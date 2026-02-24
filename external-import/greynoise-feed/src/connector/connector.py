@@ -5,19 +5,17 @@ from random import shuffle
 import pytz
 import stix2
 from dateutil.parser import parse
-from greynoise import GreyNoise
+from greynoise.api import APIConfig, GreyNoise
+from greynoise.exceptions import RequestFailure
 from pycti import (
-    Identity,
     Indicator,
-    Location,
-    Malware,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    StixSightingRelationship,
-    Vulnerability,
 )
 
 from .config_loader import ConfigLoader
+
+INTEGRATION_NAME = "opencti-feed-v4.0"
 
 
 class GreyNoiseFeedConnector:
@@ -56,25 +54,23 @@ class GreyNoiseFeedConnector:
             )
             sys.exit(1)
         elif feed_type.lower() == "benign":
-            query = "last_seen:1d classification:benign"
+            query = "last_seen_benign:1d classification:benign"
         elif feed_type.lower() == "malicious":
-            query = "last_seen:1d classification:malicious"
+            query = "last_seen_malicious:1d classification:malicious"
         elif feed_type.lower() == "suspicious":
-            query = "last_seen:1d classification:suspicious"
+            query = "last_seen_suspicious:1d classification:suspicious"
         elif feed_type.lower() == "benign+malicious":
-            query = "last_seen:1d (classification:malicious OR classification:benign)"
+            query = "(last_seen_malicious:1d classification:malicious) OR (last_seen_benign:1d classification:benign)"
         elif feed_type.lower() == "malicious+suspicious":
-            query = (
-                "last_seen:1d (classification:malicious OR classification:suspicious)"
-            )
+            query = "(last_seen_malicious:1d classification:malicious) OR (last_seen_suspicious:1d classification:suspicious)"
         elif feed_type.lower() == "benign+suspicious+malicious":
-            query = "last_seen:1d (-classification:unknown)"
+            query = "(last_seen_malicious:1d classification:malicious) OR (last_seen_suspicious:1d classification:suspicious) OR (last_seen_benign:1d classification:benign)"
         elif feed_type.lower() == "all":
             query = "last_seen:1d"
 
         return query
 
-    def _process_labels(self, data: dict, data_tags: dict) -> tuple:
+    def _process_labels(self, data: dict) -> tuple:
         """
         This method allows you to start the process of creating labels and recovering associated malware.
 
@@ -85,72 +81,41 @@ class GreyNoiseFeedConnector:
 
         self.all_labels = []
         all_malwares = []
-        entity_tags = data["tags"]
 
-        if data["classification"] == "benign":
+        if data["internet_scanner_intelligence"]["classification"] == "benign":
             # Create label GreyNoise "benign"
             self._create_custom_label("gn-classification: benign", "#06c93a")
             # Include additional label "benign-actor"
-            self._create_custom_label(f"gn-benign-actor: {data['actor']} ", "#06c93a")
-
-        elif data["classification"] == "unknown":
+            self._create_custom_label(
+                f"gn-benign-actor: {data['internet_scanner_intelligence']['actor']} ",
+                "#06c93a",
+            )
+        elif data["internet_scanner_intelligence"]["classification"] == "unknown":
             # Create label GreyNoise "unknown"
             self._create_custom_label("gn-classification: unknown", "#a6a09f")
-
-        elif data["classification"] == "malicious":
+        elif data["internet_scanner_intelligence"]["classification"] == "malicious":
             # Create label GreyNoise "malicious"
             self._create_custom_label("gn-classification: malicious", "#ff8178")
-
-        elif data["classification"] == "suspicious":
+        elif data["internet_scanner_intelligence"]["classification"] == "suspicious":
             # Create label GreyNoise "suspicious"
             self._create_custom_label("gn-classification: suspicious", "#e3d922")
 
-        if data["bot"] is True:
-            # Create label for "Known Bot Activity"
-            self._create_custom_label("Known BOT Activity", "#7e4ec2")
-
-        if data["metadata"]["tor"] is True:
-            # Create label for "Known Tor Exit Node"
-            self._create_custom_label("Known TOR Exit Node", "#7e4ec2")
-
-        if data["vpn"] is True:
-            # Create label for "Known VPN"
-            self._create_custom_label("Known VPN", "#7e4ec2")
-
-        # Create all Labels in entity_tags
-        for tag in entity_tags:
-            tag_details_matching = self._get_match(data_tags["metadata"], "name", tag)
-            if tag_details_matching is not None:
-                tag_details = tag_details_matching
-            else:
-                self.all_labels.append(tag)
-                continue
-
-            # Create red label when malicious intent and type not category worm and activity
-            if tag_details["intention"] == "malicious" and tag_details[
-                "category"
-            ] not in ["worm"]:
-                self._create_custom_label(f"{tag}", "#ff8178")
-
-            # If category is worm, prepare malware object
-            elif tag_details["category"] == "worm":
-                malware_worm = {
-                    "name": f"{tag}",
-                    "description": f"{tag_details['description']}",
-                    "type": "worm",
-                }
-                all_malwares.append(malware_worm)
-                self.all_labels.append(tag)
-
-            elif tag_details["intention"] == "benign":
-                # Create green label for benign tags
-                self._create_custom_label(f"{tag_details['name']}", "#06c93a")
-            elif tag_details["intention"] == "suspicious":
-                # Create yellow label for suspicious tags
-                self._create_custom_label(f"{tag_details['name']}", "#e3d922")
-            else:
-                # Create white label otherwise
-                self._create_custom_label(f"{tag}", "#ffffff")
+        if data["business_service_intelligence"]["trust_level"] == "1":
+            # Create label GreyNoise "trust level 1"
+            self._create_custom_label("gn-trust-level: reasonably ignore", "#90D5FF")
+            # Include additional label "provider"
+            self._create_custom_label(
+                f"gn-provider: {data['business_service_intelligence']['name']} ",
+                "#90D5FF",
+            )
+        elif data["business_service_intelligence"]["trust_level"] == "2":
+            # Create label GreyNoise "trust level 1"
+            self._create_custom_label("gn-trust-level: commonly seen", "#57B9FF")
+            # Include additional label "provider"
+            self._create_custom_label(
+                f"gn-provider: {data['business_service_intelligence']['name']} ",
+                "#57B9FF",
+            )
 
         return self.all_labels, all_malwares
 
@@ -193,34 +158,44 @@ class GreyNoiseFeedConnector:
 
         return score
 
-    def _process_data(self, work_id, session, ips_list):
+    def _process_data(self, work_id, ips_list):
         bundle_entities = []
         bundle_relationships = []
-        json_data_tags = session.metadata()
+
         self.helper.log_info("Building Indicator Bundles")
         for ip in ips_list:
-            if "ip" not in ip or "classification" not in ip:
+
+            if "ip" not in ip or "internet_scanner_intelligence" not in ip:
                 continue
 
             description = (
                 "Internet Scanning IP detected by GreyNoise with classification `"
-                + ip["classification"]
+                + ip["internet_scanner_intelligence"]["classification"]
                 + "`."
             )
             pattern = "[ipv4-addr:value = '" + ip["ip"] + "']"
 
-            labels, malwares = self._process_labels(ip, json_data_tags)
+            labels, malwares = self._process_labels(ip)
 
-            if "first_seen" in ip and ip["first_seen"]:
-                first_seen = parse(ip["first_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-                last_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
+            if (
+                "first_seen" in ip["internet_scanner_intelligence"]
+                and ip["internet_scanner_intelligence"]["first_seen"]
+            ):
+                first_seen = parse(
+                    ip["internet_scanner_intelligence"]["first_seen"]
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen = parse(
+                    ip["internet_scanner_intelligence"]["last_seen_timestamp"]
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
             else:
-                first_seen = parse(ip["last_seen"]).strftime("%Y-%m-%dT%H:%M:%SZ")
-                last_seen = datetime.strptime(ip["last_seen"], "%Y-%m-%d") + timedelta(
-                    hours=23
-                )
+                first_seen = parse(
+                    ip["internet_scanner_intelligence"]["last_seen_timestamp"]
+                ).strftime("%Y-%m-%dT%H:%M:%SZ")
+                last_seen = datetime.strptime(
+                    ip["internet_scanner_intelligence"]["last_seen_timestamp"],
+                    "%Y-%m-%d",
+                ) + timedelta(hours=23)
                 last_seen = last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
-
             # Generate ExternalReference
             external_reference = stix2.ExternalReference(
                 source_name="GreyNoise Feed",
@@ -241,7 +216,9 @@ class GreyNoiseFeedConnector:
                 created=first_seen,
                 custom_properties={
                     "x_opencti_score": (
-                        self._get_indicator_score(ip["classification"])
+                        self._get_indicator_score(
+                            ip["internet_scanner_intelligence"]["classification"]
+                        )
                     ),
                     "x_opencti_main_observable_type": "IPv4-Addr",
                 },
@@ -256,7 +233,9 @@ class GreyNoiseFeedConnector:
                 custom_properties={
                     "x_opencti_description": description,
                     "x_opencti_score": (
-                        self._get_indicator_score(ip["classification"])
+                        self._get_indicator_score(
+                            ip["internet_scanner_intelligence"]["classification"]
+                        )
                     ),
                     "created_by_ref": self.identity["standard_id"],
                     "labels": labels,
@@ -277,238 +256,6 @@ class GreyNoiseFeedConnector:
                 object_marking_refs=[stix2.TLP_GREEN],
             )
             bundle_relationships.append(stix_relationship)
-
-            # Malwares
-            stix_malwares = []
-            for malware in malwares:
-                stix_malware = stix2.Malware(
-                    id=Malware.generate_id(malware["name"]),
-                    name=malware["name"],
-                    description=malware["description"],
-                    is_family=False,
-                    malware_types=(
-                        [malware["type"]] if malware["type"] == "worm" else None
-                    ),
-                    created=first_seen,
-                    created_by_ref=self.identity["standard_id"],
-                    object_marking_refs=[stix2.TLP_WHITE],
-                )
-                stix_malwares.append(stix_malware)
-                bundle_entities.append(stix_malware)
-
-                stix_relationship_observable_malware = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_observable.id, stix_malware.id
-                    ),
-                    relationship_type="related-to",
-                    source_ref=stix_observable.id,
-                    target_ref=stix_malware.id,
-                    created_by_ref=self.identity["standard_id"],
-                    object_marking_refs=[stix2.TLP_WHITE],
-                )
-                bundle_relationships.append(stix_relationship_observable_malware)
-
-                stix_relationship_indicator_malware = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "indicates", stix_indicator.id, stix_malware.id
-                    ),
-                    relationship_type="indicates",
-                    source_ref=stix_indicator.id,
-                    target_ref=stix_malware.id,
-                    created_by_ref=self.identity["standard_id"],
-                    object_marking_refs=[stix2.TLP_WHITE],
-                )
-                bundle_relationships.append(stix_relationship_indicator_malware)
-
-            # CVE
-            if "cve" in ip and ip["cve"]:
-                for cve in ip["cve"]:
-                    stix_vulnerability = stix2.Vulnerability(
-                        id=Vulnerability.generate_id(cve),
-                        name=cve,
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_WHITE],
-                    )
-                    bundle_entities.append(stix_vulnerability)
-
-                    stix_relationship_observable_vulnerability = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to",
-                            stix_observable.id,
-                            stix_vulnerability.id,
-                        ),
-                        relationship_type="related-to",
-                        source_ref=stix_observable.id,
-                        target_ref=stix_vulnerability.id,
-                        created_by_ref=self.identity["standard_id"],
-                        object_marking_refs=[stix2.TLP_WHITE],
-                    )
-                    bundle_relationships.append(
-                        stix_relationship_observable_vulnerability
-                    )
-
-            # Metadata
-            if self.config.greynoise_feed.import_metadata:
-                if "metadata" in ip:
-                    metadata = ip["metadata"]
-                    stix_as = None
-                    if "asn" in metadata:
-                        try:
-                            stix_as = stix2.AutonomousSystem(
-                                name=metadata["asn"],
-                                number=int(metadata["asn"].replace("AS", "")),
-                                object_marking_refs=[stix2.TLP_WHITE],
-                                custom_properties={
-                                    "created_by_ref": self.identity["standard_id"],
-                                },
-                            )
-                            bundle_entities.append(stix_as)
-
-                            stix_relationship_observable_as = stix2.Relationship(
-                                id=StixCoreRelationship.generate_id(
-                                    "belongs-to", stix_observable.id, stix_as.id
-                                ),
-                                relationship_type="belongs-to",
-                                source_ref=stix_observable.id,
-                                target_ref=stix_as.id,
-                                created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_WHITE],
-                            )
-                            bundle_relationships.append(stix_relationship_observable_as)
-                        except (ValueError, TypeError):
-                            pass
-                    if "organization" in metadata:
-                        stix_organization = stix2.Identity(
-                            id=Identity.generate_id(
-                                metadata["organization"], "organization"
-                            ),
-                            name=metadata["organization"],
-                            identity_class="organization",
-                        )
-                        bundle_entities.append(stix_organization)
-
-                        stix_relationship_observable_organization = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "belongs-to", stix_observable.id, stix_organization.id
-                            ),
-                            relationship_type="belongs-to",
-                            source_ref=stix_observable.id,
-                            target_ref=stix_organization.id,
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_WHITE],
-                        )
-                        bundle_relationships.append(
-                            stix_relationship_observable_organization
-                        )
-
-                        if stix_as is not None:
-                            stix_relationship_as_organization = stix2.Relationship(
-                                id=StixCoreRelationship.generate_id(
-                                    "related-to", stix_as.id, stix_organization.id
-                                ),
-                                relationship_type="related-to",
-                                source_ref=stix_as.id,
-                                target_ref=stix_organization.id,
-                                created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_WHITE],
-                            )
-                            bundle_relationships.append(
-                                stix_relationship_as_organization
-                            )
-                    stix_city = None
-                    if "city" in metadata:
-                        stix_city = stix2.Location(
-                            id=Location.generate_id(metadata["city"], "City"),
-                            name=metadata["city"],
-                            country="N/A",
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_WHITE],
-                            custom_properties={"x_opencti_location_type": "City"},
-                        )
-                        bundle_entities.append(stix_city)
-
-                        stix_relationship_observable_city = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "located-at", stix_observable.id, stix_city.id
-                            ),
-                            relationship_type="located-at",
-                            source_ref=stix_observable.id,
-                            target_ref=stix_city.id,
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_WHITE],
-                        )
-                        bundle_relationships.append(stix_relationship_observable_city)
-
-                    if "country" in metadata:
-                        stix_country = stix2.Location(
-                            id=Location.generate_id(metadata["country"], "Country"),
-                            name=metadata["country"],
-                            country=metadata["country"],
-                            created_by_ref=self.identity["standard_id"],
-                            object_marking_refs=[stix2.TLP_WHITE],
-                            custom_properties={"x_opencti_location_type": "Country"},
-                        )
-                        bundle_entities.append(stix_country)
-
-                        if stix_city is None:
-                            stix_relationship_observable_city = stix2.Relationship(
-                                id=StixCoreRelationship.generate_id(
-                                    "located-at", stix_observable.id, stix_country.id
-                                ),
-                                relationship_type="located-at",
-                                source_ref=stix_observable.id,
-                                target_ref=stix_country.id,
-                                created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_WHITE],
-                            )
-                            bundle_relationships.append(
-                                stix_relationship_observable_city
-                            )
-                        else:
-                            stix_relationship_city_country = stix2.Relationship(
-                                id=StixCoreRelationship.generate_id(
-                                    "located-at", stix_city.id, stix_country.id
-                                ),
-                                relationship_type="located-at",
-                                source_ref=stix_city.id,
-                                target_ref=stix_country.id,
-                                created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_WHITE],
-                            )
-                            bundle_relationships.append(stix_relationship_city_country)
-                    if (
-                        self.config.greynoise_feed.import_destination_sightings
-                        and "destination_countries" in metadata
-                    ):
-                        for country in metadata["destination_countries"]:
-                            stix_country_destination = stix2.Location(
-                                id=Location.generate_id(country, "Country"),
-                                name=country,
-                                country=country,
-                                created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_WHITE],
-                                custom_properties={
-                                    "x_opencti_location_type": "Country"
-                                },
-                            )
-                            bundle_entities.append(stix_country_destination)
-
-                            stix_sighting_indicator = stix2.Sighting(
-                                id=StixSightingRelationship.generate_id(
-                                    stix_indicator.id,
-                                    stix_country_destination.id,
-                                    first_seen,
-                                    last_seen,
-                                ),
-                                sighting_of_ref=stix_indicator.id,
-                                where_sighted_refs=[stix_country_destination.id],
-                                count=1,
-                                first_seen=first_seen,
-                                last_seen=last_seen,
-                                created_by_ref=self.identity["standard_id"],
-                                object_marking_refs=[stix2.TLP_GREEN],
-                            )
-                            bundle_relationships.append(stix_sighting_indicator)
 
         # Creating the bundle from the list
         if len(bundle_entities) > 0:
@@ -538,10 +285,23 @@ class GreyNoiseFeedConnector:
             # Get the current timestamp and check
             now = datetime.now(pytz.UTC)
             current_state = self.helper.get_state()
+            if (
+                current_state is not None
+                and "api_key_error" in current_state
+                and current_state["api_key_error"]
+            ):
+                self.helper.log_error(
+                    "API Key Error - Connector will not run - Update API Key and Clear State to Run Again"
+                )
+                return
             if current_state is not None and "last_run_timestamp" in current_state:
                 last_run_timestamp = parse(current_state["last_run_timestamp"])
             else:
                 last_run_timestamp = now - timedelta(days=1)
+            if current_state is not None and "most_recent_last_seen" in current_state:
+                most_recent_last_seen = parse(current_state["most_recent_last_seen"])
+            else:
+                most_recent_last_seen = datetime.now(pytz.UTC) - timedelta(days=30)
 
             self.helper.log_info(
                 "Fetching GreyNoise feeds since "
@@ -550,23 +310,45 @@ class GreyNoiseFeedConnector:
 
             try:
                 ips_list = []
-                session = GreyNoise(
+                api_config = APIConfig(
                     api_key=self.config.greynoise_feed.api_key.get_secret_value(),
-                    integration_name="opencti-feed-v2.4",
+                    integration_name=INTEGRATION_NAME,
                 )
+                session = GreyNoise(api_config)
 
                 query = self.get_feed_query(self.config.greynoise_feed.feed_type)
                 self.helper.log_info(
                     "Querying GreyNoise API - First Results Page (" + query + ")"
                 )
-                response = session.query(query=query, exclude_raw=True)
-                complete = response.get("complete", True)
-                scroll = response.get("scroll", "")
+                response = session.query(query=query, exclude_raw=True, size=5000)
+                complete = response.get("request_metadata", {}).get("complete", True)
+                scroll = response.get("request_metadata", {}).get("scroll", "")
 
                 # Process
                 if "data" in response and len(response["data"]) > 0:
+                    added_count = 0
+                    skip_count = 0
+                    most_recent_timestamp = None
                     for ip in response["data"]:
-                        ips_list.append(ip)
+                        last_seen_str = ip.get("internet_scanner_intelligence", {}).get(
+                            "last_seen_timestamp", ""
+                        )
+                        # Parse the timestamp string (format: "2026-01-26 19:59:37") to a timezone-aware datetime
+                        last_seen_dt = datetime.strptime(
+                            last_seen_str, "%Y-%m-%d %H:%M:%S"
+                        ).replace(tzinfo=pytz.UTC)
+                        if last_seen_dt > most_recent_last_seen:
+                            ips_list.append(ip)
+                            added_count += 1
+                            if (
+                                most_recent_timestamp is None
+                                or most_recent_timestamp < last_seen_dt
+                            ):
+                                most_recent_timestamp = last_seen_dt
+                        else:
+                            skip_count += 1
+                    self.helper.log_info("Added: " + str(added_count) + " IPs")
+                    self.helper.log_info("Skipped: " + str(skip_count) + " IPs")
 
                 if len(ips_list) >= self.config.greynoise_feed.limit:
                     complete = True
@@ -577,22 +359,49 @@ class GreyNoiseFeedConnector:
                         "Query GreyNoise API - Next Results Page (" + query + ")"
                     )
                     response = session.query(
-                        query=query, scroll=scroll, exclude_raw=True
+                        query=query, scroll=scroll, exclude_raw=True, size=5000
                     )
-                    complete = response.get("complete", True)
-                    scroll = response.get("scroll", "")
+                    complete = response.get("request_metadata", {}).get(
+                        "complete", True
+                    )
+                    scroll = response.get("request_metadata", {}).get("scroll", "")
 
                     # Process
                     if "data" in response and len(response["data"]) > 0:
+                        added_count = 0
+                        skip_count = 0
                         for ip in response["data"]:
-                            ips_list.append(ip)
+                            last_seen_str = ip.get(
+                                "internet_scanner_intelligence", {}
+                            ).get("last_seen_timestamp", "")
+                            # Parse the timestamp string (format: "2026-01-26 19:59:37") to a timezone-aware datetime
+                            last_seen_dt = datetime.strptime(
+                                last_seen_str, "%Y-%m-%d %H:%M:%S"
+                            ).replace(tzinfo=pytz.UTC)
+                            if last_seen_dt > most_recent_last_seen:
+                                ips_list.append(ip)
+                                added_count += 1
+                                if (
+                                    most_recent_timestamp is None
+                                    or most_recent_timestamp < last_seen_dt
+                                ):
+                                    most_recent_timestamp = last_seen_dt
+                            else:
+                                skip_count += 1
+                        self.helper.log_info("Added: " + str(added_count) + " IPs")
+                        self.helper.log_info("Skipped: " + str(skip_count) + " IPs")
 
                         if len(ips_list) >= self.config.greynoise_feed.limit:
                             complete = True
                             ips_list = ips_list[0 : self.config.greynoise_feed.limit]
 
+                if most_recent_timestamp is not None:
+                    most_recent_last_seen = most_recent_timestamp
                 self.helper.log_info("Query GreyNoise API - Completed")
                 self.helper.log_info("GreyNoise Indicator Count: " + str(len(ips_list)))
+                self.helper.log_info(
+                    "Most Recent Last Seen: " + most_recent_last_seen.isoformat()
+                )
 
                 # Process
                 friendly_name = (
@@ -601,16 +410,38 @@ class GreyNoiseFeedConnector:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                self._process_data(work_id, session, ips_list)
+                self._process_data(work_id, ips_list)
                 message = (
                     "Connector successfully run, storing last_run_timestamp as "
                     + now.astimezone(pytz.UTC).isoformat()
+                    + " and most_recent_last_seen as "
+                    + most_recent_last_seen.isoformat()
                 )
                 self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
                 self.helper.set_state(
-                    {"last_run_timestamp": now.astimezone(pytz.UTC).isoformat()}
+                    {
+                        "last_run_timestamp": now.astimezone(pytz.UTC).isoformat(),
+                        "most_recent_last_seen": most_recent_last_seen.isoformat(),
+                        "api_key_error": False,
+                    }
                 )
+
+            except RequestFailure as e:
+                status_code = e.args[0]
+                if status_code == 401:
+                    self.helper.set_state(
+                        {
+                            "last_run_timestamp": now.astimezone(pytz.UTC).isoformat(),
+                            "most_recent_last_seen": most_recent_last_seen.isoformat(),
+                            "api_key_error": True,
+                        }
+                    )
+                    self.helper.log_error(
+                        "API authentication failed - your plan may not support this endpoint"
+                    )
+                else:
+                    self.helper.log_error(str(e))
             except Exception as e:
                 self.helper.log_error(str(e))
 

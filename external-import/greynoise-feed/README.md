@@ -6,6 +6,8 @@
 
 The GreyNoise Feed connector imports internet scanner IP addresses from GreyNoise Intelligence into OpenCTI as indicators and observables.
 
+**NOTE** This connector only imports the base indicator and observerable, and flags the indicator with a classification.  For the full enrichment details available from GreyNoise, use this connector along with the GreyNoise IP Enrichment connector.  It is recommended that the enrichment connector be set to auto-enrich so that the full enrichment is added to each indicator while the feed ingests it.  Indicators that are pulled by the feed connector prior to having the enrichment connector in place will need to be enriched manually or via workflow.
+
 ## Table of Contents
 
 - [OpenCTI GreyNoise Feed Connector](#opencti-greynoise-feed-connector)
@@ -54,16 +56,31 @@ There are a number of configuration options, which are set either in `docker-com
 |-------------------|-----------------|-------------------------------|----------------|-----------|-----------------------------------------------------------------------------|
 | Connector ID      | id              | `CONNECTOR_ID`                |                | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
 | Connector Name    | name            | `CONNECTOR_NAME`              | GreyNoise Feed | No        | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | greynoise      | No        | The scope or type of data the connector is importing.                       |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | greynoisefeed  | No        | The scope or type of data the connector is importing.                       |
 | Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info           | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT1H           | No        | Time interval between connector runs in ISO 8601 format.                    |
+| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT6H           | No        | Time interval between connector runs in ISO 8601 format.                    |
 
 ### Connector extra parameters environment variables
 
-| Parameter      | config.yml            | Docker environment variable   | Default | Mandatory | Description                                      |
-|----------------|----------------------|-------------------------------|---------|-----------|--------------------------------------------------|
-| API Key        | greynoise.api_key    | `GREYNOISE_API_KEY`           |         | Yes       | GreyNoise API key.                               |
-| Feed Type      | greynoise.feed_type  | `GREYNOISE_FEED_TYPE`         |         | No        | Type of GreyNoise feed to import.                |
+| Parameter        | config.yml                           | Docker environment variable            | Default | Mandatory | Description                                              |
+|------------------|--------------------------------------|----------------------------------------|---------|-----------|----------------------------------------------------------|
+| API Key          | greynoise.api_key                    | `GREYNOISE_API_KEY`                    |         | Yes       | GreyNoise API key.                                       |
+| Feed Type        | greynoise.feed_type                  | `GREYNOISE_FEED_TYPE`                  |         | Yes       | Type of GreyNoise feed to import.                        |
+| Limit            | greynoise.limit                      | `GREYNOISE_LIMIT`                      | 10,000  | No        | The max number of indicators to import.                  |
+| Malicious Score  | greynoise.indicator_score_malicious  | `GREYNOISE_INDICATOR_SCORE_MALICIOUS`  | 75      | No        | The indicator score for GreyNoise Malicious Indicators.  |
+| Suspicious Score | greynoise.indicator_score_suspicious | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS` | 50      | No        | The indicator score for GreyNoise Suspicious Indicators. |
+| Benign Score     | greynoise.indicator_score_benign     | `GREYNOISE_INDICATOR_SCORE_BENIGN`     | 20      | No        | The indicator score for GreyNoise Benign Indicators.     |
+
+### Feed Type Options
+
+The connector ingest indicators based off of a defined "feed type" in the configuration.  The following are the support feed types and what inidicators they will ingest:
+- `benign`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign scanning behavior
+- `malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited malicious scanning behavior
+- `suspicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited suspicious scanning behavior
+- `benign+malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign OR malicious scanning behavior
+- `malicious+suspicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited suspicious OR malicious scanning behavior
+- `benign+suspicious+malicious`: imports all indicators observed by GreyNoise in the previous day, which exhibited benign OR malicious OR suspicious scanning behavior
+- `all`: imports all indicators observed by GreyNoise in the previous day
 
 ## Deployment
 
@@ -85,10 +102,15 @@ Configure the connector in `docker-compose.yml`:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=GreyNoise Feed
-      - CONNECTOR_SCOPE=greynoise
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_DURATION_PERIOD=PT1H
+      - CONNECTOR_SCOPE=greynoisefeed
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT6H
       - GREYNOISE_API_KEY=ChangeMe
+      - GREYNOISE_FEED_TYPE=malicious
+      - GREYNOISE_LIMIT=10000
+      - GREYNOISE_INDICATOR_SCORE_MALICIOUS=75
+      - GREYNOISE_INDICATOR_SCORE_SUSPICIOUS=50
+      - GREYNOISE_INDICATOR_SCORE_BENIGN=20
     restart: always
 ```
 
@@ -157,7 +179,6 @@ graph LR
 |----------------------|---------------------|--------------------------------------------------|
 | IP Address           | IPv4-Addr           | IP observable with GreyNoise metadata            |
 | IP Address           | Indicator           | STIX pattern `[ipv4-addr:value = '...']`         |
-| CVE Tags             | Vulnerability       | Associated CVEs from GreyNoise tags              |
 | Classification       | Labels              | benign, malicious, unknown                       |
 
 ### Processing Details
@@ -166,8 +187,7 @@ For each IP in the GreyNoise feed:
 
 1. **Observable**: IPv4-Addr with GreyNoise context
 2. **Indicator**: Created with STIX pattern
-3. **Vulnerability**: Created when GreyNoise tag indicates CVE exploitation
-4. **Relationship**: Indicator → `indicates` → Vulnerability
+3. **Relationship**: Indicator → `indicates` → Vulnerability
 
 ## Debugging
 
@@ -182,6 +202,7 @@ Ensure the GreyNoise API is reachable from your OpenCTI system. For API issues, 
 ## Additional information
 
 - **Subscription Required**: GreyNoise Feed access requires a paid subscription
+- **IMPORTANT NOTE** This connector only imports the base indicator and observerable, and flags the indicator with a classification.  For the full enrichment details available from GreyNoise, use this connector along with the GreyNoise IP Enrichment connector.  It is recommended that the enrichment connector be set to auto-enrich so that the full enrichment is added to each indicator while the feed ingests it.  Indicators that are pulled by the feed connector prior to having the enrichment connector in place will need to be enriched manually or via workflow.
 - **Enrichment**: Use with GreyNoise enrichment connector for detailed IP context
-- **Classifications**: IPs are classified as benign, malicious, or unknown
+- **Classifications**: IPs are classified as benign, malicious, suspicious, or unknown
 - **Reference**: [GreyNoise](https://www.greynoise.io/)
