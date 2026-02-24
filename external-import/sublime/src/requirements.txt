@@ -1,4 +1,4 @@
 isodate==0.7.2
-pycti==6.9.22
+pycti==7.260224.0
 pyyaml==6.0.1
 stix2==3.0.1
