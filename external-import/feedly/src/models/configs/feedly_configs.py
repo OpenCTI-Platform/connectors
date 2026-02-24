@@ -33,3 +33,10 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
             "Generate your API key at https://feedly.com/i/team/api"
         ),
     )
+    enable_relationships: bool = Field(
+        default=True,
+        description=(
+            "If true, relationships between STIX Domain Objects will be included in the bundle. "
+            "If false, all relationship objects will be filtered out before sending to OpenCTI."
+        ),
+    )
