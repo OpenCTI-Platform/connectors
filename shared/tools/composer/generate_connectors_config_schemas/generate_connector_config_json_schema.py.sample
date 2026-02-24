@@ -12,7 +12,9 @@ import json
 import os
 import sys
 import traceback
+from typing import Any
 
+from connectors_sdk.settings.json_schema_generator import ConnectorConfigJsonSchemaGenerator
 from pydantic import BaseModel
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -88,6 +90,36 @@ class ConnectorConfigJsonSchemaBuilder:
         Always subclass GenerateJsonSchema and pass the class to Pydantic, not an instance
         :return: The generated connector schema as a dictionary.
         """
+
+        # Check if the model use the base connector setting and has config_json_schema, if not, create the method.
+        if not callable(getattr(self.config_model, "config_json_schema", None)):
+
+            @classmethod
+            def config_json_schema(
+                cls,
+                *,
+                connector_name: str,
+                by_alias: bool = False,
+                mode: str = "validation",
+            ) -> dict[str, Any]:
+                """Generate the connector-specific environment variable JSON schema used for metadata contracts."""
+
+                def make_schema_generator(
+                    name: str,
+                ) -> type[ConnectorConfigJsonSchemaGenerator]:
+                    return type(
+                        "GeneratedSchemaGen",
+                        (ConnectorConfigJsonSchemaGenerator,),
+                        {"connector_name": name},
+                    )
+
+                return cls.model_json_schema(
+                    by_alias=by_alias,
+                    schema_generator=make_schema_generator(connector_name),
+                    mode=mode,
+                )
+
+            self.config_model.config_json_schema = config_json_schema
 
         return self.config_model.config_json_schema(
             by_alias=False,
