@@ -1,6 +1,6 @@
-pycti==6.9.22
+pycti==7.260224.0
 dnstwist==20250130
 dnspython
 whois
 pydantic >=2.8.2, <3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260224.0#subdirectory=connectors-sdk
