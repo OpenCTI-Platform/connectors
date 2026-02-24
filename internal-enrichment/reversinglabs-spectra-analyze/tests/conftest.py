@@ -71,6 +71,7 @@ def connector_register_mock():
                     "pass": "changeme",
                 }
             },
+            "jwks": {},
         },
     ):
         yield
