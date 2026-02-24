@@ -250,14 +250,6 @@ class TestFromCSVToList(unittest.TestCase):
         ]
         self.assertEqual(from_csv_to_list(csv_bytes), expected)
 
-    def test_from_csv_to_list_limits_to_10_rows(self):
-        header = b'"key"\n'
-        rows = b"".join(f'"{i}"\n'.encode() for i in range(15))
-        result = from_csv_to_list(header + rows)
-        self.assertEqual(len(result), 10)
-        self.assertEqual(result[0], {"key": 0})
-        self.assertEqual(result[9], {"key": 9})
-
     def test_from_csv_to_list_empty_csv(self):
         csv_bytes = b'"key1","key2"\n'
         result = from_csv_to_list(csv_bytes)

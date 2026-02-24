@@ -240,9 +240,8 @@ def from_csv_to_list(csv_content: bytes) -> list[dict]:
     """
     text = csv_content.decode("utf-8")
     reader = csv.DictReader(io.StringIO(text))
-    csv_list = list(reader)[:10]
     return [
-        {k: _csv_value_to_native(v) for k, v in record.items()} for record in csv_list
+        {k: _csv_value_to_native(v) for k, v in record.items()} for record in reader
     ]
 
 
