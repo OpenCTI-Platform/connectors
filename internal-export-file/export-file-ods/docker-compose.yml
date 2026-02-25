@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-export-file-html:
+    build: ./connector-export-file-ods:${VERSION}
+    container_name: ${CONTAINER_NAME}
+    environment:
+      # Connector's definition parameters:
+      - CONNECTOR_TYPE=INTERNAL_EXPORT_FILE
+      - CONNECTOR_NAME=ExportFileODS
+      - CONNECTOR_SCOPE=application/ods
+      # Connector's generic execution parameters:
+      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_EXPORT_FILE_ODS_ID}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_EXPORT_FILE_ODS_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_EXPORT_FILE_ODS_LOG_LEVEL}
+    restart: always
+
+networks:
+  default:
+    external: true
+    name: docker_default
