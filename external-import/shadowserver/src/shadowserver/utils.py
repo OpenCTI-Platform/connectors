@@ -1,17 +1,16 @@
+import csv
 import hashlib
 import io
 import ipaddress
 from datetime import datetime
-from math import isnan
-from typing import Dict, List, Optional, Union
 
-import pandas as pd
 from shadowserver.constants import REQUEST_DATE_FORMAT, SEVERITY_MAP, TLP_MAP
 from stix2.base import _Observable as Observable
+from tabulate import tabulate
 
 
 # Function to calculate different hashes
-def calculate_hashes(data: bytes) -> Dict[str, str]:
+def calculate_hashes(data: bytes) -> dict[str, str]:
     """
     Calculate MD5, SHA-1, SHA-256, and SHA-512 hashes for the given data.
 
@@ -61,7 +60,7 @@ def validate_marking_refs(marking_refs: str) -> bool:
     raise ValueError(f"Invalid marking references: {marking_refs}")
 
 
-def datetime_to_string(dt: datetime) -> Optional[str]:
+def datetime_to_string(dt: datetime) -> str | None:
     """
     Converts a datetime object to a string representation in the format "YYYY-MM-DDTHH:MM:SS.sssZ".
 
@@ -77,7 +76,7 @@ def datetime_to_string(dt: datetime) -> Optional[str]:
         return None
 
 
-def string_to_datetime(date_string: str) -> Optional[datetime]:
+def string_to_datetime(date_string: str) -> datetime | None:
     """
     Converts a string representation of a date to a datetime object.
 
@@ -108,7 +107,7 @@ def note_timestamp_to_datetime(date_string: str) -> datetime:
     return datetime.strptime(date_string, "%Y-%m-%d %H:%M:%SZ")
 
 
-def dicts_to_markdown(dicts_list: Union[List[Dict], Dict]) -> str:
+def dicts_to_markdown(dicts_list: list[dict] | dict) -> str:
     """
     Converts a list of dictionaries or a single dictionary to a Markdown formatted string.
 
@@ -124,9 +123,9 @@ def dicts_to_markdown(dicts_list: Union[List[Dict], Dict]) -> str:
     markdown_output = ""
     for data_dict in dicts_list:
         cleaned_dict = {k: v for k, v in data_dict.items() if v}
-        df = pd.DataFrame(cleaned_dict, index=[0]).T.reset_index()
-        df.columns = ["Key", "Value"]
-        markdown_output += df.to_markdown(index=False) + "\n\n"
+        rows = list(cleaned_dict.items())
+        table = tabulate(rows, headers=["Key", "Value"], tablefmt="pipe")
+        markdown_output += table + "\n\n"
 
     return markdown_output
 
@@ -168,7 +167,7 @@ def check_ip_address(ip_str: str) -> str:
     return "Invalid IP/CIDR"
 
 
-def clean_dict(original_dict: Dict) -> Dict:
+def clean_dict(original_dict: dict) -> dict:
     """
     Remove None and empty string values from a dictionary.
 
@@ -181,7 +180,7 @@ def clean_dict(original_dict: Dict) -> Dict:
     return {k: v for k, v in original_dict.items() if v is not None and v != ""}
 
 
-def clean_list_of_dicts(data_list: List[Dict]) -> List[Dict]:
+def clean_list_of_dicts(data_list: list[dict]) -> list[dict]:
     """
     Remove None and empty string values from a list of dictionaries.
 
@@ -194,7 +193,7 @@ def clean_list_of_dicts(data_list: List[Dict]) -> List[Dict]:
     return [clean_dict(d) for d in data_list]
 
 
-def from_list_to_csv(data_list: List[Dict]) -> str:
+def from_list_to_csv(data_list: list[dict]) -> str:
     """
     Convert a list of dictionaries to a CSV formatted string.
 
@@ -205,11 +204,31 @@ def from_list_to_csv(data_list: List[Dict]) -> str:
         str: A CSV formatted string.
     """
     clean_list = clean_list_of_dicts(data_list)
-    df = pd.DataFrame(clean_list)
-    return df.to_csv(index=False)
+    if not clean_list:
+        return ""
+    # Collect all unique keys from all dicts, keeping their first-seen order
+    keys = list(dict.fromkeys(k for d in clean_list for k in d.keys()))
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=keys, lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(clean_list)
+    return output.getvalue()
 
 
-def from_csv_to_list(csv_content: bytes) -> List[Dict]:
+def _csv_value_to_native(value: str) -> str | int | None:
+    """
+    Convert a CSV cell string to None, int, or str.
+
+    Empty string becomes None. Integer-looking strings become int.
+    """
+    if value == "":
+        return None
+    if value.lstrip("-").isdigit():
+        return int(value)
+    return value
+
+
+def from_csv_to_list(csv_content: bytes) -> list[dict]:
     """
     Convert CSV content (bytes) to a list of dictionaries.
 
@@ -219,21 +238,14 @@ def from_csv_to_list(csv_content: bytes) -> List[Dict]:
     Returns:
         list of dict: A list of dictionaries parsed from the CSV.
     """
-    df = pd.read_csv(io.BytesIO(csv_content))
-    csv_list = df.to_dict("records")[:10]
-
-    def replace_nan_with_none(value):
-        if isinstance(value, float) and isnan(value):
-            return None
-        return value
-
-    csv_list = [
-        {k: replace_nan_with_none(v) for k, v in record.items()} for record in csv_list
+    text = csv_content.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(text))
+    return [
+        {k: _csv_value_to_native(v) for k, v in record.items()} for record in reader
     ]
-    return csv_list
 
 
-def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:
+def get_stix_id_precedence(stix_id_list: list[str]) -> str | None:
     """
     Determine the precedence of STIX IDs.
 
@@ -259,8 +271,8 @@ def get_stix_id_precedence(stix_id_list: List[str]) -> Optional[str]:
 
 
 def find_stix_object_by_id(
-    stix_objects: List[Observable], target_id: str
-) -> Optional[Union[str, None]]:
+    stix_objects: list[Observable], target_id: str
+) -> str | None:
     """
     Search through a list of STIX2 objects and return the object with the specified ID.
 
@@ -277,7 +289,7 @@ def find_stix_object_by_id(
     return None
 
 
-def compare_severity(severity1, severity2):
+def compare_severity(severity1: str, severity2: str) -> str:
     """
     Compare two severity values and return the higher severity..
 
@@ -294,7 +306,7 @@ def compare_severity(severity1, severity2):
         return severity2
 
 
-def remove_duplicates(data_list: List):
+def remove_duplicates(data_list: list) -> list:
     """
     Remove duplicate dictionaries from a list of dictionaries.
 
