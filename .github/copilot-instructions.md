@@ -73,7 +73,7 @@ bash run_test.sh ./external-import/myconnector/tests/test-requirements.txt
 ```
 pytest
 pycti
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@release/6.9.x#subdirectory=connectors-sdk
 ```
 
 ## Repository Structure
@@ -166,7 +166,7 @@ Tests and builds only run for connectors with changes (unless on master or conne
 
 **Install:**
 ```bash
-pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
+pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@release/6.9.x#subdirectory=connectors-sdk"
 ```
 
 **Example:**

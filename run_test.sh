@@ -78,7 +78,7 @@ do
 
   echo 'Installing latest version of pycti'
   python -m pip uninstall -y pycti
-  python -m pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python
+  python -m pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@release/6.9.x#subdirectory=client-python
   python -m pip freeze | grep "connectors-sdk\|pycti" || true
 
   python -m pip check || exit 1  # exit if dependencies are broken
