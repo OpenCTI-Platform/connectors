@@ -10,6 +10,8 @@ services:
       - "CONNECTOR_NAME=Elastic Security Intel"
       - ELASTIC_SECURITY_URL=https://localhost:9200
       - ELASTIC_SECURITY_API_KEY=ChangeMe
+      - ELASTIC_SECURITY_CLIENT_CERT= # Optional: Path to client certificate file (PEM format)
+      - ELASTIC_SECURITY_CLIENT_KEY= # Optional: Path to client key file (PEM format)
       - ELASTIC_SECURITY_VERIFY_SSL=true
       - ELASTIC_SECURITY_INDICATOR_EXPIRE_TIME=90
       - ELASTIC_SECURITY_BATCH_SIZE=100

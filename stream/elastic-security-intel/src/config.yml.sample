@@ -15,6 +15,8 @@ elastic_security:
   kibana_url: '' # Optional: Kibana URL for SIEM rules (auto-detected from ES URL if not set)
   opencti_external_url: '' # Optional: Public URL for OpenCTI reference links in Elastic docs (NOT for API - uses opencti:url if empty)
   api_key: 'ChangeMe' # Elasticsearch API Key (Base64 encoded id:api_key)
+  client_cert: '' # Optional: Path to client certificate file (PEM format)
+  client_key: '' # Optional: Path to client key file (PEM format)
   verify_ssl: true # Verify SSL certificates
   index_name: 'logs-ti_custom_opencti.indicator' # Custom index with proper mappings
   indicator_expire_time: 90 # Days before indicators expire
