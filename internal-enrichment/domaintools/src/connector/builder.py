@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Builder for DomainTools."""
 
 from datetime import datetime
@@ -122,8 +121,7 @@ class DtBuilder:
         if not validators.domain(domain):
             self.helper.metric.inc("error_count")
             self.helper.log_warning(
-                f"[DomainTools] domain {domain} is not correctly "
-                "formatted. Skipping."
+                f"[DomainTools] domain {domain} is not correctly formatted. Skipping."
             )
             return None
         domain_obj = stix2.DomainName(
@@ -152,7 +150,7 @@ class DtBuilder:
         if not validators.email(email):
             self.helper.metric.inc("error_count")
             self.helper.log_warning(
-                f"[DomainTools] email {email} is " "not correctly formatted. Skipping."
+                f"[DomainTools] email {email} is not correctly formatted. Skipping."
             )
             return None
         email_obj = stix2.EmailAddress(
@@ -181,7 +179,7 @@ class DtBuilder:
         if not validators.ipv4(ip):
             self.helper.metric.inc("error_count")
             self.helper.log_warning(
-                f"[DomainTools] ip {ip} is not correctly " "formatted. Skipping."
+                f"[DomainTools] ip {ip} is not correctly formatted. Skipping."
             )
             return None
         ip_obj = stix2.IPv4Address(
