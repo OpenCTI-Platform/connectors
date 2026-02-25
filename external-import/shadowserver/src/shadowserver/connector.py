@@ -1,13 +1,12 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta
+from typing import Generator
 
 from lib.external_import import ExternalImportConnector
 from pycti import OpenCTIConnectorHelper
 from shadowserver.api import ShadowserverAPI
 from shadowserver.settings import ConnectorSettings
 from shadowserver.utils import remove_duplicates
-
-LOOKBACK = 3
-INITIAL_LOOKBACK = 30
 
 
 class CustomConnector(ExternalImportConnector):
@@ -25,18 +24,20 @@ class CustomConnector(ExternalImportConnector):
                 if isinstance(last_run, float | int)
                 else datetime.fromisoformat(last_run)
             )
-            self.lookback = (self.start_time - last_run).days + LOOKBACK
+            self.lookback = (
+                self.start_time - last_run
+            ).days + self.config.shadowserver.lookback
             self.first_run = False
         else:
-            self.lookback = INITIAL_LOOKBACK
+            self.lookback = self.config.shadowserver.initial_lookback
         self.helper.connector_logger.info(
             f"Connector initialized. Lookback: {self.lookback} days. First run: {self.first_run}"
         )
 
-    def _collect_intelligence(self) -> []:
+    def _collect_intelligence(self) -> Generator[tuple[list, str], None, None]:
         """Collects intelligence from channels
 
-        Aadd your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
+        Add your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
         Some sample code is provided as a guide to add a specific observable and a reference to the main object.
         Consider adding additional methods to the class to make the code more readable.
 
@@ -45,52 +46,62 @@ class CustomConnector(ExternalImportConnector):
         self.helper.connector_logger.info(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
-        stix_objects = []
         shadowserver_api = ShadowserverAPI(
             api_key=self.config.shadowserver.api_key.get_secret_value(),
             api_secret=self.config.shadowserver.api_secret.get_secret_value(),
             marking_refs=self.config.shadowserver.marking,
         )
-        subscription_list = shadowserver_api.get_subscriptions()
-        self.helper.connector_logger.info(
-            f"Available report types: {subscription_list}."
-        )
-        if not subscription_list:
-            self.helper.connector_logger.error(
-                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+        report_types = self.config.shadowserver.report_types
+        if report_types:
+            self.helper.connector_logger.info(
+                f"Report types to retrieve: {', '.join(report_types)}."
             )
-            raise ValueError(
-                "No report types found, please enable them following Shadowservers documentation. https://www.shadowserver.org/what-we-do/network-reporting/get-reports/"
+
+        for days_lookback in range(self.lookback, -1, -1):
+            stix_objects = []
+            date = self.start_time - timedelta(days=days_lookback)
+            date_str = date.strftime("%Y-%m-%d")
+            self.helper.connector_logger.info(f"Getting reports for {date_str}.")
+            report_list = shadowserver_api.get_report_list(
+                date=date_str, reports=report_types
             )
-        if subscription_list and isinstance(subscription_list, list):
-            for subscription in subscription_list:
-                for days_lookback in range(self.lookback, -1, -1):
-                    date = self.start_time - timedelta(days=days_lookback)
-                    date_str = date.strftime("%Y-%m-%d")
-                    self.helper.connector_logger.info(
-                        f"Getting ({subscription}) reports from ({date_str})."
+            if not report_list:
+                self.helper.connector_logger.info(f"No reports found for {date_str}.")
+                continue
+            self.helper.connector_logger.info(f"Found {len(report_list)} reports.")
+            incident = {
+                "create": self.config.shadowserver.create_incident,
+                "severity": self.config.shadowserver.incident_severity,
+                "priority": self.config.shadowserver.incident_priority,
+            }
+
+            with ThreadPoolExecutor(
+                max_workers=self.config.shadowserver.max_threads
+            ) as executor:
+                futures = [
+                    executor.submit(
+                        shadowserver_api.get_stix_report,
+                        report=report,
+                        api_helper=self.helper,
+                        incident=incident,
                     )
-                    report_list = shadowserver_api.get_report_list(
-                        date=date_str, type=subscription
-                    )
-                    self.helper.connector_logger.debug(
-                        f"Found {len(report_list)} reports."
-                    )
-                    for report in report_list:
-                        report_stix_objects = shadowserver_api.get_stix_report(
-                            report=report,
-                            api_helper=self.helper,
-                            incident={
-                                "create": self.config.shadowserver.create_incident,
-                                "severity": self.config.shadowserver.incident_severity,
-                                "priority": self.config.shadowserver.incident_priority,
-                            },
+                    for report in report_list
+                ]
+
+                for future in as_completed(futures):
+                    try:
+                        report_stix_objects = future.result()
+                        stix_objects.extend(
+                            stix_object
+                            for stix_object in report_stix_objects
+                            if stix_object
                         )
-                        for stix_object in report_stix_objects:
-                            if stix_object not in stix_objects and stix_object:
-                                stix_objects.append(stix_object)
-        self.helper.connector_logger.info(
-            f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
-        )
-        unique_stix_objects = remove_duplicates(stix_objects)
-        return unique_stix_objects
+                    except Exception as e:
+                        self.helper.connector_logger.error(
+                            f"Error processing report: {e}"
+                        )
+            self.helper.connector_logger.info(
+                f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
+            )
+            unique_stix_objects = remove_duplicates(stix_objects)
+            yield unique_stix_objects, date_str

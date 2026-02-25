@@ -52,6 +52,12 @@
       "format": "duration",
       "type": "string"
     },
+    "CONNECTOR_RUN_EVERY": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    },
     "SHADOWSERVER_API_KEY": {
       "description": "Shadowserver API key.",
       "format": "password",
@@ -91,6 +97,31 @@
       "default": "P4",
       "description": "Default incident priority.",
       "type": "string"
+    },
+    "SHADOWSERVER_REPORT_TYPES": {
+      "default": [],
+      "description": "List of report types to retrieve. If empty, all report types will be retrieved.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "SHADOWSERVER_INITIAL_LOOKBACK": {
+      "default": 30,
+      "description": "Number of days to look back for reports during the first run.",
+      "type": "integer"
+    },
+    "SHADOWSERVER_LOOKBACK": {
+      "default": 3,
+      "description": "Number of days to look back for reports during subsequent runs.",
+      "type": "integer"
+    },
+    "SHADOWSERVER_MAX_THREADS": {
+      "default": 8,
+      "description": "Maximum number of threads used to download and transform reports in parallel.",
+      "maximum": 32,
+      "minimum": 1,
+      "type": "integer"
     }
   },
   "required": [

@@ -1,4 +1,3 @@
-import warnings
 from datetime import timedelta
 from typing import Literal
 
@@ -6,9 +5,17 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, SkipValidation
+
+
+def _run_every_to_duration_period(run_every: str) -> str:
+    run_every = run_every.upper()
+    if run_every[-1] in ["H", "M", "S"]:
+        return f"PT{int(float(run_every[:-1]))}{run_every[-1]}"
+    return f"P{int(float(run_every[:-1]))}{run_every[-1]}"
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -33,28 +40,11 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(days=1),
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_deprecated_run_every(cls, data: dict) -> dict:
-        if run_every := data.pop("run_every", "").upper():
-            warnings.warn(
-                "Env var `CONNECTOR_RUN_EVERY` is deprecated. Use `CONNECTOR_DURATION_PERIOD` instead."
-            )
-            if data.get("duration_period"):
-                warnings.warn(
-                    "Both 'CONNECTOR_RUN_EVERY' and 'CONNECTOR_DURATION_PERIOD' are set. "
-                    "'CONNECTOR_DURATION_PERIOD' will take precedence."
-                )
-            elif run_every[-1] in ["H", "M", "S"]:
-                data["duration_period"] = (
-                    f"PT{int(float(run_every[:-1]))}{run_every[-1]}"
-                )
-            else:
-                data["duration_period"] = (
-                    f"P{int(float(run_every[:-1]))}{run_every[-1]}"
-                )
-        return data
+    run_every: SkipValidation[str] = DeprecatedField(
+        deprecated="Use 'CONNECTOR_DURATION_PERIOD' instead.",
+        new_namespaced_var="duration_period",
+        new_value_factory=_run_every_to_duration_period,
+    )
 
 
 class ShadowserverConfig(BaseConfigModel):
@@ -90,6 +80,24 @@ class ShadowserverConfig(BaseConfigModel):
     incident_priority: str = Field(
         description="Default incident priority.",
         default="P4",
+    )
+    report_types: ListFromString = Field(
+        description="List of report types to retrieve. If empty, all report types will be retrieved.",
+        default=[],
+    )
+    initial_lookback: int = Field(
+        description="Number of days to look back for reports during the first run.",
+        default=30,
+    )
+    lookback: int = Field(
+        description="Number of days to look back for reports during subsequent runs.",
+        default=3,
+    )
+    max_threads: int = Field(
+        description="Maximum number of threads used to download and transform reports in parallel.",
+        default=8,
+        ge=1,
+        le=32,
     )
 
 
