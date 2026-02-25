@@ -71,17 +71,17 @@ do
   if [ -n "$project_has_sdk_dependency" ] ; then
       echo 'Installing connectors-sdk local version'
       python -m pip uninstall -y connectors-sdk
-      python -m pip install -q ./connectors-sdk   # ignore error if connectors-sdk is not installable (e.g. missing dependencies)
+      python -m pip install -q ./connectors-sdk
   fi
 
   python -m pip freeze | grep "connectors-sdk\|pycti" || true
 
   echo 'Installing latest version of pycti'
   python -m pip uninstall -y pycti
-  python -m pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python  # ignore error if pycti is not installable (e.g. missing dependencies)
+  python -m pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python
   python -m pip freeze | grep "connectors-sdk\|pycti" || true
 
-  # python -m pip check || exit 1  # exit if dependencies are broken
+  python -m pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
   python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
@@ -90,3 +90,5 @@ do
   deactivate
   rm -rf "$venv_name"
 done
+
+
