@@ -82,6 +82,10 @@ class Utils:
         Returns:
             str: A formatted string containing the description and comments in the form of a Markdown table.
         """
+
+        if comments is None:
+            comments = ""
+            
         pattern = r"(?=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - )"
         blocks = re.split(pattern, comments.strip())
         list_comments = [block.strip() for block in blocks if block.strip()]

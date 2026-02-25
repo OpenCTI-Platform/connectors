@@ -18,6 +18,7 @@ class ServiceNowClient:
         self.severity_to_exclude = self.config.servicenow.severity_to_exclude
         self.priority_to_exclude = self.config.servicenow.priority_to_exclude
         self.import_start_date = self.config.servicenow.import_start_date
+        self.sysparam_display_value = self.config.servicenow.sysparam_display_value
 
         # Limiter config
         self.rate_limiter = Limiter(
@@ -243,8 +244,9 @@ class ServiceNowClient:
 
         if sysparm_query:
             filter_query_parameters.append(f"sysparm_query={sysparm_query}")
-
-        filter_query_parameters.append("sysparm_display_value=true")
+        
+        # This parameter could produce a conflict with non-ISO format datetimes
+        filter_query_parameters.append(f"sysparm_display_value={self.sysparam_display_value}")
         filter_query_parameters.append("sysparm_exclude_reference_link=true")
         filter_query_parameters.append(f"sysparm_fields={sysparm_fields}")
 
