@@ -154,7 +154,7 @@ class UrlscanClient:
                                 "response"
                             ]["dataLength"]
 
-                            if data_length == 0:
+                            if data_length == 0 and self.config.import_screenshot != False:
                                 self.helper.connector_logger.warning(
                                     "[API-RESULT] The request has been submitted to URLScan, "
                                     "but the URL does not return any screenshot."
@@ -173,7 +173,7 @@ class UrlscanClient:
             else:
                 result = response.json()
                 data_length = result["data"]["requests"][0]["response"]["dataLength"]
-                if data_length == 0:
+                if data_length == 0 and self.config.import_screenshot != False:
                     self.helper.connector_logger.warning(
                         "[API-RESULT] The request has been submitted to URLScan, "
                         "but the URL does not return any screenshot."
