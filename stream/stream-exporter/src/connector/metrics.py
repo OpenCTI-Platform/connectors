@@ -12,14 +12,16 @@ class Metrics:
     def __init__(self, name: str):
         self.name = name
 
-        self._processed_messages_counter = Counter(
-            "processed_messages", "Number of processed messages", ["name", "action"]
+        self._processed_messages = Counter(
+            "processed_messages_total",
+            "Number of processed messages",
+            ["name", "action"],
         )
-        self._written_files_counter = Counter(
-            "written_files_counter", "Number of written files on minio", ["name"]
+        self._written_files = Counter(
+            "written_files_total", "Number of written files on MinIO", ["name"]
         )
-        self._write_error_counter = Counter(
-            "write_error_counter", "Number of error writing files on minio", ["name"]
+        self._write_errors = Counter(
+            "write_errors_total", "Number of errors writing files on MinIO", ["name"]
         )
         self._current_state_gauge = Gauge(
             "current_state", "Current connector state", ["name"]
@@ -33,13 +35,13 @@ class Metrics:
         )
 
     def msg(self, action: str):
-        self._processed_messages_counter.labels(self.name, action).inc()
+        self._processed_messages.labels(self.name, action).inc()
 
     def write(self):
-        self._written_files_counter.labels(self.name).inc()
+        self._written_files.labels(self.name).inc()
 
     def write_error(self):
-        self._write_error_counter.labels(self.name).inc()
+        self._write_errors.labels(self.name).inc()
 
     def state(self, event_id: str):
         """Set current state metric from an event id.
