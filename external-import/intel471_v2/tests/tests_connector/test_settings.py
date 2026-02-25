@@ -4,7 +4,7 @@ import pytest
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 from intel471 import ConnectorSettings
 
-INITIAL_HISTORY_TIMESTAMP = 1696156471  # 2023-10-01
+INITIAL_HISTORY_TIMESTAMP = 1696156471000  # 2023-10-01
 
 
 @pytest.mark.parametrize(
@@ -35,6 +35,7 @@ INITIAL_HISTORY_TIMESTAMP = 1696156471  # 2023-10-01
                     "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                     "proxy": None,
                     "ioc_score": 90,
+                    "backend": "verity471",
                 },
             },
             id="full_valid_settings_dict",
@@ -110,6 +111,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                     "proxy": None,
                     "ioc_score": 90,
+                    "backend": "titan",
                 },
             },
             "opencti.url",
@@ -139,6 +141,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "initial_history_reports": INITIAL_HISTORY_TIMESTAMP,
                     "proxy": None,
                     "ioc_score": 90,
+                    "backend": "titan",
                 },
             },
             "intel471.api_username",

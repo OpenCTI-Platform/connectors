@@ -49,14 +49,18 @@
       "type": "string"
     },
     "INTEL471_API_USERNAME": {
-      "description": "Titan API username",
+      "description": "Titan/Verity471 API username",
       "type": "string"
     },
     "INTEL471_API_KEY": {
-      "description": "Titan API key",
+      "description": "Titan/Verity471 API key",
       "format": "password",
       "type": "string",
       "writeOnly": true
+    },
+    "INTEL471_BACKEND": {
+      "description": "Specifies the ingestion source platform. Supports 'titan' and 'verity471', with the latter providing full parity plus extended data type support.",
+      "type": "string"
     },
     "INTEL471_INTERVAL_INDICATORS": {
       "default": 60,

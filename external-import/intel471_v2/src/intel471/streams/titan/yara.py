@@ -1,9 +1,9 @@
 from typing import Union
 
-from .common import Intel471Stream
+from .base import TitanStream
 
 
-class Intel471YARAStream(Intel471Stream):
+class Intel471YARAStream(TitanStream):
     label = "yara"
     group_label = "yara"
     api_payload_objects_key = "yaras"
