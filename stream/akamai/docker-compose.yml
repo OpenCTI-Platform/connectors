@@ -1,0 +1,30 @@
+version: '3'
+services:
+  connector-akamai:
+    image: opencti/connector-akamai-client-list:latest
+    restart: always
+    environment:
+
+      # --- OpenCTI ---
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=STREAM
+      - CONNECTOR_NAME=AkamaiClientListConnector
+      - CONNECTOR_SCOPE=indicator
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+
+      # --- Akamai EdgeGrid ---
+      - AKAMAI_BASE_URL=ChangeMe
+      - AKAMAI_CLIENT_TOKEN=ChangeMe
+      - AKAMAI_CLIENT_SECRET=ChangeMe
+      - AKAMAI_ACCESS_TOKEN=ChangeMe
+
+      # --- Target Client List (IP type only) ---
+      - AKAMAI_CLIENT_LIST_ID=ChangeMe
+
+      # ---- Behavior ----
+      - AKAMAI_ENVIRONMENT=production

@@ -1,0 +1,13 @@
+opencti:
+  url: https://your-opencti-instance
+  token: CHANGE_ME
+
+
+akamai:
+  base_url: https://your-host.akamaiapis.net
+  client_token: CHANGE_ME
+  client_secret: CHANGE_ME
+  access_token: CHANGE_ME
+  client_list_id: CHANGE_ME
+
+ssl_verify: false
