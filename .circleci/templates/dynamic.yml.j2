@@ -46,8 +46,8 @@ jobs:
             find . -name requirements.txt -exec sed "s|^connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$CIRCLE_BRANCH#subdirectory=connectors-sdk|" -i {} \;
             find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$CIRCLE_BRANCH#subdirectory=connectors-sdk\",|" -i {} \;
                 {% elif "rolling" in tags %}
-            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@6.9.22#subdirectory=client-python|" -i {} \;
-            find . -name pyproject.toml -exec sed "s|pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@6.9.22#subdirectory=client-python\",|" -i {} \;
+            find . -name requirements.txt -exec sed "s|^pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@release/6.9.x#subdirectory=client-python|" -i {} \;
+            find . -name pyproject.toml -exec sed "s|pycti==.*$|pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@release/6.9.x#subdirectory=client-python\",|" -i {} \;
             find . -name requirements.txt -exec sed "s|^connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@release/6.9.x#subdirectory=connectors-sdk|" -i {} \;
             find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@release/6.9.x#subdirectory=connectors-sdk\",|" -i {} \;
                 {% endif %}
