@@ -61,6 +61,10 @@ activate_venv() {
       python -m pip install .
     fi
 
+    # Ensure connectors-sdk is available for script generation
+    echo "🔄 Installing connectors-sdk for schema generation..."
+    python -m pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@release/6.9.x#subdirectory=connectors-sdk"
+
     # Return to original working directory
     popd
 
@@ -103,7 +107,7 @@ do
     else
       echo "Changes in: " "$connector_directory_path"
       echo "> Looking for a config model in " "$connector_directory_path"
-      
+
       requirements_file=$(find_requirements_txt "$connector_directory_path")
       pyproject_toml=$(find_pyproject_toml "$connector_directory_path")
 

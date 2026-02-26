@@ -10,15 +10,15 @@ VENV_NAME=".temp_venv"
 
 find_connector_directories() {
   # Method to find all directories matching the search term
-  
+
   # Clean the search term (remove leading/trailing slashes)
   search_term=$(echo "$1" | sed 's:^/*::' | sed 's:/*$::')
-  
+
   # If search term contains a slash, treat it as a path pattern
   if echo "$search_term" | grep -q '/'; then
     # First try exact match
     exact_match=$(find . -type d -path "*/$search_term" 2>/dev/null | head -n1)
-    
+
     if [ -n "$exact_match" ]; then
       echo "$exact_match"
     else
@@ -107,6 +107,10 @@ activate_venv() {
       python -m pip install .
     fi
 
+    # Ensure connectors-sdk is available for script generation
+    echo "🔄 Installing connectors-sdk for schema generation..."
+    python -m pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@release/6.9.x#subdirectory=connectors-sdk"
+
     # Return to original working directory
     popd
 
@@ -154,10 +158,10 @@ if [ ${#matching_directories[@]} -eq 1 ]; then
     # Remove leading ./ from path for cleaner display
     clean_path=$(echo "$CONNECTOR_DIRECTORY" | sed 's:^\./::' )
     echo -e "\033[33mFound this directory: $clean_path\033[0m"
-    
+
     # Ask for confirmation
     read -p "Is this the correct connector? (y/n) " ANSWER
-    
+
     ANSWER_LOWER=$(echo "$ANSWER" | tr '[:upper:]' '[:lower:]')
     if [[ ! "$ANSWER_LOWER" =~ ^y ]]; then
         echo -e "\033[33mAborted by user.\033[0m"
@@ -167,7 +171,7 @@ else
     # Multiple matches found
     echo -e "\033[33mFound multiple connectors matching '$CONNECTOR_NAME':\033[0m"
     echo ""
-    
+
     for i in "${!matching_directories[@]}"; do
         # Remove leading ./ from path for cleaner display
         clean_path=$(echo "${matching_directories[$i]}" | sed 's:^\./::')
@@ -175,14 +179,14 @@ else
     done
     echo "  [0] Cancel"
     echo ""
-    
+
     read -p "Please select the connector you want to process (enter number): " selection
-    
+
     if [ "$selection" = "0" ] || [ -z "$selection" ]; then
         echo -e "\033[33mAborted by user.\033[0m"
         exit 0
     fi
-    
+
     # Validate selection is a number and in range
     if [[ "$selection" =~ ^[0-9]+$ ]]; then
         index=$((selection - 1))
@@ -249,9 +253,9 @@ echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. 
 (
     # Activate virtual environment
     activate_venv "$CONNECTOR_DIRECTORY"
-                
+
     echo -e "\033[36m> Generating connector JSON schema...\033[0m"
-    
+
     # Generate connector JSON schema in __metadata__
     generator_path=$(find . -name "generate_connector_config_json_schema.py.sample")
     if [ -n "$generator_path" ]; then
@@ -262,12 +266,12 @@ echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. 
     else
         echo -e "\033[31m❌ Could not find generate_connector_config_json_schema.py.sample\033[0m"
     fi
-    
+
     echo -e "\033[36m> Generating configurations table...\033[0m"
-    
+
     # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
     python -m pip install -q --disable-pip-version-check jsonschema_markdown
-    
+
     generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
     if [ -n "$generator_config_doc_path" ]; then
         cp "$generator_config_doc_path" "$CONNECTOR_DIRECTORY/generate_connector_config_doc_tmp.py"
@@ -277,7 +281,7 @@ echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. 
     else
         echo -e "\033[31m❌ Could not find generate_connector_config_doc.py.sample\033[0m"
     fi
-    
+
     # Clean up virtual environment
     deactivate_venv "$CONNECTOR_DIRECTORY/$VENV_NAME"
 )
