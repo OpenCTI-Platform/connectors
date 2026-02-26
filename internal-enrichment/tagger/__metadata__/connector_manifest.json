@@ -15,7 +15,7 @@
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/tagger",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "6.9.23",
   "container_image": "opencti/connector-tagger",
   "container_type": "INTERNAL_ENRICHMENT"
 }

@@ -15,7 +15,7 @@
   "subscription_link": "https://www.mitre.org/who-we-are/work-with-us",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mitre",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "6.9.23",
   "container_image": "opencti/connector-mitre",
   "container_type": "EXTERNAL_IMPORT"
 }

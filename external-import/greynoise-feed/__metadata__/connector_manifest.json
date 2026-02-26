@@ -15,7 +15,7 @@
   "subscription_link": "https://www.greynoise.io",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/greynoise-feed",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "6.9.23",
   "container_image": "opencti/connector-greynoise-feed",
   "container_type": "EXTERNAL_IMPORT"
 }

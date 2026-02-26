@@ -15,7 +15,7 @@
   "subscription_link": "https://mitre-attack.github.io/attack-navigator",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-export-file/export-ttps-file-navigator",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "6.9.23",
   "container_image": "opencti/connector-export-ttps-file-navigator",
   "container_type": "INTERNAL_EXPORT_FILE"
 }

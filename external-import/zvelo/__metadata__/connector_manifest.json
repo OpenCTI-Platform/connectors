@@ -15,7 +15,7 @@
   "subscription_link": "https://zvelo.com/zvelocti-cyber-threat-intelligence/malicious-detailed-detection-feed/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/zvelo",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "6.9.23",
   "container_image": "opencti/connector-zvelo",
   "container_type": "EXTERNAL_IMPORT"
 }
