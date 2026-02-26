@@ -16,7 +16,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
 from aiohttp_retry import Any
-from proofpoint_tap.client_api.v2.siem import SIEMClient, SIEMResponse
+from client_api.v2.siem import SIEMClient, SIEMResponse
 from proofpoint_tap.errors import (
     ProofpointAPIError,
     ProofpointAPIInvalidResponseError,

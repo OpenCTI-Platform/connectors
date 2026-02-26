@@ -3,6 +3,7 @@
 It handles the initialization, data retrieval, transformation to STIX format, and sending of data to OpenCTI.
 """
 
+from pathlib import Path
 import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING

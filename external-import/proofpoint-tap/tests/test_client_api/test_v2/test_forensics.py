@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError
-from proofpoint_tap.client_api.v2.forensics import Forensics, ForensicsClient
+from client_api.v2.forensics import Forensics, ForensicsClient
 from proofpoint_tap.errors import (
     ProofpointAPIError,
     ProofpointAPIInvalidResponseError,

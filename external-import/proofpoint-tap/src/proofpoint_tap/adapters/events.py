@@ -5,7 +5,7 @@ from datetime import timedelta
 from math import ceil
 from typing import TYPE_CHECKING, Any, Awaitable, Callable, Generator, Literal, Optional
 
-from proofpoint_tap.client_api.v2.siem import (
+from client_api.v2.siem import (
     ClickEvent,
     MessageEvent,
     SIEMClient,

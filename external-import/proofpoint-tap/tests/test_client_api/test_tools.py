@@ -5,7 +5,7 @@ import pathlib
 from unittest.mock import patch
 
 import pytest
-from proofpoint_tap.client_api.tools import (
+from client_api.tools import (
     _convert_get_query_url_to_filepath,
     cache_get_response_decorator,
 )
@@ -42,7 +42,7 @@ async def test_cache_get_response_decorator_load_from_cache(client):
     query_url = URL("https://domain.com/api/item/ids?filter=1")
     filepath = _convert_get_query_url_to_filepath(query_url, client.cache_folder_path)
     with patch(
-        "proofpoint_tap.client_api.tools._load_response_from_local_cache",
+        "client_api.tools._load_response_from_local_cache",
         return_value="cached_response",
     ) as mock_load:
         with patch("pathlib.Path.exists", return_value=True):
@@ -63,7 +63,7 @@ async def test_cache_get_response_decorator_store_to_cache(client):
     query_url = URL("https://domain.com/api/item/ids?filter=1")
     filepath = _convert_get_query_url_to_filepath(query_url, client.cache_folder_path)
     with patch(
-        "proofpoint_tap.client_api.tools._store_response_to_local_cache",
+        "client_api.tools._store_response_to_local_cache",
         return_value=filepath,
     ) as mock_store:
         with patch("pathlib.Path.exists", return_value=False):

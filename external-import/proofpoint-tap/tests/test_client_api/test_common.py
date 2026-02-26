@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from aiohttp import ClientResponse, ClientResponseError, ContentTypeError
-from proofpoint_tap.client_api.common import BaseClient, ResponseModel
+from client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import (
     ProofpointAPI404Error,
     ProofpointAPI404NoReasonError,
