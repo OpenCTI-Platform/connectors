@@ -20,7 +20,6 @@ executors:
     docker:
       - image: "cimg/base:stable"
 
-
 jobs:
   ensure_formatting:
     docker:
@@ -87,11 +86,11 @@ jobs:
       - run:
           name: Commit Manifest if changed
           command: |
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
+            if [ "$CIRCLE_BRANCH" = "release/6.2.x" ] || [ "$CIRCLE_BRANCH" = "master" ]; then
               echo "$GITHUB_GPG_SECRET_KEY" | base64 -d > /tmp/private.key
               gpg --import /tmp/private.key
               rm /tmp/private.key
-            
+
               git config credential.helper 'cache --timeout=120'
               git config user.email "automation@filigran.io"
               git config user.name "Filigran Automation"
@@ -106,13 +105,13 @@ jobs:
                 # Add custom flag to avoid triggering workflows
                 git commit -m "[Automation] Build and update manifest [ci build-manifest]"
                 # Push quietly to prevent showing the token in log
-                git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}   
+                git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}
               else
                 echo "Manifest not changed. Skipping commit."
                 exit 0
               fi
             else
-              echo "Skipping, not master"
+              echo "Skipping, not master or release/6.2.x branch."
             fi
       - run:
           name: Skip steps if flag detected
@@ -129,7 +128,7 @@ jobs:
     steps:
       - checkout
       - run: |
-          sudo apt-get update -qq 
+          sudo apt-get update -qq
           sudo apt install -y \
             curl \
             gettext-base \
@@ -238,9 +237,7 @@ workflows:
           filters:
             branches:
               only:
-                - /release\/.*/
-              ignore:
-                - /release\/6\.9\.x.*/
+                - /release\/(?!6\.9\.x).*/
       - build:
           name: "build_rolling"
           ci_executor:
@@ -255,6 +252,7 @@ workflows:
             branches:
               only:
                 - master
+                - release/6.9.x
       - notify:
           name: "send_notifications_release"
           notification_executor:
