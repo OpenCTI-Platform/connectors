@@ -2,7 +2,7 @@
 
 import json
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
@@ -82,15 +82,15 @@ class MoknApiClient:
         try:
             if isinstance(timestamp, str):
                 timestamp = int(timestamp)
-            dt = datetime.fromtimestamp(timestamp)
-            return dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            dt = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+            return dt.isoformat()
         except (ValueError, TypeError) as e:
             self.helper.connector_logger.error(
                 "Invalid timestamp format",
                 {"timestamp": timestamp, "error": str(e), "type": type(e).__name__},
             )
-            default_dt = datetime.now() - timedelta(hours=1)
-            return default_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            default_dt = datetime.now(timezone.utc) - timedelta(hours=1)
+            return default_dt.isoformat()
 
     def _build_date_range(
         self, params: Optional[Dict[str, Any]] = None
@@ -100,8 +100,8 @@ class MoknApiClient:
         :param params: Optional params including last_run_timestamp.
         :return: (datetime_from, datetime_to) ISO strings.
         """
-        now = datetime.now()
-        datetime_to = now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        now = datetime.now(timezone.utc)
+        datetime_to = now.isoformat()
 
         if params and "last_run_timestamp" in params:
             last_run_timestamp = params["last_run_timestamp"]
@@ -110,9 +110,9 @@ class MoknApiClient:
             try:
                 if isinstance(last_run_timestamp, str):
                     last_run_timestamp = int(last_run_timestamp)
-                log_timestamp = datetime.fromtimestamp(last_run_timestamp).strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
+                log_timestamp = datetime.fromtimestamp(
+                    last_run_timestamp, tz=timezone.utc
+                ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.connector_logger.info(
                     "Filtering data since", {"since": log_timestamp}
                 )
@@ -120,7 +120,7 @@ class MoknApiClient:
                 pass
         else:
             days_ago = now - timedelta(days=self.first_run_days_back)
-            datetime_from = days_ago.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            datetime_from = days_ago.isoformat()
             self.helper.connector_logger.info(
                 "First run - filtering data",
                 {
