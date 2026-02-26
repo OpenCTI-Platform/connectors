@@ -49,7 +49,7 @@ all = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "proofpoint_tap.__version__"}

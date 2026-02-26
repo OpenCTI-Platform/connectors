@@ -5,7 +5,7 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Literal, Optional, Sequence
 from urllib.parse import urljoin
 
-from proofpoint_tap.client_api.common import BaseClient, ResponseModel
+from client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import (
     ProofpointAPI404NoReasonError,
     ProofPointAPIRequestParamsError,

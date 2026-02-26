@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
-from proofpoint_tap.client_api.common import BaseClient, ResponseModel
+from client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.errors import ProofPointAPIRequestParamsError
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
 from pydantic import (
@@ -138,8 +138,8 @@ class MessageEvent(ResponseModel):
         description="Email address in the From header. Note: The documentation specifies a single email address but the API response is a list.",
     )
     guid: str = Field(..., alias="GUID", description="Unique ID of the message in PPS.")
-    header_from: str = Field(
-        ..., alias="headerFrom", description="Full content of the From header."
+    header_from: Optional[str] = Field(
+        None, alias="headerFrom", description="Full content of the From header."
     )
     header_reply_to: Optional[str] = Field(
         None, alias="headerReplyTo", description="Full content of the Reply-To header."

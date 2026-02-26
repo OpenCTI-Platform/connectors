@@ -3,7 +3,7 @@
 from typing import TYPE_CHECKING, Literal, Optional
 from urllib.parse import urljoin
 
-from proofpoint_tap.client_api.common import BaseClient, ResponseModel
+from client_api.common import BaseClient, ResponseModel
 from proofpoint_tap.warnings import PermissiveLiteral, Recommended
 from pydantic import AwareDatetime, Field
 

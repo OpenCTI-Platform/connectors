@@ -5,7 +5,7 @@ from datetime import timedelta
 from logging import getLogger
 from typing import TYPE_CHECKING, Any, Generator
 
-from proofpoint_tap.client_api.v2.campaign import (
+from client_api.v2.campaign import (
     CampaignClient,
     CampaignDetailsResponse,
     CampaignIdsResponse,

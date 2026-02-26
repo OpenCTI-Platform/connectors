@@ -55,7 +55,7 @@ config.yaml should be composed of 2 levels keys/value such as
 connector: 
   id: "..."
 ```
-you can then alter the `app.py` file to load the config.yaml using the dedicated adapter:
+you can then alter the `main.py` file to load the config.yaml using the dedicated adapter:
 
 ```python 
 from proofpoint_tap.adapters.config import ConfigLoaderYaml
@@ -138,7 +138,7 @@ pip install .
 Then, start the connector:
 
 ```shell
-python app.py
+python src/main.py
 ```
 
 ## Usage

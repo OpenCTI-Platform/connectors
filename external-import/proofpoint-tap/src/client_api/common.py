@@ -15,7 +15,7 @@ from aiohttp import (
     TraceConfig,
 )
 from aiohttp_retry import ListRetry, RetryClient
-from proofpoint_tap.client_api.tools import cache_get_response_decorator
+from client_api.tools import cache_get_response_decorator
 from proofpoint_tap.errors import (
     ProofpointAPI404Error,
     ProofpointAPI404NoReasonError,

@@ -7,13 +7,13 @@ This merges Campaign, Threat and Forensics API to provide a compiled view of a c
 import asyncio
 from typing import TYPE_CHECKING, Sequence
 
-from proofpoint_tap.client_api.v2.campaign import (
+from client_api.v2.campaign import (
     CampaignClient,
     CampaignDetailsResponse,
     CampaignMember,
 )
-from proofpoint_tap.client_api.v2.forensics import Forensics, ForensicsClient
-from proofpoint_tap.client_api.v2.threat import ThreatClient, ThreatSummary
+from client_api.v2.forensics import Forensics, ForensicsClient
+from client_api.v2.threat import ThreatClient, ThreatSummary
 from pydantic import Field
 
 if TYPE_CHECKING:

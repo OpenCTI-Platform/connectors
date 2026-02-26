@@ -11,7 +11,7 @@ from pydantic import SecretStr
 from yarl import URL
 
 from proofpoint_tap.adapters.events import EventsAPIV2
-from proofpoint_tap.client_api.v2.siem import SIEMClient
+from client_api.v2.siem import SIEMClient
 
 
 def make_fake_get_client_response() -> ClientResponse:
