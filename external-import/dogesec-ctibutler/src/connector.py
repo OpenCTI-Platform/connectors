@@ -3,7 +3,6 @@ CTIBUTLER Connector
 """
 
 import os
-import sys
 import traceback
 from contextlib import contextmanager
 from datetime import UTC, datetime

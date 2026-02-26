@@ -4,7 +4,6 @@ VULMATCH Connector
 
 import itertools
 import os
-import sys
 import traceback
 import uuid
 from contextlib import contextmanager
