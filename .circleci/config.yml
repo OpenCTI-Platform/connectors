@@ -239,6 +239,8 @@ workflows:
             branches:
               only:
                 - /release\/.*/
+              ignore:
+                - /release\/6\.9\.x.*/
       - build:
           name: "build_rolling"
           ci_executor:
