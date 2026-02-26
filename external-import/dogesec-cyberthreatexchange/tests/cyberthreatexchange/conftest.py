@@ -2,7 +2,7 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from pytest_mock import MockerFixture
+import pytest_mock
 
 
 @pytest.fixture
@@ -39,7 +39,7 @@ def mock_config(config_dict: dict[str, Any], monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture
-def mocked_helper(mocker: MockerFixture):
+def mocked_helper(mocker: pytest_mock.MockerFixture):
     helper = MagicMock()
     mocker.patch("connector.OpenCTIConnectorHelper", return_value=helper)
     helper.get_state.return_value = {}
@@ -50,7 +50,7 @@ def mocked_helper(mocker: MockerFixture):
 
 
 @pytest.fixture
-def mock_session(mocker: MockerFixture) -> MagicMock:
+def mock_session(mocker: pytest_mock.MockerFixture) -> MagicMock:
     session = MagicMock()
     mocker.patch("connector.requests.Session", return_value=session)
     return session
