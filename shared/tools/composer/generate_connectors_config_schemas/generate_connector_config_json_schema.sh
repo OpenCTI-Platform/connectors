@@ -107,6 +107,10 @@ activate_venv() {
       python -m pip install .
     fi
 
+    # Ensure connectors-sdk is available for script generation
+    echo "🔄 Installing connectors-sdk for schema generation..."
+    python -m pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
+
     # Return to original working directory
     popd
 
