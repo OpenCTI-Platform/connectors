@@ -123,10 +123,10 @@ foreach ($connector_directory in $connector_directories) {
         $hasChanges = $true  # Default to true for local development
         if ($CIRCLE_BRANCH) {
             # CI environment logic
-            if ($CIRCLE_BRANCH -eq "master") {
+            if ($CIRCLE_BRANCH -eq "release/6.9.x") {
                 $gitDiff = & git diff HEAD~1 HEAD -- $connector_path
             } else {
-                $mergeBase = & git merge-base master HEAD
+                $mergeBase = & git merge-base release/6.9.x HEAD
                 $gitDiff = & git diff $mergeBase HEAD $connector_path
             }
             $hasChanges = -not [string]::IsNullOrEmpty($gitDiff)

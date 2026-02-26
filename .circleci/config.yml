@@ -252,7 +252,6 @@ workflows:
             branches:
               only:
                 - master
-                - release/6.9.x
       - notify:
           name: "send_notifications_release"
           notification_executor:

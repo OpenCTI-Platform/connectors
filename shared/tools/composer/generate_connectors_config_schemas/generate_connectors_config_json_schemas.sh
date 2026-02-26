@@ -90,10 +90,10 @@ do
   if [ -d "$connector_directory_path" ]; then
     # Only generate schema for directory that changed
     CIRCLE_BRANCH=${CIRCLE_BRANCH:-""}
-    if [ "$CIRCLE_BRANCH" = "master" ]; then
+    if [ "$CIRCLE_BRANCH" = "release/6.9.x" ]; then
       directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
     else
-      directory_has_changed=$(git diff $(git merge-base master HEAD) HEAD "$connector_directory_path")
+      directory_has_changed=$(git diff $(git merge-base release/6.9.x HEAD) HEAD "$connector_directory_path")
     fi
 
     if [ -z "$directory_has_changed" ] ; then

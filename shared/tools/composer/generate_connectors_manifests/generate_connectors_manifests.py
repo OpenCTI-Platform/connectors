@@ -115,7 +115,7 @@ class ConnectorManifestBuilder:
         """
         parent_directory_name = os.path.basename(os.path.dirname(self.directory_path))
         directory_name = os.path.basename(self.directory_path)
-        return f"https://github.com/OpenCTI-Platform/connectors/tree/master/{parent_directory_name}/{directory_name}"
+        return f"https://github.com/OpenCTI-Platform/connectors/tree/release/6.9.x/{parent_directory_name}/{directory_name}"
 
     @property
     def manifest_container_image(self) -> str:
