@@ -1,4 +1,4 @@
-pycti==6.9.22
+pycti==6.9.23
 PyYAML==6.0.3
 requests==2.32.5
 validators==0.35.0

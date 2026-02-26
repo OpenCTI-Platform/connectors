@@ -16,7 +16,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     ]
 dependencies = [
-    "pycti==6.9.22",
+    "pycti==6.9.23",
     "validators~=0.35.0",
     "pydantic>=2.8.2,<3.0.0",
     "pytenable~=1.5.3", # for now we handle API from 5.13 to 6.4

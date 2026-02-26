@@ -1,7 +1,7 @@
 azure-identity~=1.25.0
 azure-mgmt-securityinsight==1.0.0
 filigran_sseclient~=1.0.2
-pycti==6.9.22
+pycti==6.9.23
 pydantic~=2.11.5
 pydantic-settings~=2.9.1
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.23#subdirectory=connectors-sdk

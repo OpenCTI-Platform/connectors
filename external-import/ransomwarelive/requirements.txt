@@ -1,4 +1,4 @@
-pycti==6.9.22
+pycti==6.9.23
 pydantic>=2.10, <3
 pydantic-settings~=2.9.1
 python-whois>=0.9.5
@@ -6,4 +6,4 @@ requests==2.32.5
 stix2==3.0.1
 tldextract==5.3.0
 validators==0.35.0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.23#subdirectory=connectors-sdk
