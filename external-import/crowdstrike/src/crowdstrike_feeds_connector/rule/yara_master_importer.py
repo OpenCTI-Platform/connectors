@@ -64,6 +64,7 @@ class YaraMasterImporter(BaseImporter):
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
         self.scopes = scopes
+        self.include_reports = "report" in scopes
 
         self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
 
@@ -271,7 +272,9 @@ class YaraMasterImporter(BaseImporter):
         failed_count = 0
 
         for yara_rule in yara_rules:
-            fetched_reports = self._get_reports_by_code(yara_rule.reports)
+            fetched_reports: list[FetchedReport] = []
+            if self.include_reports:
+                fetched_reports = self._get_reports_by_code(yara_rule.reports)
 
             yara_rule_bundle = self._create_yara_rule_bundle(yara_rule, fetched_reports)
             if yara_rule_bundle is None:
