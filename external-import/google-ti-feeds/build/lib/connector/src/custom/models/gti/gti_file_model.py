@@ -114,7 +114,7 @@ class ContributingFactors(BaseModel):
     mandiant_osint: bool | None = Field(
         None, description="Indicates widespread OSINT reports."
     )
-    safebrowsing_verdict: bool | None = Field(
+    safebrowsing_verdict: str | None = Field(
         None, description="Google Safe Browsing verdict."
     )
     gavs_detections: int | None = Field(None, description="Number of GAVS detections.")

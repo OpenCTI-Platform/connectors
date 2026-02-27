@@ -236,6 +236,13 @@ class GTIFileToSTIXFile(BaseMapper):
         if (
             self.file.attributes
             and self.file.attributes.gti_assessment
+            and self.file.attributes.gti_assessment.threat_score
+        ):
+            return self.file.attributes.gti_assessment.threat_score.value
+
+        if (
+            self.file.attributes
+            and self.file.attributes.gti_assessment
             and self.file.attributes.gti_assessment.contributing_factors
             and hasattr(
                 self.file.attributes.gti_assessment.contributing_factors,
@@ -247,13 +254,6 @@ class GTIFileToSTIXFile(BaseMapper):
             return (
                 self.file.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
             )
-
-        if (
-            self.file.attributes
-            and self.file.attributes.gti_assessment
-            and self.file.attributes.gti_assessment.threat_score
-        ):
-            return self.file.attributes.gti_assessment.threat_score.value
 
         return None
 

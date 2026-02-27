@@ -198,13 +198,20 @@ class GTIDomainToSTIXDomain(BaseMapper):
         """Get score from domain attributes.
 
         Priority order:
-        1. contributing_factors.mandiant_confidence_score
-        2. threat_score.value
+        1. threat_score.value
+        2. contributing_factors.mandiant_confidence_score
 
         Returns:
             int | None: The score if available, None otherwise
 
         """
+        if (
+            self.domain.attributes
+            and self.domain.attributes.gti_assessment
+            and self.domain.attributes.gti_assessment.threat_score
+        ):
+            return self.domain.attributes.gti_assessment.threat_score.value
+
         if (
             self.domain.attributes
             and self.domain.attributes.gti_assessment
@@ -219,13 +226,6 @@ class GTIDomainToSTIXDomain(BaseMapper):
             return (
                 self.domain.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
             )
-
-        if (
-            self.domain.attributes
-            and self.domain.attributes.gti_assessment
-            and self.domain.attributes.gti_assessment.threat_score
-        ):
-            return self.domain.attributes.gti_assessment.threat_score.value
 
         return None
 

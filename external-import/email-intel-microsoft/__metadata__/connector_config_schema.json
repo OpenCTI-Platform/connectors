@@ -43,7 +43,8 @@
         "error",
         "critical"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "error"
     },
     "EMAIL_INTEL_MICROSOFT_TLP_LEVEL": {
       "default": "amber+strict",

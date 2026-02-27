@@ -261,6 +261,13 @@ class GTIIPToSTIXIP(BaseMapper):
         if (
             self.ip.attributes
             and self.ip.attributes.gti_assessment
+            and self.ip.attributes.gti_assessment.threat_score
+        ):
+            return self.ip.attributes.gti_assessment.threat_score.value
+
+        if (
+            self.ip.attributes
+            and self.ip.attributes.gti_assessment
             and self.ip.attributes.gti_assessment.contributing_factors
             and hasattr(
                 self.ip.attributes.gti_assessment.contributing_factors,
@@ -272,13 +279,6 @@ class GTIIPToSTIXIP(BaseMapper):
             return (
                 self.ip.attributes.gti_assessment.contributing_factors.mandiant_confidence_score
             )
-
-        if (
-            self.ip.attributes
-            and self.ip.attributes.gti_assessment
-            and self.ip.attributes.gti_assessment.threat_score
-        ):
-            return self.ip.attributes.gti_assessment.threat_score.value
 
         return None
 

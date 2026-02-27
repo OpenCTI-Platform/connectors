@@ -212,6 +212,7 @@ class ClientAPI:
         base_headers = {
             "X-Apikey": self.config.api_key.get_secret_value(),
             "accept": "application/json",
+            "x-tool": "opencti",
         }
 
         if hasattr(self.config, "api_url") and self.config.api_url:

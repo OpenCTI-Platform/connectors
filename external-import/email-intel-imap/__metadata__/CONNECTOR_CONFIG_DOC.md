@@ -14,7 +14,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` | The type of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["email-intel-imap"]` | The scope of the connector. |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warning` `error` `critical` |  |  |
+| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warning` `error` `critical` | `"error"` | The minimum level of logs to display. |
 | EMAIL_INTEL_IMAP_TLP_LEVEL | `string` |  | `white` `clear` `green` `amber` `amber+strict` `red` | `"amber+strict"` | Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI. |
 | EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | The relative start date to import emails in ISO 8601 duration format (e.g. P30D for 30 days). |
 | EMAIL_INTEL_IMAP_PORT | `integer` |  | integer | `993` | IMAP server port number |
