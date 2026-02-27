@@ -24,7 +24,7 @@ class ExternalImportConnector:
         self.helper = helper
         self.config = config
         self.start_time = datetime.now(tz=UTC)  # Needs to be reset for each run
-        self.work_id = None
+        self.pending_work_ids: set[str] = set()
 
     @property
     def state(self) -> dict[str, Any]:
@@ -65,24 +65,32 @@ class ExternalImportConnector:
 
     def process_data(self):
         # Performing the collection of intelligence
-        if not (bundle_objects := self._collect_intelligence()):
-            self.helper.connector_logger.info("No data to send to OpenCTI.")
-            return
-        self.work_id = self.helper.api.work.initiate_work(
-            connector_id=self.helper.connect_id,
-            friendly_name=f"{self.helper.connect_name} run @ {self.start_time.isoformat(timespec='seconds')}",
-        )
+        for bundle_objects, date_str in self._collect_intelligence():
+            if not bundle_objects:
+                self.helper.connector_logger.info(
+                    f"No data to send to OpenCTI for {date_str}."
+                )
+                continue
+            work_id = self.helper.api.work.initiate_work(
+                connector_id=self.helper.connect_id,
+                friendly_name=f"{self.helper.connect_name} run @ {self.start_time.strftime('%Y-%m-%dT%H:%M:%S')} for {date_str}",
+            )
+            self.pending_work_ids.add(work_id)
 
-        bundle = self.helper.stix2_create_bundle(items=bundle_objects)
+            bundle = self.helper.stix2_create_bundle(items=bundle_objects)
 
-        self.helper.connector_logger.info(
-            f"Sending {len(bundle_objects)} STIX objects to OpenCTI..."
-        )
-        self.helper.send_stix2_bundle(
-            bundle,
-            work_id=self.work_id,
-            cleanup_inconsistent_bundle=True,
-        )
+            self.helper.connector_logger.info(
+                f"Sending {len(bundle_objects)} STIX objects to OpenCTI for {date_str}..."
+            )
+            self.helper.send_stix2_bundle(
+                bundle,
+                work_id=work_id,
+                cleanup_inconsistent_bundle=True,
+            )
+            self.helper.api.work.to_processed(
+                work_id, f"Connector successfully run for {date_str}"
+            )
+            self.pending_work_ids.discard(work_id)
 
     def process_message(self):
         self.log_last_run()
@@ -91,6 +99,8 @@ class ExternalImportConnector:
 
     def process(self):
         self.start_time = datetime.now(tz=UTC)
+        self.pending_work_ids.clear()
+        has_error = False
 
         meta = {"connector_name": self.helper.connect_name}
         try:
@@ -100,17 +110,28 @@ class ExternalImportConnector:
                 f"{self.helper.connect_name} connector ended"
             )
         except (KeyboardInterrupt, SystemExit):
+            has_error = True
             self.helper.connector_logger.info("Connector stopped by user.", meta=meta)
             sys.exit(0)
         except Exception as e:
+            has_error = True
             traceback.print_exc()
             meta["error"] = str(e)
             self.helper.connector_logger.error(f"Unexpected error: {e}", meta=meta)
         finally:
-            if self.work_id:
-                self.helper.api.work.to_processed(
-                    self.work_id, "Connector successfully run"
+            if self.pending_work_ids:
+                message = (
+                    "Connector stopped before processing completion"
+                    if has_error
+                    else "Connector successfully run"
                 )
+                for pending_work_id in list(self.pending_work_ids):
+                    self.helper.api.work.to_processed(
+                        pending_work_id,
+                        message,
+                        has_error,
+                    )
+                    self.pending_work_ids.discard(pending_work_id)
 
     def run(self) -> None:
         # Main procedure

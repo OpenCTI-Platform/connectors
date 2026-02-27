@@ -17,3 +17,7 @@ shadowserver:
   create_incident: 'true'
   incident_severity: 'low'
   incident_priority: 'P4'
+  max_threads: 8
+  report_types: ''
+  initial_lookback: 30
+  lookback: 3
