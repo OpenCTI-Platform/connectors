@@ -82,12 +82,23 @@ def get_pycti() -> dict:
 def get_tags() -> list[str]:
     data = []
     tags = os.getenv("BUILD_TAGS")
+    latest_semver = os.getenv("LATEST_SEMANTIC_VERSION")
+    print("LATEST_SEMANTIC_VERSION", latest_semver)
+
     if tags:
         data.extend(tags.split(","))
 
     circle_tag = os.getenv("CIRCLE_TAG")
     if circle_tag:
         data.append(circle_tag)
+
+    latest_version = os.getenv("LATEST_SEMANTIC_VERSION")
+
+    if latest_version != circle_tag:
+        data.remove("latest")
+
+    print("TAGS_LIST", data)
+
     if len(data) == 0:
         print("[ERROR]: At least 1 tag is required")
         exit(1)
