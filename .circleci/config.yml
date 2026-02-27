@@ -168,7 +168,6 @@ jobs:
           name: Execute Python Script
           command: |
             export LATEST_SEMANTIC_VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
-            export CIRCLE_TAG="7.260227.0"
             python .circleci/scripts/generate_ci.py
       - continuation/continue:
           configuration_path: dynamic.yml
@@ -191,105 +190,95 @@ jobs:
 workflows:
   connectors:
     jobs:
+      - ensure_formatting:
+          filters:
+            tags:
+              only: /.*/
+      - base_linter:
+          filters:
+            tags:
+              only: /.*/
+      - linter:
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          filters:
+            tags:
+              only: /.*/
+      - build_manifest:
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
       - build:
-          name: "build_correct_version"
+          name: "build_release"
           ci_executor:
             name: ci_environment
             tags: "latest"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
           filters:
             tags:
               only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
             branches:
-              only: "circleci/tags-version"
-#      - ensure_formatting:
-#          filters:
-#            tags:
-#              only: /.*/
-#      - base_linter:
-#          filters:
-#            tags:
-#              only: /.*/
-#      - linter:
-#          filters:
-#            tags:
-#              only: /.*/
-#      - test:
-#          filters:
-#            tags:
-#              only: /.*/
-#      - build_manifest:
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#      - build:
-#          name: "build_release"
-#          ci_executor:
-#            name: ci_environment
-#            tags: "latest"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#          filters:
-#            tags:
-#              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
-#            branches:
-#              ignore: /.*/
-#      - build:
-#          name: "build_prerelease"
-#          ci_executor:
-#            name: ci_environment
-#            tags: "prerelease"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#          filters:
-#            branches:
-#              only:
-#                - /release\/.*/
-#      - build:
-#          name: "build_rolling"
-#          ci_executor:
-#            name: ci_environment
-#            tags: "rolling"
-#          requires:
-#            - ensure_formatting
-#            - base_linter
-#            - linter
-#            - test
-#          filters:
-#            branches:
-#              only:
-#                - master
-#      - notify:
-#          name: "send_notifications_release"
-#          notification_executor:
-#            name: ci_notifications
-#          requires:
-#            - build_release
-#          filters:
-#            tags:
-#              only: /.*/
-#      - notify:
-#          name: "send_notifications_rolling"
-#          notification_executor:
-#            name: ci_notifications
-#          requires:
-#            - build_rolling
-#          filters:
-#            tags:
-#              only: /.*/
-#      - notify:
-#          name: "send_notifications_prerelease"
-#          notification_executor:
-#            name: ci_notifications
-#          requires:
-#            - build_prerelease
-#          filters:
-#            tags:
-#              only: /.*/
+              ignore: /.*/
+      - build:
+          name: "build_prerelease"
+          ci_executor:
+            name: ci_environment
+            tags: "prerelease"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            branches:
+              only:
+                - /release\/.*/
+      - build:
+          name: "build_rolling"
+          ci_executor:
+            name: ci_environment
+            tags: "rolling"
+          requires:
+            - ensure_formatting
+            - base_linter
+            - linter
+            - test
+          filters:
+            branches:
+              only:
+                - master
+      - notify:
+          name: "send_notifications_release"
+          notification_executor:
+            name: ci_notifications
+          requires:
+            - build_release
+          filters:
+            tags:
+              only: /.*/
+      - notify:
+          name: "send_notifications_rolling"
+          notification_executor:
+            name: ci_notifications
+          requires:
+            - build_rolling
+          filters:
+            tags:
+              only: /.*/
+      - notify:
+          name: "send_notifications_prerelease"
+          notification_executor:
+            name: ci_notifications
+          requires:
+            - build_prerelease
+          filters:
+            tags:
+              only: /.*/
