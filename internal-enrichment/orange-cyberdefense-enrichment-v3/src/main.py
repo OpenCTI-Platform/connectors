@@ -442,8 +442,8 @@ class OrangeCyberdefenseEnrichment:
             if (
                 self.ocd_enrich_add_createdby
                 and processed_object["type"] == "identity"
-                and processed_object["identity_class"] == "organization"
-                and processed_object["name"] == "Orange Cyberdefense"
+                and processed_object.get("identity_class", None) == "organization"
+                and processed_object.get("name", None) == "Orange Cyberdefense"
             ):
                 self.identity = processed_object  # pylint: disable=W0201
             if processed_object is None:
