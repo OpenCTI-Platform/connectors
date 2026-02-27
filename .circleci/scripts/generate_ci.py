@@ -82,6 +82,11 @@ def get_pycti() -> dict:
 def get_tags() -> list[str]:
     data = []
     tags = os.getenv("BUILD_TAGS")
+
+    # TODO REMOVE
+    latest_semver = os.getenv("LATEST_SEMANTIC_VERSION")
+    print("LATEST_SEMANTIC_VERSION", latest_semver)
+
     # TODO REMOVE
     print("TAGS_BEFORE", tags)
     if tags:
