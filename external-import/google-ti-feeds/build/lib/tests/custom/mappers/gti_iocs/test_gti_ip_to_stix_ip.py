@@ -634,37 +634,12 @@ def test_get_timestamps_without_data(
     assert timestamps["modified"].tzinfo == timezone.utc  # noqa: S101
 
 
-# Scenario: Extract score with mandiant confidence score available
+# Scenario: Extract score with threat score
 @pytest.mark.order(1)
-def test_get_score_with_mandiant_score(
+def test_get_score_with_threat_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
-    """Test _get_score method with mandiant confidence score."""
-    # Given an IP with mandiant confidence score
-    ip_data = GTIIPDataFactory.build(
-        attributes=IPModelFactory.build(
-            gti_assessment=GTIAssessmentFactory.build(
-                contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
-                )
-            )
-        )
-    )
-    mapper = _given_gti_ip_mapper(ip_data, mock_organization, mock_tlp_marking)
-
-    # When getting score
-    score = mapper._get_score()
-
-    # Then score should be returned
-    assert score == 85  # noqa: S101
-
-
-# Scenario: Extract score with threat score fallback
-@pytest.mark.order(1)
-def test_get_score_with_threat_score_fallback(
-    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
-) -> None:
-    """Test _get_score method with threat score fallback."""
+    """Test _get_score method with threat score."""
     # Given an IP with threat score but no mandiant score
     ip_data = GTIIPDataFactory.build(
         attributes=IPModelFactory.build(
@@ -681,8 +656,34 @@ def test_get_score_with_threat_score_fallback(
     # When getting score
     score = mapper._get_score()
 
-    # Then threat score should be returned as fallback
+    # Then threat score should be returned
     assert score == 70  # noqa: S101
+
+
+# Scenario: Extract score with mandiant confidence score available fallback
+@pytest.mark.order(1)
+def test_get_score_with_mandiant_score_fallback(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _get_score method with mandiant confidence score fallback."""
+    # Given an IP with mandiant confidence score
+    ip_data = GTIIPDataFactory.build(
+        attributes=IPModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=85
+                ),
+                threat_score=None,
+            )
+        )
+    )
+    mapper = _given_gti_ip_mapper(ip_data, mock_organization, mock_tlp_marking)
+
+    # When getting score
+    score = mapper._get_score()
+
+    # Then score should be returned as fallback
+    assert score == 85  # noqa: S101
 
 
 # Scenario: Extract score without any score data available
