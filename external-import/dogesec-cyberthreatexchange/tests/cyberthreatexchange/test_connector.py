@@ -3,9 +3,8 @@ from unittest.mock import MagicMock, call
 
 import freezegun
 import pytest
-from pytest_mock import MockerFixture
-
 from connector import CTXException, CyberThreatExchangeConnector
+from pytest_mock import MockerFixture
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
