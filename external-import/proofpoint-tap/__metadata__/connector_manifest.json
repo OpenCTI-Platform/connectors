@@ -17,7 +17,7 @@
   "subscription_link": "https://www.proofpoint.com/us/resources/data-sheets/targeted-attack-protection",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/proofpoint-tap",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "7.260227.0",
   "container_image": "opencti/connector-proofpoint-tap",
   "container_type": "EXTERNAL_IMPORT"
 }

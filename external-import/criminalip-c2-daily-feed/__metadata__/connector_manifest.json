@@ -15,7 +15,7 @@
   "subscription_link": "https://github.com/criminalip/C2-Daily-Feed",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/criminalip-c2-daily-feed",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "7.260227.0",
   "container_image": "opencti/connector-criminalip-c2-daily-feed",
   "container_type": "EXTERNAL_IMPORT"
 }

@@ -17,7 +17,7 @@
   "subscription_link": "https://github.com/kevoreilly/CAPEv2",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cape",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "7.260227.0",
   "container_image": "opencti/connector-cape",
   "container_type": "EXTERNAL_IMPORT"
 }

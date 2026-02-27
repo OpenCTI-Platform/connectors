@@ -13,7 +13,7 @@
   "subscription_link": "https://github.com/CyberMonitor/APT_CyberCriminal_Campagin_Collections",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cyber-campaign-collection",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "7.260227.0",
   "container_image": "opencti/connector-cyber-campaign-collection",
   "container_type": "EXTERNAL_IMPORT"
 }

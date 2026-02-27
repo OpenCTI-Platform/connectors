@@ -13,7 +13,7 @@
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/webhook",
   "manager_supported": false,
-  "container_version": "rolling",
+  "container_version": "7.260227.0",
   "container_image": "opencti/connector-webhook",
   "container_type": "STREAM"
 }

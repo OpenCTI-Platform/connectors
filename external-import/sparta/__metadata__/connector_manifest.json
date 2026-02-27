@@ -15,7 +15,7 @@
   "subscription_link": "https://sparta.aerospace.org/contribute",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sparta",
   "manager_supported": true,
-  "container_version": "rolling",
+  "container_version": "7.260227.0",
   "container_image": "opencti/connector-sparta",
   "container_type": "EXTERNAL_IMPORT"
 }

@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-team-cymru-scout:
-    image: opencti/connector-team-cymru-scout:rolling
+    image: opencti/connector-team-cymru-scout:7.260227.0
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=${OPENCTI_TOKEN:-}
