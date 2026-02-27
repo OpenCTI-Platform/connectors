@@ -62,9 +62,24 @@ There are a number of configuration options, which are set either in `docker-com
 | Parameter    | config.yml         | Docker environment variable | Default | Description                                                                                      |
 |--------------|-------------------|-----------------------------|---------|--------------------------------------------------------------------------------------------------|
 | API base URL | teamt5.api_base_url | `TEAMT5_API_BASE_URL`   |         | The base URL for the TeamT5 API.                                                                 |
-| API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | The API key for authenticating with the TeamT5 API.                                              |
+| API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | **Deprecated.** Pre-obtained Bearer token. Use `client_id`/`client_secret` instead.             |
+| Client ID    | teamt5.client_id    | `TEAMT5_CLIENT_ID`      |         | OAuth 2.0 client ID. Requires `client_secret` to also be set.                                   |
+| Client Secret | teamt5.client_secret | `TEAMT5_CLIENT_SECRET` |         | OAuth 2.0 client secret. Requires `client_id` to also be set.                                   |
 | TLP Level    | teamt5.tlp_level    | `TEAMT5_TLP_LEVEL`      | clear   | TLP marking for ingested data. Options: clear, white, green, amber, amber+strict, red.           |
 | First Run Retrieval Timestamp | teamt5.first_run_retrieval_timestamp | `TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP` |         | Unix timestamp (integer). On the connector's first run, Reports and Indicator Bundles created after this timestamp will be retrieved. After this first run, the connector will automatically only retrieve the newest Reports and Indicator Bundles.|
+
+### Authentication
+
+The recommended authentication method is **OAuth 2.0 Client Credentials**:
+
+```
+TEAMT5_CLIENT_ID=<your-client-id>
+TEAMT5_CLIENT_SECRET=<your-client-secret>
+```
+
+The connector will POST to `https://api.threatvision.org/oauth/token` on startup and automatically refresh the token before it expires.
+
+> **Deprecated:** The static API key (`TEAMT5_API_KEY`) is still supported for backwards compatibility but should not be used for new deployments. When both `api_key` and OAuth credentials are provided, OAuth takes precedence.
 
 ## Deployment
 
