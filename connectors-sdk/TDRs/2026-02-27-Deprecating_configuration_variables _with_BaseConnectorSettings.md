@@ -114,7 +114,7 @@ class MyConfig(BaseConfigModel):
         deprecated="Use new_var instead",
         new_namespaced_var="new_var",
         new_value_factory=lambda x: x * 60,  # Optional transformation
-        removal_date="2026-12-31",
+        removal_date="2026-12-31",  # Optional informative removal deadline
     )
     new_var: int = Field(description="New variable")
 ```
@@ -126,7 +126,7 @@ class ConnectorSettings(BaseConnectorSettings):
     old_namespace: SkipValidation[MyConfig] = DeprecatedField(
         deprecated="Use new_namespace instead",
         new_namespace="new_namespace",
-        removal_date="2026-12-31",
+        removal_date="2026-12-31",  # Optional informative removal deadline
     )
     new_namespace: MyConfig = Field(default_factory=MyConfig)
 ```
