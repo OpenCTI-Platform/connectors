@@ -1,6 +1,6 @@
 import pytest
 from pycti import Identity as PyctiIdentity
-from src.rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
+from rflib.rf_to_stix2 import ENTITY_TYPE_MAPPER
 from stix2 import (
     URL,
     AttackPattern,
