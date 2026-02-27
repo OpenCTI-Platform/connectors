@@ -19,4 +19,5 @@ services:
       - S3_INTERVAL=30 # Polling interval in seconds
       - S3_ATTACH_ORIGINAL_FILE=false # Attach original JSON to vulnerabilities
       - S3_DELETE_AFTER_IMPORT=true # Delete files from S3 after processing
+      - S3_NO_SPLIT_BUNDLES=true # No split
     restart: always

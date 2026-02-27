@@ -130,7 +130,12 @@ class S3Connector:
             config,
             default=True,
         )
-
+        self.s3_no_split_bundles = get_config_variable(
+            "S3_NO_SPLIT_BUNDLES",
+            ["s3", "no_split_bundles"],
+            config,
+            default=True,
+        )
         bucket_prefixes = get_config_variable(
             "S3_BUCKET_PREFIXES",
             ["s3", "bucket_prefixes"],
@@ -885,7 +890,11 @@ class S3Connector:
                     # Step 3: Send bundle to OpenCTI
                     # If this fails, connector crashes - file is NOT deleted
                     self.helper.log_info(f"Sending STIX bundle from file: '{file_key}'")
-                    self.helper.send_stix2_bundle(bundle=fixed_bundle, work_id=work_id)
+                    self.helper.send_stix2_bundle(
+                        bundle=fixed_bundle,
+                        work_id=work_id,
+                        no_split=self.s3_no_split_bundles,
+                    )
                     processed_files += 1
 
                     # Step 4: Optionally delete file from S3 after successful processing
