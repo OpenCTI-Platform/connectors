@@ -62,18 +62,18 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter               | config.yml                     | Docker environment variable      | Default | Mandatory | Description                           |
-|-------------------------|--------------------------------|----------------------------------|---------|-----------|---------------------------------------|
-| API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            | https://api.doppel.com/v1        | Yes       | Doppel API base URL                   |
-| API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |         | Yes       | Doppel API key                        |
-| User API key                 | doppel.user_api_key       | `DOPPEL_USER_API_KEY`            |         | No        | Doppel User API key                   |
-| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       |         | No        | Organization Code for Doppel API Keys |
-| Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         | /alerts | Yes       | API endpoint for fetching alerts      |
-| Historical polling days | doppel.historical_polling_days | `DOPPEL_HISTORICAL_POLLING_DAYS` | 30      | No        | Days of data to fetch on first run    |
-| Max retries             | doppel.max_retries             | `DOPPEL_MAX_RETRIES`             | 3       | No        | Retry attempts on API errors          |
-| Retry delay (seconds)   | doppel.retry_delay             | `DOPPEL_RETRY_DELAY`             | 30      | No        | Delay between retry attempts          |
-| TLP Level               | doppel.tlp_level               | `DOPPEL_TLP_LEVEL`               | clear   | No        | TLP marking for created STIX objects. |
-| Page size               | doppel.page_size               | `DOPPEL_PAGE_SIZE`               | 100                       | No        | Number of alerts to fetch per request |
+| Parameter               | config.yml                     | Docker environment variable      | Role |  Default | Mandatory | Description                           |
+|-------------------------|--------------------------------|----------------------------------|---------|---------|-----------|---------------------------------------|
+| API base URL            | doppel.api_base_url            | `DOPPEL_API_BASE_URL`            |    Connectivity: Defines the network entry point for all API requests.      | https://api.doppel.com/v1        | Yes       | Doppel API base URL                   |
+| API key                 | doppel.api_key                 | `DOPPEL_API_KEY`                 |    Authentication: Provides the primary security credentials for service access.      |         | Yes       | Doppel API key                        |
+| User API key                 | doppel.user_api_key       | `DOPPEL_USER_API_KEY`            |     Authorization: Used for user-specific identity.     |         | No        | Doppel User API key                   |
+| Organization Code       | doppel.organization_code       | `DOPPEL_ORGANIZATION_CODE`       |     Scope: Identifies the specific organizational workspace for multi-tenant keys.     |         | No        | Organization Code for Doppel API Keys |
+| Alerts endpoint         | doppel.alerts_endpoint         | `DOPPEL_ALERTS_ENDPOINT`         |     Routing: Specifies the API resource path for alert ingestion.     | /alerts | Yes       | API endpoint for fetching alerts      |
+| Historical polling days | doppel.historical_polling_days | `DOPPEL_HISTORICAL_POLLING_DAYS` |     Synchronization: Determines the time-window for initial data fetching.     | 30      | No        | Days of data to fetch on first run    |
+| Max retries             | doppel.max_retries             | `DOPPEL_MAX_RETRIES`             |     Resilience: Configures automated error recovery from transient failures.     | 3       | No        | Retry attempts on API errors          |
+| Retry delay (seconds)   | doppel.retry_delay             | `DOPPEL_RETRY_DELAY`             |     Rate Management: Controls the frequency of requests during error recovery.     | 30      | No        | Delay between retry attempts          |
+| TLP Level               | doppel.tlp_level               | `DOPPEL_TLP_LEVEL`               |     Data Governance: Assigns sensitivity markings for downstream sharing.     | clear   | No        | TLP marking for created STIX objects. |
+| Page size               | doppel.page_size               | `DOPPEL_PAGE_SIZE`               |    Performance: Optimizes request volume and memory usage per fetch.      | 100                       | No        | Number of alerts to fetch per request |
 
 ## Deployment
 
