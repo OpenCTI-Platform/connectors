@@ -1,16 +1,9 @@
-"""API client for fetching Checkfirst data from remote endpoints.
+"""API client for fetching Checkfirst data from remote endpoints."""
 
-This module handles paginated API requests to fetch Checkfirst data
-from a remote API server.
-"""
-
-from __future__ import annotations
-
-import json
 import time
-import urllib.parse
-import urllib.request
 from typing import Any, Iterator
+
+import requests
 
 MAX_RETRIES = 3
 RETRY_BACKOFF_SECONDS = 5
@@ -47,84 +40,63 @@ def fetch_paginated_data(
     """
     base_url = api_url.rstrip("/")
     endpoint = api_endpoint if api_endpoint.startswith("/") else f"/{api_endpoint}"
+    headers = {"Api-Key": api_key, "Accept": "application/json"}
 
     current_page = start_page
     has_more = True
 
+    session = requests.Session()
+
     while has_more:
-        # Construct URL with pagination and optional since filter
-        params = {"page": str(current_page)}
+        params: dict[str, str] = {"page": str(current_page)}
         if since:
             params["since"] = since
-        url = f"{base_url}{endpoint}?{urllib.parse.urlencode(params)}"
+        url = f"{base_url}{endpoint}"
 
-        # Retry loop for transient failures
         last_exc: Exception | None = None
         for attempt in range(1, MAX_RETRIES + 1):
-            # Create request with headers (fresh request object per attempt)
-            req = urllib.request.Request(url)
-            req.add_header("Api-Key", api_key)
-            req.add_header("Accept", "application/json")
-
             try:
-                with urllib.request.urlopen(req, timeout=600) as response:
-                    if response.status != 200:
-                        raise APIError(
-                            f"API request failed with status {response.status}: {response.reason}"
-                        )
+                response = session.get(url, headers=headers, params=params, timeout=600)
+                response.raise_for_status()
 
-                    data = json.loads(response.read().decode("utf-8"))
+                data = response.json()
 
-                    # Handle different pagination response formats
-                    if "data" in data:
-                        items = data["data"]
-                        pagination = data.get("pagination", {})
-                        has_more = pagination.get("has_next", False)
-                    else:
-                        raise APIError(
-                            f"Unrecognized API response format: {list(data.keys())}"
-                        )
+                if "data" not in data:
+                    raise APIError(
+                        f"Unrecognized API response format: {list(data.keys())}"
+                    )
 
-                    if not items:
-                        has_more = False
-                        break
+                items = data["data"]
+                has_more = data.get("pagination", {}).get("has_next", False)
 
-                    for item in items:
-                        yield item
+                if not items:
+                    has_more = False
+                    break
 
-                    current_page += 1
-                    break  # Success — exit retry loop
+                yield from items
+                current_page += 1
+                break  # success — exit retry loop
 
-            except urllib.error.HTTPError as exc:
-                error_body = (
-                    exc.read().decode("utf-8", errors="replace") if exc.fp else ""
-                )
+            except requests.HTTPError as exc:
                 last_exc = APIError(
-                    f"HTTP error {exc.code} when fetching page {current_page}: {exc.reason}. "
-                    f"Response: {error_body}"
+                    f"HTTP error {exc.response.status_code} when fetching page "
+                    f"{current_page}: {exc.response.reason}"
                 )
                 last_exc.__cause__ = exc
-            except urllib.error.URLError as exc:
-                last_exc = APIError(
-                    f"Network error when fetching page {current_page}: {exc.reason}"
-                )
-                last_exc.__cause__ = exc
-            except json.JSONDecodeError as exc:
+            except ValueError as exc:
                 last_exc = APIError(
                     f"Invalid JSON response from API on page {current_page}"
                 )
                 last_exc.__cause__ = exc
-            except APIError:
-                raise
-            except Exception as exc:
+            except requests.RequestException as exc:
                 last_exc = APIError(
-                    f"Unexpected error fetching page {current_page}: {exc}"
+                    f"Network error when fetching page {current_page}: {exc}"
                 )
                 last_exc.__cause__ = exc
+            except APIError:
+                raise
 
-            # If we get here, the attempt failed — retry or give up
             if attempt < MAX_RETRIES:
-                wait = RETRY_BACKOFF_SECONDS * attempt
-                time.sleep(wait)
+                time.sleep(RETRY_BACKOFF_SECONDS * attempt)
             else:
                 raise last_exc  # type: ignore[misc]

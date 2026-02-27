@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """STIX conversion helpers for the Checkfirst connector.
 
 Converts API rows into STIX 2.1 objects using:

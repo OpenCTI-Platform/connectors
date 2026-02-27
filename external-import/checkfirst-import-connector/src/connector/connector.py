@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import sys
 
 from checkfirst_dataset.main_logic import run_once

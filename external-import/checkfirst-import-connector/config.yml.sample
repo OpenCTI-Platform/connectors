@@ -1,11 +1,11 @@
 opencti:
-  url: http://opencti:8080
+  url: http://localhost
   token: CHANGEME
 
 connector:
   id: CHANGEME
   name: Checkfirst Import Connector
-  scope: media-content,channel,url
+  scope: checkfirst
   log_level: info
   duration_period: P7D
 
@@ -13,6 +13,6 @@ checkfirst:
   api_url: ChangeMe
   api_key: ChangeMe
   api_endpoint: /v1/articles
-  since: "2025-01-01T00:00:00Z"
+  since: P365D
   force_reprocess: false
   tlp_level: clear

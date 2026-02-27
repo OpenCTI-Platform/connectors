@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Data row model used by the API reader."""
 
 from dataclasses import dataclass

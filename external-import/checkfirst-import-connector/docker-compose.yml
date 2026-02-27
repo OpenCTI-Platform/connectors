@@ -2,17 +2,17 @@ services:
   connector-checkfirst-import-connector:
     build: .
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=checkfirst-pravda
       - CONNECTOR_NAME=Checkfirst Import Connector
-      - CONNECTOR_SCOPE=media-content,channel,url
+      - CONNECTOR_SCOPE=checkfirst
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=P7D
       - CHECKFIRST_API_URL=${CHECKFIRST_API_URL}
       - CHECKFIRST_API_KEY=${CHECKFIRST_API_KEY}
       - CHECKFIRST_API_ENDPOINT=${CHECKFIRST_API_ENDPOINT}
-      - CHECKFIRST_SINCE=${CHECKFIRST_SINCE:-2025-01-01T00:00:00Z}
+      - CHECKFIRST_SINCE=${CHECKFIRST_SINCE:-P365D}
       - CHECKFIRST_TLP_LEVEL=${CHECKFIRST_TLP_LEVEL}
     networks:
       - default

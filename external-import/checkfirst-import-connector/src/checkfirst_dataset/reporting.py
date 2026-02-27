@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Run reporting utilities.
 
 The connector records lightweight metrics (counts and error/skip reasons) to

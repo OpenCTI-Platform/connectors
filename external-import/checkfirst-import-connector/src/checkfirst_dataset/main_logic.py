@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from datetime import datetime, timezone
 
 from checkfirst_dataset.alternates import parse_alternates
@@ -11,6 +9,10 @@ from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 
 BUNDLE_SIZE = 1000
+
+
+class BundleSendError(Exception):
+    pass
 
 
 def _send_bundle(
@@ -100,8 +102,6 @@ def run_once(helper, settings: ConnectorSettings) -> None:
 
             try:
                 published_dt = parse_publication_date(row.publication_date)
-                if published_dt.tzinfo is None:
-                    published_dt = published_dt.replace(tzinfo=timezone.utc)
 
                 channel = converter.create_channel(
                     name=row.source_title,
@@ -192,9 +192,10 @@ def run_once(helper, settings: ConnectorSettings) -> None:
                     helper.connector_logger.error(
                         "Bundle send failed", {"error": str(exc)}
                     )
-                    raise
+                    raise BundleSendError(exc) from exc
 
                 state["last_page"] = current_page
+                state["last_run"] = int(now.timestamp())
                 save_state_to_helper(helper, state)
                 bundle_objects = []
                 rows_in_bundle = 0
@@ -218,11 +219,14 @@ def run_once(helper, settings: ConnectorSettings) -> None:
             except Exception as exc:  # noqa: BLE001
                 report.error(SkipReason.BUNDLE_SEND_ERROR)
                 helper.connector_logger.error("Bundle send failed", {"error": str(exc)})
-                raise
+                raise BundleSendError(exc) from exc
 
             state["last_page"] = current_page
+            state["last_run"] = int(now.timestamp())
             save_state_to_helper(helper, state)
 
+    except BundleSendError:
+        pass  # already recorded and logged
     except Exception as exc:  # noqa: BLE001
         report.error(SkipReason.API_ERROR)
         helper.connector_logger.error(

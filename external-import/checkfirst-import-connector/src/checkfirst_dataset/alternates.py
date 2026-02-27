@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Helpers for parsing the "Alternates" field.
 
 API rows may include an "Alternates" field containing additional

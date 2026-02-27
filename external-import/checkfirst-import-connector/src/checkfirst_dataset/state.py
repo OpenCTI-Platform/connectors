@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Connector state helpers.
 
 OpenCTI connectors can persist a small JSON-compatible state blob via the
@@ -25,7 +23,10 @@ def normalize_state(state: Any) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         last_page_int = 0
 
-    return {"last_page": last_page_int}
+    result: dict[str, Any] = {"last_page": last_page_int}
+    if "last_run" in state and isinstance(state.get("last_run"), (int, float)):
+        result["last_run"] = int(state["last_run"])
+    return result
 
 
 def load_state_from_helper(helper: Any) -> dict[str, Any]:

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Date parsing helpers.
 
 The API response includes a `Publication Date` string. We parse it using

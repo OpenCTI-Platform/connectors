@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from datetime import timedelta
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from connectors_sdk import (
@@ -31,7 +30,6 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 class CheckfirstConfig(BaseConfigModel):
     """Connector-specific configuration."""
 
-    # API configuration
     api_url: str = Field(
         description="Base URL for the API endpoint (e.g., https://api.example.com).",
     )
@@ -50,8 +48,12 @@ class CheckfirstConfig(BaseConfigModel):
     )
 
     since: str = Field(
-        description="Only ingest articles published on or after this date (ISO 8601).",
-        default="2025-01-01T00:00:00Z",
+        description=(
+            "Only ingest articles published on or after this date. "
+            "Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) "
+            "or durations relative to now (e.g., P365D, P1Y, P6M, P4W)."
+        ),
+        default="P365D",
     )
     force_reprocess: bool = Field(
         description=(
@@ -73,11 +75,28 @@ class CheckfirstConfig(BaseConfigModel):
         default="clear",
     )
 
-    # Resource guards (optional)
     max_row_bytes: int | None = Field(
         description="Skip any API row larger than this approximate number of bytes.",
         default=None,
     )
+
+    @field_validator("since")
+    @classmethod
+    def _resolve_since(cls, v: str) -> str:
+        """Resolve ISO 8601 duration strings to absolute UTC datetime strings."""
+        match = re.fullmatch(r"P(\d+)(Y|M|W|D)", v.strip(), re.IGNORECASE)
+        if match:
+            amount = int(match.group(1))
+            unit = match.group(2).upper()
+            delta_map = {
+                "D": timedelta(days=amount),
+                "W": timedelta(weeks=amount),
+                "Y": timedelta(days=amount * 365),
+                "M": timedelta(days=amount * 30),
+            }
+            resolved = datetime.now(tz=timezone.utc) - delta_map[unit]
+            return resolved.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return v
 
 
 class ConnectorSettings(BaseConnectorSettings):

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """API data reader.
 
 This module reads Checkfirst data from a remote API endpoint
@@ -123,6 +121,4 @@ def iter_api_rows(
             )
 
     except Exception as exc:
-        if report is not None:
-            report.error(SkipReason.API_ERROR)
         raise RuntimeError(f"Error fetching data from API: {exc}") from exc
