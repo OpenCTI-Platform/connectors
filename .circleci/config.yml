@@ -166,7 +166,9 @@ jobs:
           command: pip install -r .circleci/scripts/requirements.txt
       - run:
           name: Execute Python Script
-          command: python .circleci/scripts/generate_ci.py
+          command: |
+            export LATEST_SEMANTIC_VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+            python .circleci/scripts/generate_ci.py
       - continuation/continue:
           configuration_path: dynamic.yml
       - slack/notify:
