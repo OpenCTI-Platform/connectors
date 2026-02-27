@@ -1,6 +1,6 @@
 -r ./tests/test-requirements.txt
 -r ./src/requirements.txt
-black==25.12.0
+black==26.1.0
 isort==7.0.0
 mypy==1.19.1
 pylint==3.3.9
