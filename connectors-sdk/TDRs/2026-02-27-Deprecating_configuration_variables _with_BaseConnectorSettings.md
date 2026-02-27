@@ -78,7 +78,7 @@ This validator:
 The SDK introduces `DeprecatedField`, a helper built on top of `pydantic.Field`, allowing deprecation metadata to be declared directly on fields.
 
 Supported metadata includes:
-- `deprecated`: deprecation flag or message
+- `deprecated`: deprecation flag or message (already present on pydanctic.Field)
 - `new_namespace`: destination namespace
 - `new_namespaced_var`: destination variable name
 - `new_value_factory`: optional value transformation function
@@ -114,7 +114,7 @@ class MyConfig(BaseConfigModel):
         deprecated="Use new_var instead",
         new_namespaced_var="new_var",
         new_value_factory=lambda x: x * 60,  # Optional transformation
-        removal_date="2026-12-31",
+        removal_date="2026-12-31",  # Optional informative removal deadline
     )
     new_var: int = Field(description="New variable")
 ```
@@ -126,7 +126,7 @@ class ConnectorSettings(BaseConnectorSettings):
     old_namespace: SkipValidation[MyConfig] = DeprecatedField(
         deprecated="Use new_namespace instead",
         new_namespace="new_namespace",
-        removal_date="2026-12-31",
+        removal_date="2026-12-31",  # Optional informative removal deadline
     )
     new_namespace: MyConfig = Field(default_factory=MyConfig)
 ```
@@ -134,8 +134,9 @@ class ConnectorSettings(BaseConnectorSettings):
 In this example:
 - `old_var` is migrated to `new_var`, with an optional value transformation
 - `old_namespace` is migrated to `new_namespace`
-- Deprecated usage triggers warnings
-- If both old and new settings are present, new settings take precedence
+
+Deprecated usage triggers warnings
+If both old and new settings are present, new settings take precedence
 
 ---
 
