@@ -168,7 +168,7 @@ jobs:
           name: Execute Python Script
           command: |
             export LATEST_SEMANTIC_VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
-            export CIRCLE_TAG="6.9.26"
+            export CIRCLE_TAG="7.3"
             python .circleci/scripts/generate_ci.py
       - continuation/continue:
           configuration_path: dynamic.yml
