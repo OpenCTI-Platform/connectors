@@ -35,7 +35,7 @@ The connector supports extraction of various indicator types from alert elements
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260224.0
+- OpenCTI Platform >= 7.260227.0
 - Intelfinder subscription with API access
 - Intelfinder API Token (obtain from https://dash.intelfinder.io/integrations.php?i=api)
 

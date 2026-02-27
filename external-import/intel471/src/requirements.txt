@@ -1,4 +1,4 @@
-pycti==7.260224.0
+pycti==7.260227.0
 stix2~=3.0.1
 APScheduler~=3.11.0
 Titan-Client==1.20.0.13

@@ -19,14 +19,14 @@ classifiers = [
 requires-python = ">=3.11, <3.13" 
 
 dependencies = [
-    "pycti==7.260224.0",
+    "pycti==7.260227.0",
     "aiohttp>=3.7.4,<4",
     "limiter==0.5.0",
     "yarl>=1.10.1,<2",
     "tenacity>=9,<10",
     "markdownify>=1.1.0,<2",
     "pydantic>=2.8.2,<3",
-     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260224.0#subdirectory=connectors-sdk",
+     "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260227.0#subdirectory=connectors-sdk",
 ]
 
 

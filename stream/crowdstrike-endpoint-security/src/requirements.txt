@@ -1,5 +1,5 @@
-pycti==7.260224.0
+pycti==7.260227.0
 prometheus-client>=0.20.0,<=0.22.1
 crowdstrike-falconpy==1.6.0
 pydantic >=2.8.2, <3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260224.0#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260227.0#subdirectory=connectors-sdk

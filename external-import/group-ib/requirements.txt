@@ -1,4 +1,4 @@
-pycti==7.260224.0
+pycti==7.260227.0
 python-dotenv==1.1.1
 stix2==3.0.1
 isodate==0.7.2

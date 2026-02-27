@@ -1,4 +1,4 @@
-pycti==7.260224.0
+pycti==7.260227.0
 pycountry==24.6.1
 stix2==3.0.1
 PyYAML==6.0.3

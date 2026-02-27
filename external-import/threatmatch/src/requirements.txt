@@ -1,4 +1,4 @@
-pycti==7.260224.0
+pycti==7.260227.0
 beautifulsoup4==4.14.2
 pydantic==2.11.9
 pydantic-settings==2.10.1

@@ -1,5 +1,5 @@
 censys-platform~=0.12.0
 pydantic~=2.12.0
 pydantic-settings~=2.11.0
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260224.0#subdirectory=connectors-sdk
-pycti==7.260224.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260227.0#subdirectory=connectors-sdk
+pycti==7.260227.0
