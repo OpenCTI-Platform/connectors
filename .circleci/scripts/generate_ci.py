@@ -82,12 +82,25 @@ def get_pycti() -> dict:
 def get_tags() -> list[str]:
     data = []
     tags = os.getenv("BUILD_TAGS")
+    # TODO REMOVE
+    print("TAGS_BEFORE", tags)
     if tags:
         data.extend(tags.split(","))
 
     circle_tag = os.getenv("CIRCLE_TAG")
     if circle_tag:
         data.append(circle_tag)
+
+    # TODO REMOVE
+    print("DATA_BEFORE_FINAL_LIST", data)
+
+    latest_version = os.getenv("LATEST_SEMANTIC_VERSION")
+
+    if latest_version != circle_tag:
+        data.remove("latest")
+
+    print("TAGS_LIST", data)
+
     if len(data) == 0:
         print("[ERROR]: At least 1 tag is required")
         exit(1)
@@ -103,15 +116,17 @@ def write_config(template):
 
 
 def main():
-    template = get_template()
-    config = template.render(
-        dirs=get_dirs(),
-        param=get_parameters(),
-        pycti=get_pycti(),
-        tags=get_tags(),
-        repo=REPOSITORY,
-    )
-    write_config(config)
+    tags = get_tags()
+    print("TAGS", tags)
+    # template = get_template()
+    # config = template.render(
+    #     dirs=get_dirs(),
+    #     param=get_parameters(),
+    #     pycti=get_pycti(),
+    #     tags=get_tags(),
+    #     repo=REPOSITORY,
+    # )
+    # write_config(config)
 
 
 if __name__ == "__main__":
