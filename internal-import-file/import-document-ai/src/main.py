@@ -3,12 +3,16 @@
 
 import traceback
 
-from reportimporter import ReportImporter
+from import_doc_ai import ConfigConnector, Connector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
-        connector = ReportImporter()
-        connector.start()
+        config = ConfigConnector()
+        helper = OpenCTIConnectorHelper(config=config.load)
+
+        connector = Connector(config=config, helper=helper)
+        connector.run()
     except Exception:
         traceback.print_exc()
         exit(1)

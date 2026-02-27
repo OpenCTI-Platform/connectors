@@ -140,9 +140,9 @@ services:
       - CONNECTOR_VALIDATE_BEFORE_IMPORT=true # Validate any bundle before import
       - CONNECTOR_SCOPE=application/pdf,text/plain,text/html,text/markdown
       - CONNECTOR_AUTO=false # Enable/disable auto-import of file
-      - CONNECTOR_WEB_SERVICE_URL=http://webservice:80
       - CONNECTOR_LOG_LEVEL=debug
-      - CONNECTOR_LICENCE_KEY_PEM=${CONNECTOR_LICENCE_KEY_PEM}
+      - IMPORT_DOCUMENT_AI_API_BASE_URL=http://webservice:80
+      - IMPORT_DOCUMENT_AI_API_KEY=${IMPORT_DOCUMENT_AI_API_KEY}
       - IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS=true
     depends_on:
       - opencti
@@ -151,7 +151,7 @@ services:
       - dev-opencti
     restart: always
 
-  # is it really needed ?
+  # This is needed for workbench feature eventually
   connector-import-file-stix:
     image: opencti/connector-import-file-stix:7.260227.0
     environment:
@@ -166,7 +166,6 @@ services:
     restart: always
     networks:
       - dev-opencti
-
 
 networks:
   dev-opencti:

@@ -18,6 +18,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 logger = logging.getLogger(__name__)
 
+RESPONSES_DIR = Path(__file__).parent / "responses"
+
 
 def generate_fake_certificate(
     common_name: str,
@@ -120,9 +122,7 @@ class V1AuthMiddleware(BaseHTTPMiddleware):
         certificate_pem = request.headers.get("X-OpenCTI-Certificate")
 
         if not certificate_pem:
-            with open(
-                Path(__file__).parent / "responses" / "response_400_missing.json"
-            ) as f:
+            with open(RESPONSES_DIR / "response_400_missing.json") as f:
                 content = json.load(f)
             return JSONResponse(status_code=400, content=content)
 
@@ -139,18 +139,12 @@ class V1AuthMiddleware(BaseHTTPMiddleware):
                 common_name = _get_common_name(cert)
                 if "trial" in common_name:
                     # generate_fake_certificate("trial")
-                    with open(
-                        Path(__file__).parent / "responses" / "response_403_trial.json"
-                    ) as f:
+                    with open(RESPONSES_DIR / "response_403_trial.json") as f:
                         content = json.load(f)
                     return JSONResponse(status_code=403, content=content)
                 if "unauthorized" in common_name:
                     # generate_fake_certificate("unauthorized")
-                    with open(
-                        Path(__file__).parent
-                        / "responses"
-                        / "response_403_unauthorized.json"
-                    ) as f:
+                    with open(RESPONSES_DIR / "response_403_unauthorized.json") as f:
                         content = json.load(f)
                     return JSONResponse(status_code=403, content=content)
         except Exception as e:
@@ -158,9 +152,7 @@ class V1AuthMiddleware(BaseHTTPMiddleware):
             invalid_flag = True
 
         if invalid_flag:
-            with open(
-                Path(__file__).parent / "responses" / "response_400_invalid.json"
-            ) as f:
+            with open(RESPONSES_DIR / "response_400_invalid.json") as f:
                 content = json.load(f)
             return JSONResponse(status_code=400, content=content)
 
@@ -171,11 +163,9 @@ app = FastAPI()
 app.add_middleware(V1AuthMiddleware)
 
 
-@app.post("/extract_entities", status_code=200, deprecated=True)
-async def extract_entities(file: UploadFile):
-    """Fake endpoint to extract entities.
-
-    Note : this is a legacy route that is goig to be deprecated in the future.
+@app.post("/stix", status_code=200)
+async def extract_stix(file: UploadFile):
+    """Fake endpoint to extract stix objects.
 
     Args:
         file (UploadFile): The file to process.
@@ -183,29 +173,7 @@ async def extract_entities(file: UploadFile):
     Returns:
         JSONResponse: A response indicating the status of the operation.
     """
-    with open(
-        Path(__file__).parent / "responses" / "response_extract_entities_200.json"
-    ) as f:
-        content = json.load(f)
-    logger.warning(f"Received file: {file.filename}")
-    return JSONResponse(status_code=200, content=content)
-
-
-@app.post("/extract_entities_relations", status_code=200)
-async def extract_entities_relations(file: UploadFile):
-    """Fake endpoint to extract entities relations.
-
-    Args:
-        file (UploadFile): The file to process.
-
-    Returns:
-        JSONResponse: A response indicating the status of the operation.
-    """
-    with open(
-        Path(__file__).parent
-        / "responses"
-        / "response_extract_entities_relations_200.json"
-    ) as f:
+    with open(RESPONSES_DIR / "response_stix_200.json") as f:
         content = json.load(f)
     logger.warning(f"Received file: {file.filename}")
     return JSONResponse(status_code=200, content=content)

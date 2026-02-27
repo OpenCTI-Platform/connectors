@@ -10,11 +10,13 @@ connector:
   scope: 'application/pdf,text/plain,text/html,text/markdown'
   auto: false # Enable/disable auto-import of file
   log_level: 'info'
-  licence_key_pem: |
+
+import_document_ai:
+  include_relationships: true
+  create_indicator: false
+  api_base_url: 'ChangeMe'
+  api_key: |
     -----BEGIN CERTIFICATE-----
     ...
     -----END CERTIFICATE-----
-
-import_document:
-  include_relationships: 'true'
   
