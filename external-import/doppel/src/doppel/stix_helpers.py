@@ -84,9 +84,6 @@ def build_description(alert) -> str:
     nameservers = root_domain.get("nameservers", [])
 
     description_parts = []
-    if alert.get("product") == "telco":
-        description_parts.append(f"**Alert ID**: {alert.get('id')}\n")
-        description_parts.append(f"**Doppel Alert URI**: {alert.get('doppel_link')}\n")
     if alert.get("brand"):
         description_parts.append(f"**Brand**: {alert.get('brand')}\n")
     if alert.get("product"):
@@ -121,25 +118,6 @@ def build_description(alert) -> str:
             [ns if isinstance(ns, str) else ns.get("host") for ns in nameservers]
         )
         description_parts.append(f"**Nameservers**: {ns_text}\n")
-    if alert.get("product") == "telco":
-
-        table = "| Label | Value |\n"
-        table += "| :--- | :--- |\n"
-
-        for label in build_labels(alert):
-            if ":" in label:
-                # Split only on the first colon in case values contain colons
-                key, value = label.split(":", 1)
-                # Clean up underscores for better readability
-                key = key.replace("_", " ").title()
-                value = value.replace("_", " ")
-            else:
-                key = "Tag"
-                value = label
-
-            table += f"| {key} | {value} |\n"
-
-        description_parts.append(f"**Labels**:\n {table}")
 
     return "\n".join(description_parts) if description_parts else ""
 
@@ -161,6 +139,10 @@ def build_custom_properties(alert, author_id) -> dict:
     custom_properties["x_opencti_workflow_id"] = alert.get(
         "id"
     )  # Store alert_id for lookup
+
+    if alert.get("product") == "telco":
+        custom_properties["x_opencti_labels"] = build_labels(alert)
+        custom_properties["x_opencti_external_references"] = build_external_references(alert)
 
     x_opencti_description = build_description(alert)
     if x_opencti_description:
