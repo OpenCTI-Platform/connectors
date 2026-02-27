@@ -1,28 +1,54 @@
 opencti:
-  url: 'http://localhost:8080'
-  token: 'ChangeMe'
+  url: "http://localhost:8080" # The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`
+  token: "ChangeMe" # The default admin token configured in the OpenCTI platform parameters file.
 
 connector:
-  id: 'ChangeMe'
-  type: 'INTERNAL_ENRICHMENT'
-  name: 'anyrun_task'
-  scope: 'Artifact,Url'
+  id: "ChangeMe" # A valid arbitrary `UUIDv4` that must be unique for this connector.
+  type: "INTERNAL_ENRICHMENT" # A connector type.
+  name: "ANY.RUN Sandbox" # A connector name to be shown in OpenCTI.
+  scope: "Artifact,Url" # Supported scope. E. g., `text/html`.
   auto: false # Enable/disable auto-enrichment of observables
   confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
-  log_level: 'info'
+  log_level: "info" # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
 
 anyrun:
-  token: 'ChangeMe'
-  max_tlp: 'TLP:AMBER'
-  url: 'https://api.any.run'
-  timer: 60
-  os: 'windows'
-  bitness: '64'
-  version: '10'
-  locale: 'en-US'
-  browser: 'Google Chrome'
-  privacy: 'bylink'
-  automated_interactivity: False
-  ioc: True
-  mitre: False
-  processes: False
+  token: "ChangeMe" # ANY.RUN Sandbox API-KEY. See "Generate API token" section in the README file.
+  enable_ioc: true # Add found indicators to the OpenCTI Indicators and Observables tab.
+
+anyrun_opt:
+  opt_timeout: 240 # Timeout option. Size range: 10-660 seconds.
+  opt_network_connect: true # Enable network connection.
+  opt_network_fakenet: false # Enable FakeNet feature.
+  opt_network_tor: false # Enable TOR using.
+  opt_network_geo: "fastest" # TOR geolocation option. Example: US, AU
+  opt_network_mitm: false # Enable HTTPS MITM Proxy using.
+  opt_network_residential_proxy: false # Residential proxy using.
+  opt_network_residential_proxy_geo: "fastest" # Residential proxy geolocation option. Example: US, AU.
+  opt_privacy_type: "bylink" # Privacy settings. Supports: public, bylink, owner, byteam.
+
+anyrun_obj:
+  obj_ext_extension: true # Automatically change file extension to valid.
+
+anyrun_env:
+  env_locale: "en-US" # Operation system"s language. Use locale identifier or country name (Ex: "en-US" or "Brazil"). Case-insensitive.
+
+anyrun_windows_env:
+  os_type: "windows" # Type of OS. Must be windows
+  env_version: "10" # Version of OS. Supports: 7, 10, 11.
+  env_bitness: "64" # Bitness of Operation System. Supports 32, 64.
+  env_type: "complete" # Environment preset type. You can select **development** env for OS Windows 10 x64. For all other cases, **complete** env is required.
+  obj_ext_startfolder: "temp" # Supports: desktop, home, downloads, appdata, temp, windows, root.
+  obj_ext_cmd: "" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
+  obj_force_elevation: false # Forces the file to execute with elevated privileges and an elevated token (for PE32, PE32+, PE64 files only).
+  obj_ext_browser: "Microsoft Edge" # Browser name. Supports: Google Chrome, Mozilla Firefox, Internet Explorer, Microsoft Edge. Only for the Url analysis.
+
+anyrun_linux_env:
+  os_type: "linux" # Type of OS. Must be linux
+  obj_ext_startfolder: "temp" # Start object from. Supports: desktop, home, downloads, appdata, temp, windows, root.
+  obj_ext_cmd: "" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
+  run_as_root: true # Run file with superuser privileges.
+  obj_ext_browser: "Google Chrome" # Browser name. Supports: Google Chrome, Mozilla Firefox. Only for the Url analysis.
+
+anyrun_android_env:
+  os_type: "android" # Type of OS. Must be android
+  obj_ext_cmd: "" # Optional command line.

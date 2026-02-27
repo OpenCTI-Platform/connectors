@@ -1,26 +1,64 @@
 version: '3'
 services:
   connector-anyrun-task:
-    image: opencti/connector-anyrun-task:6.7.4
+    image: anyrun/opencti-connector-anyrun-task:latest
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=ANY.RUN task
-      - CONNECTOR_SCOPE=Artifact,Url
-      - CONNECTOR_AUTO=false
+      # OpenCTI settings.
+      - OPENCTI_URL=http://localhost # The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`
+      - OPENCTI_TOKEN=ChangeMe # The default admin token configured in the OpenCTI platform parameters file.
+
+      # Connector settings.
+      - CONNECTOR_ID=ChangeMe # A valid arbitrary `UUIDv4` that must be unique for this connector.
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT # A connector type.
+      - CONNECTOR_NAME=ANY.RUN Sandbox # A connector name to be shown in OpenCTI.
+      - CONNECTOR_SCOPE=Artifact,Url # Supported scope. E. g., `text/html`.
+      - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables.
       - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
-      - CONNECTOR_LOG_LEVEL=info
-      - ANYRUN_TOKEN=ChangeMe
-      - ANYRUN_TASK_TIMER=120
-      - ANYRUN_OS=windows
-      - ANYRUN_OS_BITNESS=64 # 32, 64
-      - ANYRUN_OS_VERSION=10 # "7", "8.1", "10", "11"
-      - ANYRUN_OS_LOCALE=en-US
-      - ANYRUN_OS_BROWSER=Google Chrome # "Google Chrome", "Mozilla Firefox", "Opera", "Internet Explorer", "Microsoft Edge"
-      - ANYRUN_PRIVACY=bylink # "public", "bylink", "owner", "team"
-      - ANYRUN_AUTOMATED_INTERACTIVITY=False # Automated Interactivity (ML) option
-      - ANYRUN_IOC=True # Add IOCs
-      - ANYRUN_MITRE=False # Add mitre attack patterns relationships
-      - ANYRUN_PROCESSES=False # Add malicious processes
+      - CONNECTOR_LOG_LEVEL=info # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
+
+      # ANY.RUN base settings.
+      - ANYRUN_API_KEY=ChangeMe # ANY.RUN Sandbox API-KEY. See "Generate API token" section in the README file.
+      - ANYRUN_ENABLE_IOC=true # Add found indicators to the OpenCTI Indicators and Observables tab.
+
+      # ANY.RUN analysis options.
+      - ANYRUN_OPT_TIMEOUT=240 # Select task completion time. Size range: 10-660 seconds.
+      - ANYRUN_OPT_NETWORK_CONNECT=true # Enable network connection.
+      - ANYRUN_OPT_NETWORK_FAKENET=false # Enable FakeNet feature.
+      - ANYRUN_TOR=false # Enable TOR using.
+      - ANYRUN_GEO=fastest # TOR geolocation option. Example: US, AU
+      - ANYRUN_MITM=false # Enable HTTPS MITM Proxy using.
+      - ANYRUN_RESIDENTIAL_PROXY=false # Residential proxy using.
+      - ANYRUN_RESIDENTIAL_PROXY_GEO=fastest # Residential proxy geolocation option. Example: US, AU.
+      - ANYRUN_PRIVACY_TYPE=bylink # Privacy settings. Supports: public, bylink, owner, byteam.
+
+      # ANY.RUN analysis object settings.
+      - ANYRUN_OBJ_EXT_EXTENSION=true # Automatically change file extension to valid.
+
+      # ANY.RUN analysis environment settings.
+      - ANYRUN_ENV_LOCALE=en-US # Operation system's language. Use locale identifier or country name (Ex: "en-US" or "Brazil"). Case-insensitive.
+
+      # Please use one of the following environments in the same time:
+
+      # Windows analysis environment.
+      - ANYRUN_OS_TYPE=windows # Type of OS. Must be windows
+      - ANYRUN_ENV_VERSION=10 # Version of OS. Supports: 7, 10, 11.
+      - ANYRUN_ENV_BITNESS=64 # Bitness of Operation System. Supports 32, 64.
+      - ANYRUN_ENV_TYPE=complete # Environment preset type. You can select **development** env for OS Windows 10 x64. For all other cases, **complete** env is required.
+      - ANYRUN_OBJ_EXT_STARTFOLDER=temp # Supports: desktop, home, downloads, appdata, temp, windows, root.
+      - ANYRUN_OBJ_EXT_CMD="" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
+      - ANYRUN_OBJ_FORCE_ELEVATION=false # Forces the file to execute with elevated privileges and an elevated token (for PE32, PE32+, PE64 files only).
+      # Only for the Url analysis.
+      # - ANYRUN_OBJ_EXT_BROWSER=Microsoft Edge # Browser name. Supports: Google Chrome, Mozilla Firefox, Internet Explorer, Microsoft Edge.
+
+      # Linux analysis environment.
+      # - ANYRUN_OS_TYPE=linux # Type of OS. Must be linux
+      # - ANYRUN_OBJ_EXT_STARTFOLDER=temp # Start object from. Supports: desktop, home, downloads, appdata, temp, windows, root.
+      # - ANYRUN_OBJ_EXT_CMD="" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
+      # - ANYRUN_RUN_AS_ROOT=true # Run file with superuser privileges.
+      # Only for the Url analysis.
+      # - ANYRUN_OBJ_EXT_BROWSER=Google Chrome # Browser name. Supports: Google Chrome, Mozilla Firefox.
+
+      # Android analysis environment.
+      # - ANYRUN_OS_TYPE=android # Type of OS. Must be android
+      # - ANYRUN_OBJ_EXT_CMD="" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
     restart: always

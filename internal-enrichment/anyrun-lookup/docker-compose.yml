@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-anyrun-ti-lookup:
+    image: anyrun/opencti-connector-anyrun-ti-lookup:latest
+    environment:
+      # OpenCTI settings.
+      - OPENCTI_URL=http://localhost # The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`
+      - OPENCTI_TOKEN=ChangeMe # The default admin token configured in the OpenCTI platform parameters file.
+
+      # Connector settings.
+      - CONNECTOR_ID=ChangeMe # A valid arbitrary `UUIDv4` that must be unique for this connector.
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT # A connector type.
+      - CONNECTOR_NAME=ANY.RUN TI Lookup # A connector name to be shown in OpenCTI.
+      - CONNECTOR_SCOPE=StixFile,Artifact,Domain-Name,Hostname,IPv4-Addr,Url # Supported scope. E. g., `text/html`.
+      - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables.
+      - CONNECTOR_CONFIDENCE_LEVEL=75 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
+
+      # ANY.RUN base settings.
+      - ANYRUN_API_KEY=ChangeMe # ANY.RUN Lookup API-KEY. See "Generate API token" section in the README file.
+      - ANYRUN_LOOKUP_DEPTH=90 # Specify the number of days from the current date for which you want to lookup.
+    restart: always
