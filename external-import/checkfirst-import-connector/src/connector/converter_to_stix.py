@@ -105,10 +105,11 @@ class ConverterToStix:
                 stix2.ExternalReference(source_name="source", url=source_url)
             )
 
+        is_telegram = source_url is not None and source_url.startswith("https://t.me/")
         channel = CustomObjectChannel(
             id=Channel.generate_id(name=name),
             name=name,
-            channel_types=["website"],
+            channel_types=["Telegram"] if is_telegram else ["website"],
             created_by_ref=self.author_id,
             object_marking_refs=[self.tlp_marking_id],
             external_references=external_refs,
