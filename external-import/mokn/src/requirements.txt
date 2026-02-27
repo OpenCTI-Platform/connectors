@@ -1,4 +1,4 @@
-pycti==6.9.9
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.9#subdirectory=connectors-sdk
+pycti==7.260227.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260227.0#subdirectory=connectors-sdk
 requests~=2.32.3
 tenacity~=8.2.3
