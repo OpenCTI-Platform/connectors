@@ -1,6 +1,6 @@
 tldextract==5.3.0
-pycti==7.260224.0
+pycti==7.260227.0
 pydantic>=2.10, <3
 pydantic-settings==2.10.1
 git+http://github.com/MISP/PyMISPWarningLists.git@main#egg=pymispwarninglists
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260224.0#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260227.0#subdirectory=connectors-sdk

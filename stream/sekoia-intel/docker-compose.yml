@@ -1,7 +1,7 @@
 version: '3'
 services:
   sekoia-intel:
-    image: opencti/connector-sekoia-intel:7.260224.0
+    image: opencti/connector-sekoia-intel:7.260227.0
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost

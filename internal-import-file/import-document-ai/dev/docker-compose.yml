@@ -65,7 +65,7 @@ services:
       - dev-opencti
 
   opencti:
-    image: opencti/platform:7.260224.0
+    image: opencti/platform:7.260227.0
     environment:
       - NODE_OPTIONS=--max-old-space-size=8096
       - APP__PORT=8080
@@ -103,7 +103,7 @@ services:
     restart: always
 
   worker:
-    image: opencti/worker:7.260224.0
+    image: opencti/worker:7.260227.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -153,7 +153,7 @@ services:
 
   # is it really needed ?
   connector-import-file-stix:
-    image: opencti/connector-import-file-stix:7.260224.0
+    image: opencti/connector-import-file-stix:7.260227.0
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
