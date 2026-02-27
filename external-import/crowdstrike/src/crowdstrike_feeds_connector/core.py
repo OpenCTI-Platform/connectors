@@ -271,6 +271,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
+                scopes=scopes_list,
             )
 
             importers.append(snort_master_importer)

@@ -51,6 +51,7 @@ class SnortMasterImporter(BaseImporter):
         report_status: int,
         report_type: str,
         no_file_trigger_import: bool,
+        scopes: list[str],
     ) -> None:
         """Initialize CrowdStrike Snort master importer."""
         super().__init__(helper, author, tlp_marking)
@@ -59,6 +60,7 @@ class SnortMasterImporter(BaseImporter):
         self.report_status = report_status
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
+        self.include_reports = "report" in scopes
 
         self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
 
@@ -266,7 +268,9 @@ class SnortMasterImporter(BaseImporter):
         failed_count = 0
 
         for snort_rule in snort_rules:
-            fetched_reports = self._get_reports_by_code(snort_rule.reports)
+            fetched_reports: List[FetchedReport] = []
+            if self.include_reports:
+                fetched_reports = self._get_reports_by_code(snort_rule.reports)
 
             snort_rule_bundle = self._create_snort_rule_bundle(
                 snort_rule, fetched_reports
