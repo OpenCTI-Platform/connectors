@@ -113,7 +113,6 @@ class MoknConnector:
             )
 
             stix_objects = self._collect_intelligence()
-
             if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
@@ -143,13 +142,15 @@ class MoknConnector:
             new_state = {
                 "last_run": end_time.strftime("%Y-%m-%d %H:%M:%S"),
                 "last_timestamp": int(end_time.timestamp()),
-                "items_processed": len(stix_objects),
             }
             self.helper.set_state(new_state)
 
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name} connector run completed",
-                {"state": new_state},
+                {
+                    "state": new_state,
+                    "items_processed": len(stix_objects),
+                },
             )
 
         except (KeyboardInterrupt, SystemExit):
