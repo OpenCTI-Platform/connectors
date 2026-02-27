@@ -153,13 +153,13 @@ Therefore, what can be seen as multiple positive sightings for a single indicato
 
 ## Screenshots
 
-### Indicators in OpenCTI
+### Indicators
 ![image](./media/Indicator_1.png)
 ![image](./media/Indicator_2.png)
 ![image](./media/Indicator_3.png)
 
-### Malwares in OpenCTI
+### Malwares
 ![image](./media/Malware.png)
 
-### Intrusion Sets in OpenCTI
+### Intrusion Sets
 ![image](./media/Intrusion_set.png)
