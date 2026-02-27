@@ -20,3 +20,4 @@ s3:
   interval: 30 # Polling interval in seconds
   attach_original_file: false # Attach original JSON to vulnerabilities
   delete_after_import: true # Delete files from S3 after processing
+  no_split_bundles: true # No split
