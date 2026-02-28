@@ -103,21 +103,13 @@ class LoggingPrefixes:
     DEBUG = "[DEBUG]"
 
 
-# Configuration Keys
-class ConfigKeys:
-    """Configuration key constants."""
-
-    DURATION_PERIOD = "CONNECTOR_DURATION_PERIOD"
-    API_BASE_URL = "CONNECTOR_HUNT_UI_API_BASE_URL"
-    API_KEY = "CONNECTOR_HUNT_UI_API_KEY"
-
-
 # State Keys
 class StateKeys:
     """State dictionary keys."""
 
     LAST_TIMESTAMP = "last_timestamp"
     LAST_RUN = "last_run"
+    LAST_RUN_WITH_INGESTED_DATA = "last_run_with_ingested_data"
     ENTITIES_PROCESSED = "entities_processed"
     PROCESSING = "processing"
     QUEUE_WARNING_MODE = "queue_warning_mode"
@@ -164,10 +156,8 @@ class AuthorInfo:
 class CustomProperties:
     """Custom STIX properties."""
 
-    CONNECTOR = "x_opencti_connector"
-    CREATED_BY = "x_opencti_created_by"
+    CREATED_BY = "x_opencti_created_by_ref"
     CONNECTOR_VALUE = "hunt-io"
-    NETWORK_TRAFFIC_CREATED_BY = "enhanced_network_traffic_model"
 
 
 # UUID Namespace for Hunt.IO

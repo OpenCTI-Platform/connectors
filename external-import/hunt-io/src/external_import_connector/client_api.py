@@ -2,21 +2,27 @@ import gzip
 import json
 import time
 from io import BytesIO
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import requests
+from external_import_connector.constants import (
+    APIConstants,
+    LoggingPrefixes,
+    ProcessingLimits,
+)
+from external_import_connector.exceptions import (
+    APIError,
+    NonRetryableError,
+    RetryableError,
+)
+from external_import_connector.models import C2
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestException
 from urllib3.util.retry import Retry
 
-from .constants import (
-    APIConstants,
-    LoggingPrefixes,
-    ProcessingLimits,
-)
-from .exceptions import APIError, NonRetryableError, RetryableError
-from .models import C2
+if TYPE_CHECKING:
+    from external_import_connector import ConfigLoader
 
 
 class HTTPSessionManager:
@@ -179,7 +185,7 @@ class ConnectorClient:
     error handling, and response processing with improved separation of concerns.
     """
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: "ConfigLoader"):
         """Initialize the ConnectorClient with necessary configurations."""
         self.helper = helper
         self.config = config
@@ -188,7 +194,9 @@ class ConnectorClient:
         self.data_processor = DataProcessor(helper)
 
         # Create HTTP session with resilience features
-        self.session = self.session_manager.create_session(self.config.api_key)
+        self.session = self.session_manager.create_session(
+            self.config.hunt_io.api_key.get_secret_value()
+        )
 
     @property
     def latest_timestamp(self) -> Optional[str]:
@@ -313,7 +321,9 @@ class ConnectorClient:
             self.session.close()
 
             # Create new session with same configuration
-            self.session = self.session_manager.create_session(self.config.api_key)
+            self.session = self.session_manager.create_session(
+                self.config.hunt_io.api_key.get_secret_value()
+            )
 
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.HTTP_RESILIENCE} HTTP session refreshed successfully"
@@ -353,7 +363,7 @@ class ConnectorClient:
 
             # Make API request
             response = self._request_data(
-                self.config.api_base_url, params=request_params
+                str(self.config.hunt_io.api_base_url), params=request_params
             )
 
             # Process response data

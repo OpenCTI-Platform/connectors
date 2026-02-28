@@ -7,16 +7,13 @@ from typing import Any, Dict, Optional, TypedDict, Union
 
 import pycti
 import stix2
-from pycti import Identity as PyCTIIdentity
-from pycti import Infrastructure as PyCTIInfrastructure
-from pycti import Malware as PyCTIMalware
-
-from .constants import (
+from external_import_connector.constants import (
     CustomProperties,
     NetworkProtocols,
     UUIDNamespace,
 )
-from .exceptions import STIXConversionError
+from external_import_connector.exceptions import STIXConversionError
+from pycti import Infrastructure as PyCTIInfrastructure
 
 
 class BaseModel(ABC):
@@ -215,151 +212,6 @@ class C2ScanResult:
         }
 
 
-class IPv4Address(BaseModel):
-    """IPv4 observable with validation."""
-
-    def __init__(self, value: str):
-        super().__init__()
-        self.value = self._validate_ipv4(value)
-        self.__post_init__()
-
-    def _validate_ipv4(self, value: str) -> str:
-        """Validate IPv4 address format."""
-        if not value or not isinstance(value, str):
-            raise ValueError("IPv4 address must be a non-empty string")
-
-        # Basic IPv4 validation - could be enhanced with regex
-        parts = value.strip().split(".")
-        if len(parts) != 4:
-            raise ValueError(f"Invalid IPv4 address format: {value}")
-
-        try:
-            for part in parts:
-                num = int(part)
-                if not 0 <= num <= 255:
-                    raise ValueError(f"Invalid IPv4 octet: {part}")
-        except ValueError as e:
-            if "invalid literal" in str(e):
-                raise ValueError(f"Invalid IPv4 address format: {value}") from e
-            raise
-
-        return value.strip()
-
-    def to_stix2_object(self) -> stix2.v21.observables.IPv4Address:
-        """Create STIX2 IPv4Address object."""
-        return stix2.IPv4Address(value=self.value)
-
-
-class DomainName(BaseModel):
-    """DomainName observable with validation."""
-
-    def __init__(self, value: str):
-        super().__init__()
-        self.value = self._validate_domain(value)
-        self.__post_init__()
-
-    def _validate_domain(self, value: str) -> str:
-        """Validate domain name format."""
-        if not value or not isinstance(value, str):
-            raise ValueError("Domain name must be a non-empty string")
-
-        domain = value.strip().lower()
-        if not domain:
-            raise ValueError("Domain name cannot be empty")
-
-        # Basic domain validation
-        if len(domain) > 253:
-            raise ValueError("Domain name too long")
-
-        if domain.startswith(".") or domain.endswith("."):
-            raise ValueError("Domain name cannot start or end with a dot")
-
-        return domain
-
-    def to_stix2_object(self) -> stix2.v21.observables.DomainName:
-        """Create STIX2 DomainName object."""
-        return stix2.DomainName(value=self.value)
-
-
-class Malware(BaseModel):
-    """Malware object with validation."""
-
-    def __init__(self, malware_name: str, malware_subsystem: str):
-        super().__init__()
-        self.name = self._validate_name(malware_name)
-        self.malware_subsystem = self._validate_subsystem(malware_subsystem)
-        self.is_family = False
-        self.__post_init__()
-
-    def _validate_name(self, name: str) -> str:
-        """Validate malware name."""
-        if not name or not isinstance(name, str):
-            raise ValueError("Malware name must be a non-empty string")
-        return name.strip()
-
-    def _validate_subsystem(self, subsystem: str) -> str:
-        """Validate malware subsystem."""
-        if not subsystem or not isinstance(subsystem, str):
-            return "unknown"  # Default subsystem
-        return subsystem.strip()
-
-    def to_stix2_object(self) -> stix2.v21.Malware:
-        """Create STIX2 Malware object."""
-        return stix2.Malware(
-            id=PyCTIMalware.generate_id(self.name),
-            name=self.name,
-            is_family=self.is_family,
-            malware_types=(
-                [self.malware_subsystem] if self.malware_subsystem else ["unknown"]
-            ),
-        )
-
-
-class URL(BaseModel):
-    """URL indicator."""
-
-    def __init__(
-        self, scan_uri: str, valid_from: datetime, author_id: str, description: str = ""
-    ):
-        super().__init__()
-        self.scan_uri = scan_uri
-        self.description = description
-        self.valid_from = valid_from
-        self.author_id = author_id
-        self.__post_init__()
-
-    def to_stix2_object(self) -> stix2.Indicator:
-        return stix2.Indicator(
-            id=pycti.Indicator.generate_id(f"[url:value = '{self.scan_uri}']"),
-            name=self.scan_uri,
-            description=self.description,
-            pattern_type="stix",
-            valid_from=self.valid_from,
-            pattern=f"[url:value = '{self.scan_uri}']",
-            created_by_ref=self.author_id,
-        )
-
-
-class Author(BaseModel):
-    """Author organization."""
-
-    def __init__(self, name: str, description: str):
-        super().__init__()
-        identity_class = "organization"
-        self.name = name
-        self.description = description
-        self.identity_class = identity_class
-        self.__post_init__()
-
-    def to_stix2_object(self) -> stix2.Identity:
-        return stix2.Identity(
-            id=PyCTIIdentity.generate_id(self.name, self.identity_class),
-            name=self.name,
-            identity_class=self.identity_class,
-            description=self.description,
-        )
-
-
 class Infrastructure(BaseModel):
     """Infrastructure object."""
 
@@ -368,6 +220,7 @@ class Infrastructure(BaseModel):
         name: str,
         infrastructure_types: str,
         author: str,
+        tpl_marking: str,
         created: Optional[datetime] = None,
     ):
         super().__init__()
@@ -375,6 +228,7 @@ class Infrastructure(BaseModel):
         self.infrastructure_types = infrastructure_types
         self.created = created
         self.author = author
+        self.tpl_marking = tpl_marking
         self.__post_init__()
 
     def to_stix2_object(self) -> stix2.Infrastructure:
@@ -384,6 +238,7 @@ class Infrastructure(BaseModel):
             name=self.name,
             created_by_ref=self.author,
             infrastructure_types=[self.infrastructure_types],
+            object_marking_refs=[self.tpl_marking],
         )
 
 
@@ -414,9 +269,13 @@ class NetworkTraffic(BaseModel):
         >>> traffic = create_network_traffic(port, src_ref)
     """
 
-    def __init__(self, port: Optional[int], src_ref: Optional[str]):
+    def __init__(
+        self, port: Optional[int], src_ref: Optional[str], author: str, tpl_marking: str
+    ):
         super().__init__()
         self.port = self._validate_port(port)
+        self.author = author
+        self.tpl_marking = tpl_marking
         self.src_ref = src_ref
         self.__post_init__()
 
@@ -462,9 +321,9 @@ class NetworkTraffic(BaseModel):
             dst_port=self.port,
             protocols=[NetworkProtocols.TCP],
             custom_properties={
-                CustomProperties.CONNECTOR: CustomProperties.CONNECTOR_VALUE,
-                CustomProperties.CREATED_BY: CustomProperties.NETWORK_TRAFFIC_CREATED_BY,
+                CustomProperties.CREATED_BY: self.author,
             },
+            object_marking_refs=[self.tpl_marking],
         )
 
 
@@ -479,6 +338,7 @@ class Relationship(BaseModel):
         target_id: Optional[str],
         author: str,
         confidence: int,
+        tpl_marking: str,
     ):
         super().__init__()
         self.relationship_type = relationship_type
@@ -486,6 +346,7 @@ class Relationship(BaseModel):
         self.source_id = source_id
         self.target_id = target_id
         self.author = author
+        self.tpl_marking = tpl_marking
         self.confidence = confidence
         self.__post_init__()
 
@@ -500,4 +361,5 @@ class Relationship(BaseModel):
             target_ref=self.target_id,
             created_by_ref=self.author,
             confidence=self.confidence,
+            object_marking_refs=[self.tpl_marking],
         )

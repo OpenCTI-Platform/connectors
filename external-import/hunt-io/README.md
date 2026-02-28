@@ -58,10 +58,13 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description                    |
-|--------------|--------------|------------------------------|---------|-----------|--------------------------------|
-| API Base URL | api_base_url | `HUNT_IO_API_BASE_URL`       |         | Yes       | Hunt.io API base URL.          |
-| API Key      | api_key      | `HUNT_IO_API_KEY`            |         | Yes       | Hunt.io API key.               |
+Below are the parameters you'll need to set for the connector:
+
+| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description                                                                                                               |
+|--------------|--------------|-----------------------------|---------|-----------|---------------------------------------------------------------------------------------------------------------------------|
+| API base URL | api_base_url | `HUNT_IO_API_BASE_URL`      |         | Yes       |                                                                                                                           |
+| API key      | api_key      | `HUNT_IO_API_KEY`           |         | Yes       |                                                                                                                           |
+| TLP level    | tlp_level    | `HUNT_IO_TLP_LEVEL`         | amber   | No        | The Traffic Light Protocol level for data being ingested. Valid values: `white`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 

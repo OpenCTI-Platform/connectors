@@ -2,15 +2,18 @@ import sys
 from datetime import datetime, timezone
 from typing import List, Optional
 
+from external_import_connector.batch_manager import BatchManager
+from external_import_connector.client_api import ConnectorClient
+from external_import_connector.constants import (
+    DateTimeFormats,
+    LoggingPrefixes,
+    StateKeys,
+)
+from external_import_connector.converter_to_stix import ConverterToStix
+from external_import_connector.entity_processor import EntityProcessor
+from external_import_connector.models import C2
+from external_import_connector.settings import ConfigLoader
 from pycti import OpenCTIConnectorHelper
-
-from .batch_manager import BatchManager
-from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
-from .constants import DateTimeFormats, LoggingPrefixes, StateKeys
-from .converter_to_stix import ConverterToStix
-from .entity_processor import EntityProcessor
-from .models import C2
 
 
 class StateManager:
@@ -72,11 +75,8 @@ class IntelligenceCollector:
         self.batch_manager = batch_manager
         self.state_manager = state_manager
 
-    def collect_and_ingest(self) -> None:
-        """
-        Collect intelligence from the source, convert into STIX objects and send
-          incrementally to OpenCTI.
-        """
+    def collect(self) -> list[C2]:
+        """Collect intelligence from the source"""
         # Get current state for incremental processing
         last_timestamp = self.state_manager.get_last_timestamp()
 
@@ -90,15 +90,14 @@ class IntelligenceCollector:
             )
 
         # Fetch entities incrementally to prevent reprocessing large datasets
-        entities: List[C2] = (
+        entities: list[C2] = (
             self.client.get_entities(since_timestamp=last_timestamp) or []
         )
 
-        if not entities:
-            self.helper.connector_logger.info(
-                f"{LoggingPrefixes.CONNECTOR} No new entities to process since last run"
-            )
-            return
+        return entities
+
+    def ingest(self, entities) -> None:
+        """Convert intelligence into STIX objects and send incrementally to OpenCTI."""
 
         # Check system health before processing
         if not self.batch_manager.check_processing_feasibility():
@@ -173,15 +172,17 @@ class ConnectorHuntIo:
     clear separation of concerns.
     """
 
-    def __init__(self):
+    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         """Initialize the Connector with necessary configurations."""
         # Load configuration and setup helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        self.config = config
+        self.helper = helper
 
         # Initialize components following dependency injection pattern
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter_to_stix = ConverterToStix(self.helper)
+        self.converter_to_stix = ConverterToStix(
+            self.helper, self.config.hunt_io.tlp_level
+        )
         self.entity_processor = EntityProcessor(self.helper, self.converter_to_stix)
         self.batch_manager = BatchManager(self.helper)
         self.state_manager = StateManager(self.helper)
@@ -195,12 +196,13 @@ class ConnectorHuntIo:
             self.state_manager,
         )
 
-    def _collect_intelligence_and_ingest(self) -> None:
-        """
-        Collect intelligence from the source, convert into STIX objects and send
-        incrementally to OpenCTI.
-        """
-        self.intelligence_collector.collect_and_ingest()
+    def collect_intelligence(self) -> list[C2]:
+        """Collect intelligence from the source"""
+        return self.intelligence_collector.collect()
+
+    def ingest_intelligence(self, entities: list[C2]) -> None:
+        """Convert intelligence into STIX objects and send incrementally to OpenCTI."""
+        self.intelligence_collector.ingest(entities)
 
     def process_message(self) -> None:
         """
@@ -238,21 +240,28 @@ class ConnectorHuntIo:
                     f"{LoggingPrefixes.CONNECTOR} Connector has never run..."
                 )
 
-            # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector Hunt IO feed"
-
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-
             self.helper.connector_logger.info(
                 f"{LoggingPrefixes.CONNECTOR} Running connector...",
                 {"connector_name": self.helper.connect_name},
             )
 
             # Performing the collection of intelligence
-            self._collect_intelligence_and_ingest()
+            entities = self.collect_intelligence()
+
+            if entities:
+                # Friendly name will be displayed on OpenCTI platform
+                friendly_name = "Connector Hunt IO feed"
+
+                # Initiate a new work
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+
+                self.ingest_intelligence(entities)
+            else:
+                self.helper.connector_logger.info(
+                    f"{LoggingPrefixes.CONNECTOR} No new entities to process since last run"
+                )
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
@@ -261,22 +270,19 @@ class ConnectorHuntIo:
             )
             current_state = self.helper.get_state()
             current_state_datetime = now.strftime(DateTimeFormats.STANDARD_FORMAT)
-            last_run_datetime = datetime.fromtimestamp(
-                current_timestamp, tz=timezone.utc
-            ).strftime(DateTimeFormats.STANDARD_FORMAT)
             if current_state:
                 current_state[StateKeys.LAST_RUN] = current_state_datetime
             else:
-                current_state = {StateKeys.LAST_RUN: current_state_datetime}
+                current_state = {
+                    StateKeys.LAST_RUN: current_state_datetime,
+                }
+
+            if entities:
+                current_state[StateKeys.LAST_RUN_WITH_INGESTED_DATA] = (
+                    current_state_datetime
+                )
+
             self.helper.set_state(current_state)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
-            )
-
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
 
             # Mark processing as complete
             self.state_manager.update_processing_state(False)
@@ -291,6 +297,19 @@ class ConnectorHuntIo:
             self.helper.connector_logger.error(str(err))
             # Mark processing as complete even on error
             self.state_manager.update_processing_state(False)
+        finally:
+            if entities:
+                last_run_datetime = datetime.fromtimestamp(
+                    current_timestamp, tz=timezone.utc
+                ).strftime(DateTimeFormats.STANDARD_FORMAT)
+
+                message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(last_run_datetime)
+                )
+
+                self.helper.connector_logger.info(message)
+                self.helper.api.work.to_processed(work_id, message)
 
     def run(self) -> None:
         """
@@ -308,5 +327,5 @@ class ConnectorHuntIo:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
