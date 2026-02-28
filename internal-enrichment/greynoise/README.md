@@ -50,7 +50,7 @@ This internal enrichment connector queries the GreyNoise API for IPv4 addresses 
 ### Requirements
 
 - OpenCTI Platform >= 6.0.0
-- GreyNoise API key (Enterprise or Community Trial)
+- GreyNoise API key **Uses with Free Tier keys will be rate limited**
 - Network access to GreyNoise API
 
 ---
@@ -83,6 +83,7 @@ This internal enrichment connector queries the GreyNoise API for IPv4 addresses 
 | `greynoise_name` | `GREYNOISE_NAME` | No | The GreyNoise organization name |
 | `greynoise_description` | `GREYNOISE_DESCRIPTION` | No | The GreyNoise organization description |
 | `greynoise_sighting_not_seen` | `GREYNOISE_SIGHTING_NOT_SEEN` | No | Create sighting with count=0 when IP not seen |
+| `greynoise_no_sightings` | `GREYNOISE_NO_SIGHTINGS` | No | Skip any sighting creations |
 | `greynoise_indicator_score_malicious` | `GREYNOISE_INDICATOR_SCORE_MALICIOUS` | No | Score for malicious classification (default: 75) |
 | `greynoise_indicator_score_suspicious` | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS` | No | Score for suspicious classification (default: 50) |
 | `greynoise_indicator_score_benign` | `GREYNOISE_INDICATOR_SCORE_BENIGN` | No | Score for benign classification (default: 20) |
@@ -113,6 +114,7 @@ services:
       - GREYNOISE_KEY=ChangeMe
       - GREYNOISE_MAX_TLP=TLP:AMBER
       - GREYNOISE_SIGHTING_NOT_SEEN=false
+      - GREYNOISE_NO_SIGHTINGS=false
     restart: always
 ```
 
@@ -137,6 +139,7 @@ Trigger enrichment:
 - Automatically if `CONNECTOR_AUTO=true`
 - Via playbooks
 
+**NOTE: Uses with Free Tier GreyNoise accounts should not use the CONNECTOR_AUTO=true value as the daily rate limits do not work well with this setting.  Uses this enrichment manually to control which indicators are enriched with the connector**
 ---
 
 ## Behavior
@@ -176,7 +179,7 @@ flowchart LR
 | `actor` | Threat Actor | `related-to` |
 | `tags` (worm category) | Malware | `related-to` |
 | `vpn_service` | Tool | `related-to` |
-| `bot`, `tor`, `vpn` | Labels | Direct attribute |
+| `tor`, `vpn` | Labels | Direct attribute |
 
 ### Classification Scoring
 
@@ -213,7 +216,8 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see detailed conn
 - STIX bundle generation details
 
 Common issues:
-- **Invalid API Key**: Ensure you have an Enterprise or Community Trial API key
+- **Invalid API Key**: Ensure you have an valid API key
+- **Rate Limit Error**: Ensure the connector is set to manual enrichment and only enrich within the weekly limits allowed for Free Tier users
 - **TLP Restrictions**: Check that observable TLP does not exceed `GREYNOISE_MAX_TLP`
 
 ---
