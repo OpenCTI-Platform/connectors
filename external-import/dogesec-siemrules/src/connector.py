@@ -4,14 +4,18 @@ SIEMRULES Connector
 
 import json
 import os
-import time
+import traceback
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from urllib.parse import urljoin
 
 import requests
-import schedule
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+
+class SiemrulesException(Exception):
+    pass
 
 
 class SiemrulesConnector:
@@ -26,7 +30,7 @@ class SiemrulesConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url") + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         detection_packs = self._get_param("detection_packs")
         self.detection_packs = detection_packs.split(",") if detection_packs else []
@@ -56,11 +60,11 @@ class SiemrulesConnector:
     def list_detection_packs(self):
         try:
             return self.retrieve("v1/detection-packs/", list_key="results")
-        except:
+        except Exception as e:
             self.helper.log_error("failed to fetch detection-packs")
-        return []
+            raise SiemrulesException("failed to fetch detection-packs") from e
 
-    def process_updated_rules(self, dpack):
+    def process_updated_rules(self, dpack, work_id):
         pack_id = dpack["id"]
         self.helper.log_info(
             "processing Pack(id={id}, title='{name}')".format_map(dpack)
@@ -78,10 +82,10 @@ class SiemrulesConnector:
         )
         pack_rules = sorted(pack_rules, key=lambda rule: rule["metadata"]["modified"])
         for rule in pack_rules:
-            self.process_rule(pack_id, rule)
+            self.process_rule(pack_id, rule, work_id)
             self.update_pack_state(pack_id, latest_update=rule["metadata"]["modified"])
 
-    def process_rule(self, pack_id, rule: dict):
+    def process_rule(self, pack_id, rule: dict, work_id):
         indicator_id = rule["metadata"]["id"]
         rule_name = rule["metadata"]["name"]
         rule_repr = (
@@ -102,18 +106,19 @@ class SiemrulesConnector:
             self.helper.log_info(
                 f"{rule_repr} sending bundle with {len(objects)} items"
             )
-            self.helper.send_stix2_bundle(json.dumps(bundle), work_id=self.work_id)
-        except:
+            self.helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
+        except Exception:
             self.helper.log_error("could not process rule " + rule_repr)
 
     def retrieve(self, path, list_key, params: dict = None):
         params = params or {}
         params.update(page=1, page_size=200)
         objects: list[dict] = []
-        total_results_count = -1
-        while total_results_count < len(objects):
+        total_results_count = 1
+        while total_results_count > len(objects):
             resp = self.session.get(urljoin(self.base_url, path), params=params)
             params.update(page=params["page"] + 1)
+            self.helper.log_info(f">>> status_code={resp.status_code} url={resp.url}")
             data = resp.json()
             total_results_count = data["total_results_count"]
             objects.extend(data[list_key])
@@ -131,11 +136,33 @@ class SiemrulesConnector:
                     f"skipping {pack_repr} not in config.siemrules.detection_packs"
                 )
                 continue
-            self.update_pack_state(pack_id, name=pack_name)
-            self.helper.log_info(f"processing {pack_repr}")
-            self.process_updated_rules(dpack)
-            self.update_pack_state(pack_id, last_run=datetime.now(UTC).isoformat())
+            with self._run_in_work(f"Pack: {pack_name} ({pack_id})") as work_id:
+                last_run = datetime.now(UTC).isoformat()
+                self.update_pack_state(pack_id, name=pack_name)
+                self.helper.log_info(f"processing {pack_repr}")
+                self.process_updated_rules(dpack, work_id)
+                self.update_pack_state(pack_id, last_run=last_run)
         self.update_state(last_run_completed=datetime.now(UTC).isoformat())
+
+    @contextmanager
+    def _run_in_work(self, work_name: str):
+        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
+        message = "[SIEMRULES] Work done"
+        in_error = False
+        try:
+            yield work_id
+        except Exception as e:
+            self.helper.log_error(f"work failed: {e}")
+            message = "[SIEMRULES] Work failed - " + traceback.format_exc()
+            in_error = True
+        finally:
+            self.helper.api.work.to_processed(
+                work_id=work_id, message=message, in_error=in_error
+            )
+
+    def run_once(self):
+        with self._run_in_work("Siemrules Connector Run"):
+            self._run_once()
 
     def update_pack_state(self, pack_id, **kwargs):
         state = self._get_state()
@@ -149,24 +176,6 @@ class SiemrulesConnector:
         state.update(kwargs)
         self.helper.set_state(state)
 
-    def run_once(self):
-        in_error = False
-        try:
-            self.work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, self.helper.connect_name
-            )
-            self._run_once()
-        except:
-            self.helper.log_error("run failed")
-            in_error = True
-        finally:
-            self.helper.api.work.to_processed(
-                work_id=self.work_id,
-                message="[CONNECTOR] Connector exited gracefully",
-                in_error=in_error,
-            )
-            self.work_id = None
-
     def _get_state(self) -> dict:
         state = self.helper.get_state()
         if not state or "detection-packs" not in state:
@@ -175,12 +184,15 @@ class SiemrulesConnector:
 
     def run(self):
         self.helper.log_info("Starting Siemrules")
-        schedule.every(self.interval_hours).hours.do(self.run_once)
-        self.run_once()
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        self.helper.schedule_process(
+            message_callback=self.run_once,
+            duration_period=self.interval_hours * 3600,
+        )
 
 
 if __name__ == "__main__":
-    SiemrulesConnector().run()
+    try:
+        SiemrulesConnector().run()
+    except BaseException:
+        traceback.print_exc()
+        exit(1)

@@ -4,13 +4,13 @@ VULMATCH Connector
 
 import itertools
 import os
-import time
+import traceback
 import uuid
+from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
 from urllib.parse import urljoin
 
 import requests
-import schedule
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -30,6 +30,10 @@ NAMESPACE = uuid.UUID("152ecfe1-5015-522b-97e4-86b60c57036d")
 SKIPPED_TYPES = ["grouping", "weakness", "exploit"]
 
 
+class VulmatchException(Exception):
+    pass
+
+
 class VulmatchConnector:
     work_id = None
 
@@ -44,7 +48,7 @@ class VulmatchConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url") + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         self.sbom_only = parse_bool(self._get_param("sbom_only"))
         self.cvss_v2_score_min = parse_number(
@@ -88,18 +92,18 @@ class VulmatchConnector:
             cpes = [obj["cpe"] for obj in self.retrieve(path, list_key="objects")]
             self.helper.log_info(f"found {len(cpes)} cpes in sbom")
             if not cpes:
-                raise Exception("no cpes in sbom")
+                raise VulmatchException("no cpes in sbom")
             return cpes
-        except Exception:
+        except Exception as e:
             self.helper.log_error("failed to fetch CPEs from SBOM")
-            return []
+            raise VulmatchException("failed to fetch CPEs from SBOM") from e
 
     def retrieve(self, path, list_key, params: dict = None):
         params = params or {}
         params.update(page=1, page_size=200)
         objects: list[dict] = []
-        total_results_count = -1
-        while total_results_count < len(objects):
+        total_results_count = 1
+        while total_results_count > len(objects):
             resp = self.session.get(urljoin(self.base_url, path), params=params)
             params.update(page=params["page"] + 1)
             data = resp.json()
@@ -132,10 +136,28 @@ class VulmatchConnector:
     def _run_once(self):
         self.helper.log_info("running as scheduled")
         for cpes in chunked(self.list_cpes_in_sbom()):
-            vulnerabilities = self.get_vulnerabilities(cpes)
-            for vuln in vulnerabilities:
-                self.process_vulnerability(vuln)
-                self.update_state(vuln["modified"])
+            cpe_str = ",".join(cpes) if cpes[0] else "all"
+            with self._run_in_work(f"CPEs: {cpe_str[:50]}"):
+                vulnerabilities = self.get_vulnerabilities(cpes)
+                for vuln in vulnerabilities:
+                    self.process_vulnerability(vuln)
+                    self.update_state(vuln["modified"])
+
+    @contextmanager
+    def _run_in_work(self, work_name: str):
+        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
+        message = "[VULMATCH] Work done"
+        in_error = False
+        try:
+            yield work_id
+        except Exception as e:
+            self.helper.log_error(f"work failed: {e}")
+            message = "[VULMATCH] Work failed - " + traceback.format_exc()
+            in_error = True
+        finally:
+            self.helper.api.work.to_processed(
+                work_id=work_id, message=message, in_error=in_error
+            )
 
     def process_vulnerability(self, vuln):
         cve_name = vuln["name"]
@@ -172,10 +194,8 @@ class VulmatchConnector:
             )
 
     def run_once(self):
-        try:
+        with self._run_in_work("Vulmatch Connector Run"):
             self._run_once()
-        except Exception:
-            self.helper.log_error("run failed")
 
     def _get_state(self) -> dict:
         state = self.helper.get_state() or dict(
@@ -198,11 +218,10 @@ class VulmatchConnector:
 
     def run(self):
         self.helper.log_info("Starting Vulmatch")
-        schedule.every(self.interval_days).days.do(self.run_once)
-        self.run_once()
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        self.helper.schedule_process(
+            message_callback=self.run_once,
+            duration_period=self.interval_days * 86400,
+        )
 
     def transform_bundle_objects(self, bundle_objects):
         """
@@ -272,4 +291,8 @@ def chunked(lst):
 
 
 if __name__ == "__main__":
-    VulmatchConnector().run()
+    try:
+        VulmatchConnector().run()
+    except BaseException:
+        traceback.print_exc()
+        exit(1)
