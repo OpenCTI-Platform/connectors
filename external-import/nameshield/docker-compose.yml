@@ -1,0 +1,23 @@
+version: '1'
+services:
+  connector-nameshield:
+    image: opencti/connector-nameshield:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=NAMESHIELD
+      - CONNECTOR_LOG_LEVEL=error
+      - NAMESHIELD_AUTH_BEARER=CHANGME
+      - NAMESHIELD_SERVER=api.nameshield.net
+      - NAMESHIELD_API_VERSION=v1
+      - NAMESHIELD_API_ENDPOINT=registrar
+      - NAMESHIELD_URL_LIST=https://{server}/{api_endpoint}/{api_version}/domains
+      - NAMESHIELD_URL_DOMAIN=https://{server}/{api_endpoint}/{api_version}/domains/{domain}
+      - NAMESHIELD_INTERVAL=168
+      - NAMESHIELD_DOMAIN_LIMIT=10000
+      - NAMESHIELD_MARKING=TLP:GREEN
+      - NAMESHIELD_UPDATE_EXISTING_DATA=true
+      - NAMESHEILD_LINK_TO_IDENTITIES=none
+    restart: always

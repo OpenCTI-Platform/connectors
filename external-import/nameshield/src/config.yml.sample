@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'NameShield'
+  scope: 'NameShield'
+  log_level: 'info'
+
+
+nameshield:
+  auth_bearer: 'ChangeMe'
+  server: 'api.nameshield.net'
+  api_version: 'v1'
+  api_endpoint: 'registrar'
+  url_list: 'https://{server}/{api_version}/{api_endpoint}/domains'
+  url_domain_info: 'https://{server}/{api_version}/{api_endpoint}/domains/{domain}'
+  interval: 168 # In hours, once a week
+  domain_limit: '10000' # Limit of size to import (for each IOC types)
+  marking_definition: 'TLP:GREEN'
