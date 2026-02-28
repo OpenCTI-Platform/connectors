@@ -3,10 +3,9 @@ import unicodedata
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from typing import Any, Final, Optional
 
-from pycti import OpenCTIConnectorHelper
-
-OBSERVABLE_TYPES = [
+OBSERVABLE_TYPES: Final = [
     "ipv4-addr",
     "ipv6-addr",
     "domain-name",
@@ -16,7 +15,7 @@ OBSERVABLE_TYPES = [
     "file",
 ]
 
-IOC_TYPES = {
+IOC_TYPES: Final = {
     "ipv4-addr": "IpAddress",
     "ipv6-addr": "IpAddress",
     "domain-name": "DomainName",
@@ -28,13 +27,26 @@ IOC_TYPES = {
     "x509-certificate": "CertificateThumbprint",
 }
 
-FILE_HASH_TYPES_MAPPER = {
+FILE_HASH_TYPES_MAPPER: Final = {
     "md5": "md5",
     "sha-1": "sha1",
     "sha1": "sha1",
     "sha-256": "sha256",
     "sha256": "sha256",
 }
+
+# Only these indicator types are written to Defender.
+# All other types (e.g., WebCategory) are read-only in our connector.
+CREATABLE_INDICATOR_TYPES: Final = {
+    "DomainName",
+    "Url",
+    "IpAddress",
+    "FileSha1",
+    "FileSha256",
+    "CertificateThumbprint",
+}
+
+_MAX_LEN_FOR_KEY: Final[int] = 800
 
 
 def is_stix_indicator(data: dict) -> bool:
@@ -67,33 +79,95 @@ def get_ioc_type(data: dict) -> str | None:
 
 def get_description(data: dict) -> str:
     """
-    Get a description according to observable.
-    :param data: Observable data to extract description from
-    :return: Observable description summary or "No Description"
+    Return a short description for the indicator.
+    Falls back to the indicator value when no explicit description is available.
     """
-    stix_description = OpenCTIConnectorHelper.get_attribute_in_extension(
-        "description", data
-    )
-    return stix_description[0:99] if stix_description is not None else "No description"
+    desc = data.get("description")
+    if isinstance(desc, str) and desc.strip():
+        return desc.strip()[:99]  # Defender prefers <=100 chars
+
+    # Fallback: use indicator value if present
+    val = data.get("value")
+    if isinstance(val, str) and val.strip():
+        return val.strip()[:99]
+
+    # Final fallback
+    return "Auto-imported from OpenCTI feed"
 
 
-def get_action(data: dict) -> str:
+def _score_from_any(data: dict) -> int:
+    s = data.get("x_opencti_score")
+    try:
+        return int(s) if s is not None else 0
+    except Exception:
+        return 0
+
+
+def get_action(data: dict, default_action: str | None = None) -> str:
     """
-    Get an action according to observable score.
-    :param data: Observable data to get action from
-    :return: Action name or "unknown"
+    Determine the effective action for this observable.
+    Precedence:
+      1) Per-observable override (__policy_action) if present
+      2) Connector-level default_action (if provided)
+      3) Existing score-based mapping (unchanged)
     """
-    score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+    if isinstance(data, dict):
+        v = data.get("__policy_action")
+        if v:
+            return str(v)
+
+    if default_action:
+        return str(default_action)
+
+    score = _score_from_any(data)
     action = "Audit"
     if score >= 60:
         action = "Block"
     elif 30 < score < 60:
-        action = "Alert"
-    elif 0 < score < 30:
         action = "Warn"
-    elif score == 0:
+    elif 0 < score < 30:
         action = "Audit"
+    elif score == 0:
+        action = "Allowed"
     return action
+
+
+def get_educate_url(o: dict[str, Any], default_url: Optional[str]) -> Optional[str]:
+    """
+    Effective educateUrl: override or default.
+    """
+    if isinstance(o, dict):
+        v = o.get("__policy_educate_url")
+        if v not in (None, ""):
+            return str(v)
+    return default_url
+
+
+def get_expire_days(o: dict[str, Any], default_days: int) -> int:
+    """
+    Effective expiration (days): override (__policy_expire_time_days) or default_days.
+    """
+    try:
+        v = o.get("__policy_expire_time_days")
+        if v is not None:
+            return int(v)
+    except (TypeError, ValueError, AttributeError):
+        # If the override is missing or invalid, fall back to the default.
+        return int(default_days)
+    return int(default_days)
+
+
+def get_recommended_actions(
+    o: dict[str, Any], default_text: Optional[str]
+) -> Optional[str]:
+    """
+    Effective recommendedActions text: override or default.
+    """
+    if isinstance(o, dict):
+        v = o.get("__policy_recommended_actions")
+        if v not in (None, ""):
+            return str(v)
+    return default_text
 
 
 def get_severity(data: dict) -> str:
@@ -102,7 +176,7 @@ def get_severity(data: dict) -> str:
     :param data: Observable data to get action from
     :return: Severity or "unknown"
     """
-    score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+    score = _score_from_any(data)
     if score >= 60:
         severity = "High"
     elif score >= 40:
@@ -125,28 +199,20 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     :return: Datetime of observable expiration as ISO8601 string
     """
     now = datetime.now(timezone.utc)
-    expire_datetime = now + timedelta(days=expiration_time)
+    default_exp = now + timedelta(days=expiration_time)
 
     # Get valid_until if present
-    valid_until = OpenCTIConnectorHelper.get_attribute_in_extension("valid_until", data)
-    if valid_until:
-        valid_until_datetime = datetime.fromisoformat(valid_until)
-        # Return the earliest of expire_datetime and valid_until_datetime
-        earliest = min(expire_datetime, valid_until_datetime)
-        return earliest.isoformat()
+    valid_until = data.get("valid_until")
 
-    return expire_datetime.isoformat()
+    if isinstance(valid_until, str) and valid_until:
+        vu = valid_until.replace("Z", "+00:00")
+        try:
+            vu_dt = datetime.fromisoformat(vu)
+            return min(default_exp, vu_dt).isoformat()
+        except Exception:
+            pass
 
-
-def get_tags(data: dict) -> list[str]:
-    """
-    Get tags for an observable.
-    :param data: Observable data to extract tags from
-    :return: List of tags
-    """
-    tags = ["opencti"]
-    labels = OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
-    return tags + labels if labels is not None else tags
+    return default_exp.isoformat()
 
 
 def get_hash_type(data: dict) -> str | None:
@@ -167,16 +233,23 @@ def get_hash_type(data: dict) -> str | None:
     return hash_type
 
 
-_URL_RE = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
-_AT_RE = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
-_TRAILING_PUNCT_RE = re.compile(r"[.,;!?]+$")
-_PLACEHOLDER_DOTS_RE = re.compile(r"\.\.\.+$")
-_WHITESPACE_RE = re.compile(r"\s+")
-_BRACKET_TRANS = str.maketrans("", "", "[]")
+def is_defender_supported_domain(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    value = value.strip().lower()
+    return bool(value) and not value.startswith("_")
+
+
+_URL_RE: Final = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
+_AT_RE: Final = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
+_TRAILING_PUNCT_RE: Final = re.compile(r"[.,;!?]+$")
+_PLACEHOLDER_DOTS_RE: Final = re.compile(r"\.\.\.+$")
+_TRAILING_WHITESPACE_RE: Final = re.compile(r"\s+$")
+_BRACKET_TRANS: Final = str.maketrans("", "", "[]")
 
 
 @lru_cache(maxsize=20000)
-def indicator_value(value: str, max_length: int = 800) -> str | None:
+def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | None:
     """
     Clean, refang, normalize, and truncate an indicator value for Defender API submission.
 
@@ -209,14 +282,14 @@ def indicator_value(value: str, max_length: int = 800) -> str | None:
     if match:
         try:
             # We treat this as a URL and sanitize accordingly
-            extracted_url = match.group(0)
-
-            # Clean trailing punctuation early
-            extracted_url = extracted_url.rstrip(".,;!?…")
+            extracted_url = match.group(0).rstrip(".,;!?…")
 
             parsed = urllib.parse.urlparse(extracted_url)
             if not parsed.scheme or not parsed.netloc:
                 return None
+
+            # Normalize host to lowercase
+            netloc = parsed.netloc.lower()
 
             # Decode and normalize
             decoded_path = _sanitize_url_component(
@@ -227,20 +300,29 @@ def indicator_value(value: str, max_length: int = 800) -> str | None:
             )
 
             safe_path = urllib.parse.quote(decoded_path, safe="/")
-            safe_query = urllib.parse.quote(decoded_query, safe="-=&")
+            safe_query = urllib.parse.quote_plus(decoded_query, safe="=&")
 
             value = urllib.parse.urlunparse(
-                (parsed.scheme, parsed.netloc, safe_path, "", safe_query, "")
+                (parsed.scheme, netloc, safe_path, "", safe_query, "")
             )
 
         except Exception:
             return None
+    else:
+        # Not a URL and looks like a plain host
+        if " " not in value and "." in value and not any(c in value for c in "/:@"):
+            value = value.rstrip(".").lower()
 
     # Collapse trailing whitespace
-    value = _WHITESPACE_RE.sub("", value)
+    # This happens in edge cases and is needed for Defender
+    # Copilot incorrectly flags this as an opportunity for improvement
+    value = _TRAILING_WHITESPACE_RE.sub("", value)
 
     # Strip trailing punctuation Defender doesn't like
     value = _TRAILING_PUNCT_RE.sub("", value)
+
+    if not value:
+        return None
 
     # Final length enforcement
     return value[:max_length]
@@ -273,3 +355,20 @@ def indicator_title(value: str, max_length: int = 4000) -> str:
     if value is not None and isinstance(value, str) and len(value) > max_length:
         return value[:max_length]
     return value
+
+
+__all__ = [
+    "OBSERVABLE_TYPES",
+    "IOC_TYPES",
+    "FILE_HASH_TYPES_MAPPER",
+    "CREATABLE_INDICATOR_TYPES",
+    "indicator_value",
+    "indicator_title",
+    "get_action",
+    "get_educate_url",
+    "get_expire_days",
+    "get_recommended_actions",
+    "get_severity",
+    "get_expiration_datetime",
+    "get_hash_type",
+]

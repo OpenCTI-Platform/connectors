@@ -6,16 +6,44 @@ connector:
   type: 'STREAM'
   id: 'ChangeMe'
   name: 'Microsoft Defender Intel Synchronizer'
-  scope: 'sentinel' # MIME type or SCO
+  scope: 'sentinel' # MIME type or SCO - not used
   log_level: 'info'
 
 microsoft_defender_intel_synchronizer:
+  # Microsoft Entra / Defender API credentials
   tenant_id: 'ChangeMe'
-  client_id: 'ChangeMe' 
-  client_secret: 'ChangeMe' 
-  login_url: 'https://login.microsoft.com'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  login_url: 'https://login.microsoftonline.com'
   base_url: 'https://api.securitycenter.microsoft.com'
   resource_path: '/api/indicators'
-  expire_time: 30
-  taxii_collections: 'ID1,ID2,ID3,etc.'
-  interval: 300
+
+  # Global defaults
+  expire_time: 30          # Default indicator TTL (days)
+  action: 'Audit'          # Default action if not overridden
+  interval: 300            # Sync interval (seconds)
+  update_only_owned: true  # Manage only owned indicators
+  passive_only: false      # Emulate-only mode if true
+  rbac_group_names: ['Default Group'] # Optional global RBAC group scope
+  max_indicators: 15000    # Defender hard limit is 15000 custom indicators
+
+  # TAXII configuration (choose one style)
+
+  ## 1. Simple list (use connector defaults for all collections)
+  # taxii_collections: 'COLLECTION1,COLLECTION2'
+
+  ## 2. Advanced per-collection configuration (YAML/JSON map)
+  taxii_collections: >
+    {
+      "COLLECTION1": {
+        "action": "Block",
+        "expire_time": 7,
+        "recommended_actions": "Block immediately",
+        "educate_url": "https://support.example.com",
+        "rbac_group_names": ["Linux Servers","Production"]
+      },
+      "COLLECTION2": {
+        "action": "Audit",
+        "expire_time": 30
+      }
+    }
