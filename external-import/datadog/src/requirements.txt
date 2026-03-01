@@ -1,0 +1,12 @@
+# OpenCTI DataDog Connector Dependencies
+# Note: pycti is installed via PYCTI_VERSION build arg (see pycti-version.env)
+
+# Core OpenCTI dependencies
+stix2==3.0.1
+
+# HTTP client and API interactions
+requests==2.32.5
+urllib3==2.5.0
+
+# Configuration and data processing
+PyYAML==6.0.3
