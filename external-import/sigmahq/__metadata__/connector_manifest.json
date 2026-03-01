@@ -1,0 +1,19 @@
+{
+  "title": "SigmaHQ",
+  "slug": "sigmahq",
+  "description": "The SigmaHQ connector enables automated ingestion of Sigma detection rules from the SigmaHQ repository (https://sigmahq.io) into OpenCTI as indicators. Sigma is a generic signature format for SIEM systems that allows detection engineers, threat hunters, and defensive security practitioners to collaborate on detection rules.\n\nThis connector imports more than 3000 detection rules.\n\nBy importing these rules as indicators in OpenCTI, organizations can enrich their threat intelligence platform with community-maintained detection logic, enhance their detection capabilities, and correlate Sigma rules with other threat intelligence entities such as TTPs, malware, and threat actors.",
+  "short_description": "The SigmaHQ connector ingests Sigma detection rules from the SigmaHQ repository (https://sigmahq.io) as indicators in OpenCTI. It imports over 3000 detection rules including generic detection rules, threat hunting rules, emerging threat rules, compliance rules, and placeholder rules, making community-driven detection logic accessible for threat intelligence operations.",
+  "logo": "external-import/sigmahq/__metadata__/logo.png",
+  "use_cases" : ["Open Source Threat Intel"],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=6.9.5",
+  "subscription_link": "https://sigmahq.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sigmahq",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sigmahq",
+  "container_type": "EXTERNAL_IMPORT"
+}
