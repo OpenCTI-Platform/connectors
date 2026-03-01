@@ -1,0 +1,27 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Google DTM'
+  scope: 'google-dtm'
+  log_level: 'error'
+  duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+google_dtm:
+  api_key: 'ChangeMe' # Google DTM API Key
+  tlp: 'clear' # Default Traffic Light Protocol (TLP) marking for imported data. Available values are: clear, white, green, amber, amber+strict, red. Default: 'clear'
+  import_start_date: 'PD10' # ISO 8601 duration string specifying how far back to import alerts (e.g., P1D for 1 day, P7D for 7 days). Default: 'P10D'
+  alert_type: '' # Comma-separated list of alert types to ingest. Leave blank to retrieve alerts of all types. Available values are: "Compromised Credentials, Domain Discovery, Email, Forum Post, Message, Paste, Shop Listing, Tweet, Web Content". Default: empty (all alert types)
+  alert_severity: '' # Comma-separated list of alert severities to ingest. Leave blank to retrieve alerts of all severities. Available values are: "high, medium, low". Default: empty (all alert severities)

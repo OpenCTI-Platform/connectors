@@ -1,0 +1,22 @@
+{
+  "title": "Google Digital Threat Monitoring (DTM)",
+  "slug": "google-dtm",
+  "description": "Google Digital Threat Monitoring (DTM) is an external threat intelligence service that continuously monitors the open web, dark web, and other online sources to identify threats targeting your brand, domains, executives, and assets. By providing contextualized alerts and curated intelligence, DTM helps organizations detect and respond quickly to phishing, impersonation, data leakage, and other digital risks. \n\nThis connector integrates Google Digital Threat Monitoring (DTM) service with OpenCTI to bring external digital risk insights directly into your threat intelligence platform. \n\nThe connector periodically pulls alerts from the DTM API and ingests each alert into OpenCTI as an Incident. For every Incident, it stores the available context from DTM (threat category, severity, timestamps, sources, and descriptive details) and links all related technical artifacts—indicators and observables like domains, URLs, IP addresses, accounts, and file hashes.\n\n By integrating DTM alerts as Incidents in OpenCTI and attaching their associated observables, the connector provides a structured, centralized view of external digital threats and makes it easier to correlate them with other intelligence feeds and internal security data.",
+  "short_description": "Google Digital Threat Monitoring (DTM) is an external threat intelligence service that continuously monitors the open web, dark web, and other online sources to identify threats targeting your brand, domains, executives, and assets. By providing contextualized alerts and curated intelligence, DTM helps organizations detect and respond quickly to phishing, impersonation, data leakage, and other digital risks.",
+  "logo": "external-import/google-dtm/__metadata__/logo.png",
+  "use_cases" : [
+    "Brand, Digital Risk & Underground Exposure",
+    "Third-Party & Supply Chain Oversight"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 70,
+  "support_version": ">=6.9.10",
+  "subscription_link": "https://cloud.google.com/security/products/digital-threat-monitoring",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/google-dtm",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-google-dtm",
+  "container_type": "EXTERNAL_IMPORT"
+}
