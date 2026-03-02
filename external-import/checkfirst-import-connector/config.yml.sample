@@ -1,0 +1,18 @@
+opencti:
+  url: http://localhost
+  token: CHANGEME
+
+connector:
+  id: CHANGEME
+  name: Checkfirst Import Connector
+  scope: checkfirst
+  log_level: info
+  duration_period: P7D
+
+checkfirst:
+  api_url: ChangeMe
+  api_key: ChangeMe
+  api_endpoint: /v1/articles
+  since: P365D
+  force_reprocess: false
+  tlp_level: clear
