@@ -1,13 +1,17 @@
 """Tests to ensure rule importers respect report scope configuration."""
 
 from datetime import date
+from os import environ as os_environ
 from unittest.mock import MagicMock, patch
+from uuid import uuid4
 
 import pytest
+from conftest import mock_env_vars
 from crowdstrike_feeds_connector.rule.snort_suricata_master_importer import (
     SnortMasterImporter,
 )
 from crowdstrike_feeds_connector.rule.yara_master_importer import YaraMasterImporter
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from crowdstrike_feeds_services.utils.snort_parser import SnortRule
 from crowdstrike_feeds_services.utils.yara_parser import YaraRule
 
@@ -45,6 +49,25 @@ def _build_helper() -> MagicMock:
     return helper
 
 
+def _build_config() -> ConnectorSettings:
+    env_vars = {
+        "OPENCTI_URL": "http://localhost:8080",
+        "OPENCTI_TOKEN": f"{uuid4()}",
+        "CONNECTOR_ID": f"{uuid4()}",
+        "CONNECTOR_NAME": "CrowdStrike Test",
+        "CONNECTOR_SCOPE": "crowdstrike",
+        "CROWDSTRIKE_BASE_URL": "https://api.crowdstrike.com",
+        "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
+        "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
+        "CONNECTOR_LOG_LEVEL": "info",
+    }
+
+    mock_env_vars(os_environ, env_vars)
+    config = ConnectorSettings()
+
+    return config
+
+
 def _build_yara_rule() -> YaraRule:
     return YaraRule(
         name="rule_yara_1",
@@ -74,6 +97,7 @@ def test_yara_master_skips_report_fetch_when_report_scope_absent(
     del patched_yara_dependencies
 
     importer = YaraMasterImporter(
+        config=_build_config(),
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
@@ -101,6 +125,7 @@ def test_yara_master_fetches_reports_when_report_scope_present(
     del patched_yara_dependencies
 
     importer = YaraMasterImporter(
+        config=_build_config(),
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
@@ -129,6 +154,7 @@ def test_snort_master_skips_report_fetch_when_report_scope_absent(
     del patched_snort_dependencies
 
     importer = SnortMasterImporter(
+        config=_build_config(),
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
@@ -156,6 +182,7 @@ def test_snort_master_fetches_reports_when_report_scope_present(
     del patched_snort_dependencies
 
     importer = SnortMasterImporter(
+        config=_build_config(),
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),

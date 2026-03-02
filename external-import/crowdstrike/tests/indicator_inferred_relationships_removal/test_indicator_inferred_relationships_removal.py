@@ -13,7 +13,7 @@ from crowdstrike_feeds_connector.indicator.builder import (
     IndicatorBundleBuilder,
     IndicatorBundleBuilderConfig,
 )
-from models.configs.config_loader import ConfigLoader
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 # =====================
@@ -274,10 +274,10 @@ def test_no_inferred_targets_relationships_between_malware_and_vulnerabilities(
 
 def _given_indicator_with_actors_and_malware_sectors(
     config_data: dict[str, str], indicator_data: dict
-) -> tuple[Any, ConfigLoader, dict]:
+) -> tuple[Any, ConnectorSettings, dict]:
     """Given an indicator with associated threat actors and malware."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert "actors" in indicator_data  # noqa: S101
     assert len(indicator_data["actors"]) > 0  # noqa: S101
@@ -290,7 +290,7 @@ def _given_indicator_with_actors_and_malware_sectors(
 
 
 def _when_indicator_is_ingested(
-    config: ConfigLoader,
+    config: ConnectorSettings,
     indicator_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,
@@ -405,10 +405,10 @@ def _then_no_targets_relationships_between_actors_and_sectors(bundle: Bundle) ->
 
 def _given_indicator_with_actors_and_vulnerabilities(
     config_data: dict[str, str], indicator_data: dict
-) -> tuple[Any, ConfigLoader, dict]:
+) -> tuple[Any, ConnectorSettings, dict]:
     """Given an indicator with associated threat actors and vulnerabilities."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert "actors" in indicator_data  # noqa: S101
     assert len(indicator_data["actors"]) > 0  # noqa: S101
@@ -420,10 +420,10 @@ def _given_indicator_with_actors_and_vulnerabilities(
 
 def _given_indicator_with_malware_and_vulnerabilities(
     config_data: dict[str, str], indicator_data: dict
-) -> tuple[Any, ConfigLoader, dict]:
+) -> tuple[Any, ConnectorSettings, dict]:
     """Given an indicator with associated malware and vulnerabilities."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert "malware_families" in indicator_data  # noqa: S101
     assert len(indicator_data["malware_families"]) > 0  # noqa: S101

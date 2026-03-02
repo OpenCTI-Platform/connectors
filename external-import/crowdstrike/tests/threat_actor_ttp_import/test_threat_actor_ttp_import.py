@@ -11,6 +11,7 @@ import pytest
 from conftest import mock_env_vars
 from crowdstrike_feeds_connector.actor.builder import ActorBundleBuilder
 from crowdstrike_feeds_connector.actor.importer import ActorImporter
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
@@ -100,8 +101,10 @@ def test_import_ttps_for_threat_actor(
     Scenario: Import TTPs for a threat actor
     """
     # Given the Crowdstrike API provides TTP data for threat actors
-    mock_env, actor_with_ttps, ttps_response = _given_crowdstrike_api_provides_ttp_data(
-        crowdstrike_config_standard, fake_actor_data, fake_mitre_attacks_data
+    mock_env, config, actor_with_ttps, ttps_response = (
+        _given_crowdstrike_api_provides_ttp_data(
+            crowdstrike_config_standard, fake_actor_data, fake_mitre_attacks_data
+        )
     )
 
     try:
@@ -111,6 +114,7 @@ def test_import_ttps_for_threat_actor(
             ttps_response=ttps_response,
             author=author_identity,
             tlp_marking=tlp_marking,
+            config=config,
             helper=mock_helper,
         )
 
@@ -143,7 +147,7 @@ def test_handle_actors_without_ttps(
     Scenario: Handle actors without TTPs
     """
     # Given the Crowdstrike API returns an actor with no TTP data
-    mock_env, actor_without_ttps, empty_response = (
+    mock_env, config, actor_without_ttps, empty_response = (
         _given_crowdstrike_api_returns_actor_without_ttps(
             crowdstrike_config_standard, fake_actor_data
         )
@@ -156,6 +160,7 @@ def test_handle_actors_without_ttps(
             empty_response=empty_response,
             author=author_identity,
             tlp_marking=tlp_marking,
+            config=config,
             helper=mock_helper,
         )
 
@@ -184,7 +189,7 @@ def test_query_mitre_attacks_for_actor(
     Scenario: Query MITRE attacks for actor
     """
     # Given the System has a threat actor identifier
-    mock_env, actor_id = _given_system_has_threat_actor_identifier(
+    mock_env, config, actor_id = _given_system_has_threat_actor_identifier(
         crowdstrike_config_standard
     )
 
@@ -193,6 +198,7 @@ def test_query_mitre_attacks_for_actor(
         ttps_response = _when_system_calls_query_mitre_attacks(
             actor_id=actor_id,
             expected_response=fake_mitre_attacks_data,
+            config=config,
             helper=mock_helper,
         )
 
@@ -224,7 +230,7 @@ def test_create_attack_pattern_from_technique_id(
     Scenario: Create AttackPattern from technique ID
     """
     # Given the Crowdstrike API returns technique IDs for an actor
-    mock_env, technique_ids = _given_crowdstrike_api_returns_technique_ids(
+    mock_env, config, technique_ids = _given_crowdstrike_api_returns_technique_ids(
         crowdstrike_config_standard, fake_mitre_attacks_data
     )
 
@@ -235,6 +241,7 @@ def test_create_attack_pattern_from_technique_id(
             actor_data=fake_actor_data,
             author=author_identity,
             tlp_marking=tlp_marking,
+            config=config,
             helper=mock_helper,
         )
 
@@ -266,13 +273,15 @@ def test_link_actor_to_techniques(
     Scenario: Link actor to techniques
     """
     # Given the System has created IntrusionSet and AttackPattern entities
-    mock_env, attack_patterns = _given_system_has_intrusion_set_and_attack_patterns(
-        config_data=crowdstrike_config_standard,
-        actor_data=fake_actor_data,
-        ttps_response=fake_mitre_attacks_data,
-        author=author_identity,
-        tlp_marking=tlp_marking,
-        helper=mock_helper,
+    mock_env, config, attack_patterns = (
+        _given_system_has_intrusion_set_and_attack_patterns(
+            config_data=crowdstrike_config_standard,
+            actor_data=fake_actor_data,
+            ttps_response=fake_mitre_attacks_data,
+            author=author_identity,
+            tlp_marking=tlp_marking,
+            helper=mock_helper,
+        )
     )
 
     try:
@@ -300,16 +309,17 @@ def test_link_actor_to_techniques(
 
 def _given_crowdstrike_api_provides_ttp_data(
     config_data: dict[str, str], actor_data: dict, ttps_response: dict
-) -> tuple[Any, dict, dict]:
+) -> tuple[Any, ConnectorSettings, dict, dict]:
     """Given the Crowdstrike API provides TTP data for threat actors."""
     mock_env = mock_env_vars(os_environ, config_data)
+    config = ConnectorSettings()
 
     assert "id" in actor_data  # noqa: S101
     assert "name" in actor_data  # noqa: S101
     assert "resources" in ttps_response  # noqa: S101
     assert len(ttps_response["resources"]) > 0  # noqa: S101
 
-    return mock_env, actor_data, ttps_response
+    return mock_env, config, actor_data, ttps_response
 
 
 def _when_system_imports_threat_actor(
@@ -317,11 +327,13 @@ def _when_system_imports_threat_actor(
     ttps_response: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,
+    config: ConnectorSettings,
     helper: MagicMock,
 ) -> Bundle:
     """When the System imports or updates a threat actor."""
     with patch.object(ActorsAPI, "query_mitre_attacks", return_value=ttps_response):
         importer = ActorImporter(
+            config=config,
             helper=helper,
             author=author,
             default_latest_timestamp=0,
@@ -382,12 +394,13 @@ def _then_analyst_sees_intrusion_set_uses_attack_pattern_relationships(
 
 def _given_crowdstrike_api_returns_actor_without_ttps(
     config_data: dict[str, str], actor_data: dict
-) -> tuple[Any, dict, dict]:
+) -> tuple[Any, ConnectorSettings, dict, dict]:
     """Given the Crowdstrike API returns an actor with no TTP data."""
     mock_env = mock_env_vars(os_environ, config_data)
+    config = ConnectorSettings()
     empty_response = {"errors": [], "meta": {"powered_by": "msa-api"}, "resources": []}
 
-    return mock_env, actor_data, empty_response
+    return mock_env, config, actor_data, empty_response
 
 
 def _when_system_imports_actor_without_ttps(
@@ -395,11 +408,13 @@ def _when_system_imports_actor_without_ttps(
     empty_response: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,
+    config: ConnectorSettings,
     helper: MagicMock,
 ) -> Bundle:
     """When the System imports the actor."""
     with patch.object(ActorsAPI, "query_mitre_attacks", return_value=empty_response):
         importer = ActorImporter(
+            config=config,
             helper=helper,
             author=author,
             default_latest_timestamp=0,
@@ -456,20 +471,22 @@ def _then_analyst_sees_actor_without_techniques(
 
 def _given_system_has_threat_actor_identifier(
     config_data: dict[str, str],
-) -> tuple[Any, int]:
+) -> tuple[Any, ConnectorSettings, int]:
     """Given the System has a threat actor identifier."""
     mock_env = mock_env_vars(os_environ, config_data)
-    return mock_env, 123456
+    config = ConnectorSettings()
+    return mock_env, config, 123456
 
 
 def _when_system_calls_query_mitre_attacks(
     actor_id: int,
     expected_response: dict,
+    config: ConnectorSettings,
     helper: MagicMock,
 ) -> dict:
     """When the System calls query_mitre_attacks from the Crowdstrike API."""
     with patch.object(ActorsAPI, "query_mitre_attacks", return_value=expected_response):
-        api = ActorsAPI(helper)
+        api = ActorsAPI(config, helper)
         response = api.query_mitre_attacks(actor_id)
 
     return response
@@ -502,11 +519,12 @@ def _then_system_can_parse_technique_identifiers(ttps_response: dict) -> None:
 
 def _given_crowdstrike_api_returns_technique_ids(
     config_data: dict[str, str], mitre_attacks_data: dict
-) -> tuple[Any, list]:
+) -> tuple[Any, ConnectorSettings, list]:
     """Given the Crowdstrike API returns technique IDs for an actor."""
     mock_env = mock_env_vars(os_environ, config_data)
+    config = ConnectorSettings()
     technique_ids = mitre_attacks_data["resources"]
-    return mock_env, technique_ids
+    return mock_env, config, technique_ids
 
 
 def _when_system_processes_ttp_data(
@@ -514,6 +532,7 @@ def _when_system_processes_ttp_data(
     actor_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,
+    config: ConnectorSettings,
     helper: MagicMock,
 ) -> list:
     """When the System processes the TTP data."""
@@ -521,6 +540,7 @@ def _when_system_processes_ttp_data(
         ActorsAPI, "query_mitre_attacks", return_value={"resources": technique_ids}
     ):
         importer = ActorImporter(
+            config=config,
             helper=helper,
             author=author,
             default_latest_timestamp=0,
@@ -564,12 +584,14 @@ def _given_system_has_intrusion_set_and_attack_patterns(
     author: Identity,
     tlp_marking: MarkingDefinition,
     helper: MagicMock,
-) -> tuple[Any, list]:
+) -> tuple[Any, ConnectorSettings, list]:
     """Given the System has created IntrusionSet and AttackPattern entities."""
     mock_env = mock_env_vars(os_environ, config_data)
+    config = ConnectorSettings()
 
     with patch.object(ActorsAPI, "query_mitre_attacks", return_value=ttps_response):
         importer = ActorImporter(
+            config=config,
             helper=helper,
             author=author,
             default_latest_timestamp=0,
@@ -577,7 +599,7 @@ def _given_system_has_intrusion_set_and_attack_patterns(
         )
 
         attack_patterns = importer._get_and_create_attack_patterns(actor_data)
-        return mock_env, attack_patterns
+        return mock_env, config, attack_patterns
 
 
 def _when_system_builds_actor_bundle(
