@@ -13,4 +13,5 @@ services:
       - FEEDLY_STREAM_IDS= # Comma separated list of stream ids
       - FEEDLY_DAYS_TO_BACK_FILL=7 # Number of days to back fill for new stream ids
       - FEEDLY_API_KEY=ChangeMe # Feedly API key to generate here https://feedly.com/i/team/api
+      - FEEDLY_ENABLE_RELATIONSHIPS=false # If false, relationship objects will be filtered out from STIX bundles
     restart: always

@@ -41,6 +41,7 @@ from src.connector.services.config_loader import CofenseThreatHQConfig
                 "pass": "changeme",
             }
         },
+        "jwks": {},
     },
 )
 def test_should_promote_observables_to_indicators(_, __):

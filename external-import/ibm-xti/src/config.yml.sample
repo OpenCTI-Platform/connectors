@@ -19,7 +19,7 @@ connector:
   #send_to_directory_path: 'ChangeMe'
   #send_to_directory_retention: 7
 
-connector_ibm_xti:
+ibm_xti:
   taxii_server_url: 'ChangeMe'
   taxii_user: 'ChangeMe'
   taxii_pass: 'ChangeMe'

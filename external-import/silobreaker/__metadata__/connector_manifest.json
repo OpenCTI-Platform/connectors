@@ -1,8 +1,8 @@
 {
   "title": "Silobreaker",
   "slug": "Silobreaker",
-  "description": "Silobreaker helps organizations transform data from millions of open and dark web sources into timely, actionable intelligence for a range of use cases.\n\nThe OpenCTI Silobreaker connector facilitates the import of Silobreaker Threat data into OpenCTI. The connector connects to the Silobreaker and gather all data from a given date.",
-  "short_description": "Silobreaker helps organizations transform data from millions of open and dark web sources into timely, actionable intelligence for a range of use cases.",
+  "description": "Silobreaker is an AI-native intelligence engine that unifies open-source, dark web, finished intelligence and internal data with advanced analytics to produce decision-grade intelligence that security teams can use to identify threats and risks faster, accelerate decisions and build resilience with confidence.The OpenCTI Silobreaker connector facilitates the import of Silobreaker threat data into OpenCTI. You will be prompted to specify a start date, and the connector will retrieve all documents from that date onwards.\n",
+  "short_description": "Silobreaker is an AI-native intelligence engine that unifies open-source, dark web, finished intelligence and internal data with advanced analytics to produce decision-grade intelligence",
   "logo": "external-import/silobreaker/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"

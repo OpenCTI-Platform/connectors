@@ -4,5 +4,4 @@ services:
     image: opencti/connector-montysecurity-c2-tracker:latest
     environment:
       - OPENCTI_URL=http://localhost
-      - OPENCTI_C2TRACKER_TOKEN=${OPENCTI_C2TRACKER_TOKEN}
     restart: always

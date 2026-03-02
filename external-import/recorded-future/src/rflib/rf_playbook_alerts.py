@@ -473,10 +473,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                         )
         stix_note = stix2.Note(
             id=pycti.Note.generate_id(
-                summary_content,
-                datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                ),
+                created=None,
+                content=summary_content,
             ),
             object_marking_refs=self.tlp,
             abstract="# Evidence summary panel",
@@ -699,10 +697,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         )
         stix_note = stix2.Note(
             id=pycti.Note.generate_id(
-                summary_content,
-                datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                ),
+                created=None,
+                content=summary_content,
             ),
             object_marking_refs=self.tlp,
             abstract="# Evidence summary panel",
@@ -786,10 +782,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
-                    evidence_whois_content,
-                    datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    ),
+                    created=None,
+                    content=evidence_whois_content,
                 ),
                 object_marking_refs=self.tlp,
                 abstract="# Evidence WhoIs panel",
@@ -867,10 +861,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 bundle_objects.append(stix_relationship)
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
-                    evidence_dns_content,
-                    datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    ),
+                    created=None,
+                    content=evidence_dns_content,
                 ),
                 object_marking_refs=self.tlp,
                 abstract="# Evidence DNS panel",

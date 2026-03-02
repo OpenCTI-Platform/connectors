@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'a7e1c3d2-5f4b-4e89-9c1a-3b8d7f6e2a90'
+  name: 'PromptIntel'
+  scope: 'promptintel'
+  log_level: 'info'
+  duration_period: 'PT1H' # ISO-8601, hourly import
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+promptintel:
+  api_url: 'https://api.promptintel.novahunting.ai/api/v1'
+  api_key: 'ChangeMe'
+  tlp_level: 'clear' # clear, green, amber, amber+strict, red
+  severity_filter: '' # critical, high, medium, low (empty = all)
+  category_filter: '' # manipulation, abuse, patterns, outputs (empty = all)
+  import_start_limit: 5000 # max prompts fetched on the very first run
+  import_limit: 1000 # max prompts fetched on each subsequent run

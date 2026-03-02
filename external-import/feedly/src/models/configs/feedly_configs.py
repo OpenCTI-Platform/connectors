@@ -15,7 +15,6 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
         ),
     )
     stream_ids: ListFromString = Field(
-        default=[],
         description=(
             "Comma separated list of Feedly stream IDs to monitor. "
             "Each stream ID represents a specific feed or collection to import from Feedly."
@@ -32,5 +31,12 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
         description=(
             "Feedly API key for authentication. "
             "Generate your API key at https://feedly.com/i/team/api"
+        ),
+    )
+    enable_relationships: bool = Field(
+        default=True,
+        description=(
+            "If true, relationships between STIX Domain Objects will be included in the bundle. "
+            "If false, all relationship objects will be filtered out before sending to OpenCTI."
         ),
     )
