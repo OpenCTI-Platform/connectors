@@ -184,6 +184,8 @@ class RecordedFutureApiClient:
                 params={
                     "alertRule": rule.rule_id,
                     "triggered": f"[{triggered_since_iso},{triggered_until_iso}]",
+                    "orderby": "triggered",
+                    "direction": "asc",
                     "limit": limit,
                     "from": offset,
                 },
