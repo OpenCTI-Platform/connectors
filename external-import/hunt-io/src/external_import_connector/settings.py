@@ -1,4 +1,5 @@
 import warnings
+from datetime import timedelta
 from typing import Literal
 
 from connectors_sdk import (
@@ -26,6 +27,10 @@ class ConnectorSettings(BaseExternalImportConnectorConfig):
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
         default="144c83b7-e267-4fc5-b77d-babd502dc56e",
+    )
+
+    duration_period: timedelta = Field(
+        description="Duration period", default=timedelta(hours=24)
     )
 
 
