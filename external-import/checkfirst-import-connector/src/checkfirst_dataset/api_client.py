@@ -56,7 +56,9 @@ def fetch_paginated_data(
         last_exc: Exception | None = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
-                response = session.get(url, headers=headers, params=params, timeout=600)
+                # 300 s: the CheckFirst infrastructure can be slow to respond
+                # on large pages, so a generous timeout avoids spurious errors.
+                response = session.get(url, headers=headers, params=params, timeout=300)
                 response.raise_for_status()
 
                 data = response.json()
