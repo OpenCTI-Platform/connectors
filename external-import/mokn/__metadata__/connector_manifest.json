@@ -1,0 +1,19 @@
+{
+  "title": "MokN",
+  "slug": "mokn",
+  "description": "Ingests login attempts from MokN Bait and converts them to STIX 2.1 objects.",
+  "short_description": "MokN Bait external import connector.",
+  "logo": "external-import/mokn/__metadata__/logo.png",
+  "use_cases": ["Threat Intel Feed", "Credential Compromise"],
+  "verified": true,
+  "last_verified_date": "2026-02-27",
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=7.260227.0",
+  "subscription_link": "https://mokn.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mokn",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-mokn",
+  "container_type": "EXTERNAL_IMPORT"
+}
