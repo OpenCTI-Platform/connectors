@@ -52,7 +52,7 @@
       "type": "string"
     },
     "CROWDSTRIKE_BASE_URL": {
-      "default": "https://api.crowdstrike.com",
+      "default": "https://api.crowdstrike.com/",
       "description": "CrowdStrike API base URL.",
       "format": "uri",
       "maxLength": 2083,
@@ -108,6 +108,19 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "CROWDSTRIKE_ATTACK_VERSION": {
+      "default": "17.1",
+      "description": "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., 17.1). Should match the version imported by the MITRE ATT&CK external import connector.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_ATTACK_ENTERPRISE_URL": {
+      "default": null,
+      "description": "Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. If set, this URL is used instead of constructing one from attack_version. Useful for air-gapped environments or internal mirrors.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
     },
     "CROWDSTRIKE_ACTOR_START_TIMESTAMP": {
       "description": "Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
