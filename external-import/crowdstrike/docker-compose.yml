@@ -36,4 +36,7 @@ services:
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS=MaliciousConfidence/High
       - CROWDSTRIKE_INDICATOR_UNWANTED_LABELS= # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
       - CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT=true
+      - CROWDSTRIKE_ATTACK_VERSION=17.1
+      # Optional override for air-gapped or mirrored environments
+      #- CROWDSTRIKE_ATTACK_ENTERPRISE_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/enterprise-attack/enterprise-attack-17.1.json
     restart: always
