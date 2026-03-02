@@ -4,13 +4,12 @@ import os
 import sys
 import time
 from collections.abc import Mapping
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import stix2
 import yaml
 from crowdstrike_feeds_services.client.base_api import BaseCrowdstrikeClient
 from crowdstrike_feeds_services.utils import (
-    convert_comma_separated_str_to_list,
     create_organization,
     get_tlp_string_marking_definition,
     timestamp_to_datetime,
@@ -21,7 +20,6 @@ from crowdstrike_feeds_services.utils.attack_lookup import (
 )
 from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
-from pycti import OpenCTIConnectorHelper
 
 from .actor.importer import ActorImporter
 from .importer import BaseImporter
@@ -31,6 +29,10 @@ from .report.importer import ReportImporter
 from .rule.snort_suricata_master_importer import SnortMasterImporter
 from .rule.yara_master_importer import YaraMasterImporter
 from .vulnerability.importer import VulnerabilityImporter
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector.settings import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class CrowdStrike:
@@ -51,141 +53,70 @@ class CrowdStrike:
         "closed": 3,
     }
 
-    _DEFAULT_CREATE_OBSERVABLES = True
-    _DEFAULT_CREATE_INDICATORS = True
-    _DEFAULT_REPORT_TYPE = "threat-report"
-    _DEFAULT_X_OPENCTI_SCORE = 50
-    _DEFAULT_INDICATOR_LOW_SCORE = 40
-    _DEFAULT_INDICATOR_MEDIUM_SCORE = 60
-    _DEFAULT_INDICATOR_HIGH_SCORE = 80
-
     _STATE_LAST_RUN = "last_run"
 
-    def __init__(self) -> None:
+    def __init__(
+        self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"
+    ) -> None:
         """
         Initialize the connector with necessary configurations
         """
 
-        # Load configuration file and connection helper
-        self.config = ConfigCrowdstrike()
+        self.config = config
+        self.helper = helper
 
-        scopes_str = self.config.scopes
-        scopes_list: list[str] = []
-        if scopes_str is not None:
-            scopes_list = convert_comma_separated_str_to_list(scopes_str)
-
-        scopes: set[str] = set(scopes_list)
-
-        tlp = self.config.tlp
-        tlp_marking = self._convert_tlp_to_marking_definition(tlp)
-
-        create_observables = self.config.create_observables
-
-        create_indicators = self.config.create_indicators
-
-        actor_start_timestamp = self.config.actor_start_timestamp
-
-        malware_start_timestamp = self.config.malware_start_timestamp
-
-        report_start_timestamp = self.config.report_start_timestamp
-
-        report_status_str = self.config.report_status
-        if not report_status_str:
-            report_status_str = "new"
-        report_status = self._convert_report_status_str_to_report_status_int(
-            report_status_str
+        scopes = self.config.crowdstrike.scopes
+        tlp_marking = self._convert_tlp_to_marking_definition(
+            self.config.crowdstrike.tlp
         )
 
-        report_type = self.config.report_type
-        if not report_type:
-            report_type = self._DEFAULT_REPORT_TYPE
+        create_observables = self.config.crowdstrike.create_observables
+        create_indicators = self.config.crowdstrike.create_indicators
 
-        report_include_types_str = self.config.report_include_types
-        report_include_types = []
-        if report_include_types_str is not None:
-            report_include_types = convert_comma_separated_str_to_list(
-                report_include_types_str
-            )
+        actor_start_timestamp = self.config.crowdstrike.actor_start_timestamp
+        malware_start_timestamp = self.config.crowdstrike.malware_start_timestamp
 
-        report_target_industries_str = self.config.report_target_industries
-        report_target_industries = []
-        if report_target_industries_str is not None:
-            report_target_industries = convert_comma_separated_str_to_list(
-                report_target_industries_str
-            )
+        report_start_timestamp = self.config.crowdstrike.report_start_timestamp
+        report_status = self._convert_report_status_str_to_report_status_int(
+            self.config.crowdstrike.report_status
+        )
+        report_type = self.config.crowdstrike.report_type
+        report_include_types = self.config.crowdstrike.report_include_types
+        report_target_industries = self.config.crowdstrike.report_target_industries
+        report_guess_malware = self.config.crowdstrike.report_guess_malware
+        report_guess_relations = self.config.crowdstrike.report_guess_relations
 
-        report_guess_malware = self.config.report_guess_malware
-        report_guess_relations = self.config.report_guess_relations
+        vulnerability_start_timestamp = (
+            self.config.crowdstrike.vulnerability_start_timestamp
+        )
 
-        indicator_start_timestamp = self.config.indicator_start_timestamp
+        indicator_start_timestamp = self.config.crowdstrike.indicator_start_timestamp
+        indicator_exclude_types = self.config.crowdstrike.indicator_exclude_types
 
-        vulnerability_start_timestamp = self.config.vulnerability_start_timestamp
+        default_x_opencti_score = self.config.crowdstrike.default_x_opencti_score
+        indicator_low_score = self.config.crowdstrike.indicator_low_score
+        indicator_low_score_labels = self.config.crowdstrike.indicator_low_score_labels
+        indicator_medium_score = self.config.crowdstrike.indicator_medium_score
+        indicator_medium_score_labels = (
+            self.config.crowdstrike.indicator_medium_score_labels
+        )
+        indicator_high_score = self.config.crowdstrike.indicator_high_score
+        indicator_high_score_labels = (
+            self.config.crowdstrike.indicator_high_score_labels
+        )
+        indicator_unwanted_labels = self.config.crowdstrike.indicator_unwanted_labels
 
-        indicator_exclude_types_str = self.config.indicator_exclude_types
-        indicator_exclude_types = []
-        if indicator_exclude_types_str is not None:
-            indicator_exclude_types = convert_comma_separated_str_to_list(
-                indicator_exclude_types_str
-            )
-
-        default_x_opencti_score = self.config.default_x_opencti_score
-        if default_x_opencti_score is None:
-            default_x_opencti_score = self._DEFAULT_X_OPENCTI_SCORE
-
-        indicator_low_score = self.config.indicator_low_score
-        if indicator_low_score is None:
-            indicator_low_score = self._DEFAULT_INDICATOR_LOW_SCORE
-
-        indicator_low_score_labels_str = self.config.indicator_low_score_labels
-        indicator_low_score_labels = []
-        if indicator_low_score_labels_str is not None:
-            indicator_low_score_labels = convert_comma_separated_str_to_list(
-                indicator_low_score_labels_str
-            )
-
-        indicator_medium_score = self.config.indicator_medium_score
-        if indicator_medium_score is None:
-            indicator_medium_score = self._DEFAULT_INDICATOR_MEDIUM_SCORE
-
-        indicator_medium_score_labels_str = self.config.indicator_medium_score_labels
-        indicator_medium_score_labels = []
-        if indicator_medium_score_labels_str is not None:
-            indicator_medium_score_labels = convert_comma_separated_str_to_list(
-                indicator_medium_score_labels_str
-            )
-
-        indicator_high_score = self.config.indicator_high_score
-        if indicator_high_score is None:
-            indicator_high_score = self._DEFAULT_INDICATOR_HIGH_SCORE
-
-        indicator_high_score_labels_str = self.config.indicator_high_score_labels
-        indicator_high_score_labels = []
-        if indicator_high_score_labels_str is not None:
-            indicator_high_score_labels = convert_comma_separated_str_to_list(
-                indicator_high_score_labels_str
-            )
-
-        indicator_unwanted_labels_str = self.config.indicator_unwanted_labels
-        indicator_unwanted_labels = []
-        if indicator_unwanted_labels_str is not None:
-            indicator_unwanted_labels = convert_comma_separated_str_to_list(
-                indicator_unwanted_labels_str
-            )
-
-        no_file_trigger_import = self.config.no_file_trigger_import
+        no_file_trigger_import = self.config.crowdstrike.no_file_trigger_import
 
         author = self._create_author()
-
-        # Create OpenCTI connector helper.
-        self.helper = OpenCTIConnectorHelper(self.config.load)
 
         # Load MITRE ATT&CK Enterprise dataset once at startup (used for ATT&CK technique ID resolution)
         self.attack_lookup = None
         try:
-            attack_version = self.config.attack_version
+            attack_version = self.config.crowdstrike.attack_version
             attack_url_override = (
-                str(self.config.attack_enterprise_url)
-                if self.config.attack_enterprise_url
+                str(self.config.crowdstrike.attack_enterprise_url)
+                if self.config.crowdstrike.attack_enterprise_url
                 else None
             )
             self.attack_lookup = AttackTechniqueLookup(
@@ -248,7 +179,7 @@ class CrowdStrike:
                 report_guess_relations,
                 indicator_config,
                 no_file_trigger_import,
-                scopes=scopes,
+                scopes=set(scopes),
             )
 
             importers.append(report_importer)
@@ -273,7 +204,7 @@ class CrowdStrike:
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
                 no_file_trigger_import=no_file_trigger_import,
-                scopes=scopes,
+                scopes=set(scopes),
                 attack_lookup=self.attack_lookup,
             )
 
@@ -288,7 +219,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
-                scopes=scopes_list,
+                scopes=scopes,
             )
 
             importers.append(yara_master_importer)
@@ -301,7 +232,7 @@ class CrowdStrike:
                 report_status,
                 report_type,
                 no_file_trigger_import,
-                scopes=scopes_list,
+                scopes=scopes,
             )
 
             importers.append(snort_master_importer)
@@ -424,17 +355,10 @@ class CrowdStrike:
             self._error("CrowdStrike connector internal error: {0}", str(e))
 
     def run(self):
-        if self.config.duration_period:
-            self.helper.schedule_iso(
-                message_callback=self.process_message,
-                duration_period=self.config.duration_period,
-            )
-        else:
-            self.helper.schedule_unit(
-                message_callback=self.process_message,
-                duration_period=self.config.interval_sec,
-                time_unit=self.helper.TimeUnit.SECONDS,
-            )
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period,  # type: ignore[arg-type]
+        )
 
     def _initiate_work(self, timestamp: int, importer_name: str) -> str:
         datetime_str = timestamp_to_datetime(timestamp)
