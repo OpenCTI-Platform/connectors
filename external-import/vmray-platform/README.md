@@ -85,8 +85,7 @@ Build a Docker Image using the provided `Dockerfile`.
 Example:
 
 ```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+docker build . -t opencti/connector-vmray-platform:latest
 ```
 
 Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your

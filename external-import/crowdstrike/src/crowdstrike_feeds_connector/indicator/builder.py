@@ -20,6 +20,7 @@ from crowdstrike_feeds_services.utils import (
     OBSERVATION_FACTORY_USER_AGENT,
     ObservableProperties,
     ObservationFactory,
+    create_attack_pattern,
     create_based_on_relationships,
     create_indicates_relationships,
     create_indicator,
@@ -35,9 +36,11 @@ from crowdstrike_feeds_services.utils import (
 from crowdstrike_feeds_services.utils.constants import (
     CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN,
 )
+from crowdstrike_feeds_services.utils.labels import extract_label_names
 from pycti import OpenCTIConnectorHelper
 from stix2 import Bundle
 from stix2.v21 import (
+    AttackPattern,
     Identity,
 )
 from stix2.v21 import Indicator as STIXIndicator
@@ -199,6 +202,46 @@ class IndicatorBundleBuilder:
             object_markings=self.object_markings,
         )
 
+    def _create_attack_patterns(self) -> List[AttackPattern]:
+        # Prefer resolved ATT&CK techniques (name + mitre_id) provided by the importer.
+        attack_patterns_resolved = self.indicator.get("attack_patterns_resolved") or []
+        attack_patterns_raw = self.indicator.get("attack_patterns") or []
+
+        if attack_patterns_resolved:
+            attack_patterns: List[AttackPattern] = []
+            for item in attack_patterns_resolved:
+                if not isinstance(item, Mapping):
+                    continue
+                ap_name = str(item.get("name") or "").strip()
+                mitre_id = str(item.get("mitre_id") or "").strip()
+                if not ap_name or not mitre_id:
+                    continue
+                attack_patterns.append(self._create_attack_pattern(ap_name, mitre_id))
+            return attack_patterns
+
+        # If we have ATT&CK labels but no technique resolution available, do not create name-only
+        # AttackPattern objects (they would not match the MITRE connector IDs and would create duplicates).
+        if attack_patterns_raw:
+            self.helper.connector_logger.debug(
+                "ATT&CK technique resolution unavailable; skipping Attack Pattern creation to avoid duplicates.",
+                {
+                    "indicator_id": self.indicator.get("id"),
+                    "attack_pattern_count": len(attack_patterns_raw),
+                },
+            )
+        return []
+
+    def _create_attack_pattern(self, name: str, mitre_id: str) -> AttackPattern:
+        # Create a minimal AttackPattern using canonical MITRE technique ID so deterministic IDs match
+        # the MITRE ATT&CK connector (source of truth).
+        return create_attack_pattern(
+            name=name,
+            mitre_id=mitre_id,
+            created_by=self.author.id,
+            confidence=self.confidence_level,
+            object_markings=[m.id for m in self.object_markings],
+        )
+
     def _create_uses_relationships(
         self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
     ) -> List[Relationship]:
@@ -258,10 +301,10 @@ class IndicatorBundleBuilder:
         # Get the labels.
         labels = self._get_labels()
 
-        # Skip indicators with labels entered in config
+        # Skip indicators with labels entered in config (case-insensitive)
+        unwanted_labels = {lbl.lower() for lbl in self.indicator_unwanted_labels}
         for label in labels:
-            label = label.lower()
-            if label in self.indicator_unwanted_labels:
+            if str(label).lower() in unwanted_labels:
                 self.helper.connector_logger.warning(
                     "[WARNING] The indicator contains a label which is one of the excluded labels defined in the "
                     "configuration. Processing of this indicator is therefore ignored.",
@@ -292,17 +335,13 @@ class IndicatorBundleBuilder:
         return Observation(observable, indicator, indicator_based_on_observable)
 
     def _get_labels(self) -> List[str]:
-        labels = []
+        # Prefer normalized label names when provided by the importer.
+        label_names = self.indicator.get("label_names")
+        if isinstance(label_names, list) and label_names:
+            return [str(x) for x in label_names if x]
 
-        indicator_labels = self.indicator["labels"]
-        for indicator_label in indicator_labels:
-            label = indicator_label["name"]
-            if not label:
-                continue
-
-            labels.append(label)
-
-        return labels
+        # Fallback: tolerate legacy raw label objects (list[dict]) or list[str].
+        return extract_label_names(self.indicator.get("labels") or [])
 
     def _create_observable(
         self, labels: List[str], score: int
@@ -349,17 +388,26 @@ class IndicatorBundleBuilder:
     def _determine_score_by_labels(self, labels: List[str]) -> int:
         label_score = None
 
+        low = {lbl.lower() for lbl in self.indicator_low_score_labels}
+        medium = {lbl.lower() for lbl in self.indicator_medium_score_labels}
+        high = {lbl.lower() for lbl in self.indicator_high_score_labels}
+
         # Score will be given floored at lowest score label found.
         for label in labels:
-            if label in self.indicator_low_score_labels:
+            lbl = str(label).lower()
+
+            if lbl in low:
                 label_score = self.indicator_low_score
                 break
-            if label in self.indicator_medium_score_labels:
+
+            if lbl in medium:
                 if label_score is None or label_score > self.indicator_medium_score:
                     label_score = self.indicator_medium_score
-            elif label in self.indicator_high_score_labels:
+
+            elif lbl in high:
                 if label_score is None:
                     label_score = self.indicator_high_score
+
         return label_score if label_score is not None else self.default_x_opencti_score
 
     def _create_indicator(
@@ -393,6 +441,7 @@ class IndicatorBundleBuilder:
                 object_markings=self.object_markings,
                 x_opencti_main_observable_type=indicator_pattern.main_observable_type,
                 x_opencti_score=score,
+                indicator_types=self.indicator.get("indicator_types", []),
             )
         except Exception as e:
             self.helper.connector_logger.warning(
@@ -473,6 +522,10 @@ class IndicatorBundleBuilder:
         malwares = self._create_malwares()
         bundle_objects.extend(malwares)
 
+        # Create attack patterns (parsed from labels) and add to bundle.
+        attack_patterns = self._create_attack_patterns()
+        bundle_objects.extend(attack_patterns)
+
         # Create target sectors and add to bundle.
         target_sectors = self._create_targeted_sectors()
         bundle_objects.extend(target_sectors)
@@ -512,7 +565,9 @@ class IndicatorBundleBuilder:
         bundle_objects.extend(indicators_based_on_observables)
 
         # Indicator(s) indicate entities and add to bundle.
-        indicator_indicates = intrusion_sets + malwares + vulnerabilities
+        indicator_indicates = (
+            intrusion_sets + malwares + vulnerabilities + attack_patterns
+        )
 
         indicator_indicates_entities = self._create_indicates_relationships(
             indicators, indicator_indicates
@@ -523,6 +578,7 @@ class IndicatorBundleBuilder:
         object_refs = create_object_refs(
             cast(List[_DomainObject], intrusion_sets),
             cast(List[_DomainObject], malwares),
+            cast(List[_DomainObject], attack_patterns),
             cast(List[_DomainObject], target_sectors),
             cast(List[_DomainObject], vulnerabilities),
             cast(List[_DomainObject], observables),

@@ -1,0 +1,8 @@
+**/logs
+**/*.gql
+**/venv
+**/.venv
+**/__pycache__/
+**/config.yml
+**/__pycache__
+**/__docs__

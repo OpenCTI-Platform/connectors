@@ -70,6 +70,11 @@
       "format": "password",
       "type": "string",
       "writeOnly": true
+    },
+    "FEEDLY_ENABLE_RELATIONSHIPS": {
+      "default": true,
+      "description": "If true, relationships between STIX Domain Objects will be included in the bundle. If false, all relationship objects will be filtered out before sending to OpenCTI.",
+      "type": "boolean"
     }
   },
   "required": [

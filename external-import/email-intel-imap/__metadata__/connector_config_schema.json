@@ -47,7 +47,9 @@
         "error",
         "critical"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "error",
+      "description": "The minimum level of logs to display."
     },
     "EMAIL_INTEL_IMAP_TLP_LEVEL": {
       "default": "amber+strict",

@@ -16,3 +16,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
 | FEEDLY_INTERVAL | `integer` |  | `0 < x ` | `60` | Polling interval in minutes for fetching and refreshing Feedly data. Determines how often the system checks for updates from Feedly streams. |
 | FEEDLY_DAYS_TO_BACK_FILL | `integer` |  | `0 < x ` | `7` | Number of days to back fill for new streams. When a new stream is added, the connector will fetch articles from this many days in the past. |
+| FEEDLY_ENABLE_RELATIONSHIPS | `boolean` |  | boolean | `true` | If true, relationships between STIX Domain Objects will be included in the bundle. If false, all relationship objects will be filtered out before sending to OpenCTI. |

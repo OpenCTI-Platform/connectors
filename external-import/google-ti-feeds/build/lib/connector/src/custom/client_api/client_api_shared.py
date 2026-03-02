@@ -45,7 +45,11 @@ class ClientAPIShared(BaseClientAPI):
             for subentity_type in subentity_types:
                 all_ids = []
 
-                params = {entity_name: entity_id, "entity_type": subentity_type, "limit": 40}
+                params = {
+                    entity_name: entity_id,
+                    "entity_type": subentity_type,
+                    "limit": 40,
+                }
 
                 try:
                     async for page_data in self._paginate_with_cursor(
