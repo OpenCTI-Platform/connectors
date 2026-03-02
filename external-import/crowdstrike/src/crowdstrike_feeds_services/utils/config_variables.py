@@ -29,6 +29,11 @@ class ConfigCrowdstrike:
         self.create_observables = self.config.crowdstrike.create_observables
         self.create_indicators = self.config.crowdstrike.create_indicators
 
+        # MITRE ATT&CK Enterprise dataset lookup (used for technique ID resolution)
+        # Pin a specific ATT&CK version for deterministic mapping; allow URL override for airgapped/mirrors.
+        self.attack_version = self.config.crowdstrike.attack_version
+        self.attack_enterprise_url = self.config.crowdstrike.attack_enterprise_url
+
         # Convert list to comma-separated string for backward compatibility
         scopes_list = self.config.crowdstrike.scopes
         self.scopes = ",".join(scopes_list) if scopes_list else None

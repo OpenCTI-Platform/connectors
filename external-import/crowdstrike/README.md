@@ -81,6 +81,8 @@ There are a number of configuration options, which are set either in `docker-com
 | Create Observables          | crowdstrike.create_observables          | `CROWDSTRIKE_CREATE_OBSERVABLES`             | true                                                 | No        | Create observables from indicators.                                              |
 | Create Indicators           | crowdstrike.create_indicators           | `CROWDSTRIKE_CREATE_INDICATORS`              | true                                                 | No        | Create indicators.                                                               |
 | Scopes                      | crowdstrike.scopes                      | `CROWDSTRIKE_SCOPES`                         | actor,report,indicator,yara_master                   | No        | Comma-separated list of data types to import.                                    |
+| MITRE ATT&CK Version        | crowdstrike.attack_version              | `CROWDSTRIKE_ATTACK_VERSION`                 | 17.1                                                | No        | MITRE ATT&CK Enterprise version used to resolve label-derived ATT&CK techniques to canonical MITRE IDs. Should match the version imported by the MITRE ATT&CK external import connector. |
+| MITRE ATT&CK Enterprise URL | crowdstrike.attack_enterprise_url       | `CROWDSTRIKE_ATTACK_ENTERPRISE_URL`          |                                                      | No        | Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. If set, this URL is used instead of constructing one from the ATT&CK version (useful for air-gapped or mirrored environments). |
 | Actor Start Timestamp       | crowdstrike.actor_start_timestamp       | `CROWDSTRIKE_ACTOR_START_TIMESTAMP`          | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL actors.                             |
 | Vulnerability Start Timestamp | crowdstrike.vulnerability_start_timestamp | `CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP` | 30 days ago                   | No        | `0`                                                                  | The Vulnerabilities updated after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC. Default is 30 days ago. |
 | Malware Start Timestamp     | crowdstrike.malware_start_timestamp     | `CROWDSTRIKE_MALWARE_START_TIMESTAMP`        | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL malware.                             |
@@ -136,6 +138,10 @@ Configure the connector in `docker-compose.yml`:
       - CROWDSTRIKE_CREATE_INDICATORS=true
       - CROWDSTRIKE_SCOPES=actor,report,indicator,yara_master
       - CROWDSTRIKE_REPORT_STATUS=New
+      # MITRE ATT&CK Enterprise lookup (used for resolving ATT&CK labels to canonical techniques)
+      - CROWDSTRIKE_ATTACK_VERSION=17.1
+      # Optional override for air-gapped or mirrored environments
+      #- CROWDSTRIKE_ATTACK_ENTERPRISE_URL=https://raw.githubusercontent.com/mitre-attack/attack-stix-data/refs/heads/master/enterprise-attack/enterprise-attack-17.1.json
       - CROWDSTRIKE_REPORT_INCLUDE_TYPES=notice,tipper,intelligence report,periodic report
       - CROWDSTRIKE_REPORT_TYPE=threat-report
       - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1,password,username
@@ -176,6 +182,17 @@ Find the connector and click the refresh button to reset the state and trigger a
 ## Behavior
 
 The connector imports threat intelligence from CrowdStrike Falcon Intelligence API.
+
+### MITRE ATT&CK Label Resolution
+
+CrowdStrike indicators may include ATT&CK-related labels (e.g. `MitreATTCK/DefenseEvasion/ProcessInjection`).
+
+When ATT&CK lookup is enabled, the connector:
+- Loads the MITRE ATT&CK Enterprise STIX dataset once at startup
+- Resolves label-derived ATT&CK technique names to canonical MITRE technique IDs (e.g. `T1055`)
+- Creates Attack Pattern relationships using deterministic STIX IDs that match the MITRE ATT&CK external import connector (source of truth)
+
+If ATT&CK labels are present but a technique cannot be resolved, the connector will skip Attack Pattern creation to avoid creating duplicate or non-canonical objects.
 
 ### Data Flow
 
