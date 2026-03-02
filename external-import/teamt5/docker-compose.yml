@@ -1,7 +1,7 @@
 version: '3'
 services:
   teamt5-external-import:
-    image: opencti/teamt5-external-import:latest
+    image: opencti/connector-teamt5:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -11,8 +11,8 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=P1D 
       - TEAMT5_API_BASE_URL=https://api.threatvision.org/
-      - TEAMT5_API_KEY=ChangeMe
+      - TEAMT5_CLIENT_ID=ChangeMe
+      - TEAMT5_CLIENT_SECRET=ChangeMe
       - TEAMT5_TLP_LEVEL=clear 
-      - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=ChangeMe 
-
+      - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=ChangeMe
     restart: always
