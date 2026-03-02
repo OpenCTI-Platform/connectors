@@ -43,6 +43,11 @@ class GreyNoiseVulnConnector:
         self.stix_objects = []
         self.integration_name = "opencti-vuln-enricher-v2.0"
 
+        if self.greynoise_key is None:
+            raise ValueError(
+                "GREYNOISE_KEY is not set in the config.yml file or the environment variable is not set"
+            )
+
     def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
         """
         Extract TLP, and we check if the variable "max_tlp" is less than
