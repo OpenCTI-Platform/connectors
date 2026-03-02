@@ -18,7 +18,6 @@ from crowdstrike_feeds_services.utils.attack_lookup import (
     AttackTechniqueLookup,
     AttackTechniqueLookupError,
 )
-from crowdstrike_feeds_services.utils.config_variables import ConfigCrowdstrike
 from crowdstrike_feeds_services.utils.constants import DEFAULT_TLP_MARKING_DEFINITION
 
 from .actor.importer import ActorImporter
@@ -136,13 +135,14 @@ class CrowdStrike:
             )
 
         # Create CrowdStrike client and importers.
-        self.connect_cs = BaseCrowdstrikeClient(self.helper)
+        self.connect_cs = BaseCrowdstrikeClient(self.config, self.helper)
 
         # Create importers.
         importers: list[BaseImporter] = []
 
         if self._CONFIG_SCOPE_ACTOR in scopes:
             actor_importer = ActorImporter(
+                self.config,
                 self.helper,
                 author,
                 actor_start_timestamp,
@@ -167,6 +167,7 @@ class CrowdStrike:
                 "indicator_unwanted_labels": set(indicator_unwanted_labels),
             }
             report_importer = ReportImporter(
+                self.config,
                 self.helper,
                 author,
                 report_start_timestamp,
@@ -186,6 +187,7 @@ class CrowdStrike:
 
         if self._CONFIG_SCOPE_INDICATOR in scopes:
             indicator_importer_config = IndicatorImporterConfig(
+                config=self.config,
                 helper=self.helper,
                 author=author,
                 default_latest_timestamp=indicator_start_timestamp,
@@ -213,6 +215,7 @@ class CrowdStrike:
 
         if self._CONFIG_SCOPE_YARA_MASTER in scopes:
             yara_master_importer = YaraMasterImporter(
+                self.config,
                 self.helper,
                 author,
                 tlp_marking,
@@ -226,6 +229,7 @@ class CrowdStrike:
 
         if self._CONFIG_SCOPE_SNORT_SURICATA_MASTER in scopes:
             snort_master_importer = SnortMasterImporter(
+                self.config,
                 self.helper,
                 author,
                 tlp_marking,
@@ -239,6 +243,7 @@ class CrowdStrike:
 
         if self._CONFIG_SCOPE_VULNERABILITY in scopes:
             vulnerability_importer = VulnerabilityImporter(
+                self.config,
                 self.helper,
                 author,
                 vulnerability_start_timestamp,
@@ -249,6 +254,7 @@ class CrowdStrike:
 
         if self._CONFIG_SCOPE_MALWARE in scopes:
             malware_importer = MalwareImporter(
+                self.config,
                 self.helper,
                 author,
                 malware_start_timestamp,

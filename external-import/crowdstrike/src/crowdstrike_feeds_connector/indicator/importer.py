@@ -1,7 +1,7 @@
 """OpenCTI CrowdStrike indicator importer module."""
 
 from datetime import datetime
-from typing import Any, Dict, List, NamedTuple, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
@@ -12,19 +12,21 @@ from crowdstrike_feeds_services.utils import (
 from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
 from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
-from pycti.connector.opencti_connector_helper import (  # noqa: E501
-    OpenCTIConnectorHelper,
-)
 from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
 from .builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
 
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class IndicatorImporterConfig(NamedTuple):
     """CrowdStrike indicator importer configuration."""
 
-    helper: OpenCTIConnectorHelper
+    config: "ConnectorSettings"
+    helper: "OpenCTIConnectorHelper"
     author: Identity
     default_latest_timestamp: int
     tlp_marking: MarkingDefinition
@@ -56,13 +58,15 @@ class IndicatorImporter(BaseImporter):
     def __init__(self, config: IndicatorImporterConfig) -> None:
         """Initialize CrowdStrike indicator importer."""
         super().__init__(
+            config.config,
             config.helper,
             config.author,
             config.tlp_marking,
         )
 
-        self.indicators_api_cs = IndicatorsAPI(config.helper)
+        self.indicators_api_cs = IndicatorsAPI(config.config, config.helper)
         self.related_actor_importer = RelatedActorImporter(
+            config.config,
             config.helper,
         )
         # Simple per-run cache to avoid repeated actor resolution calls.
@@ -89,7 +93,9 @@ class IndicatorImporter(BaseImporter):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(config.helper, self.no_file_trigger_import)
+        self.report_fetcher = ReportFetcher(
+            config.config, config.helper, self.no_file_trigger_import
+        )
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""

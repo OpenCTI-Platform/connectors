@@ -1,11 +1,12 @@
 """OpenCTI CrowdStrike related actor normalization helper."""
 
-from typing import Any, Dict, List, Optional, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
-from pycti.connector.opencti_connector_helper import (
-    OpenCTIConnectorHelper,
-)
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class RelatedActorImporter:
@@ -18,11 +19,12 @@ class RelatedActorImporter:
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
     ) -> None:
         """Initialize CrowdStrike actor normalization helper."""
         self.helper = helper
-        self.actors_api_cs = ActorsAPI(helper)
+        self.actors_api_cs = ActorsAPI(config, helper)
 
     def _process_related_actors(
         self, orig_entity_id: Any, related_actors: List[str]

@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping, Sequence
 from datetime import date, datetime, timezone
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.utils import (
@@ -16,7 +16,6 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport
 from crowdstrike_feeds_services.utils.yara_parser import YaraRule
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import (
     Bundle,
     Identity,
@@ -29,6 +28,10 @@ from stix2 import (
 from stix2 import Report as STIXReport
 from stix2.v21 import _DomainObject, _RelationshipObject
 
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class YaraRuleBundleBuilder:
     """YARA master builder."""
@@ -37,7 +40,8 @@ class YaraRuleBundleBuilder:
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         rule: YaraRule,
         author: Identity,
         source_name: str,
@@ -57,7 +61,7 @@ class YaraRuleBundleBuilder:
         self.report_status = report_status
         self.report_type = report_type
         self.reports = reports
-        self.related_actor_importer = RelatedActorImporter(helper)
+        self.related_actor_importer = RelatedActorImporter(config, helper)
         self.scopes = scopes
 
         self.first_seen = self._date_to_datetime(self.rule.last_modified)

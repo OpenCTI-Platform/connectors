@@ -1,11 +1,15 @@
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from .base_api import BaseCrowdstrikeClient
 
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class VulnerabilitiesAPI(BaseCrowdstrikeClient):
-    def __init__(self, helper):
-        super().__init__(helper)
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        super().__init__(config, helper)
 
     def query_vulnerabilities(self, limit: int, offset: int, sort: str, filter: str):
         """
