@@ -2,6 +2,7 @@
 # isort: skip_file
 # type: ignore
 """Provide fixtures and entrypoint script for pytest."""
+
 import os
 import subprocess
 import sys

@@ -435,5 +435,5 @@ class MicrosoftSentinelIncidentsConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period,  # type:ignore[invalid-argument-type]
+            duration_period=self.config.connector.duration_period,  # type: ignore[invalid-argument-type]
         )

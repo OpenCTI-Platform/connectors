@@ -10,7 +10,6 @@ from typing import Any, Callable, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, AwareDatetime
 
-
 ASSETS_CHUNK_SIZE = 10
 FINDINGS_CHUNK_SIZE = 100
 

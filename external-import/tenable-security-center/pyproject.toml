@@ -30,7 +30,7 @@ test = [
     "pytest>=8.1.1,<9",             # Pytest for running tests
 ]
 dev = [
-    "black>=25.9,<26",  # Code formatter
+    "black>=26.1,<27",  # Code formatter
     "isort>=7,<8",  # Import sorter
     "ruff>=0.7.2,<1",  # linter
     "mypy>=1.13.0,<2",  # type validator

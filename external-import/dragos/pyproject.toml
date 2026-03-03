@@ -37,7 +37,7 @@ test= [
     "freezegun >=1.2.0, <2"
 ]
 dev = [
-    "black >=25.1, <26",  # Code formatter
+    "black >=26.1, <27",  # Code formatter
     "isort >=7, <8",  # Import sorter
     "ruff >=0.7.2, <1",  # linter
     "mypy >=1.13.0, <2",  # Type validator

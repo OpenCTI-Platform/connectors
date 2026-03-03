@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CrowdSec builder (converter to stix) module."""
+
 import re
 from typing import Dict, List, Optional, Union
 
