@@ -231,7 +231,7 @@ class CrowdstrikeConfig(BaseConfigModel):
     interval_sec: SkipValidation[PositiveInt] = DeprecatedField(
         new_namespace="connector",
         new_namespaced_var="duration_period",
-        new_value_factory=lambda: timedelta(seconds=1800),
+        new_value_factory=lambda x: timedelta(seconds=x),
     )
 
     @field_validator("tlp", "report_status", mode="before")
