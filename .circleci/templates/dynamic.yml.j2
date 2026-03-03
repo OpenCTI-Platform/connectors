@@ -9,7 +9,6 @@ jobs:
     steps:
       - checkout
       - setup_remote_docker
-          version: default
       - run:
           name: Build {{top_dir}}/{{sub_dir}}
           command: |
