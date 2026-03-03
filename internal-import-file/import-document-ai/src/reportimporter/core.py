@@ -170,6 +170,7 @@ class ReportImporter:
                 "name": data["file_id"].replace("import/global/", ""),
                 "data": file_data_encoded,
                 "mime_type": data["file_mime"],
+                "no_trigger_import": True,
             }
             # Reset file offset
             file_content_buffered.seek(0)
