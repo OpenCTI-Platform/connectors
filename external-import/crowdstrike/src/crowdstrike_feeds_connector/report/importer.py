@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping as ABCMapping
 from datetime import datetime
-from typing import Any, Generator, List, Mapping, Optional, cast
+from typing import TYPE_CHECKING, Any, Generator, List, Mapping, Optional, cast
 
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
@@ -13,9 +13,6 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import (  # noqa: E501
-    OpenCTIConnectorHelper,
-)
 from stix2 import Bundle, Identity, MarkingDefinition
 from stix2.v21 import _DomainObject
 
@@ -25,6 +22,10 @@ from ..indicator.importer import (
     IndicatorBundleBuilderConfig,  # pyright: ignore[reportPrivateImportUsage]
 )
 from .builder import ReportBundleBuilder
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class ReportImporter(BaseImporter):
@@ -37,7 +38,8 @@ class ReportImporter(BaseImporter):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
@@ -52,9 +54,9 @@ class ReportImporter(BaseImporter):
         scopes: set[str],
     ) -> None:
         """Initialize CrowdStrike report importer."""
-        super().__init__(helper, author, tlp_marking)
+        super().__init__(config, helper, author, tlp_marking)
 
-        self.reports_api_cs = ReportsAPI(helper)
+        self.reports_api_cs = ReportsAPI(config, helper)
         self.default_latest_timestamp = default_latest_timestamp
         self.include_types = include_types
         self.target_industries = target_industries
@@ -62,7 +64,7 @@ class ReportImporter(BaseImporter):
         self.report_type = report_type
         self.guess_malware = guess_malware
         self.report_guess_relations = report_guess_relations
-        self.indicators_api_cs = IndicatorsAPI(helper)
+        self.indicators_api_cs = IndicatorsAPI(config, helper)
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
         self.scopes = scopes

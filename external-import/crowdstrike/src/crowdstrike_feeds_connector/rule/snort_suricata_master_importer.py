@@ -4,7 +4,17 @@ import itertools
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    List,
+    Mapping,
+    NamedTuple,
+    Optional,
+    Tuple,
+    cast,
+)
 
 from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
@@ -13,15 +23,16 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.snort_parser import SnortParser, SnortRule
-from pycti.connector.opencti_connector_helper import (  # noqa: E501
-    OpenCTIConnectorHelper,
-)
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition
 from stix2.exceptions import STIXError
 
 from ..importer import BaseImporter
 from .snort_suricata_master_builder import SnortRuleBundleBuilder
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class SnortMaster(NamedTuple):
@@ -45,7 +56,8 @@ class SnortMasterImporter(BaseImporter):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: Identity,
         tlp_marking: MarkingDefinition,
         report_status: int,
@@ -54,15 +66,15 @@ class SnortMasterImporter(BaseImporter):
         scopes: list[str],
     ) -> None:
         """Initialize CrowdStrike Snort master importer."""
-        super().__init__(helper, author, tlp_marking)
+        super().__init__(config, helper, author, tlp_marking)
 
-        self.rules_api_cs = RulesAPI(helper)
+        self.rules_api_cs = RulesAPI(config, helper)
         self.report_status = report_status
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
         self.include_reports = "report" in scopes
 
-        self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
+        self.report_fetcher = ReportFetcher(config, helper, self.no_file_trigger_import)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""

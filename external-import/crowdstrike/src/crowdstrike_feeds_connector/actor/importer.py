@@ -1,7 +1,7 @@
 """OpenCTI CrowdStrike actor importer module."""
 
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional
 
 from crowdstrike_feeds_connector.related_actors.importer import (
     RelatedActorImporter,
@@ -14,11 +14,14 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class ActorImporter(BaseImporter):
@@ -30,14 +33,15 @@ class ActorImporter(BaseImporter):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
-        super().__init__(helper, author, tlp_marking)
-        self.actors_api_cs = ActorsAPI(helper)
+        super().__init__(config, helper, author, tlp_marking)
+        self.actors_api_cs = ActorsAPI(config, helper)
         self.default_latest_timestamp = default_latest_timestamp
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
