@@ -4,9 +4,10 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, SkipValidation
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -55,14 +56,30 @@ class AnyrunTaskConfig(BaseConfigModel):
     os: str = Field(
         description="Operating system for sandbox environment.", default="windows"
     )
+    bitness: SkipValidation[str] = DeprecatedField(  # type: ignore[assignment]
+        deprecated="Deprecated: Use `os_bitness` instead.",
+        new_namespaced_var="os_bitness",
+    )
     os_bitness: Literal["32", "64"] = Field(
         description="Operating system bitness: `32` or `64`.", default="64"
+    )
+    version: SkipValidation[str] = DeprecatedField(  # type: ignore[assignment]
+        deprecated="Deprecated: Use `os_version` instead.",
+        new_namespaced_var="os_version",
     )
     os_version: Literal["7", "8.1", "10", "11"] = Field(
         description="Windows version: `7`, `8.1`, `10`, or `11`.", default="10"
     )
+    locale: SkipValidation[str] = DeprecatedField(  # type: ignore[assignment]
+        deprecated="Deprecated: Use `os_locale` instead.",
+        new_namespaced_var="os_locale",
+    )
     os_locale: str = Field(
         description="Operating system language locale.", default="en-US"
+    )
+    browser: SkipValidation[str] = DeprecatedField(  # type: ignore[assignment]
+        deprecated="Deprecated: Use `os_browser` instead.",
+        new_namespaced_var="os_browser",
     )
     os_browser: Literal[
         "Google Chrome",
@@ -71,7 +88,10 @@ class AnyrunTaskConfig(BaseConfigModel):
         "Internet Explorer",
         "Microsoft Edge",
     ] = Field(
-        description="Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`.",
+        description=(
+            "Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, "
+            "`Internet Explorer`, `Microsoft Edge`."
+        ),
         default="Google Chrome",
     )
     privacy: Literal["public", "bylink", "owner", "team"] = Field(

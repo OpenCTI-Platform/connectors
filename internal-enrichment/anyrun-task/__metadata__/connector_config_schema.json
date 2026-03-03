@@ -72,8 +72,11 @@
       "type": "string"
     },
     "ANYRUN_URL": {
-      "default": "https://api.any.run",
+      "default": "https://api.any.run/",
       "description": "Base URL for the ANY.RUN API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "ANYRUN_TASK_TIMER": {
@@ -86,6 +89,12 @@
       "description": "Operating system for sandbox environment.",
       "type": "string"
     },
+    "ANYRUN_BITNESS": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use ANYRUN_OS_BITNESS instead."
+    },
     "ANYRUN_OS_BITNESS": {
       "default": "64",
       "description": "Operating system bitness: `32` or `64`.",
@@ -94,6 +103,12 @@
         "64"
       ],
       "type": "string"
+    },
+    "ANYRUN_VERSION": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use ANYRUN_OS_VERSION instead."
     },
     "ANYRUN_OS_VERSION": {
       "default": "10",
@@ -106,10 +121,22 @@
       ],
       "type": "string"
     },
+    "ANYRUN_LOCALE": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use ANYRUN_OS_LOCALE instead."
+    },
     "ANYRUN_OS_LOCALE": {
       "default": "en-US",
       "description": "Operating system language locale.",
       "type": "string"
+    },
+    "ANYRUN_BROWSER": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use ANYRUN_OS_BROWSER instead."
     },
     "ANYRUN_OS_BROWSER": {
       "default": "Google Chrome",
