@@ -39,17 +39,8 @@ def patched_snort_dependencies() -> None:
         yield
 
 
-def _build_helper() -> MagicMock:
-    helper = MagicMock()
-    helper.log_info = MagicMock()
-    helper.log_error = MagicMock()
-    helper.log_debug = MagicMock()
-    helper.log_warning = MagicMock()
-    helper.connect_confidence_level = 80
-    return helper
-
-
-def _build_config() -> ConnectorSettings:
+@pytest.fixture
+def connector_settings() -> ConnectorSettings:
     env_vars = {
         "OPENCTI_URL": "http://localhost:8080",
         "OPENCTI_TOKEN": f"{uuid4()}",
@@ -66,6 +57,16 @@ def _build_config() -> ConnectorSettings:
     config = ConnectorSettings()
 
     return config
+
+
+def _build_helper() -> MagicMock:
+    helper = MagicMock()
+    helper.log_info = MagicMock()
+    helper.log_error = MagicMock()
+    helper.log_debug = MagicMock()
+    helper.log_warning = MagicMock()
+    helper.connect_confidence_level = 80
+    return helper
 
 
 def _build_yara_rule() -> YaraRule:
@@ -91,13 +92,14 @@ def _build_snort_rule() -> SnortRule:
 
 
 def test_yara_master_skips_report_fetch_when_report_scope_absent(
+    connector_settings,
     patched_yara_dependencies: None,
 ) -> None:
     """YARA importer does not fetch report entities if report scope is not enabled."""
     del patched_yara_dependencies
 
     importer = YaraMasterImporter(
-        config=_build_config(),
+        config=connector_settings,
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
@@ -119,13 +121,14 @@ def test_yara_master_skips_report_fetch_when_report_scope_absent(
 
 
 def test_yara_master_fetches_reports_when_report_scope_present(
+    connector_settings,
     patched_yara_dependencies: None,
 ) -> None:
     """YARA importer fetches linked reports when report scope is enabled."""
     del patched_yara_dependencies
 
     importer = YaraMasterImporter(
-        config=_build_config(),
+        config=connector_settings,
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
@@ -148,13 +151,14 @@ def test_yara_master_fetches_reports_when_report_scope_present(
 
 
 def test_snort_master_skips_report_fetch_when_report_scope_absent(
+    connector_settings,
     patched_snort_dependencies: None,
 ) -> None:
     """Snort importer does not fetch report entities if report scope is not enabled."""
     del patched_snort_dependencies
 
     importer = SnortMasterImporter(
-        config=_build_config(),
+        config=connector_settings,
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
@@ -176,13 +180,14 @@ def test_snort_master_skips_report_fetch_when_report_scope_absent(
 
 
 def test_snort_master_fetches_reports_when_report_scope_present(
+    connector_settings,
     patched_snort_dependencies: None,
 ) -> None:
     """Snort importer fetches linked reports when report scope is enabled."""
     del patched_snort_dependencies
 
     importer = SnortMasterImporter(
-        config=_build_config(),
+        config=connector_settings,
         helper=_build_helper(),
         author=MagicMock(),
         tlp_marking=MagicMock(),
