@@ -4,19 +4,19 @@
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
-      "description": "The OpenCTI platform URL.",
+      "description": "The base URL of the OpenCTI instance.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
     "OPENCTI_TOKEN": {
-      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "description": "The API token to connect to OpenCTI.",
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "CrowdStrike",
-      "description": "Name of the connector.",
+      "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -29,19 +29,9 @@
       },
       "type": "array"
     },
-    "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
-      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
-      "type": "string"
-    },
-    "CONNECTOR_TYPE": {
-      "default": "EXTERNAL_IMPORT",
-      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
-      "type": "string"
-    },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
-      "description": "Determines the verbosity of the logs.",
+      "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
         "info",
@@ -49,6 +39,17 @@
         "warning",
         "error"
       ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
+      "format": "duration",
       "type": "string"
     },
     "CROWDSTRIKE_BASE_URL": {
@@ -135,13 +136,13 @@
       "type": "integer"
     },
     "CROWDSTRIKE_REPORT_STATUS": {
-      "default": "New",
+      "default": "new",
       "description": "Report status filter.",
       "enum": [
-        "New",
-        "In Progress",
-        "Analyzed",
-        "Closed"
+        "new",
+        "in progress",
+        "analyzed",
+        "closed"
       ],
       "type": "string"
     },
@@ -164,7 +165,7 @@
       "type": "string"
     },
     "CROWDSTRIKE_REPORT_TARGET_INDUSTRIES": {
-      "default": null,
+      "default": [],
       "description": "Comma-separated list of target industries to filter reports.",
       "items": {
         "type": "string"
@@ -254,7 +255,7 @@
       "type": "array"
     },
     "CROWDSTRIKE_INDICATOR_UNWANTED_LABELS": {
-      "default": null,
+      "default": [],
       "description": "Comma-separated list of unwanted labels to filter out indicators. Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'.",
       "items": {
         "type": "string"
@@ -271,10 +272,11 @@
       "type": "integer"
     },
     "CROWDSTRIKE_INTERVAL_SEC": {
-      "default": 1800,
-      "description": "Polling interval in seconds for fetching data (used when duration_period is not set).",
+      "default": null,
+      "deprecated": true,
       "exclusiveMinimum": 0,
-      "type": "integer"
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [
