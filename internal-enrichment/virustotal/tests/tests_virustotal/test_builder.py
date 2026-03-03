@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Virustotal builder unittest."""
+
 import datetime
 import json
 import os

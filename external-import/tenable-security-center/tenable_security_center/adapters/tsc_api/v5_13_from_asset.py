@@ -49,7 +49,6 @@ from tenable_security_center.adapters.tsc_api.v5_13_common import (
     FINDING_SEVERITIES_MAP,
 )
 
-
 if TYPE_CHECKING:
     from requests import Response
     from tenable_security_center.utils import AppLogger

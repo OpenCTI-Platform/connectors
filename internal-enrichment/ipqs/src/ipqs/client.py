@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """IPQS client module."""
+
 from pycti import OpenCTIConnectorHelper
 from requests import Response, session
 from requests.exceptions import ConnectTimeout, HTTPError, InvalidURL, ProxyError
