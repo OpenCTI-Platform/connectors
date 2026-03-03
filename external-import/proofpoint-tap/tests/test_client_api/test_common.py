@@ -1,5 +1,6 @@
 # pragma: no cover # do not include tests modules in coverage metrics
 """Test the BaseClient class module."""
+
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock
 

@@ -1,6 +1,7 @@
 # isort:skip_file
 # pragma: no cover # do not include tests modules in coverage metrics
 """Test the events adapters."""
+
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock
 

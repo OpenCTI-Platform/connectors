@@ -7,6 +7,7 @@ This module tests:
     - Model responses
 
 """
+
 from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock
 

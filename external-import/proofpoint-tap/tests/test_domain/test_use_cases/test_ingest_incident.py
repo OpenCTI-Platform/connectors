@@ -1,7 +1,6 @@
 # pragma: no cover # do not include tests modules in coverage metrics
 """Test the ingest incident use case."""
 
-
 from datetime import datetime, timezone
 from typing import Literal, Optional
 

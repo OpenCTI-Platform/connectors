@@ -39,7 +39,7 @@ test = [
     "polyfactory ~=2.22.1",
 ]
 dev = [
-    "black ~=25.1",          # Code formatter
+    "black ~=26.1",          # Code formatter
     "isort ~=7.0.0",         # Import sorter
     "ruff ~=0.14.2",         # linter
     "mypy ~=1.19.1",         # Type validator

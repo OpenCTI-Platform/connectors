@@ -8,6 +8,7 @@ This module tests:
     - Model responses
 
 """
+
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 from unittest.mock import AsyncMock, MagicMock, Mock

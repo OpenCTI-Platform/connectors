@@ -97,9 +97,9 @@ class TAPCompiledCampaignClient:
         )
 
         # we deserialize instead of repeating kwargs
-        self.campaign = CampaignClient(**common_kwargs)  # type:ignore[arg-type]
-        self.threat = ThreatClient(**common_kwargs)  # type:ignore[arg-type]
-        self.forensics = ForensicsClient(**common_kwargs)  # type:ignore[arg-type]
+        self.campaign = CampaignClient(**common_kwargs)  # type: ignore[arg-type]
+        self.threat = ThreatClient(**common_kwargs)  # type: ignore[arg-type]
+        self.forensics = ForensicsClient(**common_kwargs)  # type: ignore[arg-type]
 
     async def fetch_campaign(self, campaign_id: str) -> CampaignCompiledInfo:
         """Fetch the details of a campaign and compile additional information.

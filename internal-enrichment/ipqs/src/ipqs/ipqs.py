@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """IPQS enrichment module."""
+
 from os import path
 from typing import Dict
 

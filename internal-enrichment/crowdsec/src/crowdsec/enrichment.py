@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CrowdSec internal enrichment module."""
+
 import os
 import time
 from pathlib import Path

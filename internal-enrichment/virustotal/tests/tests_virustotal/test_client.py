@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Virustotal client unittest."""
+
 import unittest
 
 from virustotal.client import VirusTotalClient
