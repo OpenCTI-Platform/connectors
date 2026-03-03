@@ -5,10 +5,11 @@ jobs:
 {% for sub_dir in sub_dirs %}
   build_{{top_dir}}_{{sub_dir}}:
     docker:
-      - image: cimg/base:stable-20.04
+      - image: cimg/base:current-24.04
     steps:
       - checkout
       - setup_remote_docker
+          version: default
       - run:
           name: Build {{top_dir}}/{{sub_dir}}
           command: |
