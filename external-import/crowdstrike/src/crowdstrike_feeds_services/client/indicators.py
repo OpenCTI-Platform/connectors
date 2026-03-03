@@ -1,12 +1,17 @@
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
 from .base_api import BaseCrowdstrikeClient
 
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class IndicatorsAPI(BaseCrowdstrikeClient):
 
-    def __init__(self, helper):
-        super().__init__(helper)
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        super().__init__(config, helper)
 
     def get_combined_indicator_entities(
         self, limit: int, sort: str, fql_filter: str, deep_pagination: bool

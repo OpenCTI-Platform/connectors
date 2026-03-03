@@ -1,10 +1,22 @@
 from datetime import datetime, timedelta, timezone
-from typing import Literal, Optional
+from typing import Literal
 
-from connectors_sdk import ListFromString
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseExternalImportConnectorConfig,
+    DeprecatedField,
+    ListFromString,
+)
 from crowdstrike_feeds_services.utils import is_timestamp_in_future
-from models.configs.base_settings import ConfigBaseSettings
-from pydantic import Field, HttpUrl, PositiveInt, SecretStr, field_validator
+from pydantic import (
+    Field,
+    HttpUrl,
+    PositiveInt,
+    SecretStr,
+    SkipValidation,
+    field_validator,
+)
 
 
 def _get_default_timestamp_30_days_ago() -> int:
@@ -13,8 +25,37 @@ def _get_default_timestamp_30_days_ago() -> int:
     return int(thirty_days_ago.timestamp())
 
 
-class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
-    """Interface for loading CrowdStrike dedicated configuration."""
+class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
+    """
+    Override the `BaseExternalImportConnectorConfig` to add parameters and/or defaults
+    to the configuration for connectors of type `EXTERNAL_IMPORT`.
+    """
+
+    id: str = Field(
+        default="crowdstrike--1234abcd-1234-1234-1234-abcd12345678",
+        description="A unique UUIDv4 identifier for this connector instance.",
+    )
+    name: str = Field(
+        description="The name of the connector.",
+        default="CrowdStrike",
+    )
+    scope: ListFromString = Field(
+        default=["crowdstrike"],
+        description=(
+            "The scope or type of data the connector is importing, "
+            "either a MIME type or Stix Object (for information only)."
+        ),
+    )
+    duration_period: timedelta = Field(
+        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
+        default=timedelta(hours=1),
+    )
+
+
+class CrowdstrikeConfig(BaseConfigModel):
+    """
+    Define parameters and/or defaults for the configuration specific to the `CrowdstrikeConnector`.
+    """
 
     # Core CrowdStrike configuration
     base_url: HttpUrl = Field(
@@ -62,7 +103,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
             "Should match the version imported by the MITRE ATT&CK external import connector."
         ),
     )
-    attack_enterprise_url: Optional[HttpUrl] = Field(
+    attack_enterprise_url: HttpUrl | None = Field(
         default=None,
         description=(
             "Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. "
@@ -89,24 +130,29 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description="Unix timestamp from which to start importing reports. Default is 30 days ago. BEWARE: 0 means ALL reports!",
     )
     report_status: Literal[
-        "New",
-        "In Progress",
-        "Analyzed",
-        "Closed",
+        "new",
+        "in progress",
+        "analyzed",
+        "closed",
     ] = Field(
-        default="New",
+        default="new",
         description="Report status filter.",
     )
-    report_include_types: Optional[ListFromString] = Field(
-        default=["notice", "tipper", "intelligence report", "periodic report"],
+    report_include_types: ListFromString = Field(
+        default=[
+            "notice",
+            "tipper",
+            "intelligence report",
+            "periodic report",
+        ],
         description="Comma-separated list of report types to include.",
     )
     report_type: str = Field(
         default="threat-report",
         description="OpenCTI report type for imported reports.",
     )
-    report_target_industries: Optional[ListFromString] = Field(
-        default=None,
+    report_target_industries: ListFromString = Field(
+        default=[],
         description="Comma-separated list of target industries to filter reports.",
     )
     report_guess_malware: bool = Field(
@@ -123,8 +169,14 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default_factory=_get_default_timestamp_30_days_ago,
         description="Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
     )
-    indicator_exclude_types: Optional[ListFromString] = Field(
-        default=["hash_ion", "hash_md5", "hash_sha1", "password", "username"],
+    indicator_exclude_types: ListFromString = Field(
+        default=[
+            "hash_ion",
+            "hash_md5",
+            "hash_sha1",
+            "password",
+            "username",
+        ],
         description="Comma-separated list of indicator types to exclude from import.",
     )
     default_x_opencti_score: PositiveInt = Field(
@@ -135,7 +187,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default=40,
         description="Score assigned to indicators with low confidence labels.",
     )
-    indicator_low_score_labels: Optional[ListFromString] = Field(
+    indicator_low_score_labels: ListFromString = Field(
         default=["MaliciousConfidence/Low"],
         description="Comma-separated list of labels indicating low confidence.",
     )
@@ -143,7 +195,7 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default=60,
         description="Score assigned to indicators with medium confidence labels.",
     )
-    indicator_medium_score_labels: Optional[ListFromString] = Field(
+    indicator_medium_score_labels: ListFromString = Field(
         default=["MaliciousConfidence/Medium"],
         description="Comma-separated list of labels indicating medium confidence.",
     )
@@ -151,12 +203,12 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         default=80,
         description="Score assigned to indicators with high confidence labels.",
     )
-    indicator_high_score_labels: Optional[ListFromString] = Field(
+    indicator_high_score_labels: ListFromString = Field(
         default=["MaliciousConfidence/High"],
         description="Comma-separated list of labels indicating high confidence.",
     )
-    indicator_unwanted_labels: Optional[ListFromString] = Field(
-        default=None,
+    indicator_unwanted_labels: ListFromString = Field(
+        default=[],
         description=(
             "Comma-separated list of unwanted labels to filter out indicators. "
             "Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'."
@@ -175,51 +227,50 @@ class _ConfigLoaderCrowdstrike(ConfigBaseSettings):
         description="Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
     )
 
-    # Interval configuration
-    interval_sec: PositiveInt = Field(
-        default=1800,
-        description="Polling interval in seconds for fetching data (used when duration_period is not set).",
+    # [DEPRECATED] Interval configuration
+    interval_sec: SkipValidation[PositiveInt] = DeprecatedField(
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(seconds=x),
     )
 
-    @field_validator("tlp", mode="before")
+    @field_validator("tlp", "report_status", mode="before")
     @classmethod
-    def validate_tlp_lowercase(cls, v: str) -> str:
-        """Convert TLP value to lowercase."""
+    def to_lowercase(cls, v: str) -> str:
+        """Convert value to lowercase."""
         return v.lower()
 
-    @field_validator("report_status")
-    def lowercase_report_status(cls, value):
-        return value.lower()
-
-    # Replace empty timestamps with default value
     @field_validator(
         "actor_start_timestamp",
         "report_start_timestamp",
         "indicator_start_timestamp",
-        mode="before",
+        mode="after",
     )
-    @staticmethod
-    def _set_start_timestamp(value):
-        # If the value is None or empty string, use the default factory value.
-        # Else check that it's not in the future.
-        if value is None or (isinstance(value, str) and value.strip() == ""):
-            return _get_default_timestamp_30_days_ago()
-
-        if isinstance(value, str):
-            value = int(value)
-
+    @classmethod
+    def check_start_timestamp(cls, value) -> int:
         if is_timestamp_in_future(value):
             raise ValueError(
                 f"The provided timestamp value '{value}' is in the future."
             )
         return value
 
-    @field_validator("attack_version")
-    @staticmethod
-    def format_attack_version(value) -> str:
+    @field_validator("attack_version", mode="after")
+    @classmethod
+    def format_attack_version(cls, value) -> str:
         if isinstance(value, str):
             # Accept versions like "v17.1" or "17.1".
             if value.lower().startswith("v"):
                 value = value[1:]
 
         return value
+
+
+class ConnectorSettings(BaseConnectorSettings):
+    """
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `CrowdstrikeConfig`.
+    """
+
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
+    crowdstrike: CrowdstrikeConfig = Field(default_factory=CrowdstrikeConfig)

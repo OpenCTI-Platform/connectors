@@ -13,7 +13,7 @@ from crowdstrike_feeds_connector.indicator.builder import (
     IndicatorBundleBuilder,
     IndicatorBundleBuilderConfig,
 )
-from models.configs.config_loader import ConfigLoader
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 # =====================
@@ -127,10 +127,10 @@ def test_ingest_indicators_without_propagating_kill_chains_to_malware(
 
 def _given_indicator_with_associated_kill_chains(
     config_data: dict[str, str], indicator_data: dict
-) -> tuple[Any, ConfigLoader, dict]:
+) -> tuple[Any, ConnectorSettings, dict]:
     """Given an indicator with associated kill chains."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert "kill_chains" in indicator_data  # noqa: S101
     assert len(indicator_data["kill_chains"]) > 0  # noqa: S101
@@ -141,7 +141,7 @@ def _given_indicator_with_associated_kill_chains(
 
 
 def _when_indicator_is_ingested(
-    config: ConfigLoader,
+    config: ConnectorSettings,
     indicator_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,

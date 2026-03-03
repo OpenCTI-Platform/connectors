@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 from conftest import mock_env_vars
 from crowdstrike_feeds_connector.report.builder import ReportBundleBuilder
-from models.configs.config_loader import ConfigLoader
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 # =====================
@@ -174,10 +174,10 @@ def test_enable_relationship_guessing_when_needed(
 
 def _given_admin_has_set_report_guess_relations_to_false(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given the Admin has set report_guess_relations to False in the configuration."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert not config.crowdstrike.report_guess_relations  # noqa: S101
 
@@ -186,10 +186,10 @@ def _given_admin_has_set_report_guess_relations_to_false(
 
 def _given_admin_has_set_report_guess_relations_to_true(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given the Admin has set report_guess_relations to True in the configuration."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert config.crowdstrike.report_guess_relations  # noqa: S101
 
@@ -197,7 +197,7 @@ def _given_admin_has_set_report_guess_relations_to_true(
 
 
 def _when_system_imports_report_from_crowdstrike_api(
-    config: ConfigLoader,
+    config: ConnectorSettings,
     report_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,

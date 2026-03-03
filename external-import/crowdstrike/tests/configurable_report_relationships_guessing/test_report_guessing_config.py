@@ -6,8 +6,7 @@ from uuid import uuid4
 
 import pytest
 from conftest import mock_env_vars
-from models.configs.config_loader import ConfigLoader
-from models.configs.crowdstrike_configs import _ConfigLoaderCrowdstrike
+from crowdstrike_feeds_connector.settings import ConnectorSettings, CrowdstrikeConfig
 
 # =====================
 # Fixtures
@@ -81,19 +80,19 @@ def _given_admin_is_installing_connector(min_required_config: dict[str, str]) ->
     return mock_env
 
 
-def _when_admin_does_not_specify_report_guess_relations() -> ConfigLoader:
+def _when_admin_does_not_specify_report_guess_relations() -> ConnectorSettings:
     """When the Admin does not specify report_guess_relations configuration."""
-    config = ConfigLoader()
+    config = ConnectorSettings()
     return config
 
 
 def _then_system_should_default_report_guess_relations_to_false(
-    config: ConfigLoader,
+    config: ConnectorSettings,
 ) -> None:
     """Then the System should default report_guess_relations to False."""
     assert hasattr(config.crowdstrike, "report_guess_relations")  # noqa: S101
     assert not config.crowdstrike.report_guess_relations  # noqa: S101
 
-    field_info = _ConfigLoaderCrowdstrike.model_fields.get("report_guess_relations")
+    field_info = CrowdstrikeConfig.model_fields.get("report_guess_relations")
     assert field_info is not None  # noqa: S101
     assert not field_info.default  # noqa: S101

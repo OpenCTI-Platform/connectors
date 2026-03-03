@@ -1,10 +1,13 @@
 """OpenCTI CrowdStrike importer module."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import stix2
-from pycti import OpenCTIConnectorHelper
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class BaseImporter(ABC):
@@ -14,11 +17,13 @@ class BaseImporter(ABC):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: stix2.Identity,
         tlp_marking: stix2.MarkingDefinition,
     ) -> None:
         """Initialize CrowdStrike importer module."""
+        self.config = config
         self.helper = helper
         self.author = author
         self.tlp_marking = tlp_marking
