@@ -1,6 +1,6 @@
 from connectors_sdk import ListFromString
 from models.configs import ConfigBaseSettings
-from pydantic import Field, PositiveInt, SecretStr
+from pydantic import Field, PositiveInt, SecretStr, field_validator
 
 
 class _ConfigLoaderFeedly(ConfigBaseSettings):
@@ -19,6 +19,7 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
             "Comma separated list of Feedly stream IDs to monitor. "
             "Each stream ID represents a specific feed or collection to import from Feedly."
         ),
+        json_schema_extra={"default": []},
     )
     days_to_back_fill: PositiveInt = Field(
         default=7,
@@ -40,3 +41,12 @@ class _ConfigLoaderFeedly(ConfigBaseSettings):
             "If false, all relationship objects will be filtered out before sending to OpenCTI."
         ),
     )
+
+    @field_validator("stream_ids", mode="after")
+    @classmethod
+    def streams_ids_must_be_filled(cls, v):
+        if v == []:
+            raise ValueError(
+                "At least one stream ID must be provided in the stream_ids setting."
+            )
+        return v
