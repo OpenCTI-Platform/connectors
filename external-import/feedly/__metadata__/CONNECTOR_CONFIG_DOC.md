@@ -8,7 +8,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The OpenCTI platform URL. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The token of the user who represents the connector in the OpenCTI platform. |
-| FEEDLY_STREAM_IDS | `array` | ✅ | string |  | Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly. |
+| FEEDLY_STREAM_IDS | `array` | ✅ | string | `[]` | Comma separated list of Feedly stream IDs to monitor. Each stream ID represents a specific feed or collection to import from Feedly. |
 | FEEDLY_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Feedly API key for authentication. Generate your API key at https://feedly.com/i/team/api |
 | CONNECTOR_NAME | `string` |  | string | `"Feedly"` | Name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["feedly"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
