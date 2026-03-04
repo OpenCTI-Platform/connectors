@@ -407,7 +407,14 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
 
     def to_helper_config(self) -> dict[str, Any]:
         """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`."""
-        return self.model_dump(mode="json", context={"mode": "pycti"})
+        return self.model_dump(
+            mode="json",
+            context={"mode": "pycti"},
+            # Deprecated fields can be set to `None` despite their type (due to `SkipValidation` annotation).
+            # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
+            # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
+            exclude_none=True,
+        )
 
 
 class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
