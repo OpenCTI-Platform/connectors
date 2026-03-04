@@ -165,4 +165,5 @@ class DeprecatedField:
                 "new_value_factory": new_value_factory,  # type: ignore[dict-item]
                 "removal_date": removal_date,  # type: ignore[dict-item]
             },
+            validate_default=False,
         )  # type: ignore[return-value]
