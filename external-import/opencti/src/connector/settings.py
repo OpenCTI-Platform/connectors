@@ -1,6 +1,5 @@
 from datetime import timedelta
-from typing import Literal
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,

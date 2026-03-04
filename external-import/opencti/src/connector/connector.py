@@ -1,6 +1,5 @@
 import json
 from connector.settings import ConnectorSettings
-import os
 import ssl
 import sys
 import time
