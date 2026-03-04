@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/opencti_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Opencti",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONFIG_SECTORS_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json",
+      "description": "URL to sectors dataset (set to `false` to disable).",
+      "type": "string"
+    },
+    "CONFIG_GEOGRAPHY_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json",
+      "description": "URL to geography dataset (set to `false` to disable).",
+      "type": "string"
+    },
+    "CONFIG_COMPANIES_FILE_URL": {
+      "default": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json",
+      "description": "URL to companies dataset.",
+      "type": "string"
+    },
+    "CONFIG_REMOVE_CREATOR": {
+      "default": false,
+      "description": "Remove creator identity from imported objects.",
+      "type": "boolean"
+    },
+    "CONFIG_INTERVAL": {
+      "default": 7,
+      "description": "Interval in days between connector runs.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
