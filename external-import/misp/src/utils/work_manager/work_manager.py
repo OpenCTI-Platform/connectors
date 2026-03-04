@@ -54,6 +54,17 @@ class WorkManager:
         """
         return self._helper.check_connector_buffering()
 
+    def check_connector_run_and_terminate(self) -> bool:
+        """Check if the connector should run and terminate.
+
+        Returns:
+            bool: True if the connector should run, False if it should terminate.
+
+        """
+        return bool(self._helper.connect_run_and_terminate) or (
+            self._config.connector.duration_period.total_seconds() == 0
+        )
+
     @staticmethod
     def _is_valid_iso_format(date_string: str) -> bool:
         """Check if a string is a valid ISO format date.
