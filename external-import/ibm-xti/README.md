@@ -64,11 +64,11 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter         | config.yml         | Docker environment variable           | Default                    | Mandatory | Description                                                    |
 |-------------------|--------------------|---------------------------------------|----------------------------|-----------|----------------------------------------------------------------|
-| TAXII Server URL  | taxii_server_url   | `CONNECTOR_IBM_XTI_TAXII_SERVER_URL`  |                            | Yes       | The base URL of the IBM X-Force PTI TAXII Server.              |
-| TAXII User        | taxii_user         | `CONNECTOR_IBM_XTI_TAXII_USER`        |                            | Yes       | Your TAXII Server username.                                    |
-| TAXII Password    | taxii_pass         | `CONNECTOR_IBM_XTI_TAXII_PASS`        |                            | Yes       | Your TAXII Server password.                                    |
-| TAXII Collections | taxii_collections  | `CONNECTOR_IBM_XTI_TAXII_COLLECTIONS` | All authorized collections | No        | Comma-separated list of collection IDs to ingest.              |
-| Create Observables| create_observables | `CONNECTOR_IBM_XTI_CREATE_OBSERVABLES`|                            | No        | Create observables from indicators.                            |
+| TAXII Server URL  | taxii_server_url   | `IBM_XTI_TAXII_SERVER_URL`  |                            | Yes       | The base URL of the IBM X-Force PTI TAXII Server.              |
+| TAXII User        | taxii_user         | `IBM_XTI_TAXII_USER`        |                            | Yes       | Your TAXII Server username.                                    |
+| TAXII Password    | taxii_pass         | `IBM_XTI_TAXII_PASS`        |                            | Yes       | Your TAXII Server password.                                    |
+| TAXII Collections | taxii_collections  | `IBM_XTI_TAXII_COLLECTIONS` | All authorized collections | No        | Comma-separated list of collection IDs to ingest.              |
+| Create Observables| create_observables | `IBM_XTI_CREATE_OBSERVABLES`|                            | No        | Create observables from indicators.                            |
 
 ## Deployment
 
@@ -93,9 +93,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_SCOPE=ibm-xti
       - CONNECTOR_DURATION_PERIOD=PT5M
       - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_IBM_XTI_TAXII_SERVER_URL=ChangeMe
-      - CONNECTOR_IBM_XTI_TAXII_USER=ChangeMe
-      - CONNECTOR_IBM_XTI_TAXII_PASS=ChangeMe
+      - IBM_XTI_TAXII_SERVER_URL=ChangeMe
+      - IBM_XTI_TAXII_USER=ChangeMe
+      - IBM_XTI_TAXII_PASS=ChangeMe
     restart: always
 ```
 
@@ -182,7 +182,7 @@ graph LR
 To limit ingestion to specific collections:
 
 ```env
-CONNECTOR_IBM_XTI_TAXII_COLLECTIONS=collection-id-1,collection-id-2
+IBM_XTI_TAXII_COLLECTIONS=collection-id-1,collection-id-2
 ```
 
 > **Note**: Use collection IDs, not names or aliases.

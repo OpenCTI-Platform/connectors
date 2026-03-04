@@ -22,9 +22,9 @@ services:
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # Connector's custom execution parameters
-      - CONNECTOR_IBM_XTI_TAXII_SERVER_URL=ChangeMe
-      - CONNECTOR_IBM_XTI_TAXII_USER=ChangeMe
-      - CONNECTOR_IBM_XTI_TAXII_PASS=ChangeMe
-      # - CONNECTOR_IBM_XTI_TAXII_COLLECTIONS="ChangeMe, ChangeMe"
-      # - CONNECTOR_IBM_XTI_CREATE_OBSERVABLES=True
+      - IBM_XTI_TAXII_SERVER_URL=ChangeMe
+      - IBM_XTI_TAXII_USER=ChangeMe
+      - IBM_XTI_TAXII_PASS=ChangeMe
+      # - IBM_XTI_TAXII_COLLECTIONS="ChangeMe, ChangeMe"
+      # - IBM_XTI_CREATE_OBSERVABLES=True
     restart: always
