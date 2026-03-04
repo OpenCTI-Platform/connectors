@@ -1,29 +1,23 @@
 version: '3'
 services:
   connector-proofpoint-tap:
-    # image: opencti/connector-proofpoint-tap:latest
-    build: .
+    image: opencti/connector-proofpoint-tap:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=2cb9340e-e4cd-46c1-ad42-62cf70e243a8
-      - CONNECTOR_ID=ext-imp--proofpoint-tap--uuid
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=c2635ebc-67f7-43a4-9caa-0d10cdc95b85
       - "CONNECTOR_NAME=Proofpoint TAP"
       - CONNECTOR_SCOPE=report
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - TAP_API_BASE_URL=https://tap-api-v2.proofpoint.com/
-      - TAP_API_PRINCIPAL=ChangeMe
-      - TAP_API_SECRET=ChangeMe
-#      - TAP_API_TIMEOUT=PT30S
-#      - TAP_API_RETRIES=3
-#      - TAP_API_BACKOFF=PT5S
-      - TAP_MARKING_DEFINITION=white
-      - TAP_EXPORT_CAMPAIGNS=False
-      - TAP_EXPORT_EVENTS=True
-      - TAP_EVENTS_TYPE=all
+      - PROOFPOINT_TAP_API_BASE_URL=https://tap-api-v2.proofpoint.com/
+      - PROOFPOINT_TAP_API_PRINCIPAL=ChangeMe
+      - PROOFPOINT_TAP_API_SECRET=ChangeMe
+      - PROOFPOINT_TAP_API_TIMEOUT=PT30S
+      - PROOFPOINT_TAP_API_RETRIES=3
+      - PROOFPOINT_TAP_API_BACKOFF=PT5S
+      - PROOFPOINT_TAP_MARKING_DEFINITION=white
+      - PROOFPOINT_TAP_EXPORT_CAMPAIGNS=true
+      - PROOFPOINT_TAP_EXPORT_EVENTS=false
+      - PROOFPOINT_TAP_EVENTS_TYPE=issues
     restart: always
-    networks:
-      - filigran_default
-networks:
-  filigran_default:
-    external: true
