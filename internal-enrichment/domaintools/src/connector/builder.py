@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Builder for DomainTools."""
 
 from datetime import datetime
@@ -6,6 +5,7 @@ from typing import Optional
 
 import stix2
 import validators
+from connectors_sdk.models import OrganizationAuthor
 from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, StixCoreRelationship
 
 from .constants import EntityType
@@ -18,7 +18,7 @@ class DtBuilder:
     """
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper, author: stix2.Identity, stix_objects: []
+        self, helper: OpenCTIConnectorHelper, author: OrganizationAuthor, stix_objects
     ):
         """Initialize DtBuilder."""
         self.helper = helper
@@ -26,8 +26,8 @@ class DtBuilder:
 
         # Use custom properties to set the author and the confidence level of the object.
         self.extensions = {}
-        self.extensions[STIX_EXT_OCTI_SCO] = {"created_by_ref": author["id"]}
-        self.bundle = stix_objects + [self.author]
+        self.extensions[STIX_EXT_OCTI_SCO] = {"created_by_ref": author.id}
+        self.bundle = stix_objects + [self.author.to_stix2_object()]
 
     def reset_score(self):
         """Reset the score used."""
@@ -121,8 +121,7 @@ class DtBuilder:
         if not validators.domain(domain):
             self.helper.metric.inc("error_count")
             self.helper.log_warning(
-                f"[DomainTools] domain {domain} is not correctly "
-                "formatted. Skipping."
+                f"[DomainTools] domain {domain} is not correctly formatted. Skipping."
             )
             return None
         domain_obj = stix2.DomainName(
@@ -151,7 +150,7 @@ class DtBuilder:
         if not validators.email(email):
             self.helper.metric.inc("error_count")
             self.helper.log_warning(
-                f"[DomainTools] email {email} is " "not correctly formatted. Skipping."
+                f"[DomainTools] email {email} is not correctly formatted. Skipping."
             )
             return None
         email_obj = stix2.EmailAddress(
@@ -180,7 +179,7 @@ class DtBuilder:
         if not validators.ipv4(ip):
             self.helper.metric.inc("error_count")
             self.helper.log_warning(
-                f"[DomainTools] ip {ip} is not correctly " "formatted. Skipping."
+                f"[DomainTools] ip {ip} is not correctly formatted. Skipping."
             )
             return None
         ip_obj = stix2.IPv4Address(
@@ -263,8 +262,7 @@ class DtBuilder:
             Created relationship.
         """
         kwargs = {
-            "created_by_ref": self.author,
-            "confidence": self.helper.connect_confidence_level,
+            "created_by_ref": self.author.id,
         }
         if description is not None:
             kwargs["description"] = description
