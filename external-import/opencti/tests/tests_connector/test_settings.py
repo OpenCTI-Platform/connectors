@@ -1,9 +1,44 @@
 from typing import Any
+
 import pytest
-from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
 
-@pytest.mark.parametrize('settings_dict', [pytest.param({'opencti': {'url': 'http://localhost:8080', 'token': 'test-token'}, 'connector': {'id': 'connector-id', 'name': 'Test Connector', 'scope': 'test, connector', 'log_level': 'error', 'duration_period': 'PT5M'}, "config": {'sectors_file_url': 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json', 'geography_file_url': 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json', 'companies_file_url': 'https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json', 'remove_creator': False, 'interval': 7}}, id='full_valid_settings_dict'), pytest.param({'opencti': {'url': 'http://localhost:8080', 'token': 'test-token'}, 'connector': {}, "config": {}}, id='minimal_valid_settings_dict')])
+from connector import ConnectorSettings
+
+
+@pytest.mark.parametrize(
+    "settings_dict",
+    [
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "config": {
+                    "sectors_file_url": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json",
+                    "geography_file_url": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json",
+                    "companies_file_url": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json",
+                    "remove_creator": False,
+                    "interval": 7,
+                },
+            },
+            id="full_valid_settings_dict",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "config": {},
+            },
+            id="minimal_valid_settings_dict",
+        ),
+    ],
+)
 def test_settings_should_accept_valid_input(settings_dict):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) accepts valid input.
@@ -22,12 +57,49 @@ def test_settings_should_accept_valid_input(settings_dict):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
+
     settings = FakeConnectorSettings()
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
     assert isinstance(settings.config, BaseConfigModel) is True
 
-@pytest.mark.parametrize('settings_dict, field_name', [pytest.param({}, 'settings', id='empty_settings_dict'), pytest.param({'opencti': {'url': 'http://localhost:8080'}, 'connector': {'id': 'connector-id', 'name': 'Test Connector', 'scope': 'test, connector', 'log_level': 'error', 'duration_period': 'PT5M'}, "config": {}}, 'opencti.token', id='missing_opencti_token'), pytest.param({'opencti': {'url': 'http://localhost:8080', 'token': 'test-token'}, 'connector': {'id': 123456, 'name': 'Test Connector', 'scope': 'test, connector', 'log_level': 'error', 'duration_period': 'PT5M'}, "config": {}}, 'connector.id', id='invalid_connector_id')])
+
+@pytest.mark.parametrize(
+    "settings_dict, field_name",
+    [
+        pytest.param({}, "settings", id="empty_settings_dict"),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "config": {},
+            },
+            "opencti.token",
+            id="missing_opencti_token",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": 123456,
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "config": {},
+            },
+            "connector.id",
+            id="invalid_connector_id",
+        ),
+    ],
+)
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) raises on invalid input.
@@ -46,6 +118,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
+
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str('Error validating configuration') in str(err)
+    assert str("Error validating configuration") in str(err)

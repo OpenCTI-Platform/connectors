@@ -1,11 +1,12 @@
 from datetime import timedelta
-from pydantic import Field
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from pydantic import Field
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -64,5 +65,7 @@ class ConnectorSettings(BaseConnectorSettings):
     Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `OpenctiConfig`.
     """
 
-    connector: ExternalImportConnectorConfig = Field(default_factory=ExternalImportConnectorConfig)
+    connector: ExternalImportConnectorConfig = Field(
+        default_factory=ExternalImportConnectorConfig
+    )
     config: OpenctiConfig = Field(default_factory=OpenctiConfig)
