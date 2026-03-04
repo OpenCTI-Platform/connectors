@@ -25,6 +25,12 @@ def test_connector_initialization(mocked_helper) -> None:
     assert connector.config.shadowserver.create_incident == True
     assert connector.config.shadowserver.incident_priority == "P1"
     assert connector.config.shadowserver.incident_severity == "high"
+    assert connector.config.shadowserver.report_types == [
+        "scan_http",
+        "open_dns_resolvers",
+    ]
+    assert connector.config.shadowserver.initial_lookback == 45
+    assert connector.config.shadowserver.lookback == 7
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -59,16 +65,17 @@ def test_connector_initialization_default_incident(mocked_helper) -> None:
 @pytest.mark.usefixtures("mock_config")
 @freezegun.freeze_time("2025-07-01T12:00:00Z")
 @pytest.mark.parametrize(
-    "state,is_first_run,lookback_days,last_run_log,data,expected_data_log,expect_send_bundle",
+    "state,is_first_run,lookback_days,last_run_log,collected_data,expected_data_log,expect_send_bundle,date_str",
     [
         (
             {},  # No state
             True,
-            30,
+            45,
             "Test Connector connector has never run",
-            [],
-            "No data to send to OpenCTI.",
+            [([], "2025-07-01")],
+            "No data to send to OpenCTI for 2025-07-01.",
             False,
+            "2025-07-01",
         ),
         (
             {
@@ -77,27 +84,34 @@ def test_connector_initialization_default_incident(mocked_helper) -> None:
                 ).timestamp()
             },
             False,
-            16,
+            20,
             "Test Connector connector last run @ 2025-06-18T12:00:00+00:00",
-            [],
-            "No data to send to OpenCTI.",
+            [([], "2025-07-01")],
+            "No data to send to OpenCTI for 2025-07-01.",
             False,
+            "2025-07-01",
         ),
         (
             {},  # No state with data
             True,
-            30,
+            45,
             "Test Connector connector has never run",
             [
-                stix2.Identity(
-                    id=pycti.Identity.generate_id(
-                        name="shadowserver", identity_class="organization"
-                    ),
-                    name="shadowserver",
+                (
+                    [
+                        stix2.Identity(
+                            id=pycti.Identity.generate_id(
+                                name="shadowserver", identity_class="organization"
+                            ),
+                            name="shadowserver",
+                        )
+                    ],
+                    "2025-07-01",
                 )
             ],
-            "Sending 1 STIX objects to OpenCTI...",
+            "Sending 1 STIX objects to OpenCTI for 2025-07-01...",
             True,
+            "2025-07-01",
         ),
     ],
 )
@@ -107,13 +121,14 @@ def test_connector_run(
     is_first_run,
     lookback_days,
     last_run_log,
-    data,
+    collected_data,
     expected_data_log,
     expect_send_bundle,
+    date_str,
 ) -> None:
     mocked_helper.get_state.return_value = state
     connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
-    connector._collect_intelligence = MagicMock(return_value=data)
+    connector._collect_intelligence = MagicMock(return_value=collected_data)
 
     connector.run()
 
@@ -150,13 +165,13 @@ def test_connector_run(
         mocked_helper.send_stix2_bundle.assert_not_called()
 
     # Work
-    if data:
+    if expect_send_bundle:
         mocked_helper.api.work.initiate_work.assert_called_once_with(
             connector_id=mocked_helper.connect_id,
-            friendly_name="Test Connector run @ 2025-07-01T12:00:00+00:00",
+            friendly_name=f"Test Connector run @ 2025-07-01T12:00:00 for {date_str}",
         )
         mocked_helper.api.work.to_processed.assert_called_once_with(
-            "work-id", "Connector successfully run"
+            "work-id", f"Connector successfully run for {date_str}"
         )
     else:
         mocked_helper.api.work.initiate_work.assert_not_called()
