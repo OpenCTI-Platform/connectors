@@ -3,12 +3,12 @@ CTIBUTLER Connector
 """
 
 import os
-import time
+import traceback
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from urllib.parse import urljoin
 
 import requests
-import schedule
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
@@ -28,6 +28,10 @@ KNOWLEDGE_BASES = [
     "disarm",
     "atlas",
 ]
+
+
+class CTIButlerException(Exception):
+    pass
 
 
 def parse_knowledgebases(helper: OpenCTIConnectorHelper, value: str):
@@ -64,7 +68,7 @@ class CTIButlerConnector:
         )
 
         self.helper = OpenCTIConnectorHelper(config)
-        self.base_url = self._get_param("base_url") + "/"
+        self.base_url = self._get_param("base_url").strip("/") + "/"
         self.api_key = self._get_param("api_key")
         self.knowledgebases = parse_knowledgebases(
             self.helper, self._get_param("knowledgebases")
@@ -91,8 +95,8 @@ class CTIButlerConnector:
         params = params or {}
         params.update(page=1, page_size=200)
         objects: list[dict] = []
-        total_results_count = -1
-        while total_results_count < len(objects):
+        total_results_count = 1
+        while total_results_count > len(objects):
             resp = self.session.get(urljoin(self.base_url, path), params=params)
             params.update(page=params["page"] + 1)
             data = resp.json()
@@ -134,15 +138,41 @@ class CTIButlerConnector:
     def _run_once(self):
         self.helper.log_info("running as scheduled")
         for base in self.knowledgebases:
-            try:
-                version, objects = self.get_knowledge_base_objects(base)
-                for obj in objects:
-                    self.bundle_object(base, obj)
-                self.update_state(base, version)
-            except VersionAlreadyIngested as e:
-                self.helper.log_info(e)
-            except Exception:
-                self.helper.log_error("cannot process for knowledge base")
+            with self._run_in_work(f"Knowledge Base: {base}") as work_id:
+                try:
+                    version, objects = self.get_knowledge_base_objects(base)
+                    for obj in objects:
+                        self.bundle_object(base, obj, work_id)
+                        # manually ping the parent work to keep it alive
+                        self.helper.api.work.ping(work_id=self.main_work_id)
+                    self.update_state(base, version)
+                except VersionAlreadyIngested as e:
+                    self.helper.log_info(str(e))
+                    raise
+                except Exception as e:
+                    self.helper.log_error(f"cannot process knowledge base {base}: {e}")
+                    raise CTIButlerException(f"failed to process {base}") from e
+
+    @contextmanager
+    def _run_in_work(self, work_name: str):
+        work_id = self.helper.api.work.initiate_work(self.helper.connect_id, work_name)
+        message = "[CTIBUTLER] Work done"
+        in_error = False
+        try:
+            yield work_id
+        except Exception as e:
+            self.helper.log_error(f"work failed: {e}")
+            message = "[CTIBUTLER] Work failed - " + traceback.format_exc()
+            in_error = True
+        finally:
+            self.helper.api.work.to_processed(
+                work_id=work_id, message=message, in_error=in_error
+            )
+
+    def run_once(self):
+        with self._run_in_work("CTIButler Connector Run") as main_work_id:
+            self.main_work_id = main_work_id
+            self._run_once()
 
     @staticmethod
     def get_object_name(base, obj):
@@ -152,44 +182,27 @@ class CTIButlerConnector:
         name = name or obj["id"]
         return f"{base} => {name}"
 
-    def bundle_object(self, base, obj):
+    def bundle_object(self, base, obj, work_id):
         readable_name = self.get_object_name(base, obj)
         self.helper.log_info(f"retrieve bundle for {readable_name}")
-        cve_work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, f"{self.helper.connect_name} @ {readable_name}"
-        )
         try:
             objects = self.retrieve(
                 f"v1/{base}/objects/{obj['id']}/bundle/", list_key="objects"
             )
             bundle = self.helper.stix2_create_bundle(objects)
-            self.helper.send_stix2_bundle(bundle, work_id=cve_work_id)
-            self.helper.api.work.to_processed(
-                work_id=cve_work_id,
-                message=f"[{readable_name}] bundle retrieved",
-            )
+            self.helper.send_stix2_bundle(bundle, work_id=work_id)
         except Exception:
             self.helper.log_error(
-                f"process {readable_name} failed", dict(work_id=cve_work_id)
+                f"process {readable_name} failed", dict(work_id=work_id)
             )
             self.helper.api.work.report_expectation(
-                work_id=cve_work_id,
+                work_id=work_id,
                 error={
-                    "error": f"[{readable_name}] could not process",
+                    "error": f"[{readable_name}] could not process:\n"
+                    + traceback.format_exc(),
                     "source": "CONNECTOR",
                 },
             )
-            self.helper.api.work.to_processed(
-                work_id=cve_work_id,
-                message=f"[{readable_name}] Retrieve bundle failed",
-                in_error=True,
-            )
-
-    def run_once(self):
-        try:
-            self._run_once()
-        except Exception:
-            self.helper.log_error("run failed")
 
     def _get_state(self) -> dict:
         state = self.helper.get_state() or dict(versions=dict())
@@ -210,11 +223,10 @@ class CTIButlerConnector:
 
     def run(self):
         self.helper.log_info("Starting CTIButler")
-        schedule.every(self.interval_days).days.do(self.run_once)
-        self.run_once()
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
+        self.helper.schedule_process(
+            message_callback=self.run_once,
+            duration_period=self.interval_days * 24 * 3600,
+        )
 
 
 def chunked(lst):
@@ -227,4 +239,8 @@ def chunked(lst):
 
 
 if __name__ == "__main__":
-    CTIButlerConnector().run()
+    try:
+        CTIButlerConnector().run()
+    except BaseException:
+        traceback.print_exc()
+        exit(1)
