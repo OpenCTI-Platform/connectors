@@ -13,24 +13,52 @@ from pydantic import Field, HttpUrl, SecretStr, SkipValidation
 
 class HuntIoConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(
-        description="API base URL", default=HttpUrl("https://api.hunt.io/v1/feeds/c2")
+        description="Hunt.io API endpoint URL for the C2 threat intelligence feeds",
+        default=HttpUrl("https://api.hunt.io/v1/feeds/c2"),
     )
-    api_key: SecretStr = Field(description="API key")
+    api_key: SecretStr = Field(
+        description=(
+            "Authentication key for accessing the Hunt.io API. "
+            "Obtain this from your Hunt.io account settings"
+        )
+    )
     tlp_level: Literal["white", "clear", "green", "amber", "amber+strict", "red"] = (
-        Field(description="TLP level", default="amber")
+        Field(
+            description=(
+                "Traffic Light Protocol (TLP) marking level to apply to imported data, "
+                "controlling information sharing restrictions"
+            ),
+            default="amber",
+        )
     )
 
 
 class ExternalImportConfig(BaseExternalImportConnectorConfig):
-    name: str = Field(description="Connector name", default="Hunt IO")
-    scope: ListFromString = Field(description="Connector scope", default=["Hunt IO"])
+    name: str = Field(
+        description="Display name for this connector instance in the OpenCTI platform",
+        default="Hunt IO",
+    )
+    scope: ListFromString = Field(
+        description=(
+            "Entity types or categories this connector will handle. "
+            "Used for filtering and organization within OpenCTI"
+        ),
+        default=["Hunt IO"],
+    )
     id: str = Field(
-        description="A UUID v4 to identify the connector in OpenCTI.",
+        description=(
+            "Unique identifier (UUID v4) for this connector instance in OpenCTI. "
+            "Change this if running multiple instances"
+        ),
         default="144c83b7-e267-4fc5-b77d-babd502dc56e",
     )
 
     duration_period: timedelta = Field(
-        description="Duration period", default=timedelta(hours=24)
+        description=(
+            "Time interval between consecutive data imports from Hunt.io. "
+            "Controls how frequently the connector runs"
+        ),
+        default=timedelta(hours=24),
     )
     hunt_ui: SkipValidation[HuntIoConfig] = DeprecatedField(  # type: ignore[assignment]
         deprecated=(
