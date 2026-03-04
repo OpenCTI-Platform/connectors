@@ -300,21 +300,15 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             mode=mode,
         )
 
-    @model_validator(mode="wrap")
     @classmethod
-    def migrate_deprecation(
-        cls,
-        data: dict[str, Any],
-        handler: ModelWrapValidatorHandler[Self],
-    ) -> Self:
-        """Migrate deprecated variables and namespaces in the configuration data.
+    def _migrate_deprecated_namespaces(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate deprecated namespaces in the configuration data.
 
         Args:
             data: Raw configuration data.
-            handler: Pydantic validation handler.
 
         Returns:
-            Validated and migrated configuration data.
+            Migrated configuration data.
         """
         for field_name, field in cls.model_fields.items():
             json_schema_extra = field.json_schema_extra
@@ -351,6 +345,23 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
                     removal_date=removal_date,
                 )
 
+        return data
+
+    @classmethod
+    def _migrate_deprecated_variables(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate deprecated variables in the configuration data.
+
+        Args:
+            data: Raw configuration data.
+
+        Returns:
+            Migrated configuration data.
+        """
+        for field_name, field in cls.model_fields.items():
+            annotation = field.annotation
+            is_namespace = isinstance(annotation, type) and issubclass(
+                annotation, BaseConfigModel
+            )
             if is_namespace:
                 for sub_field_name, sub_field in annotation.model_fields.items():  # type: ignore[union-attr]
                     sub_json_schema_extra = sub_field.json_schema_extra
@@ -377,6 +388,29 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
                             removal_date=sub_removal_date,
                         )
 
+        return data
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _migrate_deprecation(
+        cls, data: dict[str, Any], handler: ModelWrapValidatorHandler[Self]
+    ) -> Self:
+        """Migrate deprecated namespaces and variables in the configuration data.
+
+        Args:
+            data: Raw configuration data.
+            handler: Pydantic validation handler.
+
+        Returns:
+            Validated and migrated configuration data.
+
+        Notes:
+            - This is the second validator to be executed at runtime, after `_load_config_dict`.
+        """
+        # First migrate deprecated namespaces, then deprecated variables to ensure all deprecations are handled.
+        data = cls._migrate_deprecated_namespaces(data)
+        data = cls._migrate_deprecated_variables(data)
+
         return handler(data)
 
     @model_validator(mode="wrap")
@@ -394,6 +428,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             - This method is a `model_validator`, i.e. it's internally executed by pydantic during model validation
             - The mode (`"wrap"`) guarantees that this validator is always executed _before_ the validators defined in child class
             - See `_SettingsLoader.build_loader_from_model` for further details about env/config vars parsing implementation
+            - This is the first validator to be executed at runtime, before `_migrate_deprecated_namespaces` and `_migrate_deprecated_variables`
 
         References:
             https://github.com/pydantic/pydantic/issues/8277 [consulted on 2025-11-19]
