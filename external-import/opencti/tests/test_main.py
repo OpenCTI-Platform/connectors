@@ -2,8 +2,9 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from connector import ConnectorSettings, OpenCTI
 from pycti import OpenCTIConnectorHelper
+
+from connector import ConnectorSettings, OpenCTI
 
 
 @pytest.fixture
