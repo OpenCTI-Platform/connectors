@@ -14,9 +14,6 @@ The Feedly connector imports threat intelligence from Feedly AI-powered news fee
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -39,32 +36,10 @@ Feedly is an AI-powered news aggregator that helps security teams track threat i
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml | Docker environment variable | Default | Mandatory | Description                                                                 |
-|-----------------|------------|-----------------------------|---------|-----------| ----------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name  | name       | `CONNECTOR_NAME`            | Feedly  | No        | Name of the connector.                                                      |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | feedly  | No        | The scope or type of data the connector is importing.                       |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error   | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-
-### Connector extra parameters environment variables
-
-| Parameter          | config.yml               | Docker environment variable    | Default | Mandatory | Description                                                                 |
-|--------------------|--------------------------|--------------------------------|---------|-----------|-----------------------------------------------------------------------------|
-| Interval           | feedly.interval          | `FEEDLY_INTERVAL`              | 60      | No        | Polling interval in minutes.                                                |
-| Stream IDs         | feedly.stream_ids        | `FEEDLY_STREAM_IDS`            |         | Yes       | Comma-separated list of Feedly stream IDs.                                  |
-| Days to Back Fill  | feedly.days_to_back_fill | `FEEDLY_DAYS_TO_BACK_FILL`     | 7       | No        | Number of days to fetch historical data for new streams.                    |
-| API Key            | feedly.api_key           | `FEEDLY_API_KEY`               |         | Yes       | Feedly API key.                                                             |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
