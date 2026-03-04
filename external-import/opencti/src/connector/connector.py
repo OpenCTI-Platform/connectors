@@ -5,9 +5,8 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
-from pycti import OpenCTIConnectorHelper
-
 from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 CONFIG_SECTORS_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json"
 CONFIG_GEOGRAPHY_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json"
