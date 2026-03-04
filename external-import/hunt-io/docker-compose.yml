@@ -3,7 +3,7 @@ services:
     image: opencti/connector-hunt-io:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - OPENCTI_TOKEN=3b1e5383-4f4e-43eb-8ab8-ea7f9dbd83f5
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_NAME=Hunt IO
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile

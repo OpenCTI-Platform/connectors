@@ -1,7 +1,7 @@
 import sys
 import traceback
 
-from external_import_connector import ConfigLoader, ConnectorHuntIo
+from external_import_connector import ConnectorHuntIo, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        config = ConfigLoader()
+        config = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=config.to_helper_config())
         connector = ConnectorHuntIo(config=config, helper=helper)
         connector.run()

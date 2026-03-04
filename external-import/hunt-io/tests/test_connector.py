@@ -3,10 +3,11 @@ from typing import Any
 
 import pytest
 from connectors_sdk import ConfigValidationError
+from pycti import OpenCTIConnectorHelper
+
 from external_import_connector import ConnectorHuntIo
 from external_import_connector.constants import ExternalReferences
-from external_import_connector.settings import ConfigLoader
-from pycti import OpenCTIConnectorHelper
+from external_import_connector.settings import ConnectorSettings
 
 NUMS_OF_CREATED_STIX_OBJECTS = 7
 NUMS_OF_CREATED_RELATIONSHIPS = 4
@@ -26,7 +27,7 @@ def find_dict_by_key_value(dicts: list[dict], key: str, value: Any) -> dict | No
 
 
 def test_should_run_connector(correct_config, api_response_mock):
-    config = ConfigLoader()
+    config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
     connector = ConnectorHuntIo(config=config, helper=helper)
 
@@ -58,21 +59,21 @@ def test_should_run_connector(correct_config, api_response_mock):
 
 def test_should_fail_if_config_is_invalid():
     with pytest.raises(ConfigValidationError) as e:
-        config = ConfigLoader()
+        config = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=config.to_helper_config())
         ConnectorHuntIo(config=config, helper=helper)
     assert str(e.value) == "Error validating configuration."
 
 
 def test_should_warn_if_deprecated_config_is_used(deprecated_config):
-    with pytest.deprecated_call():
-        config = ConfigLoader()
+    with pytest.warns(UserWarning, match="Deprecated setting"):
+        config = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=config.to_helper_config())
         ConnectorHuntIo(config=config, helper=helper)
 
 
 def test_should_send_identity(correct_config, api_response_mock):
-    config = ConfigLoader()
+    config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
     connector = ConnectorHuntIo(config=config, helper=helper)
 
@@ -114,7 +115,7 @@ def test_should_send_identity(correct_config, api_response_mock):
 def test_should_add_external_references_to_organization_only(
     correct_config, api_response_mock
 ):
-    config = ConfigLoader()
+    config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
     connector = ConnectorHuntIo(config=config, helper=helper)
 
@@ -153,7 +154,7 @@ def test_should_add_external_references_to_organization_only(
 
 
 def test_should_send_tpl_markings(correct_config, api_response_mock):
-    config = ConfigLoader()
+    config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
     connector = ConnectorHuntIo(config=config, helper=helper)
 
@@ -188,7 +189,7 @@ def test_should_send_tpl_markings(correct_config, api_response_mock):
 def test_should_not_initiate_work_if_payload_is_empty(
     correct_config, empty_api_response_mock
 ):
-    config = ConfigLoader()
+    config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config=config.to_helper_config())
     connector = ConnectorHuntIo(config=config, helper=helper)
 

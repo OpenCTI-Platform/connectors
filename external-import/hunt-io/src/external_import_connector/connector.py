@@ -12,7 +12,7 @@ from external_import_connector.constants import (
 from external_import_connector.converter_to_stix import ConverterToStix
 from external_import_connector.entity_processor import EntityProcessor
 from external_import_connector.models import C2
-from external_import_connector.settings import ConfigLoader
+from external_import_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 
@@ -172,7 +172,7 @@ class ConnectorHuntIo:
     clear separation of concerns.
     """
 
-    def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """Initialize the Connector with necessary configurations."""
         # Load configuration and setup helper
         self.config = config

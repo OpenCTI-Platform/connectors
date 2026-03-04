@@ -22,7 +22,7 @@ from requests.exceptions import ConnectTimeout, HTTPError, ReadTimeout, RequestE
 from urllib3.util.retry import Retry
 
 if TYPE_CHECKING:
-    from external_import_connector import ConfigLoader
+    from external_import_connector import ConnectorSettings
 
 
 class HTTPSessionManager:
@@ -185,7 +185,7 @@ class ConnectorClient:
     error handling, and response processing with improved separation of concerns.
     """
 
-    def __init__(self, helper: OpenCTIConnectorHelper, config: "ConfigLoader"):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: "ConnectorSettings"):
         """Initialize the ConnectorClient with necessary configurations."""
         self.helper = helper
         self.config = config
