@@ -3,11 +3,10 @@ from typing import Any
 
 import pytest
 from connectors_sdk import ConfigValidationError
-from pycti import OpenCTIConnectorHelper
-
 from external_import_connector import ConnectorHuntIo
 from external_import_connector.constants import ExternalReferences
 from external_import_connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 NUMS_OF_CREATED_STIX_OBJECTS = 7
 NUMS_OF_CREATED_RELATIONSHIPS = 4

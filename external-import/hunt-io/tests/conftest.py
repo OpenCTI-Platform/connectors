@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from .factories import C2FeedFactory
+from .tests_connector.factories import C2FeedFactory
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
