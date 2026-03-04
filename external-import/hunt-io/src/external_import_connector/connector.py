@@ -281,17 +281,6 @@ class ConnectorHuntIo:
             # Mark processing as complete
             self.state_manager.update_processing_state(False)
 
-        except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                f"{LoggingPrefixes.CONNECTOR} Connector stopped...",
-                {"connector_name": self.helper.connect_name},
-            )
-            sys.exit(0)
-        except Exception as err:
-            self.helper.connector_logger.error(str(err))
-            # Mark processing as complete even on error
-            self.state_manager.update_processing_state(False)
-        finally:
             if entities:
                 last_run_datetime = datetime.fromtimestamp(
                     current_timestamp, tz=timezone.utc
@@ -303,6 +292,17 @@ class ConnectorHuntIo:
                 )
 
                 self.helper.connector_logger.info(message)
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                f"{LoggingPrefixes.CONNECTOR} Connector stopped...",
+                {"connector_name": self.helper.connect_name},
+            )
+            sys.exit(0)
+        except Exception as err:
+            self.helper.connector_logger.error(str(err))
+            # Mark processing as complete even on error
+            self.state_manager.update_processing_state(False)
 
     def run(self) -> None:
         """
