@@ -11,7 +11,7 @@ from connectors_sdk import (
 from pydantic import Field, HttpUrl, SecretStr, model_validator
 
 
-class ConnectorHuntIoConfig(BaseConfigModel):
+class HuntIoConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(
         description="API base URL", default=HttpUrl("https://api.hunt.io/v1/feeds/c2")
     )
@@ -38,9 +38,7 @@ class ConfigLoader(BaseConnectorSettings):
     """Handles connector configuration loading and validation."""
 
     connector: ConnectorSettings = Field(default_factory=ConnectorSettings)
-    hunt_io: ConnectorHuntIoConfig = Field(
-        default_factory=ConnectorHuntIoConfig,
-    )
+    hunt_io: HuntIoConfig = Field(default_factory=HuntIoConfig)
 
     @model_validator(mode="before")
     @classmethod
