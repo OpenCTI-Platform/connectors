@@ -297,7 +297,7 @@ stix_objects = [
 
 Ensure all STIX objects:
 
-1. **Have deterministic IDs** - Never use auto-generated IDs
+1. **Have deterministic IDs** - Never use custom IDs
 2. **Include required properties** - According to STIX 2.1 spec
 3. **Use correct object types** - Valid STIX 2.1 types
 4. **Have proper relationships** - Valid relationship types
