@@ -168,7 +168,7 @@ In ‘Buffering’ mode, the connector’s execution is paused until the queue c
 Buffering mode displayed on OpenCTI UI
 ![Buffering mode](./media/ui_buffering.png)
 
-More details on our Filigran blog: [Auto backpressure Contrtol Article](https://filigran.io/auto-backpressue-control-octi-connectors/#:~:text=Display%20of%20Details%20for%20Connectors%20in%20%E2%80%98Buffering%E2%80%99%20Mode)
+More details on our Filigran blog: [Auto backpressure Control Article](https://filigran.io/auto-backpressue-control-octi-connectors/#:~:text=Display%20of%20Details%20for%20Connectors%20in%20%E2%80%98Buffering%E2%80%99%20Mode)
 
 ### First Run
 

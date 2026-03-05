@@ -903,7 +903,6 @@ Before submitting your connector:
 - [ ] Passes pylint with custom STIX plugin
 - [ ] All STIX objects use deterministic IDs
 - [ ] Unit tests written and passing
-- [ ] Test coverage >= 70%
 - [ ] README.md complete with all sections
 - [ ] Dockerfile follows best practices
 - [ ] docker-compose.yml configured correctly
