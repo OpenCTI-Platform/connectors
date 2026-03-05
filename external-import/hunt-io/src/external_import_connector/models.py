@@ -1,6 +1,5 @@
 """OpenCTI Hunt models module."""
 
-import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional, TypedDict, Union
@@ -10,7 +9,6 @@ import stix2
 from external_import_connector.constants import (
     CustomProperties,
     NetworkProtocols,
-    UUIDNamespace,
 )
 from external_import_connector.exceptions import STIXConversionError
 from pycti import Infrastructure as PyCTIInfrastructure
@@ -270,13 +268,18 @@ class NetworkTraffic(BaseModel):
     """
 
     def __init__(
-        self, port: Optional[int], src_ref: Optional[str], author: str, tpl_marking: str
+        self,
+        port: Optional[int],
+        src_ref: Optional[str],
+        author: str,
+        tpl_marking: str,
     ):
         super().__init__()
         self.port = self._validate_port(port)
         self.author = author
         self.tpl_marking = tpl_marking
         self.src_ref = src_ref
+
         self.__post_init__()
 
     def _validate_port(self, port: Optional[int]) -> Optional[int]:
@@ -296,27 +299,9 @@ class NetworkTraffic(BaseModel):
         return port
 
     def to_stix2_object(self) -> stix2.NetworkTraffic:
-        """Create STIX2 NetworkTraffic object with deterministic ID."""
-        # Create deterministic ID to prevent conflicts
-        id_components = [
-            "type:network-traffic",
-            f"connector:{CustomProperties.CONNECTOR_VALUE}",
-            f"src_ref:{self.src_ref or 'none'}",
-            f"dst_port:{self.port or 'none'}",
-            f"protocols:{NetworkProtocols.TCP}",
-        ]
-
-        # Simple canonicalization - normalize the string for consistent hashing
-        id_string = "|".join(id_components)
-        canonical_string = id_string.strip().lower()
-
-        # Use Hunt-IO specific namespace UUID
-        namespace_uuid = uuid.UUID(UUIDNamespace.HUNT_IO)
-        custom_uuid = uuid.uuid5(namespace_uuid, canonical_string)
-        deterministic_id = f"network-traffic--{custom_uuid}"
+        """Create STIX2 NetworkTraffic."""
 
         return stix2.NetworkTraffic(
-            id=deterministic_id,
             src_ref=self.src_ref,
             dst_port=self.port,
             protocols=[NetworkProtocols.TCP],
