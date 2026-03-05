@@ -251,7 +251,33 @@ my-connector/
 ## Configuration Management
 
 All connectors use **Pydantic** for configuration validation through the connectors-sdk.
-Configuration files (`config.yml.sample`, `.env`) are resolved automatically at startup. The application looks for them at the project root and in the `src/` folder. If both locations contain a config file, specify which takes precedence if relevant (e.g., "the root-level file takes priority").
+Configuration files are discovered and parsed automatically at startup, so no manual path configuration is required.
+
+The SDK searches for files relative to the connector's entrypoint (the `__main__` module):
+
+| File         | Searched locations (first match wins)                                        |
+| ------------ | ---------------------------------------------------------------------------- |
+| `config.yml` | `src/config.yml` (entrypoint directory), then `./config.yml` (project root)  |
+| `.env`       | `./.env` (project root only)                                                 |
+
+For a typical project layout:
+
+```
+my-connector/
+├── .env              ← discovered automatically
+├── config.yml        ← discovered automatically
+└── src/
+    ├── config.yml    ← discovered automatically (legacy, takes precedence)
+    └── main.py       ← connector entrypoint
+```
+
+The loading priority is:
+
+1. **Environment variables** (always highest priority)
+2. `config.yml` **or** `.env` (mutually exclusive — `config.yml` takes precedence when both exist)
+3. Default values defined in the settings model
+
+> **Note:** `config.yml` and `.env` are mutually exclusive sources. If a `config.yml` is found, the `.env` file is ignored entirely.
 
 ### Configuration Structure
 
