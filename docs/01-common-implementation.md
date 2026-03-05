@@ -494,7 +494,6 @@ from connectors_sdk.models import (
     TLPMarking,
     Vulnerability,
 )
-from connectors_sdk.models.octi import related_to
 
 # Create author
 author = OrganizationAuthor(name="My Threat Feed")
