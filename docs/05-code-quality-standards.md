@@ -21,7 +21,7 @@
 
 ### Python Version
 
-- **Python 3.11 or 3.12** required
+- **Python 3.12** required
 - Use type hints for all function signatures
 - Follow PEP 8 style guidelines
 
