@@ -158,7 +158,9 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         aliases = []
         for alt_name in attributes.alt_names_details:
             if hasattr(alt_name, "value") and alt_name.value:
-                aliases.append(alt_name.value)
+                # Remove source from alias to prevent deduplication issue
+                alt_name_without_source = alt_name.value.split(" (", 1)[0]
+                aliases.append(alt_name_without_source)
 
         return aliases if aliases else None
 

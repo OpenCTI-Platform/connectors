@@ -763,6 +763,23 @@ def test_extract_aliases() -> None:
     _then_aliases_extracted_correctly(aliases, ["APT Example", "Example Group"])
 
 
+# Scenario: Test extract aliases method with source in values
+@pytest.mark.order(1)
+def test_extract_aliases_with_source() -> None:
+    """Test extracting aliases with source from threat actor attributes."""
+    # Given threat actor attributes with aliases
+    attributes = ThreatActorModelFactory.build(
+        alt_names_details=[
+            AltNameDetailFactory.build(value="APT Example (source 1)"),
+            AltNameDetailFactory.build(value="Example Group (source 2)"),
+        ]
+    )
+    # When extracting aliases
+    aliases = _when_extract_aliases(attributes)
+    # Then aliases should be extracted correctly without source in values
+    _then_aliases_extracted_correctly(aliases, ["APT Example", "Example Group"])
+
+
 # Scenario: Test extract aliases with empty collection
 @pytest.mark.order(1)
 def test_extract_aliases_empty() -> None:
