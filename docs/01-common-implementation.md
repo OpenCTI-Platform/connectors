@@ -1035,6 +1035,8 @@ if not is_valid:
 
 #### Querying OpenCTI API (available but NOT recommended)
 
+The OpenCTI API client is accessible through `self.helper.api`, allowing direct queries against the platform. However, this approach is **not recommended** in most connector workflows
+
 ```python
 # Get entity by ID
 entity = self.helper.api.stix_domain_object.read(id=entity_id)
@@ -1047,6 +1049,11 @@ indicators = self.helper.api.indicator.list(
     }]
 )
 ```
+**Why it should be avoided:**
+
+- **Performance impact.** Direct API calls add extra load on the OpenCTI platform, especially when listing large collections or making calls in loops.
+- **Tight coupling.** Relying on specific API endpoints makes the connector more fragile to platform API changes.
+- **Limited functionality.** The API client may not support all operations needed for complex processing, leading to workarounds that can be inefficient.
 
 ### Common Helper Properties
 
