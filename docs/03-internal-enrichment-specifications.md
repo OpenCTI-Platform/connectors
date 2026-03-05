@@ -732,7 +732,7 @@ def _send_bundle(self, stix_objects: list) -> None:
     self.helper.send_stix2_bundle(
         bundle,
         update=self.config.connector.update_existing_data,
-        work_id=self.work_id,  # passed into _process_message by the Scheduler
+        work_id=self.work_id,
     )
 ```
 
