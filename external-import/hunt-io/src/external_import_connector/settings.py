@@ -60,13 +60,6 @@ class ExternalImportConfig(BaseExternalImportConnectorConfig):
         ),
         default=timedelta(hours=24),
     )
-    hunt_ui: SkipValidation[HuntIoConfig] = DeprecatedField(  # type: ignore[assignment]
-        deprecated=(
-            "Use 'hunt_io' prefix instead of 'hunt_ui'. This field is "
-            "kept for backward compatibility and will be removed in a future release."
-        ),
-        new_namespace="hunt_io",
-    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
