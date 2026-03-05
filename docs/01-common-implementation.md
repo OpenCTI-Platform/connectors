@@ -448,8 +448,6 @@ Common models include:
 **Identity/Author:**
 
 - `OrganizationAuthor`
-- `IndividualAuthor`
-- `SystemAuthor`
 
 **Observable:**
 
