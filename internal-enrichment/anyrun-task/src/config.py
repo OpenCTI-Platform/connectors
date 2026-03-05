@@ -27,7 +27,7 @@ class Config:
         'obj_ext_extension'
     )
 
-    VERSION = 'OpenCTI:6.7.4'
+    VERSION = 'OpenCTI:7.260224.0'
 
     def __init__(self, params: dict[str, bool | int | None | str]) -> None:
         self._params = params

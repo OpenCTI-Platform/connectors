@@ -13,7 +13,7 @@ config: dict = (
 
 class Config:
     """ Base configuration class """
-    VERSION = 'OpenCTI:6.7.4'
+    VERSION = 'OpenCTI:7.260224.0'
     DATE_TIME_FORMAT = '%Y-%m-%d %H:%M:%S'
     FEEDS_CHUNK_LIMIT = 5000
 
