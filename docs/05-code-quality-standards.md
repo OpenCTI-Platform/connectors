@@ -249,6 +249,7 @@ from connectors_sdk.models import (
     IPV4Address,
     OrganizationAuthor,
     TLPMarking,
+    Relationship
 )
 from connectors_sdk.models.octi import related_to
 
@@ -272,7 +273,15 @@ ip = IPV4Address(
 )
 
 # Create relationship
-relationship = indicator | related_to | ip
+relationship =  Relationship(
+            type="based-on",
+            source=indicator.id,
+            target=ip.id,
+            author=author,
+            start_time="2026-01-14T00:00:00Z",
+            stop_time="2026-01-14T00:00:00Z",
+            markings=[tlp],
+        )
 
 # Convert to STIX
 stix_objects = [
