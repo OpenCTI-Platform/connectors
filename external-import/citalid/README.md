@@ -37,7 +37,7 @@ This connector retrieves STIX bundles from the Citalid API and imports them into
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260227.0
+- OpenCTI Platform >= 7.260305.0
 - Citalid API access (customer subdomain, username, and password)
 
 ## Configuration variables
