@@ -465,7 +465,7 @@ def process_message(self) -> None:
 1. **Always include author** - Required for proper attribution
 2. **Include appropriate markings** - TLP, PAP, statement markings
 3. **Create relationships** - Link related objects
-4. **Batch appropriately** - Don't send too many objects at once (< 1000 recommended)
+4. **Batch appropriately** - Don't send too many objects at once (< 10000 recommended)
 
 Reminder about cleanup_inconsistent_bundle: [Caution Clean Up Inconsistent Bundle](./01-common-implementation.md#creating-and-sending-bundles)
 
