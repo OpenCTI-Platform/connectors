@@ -703,7 +703,7 @@ The `scope` parameter in OpenCTI connectors defines **what the connector hand
 
 **Scope never filters the bundle content.** It only controls **when/how the platform triggers the connector**.
 
-- For `EXTERNAL_IMPORT`: scope is purely descriptive metadata. The platform registers it but does not use it for filtering. Everything in the bundle is ingested.
+- For `EXTERNAL_IMPORT` and `STREAM`: scope is purely descriptive metadata. The platform registers it but does not use it for filtering. Everything in the bundle is ingested.
 - For `INTERNAL_ENRICHMENT`: scope determines which entity types trigger the connector. Without `Indicator` in the scope, the connector won't be called when enriching an Indicator. But if the connector's response bundle contains Indicators, they **will** be ingested.
 - For `INTERNAL_IMPORT_FILE`: scope determines which file MIME types trigger the connector.
 
