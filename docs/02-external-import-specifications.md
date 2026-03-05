@@ -207,7 +207,7 @@ def process_message(self) -> None:
 
         # Create friendly name for this work
         friendly_name = f"{self.helper.connect_name} - {datetime.now().isoformat()}"
-        
+
         # Initiate work
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
@@ -325,11 +325,11 @@ def process_message(self) -> None:
 
 1. **Update after successful processing** - Don't update state if processing fails
 2. **Include enough context** - Store what you need to resume
-3. **Use timestamps for time-based imports** - More reliable than dates
+3. **Use timestamps for time-based imports** - More reliable than dates but shoudl be convert into human-readable format when setting state 
 4. **Store cursors for paginated APIs** - Resume exactly where you left off
 5. **Keep state minimal** - Don't store large objects
 
----
+--- 
 
 ## Data Collection
 
