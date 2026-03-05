@@ -567,7 +567,7 @@ For STIX Cyber Observables, OpenCTI also generates deterministic IDs based on th
 
 ### Confidence Level-Based Deduplication
 
-The deduplication mechanism relies on the Confidence Level attribute of each STIX Object, as well as identification keys for each object. If an object is created with the same identification keys as an existing one, it will replace the existing object only if the Confidence Level of the new object is higher or equal to the existing one's. Connectors have a Confidence Level in their configuration file that can be used for deduplication purposes and if a connector imports an object already existing in the platform, it will only replace the existing one if its Confidence Level is higher or equal.
+The deduplication mechanism relies on the Confidence Level attribute of each STIX Object, as well as identification keys for each object. If an object is created with the same identification keys as an existing one, it will replace the existing object only if the Confidence Level of the new object is higher or equal to the existing one's. 
 
 This is the **upsert rule**: new data can enrich existing data, but only if it comes from a source of equal or higher confidence.
 
