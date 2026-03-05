@@ -423,7 +423,7 @@ if __name__ == "__main__":
 
 ## Using the Connectors SDK
 
-The **connectors-sdk** simplifies STIX object creation and ensures compliance with both STIX2.spec and OpenCTI conventions. It provides type-safe models, automatic ID generation, and built-in validation.
+The **connectors-sdk** simplifies STIX object creation and ensures compliance with both STIX2.1 spec and OpenCTI conventions. It provides type-safe models, automatic ID generation, and built-in validation.
 
 ### Installation
 
