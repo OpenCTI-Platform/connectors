@@ -418,7 +418,6 @@ isort --profile black <path_to_connector>
 
 - Complete **README.md** with:
     - Connector description and use cases
-    - Configuration parameters with examples
     - Setup and deployment instructions
     - Prerequisites and dependencies
     - Troubleshooting guide
@@ -428,6 +427,11 @@ isort --profile black <path_to_connector>
   - Description: No size limit 
   - Logo: Must be a square PNG or JPEG file, minimum 96x96 pixels
   - The remaining fields are optional and will be completed by the Integrations team during the verification process.
+- **Configuration parameters with examples**
+  - By using the template, settings is defined with Pydantic models, which allows you to include descriptions and examples for each configuration parameter. This information will be used to automatically generate documentation and provide clear guidance to users when configuring the connector.
+  - To generate documentation, simply run `make connector_config_schema` in the root of the repository if you have `make` installed, or run the following command: `sh ./shared/tools/composer/generate_connectors_config_schemas/generate_connector_config_json_schema.sh`
+
+   This will create a JSON schema file for your connector's configuration, which will be used to generate documentation and provide clear guidance to users when configuring the connector.
 - **Inline code documentation** for complex logic
 - **Type hints** for all function signatures
 
@@ -439,6 +443,7 @@ isort --profile black <path_to_connector>
 - **Connector Development Docs**: [https://docs.opencti.io/latest/development/connectors](https://docs.opencti.io/latest/development/connectors)
 - **STIX 2.1 Specification**: [https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html](https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html)
 - **OpenCTI Ecosystem**: [https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations)
+- **Connectors SDK Documentation**: [connectors-sdk README](./connectors-sdk/README.md)
 
 ### Community Support
 

@@ -221,6 +221,7 @@ my-connector/
 │   ├── test_main.py
 │   └── test-requirements.txt
 ├── config.yml.sample
+├── .env.sample
 ├── docker-compose.yml
 ├── Dockerfile
 ├── entrypoint.sh
@@ -241,6 +242,7 @@ my-connector/
 | `src/main.py`                        | Entry point, initializes connector                        |
 | `tests/`                             | Unit and integration tests                                |
 | `config.yml.sample`                  | Sample configuration for users                            |
+| `.env.sample`                        | Sample environment variables for users                    |
 | `Dockerfile`                         | Container image definition                                |
 | `docker-compose.yml`                 | Docker Compose service definition                         |
 
@@ -249,6 +251,7 @@ my-connector/
 ## Configuration Management
 
 All connectors use **Pydantic** for configuration validation through the connectors-sdk.
+Configuration files (`config.yml.sample`, `.env`) are resolved automatically at startup. The application looks for them at the project root and in the `src/` folder. If both locations contain a config file, specify which takes precedence if relevant (e.g., "the root-level file takes priority").
 
 ### Configuration Structure
 
