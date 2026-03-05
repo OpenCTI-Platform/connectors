@@ -684,58 +684,7 @@ def _handle_create(self, entity_data: dict) -> None:
     self.client.create_entity(external_data)
 ```
 
-### 2. Batch Processing
-
-For high-volume streams:
-
-```python
-class MyStreamConnector:
-    def __init__(self, config, helper):
-        self.config = config
-        self.helper = helper
-        self.client = MyExternalClient(...)
-
-        # Batch buffer
-        self.batch = []
-        self.batch_size = 100
-        self.last_flush = time.time()
-        self.flush_interval = 30  # seconds
-
-    def process_message(self, msg) -> None:
-        """Add event to batch."""
-        self.batch.append(msg)
-
-        # Flush if batch is full or interval elapsed
-        if len(self.batch) >= self.batch_size or \
-           time.time() - self.last_flush >= self.flush_interval:
-            self._flush_batch()
-
-    def _flush_batch(self) -> None:
-        """Process batched events."""
-        if not self.batch:
-            return
-
-        self.helper.connector_logger.info(
-            "Flushing batch",
-            {"batch_size": len(self.batch)}
-        )
-
-        # Process batch
-        for msg in self.batch:
-            try:
-                self._process_single_event(msg)
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    "Failed to process event",
-                    {"error": str(e)}
-                )
-
-        # Clear batch
-        self.batch = []
-        self.last_flush = time.time()
-```
-
-### 3. Rate Limiting
+### 2. Rate Limiting
 
 ```python
 class MyStreamConnector:
@@ -780,7 +729,7 @@ class MyStreamConnector:
         self.client.create_entity(external_data)
 ```
 
-### 4. Monitoring and Metrics
+### 3. Monitoring and Metrics
 
 ```python
 class MyStreamConnector:
