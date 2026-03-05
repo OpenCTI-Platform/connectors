@@ -590,7 +590,7 @@ This deduplication mechanism, although powerful, still has limitations: it is no
 
 ---
 
-### Summary Table
+### Deduplication on OpenCTI strategy summary
 
 | Strategy                      | Trigger                                   | Mechanism                                                 |
 | ----------------------------- | ----------------------------------------- | --------------------------------------------------------- |
