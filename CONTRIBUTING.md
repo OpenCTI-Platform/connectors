@@ -173,9 +173,11 @@ This creates a complete connector structure with:
 - Docker deployment files
 - Metadata files for documentation
 
-Navigate to the `templates/` folder and copy the appropriate template for your connector type:
+The othrer option is to manually copy the template folder for your connector type:
 
-Or you can use command lines
+- Navigate to the `templates/` folder and copy the appropriate template for your connector type:
+
+- Or you can use command lines
 
 ```bash
 # For External Import connector
