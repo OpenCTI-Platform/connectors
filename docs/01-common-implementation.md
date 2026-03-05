@@ -983,7 +983,7 @@ _How it works_
 
 _Use case_
 
-Called at the start of a connector run to create a trackable work item that can then be updated with
+Called before sending stix bundle(s) to create a trackable work item that can then be updated with
 progress, expectations, and completion status.
 
 **COMPLETED WORK**
@@ -1014,6 +1014,8 @@ _In progress status_
 
 
 #### TLP Checking
+Before processing an entity, connectors can verify that its TLP (Traffic Light Protocol) marking does not exceed a configured maximum. This prevents the connector from sending data that is more sensitive than allowed.
+
 
 ```python
 # Check if entity TLP is within allowed level
@@ -1028,6 +1030,8 @@ if not is_valid:
     )
     return
 ```
+
+`check_max_tlp` compares the entity's TLP against the connector's configured threshold following the standard hierarchy: `TLP:CLEAR` < `TLP:GREEN` < `TLP:AMBER` < `TLP:AMBER+STRICT` < `TLP:RED`. It returns False when the entity's marking exceeds the limit
 
 #### Querying OpenCTI API (available but NOT recommended)
 
