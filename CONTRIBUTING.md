@@ -198,7 +198,7 @@ All connectors follow this standardized structure:
 ```
 my-connector/
 ├── __metadata__/                 # Connector metadata for catalog
-│   ├── connector_manifest.json   # Connector information and configuration
+│   ├── connector_manifest.json   # Connector information
 │   └── logo.png                  # Connector logo (optional)
 ├── src/                          # Source code
 │   ├── connector/                # Main connector logic
