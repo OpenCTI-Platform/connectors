@@ -479,7 +479,6 @@ Common models include:
 **Marking:**
 
 - `TLPMarking`
-- `StatementMarking`
 
 > [!NOTE]  
 > Note that not all OpenCTI models are available in the connectors-sdk and some may be missing. We recommend using the connectors-sdk models whenever possible for models that are available. 
