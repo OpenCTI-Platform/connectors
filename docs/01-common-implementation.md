@@ -529,13 +529,8 @@ vuln = Vulnerability(
 )
 
 # Convert to STIX objects
-stix_objects = [
-    author.to_stix2_object(),
-    tlp_green.to_stix2_object(),
-    ip.to_stix2_object(),
-    indicator.to_stix2_object(),
-    vuln.to_stix2_object(),
-]
+octi_objects = [author, tlp_green, ip, indicator, vuln]
+stix_objects = [octi_object.to_stix2_object() for octi_object in octi_objects]
 ```
 
 ---
