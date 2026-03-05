@@ -579,16 +579,8 @@ networks:
 
 ### Environment Variables Documentation
 
-Document all environment variables in README.md:
-
-| Variable               | Description             | Default                 | Required |
-| ---------------------- | ----------------------- | ----------------------- | -------- |
-| `OPENCTI_URL`          | OpenCTI platform URL    | `http://localhost:8080` | Yes      |
-| `OPENCTI_TOKEN`        | OpenCTI API token       | -                       | Yes      |
-| `CONNECTOR_ID`         | Unique connector ID     | -                       | Yes      |
-| `CONNECTOR_NAME`       | Connector name          | -                       | Yes      |
-| `CONNECTOR_SCOPE`      | Entity types to process | -                       | Yes      |
-| `MY_CONNECTOR_API_KEY` | External API key        | -                       | Yes      |
+Document all environment variables, you can follow this part [Configuration variables generation](../CONTRIBUTING.md#documentation-standards) to automate generation of configuration documentation from the code.
+Ensure that you use the template provided in the documentation standards section that use the connectors-sdk for configuration management to ensure consistency across connectors and to leverage the automatic documentation generation features of the connector.
 
 ---
 
