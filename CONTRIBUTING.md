@@ -378,6 +378,7 @@ All connectors must meet these quality standards:
 - **Pass pylint** with repository `.pylintrc` configuration
 - **Use custom STIX plugin** to ensure proper STIX ID generation
 - **Format with black** and **isort** before committing
+- **Flake8 Basic Linting** for only fatal/convention errors are enforced (all E and W codes are ignored).
 
 ```bash
 # Install dependencies
@@ -391,6 +392,9 @@ PYTHONPATH=. python -m pylint <path_to_connector> --load-plugins linter_stix_id_
 # Format code
 black <path_to_connector>
 isort --profile black <path_to_connector>
+
+# Basic linting with flake8
+flake8 --ignore=E,W .
 ```
 > [!IMPORTANT]  
 > Ensure that you are at the root of the repository when running pylint to ensure the custom plugin is correctly loaded and applied to your connector code or when running the formatting tools to ensure they apply the correct configuration.
