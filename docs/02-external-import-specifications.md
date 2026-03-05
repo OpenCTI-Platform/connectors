@@ -692,7 +692,7 @@ This format is widely supported and can be easily parsed in Python.
 
 When configuring the `import_start_date` (or equivalent history parameter) of a connector, OpenCTI recommends using relative/duration-based dates (e.g., ISO 8601 durations like P30D, P1Y) rather than absolute dates (e.g., 2021-01-01).
 
-Relative dates make connector configurations robust, portable, and safe by design, while absolute dates create a that grows more problematic the longer the platform runs.
+Relative dates make connector configurations robust, portable, and safe by design, while absolute dates create a configuration that grows more problematic the longer the platform runs.
 
 
 ## Rate Limiting
