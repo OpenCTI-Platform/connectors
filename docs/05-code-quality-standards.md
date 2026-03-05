@@ -445,43 +445,6 @@ def test_create_observable(converter):
     assert "id" in observable
 ```
 
-### Integration Tests
-
-**File:** `tests/test_connector/test_connector.py`
-
-```python
-import pytest
-import responses
-
-from connector import MyConnector
-from connector.settings import ConnectorSettings
-
-
-@pytest.fixture
-def connector(mock_helper, test_config):
-    """Create connector instance."""
-    config = ConnectorSettings()
-    return MyConnector(config=config, helper=mock_helper)
-
-
-@responses.activate
-def test_collect_intelligence(connector):
-    """Test intelligence collection."""
-    # Mock API response
-    responses.add(
-        responses.GET,
-        "https://api.example.com/threats",
-        json={"items": [{"id": "1", "value": "192.0.2.1"}]},
-        status=200
-    )
-
-    # Collect intelligence
-    stix_objects = connector._collect_intelligence()
-
-    # Verify results
-    assert len(stix_objects) > 0
-    assert any(obj["type"] == "ipv4-addr" for obj in stix_objects)
-```
 
 ### Running Tests
 
