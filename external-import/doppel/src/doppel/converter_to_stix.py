@@ -12,18 +12,12 @@ from doppel.stix_helpers import (
     is_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
-from pycti import (
-    Identity as PyCTIIdentity,
-    Indicator as PyctiIndicator,
-    Note as PyctiNote,
-    StixCoreRelationship as PyctiStixCoreRelationship,
-    MarkingDefinition as PyctiMarkingDefinition
-)
-
-from pycti.utils.constants import (
-    CustomObservablePhoneNumber as PhoneNumber
-)
-
+from pycti import Identity as PyCTIIdentity
+from pycti import Indicator as PyctiIndicator
+from pycti import MarkingDefinition as PyctiMarkingDefinition
+from pycti import Note as PyctiNote
+from pycti import StixCoreRelationship as PyctiStixCoreRelationship
+from pycti.utils.constants import CustomObservablePhoneNumber as PhoneNumber
 from stix2 import (
     TLP_AMBER,
     TLP_GREEN,
@@ -34,10 +28,10 @@ from stix2 import (
     Identity,
     Indicator,
     IPv4Address,
-    MarkingDefinition as Stix2MarkingDefinition,
-    Note,
-    Relationship as StixCoreRelationship,
 )
+from stix2 import MarkingDefinition as Stix2MarkingDefinition
+from stix2 import Note
+from stix2 import Relationship as StixCoreRelationship
 
 
 class ConverterToStix:
