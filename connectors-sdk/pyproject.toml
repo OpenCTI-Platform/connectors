@@ -157,7 +157,7 @@ exclude = [
 plugins = ['pydantic.mypy']
 
 [[tool.mypy.overrides]]
-module = ["pycti.*", "stix2.*"]
+module = ["pycti==7.260305.0"]
 ignore_missing_imports = true  # pycti and stix2 do not provide stubs
 
 [tool.sphinx]
