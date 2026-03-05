@@ -325,7 +325,7 @@ def process_message(self) -> None:
 
 1. **Update after successful processing** - Don't update state if processing fails
 2. **Include enough context** - Store what you need to resume
-3. **Use timestamps for time-based imports** - More reliable than dates but shoudl be convert into human-readable format when setting state 
+3. **Use timestamps for time-based imports or ISO strings** - Timestamps is more reliable than dates but should be convert into human-readable format when setting state or when use ISO strings, add explicit timezone everywhere
 4. **Store cursors for paginated APIs** - Resume exactly where you left off
 5. **Keep state minimal** - Don't store large objects
 
