@@ -496,7 +496,7 @@ RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-de
 CMD ["python", "main.py"]
 ```
 
-Example with entrypoint.sh
+Example with entrypoint.sh (DEPRECATED):
 
 ```dockerfile
 FROM python:3.12-alpine
