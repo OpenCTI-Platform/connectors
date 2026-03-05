@@ -257,7 +257,7 @@ The SDK searches for files relative to the connector's entrypoint (the `__main__
 
 | File         | Searched locations (first match wins)                                        |
 | ------------ | ---------------------------------------------------------------------------- |
-| `config.yml` | `src/config.yml` (entrypoint directory), then `./config.yml` (project root)  |
+| `config.yml` | `src/config.yml`, then `./config.yml` (project root)  |
 | `.env`       | `./.env` (project root only)                                                 |
 
 For a typical project layout:
