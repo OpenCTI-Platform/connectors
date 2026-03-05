@@ -1,0 +1,13 @@
+.git
+__pycache__
+*.pyc
+.env
+venv
+.idea
+.vscode
+dist
+build
+.coverage
+pytest_cache
+**/config.yml*
+**/config.yaml*
