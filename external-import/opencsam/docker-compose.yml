@@ -1,4 +1,4 @@
-version: "3"
+version: '3'
 services:
   connector-opencsam:
     image: opencti/connector-opencsam:latest

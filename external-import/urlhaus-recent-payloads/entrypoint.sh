@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-urlhaus-recent-payloads
 
 # Start the connector
-python3 urlhaus-recent-payloads.py
+python3 main.py

@@ -273,9 +273,9 @@ class Chapsvision:
             bundle = {"type": "bundle", "objects": objects}
             return bundle
         except Exception as e:
-            print(doc)
-            print(e)
-            sys.exit(0)
+            self.helper.log_error(f"Error generating bundle for doc: {doc}")
+            self.helper.log_error(str(e))
+            sys.exit(1)
 
     def process_data(self):
         # Get the current timestamp and check
@@ -339,5 +339,5 @@ class Chapsvision:
 
 
 if __name__ == "__main__":
-    chapsvisionConnector = Chapsvision()
-    chapsvisionConnector.run()
+    connector = Chapsvision()
+    connector.run()

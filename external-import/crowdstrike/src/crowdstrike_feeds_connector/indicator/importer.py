@@ -1,27 +1,32 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike indicator importer module."""
 
-from typing import Any, Dict, List, NamedTuple, Optional, Set
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
+from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
 from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.attack_lookup import AttackTechniqueLookup
+from crowdstrike_feeds_services.utils.labels import parse_crowdstrike_labels
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
 from .builder import IndicatorBundleBuilder, IndicatorBundleBuilderConfig
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class IndicatorImporterConfig(NamedTuple):
     """CrowdStrike indicator importer configuration."""
 
-    helper: OpenCTIConnectorHelper
+    config: "ConnectorSettings"
+    helper: "OpenCTIConnectorHelper"
     author: Identity
     default_latest_timestamp: int
     tlp_marking: MarkingDefinition
@@ -39,6 +44,8 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
     no_file_trigger_import: bool
+    scopes: set[str]
+    attack_lookup: Optional[AttackTechniqueLookup]
 
 
 class IndicatorImporter(BaseImporter):
@@ -51,12 +58,18 @@ class IndicatorImporter(BaseImporter):
     def __init__(self, config: IndicatorImporterConfig) -> None:
         """Initialize CrowdStrike indicator importer."""
         super().__init__(
+            config.config,
             config.helper,
             config.author,
             config.tlp_marking,
         )
 
-        self.indicators_api_cs = IndicatorsAPI(config.helper)
+        self.indicators_api_cs = IndicatorsAPI(config.config, config.helper)
+        self.related_actor_importer = RelatedActorImporter(
+            config.config,
+            config.helper,
+        )
+        # Simple per-run cache to avoid repeated actor resolution calls.
         self.create_observables = config.create_observables
         self.create_indicators = config.create_indicators
         self.default_latest_timestamp = config.default_latest_timestamp
@@ -73,12 +86,16 @@ class IndicatorImporter(BaseImporter):
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
-
+        self.scopes = config.scopes
+        # Preloaded at connector startup; used to resolve MITRE technique IDs for ATT&CK labels.
+        self.attack_lookup = config.attack_lookup
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
 
-        self.report_fetcher = ReportFetcher(config.helper, self.no_file_trigger_import)
+        self.report_fetcher = ReportFetcher(
+            config.config, config.helper, self.no_file_trigger_import
+        )
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -90,7 +107,7 @@ class IndicatorImporter(BaseImporter):
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
 
-        latest_indicator_updated_datetime = None
+        latest_indicator_updated_datetime: datetime | None = None
 
         indicator_batch = self._fetch_indicators(fetch_timestamp)
         if indicator_batch:
@@ -119,7 +136,7 @@ class IndicatorImporter(BaseImporter):
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> [List, None, None]:
+    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict] | None:
         limit = 1000
         sort = "last_updated|asc"
         fql_filter = f"last_updated:>{fetch_timestamp}"
@@ -129,7 +146,7 @@ class IndicatorImporter(BaseImporter):
 
         return self._query_indicators(limit, sort, fql_filter)
 
-    def _query_indicators(self, limit, sort, fql_filter) -> [List]:
+    def _query_indicators(self, limit: int, sort: str, fql_filter: str) -> List[dict]:
         _limit = limit
         _sort = sort
         _fql_filter = fql_filter
@@ -167,7 +184,7 @@ class IndicatorImporter(BaseImporter):
 
         return resources
 
-    def _process_indicators(self, indicators: List) -> Optional[int]:
+    def _process_indicators(self, indicators: List[dict]) -> datetime | None:
         indicator_count = len(indicators)
         self._info("Processing {0} indicators...", indicator_count)
 
@@ -219,6 +236,101 @@ class IndicatorImporter(BaseImporter):
 
     def _create_indicator_bundle(self, indicator: dict) -> Optional[Bundle]:
         try:
+            parsed_labels = parse_crowdstrike_labels(indicator.get("labels") or [])
+            indicator["label_names"] = parsed_labels.raw
+            indicator["attack_patterns"] = parsed_labels.attack_patterns
+            indicator["malware_families"] = parsed_labels.malware_families
+
+            # Resolve ATT&CK technique IDs for label-derived attack patterns so we can build canonical
+            # Attack Pattern objects that match the MITRE connector (source of truth).
+            resolved_attack_patterns: List[Dict[str, str]] = []
+            if self.attack_lookup:
+                for ap_name in parsed_labels.attack_patterns:
+                    mitre_id = self.attack_lookup.lookup_mitre_id(ap_name)
+                    if mitre_id:
+                        resolved_attack_patterns.append(
+                            {"name": ap_name, "mitre_id": mitre_id}
+                        )
+            indicator["attack_patterns_resolved"] = resolved_attack_patterns
+
+            # Do NOT merge these into `indicator["actors"]` (that field is reserved for resolved
+            # related actors from the API). Keep label-derived actors separate.
+            indicator["actor_names_from_labels"] = parsed_labels.actor_names
+
+            # Indicator types: merge CrowdStrike API arrays (preferred) and label-derived threat types (fallback)
+            api_threat_types = (
+                indicator.get("threat_types") or parsed_labels.threat_types
+            )
+            api_domain_types = indicator.get("domain_types") or []
+            api_ip_address_types = indicator.get("ip_address_types") or []
+
+            # Preserve order, de-dupe case-insensitively
+            merged_indicator_types: List[str] = []
+            seen: set[str] = set()
+            for v in (
+                list(api_threat_types)
+                + list(api_domain_types)
+                + list(api_ip_address_types)
+            ):
+                s = str(v).strip()
+                if not s or s.lower() in seen:
+                    continue
+                seen.add(s.lower())
+                merged_indicator_types.append(s)
+
+            # Keep the effective threat types separately for debugging/visibility
+            indicator["threat_types"] = list(api_threat_types)
+            indicator["indicator_types"] = merged_indicator_types
+
+            self.helper.connector_logger.debug(
+                "Parsed indicator labels",
+                {
+                    "indicator_id": indicator.get("id"),
+                    "raw_label_count": len(indicator.get("labels") or []),
+                    "label_name_count": len(indicator.get("label_names") or []),
+                    "attack_pattern_count": len(indicator.get("attack_patterns") or []),
+                    "attack_pattern_resolved_count": len(
+                        indicator.get("attack_patterns_resolved") or []
+                    ),
+                    "malware_family_count": len(
+                        indicator.get("malware_families") or []
+                    ),
+                    "actor_name_count": len(
+                        indicator.get("actor_names_from_labels") or []
+                    ),
+                    "threat_type_count": len(indicator.get("threat_types") or []),
+                    "indicator_type_count": len(indicator.get("indicator_types") or []),
+                },
+            )
+            # Map CrowdStrike malicious confidence (low/medium/high) -> STIX/OpenCTI confidence (0-100)
+            cs_mc = (indicator.get("malicious_confidence") or "").strip().lower()
+            cs_conf_map = {"high": 90, "medium": 50, "low": 10}
+            mapped_confidence = cs_conf_map.get(cs_mc)
+
+            if mapped_confidence is not None:
+                indicator["confidence"] = mapped_confidence
+
+            if "actor" in self.scopes:
+                # Process related actors
+                related_actors = indicator.get("actors") or []
+                indicator["actors"] = (
+                    self.related_actor_importer._process_related_actors(
+                        indicator.get("id"), related_actors
+                    )
+                )
+                self.helper.connector_logger.debug(
+                    "Resolved indicator actors",
+                    {
+                        "indicator_id": indicator.get("id"),
+                        "actor_count": len(indicator.get("actors") or []),
+                        "actor_entry_type": (
+                            type(indicator["actors"][0]).__name__
+                            if indicator.get("actors")
+                            else None
+                        ),
+                    },
+                )
+
             bundle_builder_config = IndicatorBundleBuilderConfig(
                 indicator=indicator,
                 author=self.author,
@@ -235,6 +347,7 @@ class IndicatorImporter(BaseImporter):
                 indicator_high_score=self.indicator_high_score,
                 indicator_high_score_labels=self.indicator_high_score_labels,
                 indicator_unwanted_labels=self.indicator_unwanted_labels,
+                scopes=self.scopes,
             )
 
             bundle_builder = IndicatorBundleBuilder(self.helper, bundle_builder_config)

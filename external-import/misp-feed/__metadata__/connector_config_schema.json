@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/misp-feed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Misp Feed",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "misp-feed"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "MISP_FEED_SOURCE_TYPE": {
+      "default": "url",
+      "description": "Source type for the MISP feed (`url` or `s3`).",
+      "enum": [
+        "url",
+        "s3"
+      ],
+      "type": "string"
+    },
+    "MISP_FEED_URL": {
+      "default": null,
+      "description": "The URL of the MISP feed (required if `source_type` is `url`).",
+      "type": "string"
+    },
+    "MISP_FEED_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify SSL certificates for the feed URL.",
+      "type": "boolean"
+    },
+    "MISP_FEED_BUCKET_NAME": {
+      "default": null,
+      "description": "Bucket Name where the MISP's files are stored",
+      "type": "string"
+    },
+    "MISP_FEED_BUCKET_PREFIX": {
+      "default": null,
+      "description": "Used to filter imports",
+      "type": "string"
+    },
+    "MISP_FEED_IMPORT_FROM_DATE": {
+      "default": null,
+      "description": "Start date for importing data from the MISP feed.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "MISP_FEED_CREATE_REPORTS": {
+      "default": true,
+      "description": "Whether to create reports from MISP feed data.",
+      "type": "boolean"
+    },
+    "MISP_FEED_REPORT_TYPE": {
+      "default": "misp-event",
+      "description": "The type of reports to create from the MISP feed.",
+      "type": "string"
+    },
+    "MISP_FEED_CREATE_INDICATORS": {
+      "default": false,
+      "description": "Whether to create indicators from the MISP feed.",
+      "type": "boolean"
+    },
+    "MISP_FEED_CREATE_OBSERVABLES": {
+      "default": false,
+      "description": "Whether to create observables from the MISP feed.",
+      "type": "boolean"
+    },
+    "MISP_FEED_CREATE_OBJECT_OBSERVABLES": {
+      "default": false,
+      "description": "Whether to create object observables.",
+      "type": "boolean"
+    },
+    "MISP_FEED_CREATE_TAGS_AS_LABELS": {
+      "default": true,
+      "description": "Whether to convert tags into labels.",
+      "type": "boolean"
+    },
+    "MISP_FEED_GUESS_THREATS_FROM_TAGS": {
+      "default": false,
+      "description": "Whether to infer threats from tags.",
+      "type": "boolean"
+    },
+    "MISP_FEED_MARKINGS_FROM_TAGS": {
+      "default": false,
+      "description": "Whether to infer markings from tags.",
+      "type": "boolean"
+    },
+    "MISP_FEED_AUTHOR_FROM_TAGS": {
+      "default": false,
+      "description": "Whether to infer authors from tags.",
+      "type": "boolean"
+    },
+    "MISP_FEED_IMPORT_TO_IDS_NO_SCORE": {
+      "default": null,
+      "description": "Import data without a score to IDS.",
+      "type": "integer"
+    },
+    "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT": {
+      "default": false,
+      "description": "Import unsupported observables as plain text.",
+      "type": "boolean"
+    },
+    "MISP_FEED_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT": {
+      "default": true,
+      "description": "Whether to import unsupported observables transparently as text.",
+      "type": "boolean"
+    },
+    "MISP_FEED_IMPORT_WITH_ATTACHMENTS": {
+      "default": false,
+      "description": "Whether to import attachments from the feed.",
+      "type": "boolean"
+    },
+    "AWS_ENDPOINT_URL": {
+      "default": null,
+      "description": "URL to specify for compatibility with other S3 buckets (MinIO)",
+      "type": "string"
+    },
+    "AWS_ACCESS_KEY_ID": {
+      "default": null,
+      "description": "Access key used to access the bucket",
+      "type": "string"
+    },
+    "AWS_SECRET_ACCESS_KEY": {
+      "default": null,
+      "description": "Secret key used to access the bucket",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

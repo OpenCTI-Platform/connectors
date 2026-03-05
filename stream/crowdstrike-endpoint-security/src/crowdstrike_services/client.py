@@ -1,7 +1,12 @@
+from typing import TYPE_CHECKING
+
 from falconpy import IOC as CrowdstrikeIOC
 
-from .config_variables import ConfigCrowdstrike
 from .constants import observable_type_mapper, platform_mapper, severity_mapper
+
+if TYPE_CHECKING:
+    from crowdstrike_connector.settings import CrowdstrikeEndpointSecurityConfig
+    from pycti import OpenCTIConnectorHelper
 
 
 class CrowdstrikeClient:
@@ -9,13 +14,18 @@ class CrowdstrikeClient:
     Working with Falcon Py for Crowdstrike API call
     """
 
-    def __init__(self, helper):
-        self.config = ConfigCrowdstrike()
+    def __init__(
+        self,
+        config: "CrowdstrikeEndpointSecurityConfig",
+        helper: "OpenCTIConnectorHelper",
+    ):
         self.helper = helper
+        self.config = config
         self.cs = CrowdstrikeIOC(
             client_id=self.config.client_id,
-            client_secret=self.config.client_secret,
-            base_url=self.config.api_base_url,
+            client_secret=self.config.client_secret.get_secret_value(),
+            # Convert HttpUrl to string
+            base_url=str(self.config.api_base_url),
         )
 
     def _handle_api_error(self, response: dict) -> None:
@@ -39,7 +49,6 @@ class CrowdstrikeClient:
         :return: List of resources or None
         """
         try:
-
             cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
 
             response = self.cs.indicator_search(filter=cs_filter)
@@ -271,7 +280,6 @@ class CrowdstrikeClient:
 
         # If IOC exists, update the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
-
             # In case of permanent_delete is False
             # Update data with label TO_DELETE for Crowdstrike
             if self.config.permanent_delete is False:

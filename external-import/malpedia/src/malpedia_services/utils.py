@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia connector utilities module."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Mapping, Optional
 
 import pycountry
@@ -22,7 +22,7 @@ class MalpediaUtils:
         :return: Work id in string
         """
 
-        now = datetime.utcfromtimestamp(timestamp)
+        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
             "%Y-%m-%d %H:%M:%S"
         )
@@ -64,7 +64,7 @@ class MalpediaUtils:
 
     @staticmethod
     def current_unix_timestamp() -> int:
-        return int(datetime.utcnow().timestamp())
+        return int(datetime.now(timezone.utc).timestamp())
 
     @staticmethod
     def filter_countries_victims(all_victims: list) -> List:

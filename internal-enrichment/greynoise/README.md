@@ -1,49 +1,225 @@
 # OpenCTI GreyNoise Connector
 
-GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-The purpose of this connector is to answer to this question : "Is everyone else seeing this stuff, or is it just me?"
+## Table of Contents
 
-In other words:  "Is this just regular Internet background noise or is machine actually targeting and attacking ME specifically?"
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [GreyNoise Configuration](#greynoise-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Classification Scoring](#classification-scoring)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
+
+## Introduction
+
+GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity. The connector helps answer the question: **"Is everyone else seeing this stuff, or is it just me?"**
+
+In other words, it determines whether traffic to your network is regular Internet background noise or if a machine is actually targeting and attacking your network specifically.
+
+This internal enrichment connector queries the GreyNoise API for IPv4 addresses and enriches them with contextual information including:
+- Classification (benign, malicious, suspicious, unknown)
+- Geolocation data (city, country)
+- ASN information
+- Associated vulnerabilities (CVEs)
+- VPN service usage
+- Known threat actors
+- Malware associations
+- Bot and TOR exit node detection
+
+---
 
 ## Installation
 
-The GreyNoise connector is a standalone Python process that must have access to the OpenCTI platform and the RabbitMQ. RabbitMQ credentials and connection parameters are provided by the API directly, as configured in the platform settings.
+### Requirements
 
-Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a Docker with the image `opencti/connector-greynoise:latest`. We provide an example of [`docker-compose.yml`](docker-compose.yml) file that could be used independently or integrated to the global `docker-compose.yml` file of OpenCTI.
+- OpenCTI Platform >= 6.0.0
+- GreyNoise API key (Enterprise or Community Trial)
+- Network access to GreyNoise API
 
-If you are using it independently, remember that the connector will try to connect to the RabbitMQ on the port configured in the OpenCTI platform.
+---
 
 ## Configuration
 
+### OpenCTI Configuration
 
-| Parameter                              | Docker envvar                          | Mandatory  | Description                                                                                                               |
-|----------------------------------------|----------------------------------------|------------|---------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`                          | `OPENCTI_URL`                          | Yes        | The URL of the OpenCTI platform.                                                                                          |
-| `opencti_token`                        | `OPENCTI_TOKEN`                        | Yes        | The default admin token configured in the OpenCTI platform parameters file.                                               |
-| `connector_id`                         | `CONNECTOR_ID`                         | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                        |
-| `connector_name`                       | `CONNECTOR_NAME`                       | Yes        | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.                   |
-| `connector_scope`                      | `CONNECTOR_SCOPE`                      | Yes        | Must be `ipv4-addr`.                                                                                                      |
-| `connector_auto`	                      | `CONNECTOR_AUTO`                       | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables                                             |
-| `connector_log_level`                  | `CONNECTOR_LOG_LEVEL`                  | Yes        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                             |
-| `greynoise_key`                        | `GREYNOISE_KEY`                        | Yes        | The GreyNoise API key .                                                                                                   |
-| `greynoise_max_tlp`                    | `GREYNOISE_MAX_TLP`                    | Yes        | Do not send any data to GreyNoise if the TLP of the observable is greater than GREYNOISE_MAX_TLP                          |
-| `greynoise_name`	                      | `GREYNOISE_NAME`                       | Yes        | The GreyNoise organization name                                                                                           |
-| `greynoise_description`                | `GREYNOISE_DESCRIPTION`                | Yes        | The GreyNoise organization description                                                                                    |
-| `greynoise_sighting_not_seen`          | `GREYNOISE_SIGHTING_NOT_SEEN`          | Yes        | Must be `true` or `false` to enable or disable the creation of a sighting with `count=0` when an IP has not been seen.    |
-| `greynoise_default_score`              | `GREYNOISE_DEFAULT_SCORE`              | Yes        | Default_score allows you to add a default score for an indicator and its observable (a number between 1 and 100)          | 
-| `greynoise_indicator_score_malicious` | `GREYNOISE_INDICATOR_SCORE_MALICIOUS=90` | No | Indicator score applied when GreyNoise classification is malicious (a number between 1 and 100) |
-| `greynoise_indicator_score_suspicious` | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS=70`| No | Indicator score applied when GreyNoise classification is suspicious (a number between 1 and 100) |
-| `greynoise_indicator_score_benign` | `GREYNOISE_INDICATOR_SCORE_BENIGN=20`| No | Indicator score applied when GreyNoise classification is benign (a number between 1 and 100) |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `IPv4-Addr` |
+| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment of observables |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+
+### GreyNoise Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `greynoise_key` | `GREYNOISE_KEY` | Yes | The GreyNoise API key |
+| `greynoise_max_tlp` | `GREYNOISE_MAX_TLP` | Yes | Maximum TLP level for data to be sent to GreyNoise |
+| `greynoise_name` | `GREYNOISE_NAME` | No | The GreyNoise organization name |
+| `greynoise_description` | `GREYNOISE_DESCRIPTION` | No | The GreyNoise organization description |
+| `greynoise_sighting_not_seen` | `GREYNOISE_SIGHTING_NOT_SEEN` | No | Create sighting with count=0 when IP not seen |
+| `greynoise_indicator_score_malicious` | `GREYNOISE_INDICATOR_SCORE_MALICIOUS` | No | Score for malicious classification (default: 75) |
+| `greynoise_indicator_score_suspicious` | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS` | No | Score for suspicious classification (default: 50) |
+| `greynoise_indicator_score_benign` | `GREYNOISE_INDICATOR_SCORE_BENIGN` | No | Score for benign classification (default: 20) |
+
+---
+
+## Deployment
+
+### Docker Deployment
+
+Build a Docker Image using the provided `Dockerfile`.
+
+Example `docker-compose.yml`:
+
+```yaml
+version: '3'
+services:
+  connector-greynoise:
+    image: opencti/connector-greynoise:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=GreyNoise
+      - CONNECTOR_SCOPE=IPv4-Addr
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_LOG_LEVEL=error
+      - GREYNOISE_KEY=ChangeMe
+      - GREYNOISE_MAX_TLP=TLP:AMBER
+      - GREYNOISE_SIGHTING_NOT_SEEN=false
+    restart: always
+```
+
+### Manual Deployment
+
+1. Clone the repository
+2. Copy `config.yml.sample` to `config.yml` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run: `python main.py`
+
+---
+
+## Usage
+
+The connector enriches IPv4 address observables by:
+1. Querying the GreyNoise API for IP context
+2. Creating STIX objects representing the enrichment data
+3. Building relationships between the observable and enrichment entities
+
+Trigger enrichment:
+- Manually via the OpenCTI UI on IPv4-Addr observables
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
+
+---
 
 ## Behavior
 
-- Create a GreyNoise `Organization` if it doesn't exist with `GREYNOISE_NAME`  and `GREYNOISE_DESCRIPTION`
-- If the IPv4 is a network: do noting (not implemented)
-- Call the GreyNoise API for the IPv4
-- If the IPv4 is knew by GreyNoise:
-  - Create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=1`
-- If the IPv4 is not knew by GreyNoise:
-  - if `GREYNOISE_SIGHTING_NOT_SEEN=true`: create a `sighting` from the IPv4 observable to the GreyNoise entity with `count=0`
-  - if `GREYNOISE_SIGHTING_NOT_SEEN=false`: do nothing.
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[IPv4-Addr Observable] --> B[GreyNoise Connector]
+    B --> C{GreyNoise API}
+    C --> D[IP Context]
+    C --> E[Tag Metadata]
+    D --> F[STIX Bundle Generator]
+    E --> F
+    F --> G[Enriched Observable]
+    F --> H[Indicator]
+    F --> I[Sighting]
+    F --> J[Location]
+    F --> K[ASN]
+    F --> L[Organization]
+    F --> M[Vulnerabilities]
+    F --> N[Threat Actors]
+    F --> O[Malware]
+    F --> P[Tools]
+```
+
+### Enrichment Mapping
+
+| GreyNoise Field | OpenCTI Entity | Relationship |
+|-----------------|----------------|--------------|
+| `classification` | Observable score, Labels | Direct attribute |
+| `metadata.city` | Location (City) | `located-at` |
+| `metadata.country_code` | Location (Country) | `located-at` |
+| `metadata.asn` | Autonomous System | `belongs-to` |
+| `metadata.organization` | Identity (Organization) | `related-to` |
+| `cve` | Vulnerability | `related-to` |
+| `actor` | Threat Actor | `related-to` |
+| `tags` (worm category) | Malware | `related-to` |
+| `vpn_service` | Tool | `related-to` |
+| `bot`, `tor`, `vpn` | Labels | Direct attribute |
+
+### Classification Scoring
+
+| Classification | Default Score |
+|----------------|---------------|
+| Malicious | 75 |
+| Suspicious | 50 |
+| Benign | 20 |
+| Unknown | 20 |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Identity (Organization) | GreyNoise organization and associated organizations |
+| Indicator | IPv4 pattern indicator with classification score |
+| Sighting | Observation by GreyNoise sensors |
+| Location (City) | City-level geolocation |
+| Location (Country) | Country-level geolocation |
+| Autonomous System | ASN information |
+| Vulnerability | Associated CVEs |
+| Threat Actor | Known threat actors |
+| Malware | Worm-type malware from tags |
+| Tool | VPN service tools |
+| Labels | Classification, bot activity, TOR, VPN status |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see detailed connector operations including:
+- API key validation status
+- GreyNoise API responses
+- STIX bundle generation details
+
+Common issues:
+- **Invalid API Key**: Ensure you have an Enterprise or Community Trial API key
+- **TLP Restrictions**: Check that observable TLP does not exceed `GREYNOISE_MAX_TLP`
+
+---
+
+## Additional Information
+
+- [GreyNoise Documentation](https://docs.greynoise.io/)
+- [GreyNoise Visualizer](https://viz.greynoise.io/)
+- [Get GreyNoise API Key](https://viz.greynoise.io/account/api-key)

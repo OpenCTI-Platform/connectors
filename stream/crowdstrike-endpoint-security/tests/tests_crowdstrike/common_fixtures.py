@@ -4,6 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 from crowdstrike_services import CrowdstrikeClient
+from pydantic import SecretStr
 
 
 @pytest.fixture(scope="class")
@@ -13,7 +14,15 @@ def setup_config(request):
     Create fake pycti OpenCTI helper
     """
     request.cls.mock_helper = Mock()
-    request.cls.mock_client = CrowdstrikeClient(request.cls.mock_helper)
+    request.cls.mock_config = Mock(
+        api_base_url="https://api.crowdstrike.com",
+        client_id="test-client-id",
+        client_secret=SecretStr("test-client-secret"),
+    )
+
+    request.cls.mock_client = CrowdstrikeClient(
+        request.cls.mock_config, request.cls.mock_helper
+    )
 
     yield
 

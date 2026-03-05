@@ -140,3 +140,21 @@ def test_base_identified_entity_should_emit_warning_if_id_is_changed(
     with pytest.warns(UserWarning) as warning:
         entity_instance.titi = 1
         assert "'id' property" in str(warning[0].message)
+
+
+def test_base_identified_entity_should_accept_reference_object_for_author_and_markings(
+    implemented_base_identified_entity,
+    fake_valid_reference,
+    fake_valid_reference_with_tlp_id,
+):
+    """Test that BaseIdentifiedEntity with reference objects."""
+    # Given an implemented BaseIdentifiedEntity
+    entity_class = implemented_base_identified_entity
+    entity_instance = entity_class(
+        toto="toto",
+        author=fake_valid_reference,
+        markings=[fake_valid_reference_with_tlp_id],
+    )
+    # Then author and marking should be a Reference model
+    assert entity_instance.author == fake_valid_reference
+    assert entity_instance.markings == [fake_valid_reference_with_tlp_id]

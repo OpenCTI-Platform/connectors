@@ -515,7 +515,7 @@ class Mandiant:
 
             except StateError as err:
                 self.helper.connector_logger.error(
-                    "Failed du to connector state error", {"error": str(err)}
+                    "Failed due to connector state error", {"error": str(err)}
                 )
                 break
 
@@ -860,7 +860,7 @@ class Mandiant:
 
         except StateError as err:
             self.helper.connector_logger.error(
-                "Failed du to connector state error", {"error": str(err)}
+                "Failed due to connector state error", {"error": str(err)}
             )
             if work_id is not None:
                 self.helper.api.work.to_processed(

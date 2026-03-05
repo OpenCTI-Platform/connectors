@@ -73,6 +73,11 @@
       "description": "Whether to include indicators in the reports imported from MispFeed or not.",
       "type": "boolean"
     },
+    "FLASHPOINT_CREATE_REPORTS": {
+      "default": false,
+      "description": "Whether to create reports or groupings from MispFeed events or not.",
+      "type": "boolean"
+    },
     "FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS": {
       "default": false,
       "description": "Whether to guess relationships between entities or not.",

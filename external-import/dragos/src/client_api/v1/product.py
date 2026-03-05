@@ -1,5 +1,6 @@
 # isort:skip_file
 """Offer Client to reach the Dragos Worldview API product endpoint."""
+
 import asyncio
 from datetime import datetime, timezone
 from io import BytesIO

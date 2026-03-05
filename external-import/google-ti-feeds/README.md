@@ -1,8 +1,8 @@
 # Google Threat Intelligence Connector
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2025-06-20 |    -    |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 ---
 
@@ -116,7 +116,6 @@ Below are the optional parameters around the collection 'Reports' you can set fo
 | Google Threat Intel Report Origins        | `gti.report_origins`           | `GTI_REPORT_ORIGINS`           | google threat intelligence | No        | The origin of the reports to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `partner`, `crowdsourced`, `google threat intelligence`.                                                                                                                                                                                                                                                                                                                                                   |
 | Google Threat Intel Report Types          | `gti.report_types`             | `GTI_REPORT_TYPES`             | All                        | No        | The types of reports to import from Google Threat Intel. Can be a string separated by comma for multiple values. Valid values are: `All`, `Actor Profile`, `Country Profile`, `Cyber Physical Security Roundup`, `Event Coverage/Implication`, `Industry Reporting`, `Malware Profile`, `Net Assessment`, `Network Activity Reports`, `News Analysis`, `OSINT Article`, `Patch Report`, `Strategic Perspective`, `TTP Deep Dive`, `Threat Activity Alert`, `Threat Activity Report`, `Trends and Forecasting`, `Weekly Vulnerability Exploitation Report` |
 
-
 Below are the optional parameters around the collection 'Threat Actors' you can set for Google Threat Intel:
 
 | Parameter                                           | config.yml                           | Docker Environment Variable          | Default                    | Mandatory | Description                                                                                                                                                                                                   |
@@ -183,7 +182,6 @@ The connector is designed to be run in a Docker container. However, if you want 
 ```bash
 pip install -e .[dev,test]
 ```
-(for legacy purposes, you can also use `pip install -r requirements.txt` that is in editable mode.)
 
 5a/ Set the required variables:
 In your shell:

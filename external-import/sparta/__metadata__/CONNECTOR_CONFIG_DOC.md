@@ -12,5 +12,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | string | `["attack-pattern", "course-of-action", "indicator", "identity"]` | The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only). |
 | CONNECTOR_TYPE | `string` |  | string | `"EXTERNAL_IMPORT"` | Should always be set to EXTERNAL_IMPORT for this connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | Determines the verbosity of the logs. |
-| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT5H"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
+| CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P7D"` | Duration between two scheduled runs of the connector (ISO 8601 format). |
 | SPARTA_BASE_URL | `string` |  | string | `"https://sparta.aerospace.org/download/STIX?f=latest"` | SPARTA base url used for retrieving SPARTA STIX |

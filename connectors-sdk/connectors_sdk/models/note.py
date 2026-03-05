@@ -5,6 +5,7 @@ from collections import OrderedDict
 import stix2.properties
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import NoteType
+from connectors_sdk.models.reference import Reference
 from pycti import Note as PyctiNote
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Note as Stix2Note
@@ -50,7 +51,7 @@ class Note(BaseIdentifiedEntity):
         default=None,
         description="The name of the author(s) of this note (e.g., the analyst(s) that created it).",
     )
-    objects: list[BaseIdentifiedEntity] | None = Field(
+    objects: list[BaseIdentifiedEntity | Reference] | None = Field(
         default=None,
         description="OCTI objects this note applies to.",
     )

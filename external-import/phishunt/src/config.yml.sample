@@ -1,10 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: ChangeMe(UUIDv4 token)
 
 connector:
   id: ChangeMe(UUIDv4 token)
-  type: 'EXTERNAL_IMPORT'
   name: 'Phishunt'
   scope: 'phishunt'
   log_level: 'info'

@@ -39,6 +39,13 @@ class ConverterToStix:
     Provides methods for converting various types of input data into STIX 2.1 objects.
     """
 
+    # URL regex pattern
+    URL_PATTERN = re.compile(r"^https?://", re.IGNORECASE)
+    # IPv4 regex pattern
+    IPV4_PATTERN = re.compile(r"^(\d{1,3}\.){3}\d{1,3}$")
+    # Email regex pattern
+    EMAIL_PATTERN = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
+
     def __init__(self, helper, config):
         self.helper = helper
         self.config = config

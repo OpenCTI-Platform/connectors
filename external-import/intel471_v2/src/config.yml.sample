@@ -1,24 +1,24 @@
 opencti:
-  url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  url: 'http://localhost'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
-  name: 'Intel471'
-  scope: 'malware,vulnerability,indicator'
-  confidence_level: 70
-  update_existing_data: False
-  log_level: 'info'
+  id: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d' # Optional (default: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d')
+  name: 'Intel471 v2' # Optional (default: 'Intel471 v2')
+  scope: 'malware,vulnerability,indicator' # Optional (default: 'malware, vulnerability, indicator')
+  log_level: 'info' # Optional (default: 'error')
 
 intel471:
-  api_username: CHANGEME
-  api_key: CHANGEME
-  interval_indicators: 60
-  initial_history_indicators: 0
-  interval_yara: 60
-  initial_history_yara: 0
-  interval_cves: 120
-  initial_history_cves: 0
-  interval_reports: 120
-  initial_history_reports: 0
+  api_username: ChangeMe
+  api_key: ChangeMe
+  interval_indicators: 60 # Optional (default: 0)
+  initial_history_indicators: 0 # Optional (default: 0)
+  interval_yara: 60 # Optional (default: 0)
+  initial_history_yara: 0 # Optional (default: 0)
+  interval_cves: 120 # Optional (default: 0)
+  initial_history_cves: 0 # Optional (default: 0)
+  interval_reports: 120 # Optional (default: 0)
+  initial_history_reports: 0 # Optional (default: 0)
+  proxy: null # Optional (default: null)
+  ioc_score: 70  # Optional (default: 70)

@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 from conftest import mock_env_vars
 from crowdstrike_feeds_connector.report.builder import ReportBundleBuilder
-from models.configs.config_loader import ConfigLoader
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 # =====================
@@ -53,6 +53,7 @@ def crowdstrike_config_with_guessing_disabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "False",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -69,6 +70,7 @@ def crowdstrike_config_with_guessing_enabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "True",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -172,10 +174,10 @@ def test_enable_relationship_guessing_when_needed(
 
 def _given_admin_has_set_report_guess_relations_to_false(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given the Admin has set report_guess_relations to False in the configuration."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert not config.crowdstrike.report_guess_relations  # noqa: S101
 
@@ -184,10 +186,10 @@ def _given_admin_has_set_report_guess_relations_to_false(
 
 def _given_admin_has_set_report_guess_relations_to_true(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given the Admin has set report_guess_relations to True in the configuration."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert config.crowdstrike.report_guess_relations  # noqa: S101
 
@@ -195,7 +197,7 @@ def _given_admin_has_set_report_guess_relations_to_true(
 
 
 def _when_system_imports_report_from_crowdstrike_api(
-    config: ConfigLoader,
+    config: ConnectorSettings,
     report_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,
@@ -211,6 +213,8 @@ def _when_system_imports_report_from_crowdstrike_api(
         report_type="threat-report",
         confidence_level=80,
         related_indicators=related_indicators,
+        malwares_from_field=None,
+        scopes={"actor", "malware", "target"},
         report_guess_relations=config.crowdstrike.report_guess_relations,
     )
 

@@ -30,7 +30,7 @@ class KasperskyClient:
         self.session.headers.update(self.headers)
         self.params = params
 
-    def _request_data(self, api_url: str, params: dict) -> requests.Response:
+    def _request_data(self, api_url: HttpUrl, params: dict) -> requests.Response:
         """
         Internal method to handle API requests
         :return: Response in JSON format
@@ -69,10 +69,11 @@ class KasperskyClient:
             self.helper.connector_logger.error("Unknown error", {"error": err})
             raise
 
-    def get_file_info(self, obs_hash: str) -> dict:
+    def get_data(self, type: str, obs: str, sections: str) -> dict:
         """
-        Retrieve file information
+        Retrieve data for current observable
         """
-        file_url = f"{self.base_url}api/hash/{obs_hash}"
-        response = self._request_data(file_url, params=self.params)
+        url = HttpUrl(f"{self.base_url}api/{type}/{obs}")
+        self.params["sections"] = sections
+        response = self._request_data(url, params=self.params)
         return response.json()

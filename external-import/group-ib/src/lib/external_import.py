@@ -1,6 +1,6 @@
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from traceback import format_exc
 from typing import Any
 
@@ -113,11 +113,11 @@ class ExternalImportConnector:
         self.enabled_collections = []
         for (
             collection_name,
-            slached_collection_name,
+            slashed_collection_name,
         ) in ConfigConnector.COLLECTION_MAP.items():
             enable = self.cfg.get_collection_settings(collection_name, "enable")
-            if enable == True:
-                self.enabled_collections.append(slached_collection_name)
+            if enable is True:
+                self.enabled_collections.append(slashed_collection_name)
             self.helper.connector_logger.debug(
                 f"Checked collection {collection_name}, enable: {enable}"
             )
@@ -226,7 +226,9 @@ class ExternalImportConnector:
 
     def get_formatted_utcfromtimestamp(self, date) -> str:
         self.helper.connector_logger.debug(f"Formatting timestamp: {date}")
-        formatted_date = datetime.utcfromtimestamp(date).strftime("%Y-%m-%d %H:%M:%S")
+        formatted_date = datetime.fromtimestamp(date, tz=timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         self.helper.connector_logger.debug(f"Formatted timestamp to: {formatted_date}")
         return formatted_date
 

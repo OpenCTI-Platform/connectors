@@ -42,8 +42,7 @@ def mock_config():
 
 @pytest.fixture
 def fake_asset():
-    return Asset.model_validate_json(
-        """
+    return Asset.model_validate_json("""
         {
         "device_type": "general-purpose",
         "fqdn": "sharepoint2016.target.example.com",
@@ -59,14 +58,12 @@ def fake_asset():
         "tracked": true,
         "last_scan_target": "192.0.0.1"
         }
-        """
-    )
+        """)
 
 
 @pytest.fixture
 def fake_plugin():
-    return Plugin.model_validate_json(
-        """
+    return Plugin.model_validate_json("""
         {
           "bid": [
             156641
@@ -192,14 +189,12 @@ def fake_plugin():
           ],
           "type": "local"
         }
-    """
-    )
+    """)
 
 
 @pytest.fixture
 def fake_vuln_finding():
-    return VulnerabilityFinding.model_validate_json(
-        """{
+    return VulnerabilityFinding.model_validate_json("""{
             "asset": {
               "device_type": "hypervisor",
               "fqdn": "vcsa8.target.example.com",
@@ -274,8 +269,7 @@ def fake_vuln_finding():
             "indexed": "2023-05-04T09:44:55.673359Z",
             "source": "NESSUS"
           }
-          """
-    )
+          """)
 
 
 def test_tlp_marking_definition_handler_should_fails_with_unsupported_TLP():

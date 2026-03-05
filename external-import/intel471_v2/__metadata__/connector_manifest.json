@@ -10,11 +10,11 @@
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
-  "max_confidence_level": 50,
+  "max_confidence_level": 70,
   "support_version": ">=6.4.4",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/intel471_v2",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-intel471_v2",
   "container_type": "EXTERNAL_IMPORT"

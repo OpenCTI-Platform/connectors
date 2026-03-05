@@ -50,7 +50,7 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT5H",
+      "default": "P7D",
       "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
       "format": "duration",
       "type": "string"

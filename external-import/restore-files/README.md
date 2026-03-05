@@ -1,5 +1,9 @@
 # Files restore connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 This connector allows organizations to restore their OpenCTI data from a specific folder.
 
 ## Installation

@@ -90,9 +90,9 @@ class VulmatchConnector:
             if not cpes:
                 raise Exception("no cpes in sbom")
             return cpes
-        except:
-            self.helper.log_error("failed to fetch dossiers")
-        return []
+        except Exception:
+            self.helper.log_error("failed to fetch CPEs from SBOM")
+            return []
 
     def retrieve(self, path, list_key, params: dict = None):
         params = params or {}
@@ -154,7 +154,7 @@ class VulmatchConnector:
                 work_id=cve_work_id,
                 message=f"[{cve_name}] bundle retrieved",
             )
-        except:
+        except Exception:
             self.helper.log_error(
                 f"process {cve_name} failed", dict(work_id=cve_work_id)
             )
@@ -174,7 +174,7 @@ class VulmatchConnector:
     def run_once(self):
         try:
             self._run_once()
-        except:
+        except Exception:
             self.helper.log_error("run failed")
 
     def _get_state(self) -> dict:

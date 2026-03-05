@@ -3,7 +3,7 @@ services:
   connector-cape-sandbox:
     image: opencti/connector-cape-sandbox:latest
     environment:
-      - OPENCTI_URL=ChangeMe
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=CAPEv2_Sandbox
       - "CONNECTOR_NAME=CAPEv2 Sandbox"

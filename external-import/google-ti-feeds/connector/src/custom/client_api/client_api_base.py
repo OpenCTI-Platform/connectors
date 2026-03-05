@@ -290,7 +290,7 @@ class BaseClientAPI:
         """Calculate total pages based on count and limit."""
         if count is None:
             return None
-        limit = params.get("limit", 10)
+        limit = params.get("limit", 40)
         return (count + limit - 1) // limit
 
     def _build_log_message(

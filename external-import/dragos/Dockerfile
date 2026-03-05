@@ -1,4 +1,4 @@
-# syntax=docker.io/docker/dockerfile:1.17-labs
+# syntax=docker.io/docker/dockerfile:1.20-labs
 FROM python:3.12-alpine AS base
 
 # Install Python modules

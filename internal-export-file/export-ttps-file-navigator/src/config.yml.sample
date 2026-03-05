@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'INTERNAL_EXPORT_FILE'
+  id: 'ChangeMe'
   name: 'ExportTTPsFileNavigator'
   scope: 'application/vnd.mitre.navigator+json'
   confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)

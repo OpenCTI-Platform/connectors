@@ -32,6 +32,16 @@ class InfobloxThreatDefenseConnector:
             "INFOBLOX_CUSTOM_LIST_ID", ["infoblox", "custom_list_id"], config
         )
 
+    def check_stream_id(self):
+        """
+        In case of stream_id configuration is missing, raise ValueError
+        """
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
+
     def get_headers(self):
         """Construct headers for Infoblox API requests."""
         return {
@@ -179,6 +189,7 @@ class InfobloxThreatDefenseConnector:
 
     def start(self):
         """Start the connector to listen to the OpenCTI stream."""
+        self.check_stream_id()
         self.helper.listen_stream(self._process_message)
 
 

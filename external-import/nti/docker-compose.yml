@@ -2,25 +2,20 @@ version: '3'
 services:
   connector-nti:
     image: opencti/connector-nti:latest
-    container_name: nti-connector
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=NTI
       - CONNECTOR_SCOPE=nti
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_LOG_LEVEL=info # Required
-      - CONNECTOR_DURATION_PERIOD=P1D # Required
-      - NTI_BASE_URL=https://nti.nsfocusglobal.com/api/v2/ # Required
-      - NTI_API_KEY=ChangeMe # Required
-      - NTI_TLP=white # Required
-      - NTI_CREATE_IOC=true # Optional
-      - NTI_CREATE_IP=true # Optional
-      - NTI_CREATE_DOMAIN=true # Optional
-      - NTI_CREATE_FILE=true # Optional
-      - NTI_CREATE_URL=true # Optional
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P1D
+      - NTI_BASE_URL=https://nti.nsfocusglobal.com/api/v2/
+      - NTI_API_KEY=ChangeMe
+      - NTI_TLP=white
+      - NTI_CREATE_IOC=true
+      - NTI_CREATE_IP=true
+      - NTI_CREATE_DOMAIN=true
+      - NTI_CREATE_FILE=true
+      - NTI_CREATE_URL=true
     restart: always
-    depends_on:
-      opencti:
-        condition: service_healthy

@@ -1,88 +1,215 @@
 # OpenCTI Vulmatch Connector
 
-* OpenCTI Connector type: [EXTERNAL_IMPORT](https://docs.opencti.io/latest/deployment/connectors/)
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
-## Overview
+## Table of Contents
 
-Vulmatch is a web application that turns CVEs into STIX objects.
+- [Introduction](#introduction)
+  - [Screenshots](#screenshots)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [Configuration Variables](#configuration-variables)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Entity Mapping](#entity-mapping)
+  - [Custom STIX Objects and OpenCTI Compatibility](#custom-stix-objects-and-opencti-compatibility)
+  - [Processing Details](#processing-details)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
 
-![](media/vulmatch-cve-list.png)
-![](media/vulmatch-cve-graph.png)
+---
 
-[vulmatch.com](https://www.vulmatch.com/).
+## Introduction
 
-The OpenCTI Vulmatch Connector syncs vulnerability intelligence from Vulmatch to OpenCTI.
+[Vulmatch](https://www.vulmatch.com/) is a web application that turns CVEs into STIX objects enriched with intelligence.
 
-_Note: The OpenCTI Vulmatch Connector only works with Vulmatch Web. It does not work with self-hosted Vulmatch installations at this time._
+The OpenCTI Vulmatch Connector syncs vulnerability intelligence from Vulmatch to OpenCTI, enabling automated import of CVE data with CVSS scores, EPSS predictions, CWE/ATT&CK/CAPEC mappings, Known Exploits, and CPE software associations.
+
+The OpenCTI Vulmatch Connector enriches vulnerability data with additional intelligence beyond what is available through the [NIST NVD CVE](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/nist-nvd-cve), [CISA Known Exploited Vulnerabilities (KEV)](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/cisa-kev), and [FIRST EPSS](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations/first-epss) Connectors.
+
+> **Note**: This connector only works with Vulmatch Web. It does not support self-hosted Vulmatch installations at this time.
+
+### Screenshots
+
+![Vulmatch CVE list](media/vulmatch-cve-list.png)
+
+![Vulmatch STIX Objects](media/vulmatch-cve-graph.png)
+
+---
 
 ## Installation
 
-### Prerequisites
+### Requirements
 
-* A Vulmatch team subscribed to a plan with API access enabled
-* OpenCTI >= 6.5.10
+- OpenCTI >= 6.5.10
+- Vulmatch team subscribed to a plan with API access enabled
+- Vulmatch API Key
 
-### Generating an Vulmatch API Key
+### Generating an API Key
 
-![](media/vulmatch-create-api-key.png)
+[![Creating a Vulmatch API Key to use with the Vulmatch OpenCTI Connector](https://img.youtube.com/vi/OabQepWZU4Q/0.jpg)](https://www.youtube.com/watch?v=OabQepWZU4Q)
 
-1. Log in to your Vulmatch account and navigate to "Account Settings"
-2. Locate the API section and select "Create New API Key"
-3. Select the team you want to use and generate the key
-4. Copy the key, it will be needed for the configoration
+[This video demonstrates the steps outlined below](https://www.youtube.com/watch?v=OabQepWZU4Q).
 
-### Configoration
+1. Log in to your Vulmatch account
+2. Navigate to "Account Settings"
+3. Locate the API section and select "Create New API Key"
+4. Select the team you want to use and generate the key
+  * If you don't see a team listed, you do not belong to a team on a plan with API access. Please upgrade the teams account to continue.
+5. Copy the API Key for the OpenCTI Connector configuration
 
-If you are unfamiliar with how to install OpenCTI Connectors, [you should read the official documentation here](https://docs.opencti.io/latest/deployment/connectors/).
+---
 
-There are a number of configuration options specific to Vulmatch, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). These options are as follows:
+## Configuration
 
-| Docker Env variable     | config variable         | Required | Data Type                   | Recommended                                              | Description                                                                                                                                                                                                                                                                                                                               |
-| ----------------------- | ----------------------- | -------- | --------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VULMATCH_BASE_URL`       | `vulmatch.base_url`       | TRUE     | url                         | `https://api.vulmatch.com/` | Should always be `https://api.vulmatch.com/`                                                                                                                                                                                                                                                                                              |
-| `VULMATCH_API_KEY`        | `vulmatch.api_key`        | TRUE     | string                      | n/a                                                      | The API key used to authenticate to Vulmatch Web                                                                                                                                                                                                                                                                                          |
-| `VULMATCH_SBOM_ONLY`      | `vulmatch.sbom_only`       | TRUE     | boolean                     | n/a                                                      | You can use the Vulmatch connector in two ways. 1) to only ingest vulnerability data related to products in your Vulmatch SBoM (set this to `TRUE`), or 2) to ingest all vulnerabilities that match filters (set this to `FALSE`)                                                                                                                        |
-| `VULMATCH_EPSS_SCORE_MIN` | `vulmatch.epss_score_min` | TRUE     | float (to 5 decimal places) | `-1`                                                   | The minimum EPSS score for the vulnerabilities to be ingested. Between `0` - `1`. Setting to `-1` will include vulnerabilities with no EPSS scores.                                                                                                                                                                                 |
-| `VULMATCH_CVSS_V2_SCORE_MIN` | `vulmatch.cvss_v2_score_min` | TRUE     | float (to 1 decimal place)  | `-1`                                                   | The minimum CVSS v2 base score for the vulnerabilities to be ingested. Between `0` - `10`. Setting to `-1` will include vulnerabilities with no CVSS scores.                                                                                                                                                                           |
-| `VULMATCH_CVSS_V3_SCORE_MIN` | `vulmatch.cvss_v3_score_min` | TRUE     | float (to 1 decimal place)  | `-1`                                                   | The minimum CVSS v3 base score for the vulnerabilities to be ingested. Between `0` - `10`. Setting to `-1` will include vulnerabilities with no CVSS scores.                                                                                                                                                                           |
-| `VULMATCH_CVSS_V4_SCORE_MIN` | `vulmatch.cvss_v4_score_min` | TRUE     | float (to 1 decimal place)  | `-1`                                                   | The minimum CVSS v4 base score for the vulnerabilities to be ingested. Between `0` - `10`. Setting to `-1` will include vulnerabilities with no CVSS scores.                                                                                                                                                                           |
-| `VULMATCH_INTERVAL_DAYS`  | `vulmatch.interval_days`  | TRUE     | integer                     | `1`                                                    | How often, in days, this Connector should poll Vulmatch Web for updates. The Vulmatch data is updated once per day.                                                                                                                                                                                                                       |
-| `VULMATCH_DAYS_TO_BACKFILL`  | `vulmatch.days_to_backfill`  | TRUE     | integer                     | `90`                                                   | When the connector is first configured, this setting determines the number of days to backfill for vulnerability data. It uses the modified time of the vulnerability. For example, setting 30 will ingest any vulnerabilities updated within the last 30 days, regardless of when they were published. Maximum value is `90` (90 days) |
+### Configuration Variables
 
-### Verification
+#### OpenCTI Parameters
 
-To verify the connector is working, you can navigate to `Data` -> `Ingestion` -> `Connectors` -> `Vulmatch`.
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| OpenCTI URL | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| OpenCTI Token | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
-## Data model
+#### Base Connector Parameters
 
-There are some important considerations when using this integration.
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| Connector ID | `CONNECTOR_ID` | Yes | A unique `UUIDv4` for this connector |
+| Connector Name | `CONNECTOR_NAME` | Yes | Name displayed in OpenCTI |
+| Log Level | `CONNECTOR_LOG_LEVEL` | No | Log level: `debug`, `info`, `warn`, or `error` |
 
-Below, shows the Vulmatch data model at a high-level;
+#### Connector Extra Parameters
 
-<iframe width="768" height="432" src="https://miro.com/app/live-embed/uXjVL5tH2Ro=/?embedMode=view_only_without_ui&moveToViewport=-487,-959,3644,2026&embedId=331026460624" frameborder="0" scrolling="no" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
+| Parameter | Docker envvar | config.yml | Required | Default | Description |
+|-----------|---------------|------------|----------|---------|-------------|
+| Base URL | `VULMATCH_BASE_URL` | `vulmatch.base_url` | Yes | `https://api.vulmatch.com/` | Vulmatch API URL |
+| API Key | `VULMATCH_API_KEY` | `vulmatch.api_key` | Yes | - | The Vulmatch API key for authentication (steps to generate described earlier in this document) |                                                                      | SBoM Only | `VULMATCH_SBOM_ONLY` | `vulmatch.sbom_only` | Yes | `FALSE` | You can use the Vulmatch connector in two ways. 1) to only ingest vulnerability data related to products in your Vulmatch SBoM (set this to `TRUE`), or 2) to ingest all vulnerabilities that match filters (set this to `FALSE`) |
+| Minimum EPSS Score | `VULMATCH_EPSS_SCORE_MIN` | `vulmatch.epss_score_min` | Yes | `-1` | The minimum EPSS score for the vulnerabilities to be ingested. Between `0` and `1`. Setting to `-1` will include vulnerabilities with no EPSS scores. |
+| Minimum CVSSv2 Score | `VULMATCH_CVSS_V2_SCORE_MIN` | `vulmatch.cvss_v2_score_min` | Yes | `-1` | The minimum CVSS v2 base score for the vulnerabilities to be ingested. Between `0.01` - `10.00`. Setting to `-1` will include vulnerabilities with no CVSS scores. |
+| Minimum CVSSv3 Score | `VULMATCH_CVSS_V3_SCORE_MIN` | `vulmatch.cvss_v3_score_min` | Yes | `-1` | The minimum CVSS v3 base score for the vulnerabilities to be ingested. Between `0.01` - `10.00`. Setting to `-1` will include vulnerabilities with no CVSS scores. |
+| Minimum CVSSv4 Score | `VULMATCH_CVSS_V4_SCORE_MIN` | `vulmatch.cvss_v4_score_min` | Yes | `-1` | The minimum CVSS v4 base score for the vulnerabilities to be ingested. Between `0.01` - `10.00`. Setting to `-1` will include vulnerabilities with no CVSS scores. |
+| Interval Days | `VULMATCH_INTERVAL_DAYS` | `vulmatch.interval_days` | Yes | `1` | Polling interval in hours. The connector polls Vulmatch for new and updated CVEs at this schedule. The minimum (and recommended) value is `1`. |
+| Days to Backfill | `VULMATCH_DAYS_TO_BACKFILL` | `vulmatch.days_to_backfill` | Yes | `90` | Number of days of historical data to import (maximum: `90`). Uses the `created` value of the CVE. This setting only applies during the initial data polling (backfill). Changing it after the backfill has completed has no effect. |
 
-Whilst Vulmatch supports the full STIX specification, OpenCTI does not. This causes a few differences between what you will see in Vulmatch and OpenCTI. 
+---
 
-### 1. No custom STIX objects imported
+## Deployment
 
-In Vulmatch:
+### Docker Deployment
 
-* [CWEs are modelled as STIX Weakness objects](https://github.com/muchdogesec/stix2extensions/blob/main/extension-definitions/sdos/weakness.json).
-* [Known exploits are modelled as STIX Exploit objects](https://github.com/muchdogesec/stix2extensions/blob/main/extension-definitions/sdos/exploit.json)
+Use the following `docker-compose.yml`:
 
-OpenCTI does not support custom STIX objects by default.
+```yaml
+services:
+  connector-vulmatch:
+    image: opencti/connector-dogesec-vulmatch:latest
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_VULMATCH_ID}
+      - CONNECTOR_NAME=Vulmatch
+      - CONNECTOR_LOG_LEVEL=info
+      - VULMATCH_BASE_URL=https://api.vulmatch.com/
+      - VULMATCH_API_KEY=${VULMATCH_API_KEY}
+      - VULMATCH_SBOM_ONLY=FALSE
+      - VULMATCH_EPSS_SCORE_MIN=-1
+      - VULMATCH_CVSS_V2_SCORE_MIN=-1
+      - VULMATCH_CVSS_V3_SCORE_MIN=-1
+      - VULMATCH_CVSS_V4_SCORE_MIN=-1
+      - VULMATCH_INTERVAL_DAYS=1
+      - VULMATCH_DAYS_TO_BACKFILL=90
+    restart: always
+    depends_on:
+      - opencti
+```
 
-As such, we skip the import of
+### Manual Deployment
 
-1. `weakness` and `exploit` objects
-2. any `relationship` objects where a `weakness` or `exploit` object is referenced in either the `source_ref` or `target_ref`
+1. Clone the repository and navigate to the connector directory
+2. Install dependencies: `pip install -r requirements.txt`
+3. Configure `config.yml`
+4. Run: `python main.py`
 
-The workarounds:
+---
 
-* CWE references can still be found in the `vulnerability` objects imported.
-* KEVs are modelled as `report` (and imported using this connector). You just won't be able to see the actual exploits discovered.
+## Behavior
 
-### 2. No custom `relationship_type`s supported
+### Data Flow
+
+```mermaid
+graph LR
+    %% Box 1: Vulmatch Web
+    subgraph Vulmatch_Web["Vulmatch Web"]
+        CVEs[Vulnerability Data]
+    end
+
+    %% Box 2: Vulmatch API
+    subgraph Vulmatch_API["Vulmatch API"]
+        API[API]
+        Bundle[STIX Bundle]
+        API --> Bundle
+    end
+    
+    %% Box 3: OpenCTI
+    subgraph OpenCTI["OpenCTI"]
+        Connector[Connector]
+        LocalProcessing[Local Processing]
+        STIX[STIX Objects]
+
+        Connector --> LocalProcessing
+        LocalProcessing --> STIX
+
+        STIX --> vulnerability[vulnerability]
+
+        vulnerability --> indicator[Indicator]
+        vulnerability --> attack-pattern-attck[ATT&CK Technique]
+        vulnerability --> attack-pattern-capec[CAPEC Technique]
+        vulnerability --> report-kev[KEV]
+        vulnerability --> report-epss[EPSS]
+
+        indicator --> software[Software]
+
+    end
+
+    %% Cross-section flow
+    CVEs --> API
+    Bundle --> Connector
+
+```
+
+### Entity Mapping
+
+| Vulmatch Data | OpenCTI Entity | Notes |
+|---------------------------|----------------|-------|
+| CVE | Vulnerability | Representing the named CVE |
+| CPE | Software | The hardware/OS/software impacted by CVE |
+| Indicator | Indicator | Contains the CPE pattern vulnerable to the CVE |
+| ATT&CK Enterprise Technique | Attack Pattern | MITRE ATT&CK techniques |
+| CAPEC Technique | Attack Pattern | MITRE CAPEC techniques |
+| KEV | Report | Known Exploited Vulnerabilities linked to a CVE |
+| EPSS | Report | EPSS history of a CVE |
+
+### Custom STIX Objects and OpenCTI Compatibility
+
+#### Custom Objects
+
+Vulmatch includes several custom STIX object types that are not currently supported by OpenCTI. These custom objects are:
+
+* `exploit` (SDO)
+    * Associated KEVs are still imported as reports. You just won't be able to see the actual exploits discovered by Vulmatch.
+* `weaknesses` (SDO)
+    * CWE references can still be found in the `vulnerability` objects imported.
+
+The connector will reprocess the bundle it receives from Vulmatch to remove these objects.
+
+#### Custom Relationships
 
 In Vulmatch, `grouping` objects are used to model CPE matches in NVD (which are then linked to the actual CPE `software` objects).
 
@@ -128,17 +255,49 @@ The UUIDv5 logic uses
 
 This does mean some context is lost (i.e. not vulnerable CPEs, CPE Match information). However, this can be obtained in Vulmatch if needed.
 
-### How the data is structured in OpenCTI
+### Processing Details
 
-To help visualise what data is imported for each vulnerability using this connector, we have created the following diagram showing all objects, and the relationships that will be imported:
+1. **Vulnerability Selection**:
+   - Specify if vulnerabilities in SBoM or all vulnerabilities should be imported from Vulmatch
 
-<iframe width="768" height="432" src="https://miro.com/app/live-embed/uXjVJ7eYHgs=/?embedMode=view_only_without_ui&moveToViewport=74,-901,3059,1526&embedId=970160109844" frameborder="0" scrolling="no" allow="fullscreen; clipboard-read; clipboard-write" allowfullscreen></iframe>
+2. **Historical Import**:
+   - On first run, backfills historical data
+   - Maximum backfill period: 90 days
+   - Configurable via `VULMATCH_DAYS_TO_BACKFILL`
 
-## Support
+3. **Incremental Updates**:
+   - Polls at configured interval (default: 1 day)
+   - Only fetches new/updated vulnerability intelligence since last run
 
-You should contact OpenCTI if you are new to installing Connectors and need support.
+---
 
-If you run into issues when installing this Connector, you can reach the dogesec team as follows:
+## Debugging
 
-* [dogesec Community Forum](https://community.dogesec.com/) (recommended)
-* [dogesec Support Portal](https://support.dogesec.com/) (requires a plan with email support)
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
+
+### Verification
+
+Navigate to `Data` → `Ingestion` → `Connectors` → `Vulmatch` to verify the connector is working.
+
+---
+
+## Additional Information
+
+### About Vulmatch
+
+- **Website**: [vulmatch.com](https://www.vulmatch.com/)
+- **Sign up**: Free tier available
+- **Provider**: [dogesec](https://dogesec.com/)
+
+### Support
+
+- **OpenCTI Support**: For general connector installation help
+- **dogesec Community Forum**: [community.dogesec.com](https://community.dogesec.com/) (recommended)
+- **dogesec Support Portal**: [support.dogesec.com](https://support.dogesec.com/) (requires plan with email support)
+
+### Use Cases
+
+| Use Case | Description |
+|---------|-------------|
+| Vulnerability Intelligence | Enrich CVE data in OpenCTI with CVSS, EPSS, CWE, KEV, and vulnerable software relationships from Vulmatch. |
+| Risk-Based Vulnerability Prioritization | Prioritize vulnerabilities using EPSS and CVSS scores to focus on the most likely and impactful threats. |

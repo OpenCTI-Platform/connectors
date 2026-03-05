@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 from conftest import mock_env_vars
 from crowdstrike_feeds_connector.report.builder import ReportBundleBuilder
-from models.configs.config_loader import ConfigLoader
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 from stix2 import TLP_AMBER, Bundle, Identity, MarkingDefinition
 
 # =====================
@@ -53,6 +53,7 @@ def crowdstrike_config_with_guessing_disabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "False",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -69,6 +70,7 @@ def crowdstrike_config_with_guessing_enabled() -> dict[str, str]:
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
         "CROWDSTRIKE_REPORT_GUESS_RELATIONS": "True",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -90,6 +92,7 @@ def minimal_crowdstrike_config_without_guessing_param() -> dict[str, str]:
         "CROWDSTRIKE_BASE_URL": "https://api.crowdstrike.com",
         "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
         "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
+        "CONNECTOR_LOG_LEVEL": "info",
     }
 
 
@@ -225,10 +228,10 @@ def test_backward_compatibility_for_existing_deployments(
 
 def _given_admin_has_configured_report_guess_relations_as_false(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given the Admin has configured report_guess_relations as False."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert not config.crowdstrike.report_guess_relations  # noqa: S101
 
@@ -237,10 +240,10 @@ def _given_admin_has_configured_report_guess_relations_as_false(
 
 def _given_admin_has_configured_report_guess_relations_as_true(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given the Admin has configured report_guess_relations as True."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     assert config.crowdstrike.report_guess_relations  # noqa: S101
 
@@ -249,10 +252,10 @@ def _given_admin_has_configured_report_guess_relations_as_true(
 
 def _given_existing_deployment_without_new_configuration_parameter(
     config_data: dict[str, str],
-) -> tuple[Any, ConfigLoader]:
+) -> tuple[Any, ConnectorSettings]:
     """Given an existing deployment without the new configuration parameter."""
     mock_env = mock_env_vars(os_environ, config_data)
-    config = ConfigLoader()
+    config = ConnectorSettings()
 
     # Verify the config defaults to False when not specified
     assert hasattr(config.crowdstrike, "report_guess_relations")  # noqa: S101
@@ -262,7 +265,7 @@ def _given_existing_deployment_without_new_configuration_parameter(
 
 
 def _when_system_processes_report_data(
-    config: ConfigLoader,
+    config: ConnectorSettings,
     report_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,
@@ -287,7 +290,7 @@ def _when_system_processes_report_data(
 
 
 def _when_system_builds_report_with_config(
-    config: ConfigLoader,
+    config: ConnectorSettings,
     report_data: dict,
     author: Identity,
     tlp_marking: MarkingDefinition,

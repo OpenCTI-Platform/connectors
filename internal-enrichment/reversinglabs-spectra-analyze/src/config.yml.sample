@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'ReversingLabs Spectra Analyze'
   scope: 'Artifact,IPv4-Addr,Domain-Name'

@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 #connector:
+#  type: 'EXTERNAL_IMPORT'
 #  id: 'email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601'
 #  name: 'Email Intel IMAP'
 #  scope: 'email-intel-imap'

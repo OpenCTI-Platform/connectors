@@ -4,7 +4,7 @@ import ssl
 import sys
 import time
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -22,18 +22,12 @@ class OpenCTI:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            with open(config_file_path) as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+        else:
+            config = {}
         self.helper = OpenCTIConnectorHelper(config)
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            default=True,
-        )
         self.config_interval = get_config_variable(
             "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True, default=7
         )
@@ -55,7 +49,8 @@ class OpenCTI:
             ),
             get_config_variable(
                 "CONFIG_COMPANIES_FILE_URL",
-                ["config", ""],
+                ["config", "companies_file_url"],
+                config,
                 default=CONFIG_COMPANIES_FILE_URL,
             ),
         ]
@@ -108,14 +103,16 @@ class OpenCTI:
                 last_run = current_state["last_run"]
                 self.helper.log_info(
                     "Connector last run: "
-                    + datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")
+                    + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
                 )
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
             # If the last_run is more than interval seconds
             if last_run is None or ((timestamp - last_run) > self.interval):
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "OpenCTI datasets run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
@@ -159,7 +156,7 @@ class OpenCTI:
             self.helper.send_stix2_bundle(
                 json.dumps(data),
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
+                update=True,
                 work_id=work_id,
             )
         except Exception as e:
@@ -179,9 +176,10 @@ class OpenCTI:
 
 if __name__ == "__main__":
     try:
-        openCTIConnector = OpenCTI()
-        openCTIConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+        opencti_connector = OpenCTI()
+        opencti_connector.run()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

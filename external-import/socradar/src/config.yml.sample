@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'OPENCTI_TOKEN'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: 'CONNECTOR_ID'
   name: 'SOCRadar'
   scope: 'socradar'

@@ -11,7 +11,7 @@ Author: Pavel Reshetnikov, Integration developer, 2024
 """
 
 import ipaddress
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import data_to_stix2 as ds
 from config import ConfigConnector
@@ -153,7 +153,7 @@ class DataToSTIXAdapter:
                 self.helper.connector_logger.warning(
                     f"Wrong format of date: {date_raw}"
                 )
-                return datetime.now()
+                return datetime.now(timezone.utc)
 
         try:
             _datetime = datetime.fromisoformat(date_raw)
@@ -162,7 +162,7 @@ class DataToSTIXAdapter:
             self.helper.connector_logger.warning(
                 f"Failed to format date: {date_raw}. Using default."
             )
-            _datetime = datetime.now()
+            _datetime = datetime.now(timezone.utc)
 
         return _datetime
 

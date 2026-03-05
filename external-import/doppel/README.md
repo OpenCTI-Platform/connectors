@@ -1,30 +1,28 @@
 # OpenCTI Doppel Connector
 
-The Doppel connector integrates OpenCTI with the Doppel Threat Intelligence platform by ingesting alerts as STIX 2.1
-Observables.
-
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-08-18 | -       |
+| Status           | Date       | Comment |
+|------------------|------------|---------|
+| Partner Verified | -          | -       |
 
 ## Table of Contents
 
 - [OpenCTI Doppel Connector](#opencti-doppel-connector)
-    - [Table of Contents](#table-of-contents)
-    - [Introduction](#introduction)
-    - [Installation](#installation)
-        - [Requirements](#requirements)
-    - [Configuration variables](#configuration-variables)
-        - [OpenCTI environment variables](#opencti-environment-variables)
-        - [Base connector environment variables](#base-connector-environment-variables)
-        - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-    - [Deployment](#deployment)
-        - [Docker Deployment](#docker-deployment)
-        - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Behavior](#behavior)
-    - [Debugging](#debugging)
-    - [Additional information](#additional-information)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+    - [Mapping to OpenCTI entities](#mapping-to-opencti-entities)
+    - [Entity type detection](#entity-type-detection)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
@@ -40,25 +38,28 @@ STIX 2.1 Observable object, enriched with metadata such as severity, entity stat
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in
-`config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+
+Below are the parameters you'll need to set for OpenCTI:
 
 ### OpenCTI environment variables
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
+|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
+| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
-| Parameter        | config.yml      | Docker environment variable | Default | Mandatory | Description                                                               |
-|------------------|-----------------|-----------------------------|---------|-----------|---------------------------------------------------------------------------|
-| Connector ID     | id              | `CONNECTOR_ID`              |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                 |
-| Connector Name   | name            | `CONNECTOR_NAME`            |         | Yes       | Name of the connector.                                                    |
-| Connector Scope  | scope           | `CONNECTOR_SCOPE`           |         | Yes       | The scope or type of data the connector is importing (e.g., `Indicator`). |
-| Log Level        | log_level       | `CONNECTOR_LOG_LEVEL`       | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.    |
-| Polling Interval | duration_period | `CONNECTOR_DURATION_PERIOD` | PT1H    | Yes       | ISO-8601 interval string (e.g., `PT5M`, `PT1H`) for the polling schedule. |                                                   |
+Below are the parameters you'll need to set for running the connector properly:
+
+| Parameter       | config.yml `connector` | Docker environment variable | Default | Mandatory | Description                                                                              |
+|-----------------|------------------------|-----------------------------|---------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID    | `id`                   | `CONNECTOR_ID`              | /       | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
+| Connector Name  | `name`                 | `CONNECTOR_NAME`            | /       | Yes       | Name of the connector.                                                                   |
+| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | doppel  | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | info    | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Duration Period | `duration_period`      | `CONNECTOR_DURATION_PERIOD` | PT1H    | Yes       | The period of time between two connector runs (ISO 8601 duration format).                |
 
 ### Connector extra parameters environment variables
 
@@ -79,13 +80,11 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Docker Deployment
 
-1. Ensure `pycti` version in `requirements.txt` matches your OpenCTI version (e.g., `pycti==6.9.0`).
+Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==6.5.1`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
 
-2. Build Docker image:
+Build a Docker Image using the provided `Dockerfile`.
 
-```bash
-docker build -t opencti/connector-doppel:latest .
-```
+Example:
 
 3. Register connector in the **main** OpenCTI `docker-compose.yml`:
 
@@ -112,37 +111,40 @@ docker build -t opencti/connector-doppel:latest .
     restart: always
 ```
 
-4. Start the connector:
+Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment. Then, start the docker container with the provided `docker-compose.yml`.
 
-```bash
+```shell
 docker compose up -d
+# -d for detached
 ```
-
-> 🔁 Do not use the local `docker-compose.yml`. Always integrate the connector in OpenCTI’s main `docker-compose.yml`.
 
 ### Manual Deployment
 
-1. Copy and configure `config.yml` from the provided `config.yml.sample`
-2. Install dependencies:
+Create a file `config.yml` based on the provided `config.yml.sample`.
 
-```bash
+Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for your environment.
+
+Install the required python dependencies (preferably in a virtual environment):
+
+```shell
 pip3 install -r requirements.txt
 ```
 
-3. Start the connector:
+Then, start the connector from the `src` directory:
 
-```bash
+```shell
 python3 main.py
 ```
 
 ## Usage
 
-The connector runs automatically at the interval set by `duration_period`. You can also manually trigger it from:
+After installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
 
-**OpenCTI → Data Management → Ingestion → Connectors**
+However, if you would like to force an immediate download of a new batch of alerts, navigate to:
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+**Data management → Ingestion → Connectors** in the OpenCTI platform.
+
+Find the "Doppel" connector, and click on the refresh button to reset the connector's state and force a new download of data by re-running the connector.
 
 ## Behavior
 
@@ -154,26 +156,15 @@ download of data by re-running the connector.
 
 ## Debugging
 
-Enable verbose logging by setting:
+The connector can be debugged by setting the appropriate log level. Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
-```env
-CONNECTOR_LOG_LEVEL=debug
-```
-
-Log output includes:
+Set `CONNECTOR_LOG_LEVEL=debug` for verbose logging. Log output includes:
 
 - API call details and retry behavior
 - Alert count fetched per run
+- Page-by-page fetch progress
 - STIX conversion trace per alert
-- Connector and bundle send status
-
-You can also use:
-
-```python
-self.helper.connector_logger.debug("message")
-```
-
-...for custom log messages.
+- Bundle send status
 
 ## Additional information
 

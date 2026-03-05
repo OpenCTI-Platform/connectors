@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'CofenseIntel'
   type: 'EXTERNAL_IMPORT'
+  id: 'CofenseIntel'
   name: 'CofenseIntel'
   scope: 'cofenseintel'
   log_level: 'info'

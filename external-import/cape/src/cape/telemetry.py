@@ -65,8 +65,8 @@ class openCTIInterface:
         self.EnableRegKeys = EnableRegKeys
         self.ReportScore = ReportScore
         try:
-            self.octiLabels = self.API.label.list()  # Get labels Once ;)
-        except:
+            self.octiLabels = self.API.label.list()  # Get labels once
+        except Exception:
             self.octiLabels = self.API.label.list()
 
         self.processAndSubmit()  # This is where the magic happens
@@ -79,7 +79,7 @@ class openCTIInterface:
 
         try:
             label = self.API.label.create(value=labelValue)
-        except:
+        except Exception:
             return None
         return label["id"]
 

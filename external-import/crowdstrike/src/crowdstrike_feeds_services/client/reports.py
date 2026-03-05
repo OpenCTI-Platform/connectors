@@ -1,14 +1,27 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Dict, List, cast
+
 from .base_api import BaseCrowdstrikeClient
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class ReportsAPI(BaseCrowdstrikeClient):
 
-    def __init__(self, helper):
-        super().__init__(helper)
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        super().__init__(config, helper)
 
     def get_combined_report_entities(
-        self, limit: int, offset: int, sort: str, fql_filter: str, fields: list
-    ) -> dict:
+        self,
+        limit: int,
+        offset: int,
+        sort: str,
+        fql_filter: str,
+        fields: List[Any],
+    ) -> Dict[str, Any]:
         """
         Get info about reports that match provided FQL filters
         :param limit: Maximum number of records to return (Max: 5000) in integer
@@ -20,16 +33,22 @@ class ReportsAPI(BaseCrowdstrikeClient):
         :return: Dict object containing API response
         """
 
-        response = self.cs_intel.query_report_entities(
-            limit=limit, offset=offset, sort=sort, filter=fql_filter, fields=fields
+        response = cast(
+            Dict[str, Any],
+            self.cs_intel.query_report_entities(
+                limit=limit,
+                offset=offset,
+                sort=sort,
+                filter=fql_filter,
+                fields=fields,
+            ),
         )
-
         self.handle_api_error(response)
-        self.helper.connector_logger.info("Getting combined actor entities...")
+        self.helper.connector_logger.info("Getting combined report entities...")
 
-        return response["body"]
+        return cast(Dict[str, Any], response.get("body", {}))
 
-    def get_report_entities(self, ids: list, fields: list):
+    def get_report_entities(self, ids: List[Any], fields: List[Any]) -> Dict[str, Any]:
         """
         Retrieve specific reports using their report IDs
         :param ids: List of IDs
@@ -37,14 +56,17 @@ class ReportsAPI(BaseCrowdstrikeClient):
         :return: Dict object containing API response
         """
 
-        response = self.cs_intel.get_report_entities(ids=ids, fields=fields)
+        response = cast(
+            Dict[str, Any],
+            self.cs_intel.get_report_entities(ids=ids, fields=fields),
+        )
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting report entities...")
 
-        return response["body"]
+        return cast(Dict[str, Any], response.get("body", {}))
 
-    def get_report_pdf(self, report_id: str):
+    def get_report_pdf(self, report_id: str) -> Any:
         """
         Return a Report PDF attachment
         :param report_id: ID of a report in string
@@ -52,7 +74,7 @@ class ReportsAPI(BaseCrowdstrikeClient):
         """
         response = self.cs_intel.get_report_pdf(id=report_id)
 
-        if type(response) is dict:
+        if isinstance(response, dict):
             self.handle_api_error(response)
 
         self.helper.connector_logger.info("Getting report PDF...")

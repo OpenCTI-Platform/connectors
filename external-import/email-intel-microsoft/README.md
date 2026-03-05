@@ -1,8 +1,8 @@
 # 📬 Email Intel Microsoft Connector
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-05-09 | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
 The **Email Intel Microsoft Connector** ingests cyber‑threat‑intelligence (CTI) reports received by **e‑mail** into
 the OpenCTI platform.  

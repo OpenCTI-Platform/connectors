@@ -4,19 +4,19 @@
   "type": "object",
   "properties": {
     "OPENCTI_URL": {
-      "description": "The OpenCTI platform URL.",
+      "description": "The base URL of the OpenCTI instance.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
     "OPENCTI_TOKEN": {
-      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "description": "The API token to connect to OpenCTI.",
       "type": "string"
     },
     "CONNECTOR_NAME": {
       "default": "CrowdStrike",
-      "description": "Name of the connector.",
+      "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
@@ -29,19 +29,9 @@
       },
       "type": "array"
     },
-    "CONNECTOR_DURATION_PERIOD": {
-      "default": "PT1H",
-      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
-      "type": "string"
-    },
-    "CONNECTOR_TYPE": {
-      "default": "EXTERNAL_IMPORT",
-      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
-      "type": "string"
-    },
     "CONNECTOR_LOG_LEVEL": {
       "default": "error",
-      "description": "Determines the verbosity of the logs.",
+      "description": "The minimum level of logs to display.",
       "enum": [
         "debug",
         "info",
@@ -51,8 +41,19 @@
       ],
       "type": "string"
     },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
+      "format": "duration",
+      "type": "string"
+    },
     "CROWDSTRIKE_BASE_URL": {
-      "default": "https://api.crowdstrike.com",
+      "default": "https://api.crowdstrike.com/",
       "description": "CrowdStrike API base URL.",
       "format": "uri",
       "maxLength": 2083,
@@ -99,17 +100,35 @@
         "actor",
         "report",
         "indicator",
+        "malware",
         "yara_master",
         "snort_suricata_master"
       ],
-      "description": "Comma-separated list of scopes to enable. Available: actor, report, indicator, yara_master, snort_suricata_master.",
+      "description": "Comma-separated list of scopes to enable. Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master.",
       "items": {
         "type": "string"
       },
       "type": "array"
     },
+    "CROWDSTRIKE_ATTACK_VERSION": {
+      "default": "17.1",
+      "description": "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., 17.1). Should match the version imported by the MITRE ATT&CK external import connector.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_ATTACK_ENTERPRISE_URL": {
+      "default": null,
+      "description": "Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. If set, this URL is used instead of constructing one from attack_version. Useful for air-gapped environments or internal mirrors.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
     "CROWDSTRIKE_ACTOR_START_TIMESTAMP": {
       "description": "Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_MALWARE_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing malware. Default is 30 days ago. BEWARE: 0 means ALL malware!",
       "type": "integer"
     },
     "CROWDSTRIKE_REPORT_START_TIMESTAMP": {
@@ -117,13 +136,13 @@
       "type": "integer"
     },
     "CROWDSTRIKE_REPORT_STATUS": {
-      "default": "New",
+      "default": "new",
       "description": "Report status filter.",
       "enum": [
-        "New",
-        "In Progress",
-        "Analyzed",
-        "Closed"
+        "new",
+        "in progress",
+        "analyzed",
+        "closed"
       ],
       "type": "string"
     },
@@ -146,7 +165,7 @@
       "type": "string"
     },
     "CROWDSTRIKE_REPORT_TARGET_INDUSTRIES": {
-      "default": null,
+      "default": [],
       "description": "Comma-separated list of target industries to filter reports.",
       "items": {
         "type": "string"
@@ -236,7 +255,7 @@
       "type": "array"
     },
     "CROWDSTRIKE_INDICATOR_UNWANTED_LABELS": {
-      "default": null,
+      "default": [],
       "description": "Comma-separated list of unwanted labels to filter out indicators. Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'.",
       "items": {
         "type": "string"
@@ -248,11 +267,16 @@
       "description": "Whether to trigger import without file dependencies.",
       "type": "boolean"
     },
-    "CROWDSTRIKE_INTERVAL_SEC": {
-      "default": 1800,
-      "description": "Polling interval in seconds for fetching data (used when duration_period is not set).",
-      "exclusiveMinimum": 0,
+    "CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
       "type": "integer"
+    },
+    "CROWDSTRIKE_INTERVAL_SEC": {
+      "default": null,
+      "deprecated": true,
+      "exclusiveMinimum": 0,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
     }
   },
   "required": [

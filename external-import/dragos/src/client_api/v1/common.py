@@ -1,5 +1,6 @@
 # isort:skip_file
 """Offer Common tools for the Dragos API V1 endpoints."""
+
 import json
 from abc import ABC
 from logging import DEBUG, getLogger

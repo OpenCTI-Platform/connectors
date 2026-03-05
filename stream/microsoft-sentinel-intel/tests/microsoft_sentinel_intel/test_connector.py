@@ -4,16 +4,18 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel import ConnectorClient
-from microsoft_sentinel_intel.config import ConnectorSettings
+from microsoft_sentinel_intel.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from src.microsoft_sentinel_intel import Connector
 
 
 @pytest.fixture(name="connector")
-def fixture_connector(mocked_api_client: MagicMock) -> Connector:
+def fixture_connector(
+    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_config
+) -> Connector:
     config = ConnectorSettings()
-    helper = OpenCTIConnectorHelper(config.model_dump_pycti())
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
     client = ConnectorClient(helper=helper, config=config)
     return Connector(helper=helper, config=config, client=client)
 

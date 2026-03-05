@@ -13,4 +13,4 @@ services:
       - ELASTIC_SECURITY_VERIFY_SSL=true
       - ELASTIC_SECURITY_INDICATOR_EXPIRE_TIME=90
       - ELASTIC_SECURITY_BATCH_SIZE=100
-    restart: unless-stopped
+    restart: always

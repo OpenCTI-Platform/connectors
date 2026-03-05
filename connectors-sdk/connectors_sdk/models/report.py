@@ -8,6 +8,7 @@ import stix2.properties
 from connectors_sdk.models.associated_file import AssociatedFile
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import Reliability, ReportType
+from connectors_sdk.models.reference import Reference
 from pycti import Report as PyctiReport
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Report as Stix2Report
@@ -58,7 +59,7 @@ class Report(BaseIdentifiedEntity):
         default=None,
         description="Reliability of the report.",
     )
-    objects: list[BaseIdentifiedEntity] | None = Field(
+    objects: list[BaseIdentifiedEntity | Reference] | None = Field(
         default=None,
         description="Objects of the report.",
     )

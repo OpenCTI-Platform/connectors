@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import stix2
 from pycti import OpenCTIConnectorHelper
@@ -46,15 +46,12 @@ class ExternalImportConnector:
             self.update_existing_data = (
                 True if update_existing_data.lower() == "true" else False
             )
-        elif isinstance(update_existing_data, bool) and update_existing_data.lower in [
-            True,
-            False,
-        ]:
+        elif isinstance(update_existing_data, bool):
             self.update_existing_data = update_existing_data
         else:
             msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
-            self.update_existing_data = "false"
+            self.update_existing_data = False
         self.helper.log_info(f"Update existing data: {self.update_existing_data}")
 
     def _collect_intelligence(self) -> list:
@@ -64,7 +61,7 @@ class ExternalImportConnector:
     def _get_interval(self) -> int:
         """Returns the interval to use for the connector
 
-        This SHOULD return always the interval in seconds. If the connector is execting that the parameter is received as hoursUncomment as necessary.
+        This SHOULD return always the interval in seconds. If the connector is expecting that the parameter is received as hours uncomment as necessary.
         """
         unit = self.interval[-1:]
         value = self.interval[:-1]
@@ -128,7 +125,7 @@ class ExternalImportConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -141,7 +138,7 @@ class ExternalImportConnector:
                 # If the last_run is more than interval-1 day
                 if last_run is None or ((timestamp - last_run) >= self._get_interval()):
                     self.helper.log_info(f"{self.helper.connect_name} will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )

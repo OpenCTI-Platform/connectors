@@ -1,11 +1,11 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
   json_logging: false
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: "ChangeMe"
-  type: "INTERNAL_ENRICHMENT"
   name: "Shodan InternetDB"
   scope: "IPv4-Addr"
   auto: true

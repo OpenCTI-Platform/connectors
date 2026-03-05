@@ -28,11 +28,11 @@ class DshieldConnector:
         """
         stix_objects = []
 
-        # Get subnetAdresses from external sources
-        subnetAdresses = self.client.get_entities()
+        # Get subnet addresses from external sources
+        subnet_addresses = self.client.get_entities()
 
-        # Convert into STIX2 object and add it on a list
-        for subnet in subnetAdresses:
+        # Convert into STIX2 object and add it to a list
+        for subnet in subnet_addresses:
             entity_to_stix = self.converter_to_stix.create_indicator(subnet)
             stix_objects.append(entity_to_stix)
 
@@ -55,7 +55,7 @@ class DshieldConnector:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(tz=timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -97,7 +97,7 @@ class DshieldConnector:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
 
             # Store the current timestamp as a last run of the connector

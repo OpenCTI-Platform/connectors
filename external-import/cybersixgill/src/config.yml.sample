@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'Cybersixgill Darkfeed'
   scope: 'cybersixgill' # MIME type or SCO
   log_level: 'info'

@@ -311,7 +311,7 @@ def create_observable_x509_certificate_issuer(
 def create_observable_user_agent(
     properties: ObservableProperties,
 ) -> CustomObservableUserAgent:
-    """Create an observable representing an user-agent."""
+    """Create an observable representing a user-agent."""
     return CustomObservableUserAgent(
         value=properties.value,
         object_marking_refs=properties.object_markings,

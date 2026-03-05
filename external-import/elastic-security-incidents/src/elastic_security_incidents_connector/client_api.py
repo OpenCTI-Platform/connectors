@@ -284,7 +284,7 @@ class ElasticApiClient:
             else:
                 from datetime import timezone
 
-                end_dt = datetime.utcnow().replace(tzinfo=timezone.utc)
+                end_dt = datetime.now(timezone.utc)
 
             self.helper.connector_logger.debug(
                 "Filtering cases by date range",

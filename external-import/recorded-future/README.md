@@ -1,66 +1,41 @@
 # OpenCTI Recorded Future Connector
 
-The Recorded Future connector is a standalone Python process that collect data from Recorded Future which collects data from a wide range of sources to provide comprehensive threat intelligence.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Summary
+The Recorded Future connector imports threat intelligence from Recorded Future's Intelligence Cloud into OpenCTI.
+
+## Table of Contents
 
 - [OpenCTI Recorded Future Connector](#opencti-recorded-future-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
-  - [Requirements](#requirements)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
-    - [Recorded Future connector environment variables](#recorded-future-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
   - [Usage](#usage)
-  - [Behavior - What the connector imports ?](#behavior)
-    - [Analyst notes](#analyst-notes)
-      - [Initial population](#initial-population)
-      - [Verification](#verification)
-    - [Risk Lists](#risk-lists)
-      - [Initial population](#initial-population-1)
-      - [Verification](#verification-1)
-    - [Threat Maps](#threat-maps)
-      - [Initial population](#initial-population-2)
-      - [Verification](#verification-2)
-    - [Alerts](#alerts)
-    - [Playbook Alerts](#playbook-alerts)
-  - [Known Issues and Workarounds](#known-issues-and-workarounds)
-    - [Importing risk lists](#importing-risk-lists)
-  - [Useful Resources](#useful-resources)
-
----
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-[Recorded Future](https://www.recordedfuture.com/) is a cybersecurity company that specializes in providing real-time threat intelligence to help organizations anticipate, identify, and mitigate cyber threats.
+Recorded Future provides real-time threat intelligence powered by machine learning. This connector imports analyst notes, risk lists, threat maps, signatures, and alerts from Recorded Future into OpenCTI, enabling correlation with your internal threat data.
 
-The company's platform leverages machine learning and natural language processing to analyze a vast array of source:
+## Installation
 
-- **Open Web Sources**: This includes publicly accessible websites, news outlets, blogs, and forums where threat actors might discuss vulnerabilities, exploits, or plan attacks.
+### Requirements
 
-- **Technical Data Sources**: These include data from internet infrastructure such as domain name registries, IP address allocations, and SSL certificate logs, which can be analyzed to identify malicious activity or infrastructure.
-
-- **Dark Web Sources**: Recorded Future also scans parts of the dark web, including forums, marketplaces, and chat services where cybercriminals often operate and trade tools, services, and stolen data.
-
-- **Social Media**: Public posts and discussions on social media platforms can sometimes reveal information about cybersecurity threats or be used by threat actors for communication.
-
-- **Government and Industry Reports**: Reports and bulletins from cybersecurity agencies, industry groups, and security companies often contain valuable data on recent threats, vulnerabilities, and incidents.
-
-- **Proprietary Data Sources**: Recorded Future may also use proprietary data sources or data obtained through partnerships with other cybersecurity entities.
-
-By aggregating and analyzing data from these diverse sources, Recorded Future can identify patterns, trends, and indicators of compromise (IoCs) that help organizations understand and mitigate cyber threats more effectively.
-
-This connector imports _Recorded Future Analyst Notes_, the _Risk Lists_ (IP, URL, Domain Name and Hash), and _Malware_ and _Threat Actors_ from Threats Maps, converts to STIX2 and imports them into OpenCTI at regular intervals.
-
-## Requirements
-
-To use the connector, you need to have a Recorded Future account.
-
-- OpenCTI Platform version 5.12.0 or higher
-- An API Key for accessing
+- OpenCTI Platform >= 6.x
+- Recorded Future account with API access
+- Recorded Future API token
 
 ## Configuration variables
 
@@ -68,109 +43,153 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### OpenCTI environment variables
 
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter `OpenCTI` | config.yml | Docker environment variable | Mandatory | Description                                           |
-|---------------------|------------|-----------------------------|-----------|-------------------------------------------------------|
-| URL                 | `url`      | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                      |
-| Token               | `token`    | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform.  |
-
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
+| Parameter         | config.yml      | Docker environment variable   | Default           | Mandatory | Description                                                                 |
+|-------------------|-----------------|-------------------------------|-------------------|-----------|-----------------------------------------------------------------------------|
+| Connector ID      | id              | `CONNECTOR_ID`                |                   | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | Recorded Future   | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             |                   | Yes       | Comma-separated observable types to import.                                 |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error             | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT24H             | No        | Time interval between connector runs in ISO 8601 format.                    |
 
-| Parameter `Connector` | config.yml        | Docker environment variable    | Default                                                                       | Mandatory | Description                                                                                            |
-|-----------------------|-------------------|--------------------------------|-------------------------------------------------------------------------------|-----------|--------------------------------------------------------------------------------------------------------|
-| ID                    | `id`              | `CONNECTOR_ID`                 | /                                                                             | Yes       | A unique `UUIDv4` identifier for this connector instance.                                              |
-| Type                  | `type`            | `CONNECTOR_TYPE`               | `EXTERNAL_IMPORT`                                                             | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                          |
-| Name                  | `name`            | `CONNECTOR_NAME`               | `Recorded Future`                                                             | Yes       | Name of the connector.                                                                                 |
-| Scope                 | `scope`           | `CONNECTOR_SCOPE`              | `ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1` | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.               |
-| Log Level             | `log_level`       | `CONNECTOR_LOG_LEVEL`          | `info`                                                                        | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                 |
-| Duration Period       | `duration_period` | `CONNECTOR_DURATION_PERIOD`    | `PT24H`                                                                       | Yes       | Determines the time interval between each launch of the connector in ISO 8601, ex: `PT24H` or `P1D`.   |
-| Queue Threshold       | `queue_threshold` | `CONNECTOR_QUEUE_THRESHOLD`    | `500`                                                                         | No        | Used to determine the limit (RabbitMQ) in MB at which the connector must go into buffering mode.       |
+### Connector extra parameters environment variables
 
-### Recorded Future connector environment variables
-
-Below are the parameters you'll need to set for Recorded Future connector:
-
-| Parameter `Recorded Future`  | config.yml                  | Docker environment variable                 | Default                                               | Mandatory | Description                                                                                                                                                                                                                                                    |
-|------------------------------|-----------------------------|---------------------------------------------|-------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Token                        | `token`                     | `RECORDED_FUTURE_TOKEN`                     | /                                                     | Yes       | Token for the RF API.                                                                                                                                                                                                                                          |
-| Initial lookback             | `initial_lookback`          | `RECORDED_FUTURE_INITIAL_LOOKBACK`          | `240`                                                 | Yes       | The numeric timeframe the connector will search for Analyst Notes on the first run, required, in hours.                                                                                                                                                        |
-| Pull Analyst Notes           | `pull_analyst_notes`        | `RECORDED_FUTURE_PULL_ANALYST_NOTES`        | `True`                                                | yes       | A boolean flag of whether to pull entities from Analyst Notes into OpenCTI.                                                                                                                                                                                    |
-| Last Published Notes         | `last_published_notes`      | `RECORDED_FUTURE_LAST_PUBLISHED_NOTES`      | `24`                                                  | Yes       | The number of hours to fetch notes in far back                                                                                                                                                                                                                 |
-| Marking                      | `TLP`                       | `RECORDED_FUTURE_TLP`                       | `red`                                                 | Yes       | TLP Marking for data imported, possible values: white, green, amber, amber+strict, red                                                                                                                                                                         |
-| Topic                        | `topic`                     | `RECORDED_FUTURE_TOPIC`                     | `VTrvnW,g1KBGI,ZjnoP0,aDKkpk,TXSFt5,UrMRnT,TXSFt3`    | No        | Filter Analyst Notes on a specific topic. Topics can be found [here](https://support.recordedfuture.com/hc/en-us/articles/360006361774-Analyst-Note-API). You **must** use the topic RFID, for example aUyI9M. Multiple topics are allowed (separated by ','). |
-| Notes from Insikt Group      | `insikt_only`               | `RECORDED_FUTURE_INSIKT_ONLY`               | `True`                                                | No        | A boolean flag of whether to pull analyst notes only from the Insikt research team, or whether to include notes written by Users. Default to True.                                                                                                             |
-| Pull signatures              | `pull_signatures`           | `RECORDED_FUTURE_PULL_SIGNATURES`           | `False`                                               | No        | Pull Yara/Snort/Sigma rules into OpenCTI                                                                                                                                                                                                                       |
-| Person to Threat Actor       | `person_to_TA`              | `RECORDED_FUTURE_PERSON_TO_TA`              | `False`                                               | No        | Converts all Recorded Future entities of type person to STIX object "Threat Actor" instead of individual when import Analyst Notes. DO NOT USE unless you **really** know what you're doing                                                                    |
-| Theat Actor to Intrusion Set | `TA_to_intrusion_set`       | `RECORDED_FUTURE_TA_TO_INTRUSION_SET`       | `False`                                               | No        | Converts all Recorded Future Threat Actors to STIX Object "Intrusion Set" instead of "Threat Actor" when Analyst Notes are imported. DO NOT USE unless you **really** know what you're doing                                                                   |
-| Risk as score                | `risk_as_score`             | `RECORDED_FUTURE_RISK_AS_SCORE`             | `True`                                                | No        | Use Recorded Future "risk" as a score for STIX when Analyst Notes are imported                                                                                                                                                                                 |
-| Risk threshold               | `risk_threshold`            | `RECORDED_FUTURE_RISK_THRESHOLD`            | `60`                                                  | No        | A threshold under which related indicators are not taken into account. Indicators related to Analyst Notes.                                                                                                                                                    |
-| Analyst notes guess relationships               | `analyst_notes_guess_relationships`            | `RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS`            | `False`                                                  | No        | Enable or disable the automatic guessing of relationships between entities when processing analyst notes.                                                                                                                                                    |
-| Pull risk list               | `pull_risk_list`            | `RECORDED_FUTURE_PULL_RISK_LIST`            | `False`                                               | No        | A boolean flag of whether to pull risk lists into OpenCTI.                                                                                                                                                                                                     |
-| Risk rules' name as label    | `riskrules_as_label`        | `RECORDED_FUTURE_RISKRULES_AS_LABEL`        | `False`                                               | No        | A boolean flag indicating whether to add rule names (e.g. "Historical Suspected C&C Server", "Historically Reported by DHS AIS") as labels on entities.                                                                                                        |
-| Risk list threshold          | `risk_list_threshold`       | `RECORDED_FUTURE_RISK_LIST_THRESHOLD`       | `70`                                                  | No        | A threshold under which related indicators are not taken into account. Indicators from Risk Lists.                                                                                                                                                             |
-| Risk list related entities   | `risklist_related_entities` | `RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES` | `Malware,Hash,URL,Threat Actor,MitreAttackIdentifier` | Yes       | Related entities to an indicator from Risk List when it's imported. Required if pull_risk_list is True, possible values: Malware,Hash,URL,Threat Actor,MitreAttackIdentifier. Multiple related entities are allowed (separated by ',')                         |
-| Pull threat maps             | `pull_threat_maps`          | `RECORDED_FUTURE_PULL_THREAT_MAPS`          | `False`                                               | No        | A boolean flag of whether to pull entities from Threat Maps into OpenCTI.                                                                                                                                                                                      |
-
+| Parameter                               | config.yml                                     | Docker environment variable                               | Default             | Mandatory | Description                                                                 |
+|-----------------------------------------|------------------------------------------------|-----------------------------------------------------------|---------------------|-----------|-----------------------------------------------------------------------------|
+| Token                                   | recorded_future.token                          | `RECORDED_FUTURE_TOKEN`                                   |                     | Yes       | Recorded Future API token.                                                  |
+| Initial Lookback                        | recorded_future.initial_lookback               | `RECORDED_FUTURE_INITIAL_LOOKBACK`                        | 240                 | Yes       | Hours to look back on initial run.                                          |
+| TLP                                     | recorded_future.tlp                            | `RECORDED_FUTURE_TLP`                                     | amber+strict        | Yes       | TLP marking for imported data.                                              |
+| Pull Analyst Notes                      | recorded_future.pull_analyst_notes             | `RECORDED_FUTURE_PULL_ANALYST_NOTES`                      | true                | No        | Import analyst notes.                                                       |
+| Last Published Notes                    | recorded_future.last_published_notes           | `RECORDED_FUTURE_LAST_PUBLISHED_NOTES`                    | 24                  | Yes       | Hours of recent notes to fetch.                                             |
+| Topic                                   | recorded_future.topic                          | `RECORDED_FUTURE_TOPIC`                                   |                     | No        | Filter notes by topic.                                                      |
+| Insikt Only                             | recorded_future.insikt_only                    | `RECORDED_FUTURE_INSIKT_ONLY`                             | true                | No        | Only import Insikt Group notes.                                             |
+| Pull Signatures                         | recorded_future.pull_signatures                | `RECORDED_FUTURE_PULL_SIGNATURES`                         | false               | No        | Import detection signatures.                                                |
+| Person to Threat Actor                  | recorded_future.person_to_ta                   | `RECORDED_FUTURE_PERSON_TO_TA`                            | false               | No        | Convert person entities to threat actors.                                   |
+| Threat Actor to Intrusion Set           | recorded_future.ta_to_intrusion_set            | `RECORDED_FUTURE_TA_TO_INTRUSION_SET`                     | false               | No        | Convert threat actors to intrusion sets.                                    |
+| Risk as Score                           | recorded_future.risk_as_score                  | `RECORDED_FUTURE_RISK_AS_SCORE`                           | true                | No        | Use RF risk score as OpenCTI score.                                         |
+| Risk Threshold                          | recorded_future.risk_threshold                 | `RECORDED_FUTURE_RISK_THRESHOLD`                          | 60                  | No        | Minimum risk score for import.                                              |
+| Analyst Notes Guess Relationships       | recorded_future.analyst_notes_guess_relationships | `RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS`    | false               | No        | Infer relationships from notes.                                             |
+| Pull Risk List                          | recorded_future.pull_risk_list                 | `RECORDED_FUTURE_PULL_RISK_LIST`                          | false               | No        | Import risk list data.                                                      |
+| Risk Rules as Label                     | recorded_future.riskrules_as_label             | `RECORDED_FUTURE_RISKRULES_AS_LABEL`                      | false               | No        | Convert risk rules to labels.                                               |
+| Risk List Threshold                     | recorded_future.risk_list_threshold            | `RECORDED_FUTURE_RISK_LIST_THRESHOLD`                     | 70                  | No        | Minimum score for risk list import.                                         |
+| Risk List Related Entities              | recorded_future.risklist_related_entities      | `RECORDED_FUTURE_RISKLIST_RELATED_ENTITIES`               |                     | Cond.     | Entity types for relationships (required if pull_risk_list is true).        |
+| Pull Threat Maps                        | recorded_future.pull_threat_maps               | `RECORDED_FUTURE_PULL_THREAT_MAPS`                        | false               | No        | Import threat maps.                                                         |
+| **Alerts Configuration**                |                                                |                                                           |                     |           |                                                                             |
+| Alert Enable                            | alert.enable                                   | `ALERT_ENABLE`                                            | false               | Yes       | Enable alert import.                                                        |
+| Alert Default Severity                  | alert.default_opencti_severity                 | `ALERT_DEFAULT_OPENCTI_SEVERITY`                          | low                 | No        | Default severity for alerts.                                                |
+| Alert Priority Only                     | alert.priority_alerts_only                     | `ALERT_PRIORITY_ALERTS_ONLY`                              | false               | No        | Only import priority alerts.                                                |
+| **Playbook Alerts Configuration**       |                                                |                                                           |                     |           |                                                                             |
+| Playbook Alert Enable                   | playbook_alert.enable                          | `PLAYBOOK_ALERT_ENABLE`                                   | false               | Yes       | Enable playbook alert import.                                               |
+| Domain Abuse Threshold                  | playbook_alert.domain_abuse_threshold          | `PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE`          | Informational       | No        | Severity threshold for domain abuse.                                        |
+| Identity Novel Exposures Threshold      | playbook_alert.identity_threshold              | `PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES` | Informational    | No        | Severity threshold for identity exposures.                                  |
+| Code Repo Leakage Threshold             | playbook_alert.code_repo_threshold             | `PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE`     | Informational       | No        | Severity threshold for code repo leakage.                                   |
+| Playbook Alert Debug                    | playbook_alert.debug                           | `PLAYBOOK_ALERT_DEBUG`                                    | false               | No        | Enable debug mode for playbook alerts.                                      |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-recorded-future:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-recorded-future:
+    image: opencti/connector-recorded-future:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Recorded Future
+      - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      - RECORDED_FUTURE_TOKEN=ChangeMe
+      - RECORDED_FUTURE_INITIAL_LOOKBACK=240
+      - RECORDED_FUTURE_TLP=amber+strict
+      - RECORDED_FUTURE_PULL_ANALYST_NOTES=True
+      - RECORDED_FUTURE_LAST_PUBLISHED_NOTES=24
+      - RECORDED_FUTURE_INSIKT_ONLY=True
+      - RECORDED_FUTURE_RISK_AS_SCORE=True
+      - RECORDED_FUTURE_RISK_THRESHOLD=60
+      - ALERT_ENABLE=False
+      - PLAYBOOK_ALERT_ENABLE=False
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
+
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at the hourly interval specified in your `docker-compose.yml` or `config.yml`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of Analyst Notes, Risk Lists (when it is configured to `True`) or entities from Threat Maps (when it is configured to `True`), navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform. 
-
-Find the "Recorded Future" connector, and click on the refresh button to reset the connector's state and force a new download of data by re-running the connector.
-
-![Reset the connector state](./__docs__/media/rf-reset-connector.gif)
-
+Find the connector and click the refresh button to reset the state and trigger a new sync.
 
 ## Behavior
+
+The connector fetches threat intelligence from Recorded Future's API and imports it as STIX 2.1 objects.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Recorded Future
+        direction TB
+        AnalystNotes[Analyst Notes]
+        RiskLists[Risk Lists]
+        ThreatMaps[Threat Maps]
+        Signatures[Signatures]
+        Alerts[Alerts]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Report[Report]
+        Indicator[Indicator]
+        Observable[Observable]
+        Incident[Incident]
+        ThreatActor[Threat Actor]
+    end
+
+    AnalystNotes --> Report
+    RiskLists --> Indicator
+    RiskLists --> Observable
+    ThreatMaps --> ThreatActor
+    Signatures --> Indicator
+    Alerts --> Incident
+```
 
 ### Analyst notes
 
@@ -380,9 +399,10 @@ Playbook Alerts are more advanced and tailored to specific use cases. They provi
 The key advantage of Playbook Alerts is that they consolidate all necessary information in one place, enabling quicker and more efficient triage of incidents compared to Classic Alerts.
 
 The connector will import all Playbook Alerts from the following alerting rules list:
-- Domain Abuse
-- Identity Exposure
-- Data Leakage on Code Repository
+- Domain Abuse (domain_abuse)
+- Identity Exposure (identity_novel_exposures)
+- Data Leakage on Code Repository (code_repo_leakage)
+- Cyber Vulnerability (cyber_vulnerability)
 
 #### Prerequisites
 
@@ -391,52 +411,58 @@ Same as for Alerts, you need to have a Recorded Future account with the appropri
 #### Initial population
 
 Pulling Playbook Alerts is Optional.
-Pulling Alerts from Recorded Future will create an Incident.
+Pulling Alerts from Recorded Future will create Incident entities with related context.
 
-You can choose the severity of the alerting rules to pull
+
+You can choose alert categories to pull
+```sh
+  categories: 'domain_abuse,identity_novel_exposures,code_repo_leakage,cyber_vulnerability'
+```
 
 ```sh
   severity_threshold_domain_abuse: 'High'
   severity_threshold_identity_novel_exposures: 'High'
   severity_threshold_code_repo_leakage: 'High'
+  severity_threshold_cyber_vulnerability: 'High'
 ```
 
-Example of result for an Incident:
+### Entity Mapping
 
-![incident view](./__docs__/media/rf-pba-1.png)
+| Recorded Future Data | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Analyst Note         | Report              | Insikt Group research reports                    |
+| IP Address (Risk)    | IPv4-Addr/IPv6-Addr | IP observables with risk scores                  |
+| Domain (Risk)        | Domain-Name         | Domain observables with risk scores              |
+| URL (Risk)           | URL                 | URL observables with risk scores                 |
+| Hash (Risk)          | File                | File hash observables                            |
+| Vulnerability        | Vulnerability       | CVE data with RF enrichment                      |
+| Threat Actor         | Threat-Actor        | Threat actor profiles                            |
+| Malware              | Malware             | Malware families                                 |
+| YARA Rule            | Indicator           | YARA detection rules                             |
+| Alert                | Incident            | Security alerts                                  |
 
-Here the result for related entities:
+### Data Sources
 
-![incident entities](./__docs__/media/rf-pba-2.png)
+| Source          | Description                                                                                  |
+|-----------------|----------------------------------------------------------------------------------------------|
+| Analyst Notes   | Curated research from Insikt Group                                                           |
+| Risk Lists      | Scored IOCs (IPs, domains, URLs, hashes) and vulnerabilities (if subscription to the module) |
+| Threat Maps     | Threat actor relationships and TTPs                                                          |
+| Signatures      | YARA and Snort rules                                                                         |
+| Alerts          | Real-time security alerts                                                                    |
+| Playbook Alerts | Automated playbook-generated alerts                                                          |
 
-And notes will be added as well:
+## Debugging
 
-![incident notes](./__docs__/media/rf-pba-3.png)
+Enable verbose logging:
 
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
-## Known Issues and Workarounds
+## Additional information
 
-### Importing risk lists
-
-Importing risk lists along with their associated entities can result in a large amount of data. Currently, you can use the `risklist_related_entities` configuration to apply filters.
-
-For example, importing risk list with related IP Address:
-
-![RF Risk List volume](./__docs__/media/rf-risklist-volume.png)
-
-You need to have a minimum of 2 workers if `pull_risk_list` is `True` to ingest properly all data in queue before the end of the interval and an interval of 48 hours is highly recommended to avoid stacking a lot of data in the RabbitMQ Recorded Future connector queue.
-
----
-
-## Useful Resources
-
-OpenCTI documentation for connectors:
-
-- [OpenCTI Ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76)
-- [Connectors Deployment](https://docs.opencti.io/latest/deployment/connectors/)
-- [Connectors Development](https://docs.opencti.io/latest/development/connectors/)
-
-Recorded Future documentation (restricted access):
-- [Why the alert triggered?](https://support.recordedfuture.com/hc/en-us/articles/4407128752787-Why-did-this-alert-trigger)
-
-_Note: Base of Alerts and Playbook Alerts code was initiated by [Sydney](https://github.com/septdney/) from [Bouygues Telecom](https://www.corporate.bouyguestelecom.fr/csirt-bouygues-telecom/), thanks for the contribution_ 
+- **Risk Scoring**: Recorded Future's risk scores (0-100) can be mapped to OpenCTI scores
+- **Entity Types**: Configure `RISKLIST_RELATED_ENTITIES` to control relationship creation
+- **TLP Levels**: Supports `white`, `green`, `amber`, `amber+strict`, `red`
+- **Reference**: [Recorded Future API Documentation](https://api.recordedfuture.com/)

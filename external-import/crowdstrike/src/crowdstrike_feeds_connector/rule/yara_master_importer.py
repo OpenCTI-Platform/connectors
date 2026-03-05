@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA master importer module."""
 
 import itertools
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, List, Mapping, NamedTuple, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Mapping, NamedTuple, Optional, Tuple, cast
 
+from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.rules import RulesAPI
 from crowdstrike_feeds_services.utils import (
     datetime_to_timestamp,
@@ -14,21 +14,22 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
 from requests import RequestException
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
-from stix2.exceptions import STIXError  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition
+from stix2.exceptions import STIXError
 
 from ..importer import BaseImporter
 from .yara_master_builder import YaraRuleBundleBuilder
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class YaraMaster(NamedTuple):
     """YARA Master."""
 
-    rules: List[YaraRule]
+    rules: list[YaraRule]
     e_tag: Optional[str]
     last_modified: Optional[datetime]
 
@@ -46,22 +47,28 @@ class YaraMasterImporter(BaseImporter):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: Identity,
         tlp_marking: MarkingDefinition,
         report_status: int,
         report_type: str,
         no_file_trigger_import: bool,
+        scopes: list[str],
     ) -> None:
         """Initialize CrowdStrike YARA master importer."""
-        super().__init__(helper, author, tlp_marking)
+        super().__init__(config, helper, author, tlp_marking)
 
-        self.rules_api_cs = RulesAPI(helper)
+        self.rules_api_cs = RulesAPI(config, helper)
+        self.actors_api_cs = ActorsAPI(config, helper)
+
         self.report_status = report_status
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
+        self.scopes = scopes
+        self.include_reports = "report" in scopes
 
-        self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
+        self.report_fetcher = ReportFetcher(config, helper, self.no_file_trigger_import)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -158,11 +165,9 @@ class YaraMasterImporter(BaseImporter):
             e_tag=e_tag, last_modified=last_modified
         )
 
-        if type(download) is dict:
+        if isinstance(download, dict):
             self._error(
-                "An error has occurred during the recovery of the yara master. "
-                "YARA master was not retrieved correctly and is ignored... ",
-                "e_tag: {0}, last_modified : {1}, download_dict: {2}",
+                "Failed to retrieve YARA master from CrowdStrike (ignored). e_tag={0}, last_modified={1}, response={2}",
                 e_tag,
                 last_modified,
                 download,
@@ -178,13 +183,21 @@ class YaraMasterImporter(BaseImporter):
 
     def _fetch_latest_yara_master(
         self, e_tag: Optional[str] = None, last_modified: Optional[datetime] = None
-    ) -> dict:
+    ) -> bytes | dict[str, Any]:
         rule_set_type = "yara-master"
-        return self.rules_api_cs.get_latest_rule_file(
-            rule_set_type, e_tag=e_tag, last_modified=last_modified
+
+        kwargs: Dict[str, Any] = {}
+        if e_tag is not None:
+            kwargs["e_tag"] = e_tag
+        if last_modified is not None:
+            kwargs["last_modified"] = last_modified
+
+        return cast(
+            bytes | dict[str, Any],
+            self.rules_api_cs.get_latest_rule_file(rule_set_type, **kwargs),
         )
 
-    def _parse_download(self, download) -> List[YaraRule]:
+    def _parse_download(self, download) -> list[YaraRule]:
         yara_str = self._unzip_content(download)
         return self._parse_yara_rules(yara_str)
 
@@ -196,10 +209,10 @@ class YaraMasterImporter(BaseImporter):
                 return yara_master.read().decode("utf-8")
 
     @staticmethod
-    def _parse_yara_rules(yara_rules: str) -> List[YaraRule]:
+    def _parse_yara_rules(yara_rules: str) -> list[YaraRule]:
         return YaraParser.parse(yara_rules)
 
-    def _update_existing(self, yara_rules: List[YaraRule]) -> List[YaraRule]:
+    def _update_existing(self, yara_rules: list[YaraRule]) -> list[YaraRule]:
         """Update YARA rules if they already exists in the OpenCTI."""
         new_yara_rules = []
 
@@ -234,8 +247,8 @@ class YaraMasterImporter(BaseImporter):
 
     @staticmethod
     def _group_yara_rules_by_report(
-        yara_rules: List[YaraRule],
-    ) -> List[Tuple[str, List[YaraRule]]]:
+        yara_rules: list[YaraRule],
+    ) -> list[Tuple[str, list[YaraRule]]]:
         def _key_func(item: YaraRule) -> str:
             reports = item.reports
             if reports:
@@ -250,7 +263,7 @@ class YaraMasterImporter(BaseImporter):
         return groups
 
     def _process_yara_rule_group(
-        self, yara_rule_group: Tuple[str, List[YaraRule]]
+        self, yara_rule_group: Tuple[str, list[YaraRule]]
     ) -> int:
         group = yara_rule_group[0]
         self._info("Processing YARA rule group '{0}'...", group)
@@ -261,12 +274,14 @@ class YaraMasterImporter(BaseImporter):
         failed_count = 0
 
         for yara_rule in yara_rules:
-            fetched_reports = self._get_reports_by_code(yara_rule.reports)
+            fetched_reports: list[FetchedReport] = []
+            if self.include_reports:
+                fetched_reports = self._get_reports_by_code(yara_rule.reports)
 
             yara_rule_bundle = self._create_yara_rule_bundle(yara_rule, fetched_reports)
             if yara_rule_bundle is None:
                 failed_count += 1
-
+                continue
             # with open(f"yara_rule_bundle_{yara_rule.name}.json", "w") as f:
             #     f.write(yara_rule_bundle.serialize(pretty=True))
 
@@ -368,7 +383,7 @@ class YaraMasterImporter(BaseImporter):
             return False
         return updated.get(self._KEY_ID) == indicator_id
 
-    def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
+    def _get_reports_by_code(self, codes: list[str]) -> list[FetchedReport]:
         try:
             return self.report_fetcher.get_by_codes(codes)
         except RequestException as e:
@@ -376,7 +391,7 @@ class YaraMasterImporter(BaseImporter):
             return []
 
     def _create_yara_rule_bundle(
-        self, rule: YaraRule, reports: List[FetchedReport]
+        self, rule: YaraRule, reports: list[FetchedReport]
     ) -> Optional[Bundle]:
         author = self.author
         source_name = self._source_name()
@@ -386,6 +401,8 @@ class YaraMasterImporter(BaseImporter):
         report_type = self.report_type
 
         bundle_builder = YaraRuleBundleBuilder(
+            self.config,
+            self.helper,
             rule,
             author,
             source_name,
@@ -394,6 +411,7 @@ class YaraMasterImporter(BaseImporter):
             report_status,
             report_type,
             reports,
+            scopes=self.scopes,
         )
 
         try:

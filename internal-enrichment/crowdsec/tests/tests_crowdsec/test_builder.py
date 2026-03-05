@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CrowdSec builder unittest."""
+
 import datetime
 import json
 import os

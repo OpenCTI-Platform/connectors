@@ -1,9 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 # Connector definition parameters - OPTIONAL
 #connector:
+  #type: 'INTERNAL_ENRICHMENT'
   #id: 'ChangeMe'
   #name: 'ChangeMe' # Default: 'IPInfo'
   #scope: 'ChangeMe' # Default: 'ServiceNow'

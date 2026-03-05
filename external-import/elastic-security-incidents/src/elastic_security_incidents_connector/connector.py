@@ -5,7 +5,7 @@ This connector imports alerts and cases from Elastic Security into OpenCTI.
 """
 
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 import stix2
@@ -56,8 +56,6 @@ class ElasticSecurityIncidentsConnector:
             )
             # Add timezone if missing
             if state_last_run.tzinfo is None:
-                from datetime import timezone
-
                 state_last_run = state_last_run.replace(tzinfo=timezone.utc)
 
             self.helper.connector_logger.info(
@@ -78,7 +76,7 @@ class ElasticSecurityIncidentsConnector:
             )
             return start_date
 
-        default_start = datetime.utcnow() - timedelta(days=7)
+        default_start = datetime.now(timezone.utc) - timedelta(days=7)
         self.helper.connector_logger.info(
             "First run - using default start date (7 days ago)",
             {"start_date": default_start.isoformat()},
@@ -235,7 +233,7 @@ class ElasticSecurityIncidentsConnector:
             case_created_at = (
                 case.get("createdAt")
                 or case.get("created_at")
-                or datetime.utcnow().isoformat()
+                or datetime.now(timezone.utc).isoformat()
             )
             # Ensure consistent format for predictive ID generation
             if case_created_at and "+00:00" in case_created_at:
@@ -293,7 +291,7 @@ class ElasticSecurityIncidentsConnector:
                     similar_case_created = (
                         similar_case.get("createdAt")
                         or similar_case.get("created_at")
-                        or datetime.utcnow().isoformat()
+                        or datetime.now(timezone.utc).isoformat()
                     )
                     if similar_case_created and "+00:00" in similar_case_created:
                         similar_case_created = similar_case_created.replace(
@@ -355,9 +353,7 @@ class ElasticSecurityIncidentsConnector:
         try:
             # Get time range for import
             last_run = self._get_last_run_time()
-            from datetime import timezone
-
-            current_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+            current_time = datetime.now(timezone.utc)
 
             self.helper.connector_logger.info(
                 "Fetching data from Elastic Security",

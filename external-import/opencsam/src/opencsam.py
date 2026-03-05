@@ -25,11 +25,11 @@ class OpenCSAM:
     def __init__(self):
         # Instantiate the connector helper from config
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            with open(config_file_path) as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+        else:
+            config = {}
         self.helper = OpenCTIConnectorHelper(config)
         self.opencsam_api_url = get_config_variable(
             "OPENCSAM_API_URL", ["opencsam", "api_url"], config
@@ -165,10 +165,10 @@ class OpenCSAM:
         objects.append(identity_stix)
         ids = []
         final_objects = []
-        for object in objects:
-            if object["id"] not in ids:
-                ids.append(object["id"])
-                final_objects.append(object)
+        for obj in objects:
+            if obj["id"] not in ids:
+                ids.append(obj["id"])
+                final_objects.append(obj)
         number_of_incidents = len([x for x in objects if x["type"] == "incident"])
         name = "CTI daily news digest (" + str(number_of_incidents) + " news detected)"
         report_stix = stix2.Report(
@@ -209,7 +209,7 @@ class OpenCSAM:
                     )
                 else:
                     last_run = parse(current_state["last_run"]).astimezone(pytz.UTC)
-                now = datetime.now().astimezone(pytz.UTC)
+                now = datetime.now(tz=pytz.UTC)
                 delta = now - last_run
                 delta_days = delta.days
                 self.helper.log_info(
@@ -239,7 +239,7 @@ class OpenCSAM:
                 time.sleep(self.get_interval())
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info("Connector stop")
-                exit(0)
+                sys.exit(0)
             except Exception as e:
                 self.helper.log_error(str(e))
                 time.sleep(60)
@@ -247,9 +247,10 @@ class OpenCSAM:
 
 if __name__ == "__main__":
     try:
-        openCSAMConnector = OpenCSAM()
-        openCSAMConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+        opencsam_connector = OpenCSAM()
+        opencsam_connector.run()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

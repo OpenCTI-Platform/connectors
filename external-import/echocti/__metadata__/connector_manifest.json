@@ -1,0 +1,22 @@
+{
+    "title": "Echo CTI",
+    "slug": "echocti",
+    "description": "The Echo CTI connector imports threat intelligence data (IOCs) from the Echo CTI platform into OpenCTI. It fetches indicators such as IP addresses, URLs, file hashes, and IP ranges from the Echo CTI API and converts them to STIX 2.1 format for seamless integration with OpenCTI.",
+    "short_description": "Import IOCs (IP, URL, Hash, IP-Range) from Echo CTI threat intelligence platform into OpenCTI.",
+    "logo": "external-import/echocti/__metadata__/logo.png",
+    "use_cases": [
+        "Threat Intelligence",
+        "IOC Enrichment"
+    ],
+    "verified": false,
+    "last_verified_date": null,
+    "playbook_supported": false,
+    "max_confidence_level": 50,
+    "support_version": ">=6.0.0",
+    "subscription_link": null,
+    "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/echocti",
+    "manager_supported": false,
+    "container_version": "rolling",
+    "container_image": "opencti/connector-echocti",
+    "container_type": "EXTERNAL_IMPORT"
+}

@@ -509,8 +509,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                     bundle_objects.append(stix_relationship)
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
-                    hit_note,
-                    datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+                    created=None,
+                    content=hit_note,
                 ),
                 object_marking_refs=self.tlp,
                 abstract=str(

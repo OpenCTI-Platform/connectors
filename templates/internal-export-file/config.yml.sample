@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_EXPORT_FILE'
   id: 'ChangeMe'
   name: 'Template Connector' # optional (default: 'Template Connector')
   scope: 'ChangeMe'

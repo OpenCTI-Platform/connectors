@@ -1,5 +1,6 @@
 from vclib.util import works
-from vclib.util.config import SCOPE_SOFTWARE
+
+MAX_BUNDLE_SIZE = 200_000
 
 
 def check_vuln_description(descriptions: list) -> str:
@@ -14,15 +15,11 @@ def check_size_of_stix_objects(
     logger,
     source_name: str,
     stix_objects: list,
-    target_scope: list[str],
     work_id: str,
     work_num: int,
 ) -> tuple[list, str, int]:
     # PERF: We're intentionally bundling things here in groups to avoid OOM
-    # in the case of software objects being in scope
-    if (
-        SCOPE_SOFTWARE in target_scope and len(stix_objects) > 200_000
-    ):  # TODO: Make this a named constant
+    if len(stix_objects) > MAX_BUNDLE_SIZE:
         works.finish_work(
             helper=helper,
             logger=logger,

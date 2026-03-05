@@ -4,7 +4,7 @@ services:
     image: opencti/connector-doppel:latest
     environment:
       # OpenCTI connection
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=changeMe
 
       # Connector required config

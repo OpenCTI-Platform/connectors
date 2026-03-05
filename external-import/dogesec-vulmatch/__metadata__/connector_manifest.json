@@ -1,18 +1,20 @@
 {
-  "title": "Dogesec Vulmatch",
+  "title": "Vulmatch by dogesec",
   "slug": "dogesec-vulmatch",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "The OpenCTI Vulmatch Connector syncs vulnerability intelligence from Vulmatch to OpenCTI, enabling automated import of CVE data with CVSS scores, EPSS predictions, ATT&CK/CAPEC mappings, Known Exploits, and CPE software associations.",
+  "short_description": "The OpenCTI Vulmatch Connector is designed to bring enriched, actionable vulnerability intelligence into OpenCTI by transforming Vulmatch data into STIX objects that integrate seamlessly with the OpenCTI data model. In addition to standard CVE information, the connector imports CVSS scores (v2, v3, and v4), EPSS exploit probability predictions, CWE references, Known Exploited Vulnerabilities (KEV), vulnerable software relationships, and contextual links to CWE, ATT&CK and CAPEC techniques.\n\nBy applying filtering, normalization, and local processing before ingestion, the connector enables organizations to reduce noise and focus on vulnerabilities that are relevant to their environment and risk posture. Whether used for broad vulnerability monitoring or SBoM-aware exposure tracking, the Vulmatch Connector supports continuous, automated enrichment of vulnerability data to improve prioritization, investigation, and decision-making across SOC, CTI, and vulnerability management workflows.",
   "logo": "external-import/dogesec-vulmatch/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability Management"
+    "Vulnerability Management",
+    "Commercial Threat Intel",
+    "Open Source Threat Intel"
   ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=6.8.0",
-  "subscription_link": null,
+  "subscription_link": "https://www.vulmatch.com/",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dogesec-vulmatch",
   "manager_supported": false,
   "container_version": "rolling",

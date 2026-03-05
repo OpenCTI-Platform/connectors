@@ -43,7 +43,7 @@ class ETIError(Exception):
 
 
 class ETIServerError(ETIError):
-    """Excpetion with ETI server. Usually, it contains also an original HTTP exception."""
+    """Exception with ETI server. Usually, it contains also an original HTTP exception."""
 
     pass
 
@@ -61,7 +61,7 @@ class ETIXmlError(ETIError):
 
 
 class ETIFindError(ETIError):
-    """Exception within finding. Raised if find did not returned exepcted result."""
+    """Exception within finding. Raised if find did not return expected result."""
 
     pass
 
@@ -163,7 +163,7 @@ class Connection(object):
                 LOGGER.debug("Response:\n%s", decoded_data)
                 LOGGER.debug("Parsing XML ...")
                 xml_root = ET.fromstring(decoded_data)
-            except:
+            except (UnicodeDecodeError, ET.ParseError):
                 LOGGER.exception("Encountered invalid xml")
                 raise ETIXmlError()
             if xml_root.tag in ("info", "error"):
@@ -314,13 +314,13 @@ class Connection(object):
         return None
 
     def get_report(
-        self, report, format="detail", file_path=None, type_=None, method=None
+        self, report, format_="detail", file_path=None, type_=None, method=None
     ):
         """Calls API '/reports/(report_id)/(xml|pdf|adds|detail)/' for given *report*.
 
         *report*: Can be dictionary returned by other api calls or just report ID (integer or string).
 
-        *format* must be one of:
+        *format_* must be one of:
             'xml': then returns parsed_xml root and if *file_path* is provided then data are saved also in it.
 
             'detail': then returns parsed ``report`` (dict) and *file_path* is ignored.
@@ -333,19 +333,19 @@ class Connection(object):
         """
         LOGGER.debug(
             "Getting report: format=%s, filepath=%s, report=%s",
-            format,
+            format_,
             file_path,
             report,
         )
-        assert format in ["xml", "detail"] or file_path
+        assert format_ in ["xml", "detail"] or file_path
 
         if isinstance(report, int) or isinstance(report, str):
             report_id = report
         else:
             report_id = report["id"]
-        api = "/reports/{}/{}/api".format(report_id, format)
+        api = "/reports/{}/{}/api".format(report_id, format_)
 
-        if format == "detail":
+        if format_ == "detail":
             return self.parsed_call(api, xml_tag="report")[0]
         else:
             return self.call(api, file_path=file_path)

@@ -163,6 +163,6 @@ if __name__ == "__main__":
         citalidConnector = Citalid()
         citalidConnector.run()
     except Exception as e:
-        print(e)
+        OpenCTIConnectorHelper.log_error(str(e))
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

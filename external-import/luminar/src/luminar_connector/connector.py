@@ -101,8 +101,7 @@ class ConnectorLuminar:
         404: "Not Found. The server can not find the requested resource.",
         408: "Request Timeout. The server would like to shut down this unused connection.",
         429: "Too Many Requests. The user has sent too many requests in a given amount of time.",
-        500: "Internal Server Error. The server has encountered a situation it doesn't "
-        " know how to handle.",
+        500: "Internal Server Error. The server has encountered a situation it doesn't know how to handle.",
         502: "Bad Gateway. The server was acting as a gateway or proxy and received an invalid "
         "response from the upstream server.",
         503: "Service Unavailable. The server is not ready to handle the request.",
@@ -173,7 +172,7 @@ class ConnectorLuminar:
             return access_token, "Luminar API Connected successfully"
         return False, "Access token not found in response"
 
-    def get_taxi_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
+    def get_taxii_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
         """
         Fetches TAXII collections from the Luminar API and returns a mapping of
         collection aliases to their IDs.
@@ -930,7 +929,7 @@ class ConnectorLuminar:
                 return
 
             headers = {"Authorization": f"Bearer {access_token}"}
-            taxii_collection = self.get_taxi_collections(headers)
+            taxii_collection = self.get_taxii_collections(headers)
             if not taxii_collection:
                 return
 

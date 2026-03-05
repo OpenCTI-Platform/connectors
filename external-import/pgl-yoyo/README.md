@@ -1,5 +1,9 @@
 # PGL Yoyo Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Table of Contents
 
 - [PGL Yoyo Connector](#pgl-yoyo-connector)

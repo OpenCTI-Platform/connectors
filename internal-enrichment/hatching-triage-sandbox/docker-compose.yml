@@ -3,7 +3,7 @@ services:
   connector-hatching-triage-sandbox:
     image: opencti/connector-hatching-triage-sandbox:latest
     environment:
-      - OPENCTI_URL=ChangeMe
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Hatching_Triage_Sandbox
       - "CONNECTOR_NAME=Hatching Triage Sandbox"
