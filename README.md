@@ -17,40 +17,11 @@ the [OpenCTI Integrations Library](https://hub.filigran.io/cybersecurity-solutio
 
 ## Contributing
 
-**Contributions are welcome and appreciated!**.
+**Contributions are welcome and appreciated!**
 
-If you want to help us improve existing connectors or develop new ones, please check out the [development documentation for new connectors](https://docs.opencti.io/latest/development/connectors) or go to our templates folder to find the right template for your connector. 
-The README file will guide you through the process: [Connector templates](./templates).
-
-To contribute, please create a **Pull Request** on this repository along with an associated **GitHub issue** describing the purpose of your contribution (what problem it fixes, what improvement it brings, or what new integration it provides). 
+If you want to help use improve or develop a new connector, please check out our [contributing guide](CONTRIBUTING.md).
 
 Once reviewed, we will integrate your connector into the CI and add it to the [OpenCTI Integrations Library](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations).
-
-
-Any connector **should be validated** through pylint. Example of commands:
-
-Install necessary dependencies:
-
-```shell
-cd shared/pylint_plugins/check_stix_plugin
-pip install -r requirements.txt
-```
-
-You can directly run it in CLI to lint a dedicated directory or python module :
-
-```shell
-cd shared/pylint_plugins/check_stix_plugin
-PYTHONPATH=. python -m pylint <path_to_my_code> --load-plugins linter_stix_id_generator
-```
-
-If you only want to test the custom module :
-
-```shell
-cd shared/pylint_plugins/check_stix_plugin
-PYTHONPATH=. python -m pylint <path_to_my_code> --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
-```
-
-Note: no_generated_id_stix is a custom checker available in [shared tools](./shared/README.md)
 
 ## License
 
