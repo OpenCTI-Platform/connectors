@@ -259,7 +259,7 @@ except Exception as e:
     raise
 ```
 
-Here a reminder for work mannagement on [Common Implementation](./01-common-implementation.md#work-management)
+Here a reminder for work management on [Common Implementation](./01-common-implementation.md#work-management)
 
 ---
 
