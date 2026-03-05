@@ -882,6 +882,8 @@ def fetch_with_retry(self, url: str):
 - **`wait_exponential_jitter`** - Wait times increase exponentially (~1s, ~2s, ~4s...) with random jitter to avoid thundering herd
 - **`raise_for_status()`** - Raises exception on HTTP errors, triggering retry
 
+`tenacity` is not a hard requirement, it's an optional, recommended dependency. Connectors that already use HTTPAdapter with a Retry strategy from urllib3 are perfectly fine as it is and it is sufficient when retries are purely about HTTP failures.
+
 ---
 
 ## Working with the Helper
