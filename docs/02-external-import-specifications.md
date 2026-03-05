@@ -121,7 +121,10 @@ class MyConnector:
 
 ### Configuration
 
-External import connectors use `duration_period` for scheduling:
+External import connectors use `duration_period` for scheduling.
+
+The `duration_period`  is the amount of time between the end of a connector's last run and the start of the next run. It's expressed as an ISO-8601 duration format string:
+
 
 ```yaml
 connector:
@@ -196,36 +199,31 @@ Work management tracks individual connector runs in OpenCTI.
 
 ```python
 def process_message(self) -> None:
-    # Create friendly name for this work
-    friendly_name = f"{self.helper.connect_name} - {datetime.now().isoformat()}"
-
-    # Initiate work
-    work_id = self.helper.api.work.initiate_work(
-        self.helper.connect_id,
-        friendly_name
-    )
-
-    self.helper.connector_logger.info(
-        "Work initiated",
-        {"work_id": work_id}
-    )
-
     # Perform data collection
     stix_objects = self._collect_intelligence()
 
     # Send bundle
     if len(stix_objects) > 0:
+
+        # Create friendly name for this work
+        friendly_name = f"{self.helper.connect_name} - {datetime.now().isoformat()}"
+        
+        # Initiate work
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id,
+            friendly_name
+        )
+        self.helper.connector_logger.info(
+            "Work initiated",
+            {"work_id": work_id}
+        )
+    
         bundle = self.helper.stix2_create_bundle(stix_objects)
         self.helper.send_stix2_bundle(
             bundle,
             work_id=work_id,
             cleanup_inconsistent_bundle=True,
         )
-
-    # Mark work as completed
-    message = f"Imported {len(stix_objects)} objects"
-    self.helper.api.work.to_processed(work_id, message)
-    self.helper.connector_logger.info(message)
 ```
 
 ### Work Status
