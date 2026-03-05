@@ -900,9 +900,10 @@ class MyConnector:
         self.settings = ConnectorSettings()
         self.helper = OpenCTIConnectorHelper(config=self.settings.to_helper_config())
 
-    def _process(self, work_id: str) -> str:
+    def _process(self) -> str:
         """Core logic: fetch data, build and send STIX bundle."""
         # ... your data fetching and bundle sending logic ...
+
         return "Work complete"
 
     def run(self):
@@ -915,7 +916,7 @@ class MyConnector:
 
 > `duration_period` is passed as a number of **seconds** (via `.total_seconds()` on a `timedelta`). This means your config loader must parse the ISO 8601 duration string into a `timedelta` object before passing it here.
 
-> `message_callback` receives a `work_id` string. This is the identifier of the current work unit that you **must** pass to `send_stix2_bundle()` and `work.to_processed()`.
+> `message_callback` is the function that contains your connector's core logic. It will be called by the Scheduler according to the configured interval or just once in Run & Terminate mode. 
 
 ### Legacy pattern (to avoid / migrate away from)
 
