@@ -22,7 +22,6 @@ from connectors_sdk.settings.deprecations import (
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from connectors_sdk.settings.json_schema_generator import (
     ConnectorConfigJsonSchemaGenerator,
-    SanitizedJsonSchemaGenerator,
 )
 from pydantic import (
     BaseModel,
@@ -307,18 +306,12 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             raise ConfigValidationError("Error validating configuration.") from e
 
     @classmethod
-    def model_json_schema(cls, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
-        """Use a custom JSON schema generator to sanitize the schema and remove function references."""
-        kwargs.setdefault("schema_generator", SanitizedJsonSchemaGenerator)
-        return super().model_json_schema(**kwargs)
-
-    @classmethod
     def config_json_schema(
         cls,
         *,
         connector_name: str,
         by_alias: bool = False,
-        mode: str = "validation",
+        mode: Literal["validation", "serialization"] = "validation",
     ) -> dict[str, Any]:
         """Generate the connector-specific environment variable JSON schema used for metadata contracts."""
 
