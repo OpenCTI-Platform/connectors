@@ -1,4 +1,4 @@
-pycti==7.260305.0
+pycti==7.260306.0
 urllib3==2.6.3
 pydantic>=2.10, <3
 pydantic-settings==2.10.1
