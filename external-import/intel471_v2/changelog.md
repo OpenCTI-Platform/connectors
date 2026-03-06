@@ -1,3 +1,7 @@
+# v2.2.0
+
+  + Added [Verity471](https://www.intel471.com/verity471) support with full feature and data parity alongside the existing Titan infrastructure.
+
 # v2.1.4
 
   + Upgrade `Titan-Client` to version [1.20.0.15](https://github.com/intel471/titan-client-python/releases/tag/v1.20.0.15)
