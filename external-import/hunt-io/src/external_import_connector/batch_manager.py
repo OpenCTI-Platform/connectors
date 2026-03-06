@@ -5,9 +5,7 @@ from datetime import datetime, timezone
 from typing import List
 
 import stix2
-from pycti import OpenCTIConnectorHelper
-
-from .constants import (
+from external_import_connector.constants import (
     LoggingPrefixes,
     ProcessingLimits,
     QueueThresholds,
@@ -15,8 +13,9 @@ from .constants import (
     RetryConfig,
     StateKeys,
 )
-from .exceptions import BatchProcessingError
-from .models import C2
+from external_import_connector.exceptions import BatchProcessingError
+from external_import_connector.models import C2
+from pycti import OpenCTIConnectorHelper
 
 
 class QueueHealthMonitor:
@@ -31,7 +30,11 @@ class QueueHealthMonitor:
         Returns False if the system is too overwhelmed to process new entities.
         """
         try:
-            connector_info = self.helper.api.connector.ping()
+            connector_info = self.helper.api.connector.ping(
+                self.helper.connector.id,
+                self.helper.connector_state,
+                self.helper.connector_info.all_details,
+            )
 
             if not connector_info:
                 self.helper.connector_logger.warning(
@@ -164,12 +167,20 @@ class BundleSender:
             f"Sending bundle: {total_objects} STIX objects {description}"
         )
 
+        # One work per bundle; only mark as processed on successful send
+        now_iso = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        friendly_name = f"Connector Hunt IO feed @ {now_iso}"
+        work_id = self.helper.api.work.initiate_work(
+            self.helper.connect_id, friendly_name
+        )
+
         for attempt in range(RetryConfig.MAX_RETRIES):
             try:
                 stix_bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
 
                 self.helper.send_stix2_bundle(
                     stix_bundle.serialize(),
+                    work_id=work_id,
                     update=True,
                     cleanup_inconsistent_bundle=True,
                 )
@@ -178,7 +189,8 @@ class BundleSender:
                     f"Successfully sent bundle: {total_objects} STIX objects {description}"
                     + (f" (attempt {attempt + 1})" if attempt > 0 else "")
                 )
-                return  # Success
+                self.helper.api.work.to_processed(work_id, "Bundle sent successfully")
+                return
 
             except Exception as e:
                 if (

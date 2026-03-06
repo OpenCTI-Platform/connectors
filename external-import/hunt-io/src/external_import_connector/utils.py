@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
+from pydantic import AwareDatetime
 from validators import domain, hashes, ip_address, url  # type: ignore
 
 
@@ -81,8 +82,11 @@ def create_indicator_pattern(value: str) -> str:
         )
 
 
-def convert_timestamp_to_iso_format(timestamp: str) -> datetime:
+def convert_timestamp_to_iso_format(timestamp: str) -> AwareDatetime:
     """
     Convert timestamp to ISO format
     """
-    return datetime.fromisoformat(timestamp)
+    date_time = datetime.fromisoformat(timestamp)
+    if date_time.tzinfo is None:
+        date_time = date_time.replace(tzinfo=timezone.utc)
+    return date_time
