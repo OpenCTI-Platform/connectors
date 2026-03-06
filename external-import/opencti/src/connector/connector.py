@@ -1,13 +1,12 @@
 import json
-import os
 import ssl
 import sys
 import time
 import urllib.request
 from datetime import datetime, timezone
 
-import yaml
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 CONFIG_SECTORS_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json"
 CONFIG_GEOGRAPHY_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json"
@@ -19,40 +18,16 @@ def days_to_seconds(days):
 
 
 class OpenCTI:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        if os.path.isfile(config_file_path):
-            with open(config_file_path) as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-        else:
-            config = {}
-        self.helper = OpenCTIConnectorHelper(config)
-        self.config_interval = get_config_variable(
-            "CONFIG_INTERVAL", ["config", "interval"], config, isNumber=True, default=7
-        )
-        self.remove_creator = get_config_variable(
-            "CONFIG_REMOVE_CREATOR", ["config", "remove_creator"], config, default=False
-        )
+
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+        self.config_interval = self.config.config.interval
+        self.remove_creator = self.config.config.remove_creator
         urls = [
-            get_config_variable(
-                "CONFIG_SECTORS_FILE_URL",
-                ["config", "sectors_file_url"],
-                config,
-                default=CONFIG_SECTORS_FILE_URL,
-            ),
-            get_config_variable(
-                "CONFIG_GEOGRAPHY_FILE_URL",
-                ["config", "geography_file_url"],
-                config,
-                default=CONFIG_GEOGRAPHY_FILE_URL,
-            ),
-            get_config_variable(
-                "CONFIG_COMPANIES_FILE_URL",
-                ["config", "companies_file_url"],
-                config,
-                default=CONFIG_COMPANIES_FILE_URL,
-            ),
+            self.config.config.sectors_file_url,
+            self.config.config.geography_file_url,
+            self.config.config.companies_file_url,
         ]
         self.urls = list(filter(lambda url: url is not False, urls))
         self.interval = days_to_seconds(self.config_interval)
@@ -73,10 +48,7 @@ class OpenCTI:
         """
         try:
             return json.loads(
-                urllib.request.urlopen(
-                    url,
-                    context=ssl.create_default_context(),
-                )
+                urllib.request.urlopen(url, context=ssl.create_default_context())
                 .read()
                 .decode("utf-8")
             )
@@ -96,7 +68,6 @@ class OpenCTI:
 
     def process_data(self):
         try:
-            # Get the current timestamp and check
             timestamp = int(time.time())
             current_state = self.helper.get_state()
             if current_state is not None and "last_run" in current_state:
@@ -110,8 +81,7 @@ class OpenCTI:
             else:
                 last_run = None
                 self.helper.log_info("Connector has never run")
-            # If the last_run is more than interval seconds
-            if last_run is None or ((timestamp - last_run) > self.interval):
+            if last_run is None or timestamp - last_run > self.interval:
                 now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "OpenCTI datasets run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -119,7 +89,6 @@ class OpenCTI:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-
                 for url in self.urls:
                     try:
                         data = self.retrieve_data(url)
@@ -128,7 +97,6 @@ class OpenCTI:
                         self.send_bundle(work_id, data)
                     except Exception as e:
                         self.helper.log_error(str(e))
-
                 message = f"Connector successfully run, storing last_run as {timestamp}"
                 self.helper.log_info(message)
                 self.helper.set_state({"last_run": timestamp})
@@ -172,14 +140,3 @@ class OpenCTI:
             while True:
                 self.process_data()
                 time.sleep(60)
-
-
-if __name__ == "__main__":
-    try:
-        opencti_connector = OpenCTI()
-        opencti_connector.run()
-    except Exception:
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
