@@ -373,7 +373,7 @@ class NameShield:
             modified="2025-12-08T10:03:08.243Z",
             identity_class="organization",
             type="identity",
-            object_marking_refs=stix2.TLP_WHITE,
+            object_marking_refs=[stix2.TLP_WHITE["id"]],
         )
 
         stix_objects = [identity, self.nameshield_marking]
