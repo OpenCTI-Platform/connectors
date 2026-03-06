@@ -1,4 +1,4 @@
-pycti==7.260306.0
+pycti==7.260306.1
 pydantic~= 2.11.3
 pydantic-settings==2.11.0
 requests~=2.32.3
