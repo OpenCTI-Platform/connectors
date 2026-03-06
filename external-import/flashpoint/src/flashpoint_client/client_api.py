@@ -46,6 +46,12 @@ class FlashpointClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount(self.api_base_url, adapter)
 
+    @staticmethod
+    def _to_flashpoint_datetime(value: datetime) -> str:
+        return value.strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        )  # UTC as +00:00 offset leads to 400 Bad Request
+
     def get_communities_doc(self, doc_id):
         """
         :param doc_id:
@@ -69,9 +75,7 @@ class FlashpointClient:
             "query": query,
             "include": {
                 "date": {
-                    "start": start_date.strftime(
-                        "%Y-%m-%dT%H:%M:%SZ"
-                    ),  # UTC as +00:00 offset leads to 400 Bad Request
+                    "start": start_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "end": "",
                 }
             },
@@ -119,11 +123,7 @@ class FlashpointClient:
         """
         alerts = []
         url = self.api_base_url + "/alert-management/v1/notifications"
-        params = {
-            "created_after": start_date.strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )  # UTC as +00:00 offset leads to 400 Bad Request
-        }
+        params = {"created_after": self._to_flashpoint_datetime(start_date)}
         has_more = True
         while has_more:
             response = self.session.get(url, params=params)
@@ -143,9 +143,7 @@ class FlashpointClient:
         url = self.api_base_url + "/finished-intelligence/v1/reports"
         limit = 100
         params = {
-            "since": start_date.strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            ),  # UTC as +00:00 offset leads to 400 Bad Request
+            "since": self._to_flashpoint_datetime(start_date),
             "limit": limit,
             "skip": 0,
             "sort": "updated_at:asc",
@@ -164,25 +162,102 @@ class FlashpointClient:
                 has_more = False
         return reports
 
-    def get_misp_feed_manifest(self):
+    def iter_indicators_pages(
+        self, start_date: datetime, size: int = 500
+    ) -> Generator[list[dict], None, None]:
         """
-        :return:
-        """
-        url = self.api_base_url + "/technical-intelligence/v1/misp-feed/manifest.json"
-        response = self.session.get(url)
-        response.raise_for_status()
-        data = response.json()
-        return data
+        Iterate over indicator pages from Flashpoint Technical Intelligence v2 API.
 
-    def get_misp_event_file(self, filename):
+        :param start_date: Include indicators modified on or after this datetime.
+        :param size: Pagination size, must be between 1 and 1000.
+        :yield: Page of indicators.
         """
-        :return:
+        page_size = max(1, min(size, 1000))
+        url = self.api_base_url + "/technical-intelligence/v2/indicators"
+        params = {
+            "size": page_size,
+            "from": 0,
+            "sort": "modified_at:asc",
+            "modified_after": self._to_flashpoint_datetime(start_date),
+            "include_total_count": False,
+        }
+        fallback_from = 0
+
+        has_more = True
+        while has_more:
+            response = self.session.get(url, params=params)
+            response.raise_for_status()
+            response_json = response.json()
+
+            page_items = response_json.get("items")
+            if page_items is None:
+                page_items = response_json.get("data")
+            if not isinstance(page_items, list):
+                page_items = []
+            if page_items:
+                yield page_items
+
+            next_page = (response_json.get("pagination") or {}).get("next")
+            if next_page:
+                url = next_page
+                params = None
+            else:
+                if params is None:
+                    has_more = False
+                elif len(page_items) == page_size:
+                    fallback_from += page_size
+                    params["from"] = fallback_from
+                else:
+                    has_more = False
+
+    def get_sightings(
+        self,
+        size: int = 10,
+        from_offset: int = 0,
+        sort: str = "sighted_at:desc",
+        include_total_count: bool = False,
+        tags: list[str] | None = None,
+        sources: list[str] | None = None,
+        embed: list[str] | None = None,
+        sighted_after: str | None = None,
+        sighted_before: str | None = None,
+    ) -> dict:
         """
-        url = self.api_base_url + "/technical-intelligence/v1/misp-feed/" + filename
-        response = self.session.get(url)
+        Call Flashpoint Technical Intelligence v2 sightings endpoint.
+
+        Useful for debugging in ipdb, e.g.:
+        `self.client.get_sightings(size=5, include_total_count=True)`
+        """
+        if sort not in {"sighted_at:desc", "sighted_at:asc"}:
+            raise ValueError("sort must be 'sighted_at:desc' or 'sighted_at:asc'")
+
+        normalized_size = max(1, min(size, 1000))
+        normalized_from = max(0, from_offset)
+        if embed and normalized_size > 500:
+            raise ValueError("size must be <= 500 when embed is provided")
+
+        url = self.api_base_url + "/technical-intelligence/v2/sightings"
+        params: dict[str, str | int | bool | list[str]] = {
+            "size": normalized_size,
+            "from": normalized_from,
+            "sort": sort,
+            "include_total_count": include_total_count,
+        }
+
+        if tags:
+            params["tags"] = tags
+        if sources:
+            params["sources"] = sources
+        if embed:
+            params["embed"] = embed
+        if sighted_after:
+            params["sighted_after"] = sighted_after
+        if sighted_before:
+            params["sighted_before"] = sighted_before
+
+        response = self.session.get(url, params=params)
         response.raise_for_status()
-        data = response.json()
-        return data
+        return response.json()
 
     def get_compromised_credential_sightings(
         self, since: datetime | None = None, fresh_only: bool = True

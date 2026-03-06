@@ -70,12 +70,12 @@
     },
     "FLASHPOINT_INDICATORS_IN_REPORTS": {
       "default": false,
-      "description": "Whether to include indicators in the reports imported from MispFeed or not.",
+      "description": "Deprecated: legacy MISP feed option, no effect with v2 indicators import.",
       "type": "boolean"
     },
     "FLASHPOINT_CREATE_REPORTS": {
       "default": false,
-      "description": "Whether to create reports or groupings from MispFeed events or not.",
+      "description": "Deprecated: legacy MISP feed option, no effect with v2 indicators import.",
       "type": "boolean"
     },
     "FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS": {
@@ -85,7 +85,7 @@
     },
     "FLASHPOINT_IMPORT_INDICATORS": {
       "default": true,
-      "description": "WHether to import indicators of compromise (IoCs) or not.",
+      "description": "Whether to import indicators of compromise (IoCs) from technical-intelligence/v2/indicators.",
       "type": "boolean"
     },
     "FLASHPOINT_IMPORT_ALERTS": {

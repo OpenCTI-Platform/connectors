@@ -30,6 +30,7 @@ See [Flashpoint API Documentation](https://flashpoint.io/resources/datasheets/ig
 
 The Flashpoint Connector for OpenCTI imports threat intelligence data from Flashpoint and maps it to relevant entities in the OpenCTI ecosystem.
 This includes alerts, indicators, malware reports, vulnerabilities, and other intelligence, enhancing threat detection and response capabilities.  
+Indicators are imported from Flashpoint Technical Intelligence API v2 (`/technical-intelligence/v2/indicators`).
 See [Behavior](#behavior) for more details.
 
 ## Installation
@@ -224,6 +225,15 @@ graph LR
 #### Relevant documentation:
 
 - https://docs.flashpoint.io/flashpoint/reference/context_view_handler_v1_communities__id__context_get
+
+### Indicators
+
+Indicators are collected from Flashpoint Technical Intelligence API v2 endpoint `/technical-intelligence/v2/indicators`.
+The connector performs incremental ingestion using `modified_at` and maps each compatible IoC to STIX Indicators and observables in OpenCTI.
+
+#### Relevant documentation:
+
+- https://docs.flashpoint.io/flashpoint/reference/list_indicators_technical_intelligence_v2_indicators_get
 
 ### CCM Alerts
 

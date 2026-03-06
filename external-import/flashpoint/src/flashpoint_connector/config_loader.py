@@ -178,11 +178,11 @@ class FlashpointConfig(ConfigBaseModel):
         default=True,
     )
     indicators_in_reports: bool = Field(
-        description="Whether to include indicators in the reports imported from MispFeed or not.",
+        description="Deprecated: legacy MISP feed option, no effect with v2 indicators import.",
         default=False,
     )
     create_reports: bool = Field(
-        description="Whether to create reports or groupings from MispFeed events or not.",
+        description="Deprecated: legacy MISP feed option, no effect with v2 indicators import.",
         default=False,
     )
     guess_relationships_from_reports: bool = Field(
@@ -190,7 +190,7 @@ class FlashpointConfig(ConfigBaseModel):
         default=False,
     )
     import_indicators: bool = Field(
-        description="WHether to import indicators of compromise (IoCs) or not.",
+        description="Whether to import indicators of compromise (IoCs) from technical-intelligence/v2/indicators.",
         default=True,
     )
     import_alerts: bool = Field(
@@ -216,6 +216,16 @@ class FlashpointConfig(ConfigBaseModel):
     fresh_ccm_alerts_only: bool = Field(
         description="Whether to import only fresh Compromised Credentials Monitoring alerts or all of them.",
         default=True,
+    )
+    indicator_tlp: Literal[
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        description="TLP marking applied to imported indicators.",
+        default="TLP:CLEAR",
     )
 
 

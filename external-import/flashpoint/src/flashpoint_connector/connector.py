@@ -1,6 +1,6 @@
 import mimetypes
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flashpoint_client import FlashpointClient, FlashpointClientError
 from pycti import OpenCTIConnectorHelper
@@ -8,7 +8,7 @@ from stix2.exceptions import STIXError
 
 from .config_loader import ConfigLoader
 from .converter_to_stix import ConverterToStix
-from .misp_converter_to_stix import MISPConverterToStix
+from .indicator_converter_to_stix import IndicatorConverterToStix
 
 
 class FlashpointConnector:
@@ -25,7 +25,19 @@ class FlashpointConnector:
             api_key=self.config.flashpoint.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(self.helper)
-        self.misp_converter_to_stix = MISPConverterToStix(self.helper, self.config)
+        self.indicator_converter_to_stix = IndicatorConverterToStix(
+            helper=self.helper,
+            tlp_definition=self.config.flashpoint.indicator_tlp,
+        )
+
+    @staticmethod
+    def _parse_iso_datetime(value: str | None) -> datetime | None:
+        if not isinstance(value, str):
+            return None
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
 
     def _get_state(self) -> dict:
         """
@@ -41,6 +53,22 @@ class FlashpointConnector:
         """
         self.helper.set_state(state)
         self.helper.force_ping()  # force update on OpenCTI
+
+    @staticmethod
+    def _deduplicate_stix_objects(stix_objects: list) -> list:
+        deduplicated_stix_objects = []
+        seen_ids: set[str] = set()
+
+        for stix_object in stix_objects:
+            object_id = getattr(stix_object, "id", None)
+            if isinstance(object_id, str):
+                if object_id in seen_ids:
+                    continue
+                seen_ids.add(object_id)
+
+            deduplicated_stix_objects.append(stix_object)
+
+        return deduplicated_stix_objects
 
     def _send_bundle(self, work_id: str, serialized_bundle: str) -> None:
         """
@@ -131,133 +159,109 @@ class FlashpointConnector:
         message = "End of import of communities search"
         self.helper.api.work.to_processed(work_id, message)
 
-    def _import_misp_feed(self) -> None:
+    def _import_indicators(self) -> None:
         """
         :return:
         """
         try:
             now = datetime.now(tz=timezone.utc)
 
-            friendly_name = "Flashpoint MISP Feed run @ " + now.isoformat(
+            friendly_name = "Flashpoint Indicators run @ " + now.isoformat(
                 timespec="seconds"
             )
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-            current_state = self.helper.get_state()
-            if (
-                current_state is not None
-                and "misp_last_run" in current_state
-                and "misp_last_event_timestamp" in current_state
-                and "misp_last_event" in current_state
-            ):
-                last_run = datetime.fromisoformat(current_state["misp_last_run"])
-                last_event = datetime.fromisoformat(current_state["misp_last_event"])
-                last_event_timestamp = current_state["misp_last_event_timestamp"]
-                self.helper.log_info(
-                    "Connector MISP Feed last run: " + current_state["misp_last_run"]
-                )
-                self.helper.log_info(
-                    "Connector MISP Feed latest event: "
-                    + current_state["misp_last_event"]
-                )
-            elif current_state is not None and "misp_last_run" in current_state:
-                last_run = datetime.fromisoformat(current_state["misp_last_run"])
-                last_event = last_run
-                last_event_timestamp = int(last_event.timestamp())
-                self.helper.log_info(
-                    "Connector MISP Feed last run: " + current_state["misp_last_run"]
-                )
-                self.helper.log_info(
-                    "Connector MISP Feed latest event: "
-                    + current_state["misp_last_run"]  # last_event = last_run
-                )
-            else:
-                last_event = self.config.flashpoint.import_start_date
-                last_event_timestamp = int(last_event.timestamp())
-                self.helper.log_info("Connector MISP Feed has never run")
+            current_state = self._get_state()
 
-            number_events = 0
+            start_date = self.config.flashpoint.import_start_date
+            query_since = start_date
+            if "indicators_last_modified" in current_state:
+                parsed = self._parse_iso_datetime(
+                    current_state["indicators_last_modified"]
+                )
+                if parsed is not None:
+                    start_date = parsed
+                    query_since = parsed - timedelta(seconds=1)
+
+            self.helper.connector_logger.info(
+                "Fetching indicators from Flashpoint v2 endpoint",
+                {"since": query_since.isoformat(timespec="seconds")},
+            )
+
+            number_indicators = 0
+            max_modified = start_date
             try:
-                manifest_data = self.client.get_misp_feed_manifest()
-                items = []
-                for key, value in manifest_data.items():
-                    value["timestamp"] = int(value["timestamp"])
-                    items.append({**value, "event_key": key})
-                items = sorted(items, key=lambda d: d["timestamp"])
-                for item in items:
-                    if item["timestamp"] > last_event_timestamp:
-                        last_event_timestamp = item["timestamp"]
-                        self.helper.log_info(
-                            "Processing MISP event "
-                            + item["info"]
-                            + " (date="
-                            + item["date"]
-                            + ", modified="
-                            + datetime.fromtimestamp(
-                                last_event_timestamp, tz=timezone.utc
-                            ).isoformat()
-                            + ")"
+                for page_number, indicators_page in enumerate(
+                    self.client.iter_indicators_pages(query_since), start=1
+                ):
+                    page_stix_objects = []
+                    page_indicators_count = 0
+
+                    self.helper.connector_logger.info(
+                        "Indicators page fetched",
+                        {
+                            "page": page_number,
+                            "count": len(indicators_page),
+                        },
+                    )
+
+                    for indicator in indicators_page:
+                        stix_objects = (
+                            self.indicator_converter_to_stix.convert_indicator_to_stix(
+                                indicator
+                            )
+                        )
+                        if len(stix_objects) == 0:
+                            continue
+
+                        page_stix_objects.extend(stix_objects)
+                        page_indicators_count += 1
+                        number_indicators += 1
+
+                        indicator_modified = self._parse_iso_datetime(
+                            indicator.get("modified_at")
                         )
 
-                        misp_event = self.client.get_misp_event_file(
-                            item["event_key"] + ".json"
+                        if (
+                            indicator_modified is not None
+                            and indicator_modified > max_modified
+                        ):
+                            max_modified = indicator_modified
+
+                    if len(page_stix_objects) > 0:
+                        page_stix_objects = self._deduplicate_stix_objects(
+                            page_stix_objects
                         )
-                        bundle = self.misp_converter_to_stix.convert_misp_event_to_stix(
-                            misp_event
+                        self.helper.connector_logger.info(
+                            "Sending indicators bundle for page",
+                            {
+                                "page": page_number,
+                                "indicators_count": page_indicators_count,
+                                "stix_objects_count": len(page_stix_objects),
+                            },
                         )
-                        self.helper.log_info("Sending event STIX2 bundle...")
-                        self._send_bundle(work_id, bundle)
-                        number_events = number_events + 1
-                        message = (
-                            "Event processed, storing state (misp_last_run="
-                            + now.isoformat()
-                            + ", misp_last_event="
-                            + datetime.fromtimestamp(
-                                last_event_timestamp, tz=timezone.utc
-                            ).isoformat()
-                            + ", misp_last_event_timestamp="
-                            + str(last_event_timestamp)
-                        )
-                        current_state = self.helper.get_state()
-                        if current_state is None:
-                            self.helper.set_state(
-                                {
-                                    "misp_last_run": now.isoformat(),
-                                    "misp_last_event": datetime.fromtimestamp(
-                                        last_event_timestamp, tz=timezone.utc
-                                    ).isoformat(),
-                                    "misp_last_event_timestamp": last_event_timestamp,
-                                }
-                            )
-                        else:
-                            current_state["misp_last_run"] = now.isoformat()
-                            current_state["misp_last_event"] = datetime.fromtimestamp(
-                                last_event_timestamp, tz=timezone.utc
-                            ).isoformat()
-                            current_state["misp_last_event_timestamp"] = (
-                                last_event_timestamp
-                            )
-                            self.helper.set_state(current_state)
-                        self.helper.log_info(message)
+                        bundle = self.helper.stix2_create_bundle(page_stix_objects)
+                        self._send_bundle(work_id=work_id, serialized_bundle=bundle)
             except Exception as e:
                 self.helper.log_error(str(e))
 
-            # Store the current timestamp as a last run
+            current_state["indicators_last_run"] = now.isoformat()
+            current_state["indicators_last_modified"] = max_modified.isoformat()
+            current_state.pop("indicators_last_seen", None)
+            self._set_state(current_state)
+
             message = (
                 "Connector successfully run ("
-                + str(number_events)
-                + " events have been processed), storing state (misp_last_run="
-                + now.isoformat()
-                + ", misp_last_event="
-                + datetime.fromtimestamp(
-                    last_event_timestamp, tz=timezone.utc
-                ).isoformat()
-                + ", misp_last_event_timestamp="
-                + str(last_event_timestamp)
+                + str(number_indicators)
+                + " indicators have been processed), storing state "
+                + "(indicators_last_run="
+                + current_state["indicators_last_run"]
+                + ", indicators_last_modified="
+                + current_state["indicators_last_modified"]
                 + ")"
             )
-            self.helper.log_info(message)
+            self.helper.connector_logger.info(message)
             self.helper.api.work.to_processed(work_id, message)
 
         except (KeyboardInterrupt, SystemExit):
@@ -523,9 +527,9 @@ class FlashpointConnector:
                     "Import Indicators enabled, going to fetch Indicators since:",
                     {"since": last_run or self.config.flashpoint.import_start_date},
                 )
-                # start date is calculated inside self._import_misp_feed()
-                self._import_misp_feed()
-                # connector's state is updated inside self._import_misp_feed()
+                # start date is calculated inside self._import_indicators()
+                self._import_indicators()
+                # connector's state is updated inside self._import_indicators()
 
             if self.config.flashpoint.import_communities:
                 self.helper.connector_logger.info(
