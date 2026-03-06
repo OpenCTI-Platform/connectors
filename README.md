@@ -11,43 +11,17 @@ the [dedicated documentation](https://docs.opencti.io/latest/deployment/connecto
 ## Connectors list and statuses
 
 This repository is used to host connectors that are supported by the core development team of OpenCTI. Nevertheless, the
-community is also developping a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the
+community is also developing a lot of connectors, third-parties modules directly linked to OpenCTI. You can find the
 list of all available connectors and plugins in
-the [OpenCTI ecosystem dedicated space](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+the [OpenCTI Integrations Library](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations).
 
 ## Contributing
 
-If you want to help use improve or develop new connector, please check out the **[development documentation for new connectors](https://docs.opencti.io/latest/development/connectors)** or go to our templates folder to find the right template for your connector, the README file will guide you through the process: [Connector templates](./templates). 
+**Contributions are welcome and appreciated!**
 
-If you want to
-make your connector available to the community, **please create a Pull Request on this repository**, then we will
-integrate it to the CI and in
-the [OpenCTI ecosystem](https://filigran.notion.site/OpenCTI-Ecosystem-868329e9fb734fca89692b2ed6087e76).
+If you want to help use improve or develop a new connector, please check out our [contributing guide](CONTRIBUTING.md).
 
-Any connector **should be validated** through pylint. Example of commands:
-
-Install necessary dependencies:
-
-```shell
-cd shared/pylint_plugins/check_stix_plugin
-pip install -r requirements.txt
-```
-
-You can directly run it in CLI to lint a dedicated directory or python module :
-
-```shell
-cd shared/pylint_plugins/check_stix_plugin
-PYTHONPATH=. python -m pylint <path_to_my_code> --load-plugins linter_stix_id_generator
-```
-
-If you only want to test the custom module :
-
-```shell
-cd shared/pylint_plugins/check_stix_plugin
-PYTHONPATH=. python -m pylint <path_to_my_code> --disable=all --enable=no_generated_id_stix,no-value-for-parameter,unused-import --load-plugins linter_stix_id_generator
-```
-
-Note: no_generated_id_stix is a custom checker available in [shared tools](./shared/README.md)
+Once reviewed, we will integrate your connector into the CI and add it to the [OpenCTI Integrations Library](https://hub.filigran.io/cybersecurity-solutions/open-cti-integrations).
 
 ## License
 

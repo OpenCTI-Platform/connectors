@@ -1,9 +1,8 @@
 import traceback
 
-from stream_connector import IndicatorConnector
-
-CREATING_INDICATORS = False
-
+from pycti import OpenCTIConnectorHelper
+from sentinelone_connector import SentinelOneIntelConnector
+from sentinelone_connector.settings import ConnectorSettings
 
 if __name__ == "__main__":
     """
@@ -15,9 +14,11 @@ if __name__ == "__main__":
     - exit(1): effective way to terminate a Python program when an error is encountered.
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
-
     try:
-        connector = IndicatorConnector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = SentinelOneIntelConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

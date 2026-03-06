@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import signal
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from types import FrameType
 from typing import Callable
 
@@ -96,9 +96,11 @@ class ConnectorLoop(threading.Thread):
         # Get the current timestamp and check
         state = self._helper.get_state() or {}
 
-        now = datetime.utcnow().replace(microsecond=0)
+        now = datetime.now(timezone.utc).replace(microsecond=0)
         last_run = state.get("last_run", 0)
-        last_run = datetime.utcfromtimestamp(last_run).replace(microsecond=0)
+        last_run = datetime.fromtimestamp(last_run, tz=timezone.utc).replace(
+            microsecond=0
+        )
 
         if last_run.year == 1970:
             log.info("Connector has never run")
@@ -133,11 +135,11 @@ class ConnectorLoop(threading.Thread):
             self._helper.set_state(state)
 
             next_run = last_run + timedelta(seconds=self._interval)
-            delta_now = next_run - datetime.utcnow().replace(microsecond=0)
+            delta_now = next_run - datetime.now(timezone.utc).replace(microsecond=0)
             log.info("Last_run stored, next run in %s (%s)", delta_now, next_run)
         else:
             next_run = last_run + timedelta(seconds=self._interval)
-            delta_now = next_run - datetime.utcnow().replace(microsecond=0)
+            delta_now = next_run - datetime.now(timezone.utc).replace(microsecond=0)
             log.info("Connector will not run, next run in %s (%s)", delta_now, next_run)
 
     def stop(self) -> None:

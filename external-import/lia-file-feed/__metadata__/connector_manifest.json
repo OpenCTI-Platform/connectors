@@ -1,0 +1,21 @@
+{
+  "title": "Lia File Feed",
+  "slug": "lia-file-feed",
+  "description": "The connector ingests indicators of compromise (IOCs) from the Loader Insight Agency (LIA) File Feed, establishing relationships between IOCs to provide context such as the loader family responsible for downloading a payload and theURL from which it was downloaded. If known, the payload is tagged with a detection, offering insights into which malware loader delivers specific malware.\nNOTE: Requires a LIA File Feed subscription and can be acquired at https://loaderinsight.agency.",
+  "short_description": "The connector ingests indicators of compromise (IOCs) from the Loader Insight Agency (LIA) File Feed, establishing relationships between IOCs to provide context such as the loader family responsible for downloading a payload and theURL from which it was downloaded. If known, the payload is tagged with a detection, offering insights into which malware loader delivers specific malware.\nNOTE: Requires a LIA File Feed subscription and can be acquired at https://loaderinsight.agency.",
+  "logo": "external-import/lia-file-feed/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.0",
+  "subscription_link": "https://loaderinsight.agency",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/lia-file-feed",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-lia-file-feed",
+  "container_type": "EXTERNAL_IMPORT"
+}

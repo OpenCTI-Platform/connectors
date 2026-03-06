@@ -105,6 +105,11 @@
       "default": true,
       "description": "Import IOCs relationships and related objects.",
       "type": "boolean"
+    },
+    "SEKOIA_CONFIDENCE_SCORE": {
+      "default": null,
+      "description": "This will be the score assigned to the indicators. Defaults to null, maximum 100.",
+      "type": "integer"
     }
   },
   "required": [

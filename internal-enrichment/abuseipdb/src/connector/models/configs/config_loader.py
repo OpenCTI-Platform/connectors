@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field
 from pydantic_settings import (
     BaseSettings,

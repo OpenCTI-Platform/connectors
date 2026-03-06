@@ -1,4 +1,6 @@
-pycti==6.8.5
+pycti==7.260305.0
+pydantic~=2.11.3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
 validators==0.35.0
 stix2
 taxii2-client

@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'changeme'
 
 connector:
-  id: 'changme'
   type: 'EXTERNAL_IMPORT'
+  id: 'changme'
   name: 'Zerofox'
   scope: 'zerofox'
   log_level: 'info'

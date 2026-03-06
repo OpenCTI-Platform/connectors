@@ -15,7 +15,7 @@ Using Pydantic models ensures robust validation of properties, provides clear er
 ## Proposed Solution
 
 - Define OCTI Models using Pydantic.
-- Define OCTI `BaseEntity` (general purpose) and  `BaseIdentifiedEntity` (Entity with an ID) classes as Pydantic models:
+- Define OCTI `BaseObject` (general purpose) and  `BaseIdentifiedEntity` (Entity with an ID) classes as Pydantic models:
   - Provide comparison capability with hashing.
   - Use `model_config.validate_assignment` for property validation.
   - Do not enforce `frozen` models to allow for easier initialization and modification in an ingestion/processiing use case.
@@ -28,7 +28,7 @@ Using Pydantic models ensures robust validation of properties, provides clear er
 classDiagram
     %% =====================
     %% ABSTRACT BASES
-    class BaseEntity {
+    class BaseObject {
         +properties_set: set~str~
         +properties_unset: set~str~
         +to_stix2_object()
@@ -42,7 +42,7 @@ classDiagram
         +external_references: list~ExternalReference~
         +id: str
     }
-    BaseIdentifiedEntity --|> BaseEntity
+    BaseIdentifiedEntity --|> BaseObject
 
     class Author {
         <<abstract>>
@@ -61,7 +61,7 @@ classDiagram
         +version: str
         +to_stix2_object()
     }
-    AssociatedFile --|> BaseEntity
+    AssociatedFile --|> BaseObject
 
    
 
@@ -78,7 +78,7 @@ classDiagram
         +external_id: str
         +to_stix2_object()
     }
-    ExternalReference --|> BaseEntity
+    ExternalReference --|> BaseObject
 
     %% =====================
     %% RELATIONSHIPS

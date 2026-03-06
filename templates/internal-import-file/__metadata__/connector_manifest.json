@@ -1,0 +1,19 @@
+{
+  "title": "Template Connector",
+  "slug": "template",
+  "description": "Template description of the connector",
+  "short_description": "Template short description (summary) of the connector",
+  "logo": null,
+  "use_cases" : [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/template",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-template",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}

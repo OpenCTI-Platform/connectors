@@ -1,0 +1,21 @@
+{
+  "title": "Infoblox Threat Defense",
+  "slug": "infoblox-threat-defense",
+  "description": "This connector allows organizations to stream OpenCTI indicators to Infoblox Threat Defense (BloxOne). This will stream all active indicators to a custom list within Infoblox Threat Defense and remove any revoked indicators.",
+  "short_description": "This connector allows organizations to stream OpenCTI indicators to Infoblox Threat Defense (BloxOne). This will stream all active indicators to a custom list within Infoblox Threat Defense and remove any revoked indicators.",
+  "logo": "stream/infoblox-threat-defense/__metadata__/logo.png",
+  "use_cases": [
+    "Network Security"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.5.5",
+  "subscription_link": "https://www.infoblox.com/products/threat-defense/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/infoblox-threat-defense",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-infoblox-threat-defense",
+  "container_type": "STREAM"
+}

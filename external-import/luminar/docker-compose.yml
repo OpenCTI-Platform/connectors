@@ -1,9 +1,9 @@
-version: "3"
+version: '3'
 services:
   connector-luminar:
-    image: opencti/connector-luminar:rolling
+    image: opencti/connector-luminar:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
       - CONNECTOR_ID=ChangeMe(UUIDv4 token)
       - CONNECTOR_NAME=Luminar

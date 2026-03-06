@@ -1,22 +1,27 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike actor importer module."""
 
 from datetime import datetime
-from typing import Any, Dict, Generator, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional
 
+from crowdstrike_feeds_connector.related_actors.importer import (
+    RelatedActorImporter,
+)
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.utils import (
+    create_attack_pattern,
+    create_malware,
     datetime_to_timestamp,
     paginate,
     timestamp_to_datetime,
 )
-from pycti.connector.opencti_connector_helper import (  # type: ignore  # noqa: E501
-    OpenCTIConnectorHelper,
-)
-from stix2 import Bundle, Identity, MarkingDefinition  # type: ignore
+from stix2 import Bundle, Identity, MarkingDefinition
 
 from ..importer import BaseImporter
 from .builder import ActorBundleBuilder
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class ActorImporter(BaseImporter):
@@ -28,14 +33,15 @@ class ActorImporter(BaseImporter):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: Identity,
         default_latest_timestamp: int,
         tlp_marking: MarkingDefinition,
     ) -> None:
         """Initialize CrowdStrike actor importer."""
-        super().__init__(helper, author, tlp_marking)
-        self.actors_api_cs = ActorsAPI(helper)
+        super().__init__(config, helper, author, tlp_marking)
+        self.actors_api_cs = ActorsAPI(config, helper)
         self.default_latest_timestamp = default_latest_timestamp
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -45,6 +51,8 @@ class ActorImporter(BaseImporter):
         fetch_timestamp = state.get(
             self._LATEST_ACTOR_TIMESTAMP, self.default_latest_timestamp
         )
+
+        self.current_state = state.copy()
 
         new_state = state.copy()
 
@@ -103,7 +111,11 @@ class ActorImporter(BaseImporter):
         )
 
         actors = self.actors_api_cs.get_combined_actor_entities(
-            limit=limit, offset=offset, sort=sort, fql_filter=fql_filter, fields=fields
+            limit=limit,
+            offset=offset,
+            sort=sort,
+            fql_filter=fql_filter,
+            fields=fields,
         )
 
         return actors
@@ -112,33 +124,64 @@ class ActorImporter(BaseImporter):
         actor_count = len(actors)
         self._info("Processing {0} actors...", actor_count)
 
-        latest_modified_datetime = None
+        latest_modified_timestamp: int | None = None
 
         for actor in actors:
             self._process_actor(actor)
 
-            modified_date = actor["last_modified_date"]
+            modified_date = actor.get("last_modified_date")
             if modified_date is None:
                 self._error(
-                    "Missing created date for actor {0} ({1})",
-                    actor["name"],
-                    actor["id"],
+                    "Missing last_modified_date for actor {0} ({1})",
+                    actor.get("name"),
+                    actor.get("id"),
+                )
+                continue
+
+            # CrowdStrike returns dates as timestamps; normalize to int for comparisons.
+            try:
+                modified_ts = int(modified_date)
+            except (TypeError, ValueError):
+                self._error(
+                    "Invalid last_modified_date for actor {0} ({1}): {2}",
+                    actor.get("name"),
+                    actor.get("id"),
+                    modified_date,
                 )
                 continue
 
             if (
-                latest_modified_datetime is None
-                or modified_date > latest_modified_datetime
+                latest_modified_timestamp is None
+                or modified_ts > latest_modified_timestamp
             ):
-                latest_modified_datetime = modified_date
+                latest_modified_timestamp = modified_ts
+
+        RelatedActorImporter._resolved_actor_entity_cache.update(
+            {
+                a.get("id"): a.get("name")
+                for a in actors
+                if a.get("id") is not None and a.get("name") is not None
+            }
+        )
+
+        self.helper.connector_logger.debug(
+            "Actor batch processed",
+            {
+                "count": actor_count,
+                "latest_modified_timestamp": latest_modified_timestamp,
+            },
+        )
 
         self._info(
             "Processing actors completed (imported: {0}, latest: {1})",
             actor_count,
-            latest_modified_datetime,
+            latest_modified_timestamp,
         )
 
-        return timestamp_to_datetime(latest_modified_datetime)
+        if latest_modified_timestamp is None:
+            return None
+
+        return timestamp_to_datetime(latest_modified_timestamp)
 
     def _process_actor(self, actor) -> None:
         self._info("Processing actor {0} ({1})...", actor["name"], actor["id"])
@@ -153,7 +196,141 @@ class ActorImporter(BaseImporter):
         object_marking_refs = [self.tlp_marking]
         confidence_level = self._confidence_level()
 
+        attack_patterns = self._get_and_create_attack_patterns(actor)
+
+        malware = self._get_and_create_malware(actor)
+
+        # MVP3
         bundle_builder = ActorBundleBuilder(
-            actor, author, source_name, object_marking_refs, confidence_level
+            actor,
+            author,
+            source_name,
+            object_marking_refs,
+            confidence_level,
+            attack_patterns,
+            malware,
         )
         return bundle_builder.build()
+
+    def _get_and_create_malware(self, actor) -> List:
+        """Get malware from actor data and create Malware entities."""
+        try:
+            actor_id = actor["id"]
+            actor_name = actor["name"]
+
+            self._info(
+                "Processing malware for actor: {0} (ID: {1})",
+                actor_name,
+                actor_id,
+            )
+
+            all_family_names = set()
+
+            uses_threats = actor.get("uses_threats")
+            develops_threats = actor.get("develops_threats")
+
+            if uses_threats:
+                for threat in uses_threats:
+                    family_name = threat.get("family_name")
+                    if family_name:
+                        all_family_names.add(family_name)
+
+            if develops_threats:
+                for threat in develops_threats:
+                    family_name = threat.get("family_name")
+                    if family_name:
+                        all_family_names.add(family_name)
+
+            if not all_family_names:
+                self._info("No malware families found for actor: {0}", actor_name)
+                return []
+
+            malware_entities = [
+                create_malware(
+                    name=family_name,
+                    created_by=self.author,
+                    is_family=True,
+                    confidence=self._confidence_level(),
+                    object_markings=[self.tlp_marking],
+                )
+                for family_name in all_family_names
+            ]
+
+            self._info(
+                "Created {0} Malware entities for actor: {1}",
+                len(malware_entities),
+                actor_name,
+            )
+            return malware_entities
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR] Failed to retrieve and process malware for actor.",
+                {
+                    "error": err,
+                    "actor_id": actor.get("id"),
+                    "actor_name": actor.get("name"),
+                },
+            )
+            return []
+
+    def _get_and_create_attack_patterns(self, actor) -> List:
+        """Get MITRE ATT&CK TTPs and create AttackPattern entities."""
+        try:
+            actor_id = actor["id"]
+            actor_name = actor["name"]
+
+            self._info(
+                "Fetching MITRE ATT&CK TTPs for actor: {0} (ID: {1})",
+                actor_name,
+                actor_id,
+            )
+
+            ttps_response = self.actors_api_cs.query_mitre_attacks(actor_id)
+            if not ttps_response:
+                self._info("No MITRE ATT&CK response for actor: {0}", actor_name)
+                return []
+
+            ttp_ids = ttps_response.get("resources", [])
+
+            if not ttp_ids:
+                self._info("No TTPs found for actor: {0}", actor_name)
+                return []
+
+            self._info("Retrieved {0} TTPs for actor: {1}", len(ttp_ids), actor_name)
+
+            technique_ids = {
+                ttp_id.split("_")[2]
+                for ttp_id in ttp_ids
+                if "_" in ttp_id
+                and len(ttp_id.split("_")) >= 3
+                and ttp_id.split("_")[2].startswith("T")
+            }
+
+            attack_patterns = [
+                create_attack_pattern(
+                    name=technique_id,
+                    mitre_id=technique_id,
+                    created_by=self.author,
+                    object_markings=[self.tlp_marking],
+                )
+                for technique_id in technique_ids
+            ]
+
+            self._info(
+                "Created {0} AttackPattern entities for actor: {1}",
+                len(attack_patterns),
+                actor_name,
+            )
+            return attack_patterns
+
+        except Exception as err:
+            self.helper.connector_logger.error(
+                "[ERROR] Failed to retrieve and process TTPs for actor.",
+                {
+                    "error": err,
+                    "actor_id": actor.get("id"),
+                    "actor_name": actor.get("name"),
+                },
+            )
+            return []

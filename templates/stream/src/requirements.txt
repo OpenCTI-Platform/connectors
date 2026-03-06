@@ -1,2 +1,4 @@
-pycti==6.8.5
-pyyaml~=6.0.2
+pycti==7.260305.0
+pydantic~= 2.11.3
+requests~=2.32.3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

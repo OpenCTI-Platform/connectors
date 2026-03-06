@@ -27,14 +27,13 @@ class ConnectorClient:
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+                error_msg, {"url_path": api_url, "error": str(err)}
             )
             return None
 
     def get_entities(self) -> list[str]:
         """
-        :return: A list of dicts of the complete collection of subnet addresses
-        :return: A list of dicts of the complete collection of subnet addresses
+        :return: A list of CIDR subnet addresses
         """
         try:
             response = requests.get(self.config.api_base_url)

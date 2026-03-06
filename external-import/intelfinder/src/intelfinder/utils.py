@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pandas import DataFrame
 from pycti import Identity as pycti_identity
@@ -24,7 +24,9 @@ def validate_api_key(api_key):
 def format_datetime(timestamp):
     """formatting the date based on the provided timestamp and time_format."""
     # Parse the timestamp string into a datetime object
-    return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+    return datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").replace(
+        tzinfo=timezone.utc
+    )
 
 
 def create_markdown_table(name, data):

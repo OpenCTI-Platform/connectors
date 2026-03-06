@@ -10,7 +10,7 @@ from connector.src.custom.configs.gti_config_common import (
     GTIBaseConfig,
     validate_origins_list,
 )
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
 
 
@@ -32,6 +32,11 @@ class GTIThreatActorConfig(GTIBaseConfig):
         description="Comma-separated list of threat actor origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
+    )
+
+    enable_threat_actor_aliases: bool = Field(
+        default=False,
+        description="Whether to enable importing threat actor aliases from GTI",
     )
 
     @field_validator("threat_actor_origins", mode="after")

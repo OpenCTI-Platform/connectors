@@ -1,88 +1,242 @@
-# TheHive Connector for OpenCTI
+# OpenCTI TheHive Connector
 
-The **TheHive Connector** allows for integration of TheHive's alert and case management capabilities into OpenCTI. This connector imports TheHive's cases, alerts, tasks, and observables into OpenCTI. The connector uses the Python modules `thehive4py` and will work on version 4 and 5.  
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-## Configuration:
+The TheHive connector imports cases, alerts, and observables from TheHive incident response platform into OpenCTI.
 
-Setting up TheHive Connector is straightforward. The following table provides details on the necessary parameters:
+## Table of Contents
 
-| Parameter                       | Docker envvar                 | Mandatory | Description                                                     |
-|---------------------------------|-------------------------------|-----------|-----------------------------------------------------------------|
-| `opencti.url`                   | `OPENCTI_URL`                 | Yes       | The URL of the OpenCTI platform.                                |
-| `opencti.token`                 | `OPENCTI_TOKEN`               | Yes       | The token for accessing OpenCTI.                                |
-| `connector.id`                  | `CONNECTOR_ID`                | Yes       | A unique `UUIDv4` identifier for this connector instance.       |
-| `connector.name`                | `CONNECTOR_NAME`              | Yes       | Name of the connector. Should always be "TheHive".              |
-| `connector.scope`               | `CONNECTOR_SCOPE`             | Yes       | The scope of data the connector is importing.                   |
-| `connector.update_existing_data`| `CONNECTOR_UPDATE_EXISTING_DATA`| Yes     | Decide whether the connector should update already existing data.|
-| `connector.log_level`           | `CONNECTOR_LOG_LEVEL`         | Yes       | Logging level. Choices: `info`, `error`, etc.                   |
-| `thehive.url`                   | `THEHIVE_URL`                 | Yes       | URL of your TheHive instance.                                   |
-| `thehive.api_key`               | `THEHIVE_API_KEY`             | Yes       | Your API Key for accessing TheHive.                             |
-| `thehive.check_ssl`             | `THEHIVE_CHECK_SSL`           | Yes       | Whether to validate the SSL certificate of TheHive instance.   |
-| `thehive.organization_name`     | `THEHIVE_ORGANIZATION_NAME`   | Yes       | Name of your organization in TheHive.                           |
-| `thehive.import_from_date`      | `THEHIVE_IMPORT_FROM_DATE`    | No        | Date from which to start importing data.                        |
-| `thehive.import_only_tlp`       | `THEHIVE_IMPORT_ONLY_TLP`     | No        | Levels of the Traffic Light Protocol (TLP) to be imported. e.g., `0,1,2,3,4`      |
-| `thehive.import_alerts`         | `THEHIVE_IMPORT_ALERTS`       | No        | Whether to import alerts from TheHive.                          |
-| `thehive.severity_mapping`      | `THEHIVE_SEVERITY_MAPPING`    | No        | Mapping of severity levels between TheHive and OpenCTI. e.g., `1:low,2:medium,3:high,4:critical`         |
-| `thehive.case_status_mapping`   | `THEHIVE_CASE_STATUS_MAPPING` | No        | Status mapping for cases. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                       |
-| `thehive.task_status_mapping`   | `THEHIVE_TASK_STATUS_MAPPING` | No        | Status mapping for tasks. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                             |
-| `thehive.alert_status_mapping`  | `THEHIVE_ALERT_STATUS_MAPPING`| No        | Status mapping for alerts. e.g., `hive_status_1:opencti_status_id_2,hive_status_2:opencti_status_id_2`                                            |
-| `thehive.user_mapping`          | `THEHIVE_USER_MAPPING`        | No        | Mapping of TheHive assignees to OpenCTI users. e.g., `user@contoso.com:opencti_user_id,user2@contoso.com:opencti_user_id_2`                 |
-| `thehive.interval`              | `THEHIVE_INTERVAL`            | Yes       | Frequency of running the connector in minutes.                  |
+- [OpenCTI TheHive Connector](#opencti-thehive-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
-## Supported Indicator Field Names
-The following is a list of indicator Field Names supported by this integration and the prescribed value types. Indicators of this field name will be imported into OpenCTI as the STIX object defined. Please ensure that the field names are receiving standardized values to avoid potential import errors (e.g., and IP is an IP).
+## Introduction
 
-| TheHive Indicator Name        | STIX Object      |
-|------------------------|--------------------------------|
-| asset                  | Identity (system)                           |
-| autonomous-system      | Autonomous System (AS)        |
-| cve                    | Vulnerability             |
-| domain                 | Domain Name              |
-| file                   | File: Checks the length and determines the hash type (supported: MD5, SHA-1, SHA-256)                            |
-| file_md5               | File                |
-| file_sha1              | File              |
-| file_sha256            | File            |
-| filename               | File                      |
-| fqdn                   | Domain Name                 |
-| hostname               | Identity (system)                 |
-| hash                   | File: Checks the length and determines the hash type (supported: MD5, SHA-1, SHA-256)                           |
-| identity               | Identity                  |
-| ip                     | IPv4 Address or IPv6 Address, supports ipv4, ipv6, and cidr notation of both.                            |
-| ipv4                   | IPv4 Address                |
-| ipv6                   | IPv6 Address                |
-| mail                   | Email Message (body)             |
-| mail-subject           | Email Message (subject)            |
-| mail_subject           | Email Message (subject)          |
-| email_subject          | Email Message (subject)          |
-| email_address          | Email Message (email-addr)            |
-| other                  | Custom Observable                     |
-| organisation           | Identity (organization)                           |
-| organization           | Identity (organization)                  |
-| regexp                 | Custom Observable Text                     |
-| registry               | Windows Registry Key       |
-| registry_key               | Windows Registry Key       |
-| registry_value               | Windows Registry Type Value       |
-| risk_object_asset      | Identity (system)                           |
-| risk_object_identity   | Identity (identity)                           |
-| system                 | Identity (system)                  |
-| uri_path               | Url                     |
-| url                    | Url                      |
-| user-agent             | Custom Observable User Agent               |
-| user_agent             | Custom Observable User Agent               |
-| supplier               | Identity (organization)                           |
-| vendor                 | Identity (organization)                           |
+TheHive is a scalable security incident response platform designed for SOCs and CSIRTs. This connector synchronizes cases, alerts, tasks, and observables from TheHive into OpenCTI as incidents and their associated objects.
 
+## Installation
 
-## Errors you may encounter
+### Requirements
 
-You may encounter this kind of error:
+- OpenCTI Platform >= 6.x
+- TheHive 4.x or 5.x instance
+- TheHive API key with read access
 
-```shell
-AttributeError: 'str' object has no attribute 'get'
+## Configuration variables
+
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+
+### OpenCTI environment variables
+
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Base connector environment variables
+
+| Parameter       | config.yml | Docker environment variable | Default  | Mandatory | Description                                                                 |
+|-----------------|------------|-----------------------------| ---------|-----------|-----------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              |          | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name  | name       | `CONNECTOR_NAME`            | TheHive  | No        | Name of the connector.                                                      |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | thehive  | No        | The scope or type of data the connector is importing.                       |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+
+### Connector extra parameters environment variables
+
+| Parameter             | config.yml                   | Docker environment variable       | Default              | Mandatory | Description                                                                 |
+|-----------------------|------------------------------|-----------------------------------|----------------------|-----------|-----------------------------------------------------------------------------|
+| TheHive URL           | thehive.url                  | `THEHIVE_URL`                     |                      | Yes       | URL of the TheHive instance.                                                |
+| API Key               | thehive.api_key              | `THEHIVE_API_KEY`                 |                      | Yes       | TheHive API key.                                                            |
+| Check SSL             | thehive.check_ssl            | `THEHIVE_CHECK_SSL`               | true                 | No        | Verify SSL certificates.                                                    |
+| Organization Name     | thehive.organization_name    | `THEHIVE_ORGANIZATION_NAME`       |                      | Yes       | TheHive organization name.                                                  |
+| Import from Date      | thehive.import_from_date     | `THEHIVE_IMPORT_FROM_DATE`        |                      | No        | Start date for importing (ISO format).                                      |
+| Import Only TLP       | thehive.import_only_tlp      | `THEHIVE_IMPORT_ONLY_TLP`         | 0,1,2,3,4            | No        | TLP levels to import (comma-separated).                                     |
+| Import Alerts         | thehive.import_alerts        | `THEHIVE_IMPORT_ALERTS`           | true                 | No        | Import alerts in addition to cases.                                         |
+| Import Attachments    | thehive.import_attachments   | `THEHIVE_IMPORT_ATTACHMENTS`      | false                | No        | Enable or disable the import of case attachments.                           |
+| Severity Mapping      | thehive.severity_mapping     | `THEHIVE_SEVERITY_MAPPING`        | 1:low,2:medium,3:high,4:critical | No | Map TheHive severity to OpenCTI.                                       |
+| Case Status Mapping   | thehive.case_status_mapping  | `THEHIVE_CASE_STATUS_MAPPING`     |                      | No        | Map TheHive case status to OpenCTI status ID.                               |
+| Task Status Mapping   | thehive.task_status_mapping  | `THEHIVE_TASK_STATUS_MAPPING`     |                      | No        | Map TheHive task status to OpenCTI status ID.                               |
+| Alert Status Mapping  | thehive.alert_status_mapping | `THEHIVE_ALERT_STATUS_MAPPING`    |                      | No        | Map TheHive alert status to OpenCTI status ID.                              |
+| User Mapping          | thehive.user_mapping         | `THEHIVE_USER_MAPPING`            |                      | No        | Map TheHive assignees to OpenCTI user IDs.                                  |
+| Interval              | thehive.interval             | `THEHIVE_INTERVAL`                | 5                    | No        | Polling interval in minutes.                                                |
+| Case Tag Whitelist    | thehive.case_tag_whitelist   | `THEHIVE_CASE_TAG_WHITELIST`      |                      | No        | Only import cases with these tags.                                          |
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-thehive:latest .
 ```
 
-The connector tries to make an API call but the type given is not the one expected (`case` or `alert`) so the given exception will be raised and it will end the loop:
+Configure the connector in `docker-compose.yml`:
 
-![Exception on type](./docs/media/exception.png)
+```yaml
+  connector-thehive:
+    image: opencti/connector-thehive:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=TheHive
+      - CONNECTOR_SCOPE=thehive
+      - CONNECTOR_LOG_LEVEL=error
+      - THEHIVE_URL=https://thehive.example.com
+      - THEHIVE_API_KEY=ChangeMe
+      - THEHIVE_CHECK_SSL=true
+      - THEHIVE_ORGANIZATION_NAME=MyOrg
+      - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00
+      - THEHIVE_IMPORT_ONLY_TLP=0,1,2,3,4
+      - THEHIVE_IMPORT_ALERTS=true
+      - "THEHIVE_SEVERITY_MAPPING=1:low,2:medium,3:high,4:critical"
+      - THEHIVE_INTERVAL=5
+    restart: always
+```
 
-To handle it, you can check the TheHive URL in the configuration file and re-run the connector.
+Start the connector:
+
+```bash
+docker compose up -d
+```
+
+### Manual Deployment
+
+1. Create `config.yml` based on `config.yml.sample`.
+
+2. Install dependencies:
+
+```bash
+pip3 install -r requirements.txt
+```
+
+3. Start the connector:
+
+```bash
+python3 main.py
+```
+
+## Usage
+
+The connector runs automatically at the interval defined by `THEHIVE_INTERVAL`. To force an immediate run:
+
+**Data Management → Ingestion → Connectors**
+
+Find the connector and click the refresh button to reset the state and trigger a new sync.
+
+## Behavior
+
+The connector fetches cases and alerts from TheHive and converts them to STIX 2.1 incidents and observables.
+
+## Attachments import
+
+By default, attachments from TheHive cases are **not imported**.
+This behavior is intentional to prevent issues with large files and message size limits in the messaging system.
+
+### How to enable attachments import
+
+Attachments import can be enabled using one of the following options:
+
+**Environment variable**
+```bash
+THEHIVE_IMPORT_ATTACHMENTS=true
+```
+
+### RabbitMQ message size limitation
+
+OpenCTI relies on RabbitMQ for message transport.  
+By default, RabbitMQ has a maximum message size limit of **512 MB**.
+
+When importing large attachments, this limit may be exceeded and result in errors such as:
+
+PRECONDITION_FAILED - message size is larger than configured max size
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph TheHive
+        direction TB
+        Case[Case]
+        Alert[Alert]
+        Task[Task]
+        Observable[Observable]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Incident[Incident]
+        TaskEntity[Task]
+        SCO[Observable]
+    end
+
+    Case --> Incident
+    Alert --> Incident
+    Task --> TaskEntity
+    Observable --> SCO
+```
+
+### Entity Mapping
+
+| TheHive Data         | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Case                 | Incident            | Security incident                                |
+| Alert                | Incident            | Security alert                                   |
+| Task                 | Task                | Case tasks                                       |
+| Observable (IP)      | IPv4-Addr/IPv6-Addr | IP address observables                           |
+| Observable (Domain)  | Domain-Name         | Domain observables                               |
+| Observable (Hash)    | File                | File hash observables                            |
+| Observable (URL)     | URL                 | URL observables                                  |
+| Observable (Email)   | Email-Addr          | Email observables                                |
+
+### Severity Mapping
+
+| TheHive Severity | OpenCTI Severity |
+|------------------|------------------|
+| 1                | low              |
+| 2                | medium           |
+| 3                | high             |
+| 4                | critical         |
+
+### Status Mapping
+
+Use the mapping parameters to align TheHive workflow states with OpenCTI status IDs:
+
+```env
+THEHIVE_CASE_STATUS_MAPPING=Open:status-id-1,Closed:status-id-2
+THEHIVE_TASK_STATUS_MAPPING=Waiting:status-id-1,InProgress:status-id-2,Completed:status-id-3
+THEHIVE_ALERT_STATUS_MAPPING=New:status-id-1,Imported:status-id-2
+```
+
+## Debugging
+
+Enable verbose logging:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+## Additional information
+
+- **TheHive Versions**: Supports TheHive 4.x and 5.x
+- **Organization**: Specify the organization to filter cases
+- **TLP Filtering**: Use `IMPORT_ONLY_TLP` to control what data is imported
+- **User Mapping**: Map TheHive assignees to OpenCTI users for proper attribution
+- **Reference**: [TheHive Project](https://thehive-project.org/)

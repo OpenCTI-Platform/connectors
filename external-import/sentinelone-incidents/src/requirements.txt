@@ -1,4 +1,4 @@
-pycti
+pycti==7.260305.0
 validators
 requests
 pyyaml 

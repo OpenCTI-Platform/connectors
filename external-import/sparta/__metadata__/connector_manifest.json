@@ -1,0 +1,21 @@
+{
+  "title": "Aerospace SPARTA",
+  "slug": "sparta",
+  "description": "The Aerospace Corporation created the Space Attack Research and Tactic Analysis (SPARTA) matrix to address the information and communication barriers that hinder the identification and sharing of space-system Tactic, Techniques, and Procedures (TTP). SPARTA is intended to provide unclassified information to space professionals about how spacecraft may be compromised via cyber and traditional counterspace means. The matrix defines and categorizes commonly identified activities that contribute to spacecraft compromises. Where applicable the SPARTA TTPs are cross referenced to other Aerospace related work like TOR 2021-01333 REV A and TOR-2023-02161 Rev A which is available in the Related Work menu of the SPARTA website.",
+  "short_description": "The Aerospace Corporation created the Space Attack Research and Tactic Analysis (SPARTA) matrix to address the information and communication barriers that hinder the identification and sharing of space-system Tactic, Techniques, and Procedures (TTP).",
+  "logo": "https://sparta.aerospace.org/theme/images/sparta_log_white.PNG",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-11-07",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">= 6.7.0",
+  "subscription_link": "https://sparta.aerospace.org/contribute",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/sparta",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sparta",
+  "container_type": "EXTERNAL_IMPORT"
+}

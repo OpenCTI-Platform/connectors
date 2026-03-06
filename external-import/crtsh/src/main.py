@@ -11,7 +11,7 @@ from validators import domain as domain_validator
 MARKING_REFS = ["TLP:WHITE", "TLP:GREEN", "TLP:AMBER", "TLP:RED"]
 
 
-class crtshConnector(ExternalImportConnector):
+class CrtshConnector(ExternalImportConnector):
     def __init__(self):
         """Initialization of the connector"""
         super().__init__()
@@ -52,7 +52,7 @@ class crtshConnector(ExternalImportConnector):
             self.helper.log_warning(msg)
             self.is_wildcard = False
 
-    def _collect_intelligence(self, since: datetime = None) -> []:
+    def _collect_intelligence(self, since: datetime = None) -> list:
         """Collects intelligence from channels and transforms it into STIX2 objects.
 
         Returns:
@@ -73,9 +73,9 @@ class crtshConnector(ExternalImportConnector):
 
 if __name__ == "__main__":
     try:
-        connector = crtshConnector()
+        connector = CrtshConnector()
         connector.run()
     except Exception as e:
-        print(e)
+        ExternalImportConnector.log_error(str(e))
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

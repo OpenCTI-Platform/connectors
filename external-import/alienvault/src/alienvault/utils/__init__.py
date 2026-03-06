@@ -113,28 +113,11 @@ def get_tlp_string_marking_definition(tlp: str) -> stix2.MarkingDefinition:
 
 
 def iso_datetime_str_to_datetime(string):
-    """Concert ISO datetime string to datetime object."""
+    """Convert ISO datetime string to datetime object."""
     try:
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S.%f")
     except ValueError:
         return datetime.strptime(string, "%Y-%m-%dT%H:%M:%S")
-
-
-def convert_comma_separated_str_to_list(input_str: str, trim: bool = True) -> List[str]:
-    """Convert comma separated string to list of strings."""
-    comma_separated_str = input_str.strip() if trim else input_str
-    if not comma_separated_str:
-        return []
-
-    result = []
-    for part_str in comma_separated_str.split(","):
-        value = part_str
-        if trim:
-            value = value.strip()
-        if not value:
-            continue
-        result.append(value)
-    return result
 
 
 def create_organization(

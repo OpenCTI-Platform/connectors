@@ -1,14 +1,19 @@
-FROM python:3.11-alpine
+FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-COPY src /opt/opencti-c2-tracker
-WORKDIR /opt/opencti-c2-tracker
+# Copy the connector
+COPY src /opt/opencti-connector-montysecurity-c2-tracker
 
-RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
-RUN pip install requests==2.32.3
-RUN pip install pycti==6.3.13
+# Install Python modules
+# hadolint ignore=DL3003
+RUN apk update && apk upgrade && \
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
 
-# Expose and run entrypoint
+RUN cd /opt/opencti-connector-montysecurity-c2-tracker && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apk del git build-base
+
+# Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

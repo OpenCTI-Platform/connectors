@@ -1,0 +1,21 @@
+{
+  "title": "ONYPHE",
+  "slug": "onyphe",
+  "description": "The ONYPHE enrichment connector is designed to leverage the Ctiscan category of data to enrich observables, providing detailed Internet scan data\n and mapping for open ports, protocols, banners and relationships — including ASNs, organizations, certificates,\n DNS domains, technologies, ports, countries and analytical pivots such as Ja4s.\n In addition the Indicators can be enriched using the 'onyphe' pattern to run threat-hunting queries within the OpenCTI platform and import matching observables.",
+  "short_description": "ONYPHE connector enriches observables and indicators with Internet intelligence and mapping data.",
+  "logo": "internal-enrichment/onyphe/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Internet scan data & mapping"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 60,
+  "support_version": ">= 6.6.3",
+  "subscription_link": "https://www.onyphe.io/contact",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/onyphe",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-onyphe",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

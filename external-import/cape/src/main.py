@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yaml
 from cape.cape import cuckoo, cuckooReport
@@ -9,7 +9,7 @@ from cape.telemetry import openCTIInterface
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
-class capeConnector:
+class CapeConnector:
     """Connector object"""
 
     def __init__(self):
@@ -111,8 +111,8 @@ class capeConnector:
                     current_task = self.start_id
                     self.helper.set_state({"task": self.start_id})
             else:
-                last_run = datetime.utcfromtimestamp(
-                    self.helper.get_state()["last_run"]
+                last_run = datetime.fromtimestamp(
+                    self.helper.get_state()["last_run"], tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
                 self.helper.log_info("Connector last run: " + last_run)
 
@@ -152,7 +152,7 @@ class capeConnector:
                     if task["id"] > current_task:
                         taskSummary = cuckooReport(
                             self.cape_api.getTaskReport(task["id"])
-                        )  # Pull Cape Report and Searilize
+                        )  # Pull Cape Report and Serialize
                         if not taskSummary:
                             continue  # If no report continue
                         if not taskSummary.info:
@@ -178,7 +178,7 @@ class capeConnector:
                         self.helper.log_info(f"Synced task {task['id']}")
                 except Exception as e:
                     self.helper.log_error(
-                        f"An error Occured fetching task {task['id']}; {str(e)}"
+                        f"An error occurred fetching task {task['id']}; {str(e)}"
                     )
 
             self.helper.log_info("Finished grabbing Cape Reports")
@@ -197,7 +197,7 @@ class capeConnector:
 
 if __name__ == "__main__":
     try:
-        CONNECTOR = capeConnector()
-        CONNECTOR.run()
+        connector = CapeConnector()
+        connector.run()
     except Exception as e:
         raise e

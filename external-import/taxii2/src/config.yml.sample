@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'TAXII2_Import'
   scope: 'ipv4-addr,ipv6-addr,vulnerability,domain,url,file-sha256,file-md5,file-sha1'
   log_level: 'info'
@@ -20,7 +20,7 @@ taxii2:
   use_apikey: false
   apikey_key: ChangeMe
   apikey_value: ChangeMe
-  v2.1: true
+  v21: true
   collections: '*.*'
   initial_history: 24
   verify_ssl: true

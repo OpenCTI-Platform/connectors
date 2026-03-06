@@ -12,6 +12,5 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
     apk del git build-base
 
 # Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+WORKDIR /opt/opencti-connector-shodan
+ENTRYPOINT ["python3", "main.py"]

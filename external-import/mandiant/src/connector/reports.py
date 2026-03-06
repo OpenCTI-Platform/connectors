@@ -285,7 +285,7 @@ class MandiantReport:
             "isightComment" in self.details
             and self.details["isightComment"] is not None
         ):
-            content = utils.cleanhtml(self.details["isightComment"])
+            content = utils.clean_html(self.details["isightComment"])
             text += f"\n**Analyst Comment** \n{content}"
 
         if text == "":

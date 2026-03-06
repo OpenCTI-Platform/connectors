@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime, timedelta
 from random import shuffle
 
@@ -50,10 +51,10 @@ class GreyNoiseFeedConnector:
             "all",
         ]:
             self.helper.log_error(
-                "Value for feed_type is not valid.  Valid options are: benign, malicious, suspicious, "
+                "Value for feed_type is not valid. Valid options are: benign, malicious, suspicious, "
                 "benign+malicious, benign+suspicious+malicious, malicious+suspicious, all"
             )
-            exit(1)
+            sys.exit(1)
         elif feed_type.lower() == "benign":
             query = "last_seen:1d classification:benign"
         elif feed_type.lower() == "malicious":
@@ -286,7 +287,7 @@ class GreyNoiseFeedConnector:
                     description=malware["description"],
                     is_family=False,
                     malware_types=(
-                        malware["type"] if malware["type"] == "worm" else None
+                        [malware["type"]] if malware["type"] == "worm" else None
                     ),
                     created=first_seen,
                     created_by_ref=self.identity["standard_id"],
@@ -374,7 +375,7 @@ class GreyNoiseFeedConnector:
                                 object_marking_refs=[stix2.TLP_WHITE],
                             )
                             bundle_relationships.append(stix_relationship_observable_as)
-                        except:
+                        except (ValueError, TypeError):
                             pass
                     if "organization" in metadata:
                         stix_organization = stix2.Identity(
@@ -615,10 +616,10 @@ class GreyNoiseFeedConnector:
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.log_info("Connector stop")
-            exit(0)
+            sys.exit(0)
         except Exception as e:
             self.helper.log_error(str(e))
-            exit(0)
+            sys.exit(1)
 
     def run(self):
         self.helper.schedule_process(

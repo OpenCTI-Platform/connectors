@@ -35,7 +35,7 @@ class ConnectorClient:
 
         except Exception as err:
             error_msg = f"[API] Error while retrieving token: {err}"
-            self.helper.connector_logger.error(error_msg, {"error": {str(err)}})
+            self.helper.connector_logger.error(error_msg, {"error": str(err)})
             raise Exception(error_msg)
 
     def get_reports(self, since: str, until: str) -> any:

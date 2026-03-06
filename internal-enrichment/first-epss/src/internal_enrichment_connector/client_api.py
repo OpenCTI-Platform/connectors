@@ -1,26 +1,28 @@
 import requests
+from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 
 
 class ConnectorClient:
-    def __init__(self, helper, config):
+    def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl):
         """
         Initialize the client with necessary configurations
         """
         self.helper = helper
-        self.config = config
+        self.base_url = base_url
 
         # Define headers in session and update when needed
         headers = {}
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-    def _request_data(self, api_url: str, params=None):
+    def _request_data(self, api_url: HttpUrl, params=None):
         """
         Internal method to handle API requests
         :return: Response in JSON format
         """
         try:
-            response = self.session.get(api_url, params=params)
+            response = self.session.get(str(api_url), params=params)
 
             self.helper.connector_logger.info(
                 "[API] HTTP Get Request to endpoint", {"url_path": api_url}
@@ -46,7 +48,7 @@ class ConnectorClient:
         """
 
         try:
-            response = self._request_data(self.config.api_base_url, params=params)
+            response = self._request_data(self.base_url, params=params)
 
             return response.json()
 

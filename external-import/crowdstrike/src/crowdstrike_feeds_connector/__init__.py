@@ -1,6 +1,9 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector module."""
 
-from .core import CrowdStrike
+from crowdstrike_feeds_connector.connector import CrowdStrike
+from crowdstrike_feeds_connector.settings import ConnectorSettings
 
-__all__ = ["CrowdStrike"]
+__all__ = [
+    "ConnectorSettings",
+    "CrowdStrike",
+]

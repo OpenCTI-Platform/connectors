@@ -7,7 +7,7 @@ COPY src /opt/opencti-connector-accenture-acti
 # Install Python modules
 # hadolint ignore=DL3003
 RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev libgcc
 
 RUN cd /opt/opencti-connector-accenture-acti && \
     pip3 install --no-cache-dir -r requirements.txt && \

@@ -1,17 +1,20 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike connector main module."""
-import time
 
-from crowdstrike_feeds_connector import CrowdStrike
+import traceback
+
+from crowdstrike_feeds_connector import ConnectorSettings, CrowdStrike
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
     Entry point of the script
     """
     try:
-        connector = CrowdStrike()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = CrowdStrike(config=settings, helper=helper)
         connector.run()
-    except Exception as err:
-        print(err)
-        time.sleep(10)
-        exit(0)
+    except Exception:
+        traceback.print_exc()
+        exit(1)

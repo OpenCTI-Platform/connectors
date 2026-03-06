@@ -1,29 +1,48 @@
 import json
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
 
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
+    from pydantic import SecretStr
+
 
 class ConnectorClient:
-    def __init__(self, helper, config):
+    def __init__(
+        self,
+        helper: "OpenCTIConnectorHelper",
+        client_id: str,
+        client_secret: "SecretStr",
+        tenant_id: str,
+        workspace_id: str,
+        filter_labels: list[str],
+    ):
         """
         Initialize the client with necessary configurations
         """
         self.helper = helper
-        self.config = config
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.tenant_id = tenant_id
+        self.workspace_id = workspace_id
+        self.filter_labels = filter_labels
 
         self.log_analytics_url = "https://api.loganalytics.azure.com/v1"
         self.session = requests.Session()
 
     def set_oauth_token(self):
         try:
-            url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
+            url = (
+                f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token"
+            )
             oauth_data = {
-                "client_id": self.config.client_id,
-                "client_secret": self.config.client_secret,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret.get_secret_value(),
                 "grant_type": "client_credentials",
                 "scope": "https://api.loganalytics.io/.default",
             }
@@ -64,15 +83,13 @@ class ConnectorClient:
         :return: A list of all incidents as dictionaries containing mixed data types.
         """
         all_incidents = []
-        next_page_url = (
-            f"{self.log_analytics_url}/workspaces/{self.config.workspace_id}/query"
-        )
+        next_page_url = f"{self.log_analytics_url}/workspaces/{self.workspace_id}/query"
         body = {
             "query": "SecurityIncident | sort by LastModifiedTime asc"
             f"| where LastModifiedTime > todatetime('{date_str}')"
         }
-        if self.config.filter_labels:
-            labels = ", ".join(f'"{label}"' for label in self.config.filter_labels)
+        if labels := self.filter_labels:
+            labels = ", ".join(f'"{label}"' for label in labels)
             body["query"] += (
                 "| mv-apply labelsFiltered=Labels on ("
                 f"where labelsFiltered.labelName has_any ({labels})"
@@ -129,7 +146,7 @@ class ConnectorClient:
                 break
         return all_incidents
 
-    def get_incidents(self, last_incident_timestamp: int) -> list[dict]:
+    def get_incidents(self, last_incident_timestamp: int) -> list[dict] | None:
         """
         Retrieves incidents and manages the API request lifecycle.
 
@@ -165,18 +182,13 @@ class ConnectorClient:
         :return: A list of all alerts as dictionaries containing mixed data types.
         """
         all_alerts = []
-        next_page_url = (
-            self.log_analytics_url
-            + "/workspaces/"
-            + self.config.workspace_id
-            + "/query"
-        )
+        next_page_url = f"{self.log_analytics_url}/workspaces/{self.workspace_id}/query"
         body = {
-            "query": "SecurityAlert | summarize arg_max(TimeGenerated, *) by SystemAlertId | where TimeGenerated > todatetime('"
-            + date_str
-            + "') and SystemAlertId in("
-            + alert_ids.replace("[", "").replace("]", "")
-            + ")"
+            "query": (
+                "SecurityAlert | summarize arg_max(TimeGenerated, *) by SystemAlertId"
+                f" | where TimeGenerated > todatetime('{date_str}')"
+                f" and SystemAlertId in({alert_ids.replace('[', '').replace(']', '')})"
+            )
         }
         while next_page_url:
             try:
@@ -256,3 +268,4 @@ class ConnectorClient:
                 "An unknown error occurred during the recovery of all alerts",
                 {"error": str(err)},
             )
+            return []

@@ -1,42 +1,202 @@
 # OpenCTI GreyNoise Vulnerability Connector
 
-GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-The purpose of this connector is to answer to this question : "Is this vulnerability being exploited in the wild?"
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [GreyNoise Configuration](#greynoise-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
+
+## Introduction
+
+GreyNoise is a system that collects, analyzes, and labels omnidirectional Internet scan and attack activity. The GreyNoise Vulnerability connector helps answer the question: **"Is this vulnerability being exploited in the wild?"**
+
+This internal enrichment connector queries the GreyNoise API for CVE (Vulnerability) entities and enriches them with exploitation activity data including:
+- Exploitation activity seen status
+- Benign and threat IP counts over time
+- CVSS scores and attack vectors
+- EPSS scores
+- CISA KEV status
+- Related software and vendors
+- Threat actor exploitation information
+
+---
 
 ## Installation
 
-The GreyNoise Vulnerability connector is a standalone Python process that must have access to the OpenCTI platform and the RabbitMQ. RabbitMQ's credentials and connection parameters are provided by the API directly, as configured in the platform settings.
+### Requirements
 
-Enabling this connector could be done by launching the Python process directly after providing the correct configuration in the `config.yml` file or within a Docker with the image `opencti/connector-greynoise-vuln:latest`. We provide an example of [`docker-compose.yml`](docker-compose.yml) file that could be used independently or integrated to the global `docker-compose.yml` file of OpenCTI.
+- OpenCTI Platform >= 6.0.0
+- GreyNoise API key with Vulnerability Prioritization License
+- Network access to GreyNoise API
 
-If you are using it independently, remember that the connector will try to connect to the RabbitMQ on the port configured in the OpenCTI platform.
+---
 
 ## Configuration
 
+### OpenCTI Configuration
 
-| Parameter                              | Docker envvar                          | Mandatory  | Description                                                                                                            |
-|----------------------------------------|----------------------------------------|------------|------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`                          | `OPENCTI_URL`                          | Yes        | The URL of the OpenCTI platform.                                                                                       |
-| `opencti_token`                        | `OPENCTI_TOKEN`                        | Yes        | The default admin token configured in the OpenCTI platform parameters file.                                            |
-| `connector_id`                         | `CONNECTOR_ID`                         | Yes        | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                     |
-| `connector_name`                       | `CONNECTOR_NAME`                       | Yes        | The name of the GreyNoise connector instance, to identify it if you have multiple GreyNoise connectors.                |
-| `connector_scope`                      | `CONNECTOR_SCOPE`                      | Yes        | Must be `vulnerability`.                                                                                               |
-| `connector_auto`	                      | `CONNECTOR_AUTO`                       | Yes        | Must be `true` or `false` to enable or disable auto-enrichment of observables                                          |
-| `connector_log_level`                  | `CONNECTOR_LOG_LEVEL`                  | Yes        | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                          |
-| `greynoise_key`                        | `GREYNOISE_KEY`                        | Yes        | The GreyNoise API key .                                                                                                |
-| `greynoise_max_tlp`                    | `GREYNOISE_MAX_TLP`                    | Yes        | Do not send any data to GreyNoise if the TLP of the observable is greater than GREYNOISE_MAX_TLP                       |
-| `greynoise_name`	                      | `GREYNOISE_NAME`                       | Yes        | The GreyNoise organization name                                                                                        |
-| `greynoise_description`                | `GREYNOISE_DESCRIPTION`                | Yes        | The GreyNoise organization description                                                                                 |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `vulnerability` |
+| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment of vulnerabilities |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+
+### GreyNoise Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `greynoise_key` | `GREYNOISE_KEY` | Yes | The GreyNoise API key |
+| `greynoise_max_tlp` | `GREYNOISE_MAX_TLP` | Yes | Maximum TLP level for data processing |
+| `greynoise_name` | `GREYNOISE_NAME` | No | The GreyNoise organization name |
+| `greynoise_description` | `GREYNOISE_DESCRIPTION` | No | The GreyNoise organization description |
+
+---
+
+## Deployment
+
+### Docker Deployment
+
+Build a Docker Image using the provided `Dockerfile`.
+
+Example `docker-compose.yml`:
+
+```yaml
+version: '3'
+services:
+  connector-greynoise-vuln:
+    image: opencti/connector-greynoise-vuln:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=GreyNoise Vulnerability
+      - CONNECTOR_SCOPE=vulnerability
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_LOG_LEVEL=error
+      - GREYNOISE_KEY=ChangeMe
+      - GREYNOISE_MAX_TLP=TLP:AMBER
+      - "GREYNOISE_NAME=GreyNoise Internet Scanner"
+      - "GREYNOISE_DESCRIPTION=GreyNoise collects and analyzes opportunistic scan and attack activity."
+    restart: always
+```
+
+### Manual Deployment
+
+1. Clone the repository
+2. Copy `config.yml.sample` to `config.yml` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run: `python main.py`
+
+---
+
+## Usage
+
+The connector enriches Vulnerability entities (CVEs) by:
+1. Querying the GreyNoise CVE API for exploitation data
+2. Creating STIX objects with enrichment data
+3. Building relationships between the vulnerability and related entities
+
+Trigger enrichment:
+- Manually via the OpenCTI UI on Vulnerability entities
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
+
+---
 
 ## Behavior
 
-- Create a GreyNoise `Organization` if it doesn't exist with `GREYNOISE_NAME`  and `GREYNOISE_DESCRIPTION`
-- Call the GreyNoise API for the CVE ID
+### Data Flow
 
+```mermaid
+flowchart LR
+    A[Vulnerability/CVE] --> B[GreyNoise Vuln Connector]
+    B --> C{GreyNoise CVE API}
+    C --> D[CVE Context]
+    D --> E[STIX Bundle Generator]
+    E --> F[Enriched Vulnerability]
+    E --> G[Software]
+    E --> H[Organization/Vendor]
+    E --> I[Note - Exploitation Activity]
+    E --> J[External Reference]
+```
 
-## Subscription Information
+### Enrichment Mapping
 
-This connector requires an API key from GreyNoise, which can be access [here](https://viz.greynoise.io/account/api-key).  This connector will provide enrichment data based on your API key type automatically.  Those users with a Vulnerability Prioritization License will see the full data response available.  Please contact [sales@greynoise.io](mailto:sales@greynoise.io) for more information.
+| GreyNoise Field | OpenCTI Entity/Attribute | Description |
+|-----------------|--------------------------|-------------|
+| `exploitation_activity.activity_seen` | Label (gn-activity-seen) | Exploitation activity detected |
+| `exploitation_stats.number_of_available_exploits` | Label (gn-exploits-available) | Exploits are available |
+| `exploitation_stats.number_of_threat_actors_exploiting_vulnerability` | Label (gn-threat-actors-exploiting) | Active threat actor exploitation |
+| `details.cve_cvss_score` | Vulnerability CVSS score | Base CVSS score |
+| `exploitation_details.attack_vector` | Vulnerability attack vector | Attack vector type |
+| `exploitation_details.epss_score` | Vulnerability EPSS score | EPSS probability score |
+| `timeline.cisa_kev_date_added` | CISA KEV status | Added to CISA KEV catalog |
+| `details.product` | Software | Affected software |
+| `details.vendor` | Identity (Organization) | Software vendor |
+| Exploitation activity stats | Note | Detailed activity table |
 
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Identity (Organization) | GreyNoise identity and software vendors |
+| Vulnerability | Enriched CVE with CVSS, EPSS, and KEV data |
+| Software | Affected software products |
+| Note | Exploitation activity statistics table |
+| External Reference | Link to GreyNoise CVE details page |
+| Relationship | Software has Vulnerability, Software related-to Vendor |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see detailed connector operations including:
+- API key validation status
+- GreyNoise CVE API responses
+- STIX bundle generation details
+
+Common issues:
+- **CVE not found**: The CVE may not be tracked by GreyNoise
+- **Invalid API Key**: Ensure you have a valid API key with Vulnerability Prioritization License
+- **TLP Restrictions**: Check that entity TLP does not exceed `GREYNOISE_MAX_TLP`
+
+---
+
+## Additional Information
+
+- [GreyNoise Documentation](https://docs.greynoise.io/)
+- [GreyNoise CVE API Reference](https://docs.greynoise.io/reference/get_v1-cve-cve-id)
+- [Get GreyNoise API Key](https://viz.greynoise.io/account/api-key)
+
+### Subscription Information
+
+This connector requires an API key from GreyNoise with Vulnerability Prioritization License for full data access. Users with a Vulnerability Prioritization License will see the complete data response. Contact [sales@greynoise.io](mailto:sales@greynoise.io) for more information.

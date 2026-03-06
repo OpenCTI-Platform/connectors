@@ -2,7 +2,7 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from connector.models.configs import ConfigBaseSettings
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import (
     BeforeValidator,
     Field,

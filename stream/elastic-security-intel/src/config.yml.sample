@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'STREAM'
   id: 'ChangeMe' # Valid UUIDv4
   live_stream_id: 'ChangeMe' # ID of the live stream created in OpenCTI
   name: 'Elastic Security Intel'

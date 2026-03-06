@@ -47,6 +47,7 @@ from stix2 import (
     WindowsRegistryKey,
 )
 from stix2 import parse as stix_parser
+from stix2validator import validate_parsed_json as relationship_validator
 
 from .config_loader import ConfigConnector
 
@@ -100,8 +101,7 @@ class ConnectorLuminar:
         404: "Not Found. The server can not find the requested resource.",
         408: "Request Timeout. The server would like to shut down this unused connection.",
         429: "Too Many Requests. The user has sent too many requests in a given amount of time.",
-        500: "Internal Server Error. The server has encountered a situation it doesn't "
-        " know how to handle.",
+        500: "Internal Server Error. The server has encountered a situation it doesn't know how to handle.",
         502: "Bad Gateway. The server was acting as a gateway or proxy and received an invalid "
         "response from the upstream server.",
         503: "Service Unavailable. The server is not ready to handle the request.",
@@ -172,7 +172,7 @@ class ConnectorLuminar:
             return access_token, "Luminar API Connected successfully"
         return False, "Access token not found in response"
 
-    def get_taxi_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
+    def get_taxii_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
         """
         Fetches TAXII collections from the Luminar API and returns a mapping of
         collection aliases to their IDs.
@@ -231,6 +231,8 @@ class ConnectorLuminar:
             obj["id"] = OpenCTITool.generate_id(name)
         elif obj_type == "attack-pattern":
             obj["id"] = OpenCTIAttackPattern.generate_id(name, "attack-pattern")
+        elif obj_type == "software":
+            obj.pop("id", None)
         return obj
 
     def get_collection_objects(
@@ -301,6 +303,63 @@ class ConnectorLuminar:
                     f"Exceeded max retries ({max_retries}) for collection {collection}."
                 )
                 return collection_objects
+
+    def get_valid_relationship(self, relationship_obj):
+        """
+        Validate a STIX relationship object using stix2-validator.
+        If the validator warns that the source/target types are reversed,
+        swap them and revalidate. If still invalid, downgrade the relationship
+        type to 'related-to'.
+        """
+        try:
+            # Initial validation
+            validation_results = relationship_validator(relationship_obj)
+            is_valid = validation_results._is_valid
+            warnings = validation_results.warnings
+
+            # Handle reversed relationship direction warnings
+            direction_warnings = [
+                "is not a suggested relationship target object",
+                "is not a suggested relationship source object",
+            ]
+
+            # Handle reversed relationship warning
+            if any(any(msg in str(w) for msg in direction_warnings) for w in warnings):
+                self.helper.connector_logger.debug(
+                    "Swapping source_ref and target_ref for relationship validation."
+                )
+                relationship_obj["source_ref"], relationship_obj["target_ref"] = (
+                    relationship_obj["target_ref"],
+                    relationship_obj["source_ref"],
+                )
+                validation_results = relationship_validator(relationship_obj)
+                is_valid = validation_results._is_valid
+                warnings = validation_results.warnings
+
+            # If still warnings exist, normalize to generic 'related-to'
+            if warnings:
+                direction_warnings.append("is not a suggested relationship type")
+                if any(
+                    any(msg in str(w) for msg in direction_warnings) for w in warnings
+                ):
+                    # if any("is not a suggested relationship type" in str(w) for w in warnings):
+                    self.helper.connector_logger.warning(
+                        f"Relationship warnings detected; normalizing to 'related-to': {warnings}"
+                    )
+                    relationship_obj["relationship_type"] = "related-to"
+
+            # Return valid (or normalized) object
+            if is_valid or warnings:
+                return relationship_obj
+
+            self.helper.connector_logger.warning(
+                "Relationship failed validation and was discarded."
+            )
+            return None
+
+        except Exception as e:
+            self.helper.connector_logger.error(f"Error validating relationship: {e}")
+            return None
 
     def get_timestamp(self) -> str:
         """
@@ -768,42 +827,44 @@ class ConnectorLuminar:
 
         cyberfeeds_bundle = []
         for obj in relationship_records:
-            source_rec = lookup.get(obj["source_ref"])
-            target_rec = lookup.get(obj["target_ref"])
-            if source_rec and target_rec:
-                if (
-                    source_rec.get("type") in LUMINARCYBERFEEDS_X_STIX2
-                    and target_rec.get("type") in LUMINARCYBERFEEDS_X_STIX2
-                ):
-                    source_rec["description"] = self.get_description(source_rec)
-                    target_rec["description"] = self.get_description(target_rec)
-                    source_rec_copy = source_rec.copy()
-                    target_rec_copy = target_rec.copy()
-                    source_stix = LUMINARCYBERFEEDS_X_STIX2[source_rec["type"]](
-                        custom_properties=custom_prop,
-                        allow_custom=True,
-                        **self.generate_pycti_id(source_rec_copy),
-                    )
-                    target_stix = LUMINARCYBERFEEDS_X_STIX2[target_rec["type"]](
-                        custom_properties=custom_prop,
-                        allow_custom=True,
-                        **self.generate_pycti_id(target_rec_copy),
-                    )
-
-                    rel = Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            obj.get("relationship_type", "related-to"),
-                            source_stix.id,
-                            target_stix.id,
-                        ),
-                        source_ref=source_stix.id,
-                        target_ref=target_stix.id,
-                        relationship_type=obj.get("relationship_type", ""),
-                        created_by_ref=self.author.id,
-                        custom_properties=RELATIONSHIP_PROP,
-                        allow_custom=True,
-                    )
-                    cyberfeeds_bundle.extend([source_stix, target_stix, rel])
+            if not obj.get("source_ref") == obj.get("target_ref"):
+                source_rec = lookup.get(obj["source_ref"])
+                target_rec = lookup.get(obj["target_ref"])
+                if source_rec and target_rec:
+                    if (
+                        source_rec.get("type") in LUMINARCYBERFEEDS_X_STIX2
+                        and target_rec.get("type") in LUMINARCYBERFEEDS_X_STIX2
+                    ):
+                        source_rec["description"] = self.get_description(source_rec)
+                        target_rec["description"] = self.get_description(target_rec)
+                        source_rec_copy = source_rec.copy()
+                        target_rec_copy = target_rec.copy()
+                        source_stix = LUMINARCYBERFEEDS_X_STIX2[source_rec["type"]](
+                            custom_properties=custom_prop,
+                            allow_custom=True,
+                            **self.generate_pycti_id(source_rec_copy),
+                        )
+                        target_stix = LUMINARCYBERFEEDS_X_STIX2[target_rec["type"]](
+                            custom_properties=custom_prop,
+                            allow_custom=True,
+                            **self.generate_pycti_id(target_rec_copy),
+                        )
+                        valid_rel = self.get_valid_relationship(obj)
+                        if valid_rel:
+                            rel = Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    obj.get("relationship_type", "related-to"),
+                                    source_stix.id,
+                                    target_stix.id,
+                                ),
+                                source_ref=source_stix.id,
+                                target_ref=target_stix.id,
+                                relationship_type=obj.get("relationship_type", ""),
+                                created_by_ref=self.author.id,
+                                custom_properties=RELATIONSHIP_PROP,
+                                allow_custom=True,
+                            )
+                            cyberfeeds_bundle.extend([source_stix, target_stix, rel])
         for rep in reports_records:
             object_refs_stix = []
             for ref in rep.get("object_refs", []):
@@ -868,7 +929,7 @@ class ConnectorLuminar:
                 return
 
             headers = {"Authorization": f"Bearer {access_token}"}
-            taxii_collection = self.get_taxi_collections(headers)
+            taxii_collection = self.get_taxii_collections(headers)
             if not taxii_collection:
                 return
 
@@ -934,7 +995,10 @@ class ConnectorLuminar:
                     {"connector_name": self.helper.connect_name},
                 )
                 bundles_sent = self.helper.send_stix2_bundle(
-                    bundle=all_bundle, update=True, work_id=work_id
+                    bundle=all_bundle,
+                    update=True,
+                    work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",

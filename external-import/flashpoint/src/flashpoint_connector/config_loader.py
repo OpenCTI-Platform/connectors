@@ -181,6 +181,10 @@ class FlashpointConfig(ConfigBaseModel):
         description="Whether to include indicators in the reports imported from MispFeed or not.",
         default=False,
     )
+    create_reports: bool = Field(
+        description="Whether to create reports or groupings from MispFeed events or not.",
+        default=False,
+    )
     guess_relationships_from_reports: bool = Field(
         description="Whether to guess relationships between entities or not.",
         default=False,

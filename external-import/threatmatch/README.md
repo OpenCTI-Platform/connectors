@@ -1,8 +1,8 @@
 # 🔗 OpenCTI ThreatMatch Connector
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-08-18 | -       |
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
 The **ThreatMatch Connector** imports ThreatMatch intelligence (alerts, profiles, IOCs, reports) into OpenCTI. It
 authenticates to the ThreatMatch Developer Platform, fetches items since the last successful run (or a configured

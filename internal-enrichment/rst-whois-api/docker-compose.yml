@@ -1,16 +1,16 @@
 version: '3'
 services:
   connector-rst-whois-api:
-    image: opencti/connector-rst-whois-api:rolling
+    image: opencti/connector-rst-whois-api:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=3582c335-cea7-45ec-b2a2-f46130762713
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=RST WHOIS API
       - CONNECTOR_SCOPE=Domain-Name,Url,indicator
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=info
-      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1/
+      - RST_WHOIS_API_BASE_URL=https://api.rstcloud.net/v1
       - RST_WHOIS_API_API_KEY=${RST_WHOIS_API_API_KEY}
       - RST_WHOIS_API_MAX_TLP=TLP:AMBER+STRICT
       - RST_WHOIS_API_UPDATE_OUTPUT_ACTION=overwrite # overwrite or append
@@ -18,5 +18,4 @@ services:
       - RST_WHOIS_API_OUTPUT_FORMAT=standard # standard or extended
       - RST_WHOIS_API_OUTPUT_INCLUDE_RAW=false
       - RST_WHOIS_API_TIMEOUT=10
-    depends_on:
-      - opencti
+    restart: always

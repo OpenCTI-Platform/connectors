@@ -1,0 +1,14 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+#connector:
+  #type: 'INTERNAL_ENRICHMENT'
+  #id: 'tagger--b5970f8a-ce4b-4497-a381-20b7256f5777'
+  #name:  'Tagger'
+  #scope: 'report,malware,tool'
+  #auto: true
+  #log_level: 'info'
+
+#tagger:
+#  definitions: '[{"scopes":["Report","Tool"],"rules":[{"label":"cloud","search":"[Cc]loud","attributes":["name","description"]},{"label":"mobile","search":"mobile|android|apk","flags":["IGNORECASE"],"attributes":["name","description"]}]},{"scopes":["Malware"],"rules":[{"label":"windows","search":"registry|regkey","flags":["IGNORECASE"],"attributes":["description"]}]}]'

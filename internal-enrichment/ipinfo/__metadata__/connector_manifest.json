@@ -1,9 +1,9 @@
 {
   "title": "IPinfo",
   "slug": "ipinfo",
-  "description": "IPinfo.io is a leading provider of IP address data, offering detailed information about IP ownership, geolocation, and more. This service helps organizations better understand the context and origin of network traffic, aiding in threat analysis and geographical-based security decisions.\n\nIntegrating IPinfo.io with OpenCTI allows for the enrichment of threat intelligence with detailed IP address information, enhancing an organization’s ability to analyze network traffic and identify potential threats. By leveraging IPInfo data, security teams can improve incident response and threat detection accuracy by understanding the origins and paths of IP addresses involved in potential security events.",
+  "description": "IPinfo.io is a leading provider of IP address data, offering detailed information about IP ownership, geolocation, and more. This service helps organizations better understand the context and origin of network traffic, aiding in threat analysis and geographical-based security decisions.\n\nIntegrating IPinfo.io with OpenCTI allows for the enrichment of threat intelligence with detailed IP address information, enhancing an organization\u2019s ability to analyze network traffic and identify potential threats. By leveraging IPInfo data, security teams can improve incident response and threat detection accuracy by understanding the origins and paths of IP addresses involved in potential security events.",
   "short_description": "IPinfo.io provides detailed data on IP ownership, geolocation, and more, enhancing understanding of network traffic origins. Integration with OpenCTI enriches threat intelligence, improving threat analysis and incident response accuracy.",
-  "logo": "https://res.cloudinary.com/dktzowanc/image/upload/v1752140062/Screenshot_2025-07-10_113340_hwa5wh.png",
+  "logo": "internal-enrichment/ipinfo/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis"
   ],
@@ -11,7 +11,7 @@
   "last_verified_date": "2025-06-15",
   "playbook_supported": true,
   "max_confidence_level": 75,
-  "support_version": ">= 6.5.1",
+  "support_version": ">= 5.6.1",
   "subscription_link": "https://ipinfo.io/support",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/ipinfo",
   "manager_supported": true,

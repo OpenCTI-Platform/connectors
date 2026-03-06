@@ -1,9 +1,9 @@
 version: '3'
 services:
   connector-joe-sandbox:
-    image: opencti/connector-joe-sandbox:rolling
+    image: opencti/connector-joe-sandbox:latest
     environment:
-      - OPENCTI_URL=ChangeMe
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Joe_Sandbox
       - "CONNECTOR_NAME=Joe Sandbox"

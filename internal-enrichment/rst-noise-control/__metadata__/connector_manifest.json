@@ -1,0 +1,21 @@
+{
+  "title": "RST Noise Control",
+  "slug": "rst-noise-control",
+  "description": "The RST Noise Control Connector allows OpenCTI to check if observables and indicators are benign or potentially noisy and not worth detecting. This connector performs a check of IP, Domain, URL, Hash values via RST Cloud API. This enhances the capability of OpenCTI by ensuring that well-known, popular, or benign values will not trigger thousands of FP detections or prevent actions in the connected security tools (RST Noise Control).",
+  "short_description": "The RST Noise Control Connector allows OpenCTI to check if observables and indicators are benign or potentially noisy and not worth detecting. This connector performs a check of IP, Domain, URL, Hash values via RST Cloud API. This enhances the capability of OpenCTI by ensuring that well-known, popular, or benign values will not trigger thousands of FP detections or prevent actions in the connected security tools (RST Noise Control).",
+  "logo": "internal-enrichment/rst-noise-control/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.0.7",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/rst-noise-control",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-rst-noise-control",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

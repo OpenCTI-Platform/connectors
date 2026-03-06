@@ -1,16 +1,6 @@
 """Offers a collection of custom exceptions to develop connectors."""
 
 
-class ConfigError(Exception):
-    """Base class for configuration-related errors.
-
-    This exception is raised when there is an issue with the configuration of the connector.
-    It can be used to indicate problems such as missing required fields, invalid values, or
-    other configuration-related issues that prevent the connector from starting correctly.
-    It signals a actionable problem in configuration and allows the user to respond appropriately immediately.
-    """
-
-
 class DataRetrievalError(Exception):
     """Base class for data retrieval-related errors.
 

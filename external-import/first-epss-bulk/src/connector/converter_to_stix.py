@@ -26,6 +26,9 @@ class ConverterToStix:
             id=Identity.generate_id(name="FIRST EPSS", identity_class="organization"),
             name="FIRST EPSS",
             identity_class="organization",
+            description="Forum of Incident Response and Security Teams (FIRST) - "
+            "Exploit Prediction Scoring System (EPSS) provides probability scores "
+            "for exploitation of CVE vulnerabilities.",
         )
         return author
 

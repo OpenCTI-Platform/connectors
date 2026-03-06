@@ -10,6 +10,7 @@
     - Test that the retry mechanism is called.
     - Test that invalid response content leads to DragosAPIError.
 """
+
 from datetime import datetime, timedelta, timezone
 from aiohttp import ClientResponseError
 from pydantic import SecretStr
@@ -28,7 +29,6 @@ from client_api.v1.product import (
     ProductClientAPIV1,
 )
 from client_api.warning import ValidationWarning
-
 
 # Define a dict to be reused in other responses containing it.
 # A fixture cannot be called directly in another fixture.

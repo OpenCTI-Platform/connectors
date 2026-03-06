@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'
+  name: 'Template Connector' # optional (default: 'Template Connector')
+  scope: 'ChangeMe'
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'live' # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+template:
+  api_base_url: 'ChangeMe'
+  api_key: 'ChangeMe'

@@ -131,7 +131,7 @@ class Intel471Connector:
             os.path.dirname(os.path.abspath(__file__)), "..", "config.yml"
         )
         try:
-            with open(config_file_path) as fh:
+            with open(config_file_path, encoding="utf-8") as fh:
                 return yaml.load(fh, Loader=yaml.FullLoader)
         except (FileNotFoundError, ParserError):
             return {}

@@ -1,0 +1,22 @@
+{
+  "title": "ANY.RUN Feed",
+  "slug": "anyrun-feed",
+  "description": "Import TI feed from ANY.RUN Interactive Online Malware Sandbox",
+  "short_description": "Import TI feed from ANY.RUN Interactive Online Malware Sandbox",
+  "logo": "external-import/anyrun-feed/__metadata__/logo.png",
+  "use_cases": [
+    "Threat Intelligence",
+    "Sandbox"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.0.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/anyrun-feed",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-anyrun-feed",
+  "container_type": "EXTERNAL_IMPORT"
+}

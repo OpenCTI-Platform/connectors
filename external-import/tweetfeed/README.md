@@ -1,5 +1,9 @@
 # Tweetfeed
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Description
 
 Tweetfeed connect is a project aimed to collect evidences from Tweetfeed project.  
@@ -7,7 +11,6 @@ Tweetfeed connect is a project aimed to collect evidences from Tweetfeed project
 This connector ingests [Tweetfeed](https://tweetfeed.live/) IOC in order to import Observables and Indicator collected from different researchers. Tweetfeed was developed by [Daniel López](https://twitter.com/0xDanielLopez).  
 This connector was built using the TAXII2 connector for [OpenCTI](https://github.com/OpenCTI-Platform/opencti) as a base.
 > **IMPORTANT**: Due to changes in the Twitter/X API, TweetFeed is no longer maintainable. Be aware that no new information beyond July 19, 2023 will be retrieved via this connector.
-
 
 ### Prerequisites
 

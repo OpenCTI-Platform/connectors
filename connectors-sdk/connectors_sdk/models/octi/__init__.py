@@ -1,35 +1,39 @@
 """Offer OpenCTI models."""
 
-from connectors_sdk.models.octi._common import (
-    MODEL_REGISTRY,
-    AssociatedFile,
-    Author,
-    BaseEntity,
-    BaseIdentifiedEntity,
-    ExternalReference,
-    TLPMarking,
-)
-from connectors_sdk.models.octi.activities.analyses import Note, Report
-from connectors_sdk.models.octi.activities.observations import (
+import warnings
+
+from connectors_sdk.models import (
     URL,
+    AssociatedFile,
+    AttackPattern,
+    BaseIdentifiedEntity,
+)
+from connectors_sdk.models import BaseObject as BaseEntity
+from connectors_sdk.models import (
+    City,
+    Country,
     DomainName,
+    ExternalReference,
     File,
     Indicator,
+    Individual,
+    IntrusionSet,
     IPV4Address,
     IPV6Address,
-    Software,
-)
-from connectors_sdk.models.octi.knowledge.arsenal import Malware, Vulnerability
-from connectors_sdk.models.octi.knowledge.entities import (
-    Individual,
+    KillChainPhase,
+    Malware,
+    Note,
     Organization,
-    Sector,
-)
-from connectors_sdk.models.octi.knowledge.locations import City, Country
-from connectors_sdk.models.octi.knowledge.techniques import AttackPattern
-from connectors_sdk.models.octi.knowledge.threats import IntrusionSet, ThreatActorGroup
-from connectors_sdk.models.octi.relationships import (
+    OrganizationAuthor,
     Relationship,
+    Report,
+    Sector,
+    Software,
+    ThreatActorGroup,
+    TLPMarking,
+    Vulnerability,
+)
+from connectors_sdk.models.octi.relationships import (
     based_on,
     derived_from,
     has,
@@ -38,8 +42,14 @@ from connectors_sdk.models.octi.relationships import (
     related_to,
     targets,
 )
-from connectors_sdk.models.octi.settings.taxonomies import KillChainPhase
-from stix2.v21 import Identity as Stix2Identity
+
+warnings.warn(
+    "The 'connectors_sdk.models.octi' module is deprecated and will be removed"
+    "in future versions. Please use 'connectors_sdk.models' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
 
 __all__ = [
     # Models flat list
@@ -80,25 +90,3 @@ __all__ = [
     "BaseEntity",
     "BaseIdentifiedEntity",
 ]
-
-
-@MODEL_REGISTRY.register
-class OrganizationAuthor(Author, Organization):
-    """Represent an organization author.
-
-    This class extends the Organization class to include author-specific fields that will be
-    widely used for all other entities a connector processes.
-
-    Examples:
-        >>> my_author = OrganizationAuthor(name="Company providing SIEM")
-        >>> org = Organization(name="Example Corp", author=my_author)
-        >>> entity = org.to_stix2_object()
-
-    """
-
-    def to_stix2_object(self) -> Stix2Identity:
-        """Make stix object."""
-        return Organization.to_stix2_object(self)
-
-
-MODEL_REGISTRY.rebuild_all()

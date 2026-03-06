@@ -10,7 +10,4 @@ RUN pip3 install --no-cache-dir -r /tmp/requirements.txt
 COPY src /opt/opencti-connector-reversinglabs-spectra-analyze
 WORKDIR /opt/opencti-connector-reversinglabs-spectra-analyze
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python", "main.py"]

@@ -28,7 +28,6 @@ from stix2.base import _Observable as Observable
 
 ALL_TYPES = "all_types"
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
-CSV_PATH = f"{BASE_PATH}/data.csv"
 
 
 # pylint:disable=too-many-instance-attributes
@@ -164,7 +163,7 @@ class ThreatFox:
             last_processed_entry_running_max = last_processed_entry
 
             for i, row in enumerate(csv_reader):
-                if len(row) > 14:
+                if len(row) > 15:
                     self.helper.log_info(
                         f"The csv line is badly formatted and will be ignored.(line: {i}, data: {row})"
                     )
@@ -212,9 +211,6 @@ class ThreatFox:
                     work_id=work_id,
                 )
 
-            if os.path.exists(CSV_PATH):
-                os.remove(CSV_PATH)
-
         except Exception:  # pylint:disable=broad-exception-caught
             self.helper.log_error(traceback.format_exc())
 
@@ -252,11 +248,10 @@ class ThreatFox:
             # Treat as an unzipped CSV from /recent/
             csv_data = data
 
-        with open(CSV_PATH, "wb") as fd:
-            fd.write(csv_data)
-
-        with open(CSV_PATH, "r", encoding="utf-8") as fd:
-            yield from (line for line in fd if not line.startswith("#"))
+        for line in csv_data.decode("utf-8").splitlines():
+            if line.startswith("#"):
+                continue
+            yield line
 
     def process_row(self, ioc: FeedRow) -> Iterable[Dict]:
         """Process the IOC record and generate SCO/SDO/SRO objects."""
@@ -532,18 +527,19 @@ class FeedRow:
             self.last_seen = None
 
         self.confidence_level = int(row[9])
-        self.reference = row[10]
+        self.is_compromised = str(row[10]).lower() == "true"
+        self.reference = row[11]
 
         if self.reference == "None":
             self.reference = ""
 
-        self.tags = list(filter(None, row[11].split(",")))
+        self.tags = list(filter(None, row[12].split(",")))
 
         if self.threat_type:
             self.tags.insert(0, self.threat_type)
 
-        self.anonymous = bool(int(row[12]))
-        self.reporter = row[13]
+        self.anonymous = bool(int(row[13]))
+        self.reporter = row[14]
 
 
 if __name__ == "__main__":

@@ -1,11 +1,12 @@
 from copy import deepcopy
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import pycti
 import stix2
 import stix2.exceptions
 from api_client.models import EventRestSearchListItem, ExtendedAttributeItem
-from connector.threats_guesser import ThreatsGuesser
+from pydantic import HttpUrl
 
 from .common import TLP_CLEAR, ConverterConfig, ConverterConfigError, ConverterError
 from .convert_attribute import AttributeConverter
@@ -14,6 +15,13 @@ from .convert_galaxy import GalaxyConverter
 from .convert_object import ObjectConverter
 from .convert_tag import TagConverter
 from .utils import find_type_by_uuid
+
+if TYPE_CHECKING:
+    from custom_typings.protocols import LoggerProtocol
+    from utils.threats_guesser import ThreatsGuesser
+
+
+LOG_PREFIX = "[EventConverter]"
 
 
 def parse_threat_level_score_mapping(mapping_str: str) -> dict:
@@ -62,9 +70,10 @@ class EventConverter:
 
     def __init__(
         self,
+        logger: "LoggerProtocol",
+        external_reference_base_url: HttpUrl,
         report_type: str = "misp-event",
         report_description_attribute_filters: dict = {},
-        external_reference_base_url: str = None,
         convert_event_to_report: bool = True,
         convert_attribute_to_associated_file: bool = False,
         convert_attribute_to_indicator: bool = True,
@@ -77,11 +86,12 @@ class EventConverter:
         convert_tag_to_marking: bool = False,
         propagate_report_labels: bool = False,
         original_tags_to_keep_as_labels: list[str] = [],
-        default_attribute_score: int = None,
+        default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
-        threats_guesser: ThreatsGuesser = None,
+        threats_guesser: "ThreatsGuesser | None" = None,
         threat_level_score_mapping: str = None,
     ):
+        self.logger = logger
         self.config = ConverterConfig(
             report_type=report_type,
             report_description_attribute_filters=report_description_attribute_filters,
@@ -174,10 +184,13 @@ class EventConverter:
 
     def process(
         self, event: EventRestSearchListItem, include_relationships: bool = True
-    ) -> list[stix2.v21._STIXBase21]:
+    ) -> tuple[
+        stix2.Identity, list[stix2.MarkingDefinition], list[stix2.v21._STIXBase21]
+    ]:
         """
         Process an event and convert it to a list of STIX objects.
         :param event: EventRestSearchListItem object
+        :param include_relationships: Whether to include relationships between objects
         :return: List of STIX objects
         """
         event_author = None
@@ -314,7 +327,7 @@ class EventConverter:
             event_intrusion_sets: list[stix2.IntrusionSet] = []
             event_malwares: list[stix2.Malware] = []
             event_tools: list[stix2.Tool] = []
-            event_countries: list[stix2.Location] = []
+            event_locations: list[stix2.Location] = []
             event_sectors: list[stix2.Identity] = []
             event_attack_patterns: list[stix2.AttackPattern] = []
 
@@ -327,8 +340,10 @@ class EventConverter:
                     case stix2.Tool():
                         event_tools.append(event_stix_object)
                     case stix2.Location():
-                        if event_stix_object["country"]:
-                            event_countries.append(event_stix_object)
+                        if event_stix_object.get("country") or event_stix_object.get(
+                            "region"
+                        ):
+                            event_locations.append(event_stix_object)
                     case stix2.Identity():
                         if event_stix_object["identity_class"] == "class":
                             event_sectors.append(event_stix_object)
@@ -369,7 +384,7 @@ class EventConverter:
                     event_intrusion_sets
                     + event_malwares
                     + event_tools
-                    + event_countries
+                    + event_locations
                     + event_sectors
                 ):
                     stix_objects.append(
@@ -407,7 +422,7 @@ class EventConverter:
                             allow_custom=True,
                         )
                     )
-                for event_entity in event_countries + event_sectors:
+                for event_entity in event_locations + event_sectors:
                     stix_objects.append(
                         stix2.Relationship(
                             id=pycti.StixCoreRelationship.generate_id(
@@ -444,18 +459,19 @@ class EventConverter:
                                     ),
                                     relationship_type="related-to",
                                     created_by_ref=event_author["id"],
-                                    description="Original Relationship: "
-                                    + object_reference["relationship_type"]
-                                    + "  \nComment: "
-                                    + object_reference["comment"],
+                                    description=(
+                                        f"Original Relationship: {object_reference['relationship_type']}\n"
+                                        f"Comment: {object_reference['comment']}"
+                                    ),
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
+                                    object_marking_refs=event_markings,
                                     allow_custom=True,
                                 )
                             )
 
         # Prepare the bundle
-        bundle_objects = [event_author]
+        bundle_objects = []
         # Keep track of objects in bundle to remove duplicates
         bundled_refs = [event_author["id"]]
 
@@ -467,7 +483,6 @@ class EventConverter:
         # Add event markings
         for event_marking in event_markings:
             if event_marking["id"] not in bundled_refs:
-                bundle_objects.append(event_marking)
                 bundled_refs.append(event_marking["id"])
 
         for stix_object in stix_objects:
@@ -511,4 +526,4 @@ class EventConverter:
                 )
                 bundle_objects.extend(note_stix_objects)
 
-        return bundle_objects
+        return (event_author, event_markings, bundle_objects)

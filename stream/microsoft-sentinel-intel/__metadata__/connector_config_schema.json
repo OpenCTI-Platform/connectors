@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/microsoft-sentinel-intel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "MicrosoftSentinelIntel",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "sentinel"
+      ],
+      "description": "The scope of the stream connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen for delete events on the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Whether to ignore dependencies when processing events from the live stream.",
+      "type": "boolean"
+    },
+    "MICROSOFT_SENTINEL_INTEL_TENANT_ID": {
+      "description": "Your Azure App Tenant ID, see the screenshot to help you find this information.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_CLIENT_ID": {
+      "description": "Your Azure App Client ID, see the screenshot to help you find this information.",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET": {
+      "description": "Your Azure App Client secret, See the screenshot to help you find this information.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID": {
+      "description": "Your Azure Workspace ID",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME": {
+      "description": "The name of the log analytics workspace",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID": {
+      "description": "The subscription id where the Log Analytics is",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP": {
+      "default": "default",
+      "deprecated": true,
+      "description": "The name of the resource group where the log analytics is",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM": {
+      "default": "Opencti Stream Connector",
+      "description": "The name of the source system displayed in Microsoft Sentinel",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS": {
+      "default": true,
+      "description": "Delete the extensions in the stix bundle sent to the SIEM",
+      "type": "boolean"
+    },
+    "MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS": {
+      "default": [],
+      "description": "Extra labels added to the bundle sent. String separated by comma",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION": {
+      "default": "2024-02-01-preview",
+      "description": "API version of the Microsoft log analytics workspace interface",
+      "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION": {
+      "default": "2025-03-01",
+      "description": "API version of the Microsoft management interface",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "MICROSOFT_SENTINEL_INTEL_TENANT_ID",
+    "MICROSOFT_SENTINEL_INTEL_CLIENT_ID",
+    "MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET",
+    "MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID",
+    "MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME",
+    "MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID"
+  ],
+  "additionalProperties": true
+}

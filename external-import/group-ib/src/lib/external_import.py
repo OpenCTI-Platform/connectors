@@ -1,13 +1,12 @@
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from traceback import format_exc
 from typing import Any
 
 from config import ConfigConnector
-from cyberintegrations import TIAdapter
+from cyberintegrations.adapters.openCTI_adapter import TIAdapter
 from cyberintegrations.decorators import cache_data
-from cyberintegrations.utils import ProxyConfigurator
 from pycti import OpenCTIConnectorHelper
 from utils import ExternalImportHelper
 
@@ -70,9 +69,8 @@ class ExternalImportConnector:
         self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper({})
         self.helper.connector_logger.info("Initializing ExternalImportConnector")
-        self.pc = ProxyConfigurator()
         self.helper.connector_logger.debug(
-            "Initialized ConfigConnector, OpenCTIConnectorHelper, and ProxyConfigurator"
+            "Initialized ConfigConnector, OpenCTIConnectorHelper"
         )
 
         current_state = self.helper.get_state()
@@ -101,31 +99,34 @@ class ExternalImportConnector:
         self.helper.connector_logger.debug("Initialized global collection filters")
 
         # Proxy initialization
-        self.proxies = self.pc.get_proxies(
-            proxy_ip=self.cfg.ti_api_proxy_ip,
-            proxy_port=self.cfg.ti_api_proxy_port,
-            proxy_protocol=self.cfg.ti_api_proxy_protocol,
-            proxy_username=self.cfg.ti_api_proxy_username,
-            proxy_password=self.cfg.ti_api_proxy_password,
-        )
+        self.proxies = {
+            "proxy_ip": self.cfg.ti_api_proxy_ip,
+            "proxy_port": self.cfg.ti_api_proxy_port,
+            "proxy_protocol": self.cfg.ti_api_proxy_protocol,
+            "proxy_username": self.cfg.ti_api_proxy_username,
+            "proxy_password": self.cfg.ti_api_proxy_password,
+        }
+
         self.helper.connector_logger.debug(f"Proxies initialized: {self.proxies}")
 
         # Collections initialization
         self.enabled_collections = []
         for (
             collection_name,
-            slached_collection_name,
+            slashed_collection_name,
         ) in ConfigConnector.COLLECTION_MAP.items():
             enable = self.cfg.get_collection_settings(collection_name, "enable")
-            if enable == True:
-                self.enabled_collections.append(slached_collection_name)
+            if enable is True:
+                self.enabled_collections.append(slashed_collection_name)
             self.helper.connector_logger.debug(
                 f"Checked collection {collection_name}, enable: {enable}"
             )
         self.helper.connector_logger.info(
             f"Enabled Collections: {self.enabled_collections}"
         )
-
+        self.helper.connector_logger.info(
+            f"self.cfg.collection_mapping_config: {self.cfg.collection_mapping_config}"
+        )
         # TI API initialization
         self.ti_adapter = TIAdapter(
             ti_creds_dict={
@@ -152,8 +153,9 @@ class ExternalImportConnector:
         self,
         collection,
         ttl,
-        portion,
+        event,
         mitre_mapper,
+        config,
         flag_instrusion_set_instead_of_threat_actor=False,
     ) -> list:
         """Collect intelligence from the source"""
@@ -198,6 +200,7 @@ class ExternalImportConnector:
             parsed_portion = portion.parse_portion(
                 filter_map=[("malware", [])],
                 check_existence=True,
+                use_alternative_parser=True,
             )
         elif (
             collection in ["apt/threat", "hi/threat"]
@@ -209,12 +212,13 @@ class ExternalImportConnector:
             parsed_portion = portion.parse_portion(
                 filter_map=[("indicators", [])],
                 check_existence=True,
+                use_alternative_parser=True,
             )
         else:
             self.helper.connector_logger.debug(
                 "No specific filters applied, parsing portion"
             )
-            parsed_portion = portion.parse_portion()
+            parsed_portion = portion.parse_portion(use_alternative_parser=True)
         self.helper.connector_logger.info(
             f"Completed extra pre-processing for collection: {collection}, parsed portion size: {len(parsed_portion) if parsed_portion else 0}"
         )
@@ -222,7 +226,9 @@ class ExternalImportConnector:
 
     def get_formatted_utcfromtimestamp(self, date) -> str:
         self.helper.connector_logger.debug(f"Formatting timestamp: {date}")
-        formatted_date = datetime.utcfromtimestamp(date).strftime("%Y-%m-%d %H:%M:%S")
+        formatted_date = datetime.fromtimestamp(date, tz=timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         self.helper.connector_logger.debug(f"Formatted timestamp to: {formatted_date}")
         return formatted_date
 
@@ -417,10 +423,11 @@ class ExternalImportConnector:
                                         f"Processing event for collection: {collection}. All data from the received event: {event}"
                                     )
                                     bundle_objects = self._collect_intelligence(
-                                        collection,
-                                        self.ttl,
-                                        event,
-                                        self.MITRE_MAPPER,
+                                        collection=collection,
+                                        ttl=self.ttl,
+                                        event=event,
+                                        mitre_mapper=self.MITRE_MAPPER,
+                                        config=self.cfg,
                                         flag_instrusion_set_instead_of_threat_actor=self.INTRUSION_SET_INSTEAD_OF_THREAT_ACTOR,
                                     )
                                     self.helper.connector_logger.debug(

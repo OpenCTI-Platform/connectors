@@ -1,17 +1,18 @@
 version: '3'
 services:
   connector-dnstwist:
-    image: opencti/connector-dnstwist:rolling
+    image: opencti/connector-dnstwist:latest
     environment:
-      - CONNECTOR_NAME=DNS_TWISTER
-      - CONNECTOR_SCOPE=Domain-Name
-      # Connector's generic execution parameters:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN= ## connector token
-      - CONNECTOR_ID= # UUID of the connector
-      - CONNECTOR_AUTO=false # don't run the connector automatically, you will flood your opencti instance
-      - CONNECTOR_FETCH_REGISTERED=true # takes true or false; gives the ability to control the dnstwister domain selection
-      - CONNECTOR_DNS_TWIST_THREADS=80 #number of threads to use for dnstwist; default is 20
-      - CONNECTOR_UPDATE_EXISTING_DATA=true
-      # Connector's custom execution parameters:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type INTERNAL_ENRICHMENT
+      - CONNECTOR_ID=CHANGEME # Optional (default: '9ff0437e-dfeb-4340-98c5-3d88d5e1c31e')
+      - CONNECTOR_NAME=DNSTwist # Optional (default: 'DNSTwist')
+      - CONNECTOR_SCOPE=Domain-Name # Optional (default: 'Domain-Name')
+      - CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      - CONNECTOR_AUTO=false # Optional (default: false) /!\ Do not run the connector automatically, you will flood your opencti instance
+      # Custom parameters for connector-template
+      - DNS_TWIST_FETCH_REGISTERED=true # Optional (default: true)
+      - DNS_TWIST_THREADS=80 # Optional (default: 20)
     restart: always

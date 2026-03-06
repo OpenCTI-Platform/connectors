@@ -1,0 +1,21 @@
+{
+  "title": "Stop Forum Spam",
+  "slug": "stopforumspam",
+  "description": "This connector retrieves domain names of suspected spammers on forums, blogs and wikis from stopforumspam.com\n",
+  "short_description": "This connector retrieves domain names of suspected spammers on forums, blogs and wikis from stopforumspam.com\n",
+  "logo": "external-import/stopforumspam/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/stopforumspam",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-stopforumspam",
+  "container_type": "EXTERNAL_IMPORT"
+}

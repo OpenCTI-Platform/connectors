@@ -1,10 +1,10 @@
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
   name: 'UnpacMe'
   scope: 'Artifact'
   auto: false # Enable/disable auto-enrichment of observables

@@ -10,7 +10,7 @@ from connector.src.custom.configs.gti_config_common import (
     GTIBaseConfig,
     validate_origins_list,
 )
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
 
 

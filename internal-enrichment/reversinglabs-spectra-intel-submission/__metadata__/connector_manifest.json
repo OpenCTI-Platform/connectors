@@ -1,0 +1,21 @@
+{
+  "title": "ReversingLabs Spectra Intel Submission",
+  "slug": "reversinglabs-spectra-intel-submission",
+  "description": "Connector supports enrichment of observables and creation of indicators based on the result received from ReversingLabs Spectra Intelligence. Connector enables file submission to the Spectra Intelligence and file analysis. Based on the result, connector creates indicators, malwares, calculates score, adds labels, adds MITRE tactics and techniques and creates relationships between created objects for submitted observable.\nConnector enables file and url submission to the ReversingLabs Spectra Intelligence.\nThe connector works for the following observable types:",
+  "short_description": "Connector supports enrichment of observables and creation of indicators based on the result received from ReversingLabs Spectra Intelligence. Connector enables file submission to the Spectra Intelligence and file analysis. Based on the result, connector creates indicators, malwares, calculates score, adds labels, adds MITRE tactics and techniques and creates relationships between created objects for submitted observable.\nConnector enables file and url submission to the ReversingLabs Spectra Intelligence.\nThe connector works for the following observable types:",
+  "logo": "internal-enrichment/reversinglabs-spectra-intel-submission/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.2.14",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/reversinglabs-spectra-intel-submission",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-reversinglabs-spectra-intel-submission",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

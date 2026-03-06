@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'ReversingLabs Spectra Analyze'
+  scope: 'Artifact,IPv4-Addr,Domain-Name'
+  #log_level: 'info'
+  #auto: false
+
+reversinglabs:
+  spectra_analyze_url: 'ChangeMe'
+  spectra_analyze_token: 'ChangeMe'
+  #max_tlp: 'TLP:AMBER'
+  #sandbox_os: 'windows10'
+  #cloud_analysis: true

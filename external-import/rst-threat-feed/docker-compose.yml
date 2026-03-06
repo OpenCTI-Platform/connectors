@@ -1,32 +1,39 @@
-version: '3'
+version: "3"
 services:
   connector-rst-threat-feed:
-    image: opencti/connector-rst-threat-feed:rolling
+    image: opencti/connector-rst-threat-feed:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=9288e3aa-3f94-4505-b31b-69585c47081b
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=RST Threat Feed
       - CONNECTOR_SCOPE=application/json
       - CONNECTOR_LOG_LEVEL=info
-      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1/
+      - RST_THREAT_FEED_BASEURL=https://api.rstcloud.net/v1
       - RST_THREAT_FEED_APIKEY=${RST_THREAT_FEED_API_KEY}
-      - RST_THREAT_FEED_CONTIMEOUT=30
-      - RST_THREAT_FEED_READTIMEOUT=60
-      - RST_THREAT_FEED_RETRY=5
-      - RST_THREAT_FEED_INTERVAL=86400
       - RST_THREAT_FEED_SSL_VERIFY=true
+      - RST_THREAT_FEED_CONTIMEOUT=30   # feed download connection parameters
+      - RST_THREAT_FEED_READTIMEOUT=120
+      - RST_THREAT_FEED_RETRY=2
+      - RST_THREAT_FEED_INTERVAL=86400 # in seconds. Change accordingly to the RST_THREAT_FEED_LATEST setting
+      - RST_THREAT_FEED_MAX_RETRIES=3 # retry configuration for connection issues when sending the STIX bundle to OpenCTI
+      - RST_THREAT_FEED_RETRY_DELAY=10
+      - RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER=2.0
       - RST_THREAT_FEED_IP=true
       - RST_THREAT_FEED_DOMAIN=true
       - RST_THREAT_FEED_URL=true
       - RST_THREAT_FEED_HASH=true
-      - RST_THREAT_FEED_LATEST=1h #1h or 4h or 12h or day
+      - RST_THREAT_FEED_LATEST=day #1h or 4h or 12h or day
       - RST_THREAT_FEED_MIN_SCORE_IMPORT=20
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_IP=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_DOMAIN=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_URL=45
       - RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH=45
       - RST_THREAT_FEED_ONLY_NEW=true
+      - RST_THREAT_FEED_ONLY_ATTRIBUTED=false
+      - RST_THREAT_FEED_KEEP_NAMED_VULNS=true
+      - RST_THREAT_FEED_CREATE_MITRE_TTPS=false # relationships: Indicator -> indicates -> Attack-Pattern (MITRE TTP). Will create a lot of Relationships, so, be careful with this setting.
+      - RST_THREAT_FEED_CREATE_CUSTOM_TTPS=true # Custom Attack-Pattern objects + relationships: Indicator -> indicates -> Attack-Pattern (Named Techniques or Attacks that are not yet covered by MITRE).
     restart: always
     depends_on:
       - opencti

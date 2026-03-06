@@ -141,7 +141,7 @@ class CTIButlerConnector:
                 self.update_state(base, version)
             except VersionAlreadyIngested as e:
                 self.helper.log_info(e)
-            except:
+            except Exception:
                 self.helper.log_error("cannot process for knowledge base")
 
     @staticmethod
@@ -168,7 +168,7 @@ class CTIButlerConnector:
                 work_id=cve_work_id,
                 message=f"[{readable_name}] bundle retrieved",
             )
-        except:
+        except Exception:
             self.helper.log_error(
                 f"process {readable_name} failed", dict(work_id=cve_work_id)
             )
@@ -188,7 +188,7 @@ class CTIButlerConnector:
     def run_once(self):
         try:
             self._run_once()
-        except:
+        except Exception:
             self.helper.log_error("run failed")
 
     def _get_state(self) -> dict:
