@@ -9,19 +9,19 @@ RUN apk update && apk upgrade && \
 
 
 FROM base AS package
-# Copy the package
-COPY proofpoint_tap /opt/proofpoint_tap
+# Copy the packages
+COPY src /opt/src
 COPY pyproject.toml /opt/pyproject.toml
 
 RUN cd /opt/ && \
     pip3 install --no-cache-dir . && \
     apk del git build-base && \
     rm /opt/pyproject.toml && \
-    rm -rf /opt/proofpoint_tap
+    rm -rf /opt/src
 
 FROM package AS app
 # Copy the app
-COPY app.py /opt/app.py    
+COPY src/main.py /opt/main.py    
 
 # Run the app
-CMD ["python3", "/opt/app.py"]
+CMD ["python3", "/opt/main.py"]
