@@ -39,6 +39,7 @@ misp:
   #import_keyword: null # Optional (default: null)
   #import_distribution_levels: '0,1,2,3' # Optional (default: '')
   #import_threat_levels: '1,2,3,4' # Optional (default: '')
+  #threat_level_score_mapping: '1:90;2:60;3:30;4:50' # Optional (default: '')
   #import_only_published: false # Optional (default: false)
   #import_with_attachments: false # Optional (default: false)
   #import_to_ids_no_score: 40 # Optional (default: null)

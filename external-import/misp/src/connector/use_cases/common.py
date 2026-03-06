@@ -85,6 +85,7 @@ class ConverterConfig:
         original_tags_to_keep_as_labels: list[str] = [],
         default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
+        threat_level_score_mapping: str = None,
     ):
         self.report_type = report_type
         self.report_description_attribute_filters = report_description_attribute_filters
@@ -107,3 +108,4 @@ class ConverterConfig:
         self.original_tags_to_keep_as_labels = original_tags_to_keep_as_labels
         self.default_attribute_score = default_attribute_score
         self.guess_threats_from_tags = guess_threats_from_tags
+        self.threat_level_score_mapping = threat_level_score_mapping
