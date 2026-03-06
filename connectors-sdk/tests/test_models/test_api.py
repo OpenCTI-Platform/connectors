@@ -68,6 +68,7 @@ def test_public_models_are_present():
         "City",
         "Country",
         "DomainName",
+        "EmailAddress",
         "ExternalReference",
         "File",
         "Hostname",
