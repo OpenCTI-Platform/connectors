@@ -6,7 +6,7 @@
 
 The GreyNoise Feed connector imports internet scanner IP addresses from GreyNoise Intelligence into OpenCTI as indicators and observables.
 
-**NOTE** This connector only imports the base indicator and observerable, and flags the indicator with a classification.  For the full enrichment details available from GreyNoise, use this connector along with the GreyNoise IP Enrichment connector.  It is recommended that the enrichment connector be set to auto-enrich so that the full enrichment is added to each indicator while the feed ingests it.  Indicators that are pulled by the feed connector prior to having the enrichment connector in place will need to be enriched manually or via workflow.
+**NOTE** This connector only imports the base indicator and observable, and flags the indicator with a classification.  For the full enrichment details available from GreyNoise, use this connector along with the GreyNoise IP Enrichment connector.  It is recommended that the enrichment connector be set to auto-enrich so that the full enrichment is added to each indicator while the feed ingests it.  Indicators that are pulled by the feed connector prior to having the enrichment connector in place will need to be enriched manually or via workflow.
 
 ## Table of Contents
 
@@ -62,14 +62,14 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter        | config.yml                           | Docker environment variable            | Default | Mandatory | Description                                              |
-|------------------|--------------------------------------|----------------------------------------|---------|-----------|----------------------------------------------------------|
-| API Key          | greynoise.api_key                    | `GREYNOISE_API_KEY`                    |         | Yes       | GreyNoise API key.                                       |
-| Feed Type        | greynoise.feed_type                  | `GREYNOISE_FEED_TYPE`                  |         | Yes       | Type of GreyNoise feed to import.                        |
-| Limit            | greynoise.limit                      | `GREYNOISE_LIMIT`                      | 10,000  | No        | The max number of indicators to import.                  |
-| Malicious Score  | greynoise.indicator_score_malicious  | `GREYNOISE_INDICATOR_SCORE_MALICIOUS`  | 75      | No        | The indicator score for GreyNoise Malicious Indicators.  |
-| Suspicious Score | greynoise.indicator_score_suspicious | `GREYNOISE_INDICATOR_SCORE_SUSPICIOUS` | 50      | No        | The indicator score for GreyNoise Suspicious Indicators. |
-| Benign Score     | greynoise.indicator_score_benign     | `GREYNOISE_INDICATOR_SCORE_BENIGN`     | 20      | No        | The indicator score for GreyNoise Benign Indicators.     |
+| Parameter        | config.yml                                | Docker environment variable                 | Default | Mandatory | Description                                              |
+|------------------|-------------------------------------------|---------------------------------------------|---------|-----------|----------------------------------------------------------|
+| API Key          | greynoise_feed.api_key                    | `GREYNOISE_FEED_API_KEY`                    |         | Yes       | GreyNoise API key.                                       |
+| Feed Type        | greynoise_feed.feed_type                  | `GREYNOISE_FEED_TYPE`                       |         | Yes       | Type of GreyNoise feed to import.                        |
+| Limit            | greynoise_feed.limit                      | `GREYNOISE_FEED_LIMIT`                      | 10,000  | No        | The max number of indicators to import.                  |
+| Malicious Score  | greynoise_feed.indicator_score_malicious  | `GREYNOISE_FEED_INDICATOR_SCORE_MALICIOUS`  | 75      | No        | The indicator score for GreyNoise Malicious Indicators.  |
+| Suspicious Score | greynoise_feed.indicator_score_suspicious | `GREYNOISE_FEED_INDICATOR_SCORE_SUSPICIOUS` | 50      | No        | The indicator score for GreyNoise Suspicious Indicators. |
+| Benign Score     | greynoise_feed.indicator_score_benign     | `GREYNOISE_FEED_INDICATOR_SCORE_BENIGN`     | 20      | No        | The indicator score for GreyNoise Benign Indicators.     |
 
 ### Feed Type Options
 
@@ -187,7 +187,7 @@ For each IP in the GreyNoise feed:
 
 1. **Observable**: IPv4-Addr with GreyNoise context
 2. **Indicator**: Created with STIX pattern
-3. **Relationship**: Indicator → `indicates` → Vulnerability
+3. **Relationship**: Indicator → `indicates` → IPv4 Observable
 
 ## Debugging
 
@@ -202,7 +202,7 @@ Ensure the GreyNoise API is reachable from your OpenCTI system. For API issues, 
 ## Additional information
 
 - **Subscription Required**: GreyNoise Feed access requires a paid subscription
-- **IMPORTANT NOTE** This connector only imports the base indicator and observerable, and flags the indicator with a classification.  For the full enrichment details available from GreyNoise, use this connector along with the GreyNoise IP Enrichment connector.  It is recommended that the enrichment connector be set to auto-enrich so that the full enrichment is added to each indicator while the feed ingests it.  Indicators that are pulled by the feed connector prior to having the enrichment connector in place will need to be enriched manually or via workflow.
+- **IMPORTANT NOTE** This connector only imports the base indicator and observable, and flags the indicator with a classification.  For the full enrichment details available from GreyNoise, use this connector along with the GreyNoise IP Enrichment connector.  It is recommended that the enrichment connector be set to auto-enrich so that the full enrichment is added to each indicator while the feed ingests it.  Indicators that are pulled by the feed connector prior to having the enrichment connector in place will need to be enriched manually or via workflow.
 - **Enrichment**: Use with GreyNoise enrichment connector for detailed IP context
 - **Classifications**: IPs are classified as benign, malicious, suspicious, or unknown
 - **Reference**: [GreyNoise](https://www.greynoise.io/)

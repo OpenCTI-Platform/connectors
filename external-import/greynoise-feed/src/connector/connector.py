@@ -70,9 +70,9 @@ class GreyNoiseFeedConnector:
 
         return query
 
-    def _process_labels(self, data: dict) -> tuple:
+    def _process_labels(self, data: dict) -> list:
         """
-        This method allows you to start the process of creating labels and recovering associated malware.
+        This method allows you to start the process of creating labels.
 
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
         :param data_tags: A parameter that contains all the data relating to the existing tags in GreyNoise
@@ -80,7 +80,6 @@ class GreyNoiseFeedConnector:
         """
 
         self.all_labels = []
-        all_malwares = []
 
         if data["internet_scanner_intelligence"]["classification"] == "benign":
             # Create label GreyNoise "benign"
@@ -117,7 +116,7 @@ class GreyNoiseFeedConnector:
                 "#57B9FF",
             )
 
-        return self.all_labels, all_malwares
+        return self.all_labels
 
     def _create_custom_label(self, name_label: str, color_label: str):
         """
@@ -175,7 +174,7 @@ class GreyNoiseFeedConnector:
             )
             pattern = "[ipv4-addr:value = '" + ip["ip"] + "']"
 
-            labels, malwares = self._process_labels(ip)
+            labels = self._process_labels(ip)
 
             if (
                 "first_seen" in ip["internet_scanner_intelligence"]
@@ -193,7 +192,7 @@ class GreyNoiseFeedConnector:
                 ).strftime("%Y-%m-%dT%H:%M:%SZ")
                 last_seen = datetime.strptime(
                     ip["internet_scanner_intelligence"]["last_seen_timestamp"],
-                    "%Y-%m-%d",
+                    "%Y-%m-%dT%H:%M:%SZ",
                 ) + timedelta(hours=23)
                 last_seen = last_seen.strftime("%Y-%m-%dT%H:%M:%SZ")
             # Generate ExternalReference
@@ -323,20 +322,25 @@ class GreyNoiseFeedConnector:
                 response = session.query(query=query, exclude_raw=True, size=5000)
                 complete = response.get("request_metadata", {}).get("complete", True)
                 scroll = response.get("request_metadata", {}).get("scroll", "")
+                most_recent_timestamp = None
 
                 # Process
                 if "data" in response and len(response["data"]) > 0:
                     added_count = 0
                     skip_count = 0
-                    most_recent_timestamp = None
                     for ip in response["data"]:
                         last_seen_str = ip.get("internet_scanner_intelligence", {}).get(
                             "last_seen_timestamp", ""
                         )
                         # Parse the timestamp string (format: "2026-01-26 19:59:37") to a timezone-aware datetime
-                        last_seen_dt = datetime.strptime(
-                            last_seen_str, "%Y-%m-%d %H:%M:%S"
-                        ).replace(tzinfo=pytz.UTC)
+                        try:
+                            last_seen_dt = datetime.strptime(
+                                last_seen_str, "%Y-%m-%d %H:%M:%S"
+                            ).replace(tzinfo=pytz.UTC)
+                        except ValueError:
+                            # Skip entries with an unparsable timestamp
+                            skip_count += 1
+                            continue
                         if last_seen_dt > most_recent_last_seen:
                             ips_list.append(ip)
                             added_count += 1
