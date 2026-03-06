@@ -163,7 +163,7 @@ class ConnectorConfig(ConfigBaseModel):
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
-        default=timedelta(hours=24),
+        default=timedelta(hours=6),
     )
     log_level: Optional[
         Literal[
@@ -198,14 +198,6 @@ class GreynoiseConfig(ConfigBaseModel):
     limit: int = Field(
         description="Max number of indicators to ingest.",
         default=10_000,
-    )
-    import_metadata: bool = Field(
-        description="Import metadata (cities, sightings, etc.). ⚠️ Can generate a lot of data.",
-        default=False,
-    )
-    import_destination_sightings: bool = Field(
-        description="Import indicator's countries (from metadata) as a Sighting.",
-        default=False,
     )
     indicator_score_malicious: int = Field(
         description="Default indicator score for malicious indicators.",
