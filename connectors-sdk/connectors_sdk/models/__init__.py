@@ -12,6 +12,7 @@ from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
 from connectors_sdk.models.domain_name import DomainName
+from connectors_sdk.models.email_address import EmailAddress
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
@@ -53,6 +54,7 @@ __all__ = [
     "City",
     "Country",
     "DomainName",
+    "EmailAddress",
     "ExternalReference",
     "File",
     "Hostname",
