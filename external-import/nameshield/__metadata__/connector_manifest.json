@@ -3,7 +3,7 @@
   "slug": "NameShield",
   "description": "NameShield is registrar providing domain privacy and security services. This connector allows you to import your domain list from NameShield service into OpenCTI.",
   "short_description": "NameShield connector to import your domain list from NameShield service.",
-  "logo": "external-import/NameShield/__metadata__/logo.png",
+  "logo": "external-import/nameshield/__metadata__/logo.png",
   "use_cases": [
     "Legitimate use case"
   ],

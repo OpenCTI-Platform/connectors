@@ -188,7 +188,7 @@ class NameShield:
         try:
             headers = {
                 "Authorization": "Bearer {}".format(self.nameshield_auth_bearer),
-                "ContentType": "application/json",
+                "Content-Type": "application/json",
             }
             ioc_types = ["host"]
             nameshield_result = []
@@ -223,9 +223,10 @@ class NameShield:
                     self.helper.connector_logger.error(
                         "NameShield response has no data field."
                     )
+                    keys_str = ",".join(r_json.keys())
                     self.helper.set_state(
                         {
-                            "Error": f"Error NameShield no data returned only thoses keys:  {str(",".join(r_json.keys()))}"
+                            "Error": f"Error NameShield no data returned only thoses keys:  {keys_str}"
                         }
                     )
                     return None
@@ -330,14 +331,14 @@ class NameShield:
                     identity.strip()
                     for identity in self.nameshield_link_to_identities.split(",")
                 ]
-                for identity_id in identities_list:
+                for identity_id2 in identities_list:
                     relationship_identity = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "attributed-to", indicator["id"], identity_id
+                            "attributed-to", indicator["id"], identity_id2
                         ),
                         relationship_type="attributed-to",
                         source_ref=indicator["id"],
-                        target_ref=identity_id,
+                        target_ref=identity_id2,
                         start_time=datetime.datetime.strptime(
                             str(threat["nicCreationDate"]), "%Y-%m-%d"
                         ),
@@ -385,7 +386,7 @@ class NameShield:
             objects=stix_objects,
             allow_custom=True,
         )
-        return bundle, nameshield_dom
+        return bundle, domain_list
 
     def opencti_bundle(self, work_id):
         info = self.nameshield_api_get_list()
@@ -440,7 +441,7 @@ class NameShield:
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-            time.sleep(self.nameshield_interval)
+            time.sleep(self.nameshield_interval * 60 * 60)
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
@@ -457,7 +458,6 @@ class NameShield:
         else:
             while True:
                 self.process_data()
-                time.sleep(self.nameshield_interval * 60 * 60)
 
 
 if __name__ == "__main__":
