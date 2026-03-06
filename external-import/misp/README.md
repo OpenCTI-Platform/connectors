@@ -200,11 +200,7 @@ CONNECTOR_LOG_LEVEL=debug
 
 ## Additional information
 
-<<<<<<< HEAD
-If MISP doesn't return anything with your curl query, try to see if any tag names differ from MISP's and alike. Once the query is returning events, the OpenCTI MISP connector should work as well.
-=======
 - **PyMISP**: The connector uses the PyMISP library for API interaction
 - **Two-Way Sync**: This connector is one-way (MISP → OpenCTI). For bidirectional sync, use the MISP internal enrichment connector
 - **Performance**: Large MISP instances may require filtering to manage data volume
 - **Reference**: [MISP Project](https://www.misp-project.org/)
->>>>>>> master
