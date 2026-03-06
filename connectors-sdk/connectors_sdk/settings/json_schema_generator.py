@@ -3,43 +3,10 @@
 from copy import deepcopy
 from typing import Any
 
-from pydantic.json_schema import (
-    GenerateJsonSchema,
-    JsonSchemaValue,
-)
+from pydantic.json_schema import GenerateJsonSchema, JsonSchemaValue
 
 
-class SanitizedJsonSchemaGenerator(GenerateJsonSchema):
-    """A JsonSchema generator that removes function references from schemas."""
-
-    def generate_inner(self, schema: Any) -> JsonSchemaValue:
-        """Generate inner schema, removing function references from metadata.
-
-        Args:
-            schema: The schema to process.
-
-        Returns:
-            The processed JSON schema value.
-        """
-        if (
-            not isinstance(schema, dict)
-            or not isinstance(meta := schema.get("metadata"), dict)
-            or not isinstance(js_extra := meta.get("pydantic_js_extra"), dict)
-            or "new_value_factory" not in js_extra
-        ):
-            return super().generate_inner(schema)
-
-        schema = schema.copy()
-        meta = meta.copy()
-        js_extra = js_extra.copy()
-        js_extra.pop("new_value_factory", None)
-        meta["pydantic_js_extra"] = js_extra
-        schema["metadata"] = meta
-
-        return super().generate_inner(schema)
-
-
-class ConnectorConfigJsonSchemaGenerator(SanitizedJsonSchemaGenerator):
+class ConnectorConfigJsonSchemaGenerator(GenerateJsonSchema):
     """Generate JSON schemas for connector configurations with resolved references and deprecation handling."""
 
     connector_name: str

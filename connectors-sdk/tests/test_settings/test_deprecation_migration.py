@@ -9,7 +9,7 @@ from connectors_sdk.settings.base_settings import (
 )
 from connectors_sdk.settings.deprecations import DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
-from pydantic import Field, SkipValidation
+from pydantic import Field
 
 
 class TestMigrateDeprecation:
@@ -49,6 +49,35 @@ class TestMigrateDeprecation:
 
         # Should have migrated value
         assert settings.connector.new_field == "old_value"
+
+    def test_migrate_deprecated_variable_with_non_string_value(self, monkeypatch):
+        """Test that variable migration raises ValueError for non-string new_namespaced_var."""
+
+        class CustomConnectorConfig(BaseExternalImportConnectorConfig):
+            old_field: str | None = DeprecatedField(
+                deprecated="Use new_field instead",
+                new_namespaced_var=123,  # Non-string value
+            )
+            new_field: str = Field(default="default")
+
+        class TestSettings(BaseConnectorSettings):
+            connector: CustomConnectorConfig = Field(
+                default_factory=CustomConnectorConfig
+            )
+
+        # Setup environment
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "test-id")
+        monkeypatch.setenv("CONNECTOR_NAME", "Test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
+
+        # Should raise a ConfigValidationError due to non-string new_namespaced_var
+        with pytest.raises(
+            ConfigValidationError, match="Error validating configuration"
+        ):
+            TestSettings()
 
     def test_migrate_deprecated_variable_with_value_transformation(self, monkeypatch):
         """Test variable migration with value transformation."""
@@ -91,10 +120,10 @@ class TestMigrateDeprecation:
             pass
 
         class TestSettings(BaseConnectorSettings):
-            connector: CustomConnectorConfig = Field(
+            connector: CustomConnectorConfig = DeprecatedField(
                 default_factory=CustomConnectorConfig,
                 deprecated=True,
-                json_schema_extra={"new_namespace": 123},  # Non-string value
+                new_namespace=123,  # Non-string value
             )
 
         # Setup environment
@@ -111,7 +140,7 @@ class TestMigrateDeprecation:
         ):
             TestSettings()
 
-    def test_error_when_namespace_has_new_namespaced_var_in_legacy_field(
+    def test_error_when_namespace_has_new_namespaced_var_in_deprecated_field(
         self, monkeypatch
     ):
         """Test that ValueError is raised when a deprecated namespace has new_namespaced_var."""
@@ -120,13 +149,11 @@ class TestMigrateDeprecation:
             pass
 
         class TestSettings(BaseConnectorSettings):
-            old_connector: DeprecatedConfig = Field(
+            old_connector: DeprecatedConfig = DeprecatedField(
                 default_factory=DeprecatedConfig,
                 deprecated="Use new_connector",
-                json_schema_extra={
-                    "new_namespace": "new_connector",
-                    "new_namespaced_var": "renamed",  # This should trigger ValueError
-                },
+                new_namespace="new_connector",
+                new_namespaced_var="renamed",  # This should trigger ValueError
             )
 
         # Setup environment
@@ -219,7 +246,7 @@ class TestMigrateDeprecation:
             api_key: str = Field(default="key")
 
         class TestSettings(BaseConnectorSettings):
-            old_connector: SkipValidation[CustomConnectorConfig] = DeprecatedField(
+            old_connector: CustomConnectorConfig = DeprecatedField(
                 deprecated="Use connector namespace instead",
                 new_namespace="connector",
             )
@@ -257,3 +284,44 @@ class TestMigrateDeprecation:
         # But fields that don't exist in new namespace are migrated
         assert settings.connector.custom_field == "migrated_custom"
         assert settings.connector.api_key == "migrated_key"
+
+    def test_migrate_both_namespace_and_field(self, monkeypatch):
+        """Test that both namespace and field-level migration can occur together."""
+
+        class CustomConnectorConfig(BaseExternalImportConnectorConfig):
+            new_field: str = Field(default="default")
+            old_field: str | None = DeprecatedField(
+                deprecated="Use new_field instead",
+                new_namespace="connector",
+                new_namespaced_var="new_field",
+            )
+
+        class TestSettings(BaseConnectorSettings):
+            connector: CustomConnectorConfig = Field(
+                default_factory=CustomConnectorConfig
+            )
+            old_connector: CustomConnectorConfig = DeprecatedField(
+                deprecated="Use connector namespace instead",
+                new_namespace="connector",
+            )
+
+        # Setup environment with old_connector and old_field variables
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("OLD_CONNECTOR_ID", "old-id")
+        monkeypatch.setenv("OLD_CONNECTOR_NAME", "Old Name")
+        monkeypatch.setenv("OLD_CONNECTOR_SCOPE", "old-scope")
+        monkeypatch.setenv("OLD_CONNECTOR_DURATION_PERIOD", "PT10M")
+        monkeypatch.setenv("OLD_CONNECTOR_OLD_FIELD", "migrated_value")
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            settings = TestSettings()
+
+            # Should have warnings about both namespace and field migration
+            warning_messages = [str(warning.message) for warning in w]
+            assert any("old_connector" in msg.lower() for msg in warning_messages)
+            assert any("old_field" in msg.lower() for msg in warning_messages)
+
+        # Value should be migrated to new_field within connector namespace
+        assert settings.connector.new_field == "migrated_value"
