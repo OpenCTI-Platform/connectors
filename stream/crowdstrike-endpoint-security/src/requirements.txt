@@ -1,4 +1,4 @@
-pycti==6.9.23
+pycti==6.9.24
 prometheus-client>=0.20.0,<=0.22.1
 crowdstrike-falconpy==1.6.0
 pydantic >=2.8.2, <3
