@@ -121,7 +121,14 @@ def migrate_deprecated_variable(
     data[destination_namespace] = new_config
 
 
-class DeprecatedField:
+def DeprecatedField(  # noqa: N802 (using pydantic.Field naming convention)
+    *,
+    deprecated: str | bool = True,
+    new_namespace: str | None = None,
+    new_namespaced_var: str | None = None,
+    new_value_factory: Callable[[Any], Any] | None = None,
+    removal_date: date | str | None = None,
+) -> Any:
     """Define a deprecated field with migration information.
 
     The migration information is used in the BaseConnectorSettings to automatically
@@ -136,34 +143,31 @@ class DeprecatedField:
 
     Returns:
         FieldInfo: A Pydantic FieldInfo object with deprecation metadata.
-    """
 
-    def __new__(  # type: ignore[misc]
-        cls,
-        *,
-        deprecated: str | bool = True,
-        new_namespace: str | None = None,
-        new_namespaced_var: str | None = None,
-        new_value_factory: Callable[[Any], Any] | None = None,
-        removal_date: date | str | None = None,
-    ) -> FieldInfo:
-        """Create a Pydantic Field with deprecation metadata."""
-        if not deprecated:
-            raise ValueError(
-                "DeprecatedField must have a deprecation reason or be set to True."
-            )
-        if isinstance(removal_date, str):
-            removal_date = date.fromisoformat(removal_date)
-        if removal_date:
-            removal_date = removal_date.strftime("%Y-%m-%d")
-        return Field(
-            default=None,
-            deprecated=deprecated,
-            json_schema_extra={
-                "new_namespace": new_namespace,
-                "new_namespaced_var": new_namespaced_var,
-                "new_value_factory": new_value_factory,  # type: ignore[dict-item]
-                "removal_date": removal_date,  # type: ignore[dict-item]
-            },
-            validate_default=False,
-        )  # type: ignore[return-value]
+    Notes:
+        - The return annotation is `Any` so `DeprecatedField` can be used on any type-annotated
+        fields without causing a type error. See
+    """
+    if not deprecated:
+        raise ValueError(
+            "DeprecatedField must have a deprecation reason or be set to True."
+        )
+
+    if isinstance(removal_date, str):
+        removal_date = date.fromisoformat(removal_date)
+    if removal_date:
+        removal_date = removal_date.strftime("%Y-%m-%d")
+
+    field_info: FieldInfo = Field(  # type: ignore[call-overload]
+        default=None,
+        deprecated=deprecated,
+        json_schema_extra={
+            "new_namespace": new_namespace,
+            "new_namespaced_var": new_namespaced_var,
+            "new_value_factory": new_value_factory,
+            "removal_date": removal_date,  # type: ignore[dict-item]
+        },
+        validate_default=False,
+    )
+
+    return field_info
