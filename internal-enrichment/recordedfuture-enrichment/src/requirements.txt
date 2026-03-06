@@ -1,4 +1,4 @@
-pycti==7.260306.0
+pycti==7.260306.1
 pydantic==2.11.9
 pydantic-settings==2.10.1
 regex==2024.11.6
