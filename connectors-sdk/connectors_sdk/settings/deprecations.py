@@ -2,7 +2,7 @@
 
 import warnings
 from datetime import date
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from pydantic import Field
 from pydantic.fields import FieldInfo
@@ -121,53 +121,87 @@ def migrate_deprecated_variable(
     data[destination_namespace] = new_config
 
 
-def DeprecatedField(  # noqa: N802 (using pydantic.Field naming convention)
-    *,
-    deprecated: str | bool = True,
-    new_namespace: str | None = None,
-    new_namespaced_var: str | None = None,
-    new_value_factory: Callable[[Any], Any] | None = None,
-    removal_date: date | str | None = None,
-) -> Any:
-    """Define a deprecated field with migration information.
-
-    The migration information is used in the BaseConnectorSettings to automatically
-    migrate deprecated fields to their new names or namespaces.
+class Deprecate:
+    """A metadata class that indicates that a field is deprecated and may be migrated
+    to a new variable during `BaseConnectorSettings` validation.
 
     Args:
-        deprecated (str | bool): `True` to mark the field as deprecated, or a deprecation message to be displayed in warnings and JSON schemas.
         new_namespace (str | None): The new namespace to migrate to.
         new_namespaced_var (str | None): The new variable name when migrating a variable.
         new_value_factory (Callable | None): A function to change the value when migrating.
         removal_date (date | str | None): Date when the deprecated setting will be removed.
+
+    Notes:
+        - If this is applied as an annotation (e.g., via `x: Annotated[int, Deprecate(removal_date="2027-01-01")]`),
+        the field will be marked as deprecated and no validation will be applied.
+
+        - Because this sets the field as optional (i.e., sets its default to `None`), subsequent annotation-applied transformations
+        may be impacted. Additionally, IDE and static type checkers may ignore that the field can be set to `None`,
+        which can lead to issues if the field is accessed without checking for `None` first.
+    """
+
+    def __init__(
+        self,
+        new_namespace: str | None = None,
+        new_namespaced_var: str | None = None,
+        new_value_factory: Callable[[Any], Any] | None = None,
+        removal_date: date | str | None = None,
+    ):
+        """Instantiate a `Deprecate` metadata."""
+        self.new_namespace = new_namespace
+        self.new_namespaced_var = new_namespaced_var
+        self.new_value_factory = new_value_factory
+        if isinstance(removal_date, str):
+            removal_date = date.fromisoformat(removal_date)
+        self.removal_date = removal_date.strftime("%Y-%m-%d") if removal_date else None
+
+
+def DeprecatedField(  # noqa: N802 (using pydantic.Field naming convention)
+    *,
+    deprecated: str | Literal[True] = True,
+    new_namespace: str | None = None,
+    new_namespaced_var: str | None = None,
+    new_value_factory: Callable[[Any], Any] | None = None,
+    removal_date: date | str | None = None,
+    **kwargs: Any,
+) -> Any:
+    """Define a deprecated field with migration information.
+
+    The migration information is used in the `BaseConnectorSettings` to automatically
+    migrate deprecated fields to their new names or namespaces.
+
+    Args:
+        deprecated (str | Literal[True]): `True` to mark the field as deprecated, or
+        a deprecation message to be displayed in warnings and JSON schemas.
+        new_namespace (str | None): The new namespace to migrate to.
+        new_namespaced_var (str | None): The new variable name when migrating a variable.
+        new_value_factory (Callable | None): A function to change the value when migrating.
+        removal_date (date | str | None): Date when the deprecated setting will be removed.
+        **kwargs: Additional keyword arguments to be passed to the underlying `Field` definition.
 
     Returns:
         FieldInfo: A Pydantic FieldInfo object with deprecation metadata.
 
     Notes:
         - The return annotation is `Any` so `DeprecatedField` can be used on any type-annotated
-        fields without causing a type error. See
+        fields without causing a type error (same as `Field` from Pydantic).
+        - See `pydantic.Field` (https://docs.pydantic.dev/latest/api/fields/) for more information
+        on the available parameters to define a field, as they can be used in conjunction with the deprecation parameters.
     """
     if not deprecated:
         raise ValueError(
             "DeprecatedField must have a deprecation reason or be set to True."
         )
 
-    if isinstance(removal_date, str):
-        removal_date = date.fromisoformat(removal_date)
-    if removal_date:
-        removal_date = removal_date.strftime("%Y-%m-%d")
-
-    field_info: FieldInfo = Field(  # type: ignore[call-overload]
-        default=None,
-        deprecated=deprecated,
-        json_schema_extra={
-            "new_namespace": new_namespace,
-            "new_namespaced_var": new_namespaced_var,
-            "new_value_factory": new_value_factory,
-            "removal_date": removal_date,  # type: ignore[dict-item]
-        },
-        validate_default=False,
+    field_info: FieldInfo = Field(deprecated=deprecated, **kwargs)
+    # Add Deprecate metadata so it can be used for migration in BaseConnectorSettings
+    field_info.metadata.append(
+        Deprecate(
+            new_namespace=new_namespace,
+            new_namespaced_var=new_namespaced_var,
+            new_value_factory=new_value_factory,
+            removal_date=removal_date,
+        )
     )
 
     return field_info

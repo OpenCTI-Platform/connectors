@@ -1,11 +1,41 @@
 import sys
 from pathlib import Path
+from typing import Annotated
 from unittest.mock import patch
 
 import pytest
-from connectors_sdk.settings.base_settings import BaseConnectorSettings, _SettingsLoader
+from connectors_sdk.settings.base_settings import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    _SettingsLoader,
+)
+from connectors_sdk.settings.deprecations import Deprecate, DeprecatedField
 from connectors_sdk.settings.exceptions import ConfigValidationError
-from pydantic import HttpUrl
+from pydantic import Field, HttpUrl
+
+
+def test_base_config_model_should_retrieve_deprecated_fields():
+    """Test that `BaseConfigModel` subclasses can retrieve deprecated fields metadata."""
+
+    class TestConfig(BaseConfigModel):
+        test_field: str = Field(default="test")
+        old_field: str = DeprecatedField(removal_date="2026-12-31")
+
+    assert len(TestConfig._model_deprecated_fields) == 1
+    assert "old_field" in TestConfig._model_deprecated_fields
+
+
+def test_base_config_model_should_retrieve_fields_with_deprecate_annotation():
+    """Test that `BaseConfigModel` subclasses can retrieve fields with `Deprecate` metadata."""
+
+    class TestConfig(BaseConfigModel):
+        test_field: str = Field(default="test")
+        old_field: Annotated[
+            str, Field(description="Test field"), Deprecate(removal_date="2026-12-31")
+        ]
+
+    assert len(TestConfig._model_deprecated_fields) == 1
+    assert "old_field" in TestConfig._model_deprecated_fields
 
 
 def test_settings_loader_should_get_connector_main_path(mock_main_path):

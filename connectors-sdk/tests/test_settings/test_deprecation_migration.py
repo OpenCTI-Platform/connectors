@@ -50,6 +50,35 @@ class TestMigrateDeprecation:
         # Should have migrated value
         assert settings.connector.new_field == "old_value"
 
+    def test_migrate_deprecated_variable_with_non_string_value(self, monkeypatch):
+        """Test that namespace migration raises ValueError for non-string new_namespace."""
+
+        class CustomConnectorConfig(BaseExternalImportConnectorConfig):
+            old_field: str | None = DeprecatedField(
+                deprecated="Use new_field instead",
+                new_namespaced_var=123,  # Non-string value
+            )
+            new_field: str = Field(default="default")
+
+        class TestSettings(BaseConnectorSettings):
+            connector: CustomConnectorConfig = Field(
+                default_factory=CustomConnectorConfig
+            )
+
+        # Setup environment
+        monkeypatch.setenv("OPENCTI_URL", "http://localhost:8080")
+        monkeypatch.setenv("OPENCTI_TOKEN", "test-token")
+        monkeypatch.setenv("CONNECTOR_ID", "test-id")
+        monkeypatch.setenv("CONNECTOR_NAME", "Test")
+        monkeypatch.setenv("CONNECTOR_SCOPE", "test")
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT5M")
+
+        # Should raise a ConfigValidationError due to non-string new_namespaced_var
+        with pytest.raises(
+            ConfigValidationError, match="Error validating configuration"
+        ):
+            TestSettings()
+
     def test_migrate_deprecated_variable_with_value_transformation(self, monkeypatch):
         """Test variable migration with value transformation."""
 
@@ -91,10 +120,10 @@ class TestMigrateDeprecation:
             pass
 
         class TestSettings(BaseConnectorSettings):
-            connector: CustomConnectorConfig = Field(
+            connector: CustomConnectorConfig = DeprecatedField(
                 default_factory=CustomConnectorConfig,
                 deprecated=True,
-                json_schema_extra={"new_namespace": 123},  # Non-string value
+                new_namespace=123,  # Non-string value
             )
 
         # Setup environment
@@ -120,13 +149,11 @@ class TestMigrateDeprecation:
             pass
 
         class TestSettings(BaseConnectorSettings):
-            old_connector: DeprecatedConfig = Field(
+            old_connector: DeprecatedConfig = DeprecatedField(
                 default_factory=DeprecatedConfig,
                 deprecated="Use new_connector",
-                json_schema_extra={
-                    "new_namespace": "new_connector",
-                    "new_namespaced_var": "renamed",  # This should trigger ValueError
-                },
+                new_namespace="new_connector",
+                new_namespaced_var="renamed",  # This should trigger ValueError
             )
 
         # Setup environment
