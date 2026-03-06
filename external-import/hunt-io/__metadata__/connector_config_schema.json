@@ -16,14 +16,14 @@
     },
     "CONNECTOR_NAME": {
       "default": "Hunt IO",
-      "description": "Connector name",
+      "description": "Display name for this connector instance in the OpenCTI platform",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
       "default": [
         "Hunt IO"
       ],
-      "description": "Connector scope",
+      "description": "Entity types or categories this connector will handle. Used for filtering and organization within OpenCTI",
       "items": {
         "type": "string"
       },
@@ -47,23 +47,88 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "description": "The period of time to await between two runs of the connector.",
+      "default": "P1D",
+      "description": "Time interval between consecutive data imports from Hunt.io. Controls how frequently the connector runs",
       "format": "duration",
       "type": "string"
     },
+    "CONNECTOR_HUNT_UI_API_BASE_URL": {
+      "default": "https://api.hunt.io/v1/feeds/c2",
+      "description": "Use HUNT_IO_API_BASE_URL instead.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string",
+      "deprecated": true
+    },
+    "CONNECTOR_HUNT_UI_API_KEY": {
+      "description": "Use HUNT_IO_API_KEY instead.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "deprecated": true
+    },
+    "CONNECTOR_HUNT_UI_TLP_LEVEL": {
+      "default": "amber",
+      "description": "Use HUNT_IO_TLP_LEVEL instead.",
+      "enum": [
+        "white",
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
+    "CONNECTOR_HUNT_IO_API_BASE_URL": {
+      "default": "https://api.hunt.io/v1/feeds/c2",
+      "description": "Use HUNT_IO_API_BASE_URL instead.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string",
+      "deprecated": true
+    },
+    "CONNECTOR_HUNT_IO_API_KEY": {
+      "description": "Use HUNT_IO_API_KEY instead.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "deprecated": true
+    },
+    "CONNECTOR_HUNT_IO_TLP_LEVEL": {
+      "default": "amber",
+      "description": "Use HUNT_IO_TLP_LEVEL instead.",
+      "enum": [
+        "white",
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
     "HUNT_IO_API_BASE_URL": {
-      "description": "API base URL",
+      "default": "https://api.hunt.io/v1/feeds/c2",
+      "description": "Hunt.io API endpoint URL for the C2 threat intelligence feeds",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "HUNT_IO_API_KEY": {
-      "description": "API key",
+      "description": "Authentication key for accessing the Hunt.io API. Obtain this from your Hunt.io account settings",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
     "HUNT_IO_TLP_LEVEL": {
       "default": "amber",
-      "description": "TLP level",
+      "description": "Traffic Light Protocol (TLP) marking level to apply to imported data, controlling information sharing restrictions",
       "enum": [
         "white",
         "clear",
@@ -78,7 +143,6 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_DURATION_PERIOD",
     "HUNT_IO_API_KEY"
   ],
   "additionalProperties": true
