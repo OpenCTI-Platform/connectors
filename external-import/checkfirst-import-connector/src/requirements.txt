@@ -4,4 +4,4 @@ python-dateutil>=2.9.0.post0
 pyyaml>=6.0.1
 
 # OpenCTI connectors SDK (typed settings, deterministic models helpers)
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.17#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260306.1#subdirectory=connectors-sdk
