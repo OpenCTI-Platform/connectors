@@ -4,6 +4,7 @@ import warnings
 
 import pytest
 from connectors_sdk.settings.deprecations import (
+    Deprecate,
     DeprecatedField,
     migrate_deprecated_namespace,
     migrate_deprecated_variable,
@@ -242,13 +243,19 @@ class TestMigrateDeprecatedVariable:
 class TestDeprecatedField:
     """Test DeprecatedField factory function."""
 
+    def get_field_deprecate_annotation(self, field: FieldInfo) -> Deprecate | None:
+        """Helper method to get Deprecate annotation from FieldInfo."""
+        return next(
+            (meta for meta in field.metadata if isinstance(meta, Deprecate)), None
+        )
+
     def test_deprecated_field_with_deprecation(self):
         """Test DeprecatedField creates FieldInfo with deprecation."""
         field = DeprecatedField(deprecated="Use new_field instead")
 
         assert isinstance(field, FieldInfo)
         assert field.deprecated == "Use new_field instead"
-        assert field.default is None
+        assert self.get_field_deprecate_annotation(field) is not None
 
     def test_deprecated_field_with_boolean_deprecation(self):
         """Test DeprecatedField with boolean deprecation flag."""
@@ -256,6 +263,7 @@ class TestDeprecatedField:
 
         assert isinstance(field, FieldInfo)
         assert field.deprecated is True
+        assert self.get_field_deprecate_annotation(field) is not None
 
     def test_deprecated_field_with_new_namespace(self):
         """Test DeprecatedField with new_namespace metadata."""
@@ -263,7 +271,9 @@ class TestDeprecatedField:
             deprecated="Moved to new_namespace", new_namespace="new_namespace"
         )
 
-        assert field.json_schema_extra["new_namespace"] == "new_namespace"  # type: ignore
+        deprecate_annotation = self.get_field_deprecate_annotation(field)
+        assert deprecate_annotation is not None
+        assert deprecate_annotation.new_namespace == "new_namespace"
 
     def test_deprecated_field_with_new_namespaced_var(self):
         """Test DeprecatedField with new_namespaced_var metadata."""
@@ -271,7 +281,9 @@ class TestDeprecatedField:
             deprecated="Renamed to new_var", new_namespaced_var="new_var"
         )
 
-        assert field.json_schema_extra["new_namespaced_var"] == "new_var"  # type: ignore
+        deprecate_annotation = self.get_field_deprecate_annotation(field)
+        assert deprecate_annotation is not None
+        assert deprecate_annotation.new_namespaced_var == "new_var"
 
     def test_deprecated_field_with_new_value_factory(self):
         """Test DeprecatedField with new_value_factory function."""
@@ -281,7 +293,9 @@ class TestDeprecatedField:
 
         field = DeprecatedField(deprecated=True, new_value_factory=transformer)
 
-        assert field.json_schema_extra["new_value_factory"] == transformer  # type: ignore
+        deprecate_annotation = self.get_field_deprecate_annotation(field)
+        assert deprecate_annotation is not None
+        assert deprecate_annotation.new_value_factory == transformer
 
     def test_deprecated_field_with_all_parameters(self):
         """Test DeprecatedField with all parameters."""
@@ -297,15 +311,11 @@ class TestDeprecatedField:
         )
 
         assert field.deprecated == "Complete migration"
-        assert field.json_schema_extra["new_namespace"] == "new_ns"  # type: ignore
-        assert field.json_schema_extra["new_namespaced_var"] == "new_var"  # type: ignore
-        assert field.json_schema_extra["new_value_factory"] == transformer  # type: ignore
-
-    def test_deprecated_field_default_none(self):
-        """Test DeprecatedField always sets default to None."""
-        field = DeprecatedField(deprecated=True)
-
-        assert field.default is None
+        deprecate_annotation = self.get_field_deprecate_annotation(field)
+        assert deprecate_annotation is not None
+        assert deprecate_annotation.new_namespace == "new_ns"
+        assert deprecate_annotation.new_namespaced_var == "new_var"
+        assert deprecate_annotation.new_value_factory == transformer
 
     def test_deprecated_field_raises_when_deprecated_is_false(self):
         """Test DeprecatedField raises ValueError when deprecated is False."""
@@ -320,8 +330,10 @@ class TestDeprecatedField:
             removal_date="2026-12-31",
         )
 
-        assert field.json_schema_extra["removal_date"] == "2026-12-31"  # type: ignore
-        assert field.json_schema_extra["new_namespaced_var"] == "new_field"  # type: ignore
+        deprecate_annotation = self.get_field_deprecate_annotation(field)
+        assert deprecate_annotation is not None
+        assert deprecate_annotation.removal_date == "2026-12-31"
+        assert deprecate_annotation.new_namespaced_var == "new_field"
 
     def test_migrate_namespace_with_removal_date(self):
         """Test migrate_deprecated_namespace includes removal_date in warning."""
