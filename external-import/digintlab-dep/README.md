@@ -40,6 +40,7 @@ The platform tracks ransomware groups' activities, including victim announcement
 - Uses deterministic incident IDs (based on DEP hash) so updated announcements are merged
 - Validates and normalizes DEP payload fields before STIX object creation
 - Optionally skips records with empty/placeholder victim names (`n/a`, `none`)
+- Optionally creates sector class identities and links victims to sectors
 
 ---
 
@@ -77,22 +78,23 @@ The platform tracks ransomware groups' activities, including victim announcement
 
 #### Connector Extra Parameters
 
-| Parameter             | Docker envvar               | Mandatory | Default                                                   | Description                                                       |
-| --------------------- | --------------------------- | --------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
-| Username              | `DEP_USERNAME`              | Yes       | -                                                         | Double Extortion Platform username                                |
-| Password              | `DEP_PASSWORD`              | Yes       | -                                                         | Double Extortion Platform password                                |
-| API Key               | `DEP_API_KEY`               | Yes       | -                                                         | API key issued by the platform                                    |
-| Client ID             | `DEP_CLIENT_ID`             | Yes       | -                                                         | AWS Cognito App Client ID                                         |
-| Login Endpoint        | `DEP_LOGIN_ENDPOINT`        | No        | `https://cognito-idp.eu-west-1.amazonaws.com/`            | Cognito login endpoint                                            |
-| API Endpoint          | `DEP_API_ENDPOINT`          | No        | `https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist` | REST endpoint for announcements                                   |
-| Lookback Days         | `DEP_LOOKBACK_DAYS`         | No        | `7`                                                       | Days to look back on first run                                    |
-| Overlap Hours         | `DEP_OVERLAP_HOURS`         | No        | `72`                                                      | Hours subtracted from `last_run` to replay recent data            |
-| Extended Results      | `DEP_EXTENDED_RESULTS`      | No        | `true`                                                    | Request extended leak information                                 |
-| Dataset               | `DEP_DSET`                  | No        | `ext`                                                     | Dataset to query (`ext`, `sanctions`, etc.)                       |
-| Enable Site Indicator | `DEP_ENABLE_SITE_INDICATOR` | No        | `true`                                                    | Create domain indicator per victim                                |
-| Enable Hash Indicator | `DEP_ENABLE_HASH_INDICATOR` | No        | `true`                                                    | Create hash indicator when available                              |
-| Skip Empty Victim     | `DEP_SKIP_EMPTY_VICTIM`     | No        | `true`                                                    | Skip records where victim is empty or placeholder (`n/a`, `none`) |
-| Confidence            | `DEP_CONFIDENCE`            | No        | `70`                                                      | Confidence level for created objects                              |
+| Parameter                | Docker envvar                  | Mandatory | Default                                                   | Description                                                                  |
+| ------------------------ | ------------------------------ | --------- | --------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| Username                 | `DEP_USERNAME`                 | Yes       | -                                                         | Double Extortion Platform username                                           |
+| Password                 | `DEP_PASSWORD`                 | Yes       | -                                                         | Double Extortion Platform password                                           |
+| API Key                  | `DEP_API_KEY`                  | Yes       | -                                                         | API key issued by the platform                                               |
+| Client ID                | `DEP_CLIENT_ID`                | Yes       | -                                                         | AWS Cognito App Client ID                                                    |
+| Login Endpoint           | `DEP_LOGIN_ENDPOINT`           | No        | `https://cognito-idp.eu-west-1.amazonaws.com/`            | Cognito login endpoint                                                       |
+| API Endpoint             | `DEP_API_ENDPOINT`             | No        | `https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist` | REST endpoint for announcements                                              |
+| Lookback Days            | `DEP_LOOKBACK_DAYS`            | No        | `7`                                                       | Days to look back on first run                                               |
+| Overlap Hours            | `DEP_OVERLAP_HOURS`            | No        | `72`                                                      | Hours subtracted from `last_run` to replay recent data                       |
+| Extended Results         | `DEP_EXTENDED_RESULTS`         | No        | `true`                                                    | Request extended leak information                                            |
+| Dataset                  | `DEP_DSET`                     | No        | `ext`                                                     | Dataset to query (`ext`, `sanctions`, etc.)                                  |
+| Enable Site Indicator    | `DEP_ENABLE_SITE_INDICATOR`    | No        | `true`                                                    | Create domain indicator per victim                                           |
+| Enable Hash Indicator    | `DEP_ENABLE_HASH_INDICATOR`    | No        | `true`                                                    | Create hash indicator when available                                         |
+| Skip Empty Victim        | `DEP_SKIP_EMPTY_VICTIM`        | No        | `true`                                                    | Skip records where victim is empty or placeholder (`n/a`, `none`)            |
+| Create Sector Identities | `DEP_CREATE_SECTOR_IDENTITIES` | No        | `true`                                                    | Create sector `identity_class=class` entities and link victims via `part-of` |
+| Confidence               | `DEP_CONFIDENCE`               | No        | `70`                                                      | Confidence level for created objects                                         |
 
 ---
 
@@ -130,6 +132,7 @@ services:
       - DEP_ENABLE_SITE_INDICATOR=true
       - DEP_ENABLE_HASH_INDICATOR=true
       - DEP_SKIP_EMPTY_VICTIM=true
+      - DEP_CREATE_SECTOR_IDENTITIES=true
     restart: always
     depends_on:
       - opencti
@@ -157,11 +160,12 @@ graph TB
         Connector[DEP Connector]
     end
 
-    Connector -->|Fetch announcements| API
+    Connector -->|Fetch announcements (API key + IdToken)| API
     API -->|Leak records| Connector
 
     subgraph OpenCTI
         Connector --> Victim[Identity - Victim Org]
+        Connector --> Sector[Identity - Sector Class]
         Connector --> Incident[Incident]
         Connector --> DomainInd[Indicator - Domain]
         Connector --> HashInd[Indicator - Hash]
@@ -169,21 +173,23 @@ graph TB
     end
 
     Incident -- targets --> Victim
+    Victim -- part-of --> Sector
     DomainInd -- indicates --> Incident
     HashInd -- indicates --> Incident
 ```
 
 ### Entity Mapping
 
-| DEP Data          | OpenCTI Entity          | Notes                                                             |
-| ----------------- | ----------------------- | ----------------------------------------------------------------- |
-| Announcement      | Incident                | Type: `cybercrime`, includes first_seen date                      |
-| Victim Name       | Identity (Organization) | Organization identity with sector/revenue description             |
-| Victim Domain     | Indicator               | STIX pattern: `[domain-name:value = '...']`                       |
-| Hash ID           | Indicator               | STIX pattern based on hash type (MD5/SHA1/SHA256)                 |
-| Announcement Link | External Reference      | Link to DEP announcement page                                     |
-| Victim Site       | External Reference      | Link to victim's website                                          |
-| -                 | Relationship            | `targets` (Incident → Victim), `indicates` (Indicator → Incident) |
+| DEP Data          | OpenCTI Entity          | Notes                                                                                          |
+| ----------------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| Announcement      | Incident                | Type: `cybercrime`, includes first_seen date                                                   |
+| Victim Name       | Identity (Organization) | Organization identity with revenue description                                                 |
+| Victim Sector     | Identity (Class)        | Optional; created when `create_sector_identities=true`                                         |
+| Victim Domain     | Indicator               | STIX pattern: `[domain-name:value = '...']`                                                    |
+| Hash ID           | Indicator               | STIX pattern based on hash type (MD5/SHA1/SHA256)                                              |
+| Announcement Link | External Reference      | Link to DEP announcement page                                                                  |
+| Victim Site       | External Reference      | Link to victim's website                                                                       |
+| -                 | Relationship            | `targets` (Incident → Victim), `part-of` (Victim → Sector), `indicates` (Indicator → Incident) |
 
 ### Processing Details
 
@@ -211,10 +217,16 @@ graph TB
 4. **Victim Identity**:
    - Name: Victim organization name
    - Identity Class: `organization`
-   - Description: Includes industry sector and reported revenue
+   - Description: Includes reported revenue
+   - If `create_sector_identities=false`, sector is also added to victim description
    - External References: Announcement and victim site links
 
-5. **Indicator Creation**:
+5. **Sector Identity Creation**:
+   - Enabled when `create_sector_identities=true`
+   - Creates `Identity` objects with `identity_class=class`
+   - Sector names are normalized (whitespace collapsed) before creation
+
+6. **Indicator Creation**:
    - **Domain Indicator** (when `enable_site_indicator=true`):
      - Pattern: `[domain-name:value = '{victim_domain}']`
      - Normalizes `victimDomain` or `site` via URL parsing (lowercase hostname only)
@@ -222,11 +234,12 @@ graph TB
      - Auto-detects hash type by length (MD5=32, SHA-1=40, SHA-256=64)
      - Pattern: `[file:hashes.'{type}' = '{hash}']`
 
-6. **Relationships**:
+7. **Relationships**:
    - `targets`: Incident → Victim Organization
+   - `part-of`: Victim Organization → Sector Identity (when sector identities are enabled)
    - `indicates`: Domain/Hash Indicator → Incident
 
-7. **Record Filtering**:
+8. **Record Filtering**:
    - When `skip_empty_victim=true`, records with victim value `""`, `n/a`, or `none` are ignored
 
 ### State Management

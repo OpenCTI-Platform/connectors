@@ -87,6 +87,14 @@ class LeakRecord:
             self.site
         )
 
+    @field_validator("sector")
+    @classmethod
+    def normalize_sector(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        normalized = " ".join(v.split()).strip()
+        return normalized or None
+
 
 class DepConnector:
     def __init__(self) -> None:
@@ -183,6 +191,12 @@ class DepConnector:
         self.skip_empty_victim = pycti.get_config_variable(
             "DEP_SKIP_EMPTY_VICTIM",
             ["dep", "skip_empty_victim"],
+            config,
+            default=True,
+        )
+        self.create_sector_identities = pycti.get_config_variable(
+            "DEP_CREATE_SECTOR_IDENTITIES",
+            ["dep", "create_sector_identities"],
             config,
             default=True,
         )
@@ -301,7 +315,7 @@ class DepConnector:
             )
 
         description_parts = []
-        if item.sector:
+        if item.sector and not self.create_sector_identities:
             description_parts.append(f"Industry sector: {item.sector}")
         if item.revenue:
             description_parts.append(f"Reported revenue: {item.revenue}")
@@ -316,6 +330,17 @@ class DepConnector:
             labels=[self.label_value],
             created_by_ref=self.author_identity,
             external_references=external_references or None,
+        )
+
+    def _create_sector_identity(self, sector: str) -> stix2.Identity:
+        sector_key = sector.lower()
+        return stix2.Identity(
+            id=pycti.Identity.generate_id(sector_key, identity_class="class"),
+            name=sector,
+            identity_class="class",
+            created_by_ref=self.author_identity,
+            confidence=self.confidence,
+            labels=[self.label_value],
         )
 
     def _create_incident(self, item: LeakRecord) -> stix2.Incident:
@@ -458,12 +483,22 @@ class DepConnector:
         if hash_indicator:
             indicators.append(hash_indicator)
 
+        sector_identity: stix2.Identity | None = None
+        sector = item.sector
+        if self.create_sector_identities and sector and victim:
+            sector_identity = self._create_sector_identity(sector)
+
         objects: list[stix2._STIXBase21] = [self.author_identity]
         if victim:
             objects.append(victim)
         objects.append(incident)
         if victim:
             objects.append(self._build_relationship("targets", incident.id, victim.id))
+        if sector_identity and victim:
+            objects.append(sector_identity)
+            objects.append(
+                self._build_relationship("part-of", victim.id, sector_identity.id)
+            )
         for indicator in indicators:
             objects.append(indicator)
             objects.append(
