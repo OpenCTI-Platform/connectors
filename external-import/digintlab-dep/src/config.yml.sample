@@ -30,3 +30,5 @@ dep:
   enable_hash_indicator: true
   skip_empty_victim: true
   create_sector_identities: true
+  create_intrusion_sets: true
+  create_country_locations: true

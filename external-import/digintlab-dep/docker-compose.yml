@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-digintlab-dep:
     image: opencti/connector-digintlab-dep:latest
@@ -27,4 +27,6 @@ services:
       - DEP_ENABLE_HASH_INDICATOR=true
       - DEP_SKIP_EMPTY_VICTIM=true
       - DEP_CREATE_SECTOR_IDENTITIES=true
+      - DEP_CREATE_INTRUSION_SETS=true
+      - DEP_CREATE_COUNTRY_LOCATIONS=true
     restart: always
