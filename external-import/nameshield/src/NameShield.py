@@ -196,7 +196,7 @@ class NameShield:
 
                 url = self.make_url_dom_list()
                 response = requests.get(
-                    url, headers=headers, verify=True, timeout=(80000, 80000)
+                    url, headers=headers, verify=True, timeout=(600, 600)
                 )
                 self.helper.connector_logger.debug(
                     f"We get a response from NameShield API: {response.status_code}."
@@ -240,7 +240,7 @@ class NameShield:
                             url_domain,
                             headers=headers,
                             verify=True,
-                            timeout=(80000, 80000),
+                            timeout=(600, 600),
                         )
                         domain_info = response_domain.json()
                         nameshield_result.append(domain_info["data"])
@@ -373,7 +373,7 @@ class NameShield:
             modified="2025-12-08T10:03:08.243Z",
             identity_class="organization",
             type="identity",
-            object_marking_refs=stix2.TLP_WHITE,
+            object_marking_refs=[stix2.TLP_WHITE],
         )
 
         stix_objects = [identity, self.nameshield_marking]
@@ -467,4 +467,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

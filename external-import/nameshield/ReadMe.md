@@ -15,7 +15,7 @@ This connector facilitates domain names import of from the NameShield registrat.
 | `connector_name`  | `CONNECTOR_NAME`  | The name of the connector, can be just "Nameshield"   |
 | `connector_update_existing_data` | `CONNECTOR_UPDATE_EXISTING_DATA` | If an entity already exists, update its attributes with information provided by this connector. |
 | `connector_log_level`   | `CONNECTOR_LOG_LEVEL`   | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).   |
-| `nameshield_auth_berear` | `NAMESHIELD_AUTH_BEARER` | You connection bearer provided by nameshield (you need autorise you IP also)   |
+| `nameshield_auth_bearer` | `NAMESHIELD_AUTH_BEARER` | You connection bearer provided by nameshield (you need autorise you IP also)   |
 | `nameshield_server` | `NAMESHIELD_SERVER` | Must be `api.nameshield.net` (but if Domain name change one day...)  |
 | `nameshield_api_version` | `NAMESHIELD_API_VERSION` | Must be `v1` (but if version change one day...)  |
 | `nameshield_api_endpoint` | `NAMESHIELD_API_ENDPOINT` | Must be `registrar` (but if it change one day...)  |
