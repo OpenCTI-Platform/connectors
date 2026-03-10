@@ -8,8 +8,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| INTEL471_API_USERNAME | `string` | ✅ | string |  | Titan API username |
-| INTEL471_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Titan API key |
+| INTEL471_API_USERNAME | `string` | ✅ | string |  | Titan/Verity471 API username |
+| INTEL471_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Titan/Verity471 API key |
+| INTEL471_BACKEND | `string` |  | `titan` `verity471` | `titan` | Specifies the ingestion source platform. Supports Titan and Verity471, with the latter providing full parity plus extended data type support. |
 | CONNECTOR_NAME | `string` |  | string | `"Intel471 v2"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["malware", "vulnerability", "indicator"]` | The scope of the connector, e.g. 'malware, vulnerability, indicator'. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |

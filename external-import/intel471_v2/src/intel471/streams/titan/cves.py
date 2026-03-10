@@ -1,9 +1,9 @@
 from typing import Union
 
-from .common import Intel471Stream
+from .base import TitanStream
 
 
-class Intel471CVEsStream(Intel471Stream):
+class Intel471CVEsStream(TitanStream):
     label = "cves"
     group_label = "cves"
     api_payload_objects_key = "cve_reports"
