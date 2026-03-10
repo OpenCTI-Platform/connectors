@@ -49,18 +49,14 @@
       "type": "string"
     },
     "INTEL471_API_USERNAME": {
-      "description": "Titan/Verity471 API username",
+      "description": "Titan API username",
       "type": "string"
     },
     "INTEL471_API_KEY": {
-      "description": "Titan/Verity471 API key",
+      "description": "Titan API key",
       "format": "password",
       "type": "string",
       "writeOnly": true
-    },
-    "INTEL471_BACKEND": {
-      "description": "Specifies the ingestion source platform. Supports 'titan' and 'verity471', with the latter providing full parity plus extended data type support.",
-      "type": "string"
     },
     "INTEL471_INTERVAL_INDICATORS": {
       "default": 60,
@@ -114,6 +110,15 @@
       "default": 70,
       "description": "Indicator score. Defaults to `70`.",
       "type": "integer"
+    },
+    "INTEL471_BACKEND": {
+      "default": "titan",
+      "description": "Backend to use for Intel471 API calls. Defaults to `titan`.",
+      "enum": [
+        "titan",
+        "verity471"
+      ],
+      "type": "string"
     }
   },
   "required": [
