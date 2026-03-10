@@ -74,6 +74,24 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="API version of the Microsoft management interface",
         default="2025-03-01",
     )
+    batch_mode: bool = Field(
+        description="Enable batch mode for bulk uploading STIX objects. When disabled (default), objects are sent individually in real-time.",
+        default=False,
+    )
+    batch_size: int = Field(
+        description="Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled.",
+        default=100,
+        ge=1,
+    )
+    batch_timeout: int = Field(
+        description="Maximum time in seconds to wait before flushing a partial batch. Only used when batch_mode is enabled.",
+        default=30,
+        ge=1,
+    )
+    event_types: ListFromString = Field(
+        description="Comma-separated list of event types to process (create, update, delete). Useful for running separate connector instances for batch uploads and deletions.",
+        default=["create", "update", "delete"],
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

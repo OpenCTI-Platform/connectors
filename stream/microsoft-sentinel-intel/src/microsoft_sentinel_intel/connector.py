@@ -38,10 +38,17 @@ class Connector:
         The API used (upload_stix_objects) to upload the stix objects to Sentinel can handle
           Indicators, AttackPatterns, Identity, ThreatActors and Relationships.
         """
+        if event_type not in self.config.microsoft_sentinel_intel.event_types:
+            self.helper.connector_logger.info(
+                message=f"[{event_type.upper()}] Event type filtered out, skipping"
+            )
+            return
+
         match event_type:
             case "create" | "update":
+                prepared = self._prepare_stix_object(stix_object)
                 self.client.upload_stix_objects(
-                    stix_objects=[self._prepare_stix_object(stix_object)],
+                    stix_objects=[prepared],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
             case "delete":
@@ -53,12 +60,17 @@ class Connector:
 
     def _handle_event(self, event: Event):
         try:
-            data = json.loads(event.data)["data"]
+            parsed = json.loads(event.data)
         except json.JSONDecodeError as err:
             raise ConnectorError(
                 message="[ERROR] Data cannot be parsed to JSON",
                 metadata={"message_data": event.data, "error": str(err)},
             ) from err
+        
+        data = parsed.get("data")
+        if not data:
+            return
+
         if is_stix_indicator(data):
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Processing message",
@@ -97,6 +109,71 @@ class Connector:
                 message=f"Unexpected error: {err}", meta={"error": str(err)}
             )
 
+    def process_batch(self, batch_data: dict) -> None:
+        """
+        Batch callback for SDK BatchCallbackWrapper.
+        Receives a dict with "events" (list of raw SSE messages) and processes them
+        as a single batch upload.
+        """
+        try:
+            events = batch_data.get("events", [])
+            if not events:
+                return
+
+            unique_objects: dict[str, dict] = {}
+            for event in events:
+                try:
+                    parsed = json.loads(event.data)
+                except json.JSONDecodeError as err:
+                    self.helper.connector_logger.error(
+                        message="[BATCH] Data cannot be parsed to JSON",
+                        meta={"message_data": event.data, "error": str(err)},
+                    )
+                    continue
+
+                data = parsed.get("data")
+                if not data:
+                    continue
+
+                if not is_stix_indicator(data):
+                    continue
+
+                if event.event not in self.config.microsoft_sentinel_intel.event_types:
+                    continue
+
+                if event.event == "delete":
+                    self.helper.connector_logger.info(
+                        message="[BATCH] Ignoring delete event in batch mode"
+                    )
+                    continue
+
+                unique_objects[data["id"]] = data
+
+            if not unique_objects:
+                return
+
+            prepared_objects = [
+                self._prepare_stix_object(obj)
+                for obj in unique_objects.values()
+            ]
+
+            self.helper.connector_logger.info(
+                message=f"[BATCH] Uploading {len(prepared_objects)} objects",
+            )
+            self.client.upload_stix_objects(
+                stix_objects=prepared_objects,
+                source_system=self.config.microsoft_sentinel_intel.source_system,
+            )
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("Connector stopped by user.")
+            sys.exit(0)
+        except Exception as err:
+            traceback.print_exc()
+            self.helper.connector_logger.error(
+                message=f"[BATCH] Unexpected error: {err}",
+                meta={"error": str(err)},
+            )
+
     def run(self) -> None:
         """
         Run the main process in self.helper.listen() method
@@ -104,4 +181,16 @@ class Connector:
         The connector have the capability to listen a live stream from the platform.
         The helper provide an easy way to listen to the events.
         """
-        self.helper.listen_stream(message_callback=self.process_message)
+        if self.config.microsoft_sentinel_intel.batch_mode:
+            self.helper.connector_logger.info(
+                message=f"[BATCH] Batch mode enabled (batch_size={self.config.microsoft_sentinel_intel.batch_size}, batch_timeout={self.config.microsoft_sentinel_intel.batch_timeout}s, max_per_minute=100)",
+            )
+            callback = self.helper.create_batch_callback(
+                batch_callback=self.process_batch,
+                batch_size=self.config.microsoft_sentinel_intel.batch_size,
+                batch_timeout=self.config.microsoft_sentinel_intel.batch_timeout,
+                max_per_minute=100,
+            )
+            self.helper.listen_stream(message_callback=callback)
+        else:
+            self.helper.listen_stream(message_callback=self.process_message)

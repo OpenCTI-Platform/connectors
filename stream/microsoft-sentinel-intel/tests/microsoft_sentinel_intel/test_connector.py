@@ -20,6 +20,16 @@ def fixture_connector(
     return Connector(helper=helper, config=config, client=client)
 
 
+@pytest.fixture(name="batch_connector")
+def fixture_batch_connector(
+    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_batch_config
+) -> Connector:
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
+    client = ConnectorClient(helper=helper, config=config)
+    return Connector(helper=helper, config=config, client=client)
+
+
 @pytest.fixture(name="event_data_indicator")
 def fixture_event_data_indicator() -> dict:
     return {
@@ -114,3 +124,274 @@ def test_handle_event_delete(
         "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
         "/indicators/SentinelId?api-version=2025-03-01"
     )
+
+
+# --- Batch mode tests ---
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_handle_event_no_data(
+    mocker: MockerFixture, connector: Connector
+) -> None:
+    """Connector should gracefully ignore events with no 'data' in its JSON payload."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request"
+    )
+    connector._handle_event(
+        Event(event="consumer_metrics", data=json.dumps({"metric": "value"}))
+    )
+    assert mocked_send_request.call_count == 0
+
+
+
+
+
+def _make_indicator_data(indicator_id: str, name: str = "1.1.1.1") -> dict:
+    return {
+        "id": indicator_id,
+        "spec_version": "2.1",
+        "type": "indicator",
+        "extensions": {},
+        "created": "2025-06-06T09:37:59.399Z",
+        "modified": "2025-06-06T09:37:59.399Z",
+        "revoked": False,
+        "confidence": 100,
+        "lang": "en",
+        "name": name,
+        "description": name,
+        "pattern": f"[ipv4-addr:value = '{name}']",
+        "pattern_type": "stix",
+        "valid_from": "2025-06-06T09:37:59.368Z",
+        "valid_until": "2025-06-26T15:12:38.802Z",
+    }
+
+
+def _make_batch_event(event_type: str, indicator_id: str, name: str = "1.1.1.1") -> Event:
+    data = _make_indicator_data(indicator_id, name)
+    return Event(event=event_type, data=json.dumps({"data": data}))
+
+
+def _make_batch_data(events: list[Event]) -> dict:
+    return {"events": events}
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_uploads_all(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data([
+        _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        _make_batch_event("create", "indicator--2", "2.2.2.2"),
+        _make_batch_event("create", "indicator--3", "3.3.3.3"),
+    ])
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 3
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_deduplicates(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data([
+        _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        _make_batch_event("update", "indicator--1", "updated-name"),
+        _make_batch_event("create", "indicator--2", "2.2.2.2"),
+    ])
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    # Only 2 unique objects despite 3 events
+    assert len(body["stixobjects"]) == 2
+    names = {obj["name"] for obj in body["stixobjects"]}
+    assert "updated-name" in names
+    assert "1.1.1.1" not in names
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_skips_delete(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data([
+        _make_batch_event("delete", "indicator--1", "1.1.1.1"),
+    ])
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_prepare_applied(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data([
+        _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        _make_batch_event("create", "indicator--2", "2.2.2.2"),
+        _make_batch_event("create", "indicator--3", "3.3.3.3"),
+    ])
+    batch_connector.process_batch(batch_data)
+
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    for obj in body["stixobjects"]:
+        assert "extensions" not in obj  # delete_extensions is True
+        assert "label" in obj["labels"]  # extra_labels applied
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_empty_events(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_connector.process_batch({"events": []})
+
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_skips_no_data_events(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data([
+        Event(event="consumer_metrics", data=json.dumps({"metric": "value"})),
+    ])
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.fixture(name="create_update_only_connector")
+def fixture_create_update_only_connector(
+    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_create_update_only_config
+) -> Connector:
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
+    client = ConnectorClient(helper=helper, config=config)
+    return Connector(helper=helper, config=config, client=client)
+
+
+@pytest.fixture(name="delete_only_connector")
+def fixture_delete_only_connector(
+    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_delete_only_config
+) -> Connector:
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
+    client = ConnectorClient(helper=helper, config=config)
+    return Connector(helper=helper, config=config, client=client)
+
+
+@pytest.fixture(name="batch_create_only_connector")
+def fixture_batch_create_only_connector(
+    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_batch_create_only_config
+) -> Connector:
+    config = ConnectorSettings()
+    helper = OpenCTIConnectorHelper(config.to_helper_config())
+    client = ConnectorClient(helper=helper, config=config)
+    return Connector(helper=helper, config=config, client=client)
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_realtime_mode_unchanged(
+    mocker: MockerFixture, connector: Connector, event_data_indicator: dict
+) -> None:
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+    # In real-time mode, upload is called immediately for each event
+    assert mocked_send_request.call_count == 1
+
+
+# --- Event type filtering tests ---
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_create_update_only_config")
+def test_event_types_filters_delete(
+    mocker: MockerFixture, create_update_only_connector: Connector, event_data_indicator: dict
+) -> None:
+    """Connector with event_types=create,update should ignore delete events."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    create_update_only_connector._handle_event(
+        Event(event="delete", data=json.dumps({"data": event_data_indicator}))
+    )
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_delete_only_config")
+def test_event_types_filters_create_update(
+    mocker: MockerFixture, delete_only_connector: Connector, event_data_indicator: dict
+) -> None:
+    """Connector with event_types=delete should ignore create/update events."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+    delete_only_connector._handle_event(
+        Event(event="create", data=json.dumps({"data": event_data_indicator}))
+    )
+    delete_only_connector._handle_event(
+        Event(event="update", data=json.dumps({"data": event_data_indicator}))
+    )
+    assert mocked_send_request.call_count == 0
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_create_only_config")
+def test_process_batch_event_types_filter(
+    mocker: MockerFixture, batch_create_only_connector: Connector
+) -> None:
+    """Batch connector with event_types=create should skip update events."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data([
+        _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        _make_batch_event("update", "indicator--2", "2.2.2.2"),
+        _make_batch_event("create", "indicator--3", "3.3.3.3"),
+    ])
+    batch_create_only_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 2
