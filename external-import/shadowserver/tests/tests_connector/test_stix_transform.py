@@ -108,6 +108,74 @@ class TestShadowserverStixTransformation(unittest.TestCase):
             obj.startswith("note--") for obj in self.transformation.stix_objects
         )
 
+    def test_create_stix_note_from_data_deterministic_id(self):
+        """Note IDs must be deterministic to prevent duplication on repeated runs."""
+
+        # Ensure a note will be created
+        self.transformation.case_id = (
+            "case-incident--0cbce91a-8963-4e3c-bb7a-150615942944"
+        )
+        self.transformation.report_id = "report--93cd2052-c4ee-4f52-bc0d-4a6dc96ff207"
+
+        # When notes are created twice from the same data
+        self.transformation.create_stix_note_from_data()
+        first_ids = [
+            obj.get("id")
+            for obj in self.transformation.stix_objects
+            if hasattr(obj, "get") and obj.get("type") == "note"
+        ]
+
+        # Ensure the test actually produced notes
+        self.assertTrue(first_ids, "Test setup failed: no notes were created")
+
+        self.transformation.stix_objects = []
+        self.transformation.object_refs = []
+
+        self.transformation.create_stix_note_from_data()
+        second_ids = [
+            obj.get("id")
+            for obj in self.transformation.stix_objects
+            if hasattr(obj, "get") and obj.get("type") == "note"
+        ]
+
+        # Then the generated note IDs must be identical across both runs
+        self.assertEqual(first_ids, second_ids)
+
+    def test_create_stix_note_from_data_no_timestamp(self):
+        """Notes created from elements without a timestamp must still have deterministic IDs."""
+
+        # Ensure a note will be created
+        self.transformation.case_id = (
+            "case-incident--0cbce91a-8963-4e3c-bb7a-150615942944"
+        )
+        self.transformation.report_id = "report--93cd2052-c4ee-4f52-bc0d-4a6dc96ff207"
+
+        # Given report data that contains no timestamp field
+        self.transformation.report_list = [{"key": "value"}]
+
+        # When notes are created twice from that data
+        self.transformation.create_stix_note_from_data()
+        first_ids = [
+            obj.get("id")
+            for obj in self.transformation.stix_objects
+            if hasattr(obj, "get") and obj.get("type") == "note"
+        ]
+
+        self.assertTrue(first_ids, "Test setup failed: no notes were created")
+
+        self.transformation.stix_objects = []
+        self.transformation.object_refs = []
+
+        self.transformation.create_stix_note_from_data()
+        second_ids = [
+            obj.get("id")
+            for obj in self.transformation.stix_objects
+            if hasattr(obj, "get") and obj.get("type") == "note"
+        ]
+
+        # Then the generated note IDs must still be identical
+        self.assertEqual(first_ids, second_ids)
+
     def test_create_ip(self):
         ipv4 = self.transformation.create_ip("192.168.0.1")
         ipv6 = self.transformation.create_ip("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
