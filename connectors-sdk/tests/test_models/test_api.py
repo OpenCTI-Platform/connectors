@@ -92,6 +92,7 @@ def test_public_models_are_present():
         "ThreatActorGroup",
         "TLPMarking",
         "URL",
+        "UserAccount",
         "Vulnerability",
         "X509Certificate",
     }
