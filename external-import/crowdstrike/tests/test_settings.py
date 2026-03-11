@@ -72,6 +72,11 @@ NOW_TIMESTAMP = int(datetime.now(timezone.utc).timestamp())
                     "indicator_high_score_labels": ["MaliciousConfidence/High"],
                     "indicator_unwanted_labels": [],
                     "no_file_trigger_import": True,
+                    "indicator_ip_max_age": "P90D",
+                    "indicator_domain_max_age": "P365D",
+                    "indicator_url_max_age": "P60D",
+                    "indicator_hash_max_age": "P730D",
+                    "indicator_default_max_age": "P30D",
                     "vulnerability_start_timestamp": NOW_TIMESTAMP,
                 },
             },
@@ -261,6 +266,21 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "crowdstrike.client_id",
             id="missing_crowdstrike_client_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "indicator_ip_max_age": "90",  # Invalid ISO 8601 duration
+                },
+            },
+            "crowdstrike.indicator_ip_max_age",
+            id="invalid_duration_format",
         ),
     ],
 )

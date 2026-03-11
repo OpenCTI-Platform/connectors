@@ -104,6 +104,11 @@ There are a number of configuration options, which are set either in `docker-com
 | High Score                  | crowdstrike.indicator_high_score        | `CROWDSTRIKE_INDICATOR_HIGH_SCORE`           | 80                                                   | No        | Score for high confidence indicators.                                            |
 | High Score Labels           | crowdstrike.indicator_high_score_labels | `CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS`    | MaliciousConfidence/High                             | No        | Labels that trigger high score.                                                  |
 | Unwanted Labels             | crowdstrike.indicator_unwanted_labels   | `CROWDSTRIKE_INDICATOR_UNWANTED_LABELS`      |                                                      | No        | Filter out indicators with these labels.                                         |
+| Indicator IP Max Age          | crowdstrike.indicator_ip_max_age          | `CROWDSTRIKE_INDICATOR_IP_MAX_AGE`          |                                                   | No        | ISO8601 Duration format. Covers both IPv4 and IPv6. (e.g., `P90D`)                                                                                                                                 |
+| Indicator Domain Max Age      | crowdstrike.indicator_domain_max_age      | `CROWDSTRIKE_INDICATOR_DOMAIN_MAX_AGE`      |                                                   | No        | ISO8601 Duration format. (e.g., `P365D`)                                                                                                                                                           |
+| Indicator URL Max Age         | crowdstrike.indicator_url_max_age         | `CROWDSTRIKE_INDICATOR_URL_MAX_AGE`         |                                                   | No        | ISO8601 Duration format. (e.g., `P60D`)                                                                                                                                                            |
+| Indicator Hash Max Age        | crowdstrike.indicator_hash_max_age        | `CROWDSTRIKE_INDICATOR_HASH_MAX_AGE`        |                                                   | No        | ISO8601 Duration format. Covers MD5, SHA1, and SHA256. (e.g., `P730D`)                                                                                                                             |
+| Indicator Default Max Age     | crowdstrike.indicator_default_max_age     | `CROWDSTRIKE_INDICATOR_DEFAULT_MAX_AGE`     |                                                   | No        | ISO8601 Duration format. Default threshold for any other type. (e.g., `P30D`)                                                                                                                      |
 | No File Trigger Import      | crowdstrike.no_file_trigger_import      | `CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT`         | true                                                 | No        | Import indicator updates without file triggers.                                  |
 
 **Note**: It is not recommended to use the default value `0` for configuration parameters `report_start_timestamp`, `indicator_start_timestamp`, and `malware_start_timestamp` because of the large data volumes.
@@ -146,6 +151,11 @@ Configure the connector in `docker-compose.yml`:
       - CROWDSTRIKE_REPORT_INCLUDE_TYPES=notice,tipper,intelligence report,periodic report
       - CROWDSTRIKE_REPORT_TYPE=threat-report
       - CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES=hash_ion,hash_md5,hash_sha1,password,username
+      - CROWDSTRIKE_INDICATOR_IP_MAX_AGE=P90D
+      - CROWDSTRIKE_INDICATOR_DOMAIN_MAX_AGE=P365D
+      - CROWDSTRIKE_INDICATOR_URL_MAX_AGE=P60D
+      - CROWDSTRIKE_INDICATOR_HASH_MAX_AGE=P730D
+      - CROWDSTRIKE_INDICATOR_DEFAULT_MAX_AGE=P30D
       - CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE=50
     restart: always
 ```

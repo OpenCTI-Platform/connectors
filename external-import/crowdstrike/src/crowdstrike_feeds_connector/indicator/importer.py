@@ -1,6 +1,6 @@
 """OpenCTI CrowdStrike indicator importer module."""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
@@ -43,6 +43,7 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score: int
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
+    indicator_max_age_by_type: Dict[str, Optional[timedelta]]
     no_file_trigger_import: bool
     scopes: set[str]
     attack_lookup: Optional[AttackTechniqueLookup]
@@ -84,6 +85,7 @@ class IndicatorImporter(BaseImporter):
         self.indicator_high_score = config.indicator_high_score
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
+        self.indicator_max_age_by_type = config.indicator_max_age_by_type
         self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
         self.scopes = config.scopes
@@ -219,6 +221,9 @@ class IndicatorImporter(BaseImporter):
     def _process_indicator(self, indicator: dict) -> bool:
         self._info("Processing indicator {0}...", indicator["id"])
 
+        if self._is_indicator_too_old(indicator):
+            return True
+
         indicator_bundle = self._create_indicator_bundle(indicator)
         if indicator_bundle is None:
             self._warning("Discarding indicator {0} bundle", indicator["id"])
@@ -230,6 +235,45 @@ class IndicatorImporter(BaseImporter):
         self._send_bundle(indicator_bundle)
 
         return True
+
+    def _is_indicator_too_old(self, indicator: dict) -> bool:
+        indicator_type = indicator.get("type", "")
+        published_date_timestamp = indicator.get("published_date")
+
+        if published_date_timestamp is None:
+            return False
+
+        published_date = timestamp_to_datetime(published_date_timestamp)
+        now = datetime.now(timezone.utc)
+
+        threshold_key = "default"
+        if indicator_type in ["ip_address", "ip_address_block"]:
+            threshold_key = "ip"
+        elif indicator_type == "domain":
+            threshold_key = "domain"
+        elif indicator_type == "url":
+            threshold_key = "url"
+        elif indicator_type in ["hash_md5", "hash_sha1", "hash_sha256"]:
+            threshold_key = "hash"
+
+        threshold = self.indicator_max_age_by_type.get(threshold_key)
+
+        # Fallback to default if type-specific threshold is not defined
+        if threshold is None and threshold_key != "default":
+            threshold = self.indicator_max_age_by_type.get("default")
+
+        if threshold is not None:
+            if published_date < (now - threshold):
+                self._info(
+                    "Indicator {0} (type: {1}, published: {2}) is older than the threshold ({3}), skipping...",
+                    indicator["id"],
+                    indicator_type,
+                    published_date,
+                    threshold,
+                )
+                return True
+
+        return False
 
     def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
         return self.report_fetcher.get_by_codes(codes)

@@ -179,6 +179,35 @@ class CrowdstrikeConfig(BaseConfigModel):
         ],
         description="Comma-separated list of indicator types to exclude from import.",
     )
+    indicator_ip_max_age: timedelta | None = Field(
+        default=None,
+        description=(
+            "ISO8601 Duration format starting with 'P' for Period (e.g., 'P90D' for 90 days). "
+            "Covers both IPv4 and IPv6."
+        ),
+    )
+    indicator_domain_max_age: timedelta | None = Field(
+        default=None,
+        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'P365D' for 365 days).",
+    )
+    indicator_url_max_age: timedelta | None = Field(
+        default=None,
+        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'P60D' for 60 days).",
+    )
+    indicator_hash_max_age: timedelta | None = Field(
+        default=None,
+        description=(
+            "ISO8601 Duration format starting with 'P' for Period (e.g., 'P730D' for 730 days). "
+            "Covers MD5, SHA1, and SHA256 hashes."
+        ),
+    )
+    indicator_default_max_age: timedelta | None = Field(
+        default=None,
+        description=(
+            "ISO8601 Duration format starting with 'P' for Period (e.g., 'P30D' for 30 days). "
+            "Default threshold for any other indicator type."
+        ),
+    )
     default_x_opencti_score: PositiveInt = Field(
         default=50,
         description="Default confidence score for entities without explicit score.",
