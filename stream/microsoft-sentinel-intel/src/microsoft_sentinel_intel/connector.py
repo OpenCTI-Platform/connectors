@@ -170,9 +170,7 @@ class Connector:
         except ConnectorWarning as err:
             self.helper.connector_logger.warning(message=err.message)
         except ConnectorError as err:
-            self.helper.connector_logger.error(
-                message=err.message, meta=err.metadata
-            )
+            self.helper.connector_logger.error(message=err.message, meta=err.metadata)
         except Exception as err:
             traceback.print_exc()
             self.helper.connector_logger.error(
