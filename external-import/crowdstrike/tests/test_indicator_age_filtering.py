@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
+
 from crowdstrike_feeds_connector.indicator.importer import (
     IndicatorImporter,
     IndicatorImporterConfig,
