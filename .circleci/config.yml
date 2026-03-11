@@ -224,7 +224,7 @@ workflows:
             - test
           filters:
             tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts[0-9]+)?/
             branches:
               ignore: /.*/
       - build:
