@@ -6,7 +6,7 @@ from stix2.v21 import MACAddress as Stix2MACAddress
 
 
 class MACAddress(BaseObservableEntity):
-    """Represent an MAC Address observable on OpenCTI."""
+    """Represent a MAC address observable on OpenCTI."""
 
     value: str = Field(
         description="The MAC address value.",
