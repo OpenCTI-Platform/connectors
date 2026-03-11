@@ -120,7 +120,9 @@ def _mock_config_environ(
 def fixture_microsoft_sentinel_intel_create_update_only_config_dict(
     microsoft_sentinel_intel_config_dict: dict[str, dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
-    return _make_config_with_event_types(microsoft_sentinel_intel_config_dict, "create,update")
+    return _make_config_with_event_types(
+        microsoft_sentinel_intel_config_dict, "create,update"
+    )
 
 
 @pytest.fixture(name="mock_microsoft_sentinel_intel_create_update_only_config")
@@ -128,7 +130,9 @@ def fixture_mock_microsoft_sentinel_intel_create_update_only_config(
     mocker: MockerFixture,
     microsoft_sentinel_intel_create_update_only_config_dict: dict[str, dict[str, Any]],
 ) -> None:
-    _mock_config_environ(mocker, microsoft_sentinel_intel_create_update_only_config_dict)
+    _mock_config_environ(
+        mocker, microsoft_sentinel_intel_create_update_only_config_dict
+    )
 
 
 @pytest.fixture(name="microsoft_sentinel_intel_delete_only_config_dict")
@@ -150,7 +154,9 @@ def fixture_mock_microsoft_sentinel_intel_delete_only_config(
 def fixture_microsoft_sentinel_intel_batch_create_only_config_dict(
     microsoft_sentinel_intel_batch_config_dict: dict[str, dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
-    return _make_config_with_event_types(microsoft_sentinel_intel_batch_config_dict, "create")
+    return _make_config_with_event_types(
+        microsoft_sentinel_intel_batch_config_dict, "create"
+    )
 
 
 @pytest.fixture(name="mock_microsoft_sentinel_intel_batch_create_only_config")

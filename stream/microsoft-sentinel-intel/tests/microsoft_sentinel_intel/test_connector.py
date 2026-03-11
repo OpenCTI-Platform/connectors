@@ -128,10 +128,9 @@ def test_handle_event_delete(
 
 # --- Batch mode tests ---
 
+
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
-def test_handle_event_no_data(
-    mocker: MockerFixture, connector: Connector
-) -> None:
+def test_handle_event_no_data(mocker: MockerFixture, connector: Connector) -> None:
     """Connector should gracefully ignore events with no 'data' in its JSON payload."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request"
@@ -140,9 +139,6 @@ def test_handle_event_no_data(
         Event(event="consumer_metrics", data=json.dumps({"metric": "value"}))
     )
     assert mocked_send_request.call_count == 0
-
-
-
 
 
 def _make_indicator_data(indicator_id: str, name: str = "1.1.1.1") -> dict:
@@ -165,7 +161,9 @@ def _make_indicator_data(indicator_id: str, name: str = "1.1.1.1") -> dict:
     }
 
 
-def _make_batch_event(event_type: str, indicator_id: str, name: str = "1.1.1.1") -> Event:
+def _make_batch_event(
+    event_type: str, indicator_id: str, name: str = "1.1.1.1"
+) -> Event:
     data = _make_indicator_data(indicator_id, name)
     return Event(event=event_type, data=json.dumps({"data": data}))
 
@@ -183,11 +181,13 @@ def test_process_batch_uploads_all(
         return_value=Mock(status_code=200),
     )
 
-    batch_data = _make_batch_data([
-        _make_batch_event("create", "indicator--1", "1.1.1.1"),
-        _make_batch_event("create", "indicator--2", "2.2.2.2"),
-        _make_batch_event("create", "indicator--3", "3.3.3.3"),
-    ])
+    batch_data = _make_batch_data(
+        [
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+            _make_batch_event("create", "indicator--2", "2.2.2.2"),
+            _make_batch_event("create", "indicator--3", "3.3.3.3"),
+        ]
+    )
     batch_connector.process_batch(batch_data)
 
     assert mocked_send_request.call_count == 1
@@ -205,11 +205,13 @@ def test_process_batch_deduplicates(
         return_value=Mock(status_code=200),
     )
 
-    batch_data = _make_batch_data([
-        _make_batch_event("create", "indicator--1", "1.1.1.1"),
-        _make_batch_event("update", "indicator--1", "updated-name"),
-        _make_batch_event("create", "indicator--2", "2.2.2.2"),
-    ])
+    batch_data = _make_batch_data(
+        [
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+            _make_batch_event("update", "indicator--1", "updated-name"),
+            _make_batch_event("create", "indicator--2", "2.2.2.2"),
+        ]
+    )
     batch_connector.process_batch(batch_data)
 
     assert mocked_send_request.call_count == 1
@@ -231,9 +233,11 @@ def test_process_batch_skips_delete(
         return_value=Mock(status_code=200),
     )
 
-    batch_data = _make_batch_data([
-        _make_batch_event("delete", "indicator--1", "1.1.1.1"),
-    ])
+    batch_data = _make_batch_data(
+        [
+            _make_batch_event("delete", "indicator--1", "1.1.1.1"),
+        ]
+    )
     batch_connector.process_batch(batch_data)
 
     assert mocked_send_request.call_count == 0
@@ -248,11 +252,13 @@ def test_process_batch_prepare_applied(
         return_value=Mock(status_code=200),
     )
 
-    batch_data = _make_batch_data([
-        _make_batch_event("create", "indicator--1", "1.1.1.1"),
-        _make_batch_event("create", "indicator--2", "2.2.2.2"),
-        _make_batch_event("create", "indicator--3", "3.3.3.3"),
-    ])
+    batch_data = _make_batch_data(
+        [
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+            _make_batch_event("create", "indicator--2", "2.2.2.2"),
+            _make_batch_event("create", "indicator--3", "3.3.3.3"),
+        ]
+    )
     batch_connector.process_batch(batch_data)
 
     request = mocked_send_request.call_args.kwargs["request"]
@@ -285,9 +291,11 @@ def test_process_batch_skips_no_data_events(
         return_value=Mock(status_code=200),
     )
 
-    batch_data = _make_batch_data([
-        Event(event="consumer_metrics", data=json.dumps({"metric": "value"})),
-    ])
+    batch_data = _make_batch_data(
+        [
+            Event(event="consumer_metrics", data=json.dumps({"metric": "value"})),
+        ]
+    )
     batch_connector.process_batch(batch_data)
 
     assert mocked_send_request.call_count == 0
@@ -295,7 +303,8 @@ def test_process_batch_skips_no_data_events(
 
 @pytest.fixture(name="create_update_only_connector")
 def fixture_create_update_only_connector(
-    mocked_api_client: MagicMock, mock_microsoft_sentinel_intel_create_update_only_config
+    mocked_api_client: MagicMock,
+    mock_microsoft_sentinel_intel_create_update_only_config,
 ) -> Connector:
     config = ConnectorSettings()
     helper = OpenCTIConnectorHelper(config.to_helper_config())
@@ -343,7 +352,9 @@ def test_realtime_mode_unchanged(
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_create_update_only_config")
 def test_event_types_filters_delete(
-    mocker: MockerFixture, create_update_only_connector: Connector, event_data_indicator: dict
+    mocker: MockerFixture,
+    create_update_only_connector: Connector,
+    event_data_indicator: dict,
 ) -> None:
     """Connector with event_types=create,update should ignore delete events."""
     mocked_send_request = mocker.patch(
@@ -384,11 +395,13 @@ def test_process_batch_event_types_filter(
         return_value=Mock(status_code=200),
     )
 
-    batch_data = _make_batch_data([
-        _make_batch_event("create", "indicator--1", "1.1.1.1"),
-        _make_batch_event("update", "indicator--2", "2.2.2.2"),
-        _make_batch_event("create", "indicator--3", "3.3.3.3"),
-    ])
+    batch_data = _make_batch_data(
+        [
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+            _make_batch_event("update", "indicator--2", "2.2.2.2"),
+            _make_batch_event("create", "indicator--3", "3.3.3.3"),
+        ]
+    )
     batch_create_only_connector.process_batch(batch_data)
 
     assert mocked_send_request.call_count == 1

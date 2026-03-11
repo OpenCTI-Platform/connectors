@@ -66,7 +66,7 @@ class Connector:
                 message="[ERROR] Data cannot be parsed to JSON",
                 metadata={"message_data": event.data, "error": str(err)},
             ) from err
-        
+
         data = parsed.get("data")
         if not data:
             return
@@ -153,8 +153,7 @@ class Connector:
                 return
 
             prepared_objects = [
-                self._prepare_stix_object(obj)
-                for obj in unique_objects.values()
+                self._prepare_stix_object(obj) for obj in unique_objects.values()
             ]
 
             self.helper.connector_logger.info(
