@@ -61,7 +61,7 @@ class AkamaiConnector:
             }
         )
 
-        self.helper.connector_logger.info(f"Akamai connector initialized (SSL enabled)")
+        self.helper.connector_logger.info("Akamai connector initialized (SSL enabled)")
 
     def start(self):
         """

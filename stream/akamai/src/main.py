@@ -4,7 +4,6 @@ import time
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-
 from stream_connector.connector import AkamaiConnector
 
 if __name__ == "__main__":
