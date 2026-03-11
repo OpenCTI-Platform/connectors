@@ -18,7 +18,8 @@ def test_mac_address_class_should_not_accept_invalid_input() -> None:
     }
     with pytest.raises(ValidationError) as error:
         MACAddress.model_validate(input_data)
-        assert error.value.errors()[0]["loc"] == ("invalid_key",)
+
+    assert error.value.errors()[0]["loc"] == ("invalid_key",)
 
 
 def test_mac_address_to_stix2_object_returns_valid_stix_object() -> None:
