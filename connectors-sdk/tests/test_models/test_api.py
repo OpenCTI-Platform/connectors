@@ -77,6 +77,7 @@ def test_public_models_are_present():
         "IPV4Address",
         "IPV6Address",
         "KillChainPhase",
+        "MACAddress",
         "Malware",
         "Note",
         "ObservedData",
