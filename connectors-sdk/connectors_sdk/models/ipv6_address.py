@@ -30,7 +30,7 @@ class IPV6Address(BaseObservableEntity):
         default=None,
     )
     belongs_to: list[AutonomousSystem | Reference] | None = Field(
-        description="List of network-traffic objects that this IP V6 address belongs to.",
+        description="List of autonomous systems that this IP V6 address belongs to.",
         default=None,
     )
 
