@@ -26,6 +26,7 @@ def test_mac_address_to_stix2_object_returns_valid_stix_object() -> None:
     """Test that MACAddress to_stix2_object method returns a valid STIX2.1 object."""
     mac_address = MACAddress(value="00:11:22:33:44:55")
     stix2_obj = mac_address.to_stix2_object()
+
     assert isinstance(stix2_obj, Stix2MACAddress)
 
 
@@ -46,9 +47,10 @@ def test_mac_address_to_stix2_object(
         author=fake_valid_organization_author,
         markings=fake_valid_tlp_markings,
         external_references=fake_valid_external_references,
-    ).to_stix2_object()
+    )
+    stix_object = mac_address.to_stix2_object()
 
-    assert mac_address == Stix2MACAddress(
+    assert stix_object == Stix2MACAddress(
         value="AA-BB-CC-DD-EE-FF",
         allow_custom=True,
         object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
