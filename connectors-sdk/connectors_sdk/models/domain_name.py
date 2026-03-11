@@ -1,15 +1,17 @@
 """DomainName."""
 
-from typing import TYPE_CHECKING
-
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.ipv4_address import (  # pylint: disable=unused-import # actually used during model_rebuild
+    IPV4Address,
+)
+from connectors_sdk.models.ipv6_address import (  # pylint: disable=unused-import # actually used during model_rebuild
+    IPV6Address,
+)
+from connectors_sdk.models.reference import (  # pylint: disable=unused-import # actually used during model_rebuild
+    Reference,
+)
 from pydantic import Field
 from stix2.v21 import DomainName as Stix2DomainName
-
-if TYPE_CHECKING:
-    from connectors_sdk.models.ipv4_address import IPV4Address
-    from connectors_sdk.models.ipv6_address import IPV6Address
-    from connectors_sdk.models.reference import Reference
 
 
 class DomainName(BaseObservableEntity):
@@ -35,3 +37,9 @@ class DomainName(BaseObservableEntity):
             ),
             **self._common_stix2_properties(),
         )
+
+
+# Rebuilding the model is required to resolve forward reference to DomainName used in `resolves_to`.
+# Without this, isolated executions (e.g. a single test module) can fail due to
+# "DomainName is not fully defined" error before any instance validation/conversion.
+DomainName.model_rebuild()
