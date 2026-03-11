@@ -1,7 +1,8 @@
+import ipaddress
 import json
 import re
+
 import requests
-import ipaddress
 from akamai.edgegrid import EdgeGridAuth
 
 
@@ -60,17 +61,13 @@ class AkamaiConnector:
             }
         )
 
-        self.helper.connector_logger.info(
-            f"Akamai connector initialized (SSL enabled)"
-        )
+        self.helper.connector_logger.info(f"Akamai connector initialized (SSL enabled)")
 
     def start(self):
         """
         Start listening to OpenCTI live stream.
         """
-        self.helper.connector_logger.info(
-            "Listening for OpenCTI stream events..."
-        )
+        self.helper.connector_logger.info("Listening for OpenCTI stream events...")
         self.helper.listen_stream(self._process_message)
 
     def _extract_ip_from_pattern(self, pattern: str):
@@ -114,21 +111,15 @@ class AkamaiConnector:
                 return
 
             if msg.event == "create":
-                self.helper.connector_logger.info(
-                    f"Adding IP: {ip}"
-                )
+                self.helper.connector_logger.info(f"Adding IP: {ip}")
                 self._add_ip(ip)
 
             elif msg.event == "delete":
-                self.helper.connector_logger.info(
-                    f"Removing IP: {ip}"
-                )
+                self.helper.connector_logger.info(f"Removing IP: {ip}")
                 self._remove_ip(ip)
 
         except Exception as e:
-            self.helper.connector_logger.error(
-                f"Error processing message: {str(e)}"
-            )
+            self.helper.connector_logger.error(f"Error processing message: {str(e)}")
 
     def _add_ip(self, ip):
         """
@@ -153,7 +144,6 @@ class AkamaiConnector:
         payload = {"delete": [{"value": ip}]}
 
         response = self.session.post(url, json=payload)
-
 
         if response.status_code == 400:
             self.helper.connector_logger.info(

@@ -11,5 +11,5 @@ def load_config_variables(helper, config):
         "akamai_client_secret": config["akamai"]["client_secret"],
         "akamai_access_token": config["akamai"]["access_token"],
         "akamai_client_list_id": config["akamai"]["client_list_id"],
-        "ssl_verify": config.get("ssl_verify", True), 
+        "ssl_verify": config.get("ssl_verify", True),
     }
