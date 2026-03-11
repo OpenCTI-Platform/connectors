@@ -126,9 +126,6 @@ def test_handle_event_delete(
     )
 
 
-# --- Batch mode tests ---
-
-
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
 def test_handle_event_no_data(mocker: MockerFixture, connector: Connector) -> None:
     """Connector should gracefully ignore events with no 'data' in its JSON payload."""
@@ -139,6 +136,9 @@ def test_handle_event_no_data(mocker: MockerFixture, connector: Connector) -> No
         Event(event="consumer_metrics", data=json.dumps({"metric": "value"}))
     )
     assert mocked_send_request.call_count == 0
+
+
+# --- Batch mode tests ---
 
 
 def _make_indicator_data(indicator_id: str, name: str = "1.1.1.1") -> dict:
@@ -408,3 +408,79 @@ def test_process_batch_event_types_filter(
     request = mocked_send_request.call_args.kwargs["request"]
     body = json.loads(request.body)
     assert len(body["stixobjects"]) == 2
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_malformed_json(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    """Batch should skip malformed JSON events and process remaining valid ones."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    batch_data = _make_batch_data(
+        [
+            Event(event="create", data="not valid json"),
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        ]
+    )
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 1
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_batch_config")
+def test_process_batch_non_indicator_stix_types(
+    mocker: MockerFixture, batch_connector: Connector
+) -> None:
+    """Batch should skip non-indicator STIX objects."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request",
+        return_value=Mock(status_code=200),
+    )
+
+    non_indicator = {
+        "id": "malware--uuid",
+        "type": "malware",
+        "name": "some-malware",
+    }
+    batch_data = _make_batch_data(
+        [
+            Event(event="create", data=json.dumps({"data": non_indicator})),
+            _make_batch_event("create", "indicator--1", "1.1.1.1"),
+        ]
+    )
+    batch_connector.process_batch(batch_data)
+
+    assert mocked_send_request.call_count == 1
+    request = mocked_send_request.call_args.kwargs["request"]
+    body = json.loads(request.body)
+    assert len(body["stixobjects"]) == 1
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_prepare_stix_object_missing_extensions(
+    connector: Connector, event_data_indicator: dict
+) -> None:
+    """_prepare_stix_object should not raise if 'extensions' key is absent."""
+    indicator_no_ext = {
+        k: v for k, v in event_data_indicator.items() if k != "extensions"
+    }
+    result = connector._prepare_stix_object(indicator_no_ext)
+    assert "extensions" not in result
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_prepare_stix_object_does_not_mutate_input(
+    connector: Connector, event_data_indicator: dict
+) -> None:
+    """_prepare_stix_object should not modify the original dict."""
+    original_keys = set(event_data_indicator.keys())
+    connector._prepare_stix_object(event_data_indicator)
+    assert set(event_data_indicator.keys()) == original_keys
+    assert "extensions" in event_data_indicator

@@ -23,8 +23,9 @@ class Connector:
         self.client = client
 
     def _prepare_stix_object(self, stix_object: dict) -> dict:
+        stix_object = dict(stix_object)
         if self.config.microsoft_sentinel_intel.delete_extensions:
-            del stix_object["extensions"]
+            stix_object.pop("extensions", None)
         if extra_labels := self.config.microsoft_sentinel_intel.extra_labels:
             stix_object["labels"] = list(
                 set(stix_object.get("labels", []) + extra_labels)
@@ -166,6 +167,12 @@ class Connector:
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stopped by user.")
             sys.exit(0)
+        except ConnectorWarning as err:
+            self.helper.connector_logger.warning(message=err.message)
+        except ConnectorError as err:
+            self.helper.connector_logger.error(
+                message=err.message, meta=err.metadata
+            )
         except Exception as err:
             traceback.print_exc()
             self.helper.connector_logger.error(
@@ -184,10 +191,16 @@ class Connector:
             self.helper.connector_logger.info(
                 message=f"[BATCH] Batch mode enabled (batch_size={self.config.microsoft_sentinel_intel.batch_size}, batch_timeout={self.config.microsoft_sentinel_intel.batch_timeout}s, max_per_minute=100)",
             )
+            if "delete" in self.config.microsoft_sentinel_intel.event_types:
+                self.helper.connector_logger.warning(
+                    message="[BATCH] Delete events are not supported in batch mode and will be skipped. "
+                    "Consider running a separate real-time instance with event_types=delete.",
+                )
             callback = self.helper.create_batch_callback(
                 batch_callback=self.process_batch,
                 batch_size=self.config.microsoft_sentinel_intel.batch_size,
                 batch_timeout=self.config.microsoft_sentinel_intel.batch_timeout,
+                # Azure Sentinel Upload Indicators API is limited to 100 requests/min
                 max_per_minute=100,
             )
             self.helper.listen_stream(message_callback=callback)

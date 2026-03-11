@@ -52,7 +52,6 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     resource_group: str = Field(
         description="The name of the resource group where the log analytics is",
         default="default",
-        deprecated=True,
     )
     source_system: str = Field(
         description="The name of the source system displayed in Microsoft Sentinel",
