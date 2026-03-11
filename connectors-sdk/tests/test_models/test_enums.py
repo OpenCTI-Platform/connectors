@@ -26,6 +26,7 @@ OCTI_ENUMS = {
 }
 
 ENUMS = OCTI_ENUMS | {
+    "AccountType",
     "RelationshipType",
 }
 
