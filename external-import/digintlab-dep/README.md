@@ -186,6 +186,7 @@ graph TB
     Incident -- attributed-to --> Actor
     Victim -- located-at --> Country
     Actor -- targets --> Sector
+    Actor -- targets --> Country
     Sector -- related-to --> Country
     DomainInd -- indicates --> Incident
     HashInd -- indicates --> Incident
@@ -204,7 +205,7 @@ graph TB
 | Hash ID           | Indicator               | STIX pattern based on hash type (MD5/SHA1/SHA256)                                                                             |
 | Announcement Link | External Reference      | Link to DEP announcement page                                                                                                 |
 | Victim Site       | External Reference      | Link to victim's website                                                                                                      |
-| -                 | Relationship            | `targets` (Incident → Victim and Intrusion-Set → Sector), `part-of`, `attributed-to`, `located-at`, `related-to`, `indicates` |
+| -                 | Relationship            | `targets` (Incident → Victim, Intrusion-Set → Sector, Intrusion-Set → Country), `part-of`, `attributed-to`, `located-at`, `related-to`, `indicates` |
 
 ### Processing Details
 
@@ -266,12 +267,12 @@ graph TB
    - `attributed-to`: Incident → Intrusion Set (when intrusion sets are enabled)
    - `located-at`: Victim Organization → Country Location (when country locations are enabled)
    - `targets`: Intrusion Set → Sector Identity (when both are present)
+   - `targets`: Intrusion Set → Country Location (when both are present)
    - `related-to`: Sector Identity → Country Location (when both are present)
    - `indicates`: Domain/Hash Indicator → Incident
 
 10. **Record Filtering**:
-
-- When `skip_empty_victim=true`, records with victim value `""`, `n/a`, or `none` are ignored
+   - When `skip_empty_victim=true`, records with victim value `""`, `n/a`, or `none` are ignored
 
 ### State Management
 

@@ -590,6 +590,12 @@ class DepConnector:
                     "targets", intrusion_set.id, sector_identity.id
                 )
             )
+        if intrusion_set and country_location:
+            objects.append(
+                self._build_relationship(
+                    "targets", intrusion_set.id, country_location.id
+                )
+            )
         if sector_identity and country_location:
             objects.append(
                 self._build_relationship(
