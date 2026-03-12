@@ -1,0 +1,232 @@
+# OpenCTI PRODAFT USTA External Import Connector
+
+This connector imports threat intelligence data from the [USTA](https://usta.prodaft.com) Threat Stream API by [Prodaft](https://prodaft.com) into [OpenCTI](https://www.opencti.io/).
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Data Imported](#data-imported)
+- [STIX Mapping](#stix-mapping)
+- [Requirements](#requirements)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [Testing](#testing)
+- [Architecture](#architecture)
+- [Finding Data in OpenCTI](#finding-data-in-opencti)
+
+---
+
+## Overview
+
+The USTA connector is an **External Import** connector that periodically fetches IOCs and ticket data from five USTA Threat Stream v4 API endpoints and converts them into STIX 2.1 bundles for ingestion into OpenCTI.
+
+**Key features:**
+
+- Imports **malicious URLs**, **phishing sites**, **malware hashes**, **compromised credentials**, and **credit card fraud tickets**
+- Per-feed cursor-based incremental import (never re-imports data)
+- Graceful degradation — if one feed fails, the others continue
+- Deterministic STIX IDs for proper deduplication
+- Automatic batch splitting for large datasets
+- Rate limiting and exponential-backoff retry
+- Full `schedule_process()` integration (OpenCTI ≥ 6.2.12)
+- Raw passwords are **never** stored; card numbers are masked to BIN + last 4
+
+---
+
+## Data Imported
+
+| USTA Endpoint | Data Type | STIX Objects Created |
+|---|---|---|
+| `/ioc/malicious-urls` | C2 infrastructure, RAT callbacks | IPv4-Addr, Domain-Name, URL, Indicator, Malware |
+| `/ioc/phishing-sites` | Credential harvesting domains | URL, Domain-Name, Indicator |
+| `/ioc/malware-hashes` | Known malware samples | File (StixFile), Indicator, Malware |
+| `.../compromised-credentials-tickets` | Stolen credentials | User-Account, URL, Domain-Name, IPv4-Addr, Indicator, Malware, Note |
+| `.../credit-card-tickets` | Compromised payment cards | Incident, Identity, Note |
+
+---
+
+## STIX Mapping
+
+### IOC Feeds (Malicious URLs, Phishing Sites, Malware Hashes)
+
+```
+Indicator ──based-on──▸ Observable (IPv4 / Domain / URL / File)
+    │
+    └──indicates──▸ Malware (from API "tags" field)
+```
+
+### Compromised Credentials
+
+```
+Indicator ──based-on──▸ User-Account (compromised login)
+    │                 ▸ URL (target login page)
+    │                 ▸ IPv4-Addr (victim machine IP)
+    │
+    ├──indicates──▸ Malware (stealer family from victim_detail)
+    │
+    └── Note (victim telemetry: OS, CPU, infection date)
+```
+
+### Credit Card Fraud Tickets
+
+```
+Incident ──targets──▸ Identity (affected company)
+    │
+    └── Note (masked card: BIN + last 4, expiry)
+```
+
+**Author:** `Identity` SDO — "USTA" (organization)
+**Markings:** Configurable TLP level (default: TLP:RED)
+**Confidence:** Configurable (default: 99)
+
+---
+
+## Requirements
+
+- OpenCTI Platform ≥ **6.2.12**
+- Python ≥ **3.12** (for local development)
+- A valid **USTA API Bearer Token** (obtain from USTA platform)
+
+---
+
+## Configuration
+
+| Parameter | Environment Variable | Required | Default | Description |
+|---|---|---|---|---|
+| `opencti.url` | `OPENCTI_URL` | **Yes** | — | OpenCTI platform URL |
+| `opencti.token` | `OPENCTI_TOKEN` | **Yes** | — | OpenCTI API token |
+| `connector.id` | `CONNECTOR_ID` | **Yes** | — | Unique UUIDv4 for this connector |
+| `connector.name` | `CONNECTOR_NAME` | No | `USTA Prodaft` | Display name |
+| `connector.duration_period` | `CONNECTOR_DURATION_PERIOD` | No | `PT30M` | Interval between runs (ISO 8601) |
+| `usta_prodaft.api_key` | `USTA_PRODAFT_API_KEY` | **Yes** | — | USTA API bearer token |
+| `usta_prodaft.api_base_url` | `USTA_PRODAFT_API_BASE_URL` | No | `https://usta.prodaft.com` | API base URL |
+| `usta_prodaft.import_start_date` | `USTA_PRODAFT_IMPORT_START_DATE` | No | `P90D` | How far back on first run |
+| `usta_prodaft.page_size` | `USTA_PRODAFT_PAGE_SIZE` | No | `100` | Records per API page |
+| `usta_prodaft.import_malicious_urls` | `USTA_PRODAFT_IMPORT_MALICIOUS_URLS` | No | `true` | Enable malicious URL feed |
+| `usta_prodaft.import_phishing_sites` | `USTA_PRODAFT_IMPORT_PHISHING_SITES` | No | `true` | Enable phishing sites feed |
+| `usta_prodaft.import_malware_hashes` | `USTA_PRODAFT_IMPORT_MALWARE_HASHES` | No | `true` | Enable malware hashes feed |
+| `usta_prodaft.import_compromised_credentials` | `USTA_PRODAFT_IMPORT_COMPROMISED_CREDENTIALS` | No | `true` | Enable compromised credentials feed |
+| `usta_prodaft.import_credit_cards` | `USTA_PRODAFT_IMPORT_CREDIT_CARDS` | No | `true` | Enable credit card fraud feed |
+| `usta_prodaft.tlp_level` | `USTA_PRODAFT_TLP_LEVEL` | No | `red` | TLP marking for all objects |
+| `usta_prodaft.confidence_level` | `USTA_PRODAFT_CONFIDENCE_LEVEL` | No | `99` | Confidence score (0–100) |
+
+---
+
+## Deployment
+
+### Docker (Recommended)
+
+Set the required env variables in `docker-compose.yml`, then run.
+
+```bash
+# Build and run
+docker compose up --build
+```
+
+### Standalone Python
+
+```bash
+cd src
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+# ..Set required env vars here..
+python main.py
+```
+
+---
+
+## Testing
+
+Tests use `pytest` with `pytest-cov` for 95%+ code coverage.
+
+```bash
+# From the project root:
+pip install -r src/requirements.txt -r tests/test-requirements.txt
+pytest --cov --cov-report=term-missing
+```
+
+The `pyproject.toml` configures `pythonpath = ["src"]` so that `pytest` can resolve `from connector import ...` and `from usta_client import ...` correctly regardless of the working directory.
+
+---
+
+## Architecture
+
+```
+usta/
+├── __metadata__
+|   ├── connector_manifest.json
+|   └── logo.png
+├── src/
+|   ├── requirements.txt
+│   ├── main.py                          # Entry point
+│   ├── connector/
+│   │   ├── __init__.py
+│   │   ├── connector.py                 # Import orchestration (state, work, batching)
+│   │   ├── converter_to_stix.py         # STIX 2.1 conversion for all 5 data families
+│   │   ├── settings.py                  # Pydantic configuration models
+│   │   └── utils.py                     # Shared utility functions
+│   └── usta_client/
+│       ├── __init__.py
+│       └── api_client.py                # USTA API client (rate-limited, retried)
+├── tests/
+│   ├── conftest.py                      # Shared fixtures
+│   ├── test_main.py                     # Import smoke tests
+│   ├── test_connector/
+│   │   ├── test_connector.py            # Orchestrator tests
+│   │   ├── test_converter_to_stix.py    # Converter tests
+│   │   ├── test_settings.py             # Configuration tests
+│   │   └── test_utils.py                # Utility tests
+│   └── test_client/
+│       └── test_api_client.py           # API client tests
+├── entrypoint.sh                        # Docker entrypoint
+├── Dockerfile
+├── pytest.ini 
+└── docker-compose.yml
+```
+
+### State Management
+
+| State Key | Purpose |
+|---|---|
+| `last_run_start` | Timestamp of the last run |
+| `last_run_with_data` | Timestamp of last run that ingested data |
+| `malicious_urls_last_created` | Cursor for malicious URLs feed |
+| `phishing_sites_last_created` | Cursor for phishing sites feed |
+| `malware_hashes_last_created` | Cursor for malware hashes feed |
+| `compromised_creds_last_created` | Cursor for compromised credentials feed |
+| `credit_cards_last_created` | Cursor for credit card tickets feed |
+
+---
+
+## Finding Data in OpenCTI
+
+### Compromised Accounts / Credentials
+
+Compromised credentials are imported as **Indicators** with `x_opencti_main_observable_type = User-Account`.
+
+1. **Observations → Observables**: Filter by type `User Account`. Each compromised login appears as a `User-Account` SCO with the `account_login` field set to the stolen username/email.
+
+2. **Analysis → Indicators**: Filter labels by `compromised-credentials`. Each indicator has a STIX pattern like `[user-account:account_login = 'user@example.com']`.
+
+3. **Analysis → Notes**: Victim telemetry (OS, IP, computer name, infection date, stealer family) is attached as Notes linked to the Indicator and User-Account.
+
+4. **Threats → Malware**: Stealer families (e.g., "StealC", "Vidar") are created as Malware SDOs and linked via `indicates` relationships.
+
+### Malicious URLs / Phishing Sites
+
+**Analysis → Indicators**: Filter labels by `malicious-activity` or `phishing`.
+
+### Malware Hashes
+
+**Analysis → Indicators**: Filter by main observable type `StixFile`.
+**Observations → Observables**: Filter by type `File` to see the hash observables directly.
+
+### Credit Card Fraud
+
+**Events → Incidents**: Each compromised card appears as an Incident with masked card details in the description. The company is linked via a `targets` relationship.
+
+---
+
+## License
+
+Apache 2.0
