@@ -11,8 +11,9 @@ from abc import ABC
 from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
+from connectors_sdk.logger.sdk_logger import sdk_logger as logger
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
     Deprecate,
@@ -29,6 +30,7 @@ from pydantic import (
     Field,
     HttpUrl,
     ModelWrapValidatorHandler,
+    PrivateAttr,
     ValidationError,
     create_model,
     model_validator,
@@ -41,6 +43,9 @@ from pydantic_settings import (
     SettingsConfigDict,
     YamlConfigSettingsSource,
 )
+
+if TYPE_CHECKING:
+    from connectors_sdk.logger.logger import BaseLogger
 
 
 class BaseConfigModel(BaseModel, ABC):
@@ -298,12 +303,20 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         description="Connector configurations.",
     )
 
+    _logger: "BaseLogger" = PrivateAttr()  # must be declared as instances are frozen
+
     def __init__(self) -> None:
         """Initialize the configuration model and handle validation errors."""
         try:
             super().__init__()
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
+
+        self._logger = logger.get_child("settings")
+        self._logger.debug(
+            f"{self.__class__.__name__} initialized succesfully",
+            {"settings": self.model_dump(mode="json")},
+        )
 
     @classmethod
     def config_json_schema(

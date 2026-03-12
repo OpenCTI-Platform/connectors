@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Generator
 
 from connectors_sdk.connectors._work_manager import WorkManager, WorkManagerError
+from connectors_sdk.logger.sdk_logger import sdk_logger as logger
 
 if TYPE_CHECKING:
     from connectors_sdk.models import BaseIdentifiedObject
@@ -43,9 +44,14 @@ class BaseDataProcessor(ABC):
         """Initialize the data processor with its dependencies."""
         self.config = config
         self.helper = helper
-        self.logger = helper.connector_logger
         self.state_manager = state_manager
         self.work_manager = WorkManager(helper)
+
+        # Ensure OpenCTIConnectorHelper's logger is attached to SDK's logger as soon as it's reachable
+        logger.attach_connector_helper_logger(self.helper)
+        self._logger = logger.get_child("data_processor")
+
+        self._logger.debug(f"{self.__class__.__name__} initialized succesfully")
 
     @abstractmethod
     def collect(self) -> Any:
@@ -108,7 +114,22 @@ class BaseDataProcessor(ABC):
                 )
 
                 try:
-                    stix_objects = [obj.to_stix2_object() for obj in octi_objects]
+                    self._logger.debug(
+                        "Converting OCTI objects to STIX format",
+                        {"work_id": work_id, "octi_objects_count": len(octi_objects)},
+                    )
+
+                    stix_objects = [
+                        obj.to_stix2_object()
+                        for obj in octi_objects
+                        if hasattr(obj, "to_stix2_object")
+                    ]
+
+                    self._logger.debug(
+                        "OCTI objects converted to STIX format",
+                        {"work_id": work_id, "stix_objects_count": len(stix_objects)},
+                    )
+
                     self.work_manager.send_bundle(
                         work_id=work_id, stix_objects=stix_objects
                     )
@@ -118,5 +139,9 @@ class BaseDataProcessor(ABC):
                         message="Work completed successfully",
                     )
                 except WorkManagerError as e:
-                    self.logger.error(f"Failed to send bundle for work {work_id}: {e}")
+                    self._logger.error(
+                        "Failed to send bundle for work",
+                        {"work_id": work_id, "error": str(e)},
+                    )
+
                     self.work_manager.delete_work(work_id)

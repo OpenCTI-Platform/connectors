@@ -13,6 +13,8 @@ import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from connectors_sdk.logger.sdk_logger import sdk_logger as logger
+
 if TYPE_CHECKING:
     from connectors_sdk.connectors.base_data_processor import BaseDataProcessor
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
@@ -51,9 +53,14 @@ class ExternalImportConnector:
         """Initialize connector with config and helper."""
         self.config = config
         self.helper = helper
-        self.logger = helper.connector_logger
         self.state_manager = state_manager
         self.data_processors = data_processors
+
+        # Ensure OpenCTIConnectorHelper's logger is attached to SDK's logger as soon as it's reachable
+        logger.attach_connector_helper_logger(self.helper)
+        self._logger = logger.get_child("connector")
+
+        self._logger.debug(f"{self.__class__.__name__} initialized succesfully")
 
     def callback(self) -> None:
         """Main processing function.
@@ -64,18 +71,15 @@ class ExternalImportConnector:
         The global error handling ensures that the connector keeps alive in case of unexpected errors.
         """
         try:
-            self.logger.info(
-                "[CONNECTOR] Starting connector...",
+            self._logger.info(
+                "Starting connector's run...",
                 {"connector_name": self.config.connector.name},
             )
+
             now = datetime.now(timezone.utc)
 
             # 1. Load state
             self.state_manager.load()
-            self.logger.debug(
-                "[CONNECTOR] Current connector's state",
-                {"state": self.state_manager.model_dump()},
-            )
 
             # 2. Collect data, transform it and send it to OpenCTI
             for data_processor in self.data_processors:
@@ -87,18 +91,21 @@ class ExternalImportConnector:
             self.state_manager.last_run = now
             self.state_manager.save()
 
-            self.logger.info(
-                "[CONNECTOR] Connector's run completed",
+            self._logger.info(
+                "Connector's run completed",
                 {"connector_name": self.config.connector.name},
             )
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
+            self._logger.info(
+                "Connector stopped...",
                 {"connector_name": self.config.connector.name},
             )
             sys.exit(0)
         except Exception as err:
-            self.logger.error(err, {"connector": self.config.connector.name})
+            self._logger.error(
+                "Unexpected error occurred",
+                {"connector_name": self.config.connector.name, "error": str(err)},
+            )
 
     def start(self) -> None:
         """Schedule callback based on connector's configuration."""
