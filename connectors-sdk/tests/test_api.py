@@ -9,6 +9,8 @@ def test_root_public_api_is_valid():
     # Given the feature name
     # Then it should all be present
     imports = {
+        "ConnectorLogger",
+        "logger",
         "BaseConfigModel",
         "BaseConnectorSettings",
         "BaseConnectorStateManager",
