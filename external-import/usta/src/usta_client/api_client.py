@@ -62,6 +62,7 @@ class UstaClient:
         self.session = requests.Session()
         self.session.headers.update(
             {
+                "User-Agent": "USTA-OpenCTI-Integration/1.0",
                 "Authorization": f"Bearer {self.api_key}",
                 "Accept": "application/json",
             }

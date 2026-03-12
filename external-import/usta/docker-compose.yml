@@ -1,8 +1,6 @@
 services:
   connector-usta-prodaft:
-    container_name: connector-usta-prodaft
-    build:
-      context: .
+    image: opencti/connector-usta-prodaft:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
