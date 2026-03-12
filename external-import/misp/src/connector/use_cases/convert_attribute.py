@@ -166,8 +166,11 @@ class AttributeConverter:
         custom_properties: dict[str, str],
     ) -> stix2.IPv4Address | stix2.IPv6Address:
         try:
+            # Handling for value being IP v4 address range
+            test_value = value.split("/")[0]
+
             # Test if valid IP v4 address
-            ipaddress.IPv4Address(value)
+            ipaddress.IPv4Address(test_value)
 
             return stix2.IPv4Address(
                 value=value,
