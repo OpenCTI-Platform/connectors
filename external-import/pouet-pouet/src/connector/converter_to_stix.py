@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Literal
 
+from connectors_sdk import logger
 from connectors_sdk.models import Indicator, OrganizationAuthor, Report, TLPMarking
 from pycti import OpenCTIConnectorHelper
 
@@ -29,22 +30,27 @@ class ConverterToStix:
             tlp_level (str): The TLP level to add to the created STIX entities.
         """
         self.helper = helper
+        self.logger = logger.get_child("converter_to_stix")
 
         self.author = self.create_author()
-        self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+        self.tlp_marking = self.create_tlp_marking(level=tlp_level.lower())
 
-    @staticmethod
-    def create_author() -> OrganizationAuthor:
+    def create_author(self) -> OrganizationAuthor:
+        self.logger.debug("Creating OrganizationAuthor")
+
         return OrganizationAuthor(
             name="Pouet Pouet",
             description="Pouet Pouet is a platform for pouetpoueting.",
         )
 
-    @staticmethod
-    def _create_tlp_marking(level):
+    def create_tlp_marking(self, level):
+        self.logger.debug("Creating TLPMarking", {"level": level})
+
         return TLPMarking(level=level)
 
     def create_report(self, report_data: dict) -> Report:
+        self.logger.debug("Creating Report", {"report_data": report_data})
+
         return Report(
             name=report_data["name"],
             publication_date=datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc),
@@ -53,6 +59,8 @@ class ConverterToStix:
         )
 
     def create_indicator(self, indicator_data: dict) -> Indicator:
+        self.logger.debug("Creating Indicator", {"indicator_data": indicator_data})
+
         indicator_type = indicator_data["type"]
         indicator_name = indicator_data["name"]
 

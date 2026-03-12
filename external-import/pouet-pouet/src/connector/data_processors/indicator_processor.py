@@ -6,7 +6,7 @@ from time import sleep
 from typing import TYPE_CHECKING, override
 
 from connector.converter_to_stix import ConverterToStix
-from connectors_sdk import BaseDataProcessor
+from connectors_sdk import BaseDataProcessor, logger
 from connectors_sdk.models import BaseIdentifiedObject
 from pouet_pouet_client.api_client import PouetPouetClient
 
@@ -41,6 +41,8 @@ class IndicatorProcessor(BaseDataProcessor):
         self.config = config
         self.state_manager = state_manager
 
+        self.logger = logger.get_child("indicator_processor")
+
         self.api_client = PouetPouetClient(
             helper=helper,
             base_url=self.config.pouet_pouet.api_base_url,
@@ -58,7 +60,13 @@ class IndicatorProcessor(BaseDataProcessor):
         This method return retrieved data as a generator of dictionaries,
         where each dictionary represents an indicator to be ingested into OpenCTI.
         """
+        self.logger.info("Fetching indicators")
+
         pouet_indicators = self.api_client.get_indicators()
+
+        self.logger.debug(
+            "Fetched indicators", {"indicators_count": len(pouet_indicators)}
+        )
 
         return pouet_indicators
 
@@ -70,6 +78,8 @@ class IndicatorProcessor(BaseDataProcessor):
         the format expected by OpenCTI for ingestion.
         Returns a generator of lists of `BaseIdentifiedObject`, where each list contains the OCTI objects of one bundle.
         """
+        self.logger.info("Transforming indicators into OCTI objects")
+
         octi_objects = [
             self.converter_to_stix.tlp_marking,
             self.converter_to_stix.author,
@@ -79,5 +89,10 @@ class IndicatorProcessor(BaseDataProcessor):
             sleep(1)  # simulate long running conversion
             octi_indicator = self.converter_to_stix.create_indicator(pouet_indicator)
             octi_objects.append(octi_indicator)
+
+        self.logger.debug(
+            "Transformed indicators into OCTI objects",
+            {"octi_objects_count": len(octi_objects)},
+        )
 
         return octi_objects

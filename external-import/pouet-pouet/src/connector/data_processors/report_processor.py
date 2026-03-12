@@ -6,7 +6,7 @@ from time import sleep
 from typing import TYPE_CHECKING, Generator, override
 
 from connector.converter_to_stix import ConverterToStix
-from connectors_sdk import BaseDataProcessor
+from connectors_sdk import BaseDataProcessor, logger
 from connectors_sdk.models import BaseIdentifiedObject, Report
 from pouet_pouet_client.api_client import PouetPouetClient
 
@@ -41,6 +41,8 @@ class ReportProcessor(BaseDataProcessor):
         self.config = config
         self.state_manager = state_manager
 
+        self.logger = logger.get_child("report_processor")
+
         self.api_client = PouetPouetClient(
             helper=helper,
             base_url=self.config.pouet_pouet.api_base_url,
@@ -59,7 +61,12 @@ class ReportProcessor(BaseDataProcessor):
         where each dictionary represents a report to be ingested into OpenCTI.
         """
         last_ingested_at = self.state_manager.last_ingested_at
+
+        self.logger.info("Fetching reports with filters", {"since": last_ingested_at})
+
         pouet_reports = self.api_client.get_reports(since=last_ingested_at)
+
+        self.logger.debug("Fetched reports")
 
         return pouet_reports
 
@@ -73,6 +80,8 @@ class ReportProcessor(BaseDataProcessor):
         the format expected by OpenCTI for ingestion.
         Returns a generator of lists of `BaseIdentifiedObject`, where each list contains the OCTI objects of one bundle.
         """
+        self.logger.info("Transforming reports into OCTI objects")
+
         for pouet_report in data:
             sleep(1)  # simulate long running conversion
             octi_report = self.converter_to_stix.create_report(pouet_report)
@@ -82,6 +91,14 @@ class ReportProcessor(BaseDataProcessor):
                 self.converter_to_stix.author,
                 octi_report,
             ]
+
+            self.logger.debug(
+                "Transformed report into OCTI objects",
+                {
+                    "report_name": pouet_report["name"],
+                    "octi_objects_count": len(octi_objects),
+                },
+            )
 
             yield octi_objects
 
@@ -106,7 +123,14 @@ class ReportProcessor(BaseDataProcessor):
                 None,
             )
             if bundle_last_report:
-
+                self.logger.debug(
+                    "Saving last report info in connector's state",
+                    {
+                        "report_name": bundle_last_report.name,
+                        "report_id": bundle_last_report.id,
+                        "report_publication_date": bundle_last_report.publication_date,
+                    },
+                )
                 if (
                     last_report is None
                     or last_report.publication_date

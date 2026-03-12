@@ -17,14 +17,16 @@ from connector import (
     ReportProcessor,
 )
 from connectors_sdk import ExternalImportConnector as PouetPouetConnector
+from connectors_sdk import logger
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
+        logger.info("Starting connector")
+
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
         state_manager = ConnectorStateManager(helper=helper)  # type: ignore[abstract]
-
         report_processor = ReportProcessor(
             config=settings,
             helper=helper,
@@ -43,6 +45,8 @@ if __name__ == "__main__":
             data_processors=[report_processor, indicator_processor],
         )
         connector.start()
-    except Exception:
+    except Exception as e:
+        logger.error("Unexpected error occurred", {"error": str(e)})
+
         traceback.print_exc()
         exit(1)

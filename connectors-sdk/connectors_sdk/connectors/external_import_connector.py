@@ -13,7 +13,7 @@ import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
-from connectors_sdk.logger.sdk_logger import sdk_logger as logger
+from connectors_sdk.logging.sdk_logger import sdk_logger as logger
 
 if TYPE_CHECKING:
     from connectors_sdk.connectors.base_data_processor import BaseDataProcessor

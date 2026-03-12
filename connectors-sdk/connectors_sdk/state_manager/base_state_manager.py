@@ -13,7 +13,7 @@ Architecture:
 from datetime import datetime
 from typing import Any
 
-from connectors_sdk.logger.sdk_logger import sdk_logger as logger
+from connectors_sdk.logging.sdk_logger import sdk_logger as logger
 from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -48,7 +48,7 @@ class BaseConnectorStateManager(BaseModel):
             {"initial_state": self._to_dict()},
         )
 
-    def _to_dict(self) -> dict:
+    def _to_dict(self) -> dict[str, Any]:
         """Convert the state to a JSON dictionary."""
         declared_fields = set(type(self).model_fields)
 

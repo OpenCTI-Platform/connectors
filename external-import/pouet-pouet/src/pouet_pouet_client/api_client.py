@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Generator
 
 import requests
+from connectors_sdk import logger
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 
@@ -19,6 +20,7 @@ class PouetPouetClient:
             api_key (str): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
+        self.logger = logger.get_child("pouet_pouet_client")
 
         self.base_url = base_url
         # Define headers in session and update when needed
@@ -34,17 +36,15 @@ class PouetPouetClient:
         try:
             response = self.session.get(api_url, params=params)
 
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
+            self.logger.info("HTTP GET Request to endpoint", {"url_path": api_url})
 
             response.raise_for_status()
             return response.json()
 
         except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+            self.logger.error(
+                "Error while fetching data",
+                {"url_path": {api_url}, "error": {str(err)}},
             )
             return None
 

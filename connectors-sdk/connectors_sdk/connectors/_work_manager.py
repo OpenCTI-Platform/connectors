@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from connectors_sdk.logger.sdk_logger import sdk_logger as logger
+from connectors_sdk.logging.sdk_logger import sdk_logger as logger
 
 if TYPE_CHECKING:
     import stix2
@@ -38,7 +38,7 @@ class WorkManager:
         if not isinstance(work_id, str):
             raise WorkManagerError("Failed to initiate work")
 
-        self._logger.debug(f"Initiated work", {"work_id": work_id, "work_name": name})
+        self._logger.debug("Initiated work", {"work_id": work_id, "work_name": name})
 
         return work_id
 
@@ -49,10 +49,11 @@ class WorkManager:
         if not stix_objects:
             raise WorkManagerError("Cannot send empty STIX bundle")
 
+        bundle = self.helper.stix2_create_bundle(stix_objects)
         sent_bundles = self.helper.send_stix2_bundle(bundle=bundle, work_id=work_id)
 
         self._logger.debug(
-            f"Bundles sent to work",
+            "Bundles sent to work",
             {"work_id": work_id, "object_count": len(sent_bundles)},
         )
 
@@ -61,7 +62,7 @@ class WorkManager:
         self.helper.api.work.to_processed(work_id, message, in_error)
 
         self._logger.debug(
-            f"Completed work",
+            "Completed work",
             {"work_id": work_id, "message": message, "in_error": in_error},
         )
 
@@ -69,4 +70,4 @@ class WorkManager:
         """Delete a work."""
         self.helper.api.work.delete_work(work_id)
 
-        self._logger.debug(f"Deleted work", {"work_id": work_id})
+        self._logger.debug("Deleted work", {"work_id": work_id})

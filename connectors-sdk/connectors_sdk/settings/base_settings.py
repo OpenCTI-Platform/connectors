@@ -13,7 +13,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
 
-from connectors_sdk.logger.sdk_logger import sdk_logger as logger
+from connectors_sdk.logging.sdk_logger import sdk_logger as logger
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
     Deprecate,
@@ -45,7 +45,7 @@ from pydantic_settings import (
 )
 
 if TYPE_CHECKING:
-    from connectors_sdk.logger.logger import BaseLogger
+    from connectors_sdk.logging._base_logger import BaseLogger
 
 
 class BaseConfigModel(BaseModel, ABC):

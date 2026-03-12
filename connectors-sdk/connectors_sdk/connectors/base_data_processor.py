@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Generator
 
 from connectors_sdk.connectors._work_manager import WorkManager, WorkManagerError
-from connectors_sdk.logger.sdk_logger import sdk_logger as logger
+from connectors_sdk.logging.sdk_logger import sdk_logger as logger
 
 if TYPE_CHECKING:
     from connectors_sdk.models import BaseIdentifiedObject
