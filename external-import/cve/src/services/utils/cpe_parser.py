@@ -40,4 +40,3 @@ def parse_cpe_uri(cpe_str: str) -> dict[str, str]:
                 }
             raise ValueError(f"CPE URI is missing mandatory information: {cpe_str}")
     raise NotImplementedError(f"Unknown CPE URI format: {cpe_str}")
-
