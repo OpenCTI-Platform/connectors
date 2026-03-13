@@ -37,3 +37,7 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
         default=2019,
         description="Year in number. Required when pull_history is set to `True`.  Minimum 2019 as CVSS V3.1 was released in June 2019, thus most CVE published before 2019 do not include the cvssMetricV31 object.",
     )
+    import_software: bool = Field(
+        default=False,
+        description="If set to `True`, resolve CPEs associated with each CVE via the NVD CPE Match API and import them as Software objects with 'has' relationships to vulnerabilities. Warning: this can generate a large volume of data.",
+    )
