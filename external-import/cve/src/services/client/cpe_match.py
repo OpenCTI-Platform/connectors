@@ -25,17 +25,13 @@ class CPEMatchClient(CVEClient):
         cpe_names: set[str] = set()
         params = {"cveId": cve_id}
 
-        info_msg = (
-            f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
-        )
+        info_msg = f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
         self.helper.connector_logger.info(info_msg)
 
         try:
             first_response = self._request_data(self, CPE_MATCH_BASE_URL, params)
             if first_response is None:
-                warn_msg = (
-                    f"[CPE MATCH API] No response for {cve_id}, skipping CPE resolution."
-                )
+                warn_msg = f"[CPE MATCH API] No response for {cve_id}, skipping CPE resolution."
                 self.helper.connector_logger.warning(warn_msg)
                 return []
 
@@ -98,7 +94,3 @@ class CPEMatchClient(CVEClient):
             else:
                 for match in match_criteria.get("matches", []):
                     cpe_names.add(match.get("cpeName"))
-
-
-
-
