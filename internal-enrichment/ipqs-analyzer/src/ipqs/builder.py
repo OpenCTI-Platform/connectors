@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """IPQS builder module."""
 
-import pycti
+from pycti import Indicator as PyctiIndicator
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import Bundle, Identity, Indicator, Relationship
 
@@ -53,7 +53,7 @@ class IPQSBuilder:
         self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
 
         indicator = Indicator(
-            id=pycti.Indicator.generate_id(pattern),
+            id=PyctiIndicator.generate_id(pattern),
             created_by_ref=self.author,
             name=indicator_value,
             description=description,
