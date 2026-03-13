@@ -14,4 +14,5 @@ cve:
 #  maintain_data: True # Optional, retrieve only updated data
 #  pull_history: False # Optional, If True, history_start_year is required
 #  history_start_year: 2019 # Required if pull_history is True, min 2019 (see documentation CVE and CVSS base score V3.1)
+#  import_software: False # Optional, if True, resolve CPEs and import as Software objects (generates large volume of data)
 
