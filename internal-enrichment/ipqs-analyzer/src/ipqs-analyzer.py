@@ -6,8 +6,9 @@ import time
 from os import path
 from typing import Any, Dict, List
 
-import pycti
 import stix2
+from pycti import Identity as PyctiIdentity
+from pycti import Note as PyctiNote
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
 from yaml import FullLoader, load
@@ -69,7 +70,7 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
         )
 
         self.author = Identity(
-            id=pycti.Identity.generate_id(self._SOURCE_NAME, "organization"),
+            id=PyctiIdentity.generate_id(self._SOURCE_NAME, "organization"),
             name=self._SOURCE_NAME,
             identity_class="organization",
             description="IPQS",
@@ -212,8 +213,11 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
         if "Could not download" in message:
             labels.append("ipqs-no-downloadable-file")
 
+        content = f"IPQS enrichment failed: {message}"
+        note_id = PyctiNote.generate_id(created=None, content=content)
         note = stix2.Note(
-            content=f"IPQS enrichment failed: {message}",
+            id=note_id,
+            content=content,
             object_refs=[observable["standard_id"]],
             created_by_ref=self.author,
             confidence=50,
