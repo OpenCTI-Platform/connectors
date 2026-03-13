@@ -338,6 +338,8 @@ class Misp:
                     "last_event_date": self._get_event_datetime(event).isoformat(),
                     "remaining_objects_count": remaining_objects_count,
                 }
+                if self.config.misp.datetime_attribute == "date":
+                    new_state["current_event_id"] = event.Event.id
                 self.work_manager.update_state(state_update=new_state)
 
                 return ProcessingOutcome.BUFFERING
