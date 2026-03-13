@@ -1,0 +1,21 @@
+opencti:
+  url: "http://localhost"
+  token: "ChangeMe"
+
+connector:
+  type: "INTERNAL_ENRICHMENT"
+  id: "IPQS_Analyzer"
+  name: "IPQS Malware And Virus File Scanner"
+  scope: "Artifact,Url"
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: "info"
+
+ipqs_analyzer:
+  server: "https://www.ipqualityscore.com/api/json"
+  api_key: "ChangeMe"
+  default_color: "#54483b" # Default label color
+  classifications_color: "#54483b" # Label color for classifications
+  threat_names_color: "#0059f7" # Label color for threat names
+  default_tlp: "TLP:CLEAR"
+  max_tlp: "TLP:AMBER"
