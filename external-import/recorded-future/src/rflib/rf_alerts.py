@@ -198,13 +198,15 @@ class RecordedFutureAlertConnector(threading.Thread):
                 del current_state["last_alerts_run"]
                 self.helper.set_state(current_state)
 
-            last_processed_alert_date = (
-                datetime.fromisoformat(
-                    current_state.get("last_processed_alert_date", "")
-                ).replace(tzinfo=timezone.utc)
-                if current_state.get("last_processed_alert_date")
-                else None
+            state_last_processed_alert_date = current_state.get(
+                "last_processed_alert_date"
             )
+            if state_last_processed_alert_date is None:
+                last_processed_alert_date = None
+            else:
+                last_processed_alert_date = datetime.fromisoformat(
+                    state_last_processed_alert_date
+                ).replace(tzinfo=timezone.utc)
 
             alerts = self.collect_alerts(since=last_processed_alert_date or now)
             alerts.sort(key=lambda a: a.alert_date or "")
