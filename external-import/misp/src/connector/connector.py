@@ -455,6 +455,7 @@ class Misp:
                                 f"Error while converting MISP event, skipping it. {err}",
                                 event_log_data,
                             )
+                            self._current_bundle = None
                             continue
                     else:
                         self.logger.info(
@@ -526,6 +527,13 @@ class Misp:
                                     "last_event_date": last_event_datetime.isoformat(),
                                 },
                             )
+
+            except Exception as e:
+                self.logger.error(
+                    "Error while processing MISP events",
+                    {"prefix": LOG_PREFIX, "error": str(e)},
+                )
+                self._current_bundle = None
 
             finally:
                 self._flush_batch_processor()
