@@ -1,7 +1,6 @@
 from datetime import datetime
 from uuid import NAMESPACE_URL, uuid5
 
-from doppel.constants import STIX_VERSION
 from doppel.stix_helpers import (
     build_custom_properties,
     build_description,
@@ -378,7 +377,6 @@ class ConverterToStix:
                 ),
                 abstract="Moved from taken down back to unresolved",
                 content=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
-                spec_version=STIX_VERSION,
                 created=modified,
                 modified=modified,
                 created_by_ref=self.author.id,
@@ -403,7 +401,6 @@ class ConverterToStix:
 
         phone_number_observable = PhoneNumber(
             value=phone_number,
-            spec_version=STIX_VERSION,
             object_marking_refs=[self.tlp_marking.id],
             custom_properties=custom_properties or None,
         )
@@ -419,7 +416,6 @@ class ConverterToStix:
 
         domain_observable = DomainName(
             value=domain_name,
-            spec_version=STIX_VERSION,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
             external_references=external_references if external_references else None,
@@ -438,7 +434,6 @@ class ConverterToStix:
 
         ip_observable = IPv4Address(
             value=ip_address,
-            spec_version=STIX_VERSION,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
             external_references=external_references if external_references else None,
@@ -464,7 +459,6 @@ class ConverterToStix:
             name=f"Case for Alert {alert_id}",
             context="suspicious-activity",
             object_refs=object_refs,
-            spec_version=STIX_VERSION,
             created_by_ref=self.author.id,
             external_references=(
                 build_external_references(alert)
@@ -493,7 +487,6 @@ class ConverterToStix:
             relationship_type=relationship_type,
             source_ref=source_id,
             target_ref=target_id,
-            spec_version=STIX_VERSION,
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
@@ -511,7 +504,6 @@ class ConverterToStix:
             ),
             abstract=note_content,
             content=note_body,
-            spec_version=STIX_VERSION,
             created=note_timestamp,
             modified=note_timestamp,
             created_by_ref=self.author.id,
@@ -534,7 +526,6 @@ class ConverterToStix:
             id=PyctiIndicator.generate_id(pattern),
             pattern=pattern,
             pattern_type="stix",
-            spec_version=STIX_VERSION,
             name=name,
             description=build_description(alert),
             created=created_at,
