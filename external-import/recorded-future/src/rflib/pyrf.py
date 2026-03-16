@@ -168,9 +168,13 @@ class RecordedFutureApiClient:
         :return: Search alerts raw dictionary.
         """
         try:
-            triggered_since_iso = triggered_since.isoformat().replace("+00:00", "Z")
+            triggered_since_iso = triggered_since.isoformat(
+                timespec="milliseconds"
+            ).replace("+00:00", "Z")
             triggered_until_iso = (
-                triggered_until.isoformat().replace("+00:00", "Z")
+                triggered_until.isoformat(timespec="milliseconds").replace(
+                    "+00:00", "Z"
+                )
                 if triggered_until
                 else ""
             )
@@ -183,7 +187,9 @@ class RecordedFutureApiClient:
                 },
                 params={
                     "alertRule": rule.rule_id,
-                    "triggered": f"[{triggered_since_iso},{triggered_until_iso}]",
+                    "triggered": f"({triggered_since_iso},{triggered_until_iso}]",
+                    "orderby": "triggered",
+                    "direction": "asc",
                     "limit": limit,
                     "from": offset,
                 },

@@ -188,15 +188,28 @@ class RecordedFutureAlertConnector(threading.Thread):
             self.update_rules()
 
             current_state = self.helper.get_state() or {}
-            last_alerts_run = (
-                datetime.fromisoformat(
-                    current_state.get("last_alerts_run", "")
-                ).replace(tzinfo=timezone.utc)
-                if current_state.get("last_alerts_run")
-                else None
-            )
 
-            alerts = self.collect_alerts(since=last_alerts_run or now)
+            # Migrate old state key to new name
+            if "last_alerts_run" in current_state:
+                if "last_processed_alert_date" not in current_state:
+                    current_state["last_processed_alert_date"] = current_state[
+                        "last_alerts_run"
+                    ]
+                del current_state["last_alerts_run"]
+                self.helper.set_state(current_state)
+
+            state_last_processed_alert_date = current_state.get(
+                "last_processed_alert_date"
+            )
+            if state_last_processed_alert_date is None:
+                last_processed_alert_date = None
+            else:
+                last_processed_alert_date = datetime.fromisoformat(
+                    state_last_processed_alert_date
+                ).replace(tzinfo=timezone.utc)
+
+            alerts = self.collect_alerts(since=last_processed_alert_date or now)
+            alerts.sort(key=lambda a: a.alert_date or "")
             for alert in alerts:
                 try:
                     self.alert_to_incident(alert)
@@ -207,9 +220,16 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                     continue
 
-            current_state = self.helper.get_state() or {}
-            current_state["last_alerts_run"] = now.isoformat()
-            self.helper.set_state(current_state)
+                current_state = self.helper.get_state() or {}
+                checkpoint = (
+                    datetime.fromisoformat(alert.alert_date)
+                    if alert.alert_date
+                    else now
+                )
+                current_state["last_processed_alert_date"] = checkpoint.isoformat(
+                    timespec="milliseconds"
+                )
+                self.helper.set_state(current_state)
 
             message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
             self.helper.api.work.to_processed(self.work_id, message)
