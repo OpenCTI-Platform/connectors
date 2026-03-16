@@ -56,8 +56,10 @@ class DoppelConnector:
             # Perform collection of intelligence
             alerts = self.client.get_alerts(last_run, page_size=self.config.page_size)
             if alerts:
+                now = datetime.now(tz=timezone.utc)
+                friendly_name = f"Doppel run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
                 work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, "Connector feed"
+                    self.helper.connect_id, friendly_name
                 )
 
                 bundle = self.converter.convert_alerts_to_stix(alerts)
