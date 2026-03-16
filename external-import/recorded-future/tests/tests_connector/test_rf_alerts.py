@@ -79,11 +79,11 @@ def test_set_state_uses_alert_date():
     # When: the connector runs
     connector.run()
 
-    # Then: each set_state call saves the alert's own date
+    # Then: each set_state call saves the alert's date with millisecond precision
     helper.set_state.assert_has_calls(
         [
-            call({"last_processed_alert_date": "2025-06-01T10:00:00"}),
-            call({"last_processed_alert_date": "2025-06-02T12:00:00"}),
+            call({"last_processed_alert_date": "2025-06-01T10:00:00.000+00:00"}),
+            call({"last_processed_alert_date": "2025-06-02T12:00:00.000+00:00"}),
         ]
     )
 
@@ -133,6 +133,59 @@ def test_alerts_processed_in_chronological_order():
         c.args[0].alert_id for c in connector.alert_to_incident.call_args_list
     ]
     assert processed_ids == ["a1", "a2", "a3"]
+
+
+def test_checkpoint_excludes_last_processed_alert():
+    """Checkpoint must equal the last alert's triggered time (ms precision).
+
+    On the next run the API range ``(since,]`` naturally excludes this checkpoint.
+    """
+    # Given: an alert with millisecond-precision triggered time
+    helper = MagicMock()
+    helper.get_state.return_value = {}
+    helper.connect_name = "RecordedFuture"
+    helper.connector_id = "connector-1"
+
+    connector = _build_connector(helper)
+    alert = _make_alert("a1", alert_date="2025-09-23T12:03:58.567Z")
+    connector.collect_alerts = MagicMock(return_value=[alert])
+
+    # When: the connector runs
+    connector.run()
+
+    # Then: the saved checkpoint preserves the exact alert triggered time
+    saved_state = helper.set_state.call_args_list[-1].args[0]
+    saved_date = datetime.fromisoformat(saved_state["last_processed_alert_date"])
+    alert_date = datetime.fromisoformat("2025-09-23T12:03:58.567Z")
+    assert saved_date == alert_date
+
+
+def test_triggered_param_uses_exclusive_start_and_millisecond_precision():
+    """The triggered query parameter must use exclusive start '(' and millisecond precision."""
+    # Given: a Recorded Future API client
+    helper = MagicMock()
+    rule = PrioritiedRule(
+        rule_id="rule-1",
+        rule_name="Test Rule",
+        rule_intelligence_goal="Test Goal",
+    )
+
+    client = RecordedFutureApiClient.__new__(RecordedFutureApiClient)
+    client.x_rf_token = "fake-token"
+    client.base_url = "https://api.recordedfuture.com/"
+    client.helper = helper
+
+    fake_response = MagicMock()
+    fake_response.json.return_value = {"data": [], "counts": {"total": 0}}
+
+    # When: _raw_get_alerts is called with a timestamp that has sub-second precision
+    since = datetime(2025, 9, 23, 12, 3, 58, 567000, tzinfo=timezone.utc)
+    with patch("rflib.pyrf.requests.get", return_value=fake_response) as mock_get:
+        client._raw_get_alerts(rule=rule, triggered_since=since)
+
+        # Then: triggered param uses exclusive start bracket with milliseconds
+        params = mock_get.call_args.kwargs["params"]
+        assert params["triggered"] == "(2025-09-23T12:03:58.567Z,]"
 
 
 def test_raw_get_alerts_sends_sort_params():

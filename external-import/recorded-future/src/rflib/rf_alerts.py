@@ -226,8 +226,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                     if alert.alert_date
                     else now
                 )
-                current_state["last_processed_alert_date"] = checkpoint.strftime(
-                    "%Y-%m-%dT%H:%M:%S"
+                current_state["last_processed_alert_date"] = checkpoint.isoformat(
+                    timespec="milliseconds"
                 )
                 self.helper.set_state(current_state)
 
