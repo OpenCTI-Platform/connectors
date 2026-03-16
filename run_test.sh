@@ -56,7 +56,7 @@ do
   mkdir -p "$OUT_DIR"
 
   echo 'Creating isolated virtual environment'
-  python -m venv "$venv_name"
+  uv venv "$venv_name"
   if [ -f "$venv_name/bin/activate" ]; then
     source "$venv_name/bin/activate"  # Linux/MacOS
   elif [ -f "$venv_name/Scripts/activate" ]; then
@@ -78,7 +78,8 @@ do
 
   echo 'Installing latest version of pycti'
   uv pip uninstall pycti
-  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python
+  REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
+  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   uv pip check || exit 1  # exit if dependencies are broken

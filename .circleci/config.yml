@@ -12,14 +12,18 @@ executors:
         type: string
         default: "rolling"
         description: Image tags
+      release_ref:
+        type: string
+        default: "lts/7.260309.0"
+        description:  Git reference to use for pycti and connectors-sdk dependencies in connectors (Used if not building a tag)
     environment:
       BUILD_TAGS: <<parameters.tags>>
+      RELEASE_REF: <<parameters.release_ref>>
     docker:
       - image: cimg/python:3.11
   ci_notifications:
     docker:
       - image: "cimg/base:stable"
-
 
 jobs:
   ensure_formatting:
@@ -74,6 +78,12 @@ jobs:
     docker:
       - image: cimg/python:3.12
     working_directory: ~/repo
+    parameters:
+      ci_executor:
+        type: executor
+        description: Executor to use for this job.
+        default: ci_environment
+    executor: << parameters.ci_executor >>
     steps:
       - checkout
       - run:
@@ -87,7 +97,7 @@ jobs:
       - run:
           name: Commit Manifest if changed
           command: |
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
+            if [ "$CIRCLE_BRANCH" = "$RELEASE_REF" ]; then
               echo "$GITHUB_GPG_SECRET_KEY" | base64 -d > /tmp/private.key
               gpg --import /tmp/private.key
               rm /tmp/private.key
@@ -123,7 +133,7 @@ jobs:
                 exit 0
               fi
             else
-              echo "Skipping, not master"
+              echo "Skipping, not $RELEASE_REF branch."
             fi
       - run:
           name: Skip steps if flag detected
@@ -137,6 +147,12 @@ jobs:
       - image: cimg/python:3.11
     working_directory: ~/repo
     parallelism: 4
+    parameters:
+      ci_executor:
+        type: executor
+        description: Executor to use for this job.
+        default: ci_environment
+    executor: << parameters.ci_executor >>
     steps:
       - checkout
       - run: |
