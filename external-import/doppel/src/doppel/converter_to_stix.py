@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
 from doppel.stix_helpers import (
@@ -15,6 +16,9 @@ from pycti import Identity as PyCTIIdentity
 from pycti import Indicator as PyctiIndicator
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Note as PyctiNote
+from pycti import (
+    OpenCTIConnectorHelper,
+)
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pycti.utils.constants import CustomObservablePhoneNumber as PhoneNumber
 from stix2 import (
@@ -40,11 +44,21 @@ class ConverterToStix:
     Provides methods for converting various types of input data into STIX 2.1 objects.
     """
 
-    def __init__(self, helper, config):
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+    ):
+        """
+        Initialize the converter with necessary configuration.
+
+        Args:
+            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
+            tlp_level (str): The TLP level to add to the created STIX entities.
+        """
         self.helper = helper
-        self.config = config
         self.author = self._create_identity()
-        self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
+        self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
 
     def _create_identity(self) -> Identity:
         """

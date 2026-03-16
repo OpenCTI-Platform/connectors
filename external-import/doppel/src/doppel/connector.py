@@ -3,17 +3,21 @@ from datetime import datetime, timedelta, timezone
 
 from doppel.client_api import ConnectorClient
 from doppel.converter_to_stix import ConverterToStix
+from doppel.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 
 class DoppelConnector:
-    def __init__(self, config, helper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
         self.helper = helper
         self.config = config
         self.client = ConnectorClient(self.helper, self.config)
-        self.converter = ConverterToStix(self.helper, self.config)
+        self.converter = ConverterToStix(
+            self.helper, tlp_level=self.config.doppel.tlp_level
+        )
 
     def _get_last_run(self, start_datetime: datetime) -> datetime:
         """
@@ -32,7 +36,9 @@ class DoppelConnector:
             )
             last_run = current_state["last_run"]
         else:
-            default_start = start_datetime - timedelta(days=self.config.historical_days)
+            default_start = start_datetime - timedelta(
+                days=self.config.doppel.historical_days
+            )
             last_run = default_start.strftime("%Y-%m-%dT%H:%M:%S")
             self.helper.connector_logger.info(
                 "No previous state found. Using historical polling window",
@@ -54,7 +60,9 @@ class DoppelConnector:
             last_run = self._get_last_run(start_datetime)
 
             # Perform collection of intelligence
-            alerts = self.client.get_alerts(last_run, page_size=self.config.page_size)
+            alerts = self.client.get_alerts(
+                last_run, page_size=self.config.doppel.page_size
+            )
             if alerts:
                 now = datetime.now(tz=timezone.utc)
                 friendly_name = f"Doppel run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -110,5 +118,5 @@ class DoppelConnector:
         self.helper.connector_logger.info("[DoppelConnector] Starting scheduler")
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
