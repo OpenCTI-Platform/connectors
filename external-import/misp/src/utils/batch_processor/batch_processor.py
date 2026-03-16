@@ -206,6 +206,14 @@ class BatchProcessor:
             "batch_size_limit": self.batch_size,
         }
 
+    def clear_current_batch(self) -> None:
+        """Discard all items currently in the batch without sending them.
+
+        Use this when the connector is buffering and the queued items must be
+        re-processed on the next scheduler run instead of being sent now.
+        """
+        self._current_batch.clear()
+
     def get_current_batch_size(self) -> int:
         """Get the number of items in the current batch.
 
