@@ -27,7 +27,7 @@
 
 [Cyber Threat Exchange](https://www.cyberthreatexchange.com/) is a market place for threat intelligence.
 
-The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds you are subsribed to Cyber Threat Exchange into OpenCTI.
+The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds you are subscribed to Cyber Threat Exchange into OpenCTI.
 
 > **Note**: This connector only works with Cyber Threat Exchange Web ([https://www.cyberthreatexchange.com](https://www.cyberthreatexchange.com)). It does not support self-hosted Cyber Threat Exchange installations at this time.
 
