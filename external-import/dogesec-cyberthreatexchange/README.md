@@ -25,7 +25,7 @@
 
 ## Introduction
 
-[Cyber Threat Exchange](https://www.cyberthreatexchange.com/) is a market place for threat intelligence.
+[Cyber Threat Exchange](https://www.cyberthreatexchange.com/) is a marketplace for threat intelligence.
 
 The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds you are subscribed to Cyber Threat Exchange into OpenCTI.
 
