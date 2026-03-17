@@ -6,6 +6,7 @@ Table of Contents
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
+  - [Verification status](#verification-status)
   - [Configuration variables](#configuration-variables)
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
@@ -31,6 +32,12 @@ across the internet.
 - OpenCTI Platform >= 6.8.13
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
+
+## Verification status
+
+| Status            |    Date    | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 17/03/2026 |         |
 
 ## Configuration variables
 
