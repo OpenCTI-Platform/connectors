@@ -9,6 +9,7 @@ from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.campaign import Campaign
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
 from connectors_sdk.models.domain_name import DomainName
@@ -52,6 +53,7 @@ __all__ = [
     "AssociatedFile",
     "AttackPattern",
     "AutonomousSystem",
+    "Campaign",
     "City",
     "Country",
     "DomainName",
