@@ -31,7 +31,7 @@ class SigmaHQConnector:
         """
         stix_objects = []
         # retrieve latest release version
-        rules = None
+        rules = []
         for asset in release_metadata["assets"]:
             if rule_package in asset["name"]:
                 rules = self.client.download_and_convert_package(
@@ -44,7 +44,7 @@ class SigmaHQConnector:
                 stix_objects.extend(stix_entities)
             except Exception as err:
                 self.helper.connector_logger.error(
-                    f"An exception occurred while converting SigmaHQ rule: {rule.filename}",
+                    f"An exception occurred while converting SigmaHQ rule: {rule['filename']}",
                     err,
                 )
                 pass
@@ -97,7 +97,7 @@ class SigmaHQConnector:
             )
 
             # get latest rule package version
-            release_metadata = self.client.get_lastest_published_version()
+            release_metadata = self.client.get_latest_published_version()
             latest_version = release_metadata.get("tag").lower()
             if (
                 rule_package_version is None

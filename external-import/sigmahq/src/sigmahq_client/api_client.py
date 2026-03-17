@@ -18,7 +18,7 @@ class SigmaHQClient:
         # Define headers in session and update when needed
         self.session = requests.Session()
 
-    def get_lastest_published_version(self) -> dict[str, Any] | None:
+    def get_latest_published_version(self) -> dict[str, Any] | None:
         """
         :return:
         """
@@ -54,7 +54,10 @@ class SigmaHQClient:
             )
 
     def download_and_convert_package(self, url):
-
+        """
+        :param url:
+        :return:
+        """
         try:
             response = self.session.get(url, stream=True)
             response.raise_for_status()
