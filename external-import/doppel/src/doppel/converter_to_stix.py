@@ -57,12 +57,12 @@ class ConverterToStix:
             tlp_level (str): The TLP level to add to the created STIX entities.
         """
         self.helper = helper
-        self.author = self._create_identity()
+        self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
 
-    def _create_identity(self) -> Identity:
+    def create_author(self) -> Identity:
         """
-        Create Identity
+        Create author object
         :return: Identity Stix2 object
         """
         return Identity(
@@ -96,6 +96,309 @@ class ConverterToStix:
             "red": TLP_RED,
         }
         return mapping[level]
+
+    def create_phone_number(self, phone_number: str, alert: dict) -> PhoneNumber:
+        """
+        Create PhoneNumber object
+        """
+        custom_properties = build_custom_properties(alert, self.author.id)
+
+        return PhoneNumber(
+            value=phone_number,
+            object_marking_refs=[self.tlp_marking.id],
+            custom_properties=custom_properties,
+        )
+
+    def create_domain(self, domain_name: str, alert: dict) -> DomainName:
+        """
+        Create DomainName object
+        """
+        labels_flat = build_labels(alert)
+        external_references = build_external_references(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
+
+        return DomainName(
+            value=domain_name,
+            object_marking_refs=[self.tlp_marking.id],
+            labels=labels_flat or None,
+            external_references=external_references if external_references else None,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+
+    def create_ipv4(self, ip_address: str, alert: dict) -> IPv4Address:
+        """
+        Create IPv4Address object
+        """
+        labels_flat = build_labels(alert)
+        external_references = build_external_references(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
+
+        return IPv4Address(
+            value=ip_address,
+            object_marking_refs=[self.tlp_marking.id],
+            labels=labels_flat or None,
+            external_references=external_references if external_references else None,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+
+    def create_grouping_case(self, alert: dict, object_refs) -> Grouping:
+        """
+        Create Grouping case object
+        """
+        alert_id = alert.get("id")
+        score = alert.get("score")
+        priority = calculate_priority(score)
+
+        case_id = f"grouping--{uuid5(NAMESPACE_URL, f'doppel-case-{alert_id}')}"
+        case_labels = build_labels(alert)
+        case_labels.append(f"priority:{priority}")
+
+        return Grouping(
+            id=case_id,
+            name=f"Case for Alert {alert_id}",
+            context="suspicious-activity",
+            object_refs=object_refs,
+            created_by_ref=self.author.id,
+            external_references=(
+                build_external_references(alert)
+                if build_external_references(alert)
+                else None
+            ),
+            description=build_description(alert),
+            labels=case_labels or None,
+            object_marking_refs=[self.tlp_marking.id],
+            allow_custom=True,
+        )
+
+    def create_relationship(
+        self, source_id: str, target_id: str, relationship_type: str
+    ) -> StixCoreRelationship:
+        """
+        Create StixCoreRelationship object
+        """
+        return StixCoreRelationship(
+            id=PyctiStixCoreRelationship.generate_id(
+                relationship_type=relationship_type,
+                source_ref=source_id,
+                target_ref=target_id,
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_id,
+            target_ref=target_id,
+            created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking.id],
+            allow_custom=True,
+        )
+
+    def create_note(
+        self, note_content: str, note_body: str, note_refs: str, note_timestamp
+    ) -> Note:
+        """
+        Create Note object
+        """
+        return Note(
+            id=PyctiNote.generate_id(
+                content=note_body,
+                created=note_timestamp,
+            ),
+            abstract=note_content,
+            content=note_body,
+            created=note_timestamp,
+            modified=note_timestamp,
+            created_by_ref=self.author.id,
+            object_refs=note_refs,
+            object_marking_refs=[self.tlp_marking.id],
+            allow_custom=True,
+        )
+
+    def create_indicator(
+        self,
+        alert: dict,
+        pattern: str,
+        name: str,
+        created_at: datetime,
+        modified: datetime,
+    ) -> Indicator:
+        """
+        Create Indicator object
+        """
+        labels_flat = build_labels(alert)
+        external_references = build_external_references(alert)
+        custom_properties = build_custom_properties(alert, self.author.id)
+
+        return Indicator(
+            id=PyctiIndicator.generate_id(pattern),
+            pattern=pattern,
+            pattern_type="stix",
+            name=name,
+            description=build_description(alert),
+            created=created_at,
+            modified=modified,
+            created_by_ref=self.author.id,
+            object_marking_refs=[self.tlp_marking.id],
+            labels=labels_flat or None,
+            external_references=external_references if external_references else None,
+            valid_from=created_at,
+            custom_properties=custom_properties,
+            allow_custom=True,
+        )
+
+    def _handle_state_transitions(
+        self,
+        alert_queue_state,
+        previous_queue_state,
+        alert_id,
+        alert,
+        domain_observable_id,
+        ip_observable_id,
+        stix_objects,
+        domain_name,
+        ip_address,
+    ):
+        """
+        Handle state transitions based on queue_state
+        """
+        is_takedown_now = is_takedown_state(alert_queue_state)
+        was_takedown = (
+            is_takedown_state(previous_queue_state) if previous_queue_state else False
+        )
+        is_reverted = is_reverted_state(alert_queue_state)
+
+        # Transition: TO_TAKEDOWN
+        if is_takedown_now and not was_takedown:
+            self._process_takedown(
+                alert, domain_observable_id, ip_observable_id, stix_objects
+            )
+
+        # Transition: REVERSION
+        elif was_takedown and not is_takedown_now:
+            self._process_reversion(
+                alert, domain_observable_id, ip_observable_id, stix_objects
+            )
+
+        # Handle case where previous_state is null but we have an active indicator in reverted state
+        elif previous_queue_state is None and is_reverted and not is_takedown_now:
+            existing_indicators = self._find_indicators_by_alert_id(
+                alert_id, domain_name=domain_name, ip_address=ip_address
+            )
+            active_indicators = [
+                ind for ind in existing_indicators if not ind.get("revoked", False)
+            ]
+
+            if active_indicators:
+                self._process_reversion(
+                    alert, domain_observable_id, ip_observable_id, stix_objects
+                )
+
+    def convert_alerts_to_stix(self, alerts: list):
+        """
+        Convert list of alerts to stix2 Observable objects (domain-name and ipv4-addr)
+        Uses helper.get_state() / helper.set_state() for persistent state tracking
+        """
+        stix_objects = [self.author, self.tlp_marking]
+
+        # Get persistent state
+        state = self.helper.get_state() or {}
+
+        for alert in alerts:
+            try:
+                alert_id = alert.get("id", "unknown")
+                alert_queue_state = alert.get("queue_state")
+                previous_queue_state = state.get(alert_id, {}).get("queue_state")
+
+                # Extract required fields
+                entity_content = alert.get("entity_content", {})
+                product = alert.get("product")
+                root_domain = entity_content.get("root_domain", {})
+                domain_name = root_domain.get("domain")
+                ip_address = root_domain.get("ip_address")
+
+                domain_observable_id = None
+                ip_observable_id = None
+
+                # Create Phone Number Observable for product = telco.
+                if product == "telco":
+                    phone_number_observable = self.create_phone_number(
+                        alert.get("entity"), alert
+                    )
+                    stix_objects.append(phone_number_observable)
+                    domain_observable_id = (
+                        phone_number_observable.id
+                    )  # mocked domain observable id
+
+                # Create or reference Domain Observable
+                if domain_name:
+                    domain_observable = self.create_domain(domain_name, alert)
+                    stix_objects.append(domain_observable)
+                    domain_observable_id = domain_observable.id
+
+                # Create or reference IP Observable
+                if ip_address:
+                    ip_observable = self.create_ipv4(ip_address, alert)
+                    stix_objects.append(ip_observable)
+                    ip_observable_id = ip_observable.id
+
+                    # Create resolves-to relationship if domain also exists
+                    if domain_observable_id:
+                        relationship = self.create_relationship(
+                            source_id=domain_observable_id,
+                            target_id=ip_observable.id,
+                            relationship_type="resolves-to",
+                        )
+                        stix_objects.append(relationship)
+
+                # DETECT STATE TRANSITIONS
+                self._handle_state_transitions(
+                    alert_queue_state,
+                    previous_queue_state,
+                    alert_id,
+                    alert,
+                    domain_observable_id,
+                    ip_observable_id,
+                    stix_objects,
+                    domain_name,
+                    ip_address,
+                )
+
+                # Case Creation
+                if domain_observable_id or ip_observable_id:
+                    case_refs = []
+                    if domain_observable_id:
+                        case_refs.append(domain_observable_id)
+                    if ip_observable_id:
+                        case_refs.append(ip_observable_id)
+
+                    case = self.create_grouping_case(alert, object_refs=case_refs)
+                    stix_objects.append(case)
+
+                    # Create related-to relationship from case to primary observable
+                    related_to = self.create_relationship(
+                        source_id=case.id,
+                        target_id=domain_observable_id or ip_observable_id,
+                        relationship_type="related-to",
+                    )
+                    stix_objects.append(related_to)
+
+                # # Update state for this alert
+                # state[alert_id] = {
+                #     "queue_state": current_queue_state,
+                #     "last_processed": datetime.utcnow().isoformat(),
+                # }
+
+            except Exception as e:
+                # Unexpected errors - log and raise
+                self.helper.connector_logger.error(
+                    "[DoppelConverter] Failed to process alert",
+                    {"alert_id": alert_id, "error": str(e)},
+                )
+                raise
+
+        # Persist updated state
+        self.helper.set_state(state)
+
+        return self.helper.stix2_create_bundle(stix_objects)
 
     def _find_indicators_by_alert_id(
         self, alert_id, domain_name=None, ip_address=None
@@ -234,7 +537,7 @@ class ConverterToStix:
                 note_refs.append(primary_observable_id)
 
             if note_refs:
-                note = self._create_note(
+                note = self.create_note(
                     note_content, note_body, note_refs, note_timestamp
                 )
                 stix_objects.append(note)
@@ -255,12 +558,12 @@ class ConverterToStix:
             return
 
         # Create Indicator
-        indicator = self._create_indicator(alert, pattern, name, created_at, modified)
+        indicator = self.create_indicator(alert, pattern, name, created_at, modified)
         stix_objects.append(indicator)
 
         # Create based-on relationship to primary observable
         if primary_observable_id:
-            based_on_rel = self._create_relationship(
+            based_on_rel = self.create_relationship(
                 source_id=indicator.id,
                 target_id=primary_observable_id,
                 relationship_type="based-on",
@@ -286,7 +589,7 @@ class ConverterToStix:
         if primary_observable_id:
             note_refs.append(primary_observable_id)
 
-        note = self._create_note(note_content, note_body, note_refs, note_timestamp)
+        note = self.create_note(note_content, note_body, note_refs, note_timestamp)
         stix_objects.append(note)
 
         self.helper.connector_logger.info(
@@ -404,309 +707,3 @@ class ConverterToStix:
             "[DoppelConverter] Revoked indicators",
             {"alert_id": alert_id, "count": len(active_indicators)},
         )
-
-    def _create_phone_number_observable(self, phone_number, alert) -> PhoneNumber:
-        """
-        Create PhoneNumber observable
-        """
-        # labels_flat = build_labels(alert)
-        # external_references = build_external_references(alert)
-        custom_properties = build_custom_properties(alert, self.author.id)
-
-        phone_number_observable = PhoneNumber(
-            value=phone_number,
-            object_marking_refs=[self.tlp_marking.id],
-            custom_properties=custom_properties or None,
-        )
-        return phone_number_observable
-
-    def _create_domain_observable(self, domain_name, alert) -> DomainName:
-        """
-        Create DomainName observable
-        """
-        labels_flat = build_labels(alert)
-        external_references = build_external_references(alert)
-        custom_properties = build_custom_properties(alert, self.author.id)
-
-        domain_observable = DomainName(
-            value=domain_name,
-            object_marking_refs=[self.tlp_marking.id],
-            labels=labels_flat or None,
-            external_references=external_references if external_references else None,
-            custom_properties=custom_properties,
-            allow_custom=True,
-        )
-        return domain_observable
-
-    def _create_ip_observable(self, ip_address, alert) -> IPv4Address:
-        """
-        Create IPv4Address observable
-        """
-        labels_flat = build_labels(alert)
-        external_references = build_external_references(alert)
-        custom_properties = build_custom_properties(alert, self.author.id)
-
-        ip_observable = IPv4Address(
-            value=ip_address,
-            object_marking_refs=[self.tlp_marking.id],
-            labels=labels_flat or None,
-            external_references=external_references if external_references else None,
-            custom_properties=custom_properties,
-            allow_custom=True,
-        )
-        return ip_observable
-
-    def _create_grouping_case(self, alert, object_refs) -> Grouping:
-        """
-        Create Grouping case object
-        """
-        alert_id = alert.get("id")
-        score = alert.get("score")
-        priority = calculate_priority(score)
-
-        case_id = f"grouping--{uuid5(NAMESPACE_URL, f'doppel-case-{alert_id}')}"
-        case_labels = build_labels(alert)
-        case_labels.append(f"priority:{priority}")
-
-        case = Grouping(
-            id=case_id,
-            name=f"Case for Alert {alert_id}",
-            context="suspicious-activity",
-            object_refs=object_refs,
-            created_by_ref=self.author.id,
-            external_references=(
-                build_external_references(alert)
-                if build_external_references(alert)
-                else None
-            ),
-            description=build_description(alert),
-            labels=case_labels or None,
-            object_marking_refs=[self.tlp_marking.id],
-            allow_custom=True,
-        )
-        return case
-
-    def _create_relationship(
-        self, source_id, target_id, relationship_type
-    ) -> StixCoreRelationship:
-        """
-        Create StixCoreRelationship object
-        """
-        relationship = StixCoreRelationship(
-            id=PyctiStixCoreRelationship.generate_id(
-                relationship_type=relationship_type,
-                source_ref=source_id,
-                target_ref=target_id,
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking.id],
-            allow_custom=True,
-        )
-        return relationship
-
-    def _create_note(self, note_content, note_body, note_refs, note_timestamp) -> Note:
-        """
-        Create Note object
-        """
-        return Note(
-            id=PyctiNote.generate_id(
-                content=note_body,
-                created=note_timestamp,
-            ),
-            abstract=note_content,
-            content=note_body,
-            created=note_timestamp,
-            modified=note_timestamp,
-            created_by_ref=self.author.id,
-            object_refs=note_refs,
-            object_marking_refs=[self.tlp_marking.id],
-            allow_custom=True,
-        )
-
-    def _create_indicator(
-        self, alert, pattern, name, created_at, modified
-    ) -> Indicator:
-        """
-        Create Indicator
-        """
-        labels_flat = build_labels(alert)
-        external_references = build_external_references(alert)
-        custom_properties = build_custom_properties(alert, self.author.id)
-
-        indicator = Indicator(
-            id=PyctiIndicator.generate_id(pattern),
-            pattern=pattern,
-            pattern_type="stix",
-            name=name,
-            description=build_description(alert),
-            created=created_at,
-            modified=modified,
-            created_by_ref=self.author.id,
-            object_marking_refs=[self.tlp_marking.id],
-            labels=labels_flat or None,
-            external_references=external_references if external_references else None,
-            valid_from=created_at,
-            custom_properties=custom_properties,
-            allow_custom=True,
-        )
-        return indicator
-
-    def _handle_state_transitions(
-        self,
-        current_queue_state,
-        previous_queue_state,
-        alert_id,
-        alert,
-        domain_observable_id,
-        ip_observable_id,
-        stix_objects,
-        domain_name,
-        ip_address,
-    ):
-        """
-        Handle state transitions based on queue_state
-        """
-        is_takedown_now = is_takedown_state(current_queue_state)
-        was_takedown = (
-            is_takedown_state(previous_queue_state) if previous_queue_state else False
-        )
-        is_reverted = is_reverted_state(current_queue_state)
-
-        # Transition: TO_TAKEDOWN
-        if is_takedown_now and not was_takedown:
-            self._process_takedown(
-                alert, domain_observable_id, ip_observable_id, stix_objects
-            )
-
-        # Transition: REVERSION
-        elif was_takedown and not is_takedown_now:
-            self._process_reversion(
-                alert, domain_observable_id, ip_observable_id, stix_objects
-            )
-
-        # Handle case where previous_state is null but we have an active indicator in reverted state
-        elif previous_queue_state is None and is_reverted and not is_takedown_now:
-            existing_indicators = self._find_indicators_by_alert_id(
-                alert_id, domain_name=domain_name, ip_address=ip_address
-            )
-            active_indicators = [
-                ind for ind in existing_indicators if not ind.get("revoked", False)
-            ]
-
-            if active_indicators:
-                self._process_reversion(
-                    alert, domain_observable_id, ip_observable_id, stix_objects
-                )
-
-    def convert_alerts_to_stix(self, alerts: list):
-        """
-        Convert list of alerts to stix2 Observable objects (domain-name and ipv4-addr)
-        Uses helper.get_state() / helper.set_state() for persistent state tracking
-        """
-        stix_objects = [self.author, self.tlp_marking]
-
-        # Get persistent state
-        state = self.helper.get_state() or {}
-
-        for alert in alerts:
-            try:
-                alert_id = alert.get("id", "unknown")
-                current_queue_state = alert.get("queue_state")
-                previous_queue_state = state.get(alert_id, {}).get("queue_state")
-
-                # Extract required fields
-                entity_content = alert.get("entity_content", {})
-                product = alert.get("product")
-                root_domain = entity_content.get("root_domain", {})
-                domain_name = root_domain.get("domain")
-                ip_address = root_domain.get("ip_address")
-
-                domain_observable_id = None
-                ip_observable_id = None
-
-                # Create Phone Number Observable for product = telco.
-                if product == "telco":
-                    phone_number_observable = self._create_phone_number_observable(
-                        alert.get("entity"), alert
-                    )
-                    stix_objects.append(phone_number_observable)
-                    domain_observable_id = (
-                        phone_number_observable.id
-                    )  # mocked domain observable id
-
-                # Create or reference Domain Observable
-                if domain_name:
-                    domain_observable = self._create_domain_observable(
-                        domain_name, alert
-                    )
-                    stix_objects.append(domain_observable)
-                    domain_observable_id = domain_observable.id
-
-                # Create or reference IP Observable
-                if ip_address:
-                    ip_observable = self._create_ip_observable(ip_address, alert)
-                    stix_objects.append(ip_observable)
-                    ip_observable_id = ip_observable.id
-
-                    # Create resolves-to relationship if domain also exists
-                    if domain_observable_id:
-                        relationship = self._create_relationship(
-                            source_id=domain_observable_id,
-                            target_id=ip_observable.id,
-                            relationship_type="resolves-to",
-                        )
-                        stix_objects.append(relationship)
-
-                # DETECT STATE TRANSITIONS
-                self._handle_state_transitions(
-                    current_queue_state,
-                    previous_queue_state,
-                    alert_id,
-                    alert,
-                    domain_observable_id,
-                    ip_observable_id,
-                    stix_objects,
-                    domain_name,
-                    ip_address,
-                )
-
-                # Case Creation
-                if domain_observable_id or ip_observable_id:
-                    case_refs = []
-                    if domain_observable_id:
-                        case_refs.append(domain_observable_id)
-                    if ip_observable_id:
-                        case_refs.append(ip_observable_id)
-
-                    case = self._create_grouping_case(alert, object_refs=case_refs)
-                    stix_objects.append(case)
-
-                    # Create related-to relationship from case to primary observable
-                    related_to = self._create_relationship(
-                        source_id=case.id,
-                        target_id=domain_observable_id or ip_observable_id,
-                        relationship_type="related-to",
-                    )
-                    stix_objects.append(related_to)
-
-                # Update state for this alert
-                state[alert_id] = {
-                    "queue_state": current_queue_state,
-                    "last_processed": datetime.utcnow().isoformat(),
-                }
-
-            except Exception as e:
-                # Unexpected errors - log and raise
-                self.helper.connector_logger.error(
-                    "[DoppelConverter] Failed to process alert",
-                    {"alert_id": alert_id, "error": str(e)},
-                )
-                raise
-
-        # Persist updated state
-        self.helper.set_state(state)
-
-        return self.helper.stix2_create_bundle(stix_objects)
