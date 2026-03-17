@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  #name: 'Criminal IP' # Optional (default: 'Criminal IP')
+  #scope: 'IPv4-Addr,Domain-Name' # Optional (default: 'IPv4-Addr,Domain-Name')
+  #auto: false # Optional (default: false)
+  #log_level: 'error' # Optional (default: 'error')
+
+criminal_ip:
+  token: 'ChangeMe'
+  #max_tlp: 'TLP:AMBER' # Optional (default: 'TLP:AMBER')
