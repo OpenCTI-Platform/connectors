@@ -3,10 +3,21 @@ from datetime import datetime, timezone
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
-from connectors_sdk.models import Indicator, Malware
+from connectors_sdk.models import (
+    IPV4Address,
+    IPV6Address,
+    Malware,
+    OrganizationAuthor,
+    Relationship,
+    TLPMarking,
+)
 from connectors_sdk.models.enums import RelationshipType
 from montysecurity_c2_tracker_client import MontysecurityC2TrackerClient
 from pycti import OpenCTIConnectorHelper
+
+ENTITIES_TYPE = list[
+    IPV4Address | IPV6Address | Malware | Relationship | TLPMarking | OrganizationAuthor
+]
 
 
 class MontysecurityC2TrackerConnector:
@@ -65,26 +76,28 @@ class MontysecurityC2TrackerConnector:
             # Pass any arguments necessary to the converter
         )
 
-    def _collect_intelligence(self) -> list:
+    def _collect_intelligence(
+        self,
+    ) -> ENTITIES_TYPE:
         """
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
         # Get entities from external sources
         malware_list = self.client.get_malware_list()
-        entities = []
+        entities: ENTITIES_TYPE = []
         malware_list = [malware.strip('"') for malware in malware_list]
 
         self.helper.connector_logger.debug(malware_list)
 
         for malware in malware_list:
-            malware_stix: Malware = self.converter_to_stix.convert_malware(malware)
+            malware_stix = self.converter_to_stix.convert_malware(malware)
             entities.append(malware_stix)
 
             ips = self.client.get_ips(malware)
 
             for ip in ips:
-                ip_indicator: Indicator = self.converter_to_stix.convert_ip(ip)
+                ip_indicator = self.converter_to_stix.convert_ip(ip)
                 if not ip_indicator:
                     continue
                 entities.append(ip_indicator)
@@ -151,12 +164,13 @@ class MontysecurityC2TrackerConnector:
             if stix_objects:
                 # Initiate a new work
                 work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+                    self.helper.connect_id,
+                    friendly_name,  # type: ignore
                 )
 
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle,
+                    stix_objects_bundle,  # type: ignore
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
@@ -185,8 +199,8 @@ class MontysecurityC2TrackerConnector:
             self.helper.set_state(current_state)
 
             message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
+                f"{self.helper.connect_name} connector successfully run, "
+                f"storing last_run as {last_run_datetime}"
             )
 
             if work_id:

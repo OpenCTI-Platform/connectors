@@ -1,5 +1,4 @@
 import re
-from typing import Any
 from urllib.parse import quote, urljoin
 
 import requests
@@ -28,7 +27,7 @@ class MontysecurityC2TrackerClient:
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-    def _request_data(self, api_url: str, params=None):
+    def _request_data(self, api_url: str, params: dict | None = None):
         """
         Internal method to handle API requests
         :return: Response in JSON format
@@ -50,7 +49,8 @@ class MontysecurityC2TrackerClient:
             )
             return None
 
-    def get_malware_list(self, params=None) -> list[Any] | None:
+    def get_malware_list(self, params: dict | None = None) -> list[str]:
+        """Fetch the list of malware from the external API."""
         try:
             self.helper.connector_logger.info("Get Malware Entities")
             malware_list_url = self.config.malware_list_url.encoded_string()
@@ -64,11 +64,13 @@ class MontysecurityC2TrackerClient:
 
         except RequestException as err:
             self.helper.connector_logger.error(
-                f"Failed malware list: {err}", exc_info=True  # Includes full traceback
+                f"Failed malware list: {err}",
+                exc_info=True,  # Includes full traceback
             )
             return []
 
-    def get_ips(self, malware_name: str, params=None) -> list:
+    def get_ips(self, malware_name: str, params: dict | None = None) -> list[str]:
+        """Fetch the list of IPs associated with a malware from the external API."""
         try:
             self.helper.connector_logger.info("Get Malware IPs")
 
@@ -83,6 +85,7 @@ class MontysecurityC2TrackerClient:
             return ips
         except RequestException as err:
             self.helper.connector_logger.error(
-                f"Failed malware list: {err}", exc_info=True  # Includes full traceback
+                f"Failed malware list: {err}",
+                exc_info=True,  # Includes full traceback
             )
             return []
