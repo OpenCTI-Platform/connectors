@@ -82,6 +82,7 @@ def test_public_models_are_present():
         "IPV6Address",
         "KillChainPhase",
         "Malware",
+        "MediaContent",
         "Note",
         "ObservedData",
         "Organization",
