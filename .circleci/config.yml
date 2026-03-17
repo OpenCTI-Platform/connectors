@@ -48,8 +48,16 @@ commands:
             fi
 
             if [ -n "${PR_BASE_REF:-}" ]; then
-              RESOLVED_RELEASE_REF="${PR_BASE_REF}"
-              echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+              case "${PR_BASE_REF}" in
+                master|release/6.9.x|lts/*)
+                  RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+                  echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                  ;;
+                *)
+                  RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+                  echo "PR base '${PR_BASE_REF}' is outside allowed refs, using fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                  ;;
+              esac
             else
               RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
               echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
