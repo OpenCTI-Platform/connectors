@@ -1,0 +1,2 @@
+class UnknownBackendError(Exception):
+    pass

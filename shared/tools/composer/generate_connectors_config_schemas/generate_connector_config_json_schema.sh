@@ -85,7 +85,7 @@ activate_venv() {
     # Method to activate isolate venv
 
     # Create isolated virtual environment in connector path
-    python -m venv "$1/$VENV_NAME"
+    uv venv "$1/$VENV_NAME"
 
     # Activate virtual environment according to OS
     if [ -f "$1/$VENV_NAME/bin/activate" ]; then
@@ -101,15 +101,15 @@ activate_venv() {
     requirements_file=$(find_requirements_txt .)
     if [ -n "$requirements_file" ]; then
       # -qq: Hides both informational and warning messages, showing only errors.
-      python -m pip install -qq -r "$requirements_file"
+      uv pip install -qq -r "$requirements_file"
     else
       # If no requirements.txt, try to install the connector as a package (assuming pyproject.toml exists)
-      python -m pip install .
+      uv pip install .
     fi
 
     # Ensure connectors-sdk is available for script generation
     echo "🔄 Installing connectors-sdk for schema generation..."
-    python -m pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
+    uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
 
     # Return to original working directory
     popd
@@ -130,6 +130,14 @@ deactivate_venv() {
     deactivate
     rm -rf "$1"
 }
+
+# Check if 'uv' command is installed, install if missing
+if ! command -v uv &> /dev/null; then
+  echo "🔄 'uv' not found. Installing..."
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+else
+  echo "✅ 'uv' is already installed."
+fi
 
 # Main script
 echo -e "\033[36mGenerating config JSON schemas for a single connector...\033[0m"
@@ -270,7 +278,7 @@ echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. 
     echo -e "\033[36m> Generating configurations table...\033[0m"
     
     # Generate configurations table in __metadata/CONNECTOR_CONFIG_DOC.md
-    python -m pip install -q --disable-pip-version-check jsonschema_markdown
+    uv pip install -q jsonschema_markdown
     
     generator_config_doc_path=$(find . -name "generate_connector_config_doc.py.sample")
     if [ -n "$generator_config_doc_path" ]; then

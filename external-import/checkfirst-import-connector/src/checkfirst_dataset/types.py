@@ -1,3 +1,5 @@
+"""Protocol definitions for duck-typed interfaces used by API helpers."""
+
 from typing import Protocol
 
 

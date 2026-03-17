@@ -6,6 +6,7 @@ import warnings
 from enum import StrEnum
 
 __all__ = [
+    "AccountType",
     "AttackMotivation",
     "AttackResourceLevel",
     "CvssSeverity",
@@ -45,6 +46,25 @@ class _PermissiveEnum(StrEnum):
         obj = str.__new__(cls, _value)
         obj._value_ = _value
         return obj
+
+
+class AccountType(_PermissiveEnum):
+    """Account Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_k2b7lkt45f0i
+    """
+
+    FACEBOOK = "facebook"
+    LDAP = "ldap"
+    NIS = "nis"
+    OPENID = "openid"
+    RADIUS = "radius"
+    SKYPE = "skype"
+    TACACS = "tacacs"
+    TWITTER = "twitter"
+    UNIX = "unix"
+    WINDOWS_LOCAL = "windows-local"
+    WINDOWS_DOMAIN = "windows-domain"
 
 
 class AttackMotivation(_PermissiveEnum):

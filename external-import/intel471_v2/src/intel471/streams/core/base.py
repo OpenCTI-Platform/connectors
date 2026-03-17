@@ -1,24 +1,17 @@
 import datetime
-import os
-import time
 from abc import ABC, abstractmethod
 from queue import Queue
-from typing import Any, Iterator, Union
+from typing import TYPE_CHECKING, Any, Iterator, Union
 
-import titan_client
+from intel471.common import HelperRequest
+from intel471.version import get_version
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
 from stix2 import Bundle
-from titan_client.titan_stix import STIXMapperSettings
-from titan_client.titan_stix.exceptions import EmptyBundle
-from urllib3 import make_headers
-from urllib3.util import parse_url
 
-from .. import HelperRequest
+if TYPE_CHECKING:
+    from intel471.backend import ClientWrapper
 
-HERE = os.path.dirname(os.path.realpath(__file__))
-with open(os.path.join(HERE, "..", "..", "__version__")) as fh:
-    version = fh.read().strip()
+version = get_version()
 
 
 class Intel471Stream(ABC):
@@ -50,29 +43,18 @@ class Intel471Stream(ABC):
 
     def __init__(
         self,
+        client_wrapper: "ClientWrapper",
         helper: OpenCTIConnectorHelper,
-        api_username: str,
-        api_key: str,
         in_queue: Queue,
         out_queue: Queue,
         initial_history: int = None,
         update_existing_data: bool = False,
-        proxy_url: Union[HttpUrl, None] = None,
         ioc_score: Union[int, None] = None,
     ) -> None:
+        self.client_wrapper = client_wrapper
         self.helper = helper
         self.in_queue = in_queue
         self.out_queue = out_queue
-        self.api_config = titan_client.Configuration(
-            username=api_username, password=api_key
-        )
-        if proxy_url:
-            self.api_config.proxy = str(proxy_url)
-            if proxy_auth := parse_url(self.api_config.proxy).auth:
-                self.api_config.proxy_headers = make_headers(
-                    proxy_basic_auth=proxy_auth
-                )
-
         self.ioc_score = ioc_score
         self.update_existing_data = update_existing_data
         if initial_history:
@@ -93,56 +75,57 @@ class Intel471Stream(ABC):
     def get_bundles(self) -> Iterator[Bundle]:
         cursor = self._get_cursor()
         offsets = self._get_offsets()
-        with titan_client.ApiClient(self.api_config) as api_client:
+        with self.client_wrapper.module.ApiClient(
+            self.client_wrapper.config
+        ) as api_client:
             api_client.user_agent = (
                 f"{api_client.user_agent}; OpenCTI-Connector/{version}"
             )
-            api_instance = getattr(titan_client, self.api_class_name)(api_client)
-        while True:
-            kwargs = self._get_api_kwargs(cursor)
-            for offset in offsets:
-                if offset is not None:
-                    kwargs["offset"] = offset
-                self.helper.log_info(
-                    "{} calls Titan API with arguments: {}.".format(
-                        self.__class__.__name__, str(kwargs)
-                    )
-                )
-                api_response = getattr(api_instance, self.api_method_name)(**kwargs)
-                api_payload_objects = (
-                    getattr(api_response, self.api_payload_objects_key) or []
-                )
-                self.helper.log_info(
-                    "{} got {} items from Titan API.".format(
-                        self.__class__.__name__, len(api_payload_objects)
-                    )
-                )
-                if not api_payload_objects:
-                    break
-                cursor = self._get_cursor_value(api_response)
-                try:
-                    bundle = api_response.to_stix(
-                        STIXMapperSettings(
-                            titan_client,
-                            api_client,
-                            ioc_opencti_score=self.ioc_score,
-                            girs_names=True,
-                            report_full_content=True,
-                        )
-                    )
-                except EmptyBundle:
+            api_instance = getattr(self.client_wrapper.module, self.api_class_name)(
+                api_client
+            )
+            while True:
+                kwargs = self._get_api_kwargs(cursor)
+                for offset in offsets:
+                    if offset is not None:
+                        kwargs["offset"] = offset
                     self.helper.log_info(
-                        f"{self.__class__.__name__} got empty bundle from STIX converter."
+                        f"{self.__class__.__name__} calls {self.client_wrapper.backend_name} API "
+                        f"with arguments: {str(kwargs)}."
                     )
+                    api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                    api_payload_objects = (
+                        getattr(api_response, self.api_payload_objects_key) or []
+                    )
+                    self.helper.log_info(
+                        f"{self.__class__.__name__} got {len(api_payload_objects)} items "
+                        f"from {self.client_wrapper.backend_name} API."
+                    )
+                    if not api_payload_objects:
+                        break
+                    cursor = self._get_cursor_value(api_response)
+                    try:
+                        bundle = api_response.to_stix(
+                            self.client_wrapper.stix_mapper_settings_class(
+                                self.client_wrapper.module,
+                                api_client,
+                                ioc_opencti_score=self.ioc_score,
+                                report_full_content=True,
+                            )
+                        )
+                    except self.client_wrapper.empty_bundle_exception:
+                        self.helper.log_info(
+                            f"{self.__class__.__name__} got empty bundle from STIX converter."
+                        )
+                    else:
+                        yield bundle
                 else:
-                    yield bundle
-            else:
-                # executes when there was no break in the inner loop, i.e. there are still results to fetch,
-                # but we need to shift dates as the offset was exhausted
+                    # executes when there was no break in the inner loop, i.e. there are still results to fetch,
+                    # but we need to shift dates as the offset was exhausted
+                    self._update_cursor(cursor)
+                    continue
                 self._update_cursor(cursor)
-                continue
-            self._update_cursor(cursor)
-            break
+                break
 
     def send_to_server(self, bundle: Bundle) -> None:
         self.helper.log_info(
@@ -184,11 +167,6 @@ class Intel471Stream(ABC):
         self.helper.log_debug("Waiting for ACK from helper handler to save state")
         self.in_queue.get()
         self.helper.log_debug("Got ack for save state, proceeding")
-
-    @staticmethod
-    def _get_ttl_hash(seconds=10_000):
-        """Return the same value within `seconds` time period"""
-        return round(time.time() / seconds)
 
     @abstractmethod
     def _get_api_kwargs(self, cursor: Union[None, str]) -> dict:

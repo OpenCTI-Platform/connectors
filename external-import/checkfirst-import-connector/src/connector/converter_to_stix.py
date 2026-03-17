@@ -15,6 +15,7 @@ from pycti import (
     Channel,
     CustomObjectChannel,
     CustomObservableMediaContent,
+    Infrastructure,
     IntrusionSet,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -47,12 +48,14 @@ class ConverterToStix:
         self.tlp_marking_id = self.tlp_marking.id
 
         self.intrusion_set = self._create_intrusion_set()
-        self.campaign = self._create_campaign()
-        self.campaign_attributed_to_ims = self.create_relationship(
-            source_id=self.campaign.id,
+        self.infrastructure_campaign = self._create_campaign(year=2023)
+        self.infrastructure_campaign_attributed_to_ims = self.create_relationship(
+            source_id=self.infrastructure_campaign.id,
             relationship_type="attributed-to",
             target_id=self.intrusion_set.id,
         )
+
+        self._campaign_cache: dict[int, tuple[stix2.Campaign, stix2.Relationship]] = {}
 
     def _create_intrusion_set(self) -> stix2.IntrusionSet:
         return stix2.IntrusionSet(
@@ -63,6 +66,7 @@ class ConverterToStix:
                 "influence operations through a network of 190+ websites"
             ),
             aliases=["Portal-Kombat", "Pravda Network IMS"],
+            first_seen="2023-06-24T00:00:00Z",
             goals=[
                 "Undermine Western unity",
                 "Promote Russian narratives",
@@ -75,18 +79,20 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    def _create_campaign(self) -> stix2.Campaign:
+    def _create_campaign(self, year: int) -> stix2.Campaign:
+        name = f"Pravda Network Campaigns {year}"
+        first_seen = (
+            "2023-09-01T00:00:00Z" if year == 2023 else f"{year}-01-01T00:00:00Z"
+        )
         return stix2.Campaign(
-            id=Campaign.generate_id(
-                name="Pravda Network Campaigns",
-            ),
-            name="Pravda Network Campaigns",
+            id=Campaign.generate_id(name=name),
+            name=name,
             description=(
                 "Coordinated FIMI campaign spreading pro-Russian narratives "
                 "across multiple countries and languages"
             ),
-            aliases=["Portal-Kombat Campaign", "Pravda"],
-            first_seen="2023-09-01T00:00:00Z",
+            aliases=[f"Portal-Kombat Campaign {year}", f"Pravda {year}"],
+            first_seen=first_seen,
             objective=(
                 "Manipulate public opinion, undermine trust in Western "
                 "institutions, justify Russian actions"
@@ -95,6 +101,20 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking_id],
             allow_custom=True,
         )
+
+    def get_campaign_for_year(
+        self, year: int
+    ) -> tuple[stix2.Campaign, stix2.Relationship]:
+        """Return (Campaign, attributed-to Relationship) for the given year, cached."""
+        if year not in self._campaign_cache:
+            campaign = self._create_campaign(year=year)
+            attributed_to = self.create_relationship(
+                source_id=campaign.id,
+                relationship_type="attributed-to",
+                target_id=self.intrusion_set.id,
+            )
+            self._campaign_cache[year] = (campaign, attributed_to)
+        return self._campaign_cache[year]
 
     def create_channel(
         self, *, name: str, source_url: str | None = None
@@ -109,7 +129,7 @@ class ConverterToStix:
         channel = CustomObjectChannel(
             id=Channel.generate_id(name=name),
             name=name,
-            channel_types=["Telegram"] if is_telegram else ["website"],
+            channel_types=["channel"] if is_telegram else ["website"],
             created_by_ref=self.author_id,
             object_marking_refs=[self.tlp_marking_id],
             external_references=external_refs,
@@ -137,6 +157,53 @@ class ConverterToStix:
         )
         return media
 
+    def create_domain_name(
+        self, *, value: str, first_seen: str | None = None
+    ) -> stix2.DomainName:
+        custom: dict = {"x_opencti_created_by_ref": self.author_id}
+        if first_seen:
+            custom["x_opencti_first_seen_at"] = first_seen
+        return stix2.DomainName(
+            value=value,
+            object_marking_refs=[self.tlp_marking_id],
+            custom_properties=custom,
+        )
+
+    def create_ipv4_address(
+        self,
+        *,
+        value: str,
+        first_seen: str | None = None,
+        last_seen: str | None = None,
+    ) -> stix2.IPv4Address:
+        custom: dict = {"x_opencti_created_by_ref": self.author_id}
+        if first_seen:
+            custom["x_opencti_first_seen_at"] = first_seen
+        if last_seen:
+            custom["x_opencti_last_seen_at"] = last_seen
+        return stix2.IPv4Address(
+            value=value,
+            object_marking_refs=[self.tlp_marking_id],
+            custom_properties=custom,
+        )
+
+    def create_infrastructure(
+        self, *, name: str, first_seen: datetime | str | None = None
+    ) -> stix2.Infrastructure:
+        custom: dict = {"x_opencti_created_by_ref": self.author_id}
+        if first_seen:
+            custom["x_opencti_first_seen_at"] = first_seen
+        return stix2.Infrastructure(
+            id=Infrastructure.generate_id(name=name),
+            name=name,
+            infrastructure_types=["hosting-infrastructure"],
+            first_seen=first_seen,
+            created_by_ref=self.author_id,
+            object_marking_refs=[self.tlp_marking_id],
+            custom_properties=custom,
+            allow_custom=True,
+        )
+
     def create_url(self, *, value: str) -> stix2.URL:
         return stix2.URL(
             value=value,
@@ -153,6 +220,7 @@ class ConverterToStix:
         relationship_type: str,
         target_id: str,
         start_time: datetime | None = None,
+        stop_time: datetime | None = None,
     ) -> stix2.Relationship:
         rel = stix2.Relationship(
             id=StixCoreRelationship.generate_id(
@@ -167,5 +235,6 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking_id],
             allow_custom=True,
             start_time=start_time,
+            stop_time=stop_time,
         )
         return rel

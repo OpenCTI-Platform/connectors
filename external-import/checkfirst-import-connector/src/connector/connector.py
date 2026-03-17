@@ -1,3 +1,5 @@
+"""Entry point class for the Checkfirst external-import connector."""
+
 import sys
 
 from checkfirst_dataset.main_logic import run_once
@@ -10,7 +12,7 @@ class CheckfirstImportConnector:
 
     This follows the standard external-import connector template:
     - `process_message()` does one ingestion pass
-    - `run()` schedules runs via `OpenCTIConnectorHelper.schedule_process()`
+    - `run()` schedules runs via `OpenCTIConnectorHelper.schedule_iso()`
 
     The actual API ingestion + STIX mapping is implemented under
     `checkfirst_dataset/` and reused here.
@@ -35,7 +37,7 @@ class CheckfirstImportConnector:
 
     def run(self) -> None:
         """Start the connector using the standard scheduler."""
-        self.helper.schedule_process(
+        self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period.total_seconds(),
+            duration_period=self.config.connector.duration_period,
         )

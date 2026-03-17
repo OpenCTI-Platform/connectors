@@ -12,6 +12,7 @@ from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
 from connectors_sdk.models.domain_name import DomainName
+from connectors_sdk.models.email_address import EmailAddress
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
@@ -35,6 +36,7 @@ from connectors_sdk.models.software import Software
 from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from connectors_sdk.models.tlp_marking import TLPMarking
 from connectors_sdk.models.url import URL
+from connectors_sdk.models.user_account import UserAccount
 from connectors_sdk.models.vulnerability import Vulnerability
 from connectors_sdk.models.x509_certificate import X509Certificate
 
@@ -53,6 +55,7 @@ __all__ = [
     "City",
     "Country",
     "DomainName",
+    "EmailAddress",
     "ExternalReference",
     "File",
     "Hostname",
@@ -76,6 +79,7 @@ __all__ = [
     "ThreatActorGroup",
     "TLPMarking",
     "URL",
+    "UserAccount",
     "Vulnerability",
     "X509Certificate",
 ]
