@@ -19,7 +19,7 @@ class DoppelConnector:
             self.helper, tlp_level=self.config.doppel.tlp_level
         )
 
-    def _get_last_run(self, start_datetime: datetime) -> datetime:
+    def _get_last_run(self, current_state, start_datetime: datetime) -> datetime:
         """
         Retrieve last_run from current state or the
         start date depending on historical_days from config
@@ -27,8 +27,6 @@ class DoppelConnector:
             start_datetime (datetime): datetime when process started
         :return: datetime
         """
-        current_state = self.helper.get_state()
-
         if current_state and "last_run" in current_state:
             self.helper.connector_logger.info(
                 "Resuming from last run timestamp",
@@ -54,10 +52,13 @@ class DoppelConnector:
         """
         self.helper.connector_logger.info("[DoppelConnector] Running scheduled fetch")
         work_id = None
+        now = datetime.now()
+        current_timestamp = int(datetime.timestamp(now))
         start_datetime = datetime.now(tz=timezone.utc)
+        current_state = self.helper.get_state()
 
         try:
-            last_run = self._get_last_run(start_datetime)
+            last_run = self._get_last_run(current_state, start_datetime)
 
             # Perform collection of intelligence
             alerts = self.client.get_alerts(
@@ -80,14 +81,23 @@ class DoppelConnector:
                     "STIX bundle sent", {"len_bundle_sent": len(bundle_sent)}
                 )
 
-            # Set state with last run
-            self.helper.set_state(
-                {"last_run": start_datetime.isoformat(timespec="seconds")}
+            # Store the current timestamp as a last run of the connector
+            self.helper.connector_logger.debug(
+                "Getting current state and update it with last run of the connector",
+                {"current_timestamp": current_timestamp},
             )
+            current_state = self.helper.get_state()
+            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+            if current_state:
+                current_state["last_run"] = current_state_datetime
+            else:
+                current_state = {"last_run": current_state_datetime}
+            self.helper.set_state(current_state)
 
             self.helper.connector_logger.info(
                 "Updated last run state", {"last_run": last_run}
             )
+
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
