@@ -37,7 +37,7 @@ When a YARA rule matches an artifact, the connector creates a relationship betwe
 
 ### Requirements
 
-- OpenCTI Platform >= 6.9.26
+- OpenCTI Platform >= 6.9.27
 - YARA rules imported as Indicators in OpenCTI
 
 ---
