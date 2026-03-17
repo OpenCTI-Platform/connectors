@@ -22,8 +22,8 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "duration_period": "PT5M",
                 },
                 "montysecurity_c2_tracker": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
+                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
                     "tlp_level": "clear",
                 },
             },
@@ -40,8 +40,8 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                 },
                 "montysecurity_c2_tracker": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
+                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -96,8 +96,8 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "montysecurity_c2_tracker": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
+                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
                     "tlp_level": "clear",
                 },
             },
@@ -117,8 +117,8 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "montysecurity_c2_tracker": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
+                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
                     "tlp_level": "clear",
                 },
             },
