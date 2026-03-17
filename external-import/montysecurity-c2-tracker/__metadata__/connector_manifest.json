@@ -6,7 +6,7 @@
   "logo": null,
   "use_cases" : [],
   "verified": true,
-  "last_verified_date": null,
+  "last_verified_date": "2026-03-17",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=6.9.7",
