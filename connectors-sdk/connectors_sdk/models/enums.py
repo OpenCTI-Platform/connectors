@@ -13,6 +13,7 @@ __all__ = [
     "CvssSeverity",
     "HashAlgorithm",
     "ImplementationLanguage",
+    "InfrastructureType",
     "IndustrySector",
     "LocationType",
     "MalwareCapability",
@@ -214,6 +215,29 @@ class IndustrySector(_PermissiveEnum):
     TELECOMMUNICATIONS = "telecommunications"
     TRANSPORTATION = "transportation"
     UTILITIES = "utilities"
+
+
+class InfrastructureType(_PermissiveEnum):
+    """Infrastructure Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_67vrmztjft3h
+    """
+
+    AMPLIFICATION = "amplification"
+    ANONYMIZATION = "anonymization"
+    BOTNET = "botnet"
+    COMMAND_AND_CONTROL = "command-and-control"
+    CONTROL_SYSTEM = "control-system"
+    EXFILTRATION = "exfiltration"
+    FIREWALL = "firewall"
+    HOSTING_MALWARE = "hosting-malware"
+    HOSTING_TARGET_LISTS = "hosting-target-lists"
+    PHISHING = "phishing"
+    RECONNAISSANCE = "reconnaissance"
+    ROUTERS_SWITCHES = "routers-switches"
+    STAGING = "staging"
+    WORKSTATION = "workstation"
+    UNKNOWN = "unknown"
 
 
 class LocationType(StrEnum):

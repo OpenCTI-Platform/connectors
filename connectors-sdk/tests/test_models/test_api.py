@@ -76,6 +76,7 @@ def test_public_models_are_present():
         "Hostname",
         "Individual",
         "Indicator",
+        "Infrastructure",
         "IntrusionSet",
         "IPV4Address",
         "IPV6Address",

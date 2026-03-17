@@ -20,6 +20,7 @@ from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.individual import Individual
+from connectors_sdk.models.infrastructure import Infrastructure
 from connectors_sdk.models.intrusion_set import IntrusionSet
 from connectors_sdk.models.ipv4_address import IPV4Address
 from connectors_sdk.models.ipv6_address import IPV6Address
@@ -65,6 +66,7 @@ __all__ = [
     "Hostname",
     "Indicator",
     "Individual",
+    "Infrastructure",
     "IntrusionSet",
     "IPV4Address",
     "IPV6Address",
