@@ -12,18 +12,50 @@ executors:
         type: string
         default: "rolling"
         description: Image tags
-      release_ref:
-        type: string
-        default: "lts/7.260309.0"
-        description:  Git reference to use for pycti and connectors-sdk dependencies in connectors (Used if not building a tag)
     environment:
       BUILD_TAGS: <<parameters.tags>>
-      RELEASE_REF: <<parameters.release_ref>>
     docker:
       - image: cimg/python:3.11
   ci_notifications:
     docker:
       - image: "cimg/base:stable"
+
+commands:
+  resolve_release_ref:
+    description: Resolve RELEASE_REF from PR base branch, fallback to closest base branch script.
+    steps:
+      - run:
+          name: Resolve RELEASE_REF
+          command: |
+            PR_BASE_REF=""
+
+            if [ -n "${CIRCLE_PULL_REQUEST:-}" ]; then
+              PR_NUMBER="${CIRCLE_PULL_REQUEST##*/}"
+              API_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${PR_NUMBER}"
+
+              if [ -n "${GITHUB_TOKEN:-}" ]; then
+                PR_BASE_REF="$(curl --silent --show-error --fail \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                  "${API_URL}" \
+                | python3 -c 'import json,sys; print((json.load(sys.stdin).get("base") or {}).get("ref",""))')" || PR_BASE_REF=""
+              else
+                PR_BASE_REF="$(curl --silent --show-error --fail \
+                  -H "Accept: application/vnd.github+json" \
+                  "${API_URL}" \
+                | python3 -c 'import json,sys; print((json.load(sys.stdin).get("base") or {}).get("ref",""))')" || PR_BASE_REF=""
+              fi
+            fi
+
+            if [ -n "${PR_BASE_REF:-}" ]; then
+              RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+              echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+            else
+              RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+              echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+            fi
+            echo "export RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$BASH_ENV"
+            echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$BASH_ENV"
 
 jobs:
   ensure_formatting:
@@ -86,6 +118,7 @@ jobs:
     executor: << parameters.ci_executor >>
     steps:
       - checkout
+      - resolve_release_ref
       - run:
           name: Build Connectors Schemas for XTM composer and Update Config Documentation
           command: |
@@ -144,6 +177,7 @@ jobs:
     executor: << parameters.ci_executor >>
     steps:
       - checkout
+      - resolve_release_ref
       - run: |
           sudo apt-get update -qq 
           sudo apt install -y \
@@ -177,6 +211,7 @@ jobs:
     executor: << parameters.ci_executor >>
     steps:
       - checkout
+      - resolve_release_ref
       - run:
           name: Install dependencies
           command: pip install -r .circleci/scripts/requirements.txt
