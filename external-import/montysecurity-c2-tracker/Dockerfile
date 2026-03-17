@@ -1,19 +1,37 @@
-FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
-
-# Copy the connector
-COPY src /opt/opencti-connector-montysecurity-c2-tracker
+FROM python:3.12-alpine AS builder
 
 # Install Python modules
 # hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+WORKDIR /opt/opencti-connector-montysecurity-c2-tracker
 
-RUN cd /opt/opencti-connector-montysecurity-c2-tracker && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+RUN apk --no-cache add \
+    git \
+    build-base \
+    libmagic \
+    libxml2-dev \
+    libxslt-dev \
+    libffi-dev
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+ENV UV_LINK_MODE=copy
+RUN uv venv
+RUN --mount=type=bind,source=src/requirements.txt,target=/tmp/requirements.txt \
+    --mount=type=cache,target=/root/.cache/uv \
+    uv pip install -r /tmp/requirements.txt
+
+
+FROM python:3.12-alpine AS runner
+WORKDIR /opt/opencti-connector-montysecurity-c2-tracker
+
+RUN apk --no-cache add \
+    libmagic \
+    libxml2 \
+    libxslt \
+    libffi
+
+# Copy the connector
+COPY  src .
+COPY --from=builder --chown=app:app /opt/opencti-connector-montysecurity-c2-tracker/.venv ./.venv
 
 # Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/opt/opencti-connector-montysecurity-c2-tracker/.venv/bin/python3", "main.py"]
