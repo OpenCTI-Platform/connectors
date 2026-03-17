@@ -9,6 +9,7 @@ __all__ = [
     "AccountType",
     "AttackMotivation",
     "AttackResourceLevel",
+    "ChannelType",
     "CvssSeverity",
     "HashAlgorithm",
     "ImplementationLanguage",
@@ -110,6 +111,16 @@ class CvssSeverity(StrEnum):
     MEDIUM = "MEDIUM"
     LOW = "LOW"
     UNKNOWN = "Unknown"
+
+
+class ChannelType(_PermissiveEnum):
+    """Channel Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L129
+    """
+
+    TWITTER = "Twitter"
+    FACEBOOK = "Facebook"
 
 
 class HashAlgorithm(_PermissiveEnum):
