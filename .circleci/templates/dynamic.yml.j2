@@ -6,6 +6,8 @@ jobs:
   build_{{top_dir}}_{{sub_dir}}:
     docker:
       - image: cimg/base:current-24.04
+    environment:
+      RELEASE_REF: "{{ release_ref }}"
     steps:
       - checkout
       - setup_remote_docker
