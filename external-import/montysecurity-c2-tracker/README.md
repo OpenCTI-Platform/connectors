@@ -1,12 +1,4 @@
 # Monty Security C2 Tracker
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
 
 Table of Contents
 
@@ -133,12 +125,17 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+At each run, the connector fetches the malware list from the Monty Security C2-Tracker
+dataset, then downloads associated IP lists for each malware family. It converts
+malware names and IP observables into STIX objects and creates `indicates`
+relationships between each IP and its malware.
+
+The generated bundle is sent to OpenCTI as a scheduled external import. The
+connector also stores `last_run` in state so operators can track previous
+executions in logs.
+
+Because the source is community OSINT, entities are marked with a configurable
+TLP level (default: `clear`) and attributed to the Monty Security author identity.
 
 ## Debugging
 
