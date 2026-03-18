@@ -41,5 +41,23 @@ def test_media_content_to_stix2_object_returns_valid_stix_object(
         create_indicator=True,
     )
     stix2_obj = media_content.to_stix2_object()
-    assert isinstance(stix2_obj, CustomObservableMediaContent)
-    assert stix2_obj.get("type") == "media-content"
+
+    assert stix2_obj == CustomObservableMediaContent(
+        url="https://example.com/post",
+        title="Test title",
+        content="Test body",
+        media_category="article",
+        publication_date="2024-01-01T00:00:00Z",
+        allow_custom=True,
+        object_marking_refs=[marking.id for marking in fake_valid_tlp_markings],
+        x_opencti_score=80,
+        x_opencti_description="Test description",
+        x_opencti_labels=["news"],
+        x_opencti_external_references=[
+            external_ref.to_stix2_object()
+            for external_ref in fake_valid_external_references
+        ],
+        x_opencti_created_by_ref=fake_valid_organization_author.id,
+        x_opencti_files=[],
+        x_opencti_create_indicator=True,
+    )
