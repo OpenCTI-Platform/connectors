@@ -37,7 +37,6 @@ class MediaContent(BaseObservableEntity):
             url=self.url,
             title=self.title,
             content=self.content,
-            description=self.description,
             media_category=self.media_category,
             publication_date=self.publication_date,
             **self._common_stix2_properties(),
