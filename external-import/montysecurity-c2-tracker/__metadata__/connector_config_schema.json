@@ -20,6 +20,9 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
+      "default": [
+        "montysecurity-c2-tracker"
+      ],
       "description": "The scope of the connector, e.g. 'flashpoint'.",
       "items": {
         "type": "string"
@@ -81,8 +84,7 @@
   },
   "required": [
     "OPENCTI_URL",
-    "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE"
+    "OPENCTI_TOKEN"
   ],
   "additionalProperties": true
 }
