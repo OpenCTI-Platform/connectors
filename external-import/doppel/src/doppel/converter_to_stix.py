@@ -463,11 +463,11 @@ class ConverterToStix:
             parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
         )
         modified = (
-            parse_iso_datetime(alert.get("last_activity"))
-            if alert.get("last_activity")
+            parse_iso_datetime(alert.get("last_activity_timestamp"))
+            if alert.get("last_activity_timestamp")
             else None
         )
-        note_timestamp = modified or created_at or datetime.utcnow()
+        note_timestamp = modified or created_at or datetime.now()
         note_content = (
             "Alert is Actioned"
             if queue_state and queue_state.lower() == "actioned"
@@ -614,7 +614,7 @@ class ConverterToStix:
         modified = (
             parse_iso_datetime(alert.get("last_activity"))
             if alert.get("last_activity")
-            else datetime.utcnow()
+            else datetime.now()
         )
 
         revoked_indicator_refs = []
