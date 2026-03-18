@@ -1,8 +1,8 @@
 {
   "title": "Monty Security C2 Tracker",
   "slug": "montysecurity-c2-tracker",
-  "description": "Template description of the connector",
-  "short_description": "Template short description (summary) of the connector",
+  "description": "Imports the Monty Security C2-Tracker OSINT feed into OpenCTI by creating malware families, related IP observables, and indicates relationships.",
+  "short_description": "Ingests Monty Security C2-Tracker malware/IP intelligence into OpenCTI.",
   "logo": null,
   "use_cases" : [],
   "verified": true,

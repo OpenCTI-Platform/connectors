@@ -68,12 +68,10 @@ class MontysecurityC2TrackerConnector:
         self.client = MontysecurityC2TrackerClient(
             self.helper,
             self.config.montysecurity_c2_tracker,
-            # Pass any arguments necessary to the client
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
             tlp_level=self.config.montysecurity_c2_tracker.tlp_level,
-            # Pass any arguments necessary to the converter
         )
 
     def _collect_intelligence(
@@ -152,10 +150,7 @@ class MontysecurityC2TrackerConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
-            # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
+            # Collect intelligence and convert to STIX objects.
             entities = self._collect_intelligence()
             stix_objects = [entity.to_stix2_object() for entity in entities]
 
@@ -179,10 +174,6 @@ class MontysecurityC2TrackerConnector:
                     "Sending STIX objects to OpenCTI...",
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",

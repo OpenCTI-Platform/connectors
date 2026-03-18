@@ -13,8 +13,7 @@ class MontysecurityC2TrackerClient:
     ):
         """
         Initialize the client with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `api_key`) if necessary.
+        The connector helper is injected for logging and tracing.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.

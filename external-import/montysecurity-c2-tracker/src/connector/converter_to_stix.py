@@ -32,8 +32,7 @@ class ConverterToStix:
     ):
         """
         Initialize the converter with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `tlp_level`) if necessary.
+        The connector helper is injected for logging and tracing.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
