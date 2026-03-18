@@ -54,10 +54,25 @@ class MontysecurityC2TrackerClient:
             self.helper.connector_logger.info("Get Malware Entities")
             malware_list_url = self.config.malware_list_url.encoded_string()
             response = self._request_data(malware_list_url, params=params)
+            if response is None:
+                return []
             self.helper.connector_logger.info(
-                "Status code from github.com: ", response.status_code
+                f"Status code from github.com: {response.status_code}"
             )
-            malware_list = list(set(re.findall("[\w\s\d.]+IPs\.txt", response.text)))
+
+            malware_list = list(
+                set(
+                    # Match filenames ending with "IPs.txt":
+                    # - start on a word boundary
+                    # - first token must start with a letter
+                    # - allow extra space-separated tokens (letters/digits + _, ., -)
+                    # - require a final " IPs.txt" suffix
+                    re.findall(
+                        r"\b[A-Za-z][\w.-]*(?:\s+[A-Za-z0-9][\w.-]*)*\s+IPs\.txt\b",
+                        response.text,
+                    )
+                )
+            )
 
             return malware_list
 
@@ -77,11 +92,13 @@ class MontysecurityC2TrackerClient:
 
             url = urljoin(str(malware_ips_base_url), quote(malware_name))
             response = self._request_data(url, params=params)
-            ips = [
+            if response is None:
+                return []
+
+            return [
                 ip for ip in response.text.strip().split("\n") if ip
             ]  # Cleanup the list
 
-            return ips
         except RequestException as err:
             self.helper.connector_logger.error(
                 f"Failed malware list: {err}",
