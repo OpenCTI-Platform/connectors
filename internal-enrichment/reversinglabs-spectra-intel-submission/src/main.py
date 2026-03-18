@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Dict
 
 import stix2
+from lib.internal_enrichment import InternalEnrichmentConnector
 from pycti import (
     STIX_EXT_OCTI_SCO,
     Identity,
@@ -15,8 +16,6 @@ from pycti import (
     StixCoreRelationship,
 )
 from ReversingLabs.SDK.ticloud import DynamicAnalysis, FileReputation, FileUpload
-
-from lib.internal_enrichment import InternalEnrichmentConnector
 
 ZIP_MIME_TYPES = (
     "application/x-bzip",
@@ -34,7 +33,6 @@ SLEEP_INTERVAL = 250
 
 
 class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
-
     def __init__(self):
         super().__init__()
         self._get_config_variables()
@@ -215,8 +213,7 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
         analysis_duration = results["analysis_duration"]
 
         abstract = "ReversingLabs Spectra Sandbox Results"
-        analysis_content = textwrap.dedent(
-            f"""
+        analysis_content = textwrap.dedent(f"""
         # ReversingLabs Spectra Sandbox Analysis metadata
         
         Classification: **{classification}**
@@ -231,8 +228,7 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
 
         Analysis is executed on **{platform}** operating system with following configuration: **{configuration}**
 
-        """
-        )
+        """)
 
         signature_text_header = """
         
@@ -240,12 +236,10 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
 
         """
 
-        signature_text_content = textwrap.dedent(
-            """\
+        signature_text_content = textwrap.dedent("""\
         | Description     | Risk Factor       |
         |-----------------|-------------------|
-        """
-        )
+        """)
         signatures_list = results["signatures"]
         sorted_signatures = sorted(
             signatures_list, key=lambda x: x["risk_factor"], reverse=True
@@ -254,11 +248,9 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
         for sig in sorted_signatures:
             sig_description = sig["description"]
             sig_risk_factor = sig["risk_factor"]
-            signature_text_content += textwrap.dedent(
-                f"""\
+            signature_text_content += textwrap.dedent(f"""\
             | {sig_description} | {sig_risk_factor} |
-            """
-            )
+            """)
 
         signature_text_header = textwrap.dedent(signature_text_header)
         signature_text = signature_text_header + signature_text_content
@@ -487,7 +479,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
 
             # Submit File for analysis
             if is_archive == False:
-
                 file = open(sample_name, "wb")
                 file.write(file_content)
                 file.close()
