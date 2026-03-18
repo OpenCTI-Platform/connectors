@@ -37,7 +37,7 @@ class DoppelConnector:
             default_start = start_datetime - timedelta(
                 days=self.config.doppel.historical_days
             )
-            last_run = default_start.strftime("%Y-%m-%dT%H:%M:%S")
+            last_run = default_start.strftime("%Y-%m-%d %H:%M:%S")
             self.helper.connector_logger.info(
                 "No previous state found. Using historical polling window",
                 {"start_date": last_run},
@@ -61,8 +61,11 @@ class DoppelConnector:
             last_run = self._get_last_run(current_state, start_datetime)
 
             # Perform collection of intelligence
+            formatted_last_run = datetime.fromisoformat(last_run).isoformat(
+                timespec="seconds"
+            )
             alerts = self.client.get_alerts(
-                last_run, page_size=self.config.doppel.page_size
+                formatted_last_run, page_size=self.config.doppel.page_size
             )
             if alerts:
                 now = datetime.now(tz=timezone.utc)
