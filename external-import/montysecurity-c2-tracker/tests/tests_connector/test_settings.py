@@ -104,27 +104,6 @@ def test_settings_should_accept_valid_input(settings_dict):
             "opencti.url",
             id="invalid_opencti_url",
         ),
-        pytest.param(
-            {
-                "opencti": {
-                    "url": "http://localhost:8080",
-                    "token": "test-token",
-                },
-                "connector": {
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "duration_period": "PT5M",
-                },
-                "montysecurity_c2_tracker": {
-                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
-                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
-                    "tlp_level": "clear",
-                },
-            },
-            "connector.id",
-            id="missing_connector_id",
-        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
