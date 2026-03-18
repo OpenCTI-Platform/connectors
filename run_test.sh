@@ -36,8 +36,8 @@ do
   project_has_changed=$(git diff "$base_commit" HEAD "$project/..")
   project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$project/.." || true)
 
-  if [ "$CIRCLE_BRANCH" = "master" ]; then
-    echo "🔄 On master branch, running all tests for: " "$project"
+  if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-"master"}" ]; then
+    echo "🔄 On ${RELEASE_REF:-"master"} branch, running all tests for: " "$project"
   elif [ -n "$changes_outside_of_connectors_scope" ] ; then
     echo "🔄 Changes detected outside of connectors scope - running all tests for: " "$project"
   elif [ -n "$sdk_has_change" ] && [ -n "$project_has_sdk_dependency" ] ; then
