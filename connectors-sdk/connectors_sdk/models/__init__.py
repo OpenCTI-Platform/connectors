@@ -22,6 +22,7 @@ from connectors_sdk.models.intrusion_set import IntrusionSet
 from connectors_sdk.models.ipv4_address import IPV4Address
 from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
+from connectors_sdk.models.mac_address import MACAddress
 from connectors_sdk.models.malware import Malware
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.observed_data import ObservedData
@@ -65,6 +66,7 @@ __all__ = [
     "IPV4Address",
     "IPV6Address",
     "KillChainPhase",
+    "MACAddress",
     "Malware",
     "Note",
     "ObservedData",
