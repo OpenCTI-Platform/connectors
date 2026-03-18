@@ -195,18 +195,16 @@ class _SettingsLoader(BaseSettings):
         """
         config_yml_file_path = cls._get_config_yml_file_path()
         if config_yml_file_path:
-            settings_cls.model_config["yaml_file"] = config_yml_file_path
             return (
                 env_settings,
-                YamlConfigSettingsSource(settings_cls),
+                YamlConfigSettingsSource(settings_cls, yaml_file=config_yml_file_path),
             )
 
         dot_env_file_path = cls._get_dot_env_file_path()
         if dot_env_file_path:
-            settings_cls.model_config["env_file"] = dot_env_file_path
             return (
                 env_settings,
-                DotEnvSettingsSource(settings_cls),
+                DotEnvSettingsSource(settings_cls, env_file=dot_env_file_path),
             )
 
         return (env_settings,)
