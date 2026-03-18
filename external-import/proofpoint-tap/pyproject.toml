@@ -28,6 +28,7 @@ dependencies = [
     "python-dotenv>=1.0.1,<2",
     "PyYAML>=6.0.2,<7",
     "pytablewriter>=1.2,<2",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk",
 ]
 
 
@@ -49,7 +50,7 @@ all = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 
 [tool.setuptools.dynamic]
 version = {attr = "proofpoint_tap.__version__"}
