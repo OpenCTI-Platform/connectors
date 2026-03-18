@@ -3,7 +3,7 @@ chardet
 datefinder
 idna
 pika
-pycti==6.9.27
+pycti==6.9.28
 pydantic>=2.10, <3
 pydantic-settings>=2.0
 python-dateutil

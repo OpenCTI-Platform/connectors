@@ -1,2 +1,2 @@
-pycti==6.9.27
+pycti==6.9.28
 git+https://github.com/hatching/triage.git#subdirectory=python
