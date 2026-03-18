@@ -1,6 +1,5 @@
 from datetime import datetime
 from typing import Literal
-from uuid import NAMESPACE_URL, uuid5
 
 from doppel.stix_helpers import (
     build_custom_properties,
@@ -12,7 +11,8 @@ from doppel.stix_helpers import (
     is_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
-from pycti import Identity as PyCTIIdentity
+from pycti import Grouping as PyctiGrouping
+from pycti import Identity as PyctiIdentity
 from pycti import Indicator as PyctiIndicator
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Note as PyctiNote
@@ -36,7 +36,7 @@ from stix2 import MarkingDefinition as Stix2MarkingDefinition
 from stix2 import (
     Note,
 )
-from stix2 import Relationship as StixCoreRelationship
+from stix2 import Relationship as Stix2Relationship
 
 
 class ConverterToStix:
@@ -66,7 +66,7 @@ class ConverterToStix:
         :return: Identity Stix2 object
         """
         return Identity(
-            id=PyCTIIdentity.generate_id(name="Doppel", identity_class="organization"),
+            id=PyctiIdentity.generate_id(name="Doppel", identity_class="organization"),
             name="Doppel",
             identity_class="organization",
             description="Threat Intelligence Provider",
@@ -143,42 +143,37 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    def create_grouping_case(self, alert: dict, object_refs) -> Grouping:
+    def create_grouping_case(self, alert: dict, object_refs: list) -> Grouping:
         """
         Create Grouping case object
         """
-        alert_id = alert.get("id")
-        score = alert.get("score")
-        priority = calculate_priority(score)
-
-        case_id = f"grouping--{uuid5(NAMESPACE_URL, f'doppel-case-{alert_id}')}"
+        priority = calculate_priority(alert["score"])
+        grouping_name = f"Case for Alert {alert["id"]}"
         case_labels = build_labels(alert)
         case_labels.append(f"priority:{priority}")
 
         return Grouping(
-            id=case_id,
-            name=f"Case for Alert {alert_id}",
+            id=PyctiGrouping.generate_id(
+                name=grouping_name, context="suspicious-activity"
+            ),
+            name=grouping_name,
             context="suspicious-activity",
             object_refs=object_refs,
             created_by_ref=self.author.id,
-            external_references=(
-                build_external_references(alert)
-                if build_external_references(alert)
-                else None
-            ),
+            external_references=build_external_references(alert),
             description=build_description(alert),
-            labels=case_labels or None,
+            labels=case_labels,
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
         )
 
     def create_relationship(
         self, source_id: str, target_id: str, relationship_type: str
-    ) -> StixCoreRelationship:
+    ) -> Stix2Relationship:
         """
-        Create StixCoreRelationship object
+        Create Stix2Relationship object
         """
-        return StixCoreRelationship(
+        return Stix2Relationship(
             id=PyctiStixCoreRelationship.generate_id(
                 relationship_type=relationship_type,
                 source_ref=source_id,
@@ -245,6 +240,95 @@ class ConverterToStix:
             allow_custom=True,
         )
 
+    def convert_alerts_to_stix(self, alerts: list):
+        """
+        Convert list of alerts to stix2 Observable objects:
+        domain-name, phone number and ipv4-addr
+        """
+        stix_objects = [self.author, self.tlp_marking]
+
+        for alert in alerts:
+            try:
+                alert_id = alert.get("id", "unknown")
+                # alert_queue_state = alert.get("queue_state")
+
+                # Extract required fields
+                entity_content = alert.get("entity_content", {})
+                root_domain = entity_content.get("root_domain", {})
+                domain_name = root_domain.get("domain")
+                ipv4_address = root_domain.get("ip_address")
+
+                domain_observable = None
+                phone_number_observable = None
+                ipv4_observable = None
+                grouping_case_refs = []
+
+                # Create domain object if exist, else create phone number instead
+                if domain_name:
+                    domain_observable = self.create_domain(domain_name, alert)
+                    stix_objects.append(domain_observable)
+                    grouping_case_refs.append(domain_observable)
+                else:
+                    phone_number_observable = self.create_phone_number(
+                        alert.get("entity"), alert
+                    )
+                    stix_objects.append(phone_number_observable)
+                    grouping_case_refs.append(phone_number_observable)
+
+                # Create ipv4 object if exists
+                if ipv4_address:
+                    ipv4_observable = self.create_ipv4(ipv4_address, alert)
+                    stix_objects.append(ipv4_observable)
+                    grouping_case_refs.append(ipv4_observable)
+
+                    # Create relationship between ipv4 and domain
+                    if domain_observable:
+                        relationship = self.create_relationship(
+                            source_id=domain_observable.id,
+                            target_id=ipv4_observable.id,
+                            relationship_type="resolves-to",
+                        )
+                        stix_objects.append(relationship)
+
+                # Create grouping case
+                if grouping_case_refs:
+                    grouping_case = self.create_grouping_case(
+                        alert, object_refs=grouping_case_refs
+                    )
+                    stix_objects.append(grouping_case)
+
+                    # Create related-to relationship between case and observables
+                    for entity in grouping_case_refs:
+                        related_to = self.create_relationship(
+                            source_id=grouping_case.id,
+                            target_id=entity.id,
+                            relationship_type="related-to",
+                        )
+                        stix_objects.append(related_to)
+
+                # # DETECT STATE TRANSITIONS
+                # self._handle_state_transitions(
+                #     alert_queue_state,
+                #     previous_queue_state,
+                #     alert_id,
+                #     alert,
+                #     domain_observable_id,
+                #     ip_observable_id,
+                #     stix_objects,
+                #     domain_name,
+                #     ip_address,
+                # )
+
+            except Exception as e:
+                # Unexpected errors - log and raise
+                self.helper.connector_logger.error(
+                    "[DoppelConverter] Failed to process alert",
+                    {"alert_id": alert_id, "error": str(e)},
+                )
+                raise
+
+        return self.helper.stix2_create_bundle(stix_objects)
+
     def _handle_state_transitions(
         self,
         alert_queue_state,
@@ -291,114 +375,6 @@ class ConverterToStix:
                 self._process_reversion(
                     alert, domain_observable_id, ip_observable_id, stix_objects
                 )
-
-    def convert_alerts_to_stix(self, alerts: list):
-        """
-        Convert list of alerts to stix2 Observable objects (domain-name and ipv4-addr)
-        Uses helper.get_state() / helper.set_state() for persistent state tracking
-        """
-        stix_objects = [self.author, self.tlp_marking]
-
-        # Get persistent state
-        state = self.helper.get_state() or {}
-
-        for alert in alerts:
-            try:
-                alert_id = alert.get("id", "unknown")
-                alert_queue_state = alert.get("queue_state")
-                previous_queue_state = state.get(alert_id, {}).get("queue_state")
-
-                # Extract required fields
-                entity_content = alert.get("entity_content", {})
-                product = alert.get("product")
-                root_domain = entity_content.get("root_domain", {})
-                domain_name = root_domain.get("domain")
-                ip_address = root_domain.get("ip_address")
-
-                domain_observable_id = None
-                ip_observable_id = None
-
-                # Create Phone Number Observable for product = telco.
-                if product == "telco":
-                    phone_number_observable = self.create_phone_number(
-                        alert.get("entity"), alert
-                    )
-                    stix_objects.append(phone_number_observable)
-                    domain_observable_id = (
-                        phone_number_observable.id
-                    )  # mocked domain observable id
-
-                # Create or reference Domain Observable
-                if domain_name:
-                    domain_observable = self.create_domain(domain_name, alert)
-                    stix_objects.append(domain_observable)
-                    domain_observable_id = domain_observable.id
-
-                # Create or reference IP Observable
-                if ip_address:
-                    ip_observable = self.create_ipv4(ip_address, alert)
-                    stix_objects.append(ip_observable)
-                    ip_observable_id = ip_observable.id
-
-                    # Create resolves-to relationship if domain also exists
-                    if domain_observable_id:
-                        relationship = self.create_relationship(
-                            source_id=domain_observable_id,
-                            target_id=ip_observable.id,
-                            relationship_type="resolves-to",
-                        )
-                        stix_objects.append(relationship)
-
-                # DETECT STATE TRANSITIONS
-                self._handle_state_transitions(
-                    alert_queue_state,
-                    previous_queue_state,
-                    alert_id,
-                    alert,
-                    domain_observable_id,
-                    ip_observable_id,
-                    stix_objects,
-                    domain_name,
-                    ip_address,
-                )
-
-                # Case Creation
-                if domain_observable_id or ip_observable_id:
-                    case_refs = []
-                    if domain_observable_id:
-                        case_refs.append(domain_observable_id)
-                    if ip_observable_id:
-                        case_refs.append(ip_observable_id)
-
-                    case = self.create_grouping_case(alert, object_refs=case_refs)
-                    stix_objects.append(case)
-
-                    # Create related-to relationship from case to primary observable
-                    related_to = self.create_relationship(
-                        source_id=case.id,
-                        target_id=domain_observable_id or ip_observable_id,
-                        relationship_type="related-to",
-                    )
-                    stix_objects.append(related_to)
-
-                # # Update state for this alert
-                # state[alert_id] = {
-                #     "queue_state": current_queue_state,
-                #     "last_processed": datetime.utcnow().isoformat(),
-                # }
-
-            except Exception as e:
-                # Unexpected errors - log and raise
-                self.helper.connector_logger.error(
-                    "[DoppelConverter] Failed to process alert",
-                    {"alert_id": alert_id, "error": str(e)},
-                )
-                raise
-
-        # Persist updated state
-        self.helper.set_state(state)
-
-        return self.helper.stix2_create_bundle(stix_objects)
 
     def _find_indicators_by_alert_id(
         self, alert_id, domain_name=None, ip_address=None
