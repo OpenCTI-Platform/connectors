@@ -21,7 +21,6 @@ from pycti import (
 )
 from ReversingLabs.SDK.a1000 import A1000
 from ReversingLabs.SDK.helper import NotFoundError, RequestTimeoutError
-
 from settings import ConfigLoader
 
 FILE_SAMPLE = ("Artifact", "StixFile", "File")
@@ -64,7 +63,6 @@ def handle_spectra_errors(func):
 
 
 class ReversingLabsSpectraAnalyzeConnector:
-
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.config = config
@@ -680,28 +678,26 @@ class ReversingLabsSpectraAnalyzeConnector:
         dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
         abstract = "ReversingLabs Spectra Analyze IP address report"
 
-        content = textwrap.dedent(
-            f"""
+        content = textwrap.dedent(f"""
         ## ReversingLabs Spectra Analyze IP address report for {self.ip_sample}
         Third party statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {tp_statistics.get('malicious')} |
-        | CLEAN         | {tp_statistics.get('clean')} |
-        | SUSPICIOUS    | {tp_statistics.get('suspicious')} |
-        | UNDETECTED    | {tp_statistics.get('undetected')} |
-        | TOTAL         | {tp_statistics.get('total')} |
+        | MALICIOUS     | {tp_statistics.get("malicious")} |
+        | CLEAN         | {tp_statistics.get("clean")} |
+        | SUSPICIOUS    | {tp_statistics.get("suspicious")} |
+        | UNDETECTED    | {tp_statistics.get("undetected")} |
+        | TOTAL         | {tp_statistics.get("total")} |
         
         Downloaded files statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {dl_files_statistics.get('malicious')} |
-        | GOODWARE      | {dl_files_statistics.get('goodware')} |
-        | SUSPICIOUS    | {dl_files_statistics.get('suspicious')} |
-        | UNKNOWN       | {dl_files_statistics.get('unknown')} |
-        | TOTAL         | {dl_files_statistics.get('total')} |
-        """
-        )
+        | MALICIOUS     | {dl_files_statistics.get("malicious")} |
+        | GOODWARE      | {dl_files_statistics.get("goodware")} |
+        | SUSPICIOUS    | {dl_files_statistics.get("suspicious")} |
+        | UNKNOWN       | {dl_files_statistics.get("unknown")} |
+        | TOTAL         | {dl_files_statistics.get("total")} |
+        """)
 
         note = stix2.Note(
             id=Note.generate_id(None, content),
@@ -846,13 +842,11 @@ class ReversingLabsSpectraAnalyzeConnector:
         if selected_domains:
             abstract = "ReversingLabs Spectra Analyze domain statistics"
 
-            accumulated_content = textwrap.dedent(
-                """
+            accumulated_content = textwrap.dedent("""
             ## ReversingLabs Spectra Analyze domain statistics
             | Domain        |  Third party statistics Malicious/Total | Downloaded files statistics Malicious/Total |
             | ------------- | --------------- | --------------- |
-            """
-            )
+            """)
 
             for one_domain in selected_domains:
                 domain_name = one_domain.get("requested_domain")
@@ -987,13 +981,11 @@ class ReversingLabsSpectraAnalyzeConnector:
         if selected_urls:
             abstract = "ReversingLabs Spectra Analyze URL statistics"
 
-            accumulated_content = textwrap.dedent(
-                """
+            accumulated_content = textwrap.dedent("""
             ## ReversingLabs Spectra Analyze URL statistics
             | URL        |  Third party statistics Malicious/Total | Analysis statistics Malicious/Total |
             | ------------- | --------------- | --------------- |
-            """
-            )
+            """)
 
             for one_url in selected_urls:
                 url_name = one_url.get("requested_url")
@@ -1115,28 +1107,26 @@ class ReversingLabsSpectraAnalyzeConnector:
         )
         dl_files_statistics = resp_json.get("downloaded_files_statistics", {})
 
-        content = textwrap.dedent(
-            f"""
+        content = textwrap.dedent(f"""
         ## ReversingLabs Spectra Analyze domain report for `{self.domain_sample}`
         Third party statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {tp_statistics.get('malicious')} |
-        | CLEAN         | {tp_statistics.get('clean')} |
-        | SUSPICIOUS    | {tp_statistics.get('suspicious')} |
-        | UNDETECTED    | {tp_statistics.get('undetected')} |
-        | TOTAL         | {tp_statistics.get('total')} |
+        | MALICIOUS     | {tp_statistics.get("malicious")} |
+        | CLEAN         | {tp_statistics.get("clean")} |
+        | SUSPICIOUS    | {tp_statistics.get("suspicious")} |
+        | UNDETECTED    | {tp_statistics.get("undetected")} |
+        | TOTAL         | {tp_statistics.get("total")} |
         
         Downloaded files statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {dl_files_statistics.get('malicious')} |
-        | GOODWARE      | {dl_files_statistics.get('goodware')} |
-        | SUSPICIOUS    | {dl_files_statistics.get('suspicious')} |
-        | UNKNOWN       | {dl_files_statistics.get('unknown')} |
-        | TOTAL         | {dl_files_statistics.get('total')} |
-        """
-        )
+        | MALICIOUS     | {dl_files_statistics.get("malicious")} |
+        | GOODWARE      | {dl_files_statistics.get("goodware")} |
+        | SUSPICIOUS    | {dl_files_statistics.get("suspicious")} |
+        | UNKNOWN       | {dl_files_statistics.get("unknown")} |
+        | TOTAL         | {dl_files_statistics.get("total")} |
+        """)
 
         note = stix2.Note(
             id=Note.generate_id(None, content),
@@ -1236,29 +1226,27 @@ class ReversingLabsSpectraAnalyzeConnector:
         analysis_stats = resp_json.get("analysis", {}).get("statistics", {})
         tp_stats = resp_json.get("third_party_reputations", {}).get("statistics", {})
 
-        content = textwrap.dedent(
-            f"""
+        content = textwrap.dedent(f"""
         ## ReversingLabs Spectra Analyze URL report for `{self.url_sample}`
 
         Third party statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {tp_stats.get('malicious')} |
-        | CLEAN         | {tp_stats.get('clean')} |
-        | SUSPICIOUS    | {tp_stats.get('suspicious')} |
-        | UNDETECTED    | {tp_stats.get('undetected')} |
-        | TOTAL         | {tp_stats.get('total')} |
+        | MALICIOUS     | {tp_stats.get("malicious")} |
+        | CLEAN         | {tp_stats.get("clean")} |
+        | SUSPICIOUS    | {tp_stats.get("suspicious")} |
+        | UNDETECTED    | {tp_stats.get("undetected")} |
+        | TOTAL         | {tp_stats.get("total")} |
         
         Analysis statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {analysis_stats.get('malicious')} |
-        | GOODWARE      | {analysis_stats.get('goodware')} |
-        | SUSPICIOUS    | {analysis_stats.get('suspicious')} |
-        | UNKNOWN       | {analysis_stats.get('unknown')} |
-        | TOTAL         | {analysis_stats.get('total')} |
-        """
-        )
+        | MALICIOUS     | {analysis_stats.get("malicious")} |
+        | GOODWARE      | {analysis_stats.get("goodware")} |
+        | SUSPICIOUS    | {analysis_stats.get("suspicious")} |
+        | UNKNOWN       | {analysis_stats.get("unknown")} |
+        | TOTAL         | {analysis_stats.get("total")} |
+        """)
 
         note = stix2.Note(
             id=Note.generate_id(None, content),
@@ -1290,7 +1278,6 @@ class ReversingLabsSpectraAnalyzeConnector:
         if (results["classification"] == "malicious") or (
             results["classification"] == "suspicious"
         ):
-
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
             )
