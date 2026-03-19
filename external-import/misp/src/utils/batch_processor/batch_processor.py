@@ -7,7 +7,9 @@ handle configurable sizes and provide consistent work management.
 from typing import TYPE_CHECKING, Any
 
 import stix2
+from datasize import DataSize
 from exceptions import MispWorkProcessingError
+from pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from custom_typings.protocols import LoggerProtocol
@@ -214,7 +216,7 @@ class BatchProcessor:
         """
         self._current_batch.clear()
 
-    def get_current_batch_size(self) -> int:
+    def get_current_batch_length(self) -> int:
         """Get the number of items in the current batch.
 
         Returns:
@@ -222,6 +224,15 @@ class BatchProcessor:
 
         """
         return len(self._current_batch)
+
+    def get_current_batch_size(self) -> int:
+        """Get the total size of the current batch in bytes.
+
+        Returns:
+            Total size of current batch in bytes
+
+        """
+        return DataSize(asizeof(self._current_batch))
 
     def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.

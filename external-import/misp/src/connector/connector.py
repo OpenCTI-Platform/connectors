@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
+from datasize import DataSize
 from exceptions import MispWorkProcessingError
 from utils.batch_processor import BatchProcessor
 from utils.threats_guesser import ThreatsGuesser
@@ -86,7 +87,22 @@ class Misp:
 
         """
         if (
-            self.batch_processor.get_current_batch_size() + len(all_entities)
+            self.config.misp.batch_size_limit
+            and self.batch_processor.get_current_batch_size()
+            >= DataSize(self.config.misp.batch_size_limit)
+        ):
+            self.logger.debug(
+                "Current batch size exceeds the configured batch size limit, flushing batch",
+                {
+                    "prefix": LOG_PREFIX,
+                    "current_batch_size": f"{self.batch_processor.get_current_batch_size():.2a}",
+                    "batch_size_limit": f"{DataSize(self.config.misp.batch_size_limit):.2a}",
+                },
+            )
+            self.batch_processor.flush()
+
+        elif (
+            self.batch_processor.get_current_batch_length() + len(all_entities)
         ) >= self.config.misp.batch_count * 2:
             self.logger.debug(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
