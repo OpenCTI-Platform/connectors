@@ -112,7 +112,7 @@ class ConverterToStix:
 
         endpoint_observable = stix2.UserAccount(
             account_type="hostname",
-            user_id=f'{endpoint_name} - {account_id}',
+            user_id=f"{endpoint_name} - {account_id}",
             object_marking_refs=[stix2.TLP_RED.id],
             custom_properties={"description": desc},
         )

@@ -1,6 +1,6 @@
 import logging
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 
 from pycti import OpenCTIConnectorHelper
 
@@ -21,7 +21,7 @@ class IncidentConnector:
 
         # self._setup_development_logging(self.helper)
 
-    def _setup_development_logging(self, helper):
+    def _setup_development_logging(self):
         """
         Override json logging for more clarity in
         development :)
@@ -71,7 +71,9 @@ class IncidentConnector:
             )
 
             # Performing the collection of intelligence
-            start_date = last_run or datetime.fromisoformat(self.config.import_start_date)
+            start_date = last_run or datetime.fromisoformat(
+                self.config.import_start_date
+            )
 
             ############### PHASE 1: SCAN FOR INCIDENTS ###############
 
@@ -166,7 +168,7 @@ class IncidentConnector:
         self.helper.log_info(
             f"Connector Beginning creation of {len(self.to_process)} applicable Incidents"
         )
-        for i, s1_incident in enumerate(self.to_process):
+        for _, s1_incident in enumerate(self.to_process):
             s1_incident_id = s1_incident.get("id")
             friendly_name = f"S1 Incident Connector: Creating Incident From Threat with ID: {s1_incident_id}"
 

@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from datetime import datetime, timezone
@@ -12,7 +11,9 @@ from .custom_exceptions import SentinelOnePermissionError
 # The timeout for the API request (rare backup)
 REQUEST_TIMEOUT = (10, 30)
 
-INCIDENTS_API_LOCATION = "/web/api/v2.1/threats?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
+INCIDENTS_API_LOCATION = (
+    "/web/api/v2.1/threats?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
+)
 INCIDENT_NOTES_API_LOCATION_TEMPLATE = "/web/api/v2.1/threats/{incident_id}/notes?limit=1000&sortBy=createdAt&sortOrder=desc"
 
 
@@ -114,7 +115,7 @@ class SentinelOneClient:
         def calculate_exponential_delay(last_wait_time):
             return last_wait_time * 2
 
-        HEADERS = {
+        headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
             "Authorization": self.config.s1_api_key,
@@ -123,7 +124,7 @@ class SentinelOneClient:
         response = requests.request(
             method=request_type,
             url=url,
-            headers=HEADERS,
+            headers=headers,
             data=payload,
             timeout=REQUEST_TIMEOUT,
         )
@@ -147,7 +148,7 @@ class SentinelOneClient:
                 )
             else:
                 self.logger.error(
-                    f"Error, unable to send Payload to SentinelOne after: {self.config.max_api_attempts} attempts, please check your configuration."
+                    f"Error, unable to send Payload to SentinelOne after: {self.config.max_api_attempts} attempts."
                 )
             return False
 
