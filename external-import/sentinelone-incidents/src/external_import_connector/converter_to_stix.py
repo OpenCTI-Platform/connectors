@@ -66,7 +66,7 @@ class ConverterToStix:
             description="View Incident In SentinelOne",
         )
 
-        name = incident_data.get("threatInfo", {}).get("threatName", "")
+        name = f'{incident_data.get("threatInfo", {}).get("threatName", "")} - {incident_id}'
         created = incident_data.get("threatInfo", {}).get("identifiedAt", "")
 
         incident = stix2.Incident(
@@ -112,7 +112,7 @@ class ConverterToStix:
 
         endpoint_observable = stix2.UserAccount(
             account_type="hostname",
-            user_id=endpoint_name,
+            user_id=f'{endpoint_name} - {account_id}',
             object_marking_refs=[stix2.TLP_RED.id],
             custom_properties={"description": desc},
         )
@@ -141,58 +141,23 @@ class ConverterToStix:
 
         attack_patterns = []
 
-        for pattern in incident_data.get("indicators", []):
-            pattern_name = (
-                pattern.get("category", "")
-                + ": "
-                + ", ".join(
-                    [
-                        tactic.get("name", "")
-                        for tactic in pattern.get("tactics", [])
-                        if tactic.get("name", "") != ""
-                    ]
-                )
-            )
-
-            attack_pattern = stix2.AttackPattern(
-                id=AttackPattern.generate_id(pattern_name),
-                created_by_ref=self.author,
-                name=pattern_name,
-                description=pattern.get("description", ""),
-                object_marking_refs=[stix2.TLP_RED.id],
-            )
-
-            for tactic in pattern.get("tactics", []):
-                sub_desc = ", ".join(
-                    [
-                        technique.get("name", "")
-                        for technique in tactic.get("techniques", [])
-                        if technique.get("name", "") != ""
-                    ]
-                )
-
-                sub_name = "[sub] " + tactic.get("name", "")
-                sub_pattern = stix2.AttackPattern(
-                    id=AttackPattern.generate_id(sub_name),
-                    created_by_ref=self.author,
-                    name=sub_name,
-                    description=sub_desc,
-                    external_references=[
-                        create_mitre_reference(technique)
-                        for technique in tactic.get("techniques", [])
-                    ],
-                    object_marking_refs=[stix2.TLP_RED.id],
-                )
-
-                attack_patterns.append(sub_pattern)
-                attack_patterns.append(
-                    self.create_relationship(cti_incident_id, sub_pattern["id"], "uses")
-                )
-
-            attack_patterns.append(attack_pattern)
-            attack_patterns.append(
-                self.create_relationship(cti_incident_id, attack_pattern["id"], "uses")
-            )
+        for indicator in incident_data.get("indicators", []):
+            for tactic in indicator.get("tactics", []):
+                for technique in tactic.get("techniques", []):
+                    attack_pattern = stix2.AttackPattern(
+                        id=AttackPattern.generate_id(technique.get("name", "")),
+                        created_by_ref=self.author,
+                        name=technique.get("name", ""),
+                        description=indicator.get("description", ""),
+                        external_references=[create_mitre_reference(technique)],
+                        object_marking_refs=[stix2.TLP_RED.id],
+                    )
+                    attack_patterns.append(attack_pattern)
+                    attack_patterns.append(
+                        self.create_relationship(
+                            cti_incident_id, attack_pattern["id"], "uses"
+                        )
+                    )
 
         return attack_patterns
 
