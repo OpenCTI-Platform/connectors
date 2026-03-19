@@ -1,0 +1,5 @@
+pytest
+pytest-mock
+freezegun
+pycti
+requests
