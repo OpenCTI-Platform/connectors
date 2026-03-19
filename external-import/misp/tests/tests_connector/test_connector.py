@@ -4,9 +4,12 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pycti
+import stix2
 from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
 from connector.connector import ProcessingOutcome
+from datasize import DataSize
 from freezegun import freeze_time
 from pycti import OpenCTIConnectorHelper
 
@@ -38,6 +41,15 @@ def fake_misp_connector(config_dict: dict) -> Misp:
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
     return Misp(config=settings, helper=helper)
+
+
+def _make_identity(name: str, description: str | None = None) -> stix2.Identity:
+    return stix2.Identity(
+        id=pycti.Identity.generate_id(name=name, identity_class="organization"),
+        name=name,
+        identity_class="organization",
+        description=description,
+    )
 
 
 def test_get_event_datetime_with_timestamp(mock_opencti_connector_helper, mock_py_misp):
@@ -527,6 +539,91 @@ def test_connector_creates_misp_client_with_request_timeout_none(
         mock_misp_client_class.assert_called_once()
         call_kwargs = mock_misp_client_class.call_args.kwargs
         assert call_kwargs["timeout"] is None
+
+
+def test_check_and_add_entities_to_batch_flushes_existing_buffer_on_size_limit(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_size_limit"] = "1KB"
+    config_dict["misp"]["batch_count"] = 9999
+    connector = fake_misp_connector(config_dict)
+
+    buffered_object = _make_identity(name="buffered-object", description="X" * 10_000)
+    connector.batch_processor.add_item(buffered_object)
+
+    max_size_limit = DataSize(config_dict["misp"]["batch_size_limit"])
+    assert connector.batch_processor.get_current_batch_size() >= max_size_limit
+
+    author = _make_identity(name="author")
+    entities = [_make_identity(name="entity-1"), _make_identity(name="entity-2")]
+
+    with patch.object(
+        connector.batch_processor,
+        "flush",
+        side_effect=lambda: connector.batch_processor.clear_current_batch(),
+    ) as mock_flush:
+        connector._check_and_add_entities_to_batch(
+            all_entities=entities, author=author, markings=[]
+        )
+
+    assert mock_flush.call_count == 1
+    assert connector.batch_processor.get_current_batch_length() == 1 + len(entities)
+
+
+def test_check_and_add_entities_to_batch_flushes_on_projected_size_limit(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_size_limit"] = "30KB"
+    config_dict["misp"]["batch_count"] = 9999
+    connector = fake_misp_connector(config_dict)
+
+    connector.batch_processor.add_item(_make_identity(name="already-buffered"))
+
+    max_size_limit = DataSize(config_dict["misp"]["batch_size_limit"])
+    assert connector.batch_processor.get_current_batch_size() < max_size_limit
+
+    author = _make_identity(name="author", description="Y" * 50_000)
+    entities = [_make_identity(name="entity-1"), _make_identity(name="entity-2")]
+
+    with patch.object(
+        connector.batch_processor,
+        "flush",
+        side_effect=lambda: connector.batch_processor.clear_current_batch(),
+    ) as mock_flush:
+        connector._check_and_add_entities_to_batch(
+            all_entities=entities, author=author, markings=[]
+        )
+
+    assert mock_flush.call_count == 1
+    assert connector.batch_processor.get_current_batch_length() == 1 + len(entities)
+
+
+def test_check_and_add_entities_to_batch_keeps_count_based_flush_without_size_limit(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    connector.batch_processor.add_item(_make_identity(name="already-buffered-1"))
+    connector.batch_processor.add_item(_make_identity(name="already-buffered-2"))
+
+    author = _make_identity(name="author")
+    entities = [_make_identity(name="entity-1"), _make_identity(name="entity-2")]
+
+    with patch.object(
+        connector.batch_processor,
+        "flush",
+        side_effect=lambda: connector.batch_processor.clear_current_batch(),
+    ) as mock_flush:
+        connector._check_and_add_entities_to_batch(
+            all_entities=entities, author=author, markings=[]
+        )
+
+    assert mock_flush.call_count == 1
+    assert connector.batch_processor.get_current_batch_length() == 1 + len(entities)
 
 
 def test_connector_does_not_validate_event_already_processed_by_update_datetime(
