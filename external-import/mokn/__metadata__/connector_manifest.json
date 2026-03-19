@@ -1,8 +1,8 @@
 {
   "title": "MokN",
   "slug": "mokn",
-  "description": "Ingests login attempts from MokN Bait and converts them to STIX 2.1 objects.",
-  "short_description": "MokN Bait external import connector.",
+  "description": "MokN provides intelligence on credential compromise attempts captured through deception-based authentication systems. By deploying bait login portals that mimic legitimate services, MokN records attacker login attempts and identifies when stolen credentials are used. This helps organizations detect potential account compromises early in the attack lifecycle.\n\nWhen attackers interact with bait systems, MokN captures contextual information such as the source IP address, targeted username/password, and authentication outcome. This allows security teams to distinguish between credential harvesting attempts and cases where attackers possess valid credentials that may enable unauthorized access.\n\nThe MokN connector retrieves login attempt events from the MokN Bait platform and converts them into STIX objects within OpenCTI. It processes attacker infrastructure, targeted accounts, and credential validation status to generate observables, indicators, sightings, and incidents, enabling analysts to correlate credential compromise activity with existing threat intelligence and investigations.",
+  "short_description": "The MokN connector retrieves login attempt events from the MokN Bait platform and converts them into STIX objects within OpenCTI. It processes attacker infrastructure, targeted accounts, and credential validation status to generate observables, indicators, sightings, and incidents, enabling analysts to correlate credential compromise activity with existing threat intelligence and investigations",
   "logo": "external-import/mokn/__metadata__/logo.png",
   "use_cases": ["Threat Intel Feed", "Credential Compromise"],
   "verified": true,
