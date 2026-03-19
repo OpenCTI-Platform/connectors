@@ -225,7 +225,7 @@ class BatchProcessor:
         """
         return len(self._current_batch)
 
-    def get_current_batch_size(self) -> int:
+    def get_current_batch_size(self) -> DataSize:
         """Get the total size of the current batch in bytes.
 
         Returns:

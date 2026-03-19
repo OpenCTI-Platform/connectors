@@ -6,6 +6,7 @@ from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
 from datasize import DataSize
 from exceptions import MispWorkProcessingError
+from pympler.asizeof import asizeof
 from utils.batch_processor import BatchProcessor
 from utils.threats_guesser import ThreatsGuesser
 from utils.work_manager import WorkManager
@@ -79,27 +80,35 @@ class Misp:
     def _check_batch_size_and_flush(
         self,
         all_entities: "list[stix2.v21._STIXBase21]",
+        author: "stix2.Identity",
+        markings: "list[stix2.MarkingDefinition]",
     ) -> None:
         """Check if batch needs to be flushed and flush if necessary.
 
         Args:
             all_entities: list of entities to be added
+            author: Author of the entities
+            markings: Markings of the entities
 
         """
-        if (
-            self.config.misp.batch_size_limit
-            and self.batch_processor.get_current_batch_size()
-            >= DataSize(self.config.misp.batch_size_limit)
-        ):
-            self.logger.debug(
-                "Current batch size exceeds the configured batch size limit, flushing batch",
-                {
-                    "prefix": LOG_PREFIX,
-                    "current_batch_size": f"{self.batch_processor.get_current_batch_size():.2a}",
-                    "batch_size_limit": f"{DataSize(self.config.misp.batch_size_limit):.2a}",
-                },
-            )
-            self.batch_processor.flush()
+        if self.config.misp.batch_size_limit:
+            current_batch_size = self.batch_processor.get_current_batch_size()
+            batch_size_limit = DataSize(self.config.misp.batch_size_limit)
+            incoming_size = asizeof([author, *markings, *all_entities])
+            projected_batch_size = DataSize(current_batch_size + incoming_size)
+
+            if projected_batch_size >= int(batch_size_limit):
+                self.logger.debug(
+                    "Current and incoming batch size exceed the configured batch size limit, flushing batch",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "current_batch_size": f"{current_batch_size:.2a}",
+                        "incoming_batch_size": f"{incoming_size:.2a}",
+                        "projected_batch_size": f"{projected_batch_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                self.batch_processor.flush()
 
         elif (
             self.batch_processor.get_current_batch_length() + len(all_entities)
@@ -123,7 +132,7 @@ class Misp:
             author: Author of the entities
             markings: Markings of the entities
         """
-        self._check_batch_size_and_flush(all_entities)
+        self._check_batch_size_and_flush(all_entities, author, markings)
         self.batch_processor.add_item(author)
         self.batch_processor.add_items(markings)
         self.batch_processor.add_items(all_entities)
