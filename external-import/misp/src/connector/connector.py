@@ -332,7 +332,7 @@ class Misp:
                     remaining_objects_count
                     # Chunk size - author - markings
                     + (
-                        self.batch_processor.get_current_batch_size()
+                        self.batch_processor.get_current_batch_length()
                         - (1 + len(markings))
                     ),
                 )

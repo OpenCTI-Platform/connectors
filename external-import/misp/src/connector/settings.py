@@ -253,8 +253,8 @@ class MispConfig(BaseConfigModel):
     )
     batch_size_limit: str | None = Field(
         description=(
-            "Max size of batches (in human-readable file size, e.g., '10 MB', "
-            "'500 KB', '1.5GB') when splitting STIX bundles. `None` means no limit."
+            "Max size of batches (in human-readable file size, e.g., '10MB', "
+            "'500KB', '1.5GB') when splitting STIX bundles. `None` means no limit."
         ),
         default=None,
     )
