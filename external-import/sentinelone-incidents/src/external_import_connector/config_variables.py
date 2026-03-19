@@ -101,9 +101,9 @@ class ConfigConnector:
             )
         self.duration_period = configured_duration_period
 
-        configured_sign = get_config_variable(
-            "SENTINELONE_INCIDENTS_SIGN", ["SentinelOne", "sign"], self.load
+        configured_import_start_date = get_config_variable(
+            "SENTINELONE_INCIDENTS_IMPORT_START_DATE", ["sentinelone_incidents", "import_start_date"], self.load
         )
-        if not configured_sign:
-            raise ConnectorConfigurationError("SIGN is not configured")
-        self.sign = configured_sign
+        if not configured_import_start_date:
+            raise ConnectorConfigurationError("IMPORT_START_DATE is not configured")
+        self.import_start_date = configured_import_start_date

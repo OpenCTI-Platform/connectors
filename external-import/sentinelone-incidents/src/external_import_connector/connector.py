@@ -1,6 +1,6 @@
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -14,7 +14,6 @@ class IncidentConnector:
         self.config = ConfigConnector()
         self.helper = OpenCTIConnectorHelper(self.config.load)
 
-        self.cache = []
         self.to_process = []
 
         self.s1_client = SentinelOneClient(self.helper.connector_logger, self.config)
@@ -45,30 +44,44 @@ class IncidentConnector:
     def process_message(self) -> None:
         """
         The main process for the connector, triggered
-        at each interval. It first scans for any
-        flagged Incidents that aren't in the cache and
-        then processes each.
+        at each interval.
 
         """
+        self.helper.connector_logger.info(
+            "Starting connector...",
+            {"connector_name": self.helper.connect_name},
+        )
 
         try:
-            ############### PHASE 1: SCAN FOR INCIDENTS ###############
-            friendly_name = "S1 Incident Connector: Scanning For Incidents"
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+            # Get the current state
+            current_state = self.helper.get_state() or {}
+            last_run = (
+                datetime.fromisoformat(current_state["last_run"])
+                if "last_run" in current_state
+                else None
+            )
+
+            self.helper.connector_logger.info(
+                "Connector last run",
+                {"last_run": last_run or "Never"},
             )
             self.helper.connector_logger.info(
-                "Connector Beginning To Scan SentinelOne Instance For Flagged Incidents"
+                "Running connector...",
+                {"connector_name": self.helper.connect_name},
             )
 
-            ###query new incidents
-            self._query_new_incidents()
+            # Performing the collection of intelligence
+            start_date = last_run or datetime.fromisoformat(self.config.import_start_date)
 
-            ### after this, close that work
+            ############### PHASE 1: SCAN FOR INCIDENTS ###############
+
+            # query new incidents
+            self._query_new_incidents(start_date)
+
+            # after this, close that work
             self.helper.connector_logger.info(
                 "Connector Completed Flagged Incidents Scan"
             )
-            self.helper.api.work.to_processed(work_id, "completed scan")
             #########################################################
 
             ################ PHASE 2: Process Incidents ###############
@@ -83,9 +96,9 @@ class IncidentConnector:
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+            current_state_datetime = now.strftime("%Y-%m-%dT%H:%M:%SZ")
             last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S"
+                "%Y-%m-%dT%H:%M:%SZ"
             )
             if current_state:
                 current_state["last_run"] = current_state_datetime
@@ -117,55 +130,26 @@ class IncidentConnector:
             duration_period=self.config.duration_period,
         )
 
-    def _query_new_incidents(self):
+    def _query_new_incidents(self, start_date: datetime) -> None:
         """
         Queries for new incidents that are flagged to the
         connector and adds them to the to_process list.
         """
 
-        def is_applicable(incident_id):
-            incident_notes = self.s1_client.fetch_incident_notes(incident_id)
-            if incident_notes:
-                for note in incident_notes:
-                    if self.config.sign in note.get("text", ""):
-                        return True
-            else:
-                return None
-            return False
-
         # Retrieve all incidents from SentinelOne
         self.helper.connector_logger.info("Retrieving and filtering Incidents...")
-        present_incidents = self.s1_client.fetch_incidents()
-        if not present_incidents:
+        self.to_process = self.s1_client.fetch_incidents(start_date)
+        if not self.to_process:
             self.helper.connector_logger.info(
                 "Connector retreived no incidents from SentinelOne"
             )
             return
-        self.helper.connector_logger.info(f"Found {len(present_incidents)} incidents")
+        self.helper.connector_logger.info(f"Found {len(self.to_process)} incidents")
 
-        # Filter out incidents that are already cached or already in the to_process list
-        uncached_incidents = [
-            inc
-            for inc in present_incidents
-            if inc not in self.cache and inc not in self.to_process
-        ]
-
-        # Check if each incident is flagged via the sign in the notes
-        for incident in uncached_incidents:
-            applicability = is_applicable(incident)
-            if applicability:
-                self.to_process.append(incident)
-                self.helper.connector_logger.info(
-                    f"Found applicable incident with ID: {incident}"
-                )
-            elif applicability is None:
-                self.helper.connector_logger.debug(
-                    "Unable to determine applicability due to a SentinelOne API error"
-                )
-            else:
-                self.helper.connector_logger.debug(
-                    f"Sign not found in notes, incident not applicable with ID: {incident}"
-                )
+        for incident in self.to_process:
+            self.helper.connector_logger.debug(
+                f"Found applicable incident with ID: {incident.get('id')}"
+            )
 
         self.helper.connector_logger.info("Retrieval process complete")
 
@@ -182,7 +166,8 @@ class IncidentConnector:
         self.helper.log_info(
             f"Connector Beginning creation of {len(self.to_process)} applicable Incidents"
         )
-        for i, s1_incident_id in enumerate(self.to_process):
+        for i, s1_incident in enumerate(self.to_process):
+            s1_incident_id = s1_incident.get("id")
             friendly_name = f"S1 Incident Connector: Creating Incident From Threat with ID: {s1_incident_id}"
 
             work_id = self.helper.api.work.initiate_work(
@@ -192,16 +177,9 @@ class IncidentConnector:
                 f"Connector Beggining Creation of Incident for S1 ID: {s1_incident_id}"
             )
 
-            s1_incident = self.s1_client.fetch_incident(s1_incident_id)
-            if not s1_incident:
-                self.helper.log_info(
-                    "Unable to retrieve the Incident from SentinelOne, halting process."
-                )
-                return False
-
             stix_objects = []
 
-            ### Incident + Source
+            # Incident + Source
             incident_items = self.stix_client.create_incident(
                 s1_incident, s1_incident_id, self.config.s1_url
             )
@@ -214,33 +192,33 @@ class IncidentConnector:
             cti_incident_id = incident_items[0].get("id")
             stix_objects.extend(incident_items)
 
-            ### UserAccount + Relationship to Incident
+            # UserAccount + Relationship to Incident
             account_items = self.stix_client.create_user_account_observable(
                 s1_incident, cti_incident_id
             )
             stix_objects.extend(account_items)
 
-            ### List Of Notes
+            # List Of Notes
             s1_incident_notes = self.s1_client.fetch_incident_notes(s1_incident_id)
             notes_items = self.stix_client.create_notes(
                 s1_incident_notes, cti_incident_id
             )
             stix_objects.extend(notes_items)
 
-            ### List Of Indicators  with Relationships to Incident
+            # List Of Indicators  with Relationships to Incident
             indicators_items = self.stix_client.create_hash_indicators(
                 s1_incident, cti_incident_id
             )
             stix_objects.extend(indicators_items)
 
-            ### List Of Attack Patterns with Relationships to Incident and Sub Attack Patterns with
-            ### Relationships to the Attack Patterns
+            # List Of Attack Patterns with Relationships to Incident and Sub Attack Patterns with
+            # Relationships to the Attack Patterns
             attack_patterns_items = self.stix_client.create_attack_patterns(
                 s1_incident, cti_incident_id
             )
             stix_objects.extend(attack_patterns_items)
 
-            ### Informative log of all created objects
+            # Informative log of all created objects
             message = ""
             if incident_items:
                 message += "Incident"
@@ -256,7 +234,7 @@ class IncidentConnector:
                 f"Connector created the following objects for the Incident: {message}"
             )
 
-            ### Send the bundle to OpenCTI
+            # Send the bundle to OpenCTI
             bundle = self.helper.stix2_create_bundle(stix_objects)
             bundles_sent = self.helper.send_stix2_bundle(
                 bundle, work_id=work_id, cleanup_inconsistent_bundle=True
@@ -266,7 +244,5 @@ class IncidentConnector:
             )
 
             self.helper.api.work.to_processed(work_id, "completed creation of incident")
-            self.cache.append(s1_incident_id)
 
-        self.to_process = [inc for inc in self.to_process if inc not in self.cache]
         self.helper.log_info("Completed Incident Creation Process.")

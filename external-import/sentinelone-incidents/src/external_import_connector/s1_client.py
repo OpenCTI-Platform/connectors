@@ -1,5 +1,7 @@
+import json
 import logging
 import time
+from datetime import datetime, timezone
 from typing import Optional
 
 import requests
@@ -10,9 +12,22 @@ from .custom_exceptions import SentinelOnePermissionError
 # The timeout for the API request (rare backup)
 REQUEST_TIMEOUT = (10, 30)
 
-INCIDENTS_API_LOCATION = "/web/api/v2.1/private/threat-groups?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
+INCIDENTS_API_LOCATION = "/web/api/v2.1/threats?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
 INCIDENT_NOTES_API_LOCATION_TEMPLATE = "/web/api/v2.1/threats/{incident_id}/notes?limit=1000&sortBy=createdAt&sortOrder=desc"
-INCIDENT_API_LOCATION_TEMPLATE = "/web/api/v2.1/private/threats/{incident_id}/analysis"
+
+
+def _parse_utc(dt_str: str) -> datetime:
+    """Parse an ISO 8601 datetime string and ensure it is UTC-aware.
+    Handles both 'Z' suffix and missing timezone (assumes UTC).
+    Compatible with Python 3.9+.
+    """
+    if not dt_str:
+        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+    dt_str = dt_str.replace("Z", "+00:00")
+    dt = datetime.fromisoformat(dt_str)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 class SentinelOneClient:
@@ -22,27 +37,53 @@ class SentinelOneClient:
         self.config = config
         self.logger.info("SentinelOne Client Initialised Successfully.")
 
-    def fetch_incidents(self) -> list:
+    def fetch_incidents(self, start_date: datetime) -> list:
         """
-        Fetches all incidents from SentinelOne via API
+        Fetches all incidents from SentinelOne created after start_date.
+        Results are sorted descending by createdAt, so we stop as soon
+        as we hit an incident older than start_date.
         """
-
         url = self.config.s1_url + INCIDENTS_API_LOCATION + self.config.s1_account_id
-        raw_incidents = self._send_api_req(url, "GET")
-        return [
-            inc.get("threatInfo", {}).get("threatId")
-            for inc in raw_incidents.get("data", [])
-        ]
+        incidents = []
+        skip = 0
+        stop_fetching = False
 
-    def fetch_incident(self, incident_id: str) -> dict:
-        """
-        Fetches a single incident from SentinelOne via API
-        """
+        while not stop_fetching:
+            page_url = url + (f"&skip={skip}" if skip > 0 else "")
+            response = self._send_api_req(page_url, "GET")
 
-        url = self.config.s1_url + INCIDENT_API_LOCATION_TEMPLATE.format(
-            incident_id=incident_id
-        )
-        return self._send_api_req(url, "GET").get("data", {})
+            if not response:
+                self.logger.error("API request failed, stopping fetch.")
+                break
+
+            page_data = response.get("data", [])
+            total_items = response.get("pagination", {}).get("totalItems", 0)
+
+            if not page_data:
+                break
+
+            for incident in page_data:
+                threat_info = incident.get("threatInfo", {})
+                incident_created_at = _parse_utc(threat_info.get("createdAt", ""))
+
+                if incident_created_at < start_date:
+                    self.logger.info(
+                        f"Incident created at {incident_created_at} is before "
+                        f"start_date {start_date}, stopping fetch."
+                    )
+                    stop_fetching = True
+                    break
+
+                incidents.append(incident)
+
+            skip += len(page_data)
+
+            # Stop if we've fetched everything
+            if skip >= total_items:
+                break
+
+        self.logger.info(f"Fetched {len(incidents)} incidents since {start_date}.")
+        return incidents
 
     def fetch_incident_notes(self, incident_id: str) -> list:
         """

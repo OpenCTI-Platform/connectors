@@ -15,4 +15,4 @@ sentinelone_incidents:
   account_id: 'ChangeMe'
   url: 'ChangeMe'
   max_api_attempts: 5
-  sign: '[OpenCTI_add]'
+  start_date: '2026-01-01T00:00:00Z' # ISO-8601 format for the date to start fetching incidents from
