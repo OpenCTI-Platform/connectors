@@ -80,22 +80,30 @@ class Misp:
     def _check_batch_size_and_flush(
         self,
         all_entities: "list[stix2.v21._STIXBase21]",
-        author: "stix2.Identity",
-        markings: "list[stix2.MarkingDefinition]",
     ) -> None:
         """Check if batch needs to be flushed and flush if necessary.
 
         Args:
             all_entities: list of entities to be added
-            author: Author of the entities
-            markings: Markings of the entities
 
         """
         if self.config.misp.batch_size_limit:
             current_batch_size = self.batch_processor.get_current_batch_size()
             batch_size_limit = DataSize(self.config.misp.batch_size_limit)
-            incoming_size = asizeof([author, *markings, *all_entities])
+            incoming_size = DataSize(asizeof(all_entities))
             projected_batch_size = DataSize(current_batch_size + incoming_size)
+
+            self.logger.debug(
+                "Projected batch size and batch size limit",
+                {
+                    "prefix": LOG_PREFIX,
+                    # Datasize format 'a' will choose a unit defaulting to the largest
+                    # size with a quantity >= 1
+                    # (e.g. 1.5KB instead of 1536B, or 2MB instead of 2048KB)
+                    "projected_batch_size": f"{projected_batch_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
 
             if projected_batch_size >= int(batch_size_limit):
                 self.logger.debug(
@@ -132,9 +140,13 @@ class Misp:
             author: Author of the entities
             markings: Markings of the entities
         """
-        self._check_batch_size_and_flush(all_entities, author, markings)
-        self.batch_processor.add_item(author)
-        self.batch_processor.add_items(markings)
+        self._check_batch_size_and_flush(all_entities)
+        if self.batch_processor.get_current_batch_length() == 0:
+            # Add author and markings only at the beginning of a batch
+            # to avoid duplicates in case of batch flush during the process.
+            self.batch_processor.add_item(author)
+            self.batch_processor.add_items(markings)
+
         self.batch_processor.add_items(all_entities)
 
     def _flush_batch_processor(self) -> None:
