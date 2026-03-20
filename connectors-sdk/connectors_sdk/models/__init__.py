@@ -9,6 +9,8 @@ from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.base_object import BaseObject
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.campaign import Campaign
+from connectors_sdk.models.channel import Channel
 from connectors_sdk.models.city import City
 from connectors_sdk.models.country import Country
 from connectors_sdk.models.domain_name import DomainName
@@ -18,12 +20,14 @@ from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.individual import Individual
+from connectors_sdk.models.infrastructure import Infrastructure
 from connectors_sdk.models.intrusion_set import IntrusionSet
 from connectors_sdk.models.ipv4_address import IPV4Address
 from connectors_sdk.models.ipv6_address import IPV6Address
 from connectors_sdk.models.kill_chain_phase import KillChainPhase
 from connectors_sdk.models.mac_address import MACAddress
 from connectors_sdk.models.malware import Malware
+from connectors_sdk.models.media_content import MediaContent
 from connectors_sdk.models.note import Note
 from connectors_sdk.models.observed_data import ObservedData
 from connectors_sdk.models.organization import Organization
@@ -53,6 +57,8 @@ __all__ = [
     "AssociatedFile",
     "AttackPattern",
     "AutonomousSystem",
+    "Campaign",
+    "Channel",
     "City",
     "Country",
     "DomainName",
@@ -62,12 +68,14 @@ __all__ = [
     "Hostname",
     "Indicator",
     "Individual",
+    "Infrastructure",
     "IntrusionSet",
     "IPV4Address",
     "IPV6Address",
     "KillChainPhase",
     "MACAddress",
     "Malware",
+    "MediaContent",
     "Note",
     "ObservedData",
     "Organization",

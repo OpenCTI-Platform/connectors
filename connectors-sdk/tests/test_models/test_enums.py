@@ -27,7 +27,9 @@ OCTI_ENUMS = {
 
 ENUMS = OCTI_ENUMS | {
     "AccountType",
+    "ChannelType",
     "RelationshipType",
+    "InfrastructureType",
 }
 
 
