@@ -63,7 +63,6 @@ def handle_spectra_errors(func):
 
 
 class ReversingLabsSpectraAnalyzeConnector:
-
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.config = config
@@ -673,7 +672,6 @@ class ReversingLabsSpectraAnalyzeConnector:
 
         resp_json = response.json()
 
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         tp_statistics = resp_json.get("third_party_reputations", {}).get(
             "statistics", {}
         )
@@ -685,24 +683,24 @@ class ReversingLabsSpectraAnalyzeConnector:
         Third party statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {tp_statistics.get('malicious')} |
-        | CLEAN         | {tp_statistics.get('clean')} |
-        | SUSPICIOUS    | {tp_statistics.get('suspicious')} |
-        | UNDETECTED    | {tp_statistics.get('undetected')} |
-        | TOTAL         | {tp_statistics.get('total')} |
+        | MALICIOUS     | {tp_statistics.get("malicious")} |
+        | CLEAN         | {tp_statistics.get("clean")} |
+        | SUSPICIOUS    | {tp_statistics.get("suspicious")} |
+        | UNDETECTED    | {tp_statistics.get("undetected")} |
+        | TOTAL         | {tp_statistics.get("total")} |
         
         Downloaded files statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {dl_files_statistics.get('malicious')} |
-        | GOODWARE      | {dl_files_statistics.get('goodware')} |
-        | SUSPICIOUS    | {dl_files_statistics.get('suspicious')} |
-        | UNKNOWN       | {dl_files_statistics.get('unknown')} |
-        | TOTAL         | {dl_files_statistics.get('total')} |
+        | MALICIOUS     | {dl_files_statistics.get("malicious")} |
+        | GOODWARE      | {dl_files_statistics.get("goodware")} |
+        | SUSPICIOUS    | {dl_files_statistics.get("suspicious")} |
+        | UNKNOWN       | {dl_files_statistics.get("unknown")} |
+        | TOTAL         | {dl_files_statistics.get("total")} |
         """)
 
         note = stix2.Note(
-            id=Note.generate_id(now, content),
+            id=Note.generate_id(None, content),
             abstract=abstract,
             content=content,
             created_by_ref=self.reversinglabs_identity.id,
@@ -863,10 +861,8 @@ class ReversingLabsSpectraAnalyzeConnector:
 
             content = accumulated_content
 
-            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-
             note = stix2.Note(
-                id=Note.generate_id(now, content),
+                id=Note.generate_id(None, content),
                 abstract=abstract,
                 content=content,
                 created_by_ref=self.reversinglabs_identity.id,
@@ -1003,10 +999,9 @@ class ReversingLabsSpectraAnalyzeConnector:
                 )
 
             content = accumulated_content
-            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
 
             note = stix2.Note(
-                id=Note.generate_id(now, content),
+                id=Note.generate_id(None, content),
                 abstract=abstract,
                 content=content,
                 created_by_ref=self.reversinglabs_identity.id,
@@ -1117,24 +1112,24 @@ class ReversingLabsSpectraAnalyzeConnector:
         Third party statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {tp_statistics.get('malicious')} |
-        | CLEAN         | {tp_statistics.get('clean')} |
-        | SUSPICIOUS    | {tp_statistics.get('suspicious')} |
-        | UNDETECTED    | {tp_statistics.get('undetected')} |
-        | TOTAL         | {tp_statistics.get('total')} |
+        | MALICIOUS     | {tp_statistics.get("malicious")} |
+        | CLEAN         | {tp_statistics.get("clean")} |
+        | SUSPICIOUS    | {tp_statistics.get("suspicious")} |
+        | UNDETECTED    | {tp_statistics.get("undetected")} |
+        | TOTAL         | {tp_statistics.get("total")} |
         
         Downloaded files statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {dl_files_statistics.get('malicious')} |
-        | GOODWARE      | {dl_files_statistics.get('goodware')} |
-        | SUSPICIOUS    | {dl_files_statistics.get('suspicious')} |
-        | UNKNOWN       | {dl_files_statistics.get('unknown')} |
-        | TOTAL         | {dl_files_statistics.get('total')} |
+        | MALICIOUS     | {dl_files_statistics.get("malicious")} |
+        | GOODWARE      | {dl_files_statistics.get("goodware")} |
+        | SUSPICIOUS    | {dl_files_statistics.get("suspicious")} |
+        | UNKNOWN       | {dl_files_statistics.get("unknown")} |
+        | TOTAL         | {dl_files_statistics.get("total")} |
         """)
 
         note = stix2.Note(
-            id=Note.generate_id(now, content),
+            id=Note.generate_id(None, content),
             abstract=abstract,
             content=content,
             created_by_ref=self.reversinglabs_identity.id,
@@ -1237,24 +1232,24 @@ class ReversingLabsSpectraAnalyzeConnector:
         Third party statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {tp_stats.get('malicious')} |
-        | CLEAN         | {tp_stats.get('clean')} |
-        | SUSPICIOUS    | {tp_stats.get('suspicious')} |
-        | UNDETECTED    | {tp_stats.get('undetected')} |
-        | TOTAL         | {tp_stats.get('total')} |
+        | MALICIOUS     | {tp_stats.get("malicious")} |
+        | CLEAN         | {tp_stats.get("clean")} |
+        | SUSPICIOUS    | {tp_stats.get("suspicious")} |
+        | UNDETECTED    | {tp_stats.get("undetected")} |
+        | TOTAL         | {tp_stats.get("total")} |
         
         Analysis statistics
         | Status        |  Amount         |
         | ------------- | --------------- |
-        | MALICIOUS     | {analysis_stats.get('malicious')} |
-        | GOODWARE      | {analysis_stats.get('goodware')} |
-        | SUSPICIOUS    | {analysis_stats.get('suspicious')} |
-        | UNKNOWN       | {analysis_stats.get('unknown')} |
-        | TOTAL         | {analysis_stats.get('total')} |
+        | MALICIOUS     | {analysis_stats.get("malicious")} |
+        | GOODWARE      | {analysis_stats.get("goodware")} |
+        | SUSPICIOUS    | {analysis_stats.get("suspicious")} |
+        | UNKNOWN       | {analysis_stats.get("unknown")} |
+        | TOTAL         | {analysis_stats.get("total")} |
         """)
 
         note = stix2.Note(
-            id=Note.generate_id(now, content),
+            id=Note.generate_id(None, content),
             abstract=abstract,
             content=content,
             created_by_ref=self.reversinglabs_identity.id,
@@ -1283,7 +1278,6 @@ class ReversingLabsSpectraAnalyzeConnector:
         if (results["classification"] == "malicious") or (
             results["classification"] == "suspicious"
         ):
-
             self.helper.connector_logger.info(
                 f"{self.helper.connect_name}: Create STIX objects for malicious sample results!"
             )
