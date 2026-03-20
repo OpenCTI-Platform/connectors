@@ -140,7 +140,9 @@ class Plugin(FrozenBaseModelWithWarnedExtra):
     Represents plugin details that provide information about the detected vulnerability.
     """
 
-    bid: list[int] = Field(..., description="Bugtraq IDs related to the vulnerability.")
+    bid: Optional[list[int]] = Field(
+        None, description="Bugtraq IDs related to the vulnerability."
+    )
     checks_for_default_account: bool = Field(
         ..., description="Indicates if the plugin checks for default accounts."
     )
