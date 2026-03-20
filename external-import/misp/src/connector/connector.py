@@ -382,11 +382,17 @@ class Misp:
                 return ProcessingOutcome.BUFFERING
 
             now = datetime.now(tz=timezone.utc)
+            completion = int(
+                (
+                    max(1, i // batch_chunk_size)
+                    / max(1, bundle_size // batch_chunk_size)
+                )
+                * 100
+            )
             self.batch_processor.work_name_template = (
                 f"MISP run @ {now.isoformat(timespec='seconds')}"
                 f" - Event # {event.Event.id}"
-                f" - Batch # {max(1, i // batch_chunk_size)}"
-                f" / {max(1, bundle_size // batch_chunk_size)}"
+                f" - Completion # {completion}%"
             )
 
             bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
