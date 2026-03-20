@@ -17,13 +17,12 @@ class SkipReason(str, Enum):
     ROW_MISSING_REQUIRED_FIELDS = "row_missing_required_fields"
     ROW_INVALID_PUBLICATION_DATE = "row_invalid_publication_date"
     ROW_MAPPING_ERROR = "row_mapping_error"
-
     API_ERROR = "api_error"
     BUNDLE_SEND_ERROR = "bundle_send_error"
 
 
 @dataclass
-class RunReport:
+class RunReporter:
     """Accumulates basic counters for a connector run."""
 
     pages_fetched: int = 0
@@ -33,6 +32,12 @@ class RunReport:
 
     skipped: Counter[str] = field(default_factory=Counter)
     errors: Counter[str] = field(default_factory=Counter)
+
+    def __new__(cls, *args, **kwargs):
+        """Implement singleton pattern to ensure only one reporter instance exists."""
+        if not hasattr(cls, "_instance"):
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def skip(self, reason: SkipReason, *, count: int = 1) -> None:
         """Record that we skipped processing for a known reason."""
@@ -55,3 +60,15 @@ class RunReport:
         if self.errors:
             parts.append(f"errors={dict(self.errors)}")
         return f"Checkfirst run: {', '.join(parts)}"
+
+    def reset(self) -> None:
+        """Reset reporter to initial state."""
+        self.pages_fetched = 0
+        self.rows_seen = 0
+        self.rows_mapped = 0
+        self.bundles_sent = 0
+        self.skipped.clear()
+        self.errors.clear()
+
+
+run_reporter = RunReporter()  # singleton instance to be used across the connector
