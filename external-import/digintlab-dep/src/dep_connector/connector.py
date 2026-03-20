@@ -1,13 +1,12 @@
 from datetime import UTC, datetime, timedelta
 
 import pycti  # type: ignore[import-untyped]
-from pydantic import ValidationError
-from stix2 import TLP_AMBER  # type: ignore[import-untyped]
-from stix2 import v21 as stix2
-
 from dep_connector.client_api import DepClient
 from dep_connector.config_loader import load_config
 from dep_connector.converter_to_stix import LeakRecord, PrimaryObject, StixBuilder
+from pydantic import ValidationError
+from stix2 import TLP_AMBER  # type: ignore[import-untyped]
+from stix2 import v21 as stix2
 
 
 class DepConnector:
