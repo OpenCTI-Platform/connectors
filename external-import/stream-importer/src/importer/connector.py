@@ -6,6 +6,7 @@ from collections import namedtuple
 import pika
 from minio import Minio
 from minio.commonconfig import CopySource
+from minio.error import S3Error
 from pika.exceptions import ChannelClosedByBroker, NackError, UnroutableError
 
 from .lib.external_import import ExternalImportConnector
@@ -49,6 +50,9 @@ class StreamImporterConnector(ExternalImportConnector):
             os.environ.get("MINIO_SRC_PATH").split("/", 1)
             if "/" in os.environ.get("MINIO_SRC_PATH")
             else (os.environ.get("MINIO_SRC_PATH"), "")
+        )
+        self.minio_src_recurse = str_to_bool(
+            os.environ.get("MINIO_SRC_RECURSE", default="false")
         )
         self.minio_dst_bucket, self.minio_dst_path = (
             os.environ.get("MINIO_DST_PATH").split("/", 1)
@@ -100,15 +104,45 @@ class StreamImporterConnector(ExternalImportConnector):
         for obj in self.minio_client.list_objects(
             self.minio_src_bucket,
             prefix=self.minio_src_path,
-            recursive=True,
+            recursive=self.minio_src_recurse,
         ):
+            # Skip directories.
+            if obj.object_name.endswith("/"):
+                continue
+
             self.metrics.read()
             file_number = int(obj.object_name.split("_")[-1].split(".")[0])
             state = self.helper.get_state() or {}
             expected_file_number = state.get("file_count", 0) + 1
-            if expected_file_number != file_number:
+
+            # If the file_number is higher, some files are missing.
+            if file_number > expected_file_number:
                 self.metrics.import_down()
                 raise WrongFileOrder(obj.object_name, expected_file_number)
+
+            # If the file_number is lower, it's probably a file already processed.
+            # If it exists in the destination, it's removed from the source.
+            # If it does not exist in the destination, raises an error.
+            if file_number < expected_file_number:
+                if not self._object_exists(
+                    self.minio_dst_bucket,
+                    os.path.join(self.minio_dst_path, obj.object_name),
+                ):
+                    self.metrics.import_down()
+                    raise WrongFileOrder(obj.object_name, expected_file_number)
+
+                self.metrics.file_already_processed()
+                self.helper.log_warning(
+                    f"File {obj.object_name} already processed, discarding"
+                )
+
+                self.minio_client.remove_object(
+                    self.minio_src_bucket,
+                    obj.object_name,
+                )
+
+                continue
+
             try:
                 response = self.minio_client.get_object(
                     obj.bucket_name,
@@ -128,6 +162,20 @@ class StreamImporterConnector(ExternalImportConnector):
             finally:
                 response.close()
                 response.release_conn()
+
+    def _object_exists(self, bucket_name: str, object_name: str) -> bool:
+        """
+        Return True if `object_name` exists in `bucket_name`, False otherwise.
+        """
+        try:
+            self.minio_client.stat_object(bucket_name, object_name)
+            return True
+        except S3Error as err:
+            # MinIO returns a 404 / NoSuchKey when the object is missing.
+            if err.code == "NoSuchKey" or err.code == "404":
+                return False
+            # Anything else (e.g. permission errors, network problems) should bubble up.
+            raise
 
     def send_event(self, event: Event) -> None:
         """Send an event to RabbitMQ.
