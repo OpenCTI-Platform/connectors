@@ -31,10 +31,10 @@ class BaseIdentifiedObject(BaseObject, ABC):
         """
         if self._stix2_id is None:
             stix_object: stix2.v21._STIXBase21 = self.to_stix2_object()
-            stix_id: str = stix_object.get("id", "")
+            stix_id = stix_object.get("id")
 
-            # The 'id' property is required for model validation
-            if stix_id is None or stix_id.strip() == "":
+            # The 'id' property is required and must be a non-empty string for model validation
+            if not (isinstance(stix_id, str) and stix_id.strip()):
                 raise ValueError("The 'id' property can't be set.")
 
             self._stix2_id = stix_id
