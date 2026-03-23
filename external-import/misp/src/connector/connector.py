@@ -1,3 +1,4 @@
+from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 from typing import TYPE_CHECKING
@@ -77,6 +78,89 @@ class Misp:
 
         self._current_bundle = None
 
+    def _split_entities_to_fit_batch_size(
+        self,
+        entities: "list[stix2.v21._STIXBase21]",
+        author: "stix2.Identity",
+        markings: "list[stix2.MarkingDefinition]",
+    ) -> "Generator[tuple[list[stix2.v21._STIXBase21], bool], None, None]":
+        """Split entities into chunks respecting configured size limits.
+
+        Returns:
+            A list of tuples (chunk, is_forced_oversize_single).
+        """
+        if not entities:
+            return
+
+        if not self.config.misp.batch_size_limit:
+            yield (entities, False)
+            return
+
+        batch_size_limit = DataSize(self.config.misp.batch_size_limit)
+        metadata_entities = [author, *markings]
+        candidate_size = metadata_size = DataSize(asizeof(metadata_entities))
+
+        current_chunk: list[stix2.v21._STIXBase21] = []
+
+        if metadata_size + DataSize(asizeof(entities)) <= int(batch_size_limit):
+            self.logger.info(
+                "All entities fit in the batch size limit, no need to split",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entities_size": f"{DataSize(asizeof(entities)):.2a}",
+                    "metadata_size": f"{metadata_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+            yield (entities, False)
+            return
+
+        for entity in entities:
+            candidate_size += DataSize(asizeof(entity))
+
+            if int(candidate_size) <= int(batch_size_limit):
+                current_chunk.append(entity)
+                continue
+
+            if current_chunk:
+                self.logger.debug(
+                    "Current chunk reached batch size limit, yielding chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "chunk_size": f"{DataSize(asizeof(current_chunk)):.2a}",
+                        "metadata_size": f"{metadata_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield (current_chunk, False)
+                # Reset candidate size to metadata size for the next chunk
+                current_chunk = []
+                candidate_size = metadata_size
+
+            single_entity_size = metadata_size + DataSize(asizeof(entity))
+            if int(single_entity_size) > int(batch_size_limit):
+                self.logger.warning(
+                    "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_size": f"{DataSize(asizeof(entity)):.2a}",
+                        "metadata_size": f"{metadata_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield ([entity], True)
+            else:
+                current_chunk = [entity]
+
+        if current_chunk:
+            self.logger.debug(
+                "Yielding last chunk",
+                {
+                    "prefix": LOG_PREFIX,
+                },
+            )
+            yield (current_chunk, False)
+
     def _check_batch_size_and_flush(
         self,
         all_entities: "list[stix2.v21._STIXBase21]",
@@ -87,6 +171,7 @@ class Misp:
             all_entities: list of entities to be added
 
         """
+        current_batch_length = self.batch_processor.get_current_batch_length()
         if self.config.misp.batch_size_limit:
             current_batch_size = self.batch_processor.get_current_batch_size()
             batch_size_limit = DataSize(self.config.misp.batch_size_limit)
@@ -105,7 +190,9 @@ class Misp:
                 },
             )
 
-            if projected_batch_size >= int(batch_size_limit):
+            if current_batch_length > 0 and projected_batch_size >= int(
+                batch_size_limit
+            ):
                 self.logger.debug(
                     "Current and incoming batch size exceed the configured batch size limit, flushing batch",
                     {
@@ -117,10 +204,13 @@ class Misp:
                     },
                 )
                 self.batch_processor.flush()
+                return
 
-        elif (
-            self.batch_processor.get_current_batch_length() + len(all_entities)
-        ) >= self.config.misp.batch_count * 2:
+        if (
+            current_batch_length > 0
+            and (current_batch_length + len(all_entities))
+            >= self.config.misp.batch_count * 2
+        ):
             self.logger.debug(
                 "Need to Flush before adding next items to preserve consistency of the bundle",
                 {"prefix": LOG_PREFIX},
@@ -339,76 +429,116 @@ class Misp:
         )
         object_index = bundle_size - remaining_objects_count
         batch_chunk_size = self.config.misp.batch_count
+
         for i in range(
             object_index,
             bundle_size,
             batch_chunk_size,
         ):
-            if (
-                not self.work_manager.check_connector_run_and_terminate()
-                and self.work_manager.check_connector_buffering()
-            ):
-                remaining_objects_count = max(
-                    0,
-                    remaining_objects_count
-                    # Chunk size - author - markings
-                    + (
+            bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
+            sized_subchunks = self._split_entities_to_fit_batch_size(
+                entities=bundle_objects_chunk,
+                author=author,
+                markings=markings,
+            )
+
+            for subchunk, is_forced_oversize in sized_subchunks:
+                if (
+                    not self.work_manager.check_connector_run_and_terminate()
+                    and self.work_manager.check_connector_buffering()
+                ):
+                    buffered_entities = 0
+                    current_batch_length = (
                         self.batch_processor.get_current_batch_length()
-                        - (1 + len(markings))
+                    )
+                    if current_batch_length > 0:
+                        metadata_count = 1 + len(markings)
+                        buffered_entities = max(
+                            0, current_batch_length - metadata_count
+                        )
+
+                    remaining_objects_count = min(
+                        bundle_size,
+                        max(0, remaining_objects_count + buffered_entities),
+                    )
+                    # Clear the current batch to avoid processing duplicated items
+                    # during the next run.
+                    self.batch_processor.clear_current_batch()
+                    self.logger.info(
+                        "Connector is buffering, this event will be processed in "
+                        "the next scheduler process",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "event_id": event.Event.id,
+                            "event_uuid": event.Event.uuid,
+                        },
+                    )
+                    # Save the event date to restart from the current one in the
+                    # next process.
+                    new_state = {
+                        "last_event_date": self._get_event_datetime(event).isoformat(),
+                        "remaining_objects_count": remaining_objects_count,
+                    }
+                    if self.config.misp.datetime_attribute == "date":
+                        new_state["current_event_id"] = event.Event.id
+                    self.work_manager.update_state(state_update=new_state)
+
+                    return ProcessingOutcome.BUFFERING
+
+                if is_forced_oversize:
+                    batch_size_limit = DataSize(self.config.misp.batch_size_limit)
+                    oversize_chunk_size = DataSize(
+                        asizeof([author, *markings, *subchunk])
+                    )
+                    self.logger.warning(
+                        "Single entity exceeds batch size limit and will be sent as an oversize single-item chunk",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "event_id": event.Event.id,
+                            "event_uuid": event.Event.uuid,
+                            "oversize_chunk_size": f"{oversize_chunk_size:.2a}",
+                            "batch_size_limit": f"{batch_size_limit:.2a}",
+                        },
+                    )
+
+                # Compute completion before this subchunk so the work name
+                # matches any flush triggered while adding this subchunk.
+                completion_before_subchunk = min(
+                    100,
+                    int(
+                        ((bundle_size - remaining_objects_count) / max(1, bundle_size))
+                        * 100
                     ),
                 )
-                # Clear the current batch to avoid processing duplicated items
-                # during the next run.
-                self.batch_processor.clear_current_batch()
-                self.logger.info(
-                    "Connector is buffering, this event will be processed in "
-                    "the next scheduler process",
-                    {
-                        "prefix": LOG_PREFIX,
-                        "event_id": event.Event.id,
-                        "event_uuid": event.Event.uuid,
-                    },
+
+                now = datetime.now(tz=timezone.utc)
+                self.batch_processor.work_name_template = (
+                    f"MISP run @ {now.isoformat(timespec='seconds')}"
+                    f" - Event # {event.Event.id}"
+                    f" - Completion # {completion_before_subchunk}%"
                 )
-                # Save the event date to restart from the current one in the
-                # next process.
-                new_state = {
-                    "last_event_date": self._get_event_datetime(event).isoformat(),
-                    "remaining_objects_count": remaining_objects_count,
+
+                self._check_and_add_entities_to_batch(subchunk, author, markings)
+
+                new_state: dict[str, str | int] = {
+                    "last_event_date": self._get_event_datetime(event).isoformat()
                 }
                 if self.config.misp.datetime_attribute == "date":
-                    new_state["current_event_id"] = event.Event.id
+                    new_state["current_event_id"] = str(event.Event.id)
+
+                remaining_objects_count = max(
+                    0, remaining_objects_count - len(subchunk)
+                )
+                new_state["remaining_objects_count"] = remaining_objects_count
                 self.work_manager.update_state(state_update=new_state)
 
-                return ProcessingOutcome.BUFFERING
-
-            now = datetime.now(tz=timezone.utc)
-            completion = int(
-                (
-                    max(1, i // batch_chunk_size)
-                    / max(1, bundle_size // batch_chunk_size)
-                )
-                * 100
-            )
-            self.batch_processor.work_name_template = (
-                f"MISP run @ {now.isoformat(timespec='seconds')}"
-                f" - Event # {event.Event.id}"
-                f" - Completion # {completion}%"
-            )
-
-            bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
-            self._check_and_add_entities_to_batch(
-                bundle_objects_chunk, author, markings
-            )
-
-            new_state = {"last_event_date": self._get_event_datetime(event).isoformat()}
-            if self.config.misp.datetime_attribute == "date":
-                new_state["current_event_id"] = event.Event.id
-
-            remaining_objects_count = max(
-                0, remaining_objects_count - len(bundle_objects_chunk)
-            )
-            new_state["remaining_objects_count"] = remaining_objects_count
-            self.work_manager.update_state(state_update=new_state)
+        # Ensure final flush displays completion at 100% for this event.
+        now = datetime.now(tz=timezone.utc)
+        self.batch_processor.work_name_template = (
+            f"MISP run @ {now.isoformat(timespec='seconds')}"
+            f" - Event # {event.Event.id}"
+            " - Completion # 100%"
+        )
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
