@@ -3,9 +3,9 @@ import os
 import re
 import sys
 import time
-import urllib3
 from datetime import datetime, timezone
 
+import urllib3
 import yaml
 from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -121,9 +121,7 @@ class ThreatActorEnrichment:
                 "bool": {
                     "must": [{"term": {"entity_type.keyword": "indicator"}}],
                     "filter": {
-                        "terms": {
-                            "rel_indicates.internal_id.keyword": malware_ids
-                        }
+                        "terms": {"rel_indicates.internal_id.keyword": malware_ids}
                     },
                 }
             },
@@ -155,9 +153,7 @@ class ThreatActorEnrichment:
                 "bool": {
                     "must": [{"term": {"entity_type.keyword": "report"}}],
                     "filter": {
-                        "terms": {
-                            "rel_object.internal_id.keyword": malware_ids
-                        }
+                        "terms": {"rel_object.internal_id.keyword": malware_ids}
                     },
                 }
             },
@@ -190,9 +186,7 @@ class ThreatActorEnrichment:
         es = self._get_es_client()
 
         threat_actors = self._fetch_all_threat_actors(es)
-        self.helper.log_info(
-            f"Found {len(threat_actors)} threat-actor-group entities"
-        )
+        self.helper.log_info(f"Found {len(threat_actors)} threat-actor-group entities")
 
         updated = 0
         skipped = 0
@@ -266,9 +260,8 @@ class ThreatActorEnrichment:
             try:
                 timestamp = int(time.time())
                 now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                friendly_name = (
-                    "Threat Actor Enrichment run @ "
-                    + now.strftime("%Y-%m-%d %H:%M:%S")
+                friendly_name = "Threat Actor Enrichment run @ " + now.strftime(
+                    "%Y-%m-%d %H:%M:%S"
                 )
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -279,9 +272,9 @@ class ThreatActorEnrichment:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.fromtimestamp(
-                            last_run, tz=timezone.utc
-                        ).strftime("%Y-%m-%d %H:%M:%S")
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
+                            "%Y-%m-%d %H:%M:%S"
+                        )
                     )
                 else:
                     last_run = None
