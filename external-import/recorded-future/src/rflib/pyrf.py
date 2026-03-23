@@ -276,7 +276,10 @@ class RecordedFutureApiClient:
                 "Moderate": ["High", "Moderate"],
                 "Informational": ["High", "Moderate", "Informational"],
             }
-            for created_or_updated in ["created", "updated"]:
+            for created_or_updated, order_by in [
+                ("created", "created"),
+                ("updated", "modified"),
+            ]:
                 while int(from_api) < int(alert_count):
                     response = requests.post(
                         str(self.base_url + "playbook-alert/search"),
@@ -288,7 +291,7 @@ class RecordedFutureApiClient:
                         json={
                             "from": from_api,
                             "limit": 100,
-                            "order_by": created_or_updated,
+                            "order_by": order_by,
                             "direction": "asc",
                             "category": [str(category)],
                             str(created_or_updated + "_range"): {
@@ -298,7 +301,6 @@ class RecordedFutureApiClient:
                             "priority": priority_matrix[priority_threshold],
                         },
                     )
-
                     # If there is an error during the request, the method raise the error
                     response.raise_for_status()
 
