@@ -3,7 +3,7 @@
   "slug": "threat-actor-enrichment",
   "description": "Periodically enriches threat actor group entities by computing their real last_seen date from related indicators and reports. Fixes stale last_seen values that occur because OpenCTI does not automatically propagate activity dates from linked IOCs back to threat actor entities.",
   "short_description": "Enriches threat actor groups with computed last_seen dates from related indicators and reports.",
-  "logo": "external-import/threat-actor-enrichment/__metadata__/logo.png",
+  "logo": null,
   "use_cases": [
     "Enrichment & Analysis",
     "Threat Intelligence Management"
