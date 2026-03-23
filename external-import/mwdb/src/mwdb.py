@@ -296,9 +296,12 @@ class MWDB:
         if "c2" in config.cfg:
             for c2 in config.cfg["c2"]:
                 try:
+                    if isinstance(c2, dict):
+                        c2 = c2.get("host", str(c2))
+                    c2 = str(c2)
                     if re.match("^https?://.*", c2):
                         c2obj.extend(self.process_c2(c2, virus, "c2-url"))
-                    if re.match(
+                    elif re.match(
                         r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?",
                         c2,
                     ):
