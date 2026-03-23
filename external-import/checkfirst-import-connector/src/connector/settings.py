@@ -37,7 +37,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
 class CheckfirstImportConnectorConfig(BaseConfigModel):
     """
-    Define parameters and/or defaults for the configuration specific to the `CheckfirstImportConnectorConnector`.
+    Define parameters and/or defaults for the configuration specific to the `CheckfirstImportConnector`.
     """
 
     api_url: HttpUrl = Field(
