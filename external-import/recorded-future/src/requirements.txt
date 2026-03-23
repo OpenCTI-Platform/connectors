@@ -17,5 +17,5 @@ sseclient
 stix2
 stix2-patterns
 urllib3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@lts/7.260309.0#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260309.0-lts.2#subdirectory=connectors-sdk
 
