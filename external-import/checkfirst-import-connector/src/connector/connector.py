@@ -157,11 +157,6 @@ class CheckfirstImportConnector:
 
                     self.state.last_page = current_page
                     self.state.save()
-
-                    # Reset for next bundle
-                    seen_ids = set()
-                    octi_objects = []
-                    rows_in_bundle = 0
                 except BundleSendError:
                     self.logger.warning(
                         "Bundle send failed. Skipping it and try the next bundle",
@@ -171,7 +166,11 @@ class CheckfirstImportConnector:
                             "page": current_page,
                         },
                     )
-                    continue
+                finally:
+                    # Reset for next bundle
+                    seen_ids = set()
+                    octi_objects = []
+                    rows_in_bundle = 0
 
         if not rows_yielded:
             # Log and let the connector end the run
