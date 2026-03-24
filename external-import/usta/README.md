@@ -158,7 +158,7 @@ pip install -r src/requirements.txt -r tests/test-requirements.txt
 pytest --cov --cov-report=term-missing
 ```
 
-The `pyproject.toml` configures `pythonpath = ["src"]` so that `pytest` can resolve `from connector import ...` and `from usta_client import ...` correctly regardless of the working directory.
+`tests/conftest.py` injects `src/` into `sys.path` so that `pytest` can resolve `from connector import ...` and `from usta_client import ...` correctly regardless of the working directory.
 
 ---
 

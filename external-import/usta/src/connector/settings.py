@@ -7,15 +7,66 @@ the OpenCTI connector SDK patterns.
 
 # pylint: disable=too-few-public-methods
 
+from abc import ABC
 from datetime import timedelta
-from typing import Literal
+from typing import Any, Literal
 
-from connectors_sdk import (
-    BaseConfigModel,
-    BaseConnectorSettings,
-    BaseExternalImportConnectorConfig,
-)
-from pydantic import Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class BaseConfigModel(BaseModel, ABC):
+    """Base class for config models — frozen and accepts extra fields."""
+
+    model_config = ConfigDict(extra="allow", frozen=True, validate_default=True)
+
+
+class _OpenCTIConfig(BaseConfigModel):
+    url: HttpUrl = Field(description="The base URL of the OpenCTI instance.")
+    token: str = Field(description="The API token to connect to OpenCTI.")
+
+
+class _BaseConnectorConfig(BaseConfigModel, ABC):
+    id: str = Field(description="A UUID v4 to identify the connector in OpenCTI.")
+    name: str = Field(description="The name of the connector.")
+    scope: str = Field(description="The scope of the connector.")
+    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
+        description="The minimum level of logs to display.",
+        default="error",
+    )
+
+
+class BaseExternalImportConnectorConfig(_BaseConnectorConfig):
+    """Base config for external import connectors."""
+
+    type: Literal["EXTERNAL_IMPORT"] = "EXTERNAL_IMPORT"
+    duration_period: timedelta = Field(
+        description="The period of time to await between two runs of the connector."
+    )
+
+
+class BaseConnectorSettings(BaseSettings):
+    """Base settings class — loads configuration from environment variables."""
+
+    model_config = SettingsConfigDict(
+        env_nested_delimiter="_",
+        env_nested_max_split=1,
+        extra="allow",
+        frozen=True,
+    )
+
+    opencti: _OpenCTIConfig = Field(
+        default_factory=_OpenCTIConfig,  # type: ignore[arg-type]
+        description="OpenCTI configurations.",
+    )
+    connector: _BaseConnectorConfig = Field(
+        default_factory=_BaseConnectorConfig,  # type: ignore[arg-type]
+        description="Connector configurations.",
+    )
+
+    def to_helper_config(self) -> dict[str, Any]:
+        """Convert settings to a dict suitable for OpenCTIConnectorHelper."""
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):

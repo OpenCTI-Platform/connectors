@@ -9,6 +9,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock
 
 import pytest
+
 from connector.connector import UstaConnector
 from usta_client import UstaClientError
 

@@ -8,8 +8,9 @@ the Pydantic settings, the OpenCTI helper, and starts the connector.
 import sys
 import traceback
 
-from connector import ConnectorSettings, UstaConnector
 from pycti import OpenCTIConnectorHelper
+
+from connector import ConnectorSettings, UstaConnector
 
 if __name__ == "__main__":
     try:
