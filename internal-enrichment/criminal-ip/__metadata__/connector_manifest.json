@@ -1,0 +1,19 @@
+{
+  "title": "Criminal IP",
+  "slug": "criminal-ip",
+  "description": "Criminal IP is a cyber threat intelligence search engine that enriches IPv4 addresses with reputation scores, geolocation, autonomous system data, and vulnerability information. It also enriches domain names with phishing probability, resolved IPs, and associated server locations.",
+  "short_description": "Enriches IPv4 addresses and domain names with Criminal IP threat intelligence.",
+  "logo": "internal-enrichment/criminal-ip/__metadata__/logo.png",
+  "use_cases": ["Enrichment & Analysis"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 95,
+  "support_version": ">=6.8.13",
+  "subscription_link": "https://www.criminalip.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/criminal-ip",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-criminal-ip",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

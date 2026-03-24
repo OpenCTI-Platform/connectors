@@ -6,11 +6,14 @@ import warnings
 from enum import StrEnum
 
 __all__ = [
+    "AccountType",
     "AttackMotivation",
     "AttackResourceLevel",
+    "ChannelType",
     "CvssSeverity",
     "HashAlgorithm",
     "ImplementationLanguage",
+    "InfrastructureType",
     "IndustrySector",
     "LocationType",
     "MalwareCapability",
@@ -45,6 +48,25 @@ class _PermissiveEnum(StrEnum):
         obj = str.__new__(cls, _value)
         obj._value_ = _value
         return obj
+
+
+class AccountType(_PermissiveEnum):
+    """Account Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_k2b7lkt45f0i
+    """
+
+    FACEBOOK = "facebook"
+    LDAP = "ldap"
+    NIS = "nis"
+    OPENID = "openid"
+    RADIUS = "radius"
+    SKYPE = "skype"
+    TACACS = "tacacs"
+    TWITTER = "twitter"
+    UNIX = "unix"
+    WINDOWS_LOCAL = "windows-local"
+    WINDOWS_DOMAIN = "windows-domain"
 
 
 class AttackMotivation(_PermissiveEnum):
@@ -90,6 +112,16 @@ class CvssSeverity(StrEnum):
     MEDIUM = "MEDIUM"
     LOW = "LOW"
     UNKNOWN = "Unknown"
+
+
+class ChannelType(_PermissiveEnum):
+    """Channel Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L129
+    """
+
+    TWITTER = "Twitter"
+    FACEBOOK = "Facebook"
 
 
 class HashAlgorithm(_PermissiveEnum):
@@ -183,6 +215,29 @@ class IndustrySector(_PermissiveEnum):
     TELECOMMUNICATIONS = "telecommunications"
     TRANSPORTATION = "transportation"
     UTILITIES = "utilities"
+
+
+class InfrastructureType(_PermissiveEnum):
+    """Infrastructure Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_67vrmztjft3h
+    """
+
+    AMPLIFICATION = "amplification"
+    ANONYMIZATION = "anonymization"
+    BOTNET = "botnet"
+    COMMAND_AND_CONTROL = "command-and-control"
+    CONTROL_SYSTEM = "control-system"
+    EXFILTRATION = "exfiltration"
+    FIREWALL = "firewall"
+    HOSTING_MALWARE = "hosting-malware"
+    HOSTING_TARGET_LISTS = "hosting-target-lists"
+    PHISHING = "phishing"
+    RECONNAISSANCE = "reconnaissance"
+    ROUTERS_SWITCHES = "routers-switches"
+    STAGING = "staging"
+    WORKSTATION = "workstation"
+    UNKNOWN = "unknown"
 
 
 class LocationType(StrEnum):

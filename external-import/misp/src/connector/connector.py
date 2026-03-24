@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
@@ -15,6 +16,13 @@ if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
 LOG_PREFIX = "[Connector]"
+
+
+class ProcessingOutcome(Enum):
+    """Outcome of processing a STIX bundle within a batch."""
+
+    COMPLETED = auto()
+    BUFFERING = auto()
 
 
 class Misp:
@@ -64,6 +72,8 @@ class Misp:
             logger=self.logger,
             batch_size=self.config.misp.batch_count,
         )
+
+        self._current_bundle = None
 
     def _check_batch_size_and_flush(
         self,
@@ -270,14 +280,20 @@ class Misp:
         bundle_objects: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
-    ) -> None:
+    ) -> ProcessingOutcome:
         """Process a bundle of STIX objects in a batch.
 
         Args:
-            event_id: ID of the event
+            event: The MISP event being processed
             bundle_objects: list of STIX objects to process
             author: Author of the event
             markings: Markings of the event
+
+        Returns:
+            ProcessingOutcome.BUFFERING if the connector queue is full and
+            processing was interrupted mid-event (caller should stop the event
+            loop and resume on the next scheduler run).
+            ProcessingOutcome.COMPLETED when all chunks were sent successfully.
         """
         bundle_size = len(bundle_objects)
         current_state = self.work_manager.get_state()
@@ -291,6 +307,43 @@ class Misp:
             bundle_size,
             batch_chunk_size,
         ):
+            if (
+                not self.work_manager.check_connector_run_and_terminate()
+                and self.work_manager.check_connector_buffering()
+            ):
+                remaining_objects_count = max(
+                    0,
+                    remaining_objects_count
+                    # Chunk size - author - markings
+                    + (
+                        self.batch_processor.get_current_batch_size()
+                        - (1 + len(markings))
+                    ),
+                )
+                # Clear the current batch to avoid processing duplicated items
+                # during the next run.
+                self.batch_processor.clear_current_batch()
+                self.logger.info(
+                    "Connector is buffering, this event will be processed in "
+                    "the next scheduler process",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "event_id": event.Event.id,
+                        "event_uuid": event.Event.uuid,
+                    },
+                )
+                # Save the event date to restart from the current one in the
+                # next process.
+                new_state = {
+                    "last_event_date": self._get_event_datetime(event).isoformat(),
+                    "remaining_objects_count": remaining_objects_count,
+                }
+                if self.config.misp.datetime_attribute == "date":
+                    new_state["current_event_id"] = event.Event.id
+                self.work_manager.update_state(state_update=new_state)
+
+                return ProcessingOutcome.BUFFERING
+
             now = datetime.now(tz=timezone.utc)
             self.batch_processor.work_name_template = (
                 f"MISP run @ {now.isoformat(timespec='seconds')}"
@@ -317,6 +370,8 @@ class Misp:
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
         self.work_manager.update_state(state_update={"remaining_objects_count": 0})
+
+        return ProcessingOutcome.COMPLETED
 
     def process_events(self) -> str | None:
         """Fetch, convert and send MISP events."""
@@ -379,33 +434,35 @@ class Misp:
 
                     curr_event_date = self._get_event_datetime(event).isoformat()
 
-                    if self.work_manager.check_connector_buffering():
+                    if self._current_bundle is None:
                         self.logger.info(
-                            "Connector is buffering, this event will be processed in the next scheduler process",
-                            event_log_data,
+                            "MISP event found - Processing...", event_log_data
                         )
-                        # Save the event date to restart from the current one in the next process.
-                        new_state = {"last_event_date": curr_event_date}
-                        self.work_manager.update_state(state_update=new_state)
-                        break
-
-                    self.logger.info("MISP event found - Processing...", event_log_data)
-                    try:
-                        author, markings, bundle_objects = self.converter.process(
-                            event=event,
-                            include_relationships=(
-                                len(event.Event.Attribute or [])
-                                + len(event.Event.Object or [])
+                        try:
+                            self._current_bundle = author, markings, bundle_objects = (
+                                self.converter.process(
+                                    event=event,
+                                    include_relationships=(
+                                        len(event.Event.Attribute or [])
+                                        + len(event.Event.Object or [])
+                                    )
+                                    # TODO: Add a configuration for the maximum number of attributes and objects
+                                    < 10000,
+                                )
                             )
-                            # TODO: Add a configuration for the maximum number of attributes and objects
-                            < 10000,
-                        )
-                    except ConverterError as err:
-                        self.logger.error(
-                            f"Error while converting MISP event, skipping it. {err}",
+                        except ConverterError as err:
+                            self.logger.error(
+                                f"Error while converting MISP event, skipping it. {err}",
+                                event_log_data,
+                            )
+                            self._current_bundle = None
+                            continue
+                    else:
+                        self.logger.info(
+                            "Resuming processing of MISP event...",
                             event_log_data,
                         )
-                        continue
+                        author, markings, bundle_objects = self._current_bundle
 
                     self.logger.debug(
                         "Converted to STIX entities",
@@ -415,12 +472,16 @@ class Misp:
                         },
                     )
 
-                    self._process_bundle_in_batch(
+                    outcome = self._process_bundle_in_batch(
                         event=event,
                         bundle_objects=bundle_objects,
                         author=author,
                         markings=markings,
                     )
+                    if outcome is ProcessingOutcome.BUFFERING:
+                        break
+
+                    self._current_bundle = None
 
                 else:
                     # FOR-ELSE: The else block executes only if the loop is not
@@ -466,6 +527,13 @@ class Misp:
                                     "last_event_date": last_event_datetime.isoformat(),
                                 },
                             )
+
+            except Exception as e:
+                self.logger.error(
+                    "Error while processing MISP events",
+                    {"prefix": LOG_PREFIX, "error": str(e)},
+                )
+                self._current_bundle = None
 
             finally:
                 self._flush_batch_processor()

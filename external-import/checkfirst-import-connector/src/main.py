@@ -1,3 +1,5 @@
+"""Connector entry point: initialises settings, helper, and starts the run loop."""
+
 import traceback
 
 from connector.connector import CheckfirstImportConnector

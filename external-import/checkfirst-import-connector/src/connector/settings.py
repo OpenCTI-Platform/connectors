@@ -1,3 +1,5 @@
+"""Pydantic settings models for the Checkfirst connector."""
+
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Literal
@@ -37,6 +39,7 @@ class CheckfirstConfig(BaseConfigModel):
     @field_validator("api_url")
     @classmethod
     def _strip_trailing_slash(cls, v: str) -> str:
+        """Strip trailing slashes from the API URL."""
         return v.rstrip("/")
 
     api_key: str = Field(

@@ -1,5 +1,7 @@
 import pytest
+from connectors_sdk.models.autonomous_system import AutonomousSystem
 from connectors_sdk.models.ipv6_address import IPV6Address
+from connectors_sdk.models.mac_address import MACAddress
 from pydantic import ValidationError
 from stix2.v21 import IPv6Address as Stix2IPv6Address
 
@@ -20,9 +22,17 @@ def test_ip_v6_class_should_not_accept_invalid_input():
 
 def test_ip_v6_address_to_stix2_object_returns_valid_stix_object():
     """Test that IPV6Address to_stix2_object method returns a valid STIX2.1 IPV6Address."""
-    # Given: A valid IPV6Address instance
-    ipv6_address = IPV6Address(value="b357:5b10:0f48:d182:0140:494c:8fe9:6eda")
+    # Given: A valid IPV6Address instance with resolves_to and belongs_to refs
+    mac_address = MACAddress(value="AA-BB-CC-DD-EE-FF")
+    autonomous_system = AutonomousSystem(number=64513)
+    ipv6_address = IPV6Address(
+        value="b357:5b10:0f48:d182:0140:494c:8fe9:6eda",
+        resolves_to=[mac_address],
+        belongs_to=[autonomous_system],
+    )
     # When: calling to_stix2_object method
     stix2_obj = ipv6_address.to_stix2_object()
     # Then: A valid STIX2.1 IPV6Address is returned
     assert isinstance(stix2_obj, Stix2IPv6Address)
+    assert stix2_obj.resolves_to_refs == [mac_address.id]
+    assert stix2_obj.belongs_to_refs == [autonomous_system.id]

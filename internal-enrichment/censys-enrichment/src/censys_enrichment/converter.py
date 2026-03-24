@@ -12,7 +12,6 @@ from censys_platform import (
 from connectors_sdk.models import (
     AdministrativeArea,
     AutonomousSystem,
-    BaseIdentifiedEntity,
     BaseObject,
     City,
     Country,
@@ -22,6 +21,7 @@ from connectors_sdk.models import (
     Note,
     Organization,
     OrganizationAuthor,
+    Reference,
     Region,
     Relationship,
     Software,
@@ -29,28 +29,6 @@ from connectors_sdk.models import (
     X509Certificate,
 )
 from connectors_sdk.models.enums import HashAlgorithm, RelationshipType, TLPLevel
-from pydantic import Field
-
-
-class EmbeddedIdentifiedStixObject(BaseIdentifiedEntity):
-    """Embedded Identified STIX Object representation.
-
-    This class encapsulates a STIX object with an id as a dictionary and provides
-    access to the object without copying or modifying the original data.
-
-    Use when you only need to read or forward the STIX object, not alter it.
-    """
-
-    stix_object: dict[str, Any] = Field()
-
-    @property
-    def id(self) -> str:
-        """Return the STIX object's ID."""
-        return self.stix_object["id"]
-
-    def to_stix2_object(self) -> dict[str, Any]:
-        """Return the STIX2 object representation."""
-        return self.stix_object
 
 
 class Converter:
@@ -60,7 +38,7 @@ class Converter:
         self._common_props = {"author": self.author, "markings": [self.marking]}
 
     def _generate_city(
-        self, observable: EmbeddedIdentifiedStixObject, name: str | None
+        self, observable: Reference, name: str | None
     ) -> Generator[BaseObject, None, None]:
         if not name:
             return
@@ -80,7 +58,7 @@ class Converter:
         ]
 
     def _generate_country(
-        self, observable: EmbeddedIdentifiedStixObject, name: str | None
+        self, observable: Reference, name: str | None
     ) -> Generator[BaseObject, None, Country | None]:
         if not name:
             return None
@@ -101,7 +79,7 @@ class Converter:
         return country
 
     def _generate_region(
-        self, observable: EmbeddedIdentifiedStixObject, name: str | None
+        self, observable: Reference, name: str | None
     ) -> Generator[BaseObject, None, None]:
         if not name:
             return
@@ -122,7 +100,7 @@ class Converter:
 
     def _generate_administrative_area(
         self,
-        observable: EmbeddedIdentifiedStixObject,
+        observable: Reference,
         name: str | None,
         coordinates: Coordinates | None,
     ) -> Generator[BaseObject, None, None]:
@@ -154,7 +132,7 @@ class Converter:
         ]
 
     def _generate_hostnames(
-        self, observable: EmbeddedIdentifiedStixObject, dns: HostDNS | None
+        self, observable: Reference, dns: HostDNS | None
     ) -> Generator[BaseObject, None, None]:
         if not dns:
             return
@@ -176,7 +154,7 @@ class Converter:
 
     def _generate_organization(
         self,
-        observable: EmbeddedIdentifiedStixObject,
+        observable: Reference,
         name: str | None,
     ) -> Generator[BaseObject, None, Organization | None]:
         if not name:
@@ -199,7 +177,7 @@ class Converter:
 
     def _generate_autonomous_system(
         self,
-        observable: EmbeddedIdentifiedStixObject,
+        observable: Reference,
         number: int | None,
         name: str | None,
         description: str | None,
@@ -226,7 +204,7 @@ class Converter:
 
     def _generate_software(
         self,
-        observable: EmbeddedIdentifiedStixObject,
+        observable: Reference,
         name: str | None,
         vendor: str | None,
         cpe: str | None,
@@ -317,7 +295,7 @@ class Converter:
 
     def _generate_note(
         self,
-        observable: EmbeddedIdentifiedStixObject,
+        observable: Reference,
         content: str | None,
         publication_date: str | None,
         port: int | None,
@@ -335,7 +313,7 @@ class Converter:
         )
 
     def _generate_services(
-        self, observable: EmbeddedIdentifiedStixObject, services: list[Service] | None
+        self, observable: Reference, services: list[Service] | None
     ) -> Generator[BaseObject, None, None]:
         for service in services or []:
             for software in service.software or []:
@@ -363,7 +341,7 @@ class Converter:
             )
 
     def _generate_ip(
-        self, observable: EmbeddedIdentifiedStixObject, ip: str
+        self, observable: Reference, ip: str
     ) -> Generator[BaseObject, None, None | IPV4Address | IPV6Address]:
         ip_version = ipaddress.ip_network(ip, strict=False).version
         if ip_version == 4:
@@ -384,7 +362,7 @@ class Converter:
     def generate_octi_objects(
         self, stix_entity: dict[str, Any], data: Host
     ) -> Generator[BaseObject, None, None]:
-        observable = EmbeddedIdentifiedStixObject(stix_object=stix_entity)
+        observable = Reference(id=stix_entity.get("id"))
 
         yield from [
             self.author,
@@ -461,7 +439,7 @@ class Converter:
     ) -> Generator[BaseObject, None, None]:
         for host in hosts:
             ip_stix = yield from self._generate_ip(
-                observable=EmbeddedIdentifiedStixObject(stix_object=stix_entity),
+                observable=Reference(id=stix_entity.get("id")),
                 ip=host.ip,
             )
             yield from self.generate_octi_objects(
