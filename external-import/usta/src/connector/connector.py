@@ -19,10 +19,9 @@ from typing import Any, Callable
 from urllib.parse import unquote, urlparse
 
 import requests
-from pycti import OpenCTIConnectorHelper
-
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 from usta_client import UstaClient, UstaClientError
 
 

@@ -5,7 +5,6 @@
 from datetime import timedelta
 
 import pytest
-
 from connector.settings import ExternalImportConnectorConfig, UstaConfig
 
 
