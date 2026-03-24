@@ -55,3 +55,14 @@ jobs:
           else
             echo "✓ Found $LINKED_ISSUES linked issue(s)"
           fi
+  check-pr-title-convention:
+    name: Check that PR title follows convention
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: Slashgear/action-check-pr-title@76166c63ec0b25cdbe693e5e972e83ca186313fb
+        with:
+          regexp: '^\[\w+.+\].+$'
+          flags: "gm"
+          helpMessage: "Format: '[Connector Name] Message' for example '[MISP] updating a doc page'. see https://github.com/OpenCTI-Platform/connectors/blob/master/CONTRIBUTING.md#contributing"
