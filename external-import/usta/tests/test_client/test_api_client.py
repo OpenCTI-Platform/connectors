@@ -7,7 +7,6 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from usta_client.api_client import UstaClient, UstaClientError
 
 

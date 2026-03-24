@@ -1114,7 +1114,7 @@ class ConverterToStix:
             if len(mapped_motivations) > 1:
                 kwargs["secondary_motivations"] = mapped_motivations[1:]
 
-            threat_actor_objs.append(stix2.ThreatActor(**kwargs))
+            threat_actor_objs.append(stix2.ThreatActor(id=kwargs.pop("id"), **kwargs))
 
         stix_objects.extend(threat_actor_objs)
 
