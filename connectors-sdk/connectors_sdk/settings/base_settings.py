@@ -11,10 +11,18 @@ from abc import ABC
 from copy import deepcopy
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Literal, Self
+from typing import Any, ClassVar, Literal, Self
 
 from connectors_sdk.settings.annotated_types import ListFromString
+from connectors_sdk.settings.deprecations import (
+    Deprecate,
+    migrate_deprecated_namespace,
+    migrate_deprecated_variable,
+)
 from connectors_sdk.settings.exceptions import ConfigValidationError
+from connectors_sdk.settings.json_schema_generator import (
+    ConnectorConfigJsonSchemaGenerator,
+)
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -25,6 +33,7 @@ from pydantic import (
     create_model,
     model_validator,
 )
+from pydantic.fields import FieldInfo
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -40,6 +49,41 @@ class BaseConfigModel(BaseModel, ABC):
     """
 
     model_config = ConfigDict(extra="allow", frozen=True, validate_default=True)
+
+    _model_deprecated_fields: ClassVar[dict[str, FieldInfo]] = {}
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: Any) -> None:
+        """Initialize the `BaseConfigModel` subclass and rebuild model with deprecated fields."""
+        super().__pydantic_init_subclass__(**kwargs)
+
+        cls._model_deprecated_fields = {}
+
+        for name, field in cls.model_fields.items():
+            for meta in field.metadata:
+                if isinstance(meta, Deprecate):
+                    # Change validation behavior
+                    if not field.deprecated:
+                        field.deprecated = True
+                    field.default = None
+                    field.default_factory = None
+                    field.validate_default = False
+
+                    # Add deprecation info to JSON schema
+                    if not field.json_schema_extra:
+                        field.json_schema_extra = {}
+                    field.json_schema_extra.update(  # type: ignore[union-attr]
+                        {
+                            "new_namespace": meta.new_namespace,
+                            "new_namespaced_var": meta.new_namespaced_var,
+                            "removal_date": meta.removal_date,
+                        }
+                    )
+
+                    cls._model_deprecated_fields[name] = field
+
+        if cls._model_deprecated_fields:
+            cls.model_rebuild(force=True)
 
 
 class _OpenCTIConfig(BaseConfigModel):
@@ -151,18 +195,16 @@ class _SettingsLoader(BaseSettings):
         """
         config_yml_file_path = cls._get_config_yml_file_path()
         if config_yml_file_path:
-            settings_cls.model_config["yaml_file"] = config_yml_file_path
             return (
                 env_settings,
-                YamlConfigSettingsSource(settings_cls),
+                YamlConfigSettingsSource(settings_cls, yaml_file=config_yml_file_path),
             )
 
         dot_env_file_path = cls._get_dot_env_file_path()
         if dot_env_file_path:
-            settings_cls.model_config["env_file"] = dot_env_file_path
             return (
                 env_settings,
-                DotEnvSettingsSource(settings_cls),
+                DotEnvSettingsSource(settings_cls, env_file=dot_env_file_path),
             )
 
         return (env_settings,)
@@ -261,6 +303,143 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         except ValidationError as e:
             raise ConfigValidationError("Error validating configuration.") from e
 
+    @classmethod
+    def config_json_schema(
+        cls,
+        *,
+        connector_name: str,
+        by_alias: bool = False,
+        mode: Literal["validation", "serialization"] = "validation",
+    ) -> dict[str, Any]:
+        """Generate the connector-specific environment variable JSON schema used for metadata contracts."""
+
+        def make_schema_generator(
+            name: str,
+        ) -> type[ConnectorConfigJsonSchemaGenerator]:
+            return type(
+                "GeneratedSchemaGen",
+                (ConnectorConfigJsonSchemaGenerator,),
+                {"connector_name": name},
+            )
+
+        return cls.model_json_schema(
+            by_alias=by_alias,
+            schema_generator=make_schema_generator(connector_name),
+            mode=mode,
+        )
+
+    @classmethod
+    def _migrate_deprecated_namespaces(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate deprecated namespaces in the configuration data.
+
+        Args:
+            data: Raw configuration data.
+
+        Returns:
+            Migrated configuration data.
+        """
+        for field_name, field in cls._model_deprecated_fields.items():
+            annotation = field.annotation
+            is_namespace = isinstance(annotation, type) and issubclass(
+                annotation, BaseConfigModel
+            )
+            deprecate_metadata = next(
+                m for m in field.metadata if isinstance(m, Deprecate)
+            )
+            new_namespace = deprecate_metadata.new_namespace
+            new_namespaced_var = deprecate_metadata.new_namespaced_var
+            removal_date = deprecate_metadata.removal_date
+
+            if is_namespace and new_namespaced_var:
+                raise ValueError(
+                    f"Cannot rename variable for namespace {field_name}. "
+                    "Use only `new_namespace`."
+                )
+
+            if is_namespace and new_namespace:
+                if not isinstance(new_namespace, str):
+                    raise ValueError(
+                        f"`new_namespace` for field {field_name} must be a string."
+                    )
+
+                migrate_deprecated_namespace(
+                    data,
+                    old_namespace=field_name,
+                    new_namespace=new_namespace,
+                    removal_date=removal_date,
+                )
+
+        return data
+
+    @classmethod
+    def _migrate_deprecated_variables(cls, data: dict[str, Any]) -> dict[str, Any]:
+        """Migrate deprecated variables in the configuration data.
+
+        Args:
+            data: Raw configuration data.
+
+        Returns:
+            Migrated configuration data.
+        """
+        for field_name, field in cls.model_fields.items():
+            annotation = field.annotation
+            is_namespace = isinstance(annotation, type) and issubclass(
+                annotation, BaseConfigModel
+            )
+            if is_namespace:
+                for (
+                    sub_field_name,
+                    sub_field,
+                ) in annotation._model_deprecated_fields.items():  # type: ignore[union-attr]
+                    deprecate_metadata = next(
+                        m for m in sub_field.metadata if isinstance(m, Deprecate)
+                    )
+                    new_namespace = deprecate_metadata.new_namespace
+                    new_namespaced_var = deprecate_metadata.new_namespaced_var
+                    new_value_factory = deprecate_metadata.new_value_factory
+                    removal_date = deprecate_metadata.removal_date
+
+                    if new_namespaced_var:
+                        if not isinstance(new_namespaced_var, str):
+                            raise ValueError(
+                                f"`new_namespaced_var` for field {sub_field_name} must be a string."
+                            )
+
+                        migrate_deprecated_variable(
+                            data,
+                            old_name=sub_field_name,
+                            new_name=new_namespaced_var,
+                            current_namespace=field_name,
+                            new_namespace=new_namespace,
+                            new_value_factory=new_value_factory,
+                            removal_date=removal_date,
+                        )
+
+        return data
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _migrate_deprecation(
+        cls, data: dict[str, Any], handler: ModelWrapValidatorHandler[Self]
+    ) -> Self:
+        """Migrate deprecated namespaces and variables in the configuration data.
+
+        Args:
+            data: Raw configuration data.
+            handler: Pydantic validation handler.
+
+        Returns:
+            Validated and migrated configuration data.
+
+        Notes:
+            - This is the second validator to be executed at runtime, after `_load_config_dict`.
+        """
+        # First migrate deprecated namespaces, then deprecated variables to ensure all deprecations are handled.
+        data = cls._migrate_deprecated_namespaces(data)
+        data = cls._migrate_deprecated_variables(data)
+
+        return handler(data)
+
     @model_validator(mode="wrap")
     @classmethod
     def _load_config_dict(
@@ -276,6 +455,7 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
             - This method is a `model_validator`, i.e. it's internally executed by pydantic during model validation
             - The mode (`"wrap"`) guarantees that this validator is always executed _before_ the validators defined in child class
             - See `_SettingsLoader.build_loader_from_model` for further details about env/config vars parsing implementation
+            - This is the first validator to be executed at runtime, before `_migrate_deprecated_namespaces` and `_migrate_deprecated_variables`
 
         References:
             https://github.com/pydantic/pydantic/issues/8277 [consulted on 2025-11-19]
@@ -289,7 +469,14 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
 
     def to_helper_config(self) -> dict[str, Any]:
         """Convert model into a valid dict for `pycti.OpenCTIConnectorHelper`."""
-        return self.model_dump(mode="json", context={"mode": "pycti"})
+        return self.model_dump(
+            mode="json",
+            context={"mode": "pycti"},
+            # Deprecated fields can be set to `None` despite their type (due to `Deprecate` annotation).
+            # To avoid `PydanticSerializationError`, we exclude all fields set to `None` during serialization.
+            # OpenCTIConnectorHelper handles missing fields with default values or internal logic.
+            exclude_none=True,
+        )
 
 
 class BaseExternalImportConnectorConfig(_BaseConnectorConfig):

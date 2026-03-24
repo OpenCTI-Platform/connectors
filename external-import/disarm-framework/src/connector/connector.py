@@ -118,7 +118,7 @@ class DisarmFramework:
         try:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
-                entities_types=self.helper.connect_scope,
+                entities_types=self.config.connector.scope,
                 update=False,
                 work_id=work_id,
             )

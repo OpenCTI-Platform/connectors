@@ -15,6 +15,10 @@ from connectors_sdk.settings.base_settings import (
     BaseInternalImportFileConnectorConfig,
     BaseStreamConnectorConfig,
 )
+from connectors_sdk.settings.deprecations import (
+    Deprecate,
+    DeprecatedField,
+)
 from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
@@ -36,4 +40,7 @@ __all__ = [
     # Annotated types
     "DatetimeFromIsoString",
     "ListFromString",
+    # Deprecations
+    "Deprecate",
+    "DeprecatedField",
 ]

@@ -106,7 +106,18 @@ jobs:
                 # Add custom flag to avoid triggering workflows
                 git commit -m "[Automation] Build and update manifest [ci build-manifest]"
                 # Push quietly to prevent showing the token in log
-                git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}   
+                if git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}; then
+                  echo "Manifest changes pushed successfully."
+                  exit 0
+                else
+                  echo "Push rejected, ${CIRCLE_BRANCH} probably moved. Trying rebase..."
+                  if ! git pull --rebase origin ${CIRCLE_BRANCH}; then
+                    echo "Rebase failed, aborting."
+                    git rebase --abort
+                    exit 1
+                  fi
+                  git push -q https://${GITHUB_TOKEN}@github.com/OpenCTI-Platform/connectors.git ${CIRCLE_BRANCH}
+                fi
               else
                 echo "Manifest not changed. Skipping commit."
                 exit 0
@@ -166,7 +177,9 @@ jobs:
           command: pip install -r .circleci/scripts/requirements.txt
       - run:
           name: Execute Python Script
-          command: python .circleci/scripts/generate_ci.py
+          command: |
+            export LATEST_SEMANTIC_VERSION=$(git tag --sort=-v:refname | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1)
+            python .circleci/scripts/generate_ci.py
       - continuation/continue:
           configuration_path: dynamic.yml
       - slack/notify:
@@ -222,7 +235,7 @@ workflows:
             - test
           filters:
             tags:
-              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*/
+              only: /[0-9]+(\.[0-9]+)+(\.[0-9]+)*(-lts\.[0-9]*)?/
             branches:
               ignore: /.*/
       - build:

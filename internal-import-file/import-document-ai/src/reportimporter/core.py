@@ -92,20 +92,13 @@ class ReportImporter:
         # Retrieve the OpenCTI instance ID (used as a header for the ML service)
         # TODO make the connector more resilient to OpenCTI being down at startup,
         # by wraping the initial helper.api.query() in a try/except with retries and logging
-        self.instance_id = (
-            self.helper.api.query(
-                """
+        self.instance_id = self.helper.api.query("""
                 query SettingsQuery {
                     settings {
                         id
                         }
                     }
-            """
-            )
-            .get("data", {})
-            .get("settings", {})
-            .get("id", "")
-        )
+            """).get("data", {}).get("settings", {}).get("id", "")
 
         # Cache OpenCTI “allowed relationship” matrix
         # Loading this mapping costs one GraphQL call at startup,
@@ -177,6 +170,7 @@ class ReportImporter:
                 "name": data["file_id"].replace("import/global/", ""),
                 "data": file_data_encoded,
                 "mime_type": data["file_mime"],
+                "no_trigger_import": True,
             }
             # Reset file offset
             file_content_buffered.seek(0)

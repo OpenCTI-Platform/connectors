@@ -14,6 +14,7 @@ doppel:
   api_base_url: 'https://api.doppel.com/v1'
   api_key: 'changeMe'
   user_api_key: 'changeMe'
+  organization_code: 'changeMe'
   tlp_level: 'clear'  # Options: clear, white, green, amber, amber+strict, red
   alerts_endpoint: '/alerts'
   historical_polling_days: 30

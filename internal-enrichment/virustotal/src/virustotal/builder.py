@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """VirusTotal builder module."""
+
 import datetime
 import json
 from typing import Optional

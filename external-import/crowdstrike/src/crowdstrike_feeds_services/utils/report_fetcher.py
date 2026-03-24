@@ -1,12 +1,16 @@
 """OpenCTI CrowdStrike report fetcher module."""
 
 import logging
-from typing import Any, Dict, List, Mapping, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Union
 
 from crowdstrike_feeds_services.client.reports import ReportsAPI
 from pydantic.v1 import BaseModel
 
 from . import create_file_from_download
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +27,16 @@ class ReportFetcher:
 
     _NOT_FOUND = object()
 
-    def __init__(self, helper, no_file_trigger_import: bool) -> None:
+    def __init__(
+        self,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
+        no_file_trigger_import: bool,
+    ) -> None:
         """Initialize CrowdStrike report fetcher."""
+        self.config = config
         self.helper = helper
-        self.reports_api_cs = ReportsAPI(helper)
+        self.reports_api_cs = ReportsAPI(config, helper)
         self.no_file_trigger_import = no_file_trigger_import
 
         self.fetched_report_cache: Dict[str, Union[FetchedReport, object]] = {}

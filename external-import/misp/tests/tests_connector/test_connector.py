@@ -1,10 +1,13 @@
+import time
 from copy import deepcopy
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
+from connector.connector import ProcessingOutcome
+from freezegun import freeze_time
 from pycti import OpenCTIConnectorHelper
 
 minimal_config_dict = {
@@ -568,3 +571,175 @@ def test_connector_does_not_validate_event_already_processed_by_update_datetime(
         )
         # Timestamp is before the last event date, so the event should not be validated
         assert connector._validate_event(event) is False
+
+
+def _make_publish_timestamp_event(event_id: str, ts: int) -> EventRestSearchListItem:
+    return EventRestSearchListItem.model_validate(
+        {"Event": {"id": event_id, "publish_timestamp": str(ts)}}
+    )
+
+
+def _run_process_events(
+    connector, events, buffering_at_event_index=None, initial_state=None
+):
+    """
+    Run `process_events` with all external dependencies mocked.
+
+    Args:
+        buffering_at_event_index: 0-based index of the event call at which
+            ``_process_bundle_in_batch`` should return
+            ``ProcessingOutcome.BUFFERING``.  ``None`` means no buffering.
+
+    Returns:
+        (state dict, mock for _process_bundle_in_batch, process_events return value)
+    """
+    state = dict(initial_state or {})
+
+    def track_update_state(state_update=None, **kwargs):
+        if state_update:
+            state.update(state_update)
+
+    call_count = [0]
+
+    def process_bundle_side_effect(event, bundle_objects, author, markings):
+        idx = call_count[0]
+        call_count[0] += 1
+        if buffering_at_event_index is not None and idx == buffering_at_event_index:
+            # Simulate what the real _process_bundle_in_batch does when it
+            # detects buffering: persist the checkpoint state and signal the
+            # caller to stop the event loop.
+            state["last_event_date"] = connector._get_event_datetime(event).isoformat()
+            state["remaining_objects_count"] = len(bundle_objects)
+            return ProcessingOutcome.BUFFERING
+        return ProcessingOutcome.COMPLETED
+
+    with (
+        patch.object(connector, "helper") as mock_helper,
+        patch.object(connector, "work_manager") as mock_wm,
+        patch.object(connector, "client_api") as mock_api,
+        patch.object(connector, "converter") as mock_converter,
+        patch.object(connector, "batch_processor"),
+        patch.object(connector, "_process_bundle_in_batch") as mock_process,
+    ):
+        mock_helper.get_state.return_value = initial_state or {}
+        mock_helper.metric = MagicMock()
+
+        mock_wm.get_state.side_effect = lambda: dict(state)
+        mock_wm.update_state.side_effect = track_update_state
+
+        mock_process.side_effect = process_bundle_side_effect
+
+        mock_api.search_events.return_value = iter(events)
+        mock_converter.process.return_value = (MagicMock(), [], [MagicMock()])
+
+        result = connector.process_events()
+
+    return state, mock_process, result
+
+
+@freeze_time("2026-01-01 00:00:00")
+def test_process_events_state_set_to_buffered_event_date_on_buffering(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that when buffering is detected inside _process_bundle_in_batch for
+    event B, ``last_event_date`` is saved to event B's timestamp so the next
+    run restarts from that event.
+
+    Scenario:
+    - Event A (earlier timestamp): processed normally.
+    - Event B (later timestamp): _process_bundle_in_batch detects buffering
+      mid-chunk → returns ProcessingOutcome.BUFFERING → loop breaks.
+
+    Expected: after the run, ``last_event_date`` equals event B's timestamp
+    (not A's), so the next run re-processes event B from the saved chunk
+    offset.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    ts_a = int(time.time())
+    ts_b = int(time.time() + 1)
+
+    event_a = _make_publish_timestamp_event("1", ts_a)
+    event_b = _make_publish_timestamp_event("2", ts_b)
+
+    # Buffering triggers on the second _process_bundle_in_batch call (event B)
+    state, _, result = _run_process_events(
+        connector, [event_a, event_b], buffering_at_event_index=1
+    )
+
+    expected = datetime.fromtimestamp(ts_b, tz=timezone.utc).isoformat()
+    assert state.get("last_event_date") == expected
+
+
+@freeze_time("2026-01-01 00:00:00")
+def test_process_events_buffering_breaks_event_loop(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that when ``_process_bundle_in_batch`` returns
+    ``ProcessingOutcome.BUFFERING`` for event B, the event loop is broken
+    immediately — event B itself IS passed to the method (buffering is
+    detected inside it), but any subsequent events are not processed at all.
+
+    Scenario:
+    - Event A: _process_bundle_in_batch returns COMPLETED.
+    - Event B: _process_bundle_in_batch returns BUFFERING → loop breaks.
+    - Event C: never reached.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    ts_a = int(time.time())
+    ts_b = int(time.time() + 1)
+    ts_c = int(time.time() + 2)
+
+    event_a = _make_publish_timestamp_event("1", ts_a)
+    event_b = _make_publish_timestamp_event("2", ts_b)
+    event_c = _make_publish_timestamp_event("3", ts_c)
+
+    state, mock_process, _ = _run_process_events(
+        connector, [event_a, event_b, event_c], buffering_at_event_index=1
+    )
+
+    # Both event A and event B were passed to _process_bundle_in_batch;
+    # event C was never reached because the loop broke after event B.
+    assert mock_process.call_count == 2
+    assert mock_process.call_args_list[0][1]["event"] == event_a
+    assert mock_process.call_args_list[1][1]["event"] == event_b
+
+
+def test_process_events_adds_one_second_after_loop_completion(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    """
+    Test that after the event loop completes without interruption, `last_event_date`
+    is advanced by 1 second. This prevents events at the exact boundary timestamp
+    from being re-queried (and reprocessed) on the next run.
+    """
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    with freeze_time("2026-01-01 00:00:00") as frozen_time:
+        ts = int(time.time())
+        event = _make_publish_timestamp_event("1", ts)
+
+        # No buffering — loop completes normally
+        state, _, result = _run_process_events(connector, [event])
+
+        # ts == Now: process_events does not update last_event_date (handled
+        # by _process_bundle_in_batch, which is mocked here).
+        assert state.get("last_event_date") is None
+        assert result is None
+
+        frozen_time.move_to("2026-01-01 00:00:01")
+        state, _, result = _run_process_events(connector, [event])
+        expected = (
+            datetime.fromtimestamp(ts, tz=timezone.utc) + timedelta(seconds=1)
+        ).isoformat()
+        assert state.get("last_event_date") == expected
+        assert result is None

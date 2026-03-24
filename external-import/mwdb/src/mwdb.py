@@ -22,22 +22,6 @@ from pycti import (
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
 
-__version__ = "6.9.20"
-BANNER = f"""
-
- ██████   ██████ █████   ███   █████ ██████████   ███████████
-░░██████ ██████ ░░███   ░███  ░░███ ░░███░░░░███ ░░███░░░░░███
- ░███░█████░███  ░███   ░███   ░███  ░███   ░░███ ░███    ░███
- ░███░░███ ░███  ░███   ░███   ░███  ░███    ░███ ░██████████
- ░███ ░░░  ░███  ░░███  █████  ███   ░███    ░███ ░███░░░░░███
- ░███      ░███   ░░░█████░█████░    ░███    ███  ░███    ░███
- █████     █████    ░░███ ░░███      ██████████   ███████████
-░░░░░     ░░░░░      ░░░   ░░░      ░░░░░░░░░░   ░░░░░░░░░░░
-\n
-\n
-                              MWDB Connector, version {__version__}
-"""
-
 
 class MWDB:
     def __init__(self):
@@ -203,22 +187,26 @@ class MWDB:
             pattern = "[ipv4-addr:value = '" + value + "']"
             relation_description = "Malware communicates with C2"
             tags = ["C2"]
+            observable_type = "IPv4-Addr"
         elif configtype == "c2-url-ref":
             description = "C2 URL containing a list of possible references"
             pattern = "[url:value = '" + value + "']"
             relation_description = "Malware communicates with this url"
             tags = ["C2 LIST"]
+            observable_type = "Url"
         else:
             description = "C2 - URL" + value
             pattern = "[url:value = '" + value + "']"
             relation_description = "Malware communicates with C2"
             tags = ["C2"]
+            observable_type = "Url"
 
         if str(self.create_indicators).capitalize() == "True":
             indicatorc2 = stix2.Indicator(
                 id=Indicator.generate_id(pattern),
                 name=value,
                 description=description,
+                indicator_types=["malicious-activity"],
                 pattern_type="stix",
                 pattern=pattern,
                 valid_from=parser.parse(virus["malware"]["upload_time"]),
@@ -230,6 +218,7 @@ class MWDB:
                 modified=parser.parse(virus["malware"]["upload_time"]),
                 custom_properties={
                     "x_opencti_score": self.score,
+                    "x_opencti_main_observable_type": observable_type,
                 },
             )
             objects.append(indicatorc2)
@@ -487,6 +476,7 @@ class MWDB:
                     id=Indicator.generate_id(pattern),
                     name=str(malware.file_name).replace("-" + malware.sha256, ""),
                     description=description,
+                    indicator_types=["malicious-activity"],
                     pattern_type="stix",
                     pattern=pattern,
                     valid_from=malware.upload_time,
@@ -498,6 +488,7 @@ class MWDB:
                     modified=malware.upload_time,
                     custom_properties={
                         "x_opencti_score": self.score,
+                        "x_opencti_main_observable_type": "StixFile",
                     },
                 )
 
@@ -666,7 +657,6 @@ class MWDB:
 
 if __name__ == "__main__":
     try:
-        print(BANNER)
         mwdb_connector = MWDB()
         mwdb_connector.run()
     except Exception:

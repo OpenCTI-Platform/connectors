@@ -71,6 +71,9 @@ class TaxiiPostConnector:
         self.taxii_stix_version = get_config_variable(
             "TAXII_STIX_VERSION", ["taxii", "stix_version"], config
         )
+        self.taxii_api_root = get_config_variable(
+            "TAXII_API_ROOT", ["taxii", "api_root"], config, default="root"
+        )
 
     def check_stream_id(self):
         """
@@ -90,7 +93,9 @@ class TaxiiPostConnector:
         self.helper.log_info("Processing the object " + data["id"])
         url = (
             self.taxii_url
-            + "/root/collections/"
+            + "/"
+            + self.taxii_api_root
+            + "/collections/"
             + self.taxii_collection_id
             + "/objects/"
         )

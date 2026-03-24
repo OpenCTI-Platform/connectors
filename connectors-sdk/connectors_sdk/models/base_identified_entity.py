@@ -10,16 +10,11 @@ from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.tlp_marking import TLPMarking
-from pydantic import (
-    Field,
-    PrivateAttr,
-)
+from pydantic import Field
 
 
 class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
     """Base class that can be identified thanks to a stix-like id."""
-
-    _stix2_id: str | None = PrivateAttr(default=None)
 
     author: BaseAuthorEntity | Reference | None = Field(
         default=None,

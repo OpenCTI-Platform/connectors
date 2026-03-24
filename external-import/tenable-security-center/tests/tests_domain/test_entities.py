@@ -19,7 +19,6 @@ from tenable_security_center.domain.entities import (
 
 from pydantic import ValidationError
 
-
 CONSTRUCTORS = {
     "author": {
         "class": Author,

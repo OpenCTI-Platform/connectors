@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Virustotal client module."""
+
 import base64
 import hashlib
 import json
