@@ -1,8 +1,9 @@
 import traceback
 
+from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
+
 from internal_enrichment_connector import ConnectorScoring
 from internal_enrichment_connector.config_loader import ConfigConnector
-from pycti import OpenCTIConnectorHelper, OpenCTIApiClient
 
 if __name__ == "__main__":
     """

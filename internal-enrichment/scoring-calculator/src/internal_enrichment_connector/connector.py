@@ -1,4 +1,4 @@
-from pycti import OpenCTIConnectorHelper, OpenCTIApiClient
+from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
 from .config_loader import ConfigConnector
@@ -109,7 +109,9 @@ class ConnectorScoring:
             return 0
 
         enabled = self.config.impact_enabled.get(category, False)
-        self.helper.connector_logger.debug(f"[IMPACT] Impact - impact_enabled[{category}]={enabled}")
+        self.helper.connector_logger.debug(
+            f"[IMPACT] Impact - impact_enabled[{category}]={enabled}"
+        )
         if not self.config.impact_enabled.get(category, False):
             return 0
 

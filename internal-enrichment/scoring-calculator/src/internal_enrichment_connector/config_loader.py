@@ -1,9 +1,9 @@
+import ast
+import json
 import os
 from pathlib import Path
 
 import yaml
-import json
-import ast
 from pycti import get_config_variable
 
 

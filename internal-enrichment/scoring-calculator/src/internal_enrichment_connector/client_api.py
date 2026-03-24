@@ -1,4 +1,5 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
+
 from pycti import OpenCTIApiClient
 
 GET_REL_QUERY = """
