@@ -72,6 +72,7 @@ There are a number of configuration options, which are set either in `docker-com
 |------------------|---------------------|-----------------------------|---------|-----------|------------------------------------------------------------|
 | TAXII URL        | taxii.url           | `TAXII_URL`                 |         | Yes       | URL of the TAXII server.                                   |
 | SSL Verify       | taxii.ssl_verify    | `TAXII_SSL_VERIFY`          | true    | No        | Verify SSL certificates.                                   |
+| API Root         | taxii.api_root      | `TAXII_API_ROOT`            | root    | No        | TAXII API root (path segment between server URL and /collections/). |
 | Collection ID    | taxii.collection_id | `TAXII_COLLECTION_ID`       |         | Yes       | TAXII collection ID to POST to.                            |
 | Token            | taxii.token         | `TAXII_TOKEN`               |         | No        | Bearer token (if set, Basic auth is ignored).              |
 | Login            | taxii.login         | `TAXII_LOGIN`               |         | No        | Username for Basic authentication.                         |
@@ -104,6 +105,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LIVE_STREAM_ID=ChangeMe
       - TAXII_URL=https://taxii.example.com
       - TAXII_SSL_VERIFY=true
+      - TAXII_API_ROOT=root
       - TAXII_COLLECTION_ID=ChangeMe
       - TAXII_TOKEN=ChangeMe
       - TAXII_VERSION=2.1

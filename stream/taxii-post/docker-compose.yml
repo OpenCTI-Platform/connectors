@@ -15,6 +15,7 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - TAXII_URL=https://taxii.changeme.com # The URL of the TAXII Server
       - TAXII_SSL_VERIFY=true
+      - TAXII_API_ROOT=root # The TAXII API root (path segment between server URL and /collections/)
       - TAXII_COLLECTION_ID=ChangeMe # The collection ID
       - TAXII_TOKEN= # Token for bearer auth (if set, will ignore basic auth params)
       - TAXII_LOGIN= # Login for basic auth
