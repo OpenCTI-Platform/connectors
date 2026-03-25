@@ -245,7 +245,7 @@ class InfrastructureType(_PermissiveEnum):
 class IncidentSeverity(_PermissiveEnum):
     """Incident Severity Open Vocabulary.
 
-    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L316
     """
 
     LOW = "low"
