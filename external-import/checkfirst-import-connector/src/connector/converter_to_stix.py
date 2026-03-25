@@ -127,7 +127,6 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    @lru_cache  # same channel shared by many articles
     def create_channel(self, name: str, source_url: str | None = None) -> Channel:
         external_refs: list[ExternalReference] = []
         if source_url:
