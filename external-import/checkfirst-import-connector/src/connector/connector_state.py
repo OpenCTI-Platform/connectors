@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class ConnectorState(BaseModel):
@@ -26,6 +26,9 @@ class ConnectorState(BaseModel):
         validate_assignment=True,  # ensure model is revalidate when setting properties
     )
 
+    _helper: OpenCTIConnectorHelper = PrivateAttr()
+    _cache: "ConnectorState | None" = PrivateAttr(default=None)
+
     last_run: datetime | None = Field(default=None)
     last_page: int = Field(default=1)
 
@@ -33,13 +36,13 @@ class ConnectorState(BaseModel):
         """Initialize the state manager with the connector helper."""
         super().__init__(**kwargs)
 
-        self.helper = helper
+        self._helper = helper
         self._cache: "ConnectorState | None" = None
 
     def load(self) -> "ConnectorState":
         """Load the state from OpenCTI."""
         if self._cache is None:
-            state = self.helper.get_state() or {}
+            state = self._helper.get_state() or {}
             for key in state:
                 setattr(self, key, state[key])
 
@@ -49,13 +52,9 @@ class ConnectorState(BaseModel):
 
     def save(self) -> None:
         """Save the state to OpenCTI."""
-        declared_fields = set(type(self).model_fields)
-        state_dict = self.model_dump_json(
-            include=declared_fields,
-            exclude_none=True,
-        )
+        state_dict = self.model_dump_json(exclude_none=True)
 
-        self.helper.set_state(json.loads(state_dict))
+        self._helper.set_state(json.loads(state_dict))
         self._cache = self.model_copy()
 
     def clear_cache(self) -> None:
