@@ -80,6 +80,8 @@ class CheckfirstClient:
         endpoint_url = f"{base_url}{endpoint}"
 
         retry_strategy = Retry(
+            allowed_methods=["GET"],
+            status_forcelist=[429, 500, 502, 503, 504],
             total=MAX_RETRIES,
             backoff_factor=RETRY_BACKOFF_SECONDS,
             respect_retry_after_header=True,
