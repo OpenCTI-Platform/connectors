@@ -94,12 +94,12 @@ class CyberThreatExchangeConnector:
 
     def _retrieve(self, path, list_key, params: dict = None):
         params = params or {}
-        params.update(page=1, page_size=200)
+        params.update(page_size=200)
         objects_count = 0
         more = True
         url = urljoin(self.base_url, path)
         while more:
-            resp = self.session.get(url, params=params)
+            resp = self.session.get(url, params=params.copy())
             data = resp.json()
             yield data[list_key]
             objects_count += len(data[list_key])
@@ -111,7 +111,7 @@ class CyberThreatExchangeConnector:
             if "next" in data:
                 url = data["next"]
             if "total_results_count" in data:
-                params.update(page=params["page"] + 1)
+                params.update(page=data['page_number'] + 1)
         return []
 
     def retrieve(self, path, list_key, params: dict = None):

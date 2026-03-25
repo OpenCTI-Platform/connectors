@@ -118,6 +118,7 @@ def test_list_subbed_feeds_success(
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "total_results_count": 2,
+        "page_number": 1,
         "results": [
             {
                 "feed": {"id": "feed-1", "name": "Feed One"},
@@ -157,12 +158,14 @@ def test_retrieve(
     mock_response_1 = MagicMock()
     mock_response_1.json.return_value = {
         "total_results_count": 3,
+        "page_number": 1,
         "results": [{"id": "obj-1"}, {"id": "obj-2"}],
     }
 
     mock_response_2 = MagicMock()
     mock_response_2.json.return_value = {
         "total_results_count": 3,
+        "page_number": 2,
         "results": [{"id": "obj-3"}],
     }
 
@@ -173,7 +176,15 @@ def test_retrieve(
     assert len(objects) == 3
     assert objects[0]["id"] == "obj-1"
     assert objects[2]["id"] == "obj-3"
-    assert mock_session.get.call_count == 2
+    mock_session.get.assert_has_calls(
+        [
+            call("https://test-ctx-url/v1/test/", params={"page_size": 200}),
+            call(
+                "https://test-ctx-url/v1/test/", params={"page_size": 200, "page": 2}
+            ),
+        ],
+        any_order=True,
+    )
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
@@ -184,6 +195,7 @@ def test_retrieve_with_params(
     mock_response = MagicMock()
     mock_response.json.return_value = {
         "total_results_count": 1,
+        "page_number": 1,
         "objects": [{"id": "obj-1"}],
     }
     mock_session.get.return_value = mock_response
@@ -194,6 +206,15 @@ def test_retrieve_with_params(
 
     assert len(objects) == 1
     # Verify params were passed
+    mock_session.get.assert_has_calls(
+        [
+            call(
+                "https://test-ctx-url/v1/test/",
+                params={"added_after": "2026-02-17T00:00:00Z", "page_size": 200},
+            )
+        ],
+        any_order=True,
+    )
     call_params = mock_session.get.call_args[1]["params"]
     assert "added_after" in call_params
     assert call_params["added_after"] == "2026-02-17T00:00:00Z"
@@ -208,12 +229,14 @@ def test_retrieve_generator(
     mock_response_1 = MagicMock()
     mock_response_1.json.return_value = {
         "total_results_count": 3,
+        "page_number": 1,
         "objects": [{"id": "obj-1"}, {"id": "obj-2"}],
     }
 
     mock_response_2 = MagicMock()
     mock_response_2.json.return_value = {
         "total_results_count": 3,
+        "page_number": 2,
         "objects": [{"id": "obj-3"}],
     }
 
@@ -250,7 +273,12 @@ def test_retrieve_with_next_url(
 
     assert len(batches) == 2
     # Verify second call used the next URL
-    assert mock_session.get.call_count == 2
+    mock_session.get.assert_has_calls(
+        [
+            call("https://test-ctx-url/v1/test/", params={"page_size": 200}),
+            call("https://test-ctx-url/v1/test/?page=2", params={"page_size": 200}),
+        ]
+    )
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
