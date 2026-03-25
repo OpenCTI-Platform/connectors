@@ -93,9 +93,10 @@ class CheckfirstImportConnector:
             {"api_endpoint": self.config.checkfirst.api_endpoint},
         )
 
-        octi_objects: list[BaseIdentifiedEntity] = []
+        # Set of _unique_ OCTI objects to be sent
+        # (uniqueness is determined by comparing objects' whole content, not just their IDs)
+        octi_objects: set[BaseIdentifiedEntity] = set()
 
-        seen_ids = set()
         rows_yielded = 0
         rows_in_bundle = 0
         current_page = start_page
@@ -117,11 +118,11 @@ class CheckfirstImportConnector:
             try:
                 row_octi_objects = self._create_row_entities(row)
 
-                # Deduplicate by ID before adding to bundle
-                for octi_object in row_octi_objects:
-                    if octi_object.id not in seen_ids:
-                        octi_objects.append(octi_object)
-                        seen_ids.add(octi_object.id)
+                # Rows share many same entities, so only original objects are added to the set
+                # (OCTI models are hashable and comparable for this very purpose)
+                for row_octi_object in row_octi_objects:
+                    if row_octi_object not in octi_objects:
+                        octi_objects.add(row_octi_object)
 
             except ConversionError as err:  # noqa: BLE001
                 run_reporter.skip(SkipReason.ROW_MAPPING_ERROR)
@@ -168,8 +169,7 @@ class CheckfirstImportConnector:
                     )
                 finally:
                     # Reset for next bundle
-                    seen_ids = set()
-                    octi_objects = []
+                    octi_objects = set()
                     rows_in_bundle = 0
 
         if not rows_yielded:
