@@ -10,11 +10,6 @@ if [ -d "$venv_name" ]; then
   rm -rf "$venv_name"
 fi
 
-if [ -f "coverage.xml" ]; then
-  echo 'Removing old coverage report'
-  rm "coverage.xml"
-fi
-
 if (( $# )); then
   test_requirements_files="$@"
   echo 'Using provided test-requirements.txt files:' "$test_requirements_files"
