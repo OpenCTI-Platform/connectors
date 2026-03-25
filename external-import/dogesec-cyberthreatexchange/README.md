@@ -37,7 +37,7 @@ The OpenCTI Cyber Threat Exchange Connector synchronizes intelligence from Feeds
 
 ### Requirements
 
-- OpenCTI >= 6.5.10
+- OpenCTI >= 6.8.0
 - Cyber Threat Exchange team subscribed to a plan with API access enabled
 - Cyber Threat Exchange API Key
 
@@ -112,7 +112,7 @@ services:
 1. Clone the repository and navigate to the connector directory
 2. Install dependencies: `pip install -r requirements.txt`
 3. Configure `config.yml`
-4. Run: `python main.py`
+4. Run: `python connector.py`
 
 ---
 
