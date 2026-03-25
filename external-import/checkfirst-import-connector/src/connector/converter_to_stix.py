@@ -244,11 +244,7 @@ class ConverterToStix:
         try:
             octi_objects = []
 
-            ipv4 = self.create_ipv4_address(
-                value=PRAVDA_IP["IP"],
-                # first_seen=PRAVDA_IP["first_seen"],
-                # last_seen=PRAVDA_IP["last_seen"],
-            )
+            ipv4 = self.create_ipv4_address(value=PRAVDA_IP["IP"])
             octi_objects.append(ipv4)
 
             for entry in PRAVDA_DOMAINS:
