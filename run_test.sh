@@ -71,7 +71,13 @@ do
   echo 'Installing requirements'
   uv pip install -q -r "$requirements_file"
 
-  uv pip freeze | grep "connectors-sdk\|pycti" || true
+  if uv pip show pytest-cov >/dev/null 2>&1; then
+    pytest_cov_installed_by_requirements="true"
+    echo 'pytest-cov is provided by test requirements'
+  else
+    pytest_cov_installed_by_requirements="false"
+    echo 'pytest-cov is not provided by test requirements'
+  fi
 
   if [ -n "$project_has_sdk_dependency" ] ; then
       echo 'Installing connectors-sdk local version'
@@ -79,24 +85,27 @@ do
       uv pip install -q ./connectors-sdk
   fi
 
-  uv pip freeze | grep "connectors-sdk\|pycti" || true
-
   echo 'Installing latest version of pycti'
   uv pip uninstall pycti
   REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
   uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
-  uv pip install -q pytest-cov
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   uv pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
-  # --cov-append: Aggregate coverage for all connectors
-  # --cov-fail-under=0: Some connectors have minimal coverage but this was never
-  #      enforced, and so is failing. Setting to 0 to avoid breaking the pipeline,
-  #      but should be increased in the future.
-  python -m pytest "$project" --cov --cov-branch --cov-append --cov-fail-under=0 \
-    --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  if [ "$pytest_cov_installed_by_requirements" = "true" ]; then
+    echo 'Using project pytest configuration'
+    # --cov is not needed because already configured as addopts in pyproject.toml
+    # --cov-append is needed to merge coverage results from multiple test runs
+    python -m pytest "$project" --cov-append --cov-report=xml \
+      --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  else
+    echo 'Installing pytest-cov and using explicit coverage arguments'
+    uv pip install -q pytest-cov
+    python -m pytest "$project" --cov --cov-append \
+      --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  fi
 
   echo 'Removing virtual environment'
   deactivate
