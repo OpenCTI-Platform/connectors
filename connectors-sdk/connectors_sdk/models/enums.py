@@ -13,6 +13,8 @@ __all__ = [
     "CvssSeverity",
     "HashAlgorithm",
     "ImplementationLanguage",
+    "IncidentSeverity",
+    "IncidentType",
     "InfrastructureType",
     "IndustrySector",
     "LocationType",
@@ -238,6 +240,35 @@ class InfrastructureType(_PermissiveEnum):
     STAGING = "staging"
     WORKSTATION = "workstation"
     UNKNOWN = "unknown"
+
+
+class IncidentSeverity(_PermissiveEnum):
+    """Incident Severity Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L316
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class IncidentType(_PermissiveEnum):
+    """Incident Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L278
+    """
+
+    ALERT = "alert"
+    COMPROMISE = "compromise"
+    INFORMATION_SYSTEM_DISRUPTION = "information-system-disruption"
+    RANSOMWARE = "ransomware"
+    REPUTATION_DAMAGE = "reputation-damage"
+    DATA_LEAK = "data-leak"
+    TYPOSQUATTING = "typosquatting"
+    PHISHING = "phishing"
+    CYBERCRIME = "cybercrime"
 
 
 class LocationType(StrEnum):
