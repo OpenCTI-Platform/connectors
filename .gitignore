@@ -21,5 +21,5 @@ black
 external-import/loaderinsightagency
 .cursor
 .coverage
-**/coverage.xml
+**/*coverage.xml
 **/junit.xml
