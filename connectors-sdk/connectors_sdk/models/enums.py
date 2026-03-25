@@ -257,7 +257,7 @@ class IncidentSeverity(_PermissiveEnum):
 class IncidentType(_PermissiveEnum):
     """Incident Type Open Vocabulary.
 
-    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L278
     """
 
     ALERT = "alert"
