@@ -4,7 +4,6 @@ setup: true
 orbs:
   slack: circleci/slack@4.15.0
   continuation: circleci/continuation@1.1.0
-  codecov: codecov/codecov@5
 
 executors:
   ci_environment:
@@ -222,7 +221,6 @@ jobs:
       # Save logs/reports as downloadable artifacts
       - store_artifacts:
           path: test_outputs
-      - codecov/upload
   build:
     parameters:
       ci_executor:
