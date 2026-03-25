@@ -4,6 +4,7 @@ setup: true
 orbs:
   slack: circleci/slack@4.15.0
   continuation: circleci/continuation@1.1.0
+  codecov: codecov/codecov@5
 
 executors:
   ci_environment:
@@ -212,15 +213,16 @@ jobs:
             set -euo pipefail
             circleci tests glob "**/test-requirements.txt" \
               | circleci tests run \
-                  --split-by=timings \
+                  --time-default=10s \
                   --command="xargs bash run_test.sh"
-        # Save JUnit so CircleCI can show pass/fail per connector and build timings history
+      # Save JUnit so CircleCI can show pass/fail per connector and build timings history
       - store_test_results:
           path: test_outputs
 
       # Save logs/reports as downloadable artifacts
       - store_artifacts:
           path: test_outputs
+      - codecov/upload
   build:
     parameters:
       ci_executor:

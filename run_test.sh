@@ -10,6 +10,11 @@ if [ -d "$venv_name" ]; then
   rm -rf "$venv_name"
 fi
 
+if [ -f "coverage.xml" ]; then
+  echo 'Removing old coverage report'
+  rm "coverage.xml"
+fi
+
 if (( $# )); then
   test_requirements_files="$@"
   echo 'Using provided test-requirements.txt files:' "$test_requirements_files"
@@ -56,7 +61,7 @@ do
   mkdir -p "$OUT_DIR"
 
   echo 'Creating isolated virtual environment'
-  uv venv "$venv_name"
+  uv venv -p 3.12 "$venv_name"
   if [ -f "$venv_name/bin/activate" ]; then
     source "$venv_name/bin/activate"  # Linux/MacOS
   elif [ -f "$venv_name/Scripts/activate" ]; then
@@ -80,12 +85,18 @@ do
   uv pip uninstall pycti
   REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
   uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
+  uv pip install -q pytest-cov
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   uv pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
-  python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  # --cov-append: Aggregate coverage for all connectors
+  # --cov-fail-under=0: Some connectors have minimal coverage but this was never
+  #      enforced, and so is failing. Setting to 0 to avoid breaking the pipeline,
+  #      but should be increased in the future.
+  python -m pytest "$project" --cov --cov-branch --cov-append --cov-fail-under=0 \
+    --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
 
   echo 'Removing virtual environment'
   deactivate
