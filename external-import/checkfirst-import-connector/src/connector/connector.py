@@ -87,6 +87,44 @@ class CheckfirstImportConnector:
 
         return [campaign, attributed_to] + article_entities
 
+    def _prepare_rows_bundle(
+        self, octi_objects: set[BaseIdentifiedEntity]
+    ) -> list[BaseIdentifiedEntity]:
+        """Prepare the list of OCTI objects to be sent in a bundle.
+        This includes deduplication of Channel objects by merging their external references.
+        """
+        self.logger.debug(
+            "[CONNECTOR] Deduplicating OpenCTI objects for bundle",
+            {"octi_objects_count": len(octi_objects)},
+        )
+
+        bundle_objects: list[BaseIdentifiedEntity] = []
+
+        channels_ids = set()
+        for octi_object in octi_objects:
+            if octi_object.id in channels_ids:
+                channel = next(
+                    (obj for obj in bundle_objects if obj.id == octi_object.id), None
+                )
+                if (
+                    channel
+                    and channel.external_references
+                    and octi_object.external_references
+                ):
+                    channel.external_references.extend(octi_object.external_references)
+            elif octi_object.id.startswith("channel--"):
+                channels_ids.add(octi_object.id)
+                bundle_objects.append(octi_object)
+            else:
+                bundle_objects.append(octi_object)
+
+        self.logger.debug(
+            "[CONNECTOR] Bundle ready to be sent",
+            {"bundle_objects_count": len(bundle_objects)},
+        )
+
+        return bundle_objects
+
     def _send_rows_bundles(self, start_page: int) -> None:
         self.logger.info(
             "[CONNECTOR] Fetching data from API",
@@ -154,7 +192,9 @@ class CheckfirstImportConnector:
                             "page": current_page,
                         },
                     )
-                    self._send_bundle(octi_objects)
+
+                    bundle_objects = self._prepare_rows_bundle(octi_objects)
+                    self._send_bundle(bundle_objects)
 
                     self.state.last_page = current_page
                     self.state.save()
@@ -185,7 +225,8 @@ class CheckfirstImportConnector:
                     "page": current_page,
                 },
             )
-            self._send_bundle(octi_objects)
+            bundle_objects = self._prepare_rows_bundle(octi_objects)
+            self._send_bundle(bundle_objects)
 
             self.state.last_page = current_page
             self.state.save()
