@@ -41,12 +41,6 @@ class Incident(BaseIdentifiedEntity):
         default=None,
         description="The time that this Incident was last seen.",
     )
-    confidence: int | None = Field(
-        default=None,
-        description="Confidence level for this Incident (0-100).",
-        ge=0,
-        le=100,
-    )
     labels: list[str] | None = Field(
         default=None,
         description="Labels of the Incident.",
@@ -62,7 +56,6 @@ class Incident(BaseIdentifiedEntity):
             name=self.name,
             description=self.description,
             created=self.created,
-            confidence=self.confidence,
             labels=self.labels,
             allow_custom=True,
             source=self.source,
