@@ -45,6 +45,10 @@ class Incident(BaseIdentifiedEntity):
         default=None,
         description="Labels of the Incident.",
     )
+    objective: str | None = Field(
+        default=None,
+        description="The objective of this Incident.",
+    )
 
     def to_stix2_object(self) -> Stix2Incident:
         """Make stix object."""
@@ -63,5 +67,6 @@ class Incident(BaseIdentifiedEntity):
             incident_type=self.incident_type,
             first_seen=self.first_seen,
             last_seen=self.last_seen,
+            objective=self.objective,
             **self._common_stix2_properties(),
         )
