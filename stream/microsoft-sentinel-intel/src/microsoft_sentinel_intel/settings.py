@@ -1,3 +1,5 @@
+from typing import Optional
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -73,6 +75,22 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     management_api_version: str = Field(
         description="API version of the Microsoft management interface",
         default="2025-03-01",
+    )
+    batch_size: Optional[int] = Field(
+        description="Number of indicators to accumulate before sending a batch to Microsoft Sentinel (max 100 per request).",
+        default=100,
+        ge=1,
+        le=100,
+    )
+    batch_timeout: Optional[float] = Field(
+        description="Maximum time in seconds to wait before sending a partial batch.",
+        default=30.0,
+    )
+    max_per_minute: Optional[int] = Field(
+        description="Maximum number of batch API calls per minute (Microsoft limit: 100 requests/min/workspace).",
+        default=100,
+        ge=1,
+        le=100,
     )
 
 

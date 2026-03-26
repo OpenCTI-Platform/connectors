@@ -119,6 +119,25 @@
       "default": "2025-03-01",
       "description": "API version of the Microsoft management interface",
       "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_BATCH_SIZE": {
+      "default": 100,
+      "description": "Number of indicators to accumulate before sending a batch to Microsoft Sentinel (max 100 per request).",
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT": {
+      "default": 30.0,
+      "description": "Maximum time in seconds to wait before sending a partial batch.",
+      "type": "number"
+    },
+    "MICROSOFT_SENTINEL_INTEL_MAX_PER_MINUTE": {
+      "default": 100,
+      "description": "Maximum number of batch API calls per minute (Microsoft limit: 100 requests/min/workspace).",
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
     }
   },
   "required": [

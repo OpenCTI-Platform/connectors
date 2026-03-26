@@ -26,4 +26,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS | `array` |  | string |  | `[]` | Extra labels added to the bundle sent. String separated by comma |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION | `string` |  | string |  | `"2024-02-01-preview"` | API version of the Microsoft log analytics workspace interface |
 | MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION | `string` |  | string |  | `"2025-03-01"` | API version of the Microsoft management interface |
+| MICROSOFT_SENTINEL_INTEL_BATCH_SIZE | `integer` |  | `1 <= x <= 100` |  | `100` | Number of indicators to accumulate before sending a batch to Microsoft Sentinel (max 100 per request). |
+| MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT | `number` |  | number |  | `30.0` | Maximum time in seconds to wait before sending a partial batch. |
+| MICROSOFT_SENTINEL_INTEL_MAX_PER_MINUTE | `integer` |  | `1 <= x <= 100` |  | `100` | Maximum number of batch API calls per minute (Microsoft limit: 100 requests/min/workspace). |
 | MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP | `string` |  | string | ⛔️ | `"default"` | The name of the resource group where the log analytics is |
