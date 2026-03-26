@@ -179,9 +179,7 @@ def test_retrieve(
     mock_session.get.assert_has_calls(
         [
             call("https://test-ctx-url/v1/test/", params={"page_size": 200}),
-            call(
-                "https://test-ctx-url/v1/test/", params={"page_size": 200, "page": 2}
-            ),
+            call("https://test-ctx-url/v1/test/", params={"page_size": 200, "page": 2}),
         ],
         any_order=True,
     )

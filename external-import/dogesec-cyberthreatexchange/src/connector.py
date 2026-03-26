@@ -111,7 +111,7 @@ class CyberThreatExchangeConnector:
             if "next" in data:
                 url = data["next"]
             if "total_results_count" in data:
-                params.update(page=data['page_number'] + 1)
+                params.update(page=data["page_number"] + 1)
         return []
 
     def retrieve(self, path, list_key, params: dict = None):
