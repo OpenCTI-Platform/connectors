@@ -61,7 +61,6 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
             marking_ids=src_entity.object_marking_refs,
             created=datetime.now(tz=timezone.utc),
             modified=datetime.now(tz=timezone.utc),
-            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )
 
     def __init__(
@@ -108,7 +107,7 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
                 mitre_id=technique_id,
                 organization_id=self.organization.id,
                 marking_ids=[self.tlp_marking.id],
-                description=f"Attack technique {technique_id} (minimal representation)",
+                description=None,
                 aliases=None,
                 first_seen=None,
                 last_seen=None,
