@@ -120,7 +120,7 @@ services:
 1. Clone the repository
 2. Copy `src/config.yml.sample` to `src/config.yml` and configure
 3. Install dependencies: `pip install -r requirements.txt`
-4. Run the connector: `python src/ipqs_analyzer.py`
+4. Run the connector: `python src/ipqs-analyzer.py`
 
 ---
 
