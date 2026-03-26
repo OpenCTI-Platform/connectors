@@ -22,6 +22,7 @@ crowdstrike:
   malware_start_timestamp:  # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL malware!
   report_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL reports!
   vulnerability_start_timestamp:                                    # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL vulnerabilities!
+  vulnerability_import_affected_products: false
   report_status: 'New'
   report_include_types: 'notice,tipper,intelligence report,periodic report'
   report_type: 'threat-report'
