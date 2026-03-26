@@ -6,29 +6,31 @@
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [Scout API Configuration](#scout-api-configuration)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Usage](#usage)
-- [Behavior](#behavior)
-  - [Data Flow](#data-flow)
-  - [API Endpoints](#api-endpoints)
-  - [Generated STIX Objects](#generated-stix-objects)
-- [Debugging](#debugging)
-- [Additional Information](#additional-information)
+- [OpenCTI Team Cymru Scout Search Connector](#opencti-team-cymru-scout-search-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration](#configuration)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+    - [Data Flow](#data-flow)
+    - [API Endpoints](#api-endpoints)
+    - [Processing Details](#processing-details)
+    - [Generated STIX Objects](#generated-stix-objects)
+  - [Debugging](#debugging)
+  - [Additional Information](#additional-information)
+    - [Early Access](#early-access)
+    - [Use Case](#use-case)
 
 ---
 
 ## Introduction
 
-**Scout Search Connector** is a powerful cyber threat intelligence tool that uniquely provides real-time visibility of external threats at speeds others cannot match. This internal enrichment connector allows OpenCTI users to query the Team Cymru Scout API using Text observables for playbook-based queries.
+**Scout Search Connector** is a powerful cyber threat intelligence tool that uniquely provides real-time visibility of external threats at speeds others cannot match. This internal enrichment connector allows OpenCTI users to query the Team Cymru Scout API using Indicator observables for playbook-based queries.
 
 This connector queries the Scout API endpoints in real-time and transforms the response into standardized STIX 2.1 bundles compatible with the OpenCTI platform.
 
@@ -74,12 +76,14 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=scout-search-connector
       - CONNECTOR_NAME=Scout Search Connector
-      - CONNECTOR_SCOPE=Text
+      - CONNECTOR_SCOPE=Indicator
       - CONNECTOR_LOG_LEVEL=error
       - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
       - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe
       - PURE_SIGNAL_SCOUT_MAX_TLP=TLP:AMBER
       - PURE_SIGNAL_SCOUT_SEARCH_INTERVAL=1
+      - PURE_SIGNAL_SCOUT_INDICATOR_PATTERN_TYPE=pure-signal-scout
+      - PURE_SIGNAL_SCOUT_PATTERN_DESCRIPTION=Scout Search Query Pattern
     restart: always
 ```
 
@@ -95,11 +99,11 @@ services:
 ## Usage
 
 The connector performs searches by:
-1. Receiving Text observable enrichment requests (typically from playbooks)
+1. Receiving Indicator observable enrichment requests (typically from playbooks)
 2. Querying the Scout API with the search query
 3. Returning STIX 2.1 bundles with search results
 
-This connector is designed for playbook integration where Text observables contain search queries.
+This connector is designed for playbook integration where Indicator observables contain search queries.
 
 ---
 
@@ -109,7 +113,7 @@ This connector is designed for playbook integration where Text observables conta
 
 ```mermaid
 flowchart LR
-    A[Text Observable] --> B[Scout Search Connector]
+    A[Indicator Observable] --> B[Scout Search Connector]
     B --> C{Scout API}
     C --> D[Search Results]
     D --> E[STIX 2.1 Bundle]
@@ -120,7 +124,7 @@ flowchart LR
 
 | Observable Type | API Endpoint | Description |
 |-----------------|--------------|-------------|
-| Text | `/search?query={query}&days={days}` | Text-based search |
+| Indicator | `/search?query={query}&days={days}` | Indicator-based search |
 
 ### Processing Details
 
@@ -164,4 +168,4 @@ This connector is currently in early access. Please report any issues or feedbac
 
 ### Use Case
 
-This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create a Text observable with your search query and trigger enrichment.
+This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create a Indicator observable with your search query and trigger enrichment.
