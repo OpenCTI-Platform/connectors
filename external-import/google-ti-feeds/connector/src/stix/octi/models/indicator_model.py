@@ -73,7 +73,7 @@ class OctiIndicatorModel:
             "modified": kwargs.pop("modified", datetime.now()),
             "name": name,
             "description": description,
-            "indicator_types": indicator_types or [IndicatorTypeOV.MALICIOUS_ACTIVITY],
+            "indicator_types": indicator_types if indicator_types is not None else [],
             "pattern": pattern,
             "pattern_type": pattern_type,
             "valid_from": valid_from or datetime.now(),
