@@ -36,8 +36,8 @@ do
   project_has_changed=$(git diff "$base_commit" HEAD "$project/..")
   project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$project/.." || true)
 
-  if [ "$CIRCLE_BRANCH" = "master" ]; then
-    echo "🔄 On master branch, running all tests for: " "$project"
+  if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-"master"}" ]; then
+    echo "🔄 On ${RELEASE_REF:-"master"} branch, running all tests for: " "$project"
   elif [ -n "$changes_outside_of_connectors_scope" ] ; then
     echo "🔄 Changes detected outside of connectors scope - running all tests for: " "$project"
   elif [ -n "$sdk_has_change" ] && [ -n "$project_has_sdk_dependency" ] ; then
@@ -56,7 +56,7 @@ do
   mkdir -p "$OUT_DIR"
 
   echo 'Creating isolated virtual environment'
-  python -m venv "$venv_name"
+  uv venv -p 3.12 "$venv_name"
   if [ -f "$venv_name/bin/activate" ]; then
     source "$venv_name/bin/activate"  # Linux/MacOS
   elif [ -f "$venv_name/Scripts/activate" ]; then
@@ -64,24 +64,25 @@ do
   fi
 
   echo 'Installing requirements'
-  python -m pip install -q -r "$requirements_file"
+  uv pip install -q -r "$requirements_file"
 
-  python -m pip freeze | grep "connectors-sdk\|pycti" || true
+  uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   if [ -n "$project_has_sdk_dependency" ] ; then
       echo 'Installing connectors-sdk local version'
-      python -m pip uninstall -y connectors-sdk
-      python -m pip install -q ./connectors-sdk
+      uv pip uninstall connectors-sdk
+      uv pip install -q ./connectors-sdk
   fi
 
-  python -m pip freeze | grep "connectors-sdk\|pycti" || true
+  uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   echo 'Installing latest version of pycti'
-  python -m pip uninstall -y pycti
-  python -m pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@lts/7.260309.0#subdirectory=client-python
-  python -m pip freeze | grep "connectors-sdk\|pycti" || true
+  uv pip uninstall pycti
+  REF="${CIRCLE_TAG:-${RELEASE_REF:-"lts/7.260309.0"}}"
+  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
+  uv pip freeze | grep "connectors-sdk\|pycti" || true
 
-  python -m pip check || exit 1  # exit if dependencies are broken
+  uv pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
   python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
