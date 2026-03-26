@@ -190,60 +190,57 @@ class NameShield:
                 "Authorization": "Bearer {}".format(self.nameshield_auth_bearer),
                 "Content-Type": "application/json",
             }
-            ioc_types = ["host"]
             nameshield_result = []
-            for ioc_type in ioc_types:
-
-                url = self.make_url_dom_list()
-                response = requests.get(
-                    url, headers=headers, verify=True, timeout=(600, 600)
+            url = self.make_url_dom_list()
+            response = requests.get(
+                url, headers=headers, verify=True, timeout=(600, 600)
+            )
+            self.helper.connector_logger.debug(
+                f"We get a response from NameShield API: {response.status_code}."
+            )
+            r_json = response.json()
+            # print(r_json)
+            if "errors" in r_json:
+                self.helper.connector_logger.error(
+                    f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
                 )
-                self.helper.connector_logger.debug(
-                    f"We get a response from NameShield API: {response.status_code}."
+                self.helper.set_state(
+                    {
+                        "Error": f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
+                    }
                 )
-                r_json = response.json()
-                # print(r_json)
-                if "errors" in r_json:
-                    self.helper.connector_logger.error(
-                        f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
+                return None
+            # Check is a message has arrived
+            if "message" in r_json:
+                self.helper.connector_logger.error(
+                    f"NameShield send a message : {r_json['message']}"
+                )
+            # Check if data field is present
+            if not "data" in r_json:
+                self.helper.connector_logger.error(
+                    "NameShield response has no data field."
+                )
+                keys_str = ",".join(r_json.keys())
+                self.helper.set_state(
+                    {
+                        "Error": f"Error NameShield no data returned only thoses keys:  {keys_str}"
+                    }
+                )
+                return None
+            # We have to retreive details for each domain
+            self.helper.connector_logger.debug(f"We get : {str(r_json.keys())}.")
+            for domain_entry in r_json["data"][: self.nameshield_ioc_limit]:
+                domain_name = domain_entry["domain"]
+                if domain_name:
+                    url_domain = self.make_url_dom(domain_name)
+                    response_domain = requests.get(
+                        url_domain,
+                        headers=headers,
+                        verify=True,
+                        timeout=(600, 600),
                     )
-                    self.helper.set_state(
-                        {
-                            "Error": f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
-                        }
-                    )
-                    return None
-                # Check is a message has arrived
-                if "message" in r_json:
-                    self.helper.connector_logger.error(
-                        f"NameShield send a message : {r_json['message']}"
-                    )
-                # Check if data field is present
-                if not "data" in r_json:
-                    self.helper.connector_logger.error(
-                        "NameShield response has no data field."
-                    )
-                    keys_str = ",".join(r_json.keys())
-                    self.helper.set_state(
-                        {
-                            "Error": f"Error NameShield no data returned only thoses keys:  {keys_str}"
-                        }
-                    )
-                    return None
-                # We have to retreive details for each domain
-                self.helper.connector_logger.debug(f"We get : {str(r_json.keys())}.")
-                for domain_entry in r_json["data"][: self.nameshield_ioc_limit]:
-                    domain_name = domain_entry["domain"]
-                    if domain_name:
-                        url_domain = self.make_url_dom(domain_name)
-                        response_domain = requests.get(
-                            url_domain,
-                            headers=headers,
-                            verify=True,
-                            timeout=(600, 600),
-                        )
-                        domain_info = response_domain.json()
-                        nameshield_result.append(domain_info["data"])
+                    domain_info = response_domain.json()
+                    nameshield_result.append(domain_info["data"])
             return nameshield_result
         except Exception as e:
             self.helper.connector_logger.error(
