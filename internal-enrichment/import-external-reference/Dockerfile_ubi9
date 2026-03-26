@@ -1,0 +1,38 @@
+FROM redhat/ubi9-minimal
+
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Set environment variable
+ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+
+# Where to install Playwright browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Set working directory
+WORKDIR /opt/connector
+
+# Copy the connector
+COPY src /opt/connector
+
+RUN set -eux; \
+    microdnf -y --setopt=install_weak_deps=0 install -y \
+        python3.12 python3.12-pip git \
+        pango cairo gdk-pixbuf2 libffi \
+        nss atk at-spi2-atk cups-libs libdrm libxkbcommon \
+        libXcomposite libXdamage libXrandr libgbm alsa-lib gtk3 \
+        file-libs; \
+    microdnf clean all
+
+# Install Python dependencies
+RUN pip3.12 install --no-cache-dir -r requirements.txt
+
+# Install Playwright and its dependencies
+RUN playwright install chromium --only-shell
+
+# Clean up unnecessary files
+RUN microdnf clean all && \
+    rm -rf /var/cache/yum && \
+    rm -rf /root/.cache
+
+CMD ["python3.12", "import-external-reference.py"]
+
