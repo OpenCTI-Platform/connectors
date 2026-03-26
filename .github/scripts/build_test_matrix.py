@@ -21,6 +21,7 @@ import json
 import math
 import os
 import subprocess
+from pathlib import Path
 
 GITHUB_ACTIONS_JOB_LIMIT = 256
 
@@ -46,7 +47,8 @@ def git(*args: str) -> str:
 
 
 def get_base_commit() -> str | None:
-    commit = git("merge-base", "origin/master", "HEAD")
+    release_ref = os.environ.get("RELEASE_REF", "master")
+    commit = git("merge-base", f"origin/{release_ref}", "HEAD")
     return commit or None
 
 
@@ -59,9 +61,9 @@ def has_changes(base_commit: str, *pathspecs: str) -> bool:
     return bool(result.stdout.strip())
 
 
-def has_sdk_dependency(connector_dir: str) -> bool:
+def has_sdk_dependency(connector_dir: Path) -> bool:
     result = subprocess.run(
-        ["grep", "-rl", "connectors-sdk", connector_dir],
+        ["grep", "-rl", "connectors-sdk", str(connector_dir)],
         capture_output=True,
         text=True,
     )
@@ -73,7 +75,7 @@ def has_sdk_dependency(connector_dir: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def connector_dir(req_path: str) -> str:
+def connector_dir(req_path: str) -> Path:
     """
     Directory that owns the connector — mirrors `$project/..` from run_test.sh,
     where $project is dirname(req_path).
@@ -83,17 +85,17 @@ def connector_dir(req_path: str) -> str:
       connectors-sdk/tests/test-requirements.txt               → connectors-sdk
       stream/sekoia-intel/src/test-requirements.txt            → stream/sekoia-intel
     """
-    return os.path.normpath(os.path.join(os.path.dirname(req_path), ".."))
+    return Path(req_path).parent.parent
 
 
 def connector_type(req_path: str) -> str:
     """Top-level directory, e.g. 'external-import'."""
-    return req_path.split("/")[0]
+    return Path(req_path).parts[0]
 
 
 def connector_name(req_path: str) -> str:
     """Second path segment, e.g. 'my-connector'."""
-    parts = req_path.split("/")
+    parts = Path(req_path).parts
     return parts[1] if len(parts) >= 2 else req_path
 
 
@@ -115,7 +117,7 @@ def should_run(
         return True  # no git history, run everything
 
     cdir = connector_dir(req_path)
-    if has_changes(base_commit, cdir):
+    if has_changes(base_commit, str(cdir)):
         return True
     if sdk_changed and has_sdk_dependency(cdir):
         return True
@@ -163,14 +165,15 @@ def write_output(key: str, value: str) -> None:
     output_file = os.environ.get("GITHUB_OUTPUT")
     line = f"{key}={value}\n"
     if output_file:
-        with open(output_file, "a") as f:
+        with Path(output_file).open("a") as f:
             f.write(line)
     else:
         print(line, end="")
 
 
 def main() -> None:
-    is_master = os.environ.get("GITHUB_REF") == "refs/heads/master"
+    release_ref = os.environ.get("RELEASE_REF", "master")
+    is_master = os.environ.get("GITHUB_REF_NAME") == release_ref
     base_commit = get_base_commit()
 
     changes_outside_scope = False
@@ -183,7 +186,7 @@ def main() -> None:
         sdk_changed = has_changes(base_commit, "connectors-sdk")
 
     all_paths = [
-        p.lstrip("./")
+        str(Path(p))
         for p in subprocess.run(
             ["find", ".", "-name", "test-requirements.txt", "-type", "f"],
             capture_output=True,

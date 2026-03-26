@@ -51,6 +51,27 @@ jobs:
         with:
           fetch-depth: 0  # needed for git merge-base in build_test_matrix.py
 
+      - name: Resolve RELEASE_REF
+        run: |
+          PR_BASE_REF="${{ github.base_ref }}"
+
+          if [ -n "${PR_BASE_REF:-}" ]; then
+            case "${PR_BASE_REF}" in
+              master|release/6.9.x|lts/*)
+                RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+                echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+              *)
+                RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+                echo "PR base '${PR_BASE_REF}' is outside allowed refs, using fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+            esac
+          else
+            RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+            echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+          fi
+          echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$GITHUB_ENV"
+
       - id: set-matrix
         name: Build test matrix from test-requirements.txt files
         run: python .github/scripts/build_test_matrix.py
@@ -69,6 +90,27 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Resolve RELEASE_REF
+        run: |
+          PR_BASE_REF="${{ github.base_ref }}"
+
+          if [ -n "${PR_BASE_REF:-}" ]; then
+            case "${PR_BASE_REF}" in
+              master|release/6.9.x|lts/*)
+                RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+                echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+              *)
+                RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+                echo "PR base '${PR_BASE_REF}' is outside allowed refs, using fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+            esac
+          else
+            RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+            echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+          fi
+          echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$GITHUB_ENV"
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v8.0.0
