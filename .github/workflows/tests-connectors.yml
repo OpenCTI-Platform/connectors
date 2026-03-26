@@ -137,6 +137,13 @@ jobs:
           fail_ci_if_error: false
           verbose: true
 
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+
   baseline-coverage:
     name: Baseline coverage (untested connectors)
     runs-on: ubuntu-latest
