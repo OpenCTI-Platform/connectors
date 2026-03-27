@@ -130,7 +130,7 @@ class Misp:
 
         entities_size = self._get_serialized_size_bytes(entities)
         if metadata_size + DataSize(entities_size) <= int(batch_size_limit):
-            self.logger.info(
+            self.logger.debug(
                 "All entities fit in the batch size limit, no need to split",
                 {
                     "prefix": LOG_PREFIX,
@@ -167,7 +167,7 @@ class Misp:
 
             single_entity_size = metadata_size + entity_size
             if int(single_entity_size) > int(batch_size_limit):
-                self.logger.warning(
+                self.logger.info(
                     "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
                     {
                         "prefix": LOG_PREFIX,
@@ -541,7 +541,7 @@ class Misp:
                 self.batch_processor.work_name_template = (
                     f"MISP run @ {now.isoformat(timespec='seconds')}"
                     f" - Event # {event.Event.id}"
-                    f" - Completion # {completion_before_subchunk}%"
+                    f" - Completion {completion_before_subchunk}%"
                 )
 
                 self._check_and_add_entities_to_batch(subchunk, author, markings)
@@ -563,7 +563,7 @@ class Misp:
         self.batch_processor.work_name_template = (
             f"MISP run @ {now.isoformat(timespec='seconds')}"
             f" - Event # {event.Event.id}"
-            " - Completion # 100%"
+            " - Completion 100%"
         )
 
         # Flush any remaining items and Update the final state
