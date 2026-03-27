@@ -9,7 +9,7 @@ Handles five data families:
   - Malicious URLs           →  Indicator + IPv4-Addr / DomainName / URL + Malware SDO
   - Phishing Sites           →  Indicator + DomainName / URL
   - Malware Hashes           →  Indicator + File (StixFile) + Malware SDO
-  - Compromised Credentials  →  Indicator + UserAccount + URL + IPv4-Addr + Malware SDO + Note
+  - Compromised Credentials  →  Incident + UserAccount + URL + IPv4-Addr + Malware SDO + Note
   - Credit Card Tickets      →  Incident + Identity + Note
 """
 
@@ -650,28 +650,32 @@ class ConverterToStix:
 
     def _create_user_account_observable(
         self,
-        url: str,
         account_login: str,
         account_password: str,
+        record_id: int | str = "",
         labels: list[str] | None = None,
     ) -> stix2.UserAccount:
         """Create a User-Account SCO with deterministic ID.
 
         User-Account has no ID-contributing properties in the STIX 2.1 spec,
         so stix2 would generate a random UUID each time. We manually build a
-        deterministic UUIDv5 from the combination of url + account_login +
-        account_password so that the same credential tuple always maps to the
-        same STIX object while different credentials (same login, different
-        password or target) produce distinct objects.
+        deterministic UUIDv5 from the USTA API record ID so that the same API
+        record always maps to the same STIX object without
+        leaking the password into the ID.
 
         Args:
+            account_password: Raw password — only stored in ``credential``
+                when ``store_credential_password`` is enabled; never used
+                for ID generation.
+            record_id: The unique record ID returned by the USTA API.  Used
+                as the primary deduplication key.
             labels: Optional list of label strings attached via
                 x_opencti_labels (e.g. "corporate", "personal", "malware").
         """
         deterministic_id = "user-account--" + str(
             uuid.uuid5(
                 uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"),
-                name=f"{url}{account_login}{account_password}",
+                name=str(record_id),
             )
         )
         custom: dict[str, Any] = {"x_opencti_created_by_ref": self.author.id}
@@ -768,7 +772,7 @@ class ConverterToStix:
                 ua_labels.append(f"password-strength-{score}")
 
         user_account = self._create_user_account_observable(
-            target_url, username, _password, labels=ua_labels
+            username, _password, record_id=ticket_id, labels=ua_labels
         )
         stix_objects.append(user_account)
 
@@ -784,6 +788,11 @@ class ConverterToStix:
             url_obs = self._create_url_observable(target_url)
             stix_objects.append(url_obs)
             observable_scos.append(url_obs)
+            # Direct link: user-account → related-to → url so the target URL
+            # is visible on the UserAccount entity in OpenCTI.
+            stix_objects.append(
+                self._make_relationship("related-to", user_account.id, url_obs.id)
+            )
 
             # Extract domain from target URL
             parsed = urlparse(
@@ -1172,7 +1181,7 @@ class ConverterToStix:
 
         # Embed report PDF directly in the STIX bundle so OpenCTI attaches it
         # to the Report entity atomically — no async timing issues.
-        custom_properties: dict[str, Any] = {"confidence": self.confidence}
+        custom_properties: dict[str, Any] = {}
         pdf_data: bytes | None = record.get("_pdf_data")
         pdf_filename: str | None = record.get("_pdf_filename")
         if pdf_data and pdf_filename:
@@ -1198,6 +1207,7 @@ class ConverterToStix:
             created=created,
             created_by_ref=self.author.id,
             object_marking_refs=[record_tlp.id],
+            confidence=self.confidence,
             allow_custom=True,
             external_references=[ext_ref] if ext_ref else None,
             custom_properties=custom_properties,
@@ -1216,6 +1226,16 @@ class ConverterToStix:
         if is_domain and host_value:
             return "Domain-Name"
         if ip_addresses:
+            for addr_str in ip_addresses:
+                try:
+                    addr = ipaddress.ip_address(addr_str)
+                    return (
+                        "IPv6-Addr"
+                        if isinstance(addr, ipaddress.IPv6Address)
+                        else "IPv4-Addr"
+                    )
+                except ValueError:
+                    continue
             return "IPv4-Addr"
         if host_value:
             try:

@@ -196,33 +196,29 @@ class TestObservableHelpers:
 
     def test_user_account_deterministic(self, mock_helper):
         c = ConverterToStix(mock_helper)
-        url = "https://login.example.com"
-        a1 = c._create_user_account_observable(url, "user@test.com", "s3cr3t")
-        a2 = c._create_user_account_observable(url, "user@test.com", "s3cr3t")
+        a1 = c._create_user_account_observable("user@test.com", "s3cr3t", record_id=42)
+        a2 = c._create_user_account_observable("user@test.com", "s3cr3t", record_id=42)
         assert a1.id == a2.id
         assert a1.account_login == "user@test.com"
 
-    def test_user_account_different_password_gives_different_id(self, mock_helper):
+    def test_user_account_same_record_id_gives_same_id_regardless_of_password(
+        self, mock_helper
+    ):
+        # Password no longer influences the deterministic ID — only record_id does.
         c = ConverterToStix(mock_helper)
-        url = "https://login.example.com"
-        a1 = c._create_user_account_observable(url, "user@test.com", "pass1")
-        a2 = c._create_user_account_observable(url, "user@test.com", "pass2")
-        assert a1.id != a2.id
+        a1 = c._create_user_account_observable("user@test.com", "pass1", record_id=99)
+        a2 = c._create_user_account_observable("user@test.com", "pass2", record_id=99)
+        assert a1.id == a2.id
 
-    def test_user_account_different_url_gives_different_id(self, mock_helper):
+    def test_user_account_different_record_id_gives_different_id(self, mock_helper):
         c = ConverterToStix(mock_helper)
-        a1 = c._create_user_account_observable(
-            "https://site-a.com", "user@test.com", "pass"
-        )
-        a2 = c._create_user_account_observable(
-            "https://site-b.com", "user@test.com", "pass"
-        )
+        a1 = c._create_user_account_observable("user@test.com", "pass", record_id=1)
+        a2 = c._create_user_account_observable("user@test.com", "pass", record_id=2)
         assert a1.id != a2.id
 
     def test_user_account_labels_stored_in_custom_property(self, mock_helper):
         c = ConverterToStix(mock_helper)
         ua = c._create_user_account_observable(
-            "https://login.example.com",
             "u@t.com",
             "p",
             labels=["corporate", "malware"],
@@ -231,7 +227,7 @@ class TestObservableHelpers:
 
     def test_user_account_no_labels_omits_custom_property(self, mock_helper):
         c = ConverterToStix(mock_helper)
-        ua = c._create_user_account_observable("https://login.example.com", "u", "p")
+        ua = c._create_user_account_observable("u", "p")
         assert ua.get("x_opencti_labels") is None
 
 

@@ -310,7 +310,7 @@ class TestCollectors:
         )
         with patch("connector.connector.requests") as mock_requests:
             mock_resp = MagicMock()
-            mock_resp.content = b"%PDF-1.4 test"
+            mock_resp.iter_content.return_value = [b"%PDF-1.4 test"]
             mock_resp.raise_for_status = MagicMock()
             mock_requests.get.return_value = mock_resp
             conn._collect_deep_sight_tickets("t")

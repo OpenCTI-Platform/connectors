@@ -28,7 +28,7 @@ The USTA connector is an **External Import** connector that periodically fetches
 - Deterministic STIX IDs for proper deduplication
 - Automatic batch splitting for large datasets
 - Rate limiting and exponential-backoff retry
-- Full `schedule_process()` integration (OpenCTI ≥ 6.2.12)
+- Full `schedule_process()` integration (OpenCTI ≥ 6.6.4)
 - Raw passwords are **not** stored by default (opt-in via `USTA_STORE_CREDENTIAL_PASSWORD=true`); card numbers are masked to BIN + last 4
 
 ---
@@ -40,7 +40,7 @@ The USTA connector is an **External Import** connector that periodically fetches
 | `/ioc/malicious-urls` | C2 infrastructure, RAT callbacks | IPv4-Addr, Domain-Name, URL, Indicator, Malware |
 | `/ioc/phishing-sites` | Credential harvesting domains | URL, Domain-Name, Indicator |
 | `/ioc/malware-hashes` | Known malware samples | File (StixFile), Indicator, Malware |
-| `.../compromised-credentials-tickets` | Stolen credentials | User-Account, URL, Domain-Name, IPv4-Addr, Indicator, Malware, Note |
+| `.../compromised-credentials-tickets` | Stolen credentials | Incident, User-Account, URL, Domain-Name, IPv4-Addr, Malware, Note |
 | `.../credit-card-tickets` | Compromised payment cards | Incident, Identity, Note |
 | `.../deep-sight-tickets` | Threat reports, leaks, APT activity | Report, ThreatActor, Identity, Relationship |
 
@@ -59,13 +59,15 @@ Indicator ──based-on──▸ Observable (IPv4 / Domain / URL / File)
 ### Compromised Credentials
 
 ```
-Indicator ──based-on──▸ User-Account (compromised login)
-    │                 ▸ URL (target login page)
-    │                 ▸ IPv4-Addr (victim machine IP)
-    │
-    ├──indicates──▸ Malware (stealer family from victim_detail)
+Incident ──related-to──▸ User-Account (compromised login)
+    │    ──related-to──▸ URL (target login page)
+    │    ──related-to──▸ Domain-Name (extracted from URL)
+    │    ──related-to──▸ IPv4-Addr (victim machine IP)
+    │    ──uses────────▸ Malware (stealer family from victim_detail)
     │
     └── Note (victim telemetry: OS, CPU, infection date)
+
+User-Account ──related-to──▸ URL (target login page)
 ```
 
 ### Credit Card Fraud Tickets
@@ -94,7 +96,7 @@ Report ──contains──▸ ThreatActor (per threat actor entry)
 
 ## Requirements
 
-- OpenCTI Platform ≥ **6.2.12**
+- OpenCTI Platform ≥ **6.6.4**
 - Python ≥ **3.12** (for local development)
 - A valid **USTA API Bearer Token** (obtain from USTA platform)
 
@@ -216,15 +218,15 @@ usta/
 
 ### Compromised Accounts / Credentials
 
-Compromised credentials are imported as **Indicators** with `x_opencti_main_observable_type = User-Account`.
+Compromised credentials are imported as an **Incident** with related STIX objects.
 
 1. **Observations → Observables**: Filter by type `User Account`. Each compromised login appears as a `User-Account` SCO with the `account_login` field set to the stolen username/email.
 
-2. **Analysis → Indicators**: Filter labels by `compromised-credentials`. Each indicator has a STIX pattern like `[user-account:account_login = 'user@example.com']`.
+2. **Events → Incidents**: An Incident SDO is created per credential record, linked to the User-Account, URL, and IP observables via `related-to` relationships.
 
-3. **Analysis → Notes**: Victim telemetry (OS, IP, computer name, infection date, stealer family) is attached as Notes linked to the Indicator and User-Account.
+3. **Analysis → Notes**: Victim telemetry (OS, IP, computer name, infection date, stealer family) is attached as Notes linked to the Incident and User-Account.
 
-4. **Threats → Malware**: Stealer families (e.g., "StealC", "Vidar") are created as Malware SDOs and linked via `indicates` relationships.
+4. **Threats → Malware**: Stealer families (e.g., "StealC", "Vidar") are created as Malware SDOs and linked via `related-to` relationships.
 
 ### Malicious URLs / Phishing Sites
 

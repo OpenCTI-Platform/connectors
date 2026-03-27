@@ -24,6 +24,8 @@ from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from usta_client import UstaClient, UstaClientError
 
+_MAX_PDF_BYTES = 50 * 1024 * 1024  # 50 MB
+
 
 @dataclass
 class _FeedConfig:
@@ -339,18 +341,37 @@ class UstaConnector:
                     if report_url:
                         filename = self._extract_filename_from_url(report_url)
                         try:
-                            response = requests.get(report_url, timeout=60)
+                            response = requests.get(report_url, timeout=60, stream=True)
                             response.raise_for_status()
-                            record["_pdf_data"] = response.content
-                            record["_pdf_filename"] = filename
-                            self.helper.connector_logger.debug(
-                                "[CONNECTOR] Downloaded Deep Sight report PDF",
-                                {
-                                    "ticket_id": record_id,
-                                    "filename": filename,
-                                    "file_size_bytes": len(response.content),
-                                },
-                            )
+                            chunks: list[bytes] = []
+                            total = 0
+                            too_large = False
+                            for chunk in response.iter_content(chunk_size=65536):
+                                total += len(chunk)
+                                if total > _MAX_PDF_BYTES:
+                                    too_large = True
+                                    break
+                                chunks.append(chunk)
+                            if too_large:
+                                self.helper.connector_logger.warning(
+                                    "[CONNECTOR] Deep Sight report PDF exceeds size"
+                                    " limit — skipping attachment",
+                                    {
+                                        "ticket_id": record_id,
+                                        "limit_bytes": _MAX_PDF_BYTES,
+                                    },
+                                )
+                            else:
+                                record["_pdf_data"] = b"".join(chunks)
+                                record["_pdf_filename"] = filename
+                                self.helper.connector_logger.debug(
+                                    "[CONNECTOR] Downloaded Deep Sight report PDF",
+                                    {
+                                        "ticket_id": record_id,
+                                        "filename": filename,
+                                        "file_size_bytes": total,
+                                    },
+                                )
                         except (
                             Exception  # pylint: disable=broad-exception-caught
                         ) as dl_err:
