@@ -7,7 +7,6 @@ from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
 from datasize import DataSize
 from exceptions import MispWorkProcessingError
-from pympler.asizeof import asizeof
 from utils.batch_processor import BatchProcessor
 from utils.threats_guesser import ThreatsGuesser
 from utils.work_manager import WorkManager
@@ -78,45 +77,74 @@ class Misp:
 
         self._current_bundle = None
 
+    @staticmethod
+    def _get_serialized_size_bytes(
+        entities: "list[stix2.v21._STIXBase21]|stix2.v21._STIXBase21",
+    ) -> int:
+        """Estimate network payload size from serialized UTF-8 JSON bytes."""
+        if isinstance(entities, list):
+            if not entities:
+                return 2  # []
+
+            # Add separators and brackets without building one giant string.
+            return (
+                2  # Brackets []
+                + (len(entities) - 1)  # Commas between items
+                # Size of each item in the list
+                + sum(Misp._get_serialized_size_bytes(item) for item in entities)
+            )
+
+        serialize = getattr(entities, "serialize", None)
+        if callable(serialize):
+            return len(serialize().encode("utf-8"))
+
+        # Invalid entity that cannot be serialized, return 0 as it will not contribute
+        # to the batch size.
+        return 0
+
     def _split_entities_to_fit_batch_size(
         self,
         entities: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
-    ) -> "Generator[tuple[list[stix2.v21._STIXBase21], bool], None, None]":
+    ) -> "Generator[list[stix2.v21._STIXBase21], None, None]":
         """Split entities into chunks respecting configured size limits.
 
-        Returns:
-            A list of tuples (chunk, is_forced_oversize_single).
+        Yields:
+            Chunks of entities that fit within the configured batch size limit,
+            including the author and markings in the size calculation.
         """
         if not entities:
             return
 
         if not self.config.misp.batch_size_limit:
-            yield (entities, False)
+            yield entities
             return
 
         batch_size_limit = DataSize(self.config.misp.batch_size_limit)
         metadata_entities = [author, *markings]
-        candidate_size = metadata_size = DataSize(asizeof(metadata_entities))
+        metadata_entities_size = self._get_serialized_size_bytes(metadata_entities)
+        candidate_size = metadata_size = DataSize(metadata_entities_size)
 
         current_chunk: list[stix2.v21._STIXBase21] = []
 
-        if metadata_size + DataSize(asizeof(entities)) <= int(batch_size_limit):
+        entities_size = self._get_serialized_size_bytes(entities)
+        if metadata_size + DataSize(entities_size) <= int(batch_size_limit):
             self.logger.info(
                 "All entities fit in the batch size limit, no need to split",
                 {
                     "prefix": LOG_PREFIX,
-                    "entities_size": f"{DataSize(asizeof(entities)):.2a}",
+                    "entities_size": f"{DataSize(entities_size):.2a}",
                     "metadata_size": f"{metadata_size:.2a}",
                     "batch_size_limit": f"{batch_size_limit:.2a}",
                 },
             )
-            yield (entities, False)
+            yield entities
             return
 
         for entity in entities:
-            candidate_size += DataSize(asizeof(entity))
+            entity_size = DataSize(self._get_serialized_size_bytes(entity))
+            candidate_size += entity_size
 
             if int(candidate_size) <= int(batch_size_limit):
                 current_chunk.append(entity)
@@ -127,28 +155,28 @@ class Misp:
                     "Current chunk reached batch size limit, yielding chunk",
                     {
                         "prefix": LOG_PREFIX,
-                        "chunk_size": f"{DataSize(asizeof(current_chunk)):.2a}",
+                        "chunk_size": f"{DataSize(self._get_serialized_size_bytes(current_chunk)):.2a}",
                         "metadata_size": f"{metadata_size:.2a}",
                         "batch_size_limit": f"{batch_size_limit:.2a}",
                     },
                 )
-                yield (current_chunk, False)
+                yield current_chunk
                 # Reset candidate size to metadata size for the next chunk
                 current_chunk = []
                 candidate_size = metadata_size
 
-            single_entity_size = metadata_size + DataSize(asizeof(entity))
+            single_entity_size = metadata_size + entity_size
             if int(single_entity_size) > int(batch_size_limit):
                 self.logger.warning(
                     "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
                     {
                         "prefix": LOG_PREFIX,
-                        "entity_size": f"{DataSize(asizeof(entity)):.2a}",
+                        "entity_size": f"{entity_size:.2a}",
                         "metadata_size": f"{metadata_size:.2a}",
                         "batch_size_limit": f"{batch_size_limit:.2a}",
                     },
                 )
-                yield ([entity], True)
+                yield [entity]
             else:
                 current_chunk = [entity]
 
@@ -159,7 +187,7 @@ class Misp:
                     "prefix": LOG_PREFIX,
                 },
             )
-            yield (current_chunk, False)
+            yield current_chunk
 
     def _check_batch_size_and_flush(
         self,
@@ -175,7 +203,7 @@ class Misp:
         if self.config.misp.batch_size_limit:
             current_batch_size = self.batch_processor.get_current_batch_size()
             batch_size_limit = DataSize(self.config.misp.batch_size_limit)
-            incoming_size = DataSize(asizeof(all_entities))
+            incoming_size = DataSize(self._get_serialized_size_bytes(all_entities))
             projected_batch_size = DataSize(current_batch_size + incoming_size)
 
             self.logger.debug(
@@ -401,6 +429,24 @@ class Misp:
 
         return event_datetime
 
+    @staticmethod
+    def _compute_completion_percentage(
+        bundle_size: int, remaining_objects_count: int
+    ) -> int:
+        """Compute event processing completion percentage.
+
+        Args:
+            bundle_size: Total number of objects in the event bundle
+            remaining_objects_count: Number of objects left to process
+
+        Returns:
+            Integer completion percentage capped at 100.
+        """
+        return min(
+            100,
+            int(((bundle_size - remaining_objects_count) / max(1, bundle_size)) * 100),
+        )
+
     def _process_bundle_in_batch(
         self,
         event: "EventRestSearchListItem",
@@ -442,7 +488,7 @@ class Misp:
                 markings=markings,
             )
 
-            for subchunk, is_forced_oversize in sized_subchunks:
+            for subchunk in sized_subchunks:
                 if (
                     not self.work_manager.check_connector_run_and_terminate()
                     and self.work_manager.check_connector_buffering()
@@ -485,30 +531,10 @@ class Misp:
 
                     return ProcessingOutcome.BUFFERING
 
-                if is_forced_oversize:
-                    batch_size_limit = DataSize(self.config.misp.batch_size_limit)
-                    oversize_chunk_size = DataSize(
-                        asizeof([author, *markings, *subchunk])
-                    )
-                    self.logger.warning(
-                        "Single entity exceeds batch size limit and will be sent as an oversize single-item chunk",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "event_id": event.Event.id,
-                            "event_uuid": event.Event.uuid,
-                            "oversize_chunk_size": f"{oversize_chunk_size:.2a}",
-                            "batch_size_limit": f"{batch_size_limit:.2a}",
-                        },
-                    )
-
                 # Compute completion before this subchunk so the work name
                 # matches any flush triggered while adding this subchunk.
-                completion_before_subchunk = min(
-                    100,
-                    int(
-                        ((bundle_size - remaining_objects_count) / max(1, bundle_size))
-                        * 100
-                    ),
+                completion_before_subchunk = self._compute_completion_percentage(
+                    bundle_size, remaining_objects_count
                 )
 
                 now = datetime.now(tz=timezone.utc)

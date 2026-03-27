@@ -4,12 +4,12 @@ This module provides a flexible processor that can work with any data type,
 handle configurable sizes and provide consistent work management.
 """
 
+import json
 from typing import TYPE_CHECKING, Any
 
 import stix2
 from datasize import DataSize
 from exceptions import MispWorkProcessingError
-from pympler.asizeof import asizeof
 
 if TYPE_CHECKING:
     from custom_typings.protocols import LoggerProtocol
@@ -232,7 +232,32 @@ class BatchProcessor:
             Total size of current batch in bytes
 
         """
-        return DataSize(asizeof(self._current_batch))
+        return DataSize(self._get_serialized_size_bytes(self._current_batch))
+
+    @staticmethod
+    def _get_serialized_size_bytes(value: Any) -> int:
+        """Estimate payload size from serialized UTF-8 JSON bytes."""
+        if isinstance(value, list):
+            if not value:
+                return 2  # []
+            # Account for commas and brackets without materializing the full list JSON.
+            return (
+                2
+                + (len(value) - 1)
+                + sum(BatchProcessor._get_serialized_size_bytes(item) for item in value)
+            )
+
+        serialize = getattr(value, "serialize", None)
+        if callable(serialize):
+            return len(serialize().encode("utf-8"))
+
+        return len(
+            json.dumps(
+                value,
+                separators=(",", ":"),
+                default=str,
+            ).encode("utf-8"),
+        )
 
     def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.
