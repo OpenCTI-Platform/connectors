@@ -10,6 +10,7 @@ import stix2
 import yaml
 from pycti import (
     Indicator,
+    Identity,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -96,13 +97,6 @@ class NameShield:
             ["nameshield", "marking_definition"],
             config,
             default="TLP:GREEN",
-        )
-        # CONNECTOR_UPDATE_EXISTING_DATA
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-            default=False,
         )
         # NAMESHIELD_LINK_TO_IDENTITIES
         self.nameshield_link_to_identities = get_config_variable(
@@ -199,14 +193,14 @@ class NameShield:
                 f"We get a response from NameShield API: {response.status_code}."
             )
             r_json = response.json()
-            # print(r_json)
             if "errors" in r_json:
+                error = r_json["errors"]
                 self.helper.connector_logger.error(
-                    f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
+                    f"Error NameShield: {error['code']} {error['message']}"
                 )
                 self.helper.set_state(
                     {
-                        "Error": f"Error NameShield: {r_json['errors']['code']} {r_json['errors']['message']}"
+                        "Error": f"Error NameShield: {error['code']} {error['message']}"
                     }
                 )
                 return None
@@ -294,7 +288,6 @@ class NameShield:
             ),
             modified=datetime.datetime.now(),
             labels=[threat["class"], threat["property"]],
-            confidence=threat["confidence"],
             object_marking_refs=[self.nameshield_marking],
             custom_properties={
                 "x_opencti_score": threat["threat_level"],
@@ -360,17 +353,16 @@ class NameShield:
             self.helper.connector_logger.info("No NameShield domains returned.")
             return None, None
 
-        identity_id = "identity--d810a42f-59f5-5409-bb3a-6839c5087806"
+        identity_id = Identity.generate_id(name="NameShield", identity_class="organization")
         identity = stix2.Identity(
             id=identity_id,
             spec_version="2.1",
             name="NameShield",
-            confidence=100,
             created="2024-07-17T10:53:11.000Z",
             modified="2025-12-08T10:03:08.243Z",
             identity_class="organization",
             type="identity",
-            object_marking_refs=[[stix2.TLP_WHITE]["id"]],
+            object_marking_refs=[stix2.TLP_WHITE["id"]],
         )
 
         stix_objects = [identity, self.nameshield_marking]
@@ -399,7 +391,7 @@ class NameShield:
 
                 stix_bundle_dict = json.dumps(stix_bundle_dict, indent=4)
                 self.helper.send_stix2_bundle(
-                    stix_bundle_dict, update=self.update_existing_data, work_id=work_id
+                    stix_bundle_dict, work_id=work_id
                 )
         except Exception as e:
             self.helper.connector_logger.error(str(e))
@@ -409,7 +401,6 @@ class NameShield:
             self.helper.send_stix2_bundle(
                 serialized_bundle,
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as e:
