@@ -25,5 +25,6 @@
     "every weekend",
     "before 5am every weekday"
   ],
-  "updateNotScheduled": false
+  "updateNotScheduled": false,
+  "commitMessagePrefix": "[tool] chore(deps):"
 }
