@@ -9,8 +9,8 @@ import requests
 import stix2
 import yaml
 from pycti import (
-    Indicator,
     Identity,
+    Indicator,
     MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -199,9 +199,7 @@ class NameShield:
                     f"Error NameShield: {error['code']} {error['message']}"
                 )
                 self.helper.set_state(
-                    {
-                        "Error": f"Error NameShield: {error['code']} {error['message']}"
-                    }
+                    {"Error": f"Error NameShield: {error['code']} {error['message']}"}
                 )
                 return None
             # Check is a message has arrived
@@ -353,7 +351,9 @@ class NameShield:
             self.helper.connector_logger.info("No NameShield domains returned.")
             return None, None
 
-        identity_id = Identity.generate_id(name="NameShield", identity_class="organization")
+        identity_id = Identity.generate_id(
+            name="NameShield", identity_class="organization"
+        )
         identity = stix2.Identity(
             id=identity_id,
             spec_version="2.1",
@@ -390,9 +390,7 @@ class NameShield:
                 stix_bundle_dict = json.loads(stix_bundle.serialize())
 
                 stix_bundle_dict = json.dumps(stix_bundle_dict, indent=4)
-                self.helper.send_stix2_bundle(
-                    stix_bundle_dict, work_id=work_id
-                )
+                self.helper.send_stix2_bundle(stix_bundle_dict, work_id=work_id)
         except Exception as e:
             self.helper.connector_logger.error(str(e))
 
