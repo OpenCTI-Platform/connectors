@@ -226,9 +226,8 @@ class Indicator(RFStixEntity):
                             for rf_related_element in element["entities"]:
                                 type_ = element["type"]["name"]
                                 name_ = rf_related_element["name"]
-                                related_element = ENTITY_TYPE_MAPPER[type_](
-                                    name_, type_, self.author, tlp
-                                )
+                                cls = _resolve_entity_class(type_)
+                                related_element = cls(name_, type_, self.author, tlp)
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
 
@@ -245,7 +244,7 @@ class Indicator(RFStixEntity):
         for entity in self.related_entities:
             if entity["type"] in ["indicator"]:
                 relationships.append(self._create_rel("related-to", entity.id))
-            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
+            if entity["type"] in _STIX_DIRECTIONAL_REL_TYPES:
                 relationships.append(self._create_rel("indicates", entity.id))
         self.objects.extend(relationships)
 
@@ -859,9 +858,8 @@ class Vulnerability(RFStixEntity):
                             for rf_related_element in element["entities"]:
                                 type_ = element["type"]["name"]
                                 name_ = rf_related_element["name"]
-                                related_element = ENTITY_TYPE_MAPPER[type_](
-                                    name_, type_, self.author, tlp
-                                )
+                                cls = _resolve_entity_class(type_)
+                                related_element = cls(name_, type_, self.author, tlp)
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
 
@@ -878,7 +876,7 @@ class Vulnerability(RFStixEntity):
         for entity in self.related_entities:
             if entity["type"] in ["indicator"]:
                 relationships.append(self._create_rel("related-to", entity.id))
-            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
+            if entity["type"] in _STIX_DIRECTIONAL_REL_TYPES:
                 relationships.append(self._create_rel("targets", entity.id))
         self.objects.extend(relationships)
 
@@ -1021,6 +1019,21 @@ ENTITY_TYPE_MAPPER = {
     "Operation": Campaign,
     "Threat Actor": ThreatActor,
 }
+
+
+def _resolve_entity_class(type_: str):
+    """Return the STIX entity class for *type_*, mapping Threat Actor → IntrusionSet."""
+    if type_ == "Threat Actor":
+        return IntrusionSet
+    return ENTITY_TYPE_MAPPER[type_]
+
+
+# STIX types that justify a directional relationship (indicates / targets)
+# rather than the generic "related-to" used for other indicators.
+_STIX_DIRECTIONAL_REL_TYPES = frozenset(
+    ["attack-pattern", "malware", "threat-actor", "intrusion-set"]
+)
+
 
 # maps RF types to the corresponding url to get the risk score
 INDICATOR_TYPE_URL_MAPPER = {
