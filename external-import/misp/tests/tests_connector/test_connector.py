@@ -851,7 +851,7 @@ def test_process_bundle_in_batch_sets_work_name_completion_to_100_on_last_chunk(
         )
 
     assert outcome is ProcessingOutcome.COMPLETED
-    assert "Completion # 100%" in connector.batch_processor.work_name_template
+    assert "Completion 100%" in connector.batch_processor.work_name_template
 
 
 def test_process_bundle_in_batch_completion_progression_matches_processed_batches(
@@ -925,11 +925,11 @@ def test_process_bundle_in_batch_completion_progression_matches_processed_batche
 
     assert outcome is ProcessingOutcome.COMPLETED
     assert len(work_name_snapshots) == 5
-    assert "Completion # 0%" in work_name_snapshots[0]
-    assert "Completion # 22%" in work_name_snapshots[1]
-    assert "Completion # 44%" in work_name_snapshots[2]
-    assert "Completion # 66%" in work_name_snapshots[3]
-    assert "Completion # 88%" in work_name_snapshots[4]
+    assert "Completion 0%" in work_name_snapshots[0]
+    assert "Completion 22%" in work_name_snapshots[1]
+    assert "Completion 44%" in work_name_snapshots[2]
+    assert "Completion 66%" in work_name_snapshots[3]
+    assert "Completion 88%" in work_name_snapshots[4]
 
 
 def test_process_bundle_in_batch_completion_starts_from_resume_object_index(
@@ -1004,7 +1004,7 @@ def test_process_bundle_in_batch_completion_starts_from_resume_object_index(
 
     assert outcome is ProcessingOutcome.COMPLETED
     # First visible progress should reflect resumed index (2/9 ~= 22%).
-    assert "Completion # 22%" in work_name_snapshots[0]
+    assert "Completion 22%" in work_name_snapshots[0]
 
 
 def test_connector_does_not_validate_event_already_processed_by_update_datetime(
