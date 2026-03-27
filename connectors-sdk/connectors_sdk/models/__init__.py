@@ -18,6 +18,7 @@ from connectors_sdk.models.email_address import EmailAddress
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
+from connectors_sdk.models.incident import Incident
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.infrastructure import Infrastructure
@@ -66,6 +67,7 @@ __all__ = [
     "ExternalReference",
     "File",
     "Hostname",
+    "Incident",
     "Indicator",
     "Individual",
     "Infrastructure",

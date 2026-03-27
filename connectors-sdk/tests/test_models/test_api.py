@@ -78,6 +78,7 @@ def test_public_models_are_present():
         "ExternalReference",
         "File",
         "Hostname",
+        "Incident",
         "Individual",
         "Indicator",
         "Infrastructure",

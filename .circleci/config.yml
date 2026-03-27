@@ -20,6 +20,50 @@ executors:
     docker:
       - image: "cimg/base:stable"
 
+commands:
+  resolve_release_ref:
+    description: Resolve RELEASE_REF from PR base branch, fallback to closest base branch script.
+    steps:
+      - run:
+          name: Resolve RELEASE_REF
+          command: |
+            PR_BASE_REF=""
+
+            if [ -n "${CIRCLE_PULL_REQUEST:-}" ]; then
+              PR_NUMBER="${CIRCLE_PULL_REQUEST##*/}"
+              API_URL="https://api.github.com/repos/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/pulls/${PR_NUMBER}"
+
+              if [ -n "${GITHUB_TOKEN:-}" ]; then
+                PR_BASE_REF="$(curl --silent --show-error --fail \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+                  "${API_URL}" \
+                | python3 -c 'import json,sys; print((json.load(sys.stdin).get("base") or {}).get("ref",""))')" || PR_BASE_REF=""
+              else
+                PR_BASE_REF="$(curl --silent --show-error --fail \
+                  -H "Accept: application/vnd.github+json" \
+                  "${API_URL}" \
+                | python3 -c 'import json,sys; print((json.load(sys.stdin).get("base") or {}).get("ref",""))')" || PR_BASE_REF=""
+              fi
+            fi
+
+            if [ -n "${PR_BASE_REF:-}" ]; then
+              case "${PR_BASE_REF}" in
+                master|release/6.9.x|lts/*)
+                  RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+                  echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                  ;;
+                *)
+                  RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+                  echo "PR base '${PR_BASE_REF}' is outside allowed refs, using fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                  ;;
+              esac
+            else
+              RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+              echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+            fi
+            echo "export RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$BASH_ENV"
+            echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$BASH_ENV"
 
 jobs:
   ensure_formatting:
@@ -74,8 +118,15 @@ jobs:
     docker:
       - image: cimg/python:3.12
     working_directory: ~/repo
+    parameters:
+      ci_executor:
+        type: executor
+        description: Executor to use for this job.
+        default: ci_environment
+    executor: << parameters.ci_executor >>
     steps:
       - checkout
+      - resolve_release_ref
       - run:
           name: Build Connectors Schemas for XTM composer and Update Config Documentation
           command: |
@@ -87,7 +138,7 @@ jobs:
       - run:
           name: Commit Manifest if changed
           command: |
-            if [ "$CIRCLE_BRANCH" = "master" ]; then
+            if [ "$CIRCLE_BRANCH" = "$RELEASE_REF" ]; then
               echo "$GITHUB_GPG_SECRET_KEY" | base64 -d > /tmp/private.key
               gpg --import /tmp/private.key
               rm /tmp/private.key
@@ -123,7 +174,7 @@ jobs:
                 exit 0
               fi
             else
-              echo "Skipping, not master"
+              echo "Skipping, not $RELEASE_REF branch."
             fi
       - run:
           name: Skip steps if flag detected
@@ -137,8 +188,15 @@ jobs:
       - image: cimg/python:3.11
     working_directory: ~/repo
     parallelism: 4
+    parameters:
+      ci_executor:
+        type: executor
+        description: Executor to use for this job.
+        default: ci_environment
+    executor: << parameters.ci_executor >>
     steps:
       - checkout
+      - resolve_release_ref
       - run: |
           sudo apt-get update -qq 
           sudo apt install -y \
@@ -172,6 +230,7 @@ jobs:
     executor: << parameters.ci_executor >>
     steps:
       - checkout
+      - resolve_release_ref
       - run:
           name: Install dependencies
           command: pip install -r .circleci/scripts/requirements.txt

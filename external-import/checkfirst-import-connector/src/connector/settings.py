@@ -1,27 +1,33 @@
-"""Pydantic settings models for the Checkfirst connector."""
-
-import re
 from datetime import datetime, timedelta, timezone
-from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
+    ListFromString,
 )
-from pydantic import Field, field_validator
+from connectors_sdk.models.enums import TLPLevel
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
-    """Common configuration for connectors of type `EXTERNAL_IMPORT`."""
+    """
+    Override the `BaseExternalImportConnectorConfig` to add parameters and/or defaults
+    to the configuration for connectors of type `EXTERNAL_IMPORT`.
+    """
 
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="04e5ba20-0e6f-4265-a723-4803502fd6db",
+    )
     name: str = Field(
         description="The name of the connector.",
         default="Checkfirst Import Connector",
     )
-    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        description="The minimum level of logs to display.",
-        default="info",
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["checkfirst"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -29,34 +35,29 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class CheckfirstConfig(BaseConfigModel):
-    """Connector-specific configuration."""
+class CheckfirstImportConnectorConfig(BaseConfigModel):
+    """
+    Define parameters and/or defaults for the configuration specific to the `CheckfirstImportConnector`.
+    """
 
-    api_url: str = Field(
-        description="Base URL for the API endpoint (e.g., https://api.example.com).",
-    )
-
-    @field_validator("api_url")
-    @classmethod
-    def _strip_trailing_slash(cls, v: str) -> str:
-        """Strip trailing slashes from the API URL."""
-        return v.rstrip("/")
-
-    api_key: str = Field(
-        description="API key for authentication (sent in Api-Key header).",
+    api_url: HttpUrl = Field(
+        description="Base URL for the API endpoint (e.g., https://api.example.com)."
     )
     api_endpoint: str = Field(
         description="API endpoint path (e.g., /v1/articles).",
         default="/v1/articles",
     )
-
-    since: str = Field(
+    api_key: SecretStr = Field(
+        description="API key for authentication (sent in Api-Key header)."
+    )
+    since: DatetimeFromIsoString = Field(
         description=(
             "Only ingest articles published on or after this date. "
             "Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) "
-            "or durations relative to now (e.g., P365D, P1Y, P6M, P4W)."
+            "or durations relative to now (e.g., P365D, P1Y, P6M, P4W). "
+            "Defaults to 1 year ago."
         ),
-        default="P365D",
+        default=datetime.now(tz=timezone.utc) - timedelta(days=365),
     )
     force_reprocess: bool = Field(
         description=(
@@ -65,47 +66,24 @@ class CheckfirstConfig(BaseConfigModel):
         ),
         default=False,
     )
-
-    tlp_level: Literal[
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(
+    tlp_level: TLPLevel = Field(
         description="TLP marking level applied to created STIX entities.",
-        default="clear",
+        default=TLPLevel.CLEAR,
     )
-
     max_row_bytes: int | None = Field(
         description="Skip any API row larger than this approximate number of bytes.",
         default=None,
     )
 
-    @field_validator("since")
-    @classmethod
-    def _resolve_since(cls, v: str) -> str:
-        """Resolve ISO 8601 duration strings to absolute UTC datetime strings."""
-        match = re.fullmatch(r"P(\d+)(Y|M|W|D)", v.strip(), re.IGNORECASE)
-        if match:
-            amount = int(match.group(1))
-            unit = match.group(2).upper()
-            delta_map = {
-                "D": timedelta(days=amount),
-                "W": timedelta(weeks=amount),
-                "Y": timedelta(days=amount * 365),
-                "M": timedelta(days=amount * 30),
-            }
-            resolved = datetime.now(tz=timezone.utc) - delta_map[unit]
-            return resolved.strftime("%Y-%m-%dT%H:%M:%SZ")
-        return v
-
 
 class ConnectorSettings(BaseConnectorSettings):
-    """Settings model loaded from env vars / config.yml."""
+    """
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `CheckfirstImportConnectorConfig`.
+    """
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    checkfirst: CheckfirstConfig = Field(default_factory=CheckfirstConfig)
+    checkfirst: CheckfirstImportConnectorConfig = Field(
+        default_factory=CheckfirstImportConnectorConfig
+    )

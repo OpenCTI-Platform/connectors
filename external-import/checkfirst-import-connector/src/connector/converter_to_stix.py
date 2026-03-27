@@ -5,25 +5,62 @@ Converts API rows into STIX 2.1 objects using:
 - `pycti.*.generate_id()` for deterministic IDs on OpenCTI custom entities
 """
 
-from datetime import datetime
+import re
+from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlparse
 
-import stix2
-from connectors_sdk.models import OrganizationAuthor, TLPMarking
-from pycti import (
+from checkfirst_client.api_models import AlternateURL, Article
+from connector.pravda_network import PRAVDA_DOMAINS, PRAVDA_IP, SUBDOMAIN_TO_DOMAIN
+from connectors_sdk.models import (
+    URL,
+    BaseIdentifiedEntity,
     Campaign,
     Channel,
-    CustomObjectChannel,
-    CustomObservableMediaContent,
+    DomainName,
+    ExternalReference,
     Infrastructure,
     IntrusionSet,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
+    IPV4Address,
+    MediaContent,
+    OrganizationAuthor,
+    Relationship,
+    TLPMarking,
 )
+from pycti import OpenCTIConnectorHelper
+
+
+class ConversionError(Exception):
+    """Raised when conversion of API data to OpenCTI objects fails."""
+
+
+_URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
+
+
+def parse_alternates(alternates_urls: list[AlternateURL]) -> list[str]:
+    """Extract a list of unique alternate URLs from a raw column value."""
+    parsed_urls: list[str] = []
+    for alternate_url in alternates_urls:
+        url = alternate_url.url.strip() if alternate_url.url else ""
+
+        if _URL_RE.search(url):
+            parsed_urls.append(url)
+
+    # preserve order but remove duplicates
+    seen: set[str] = set()
+    out: list[str] = []
+    for url in parsed_urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        out.append(url)
+
+    return out
 
 
 class ConverterToStix:
-    """Convert API rows into STIX 2.1 objects + bundles."""
+    """Convert API rows into OpenCTI objects (convertible to STIX 2.1 format)."""
 
     def __init__(
         self,
@@ -39,34 +76,25 @@ class ConverterToStix:
     ):
         self.helper = helper
 
-        _author_model = OrganizationAuthor(name="CheckFirst")
-        self.author = _author_model.to_stix2_object()
-        self.author_id = self.author.id
-
-        _tlp_model = TLPMarking(level=tlp_level.lower())
-        self.tlp_marking = _tlp_model.to_stix2_object()
-        self.tlp_marking_id = self.tlp_marking.id
-
+        self.author = OrganizationAuthor(name="CheckFirst")
+        self.tlp_marking = TLPMarking(level=tlp_level.lower())
         self.intrusion_set = self._create_intrusion_set()
-        self.infrastructure_campaign = self._create_campaign(year=2023)
-        self.infrastructure_campaign_attributed_to_ims = self.create_relationship(
-            source_id=self.infrastructure_campaign.id,
-            relationship_type="attributed-to",
-            target_id=self.intrusion_set.id,
-        )
 
-        self._campaign_cache: dict[int, tuple[stix2.Campaign, stix2.Relationship]] = {}
+        self.required_objects = [
+            self.author,
+            self.tlp_marking,
+            self.intrusion_set,
+        ]
 
-    def _create_intrusion_set(self) -> stix2.IntrusionSet:
-        return stix2.IntrusionSet(
-            id=IntrusionSet.generate_id(name="Pravda Network"),
+    def _create_intrusion_set(self) -> IntrusionSet:
+        return IntrusionSet(
             name="Pravda Network",
             description=(
                 "Information Manipulation Set (IMS) conducting pro-Russian "
                 "influence operations through a network of 190+ websites"
             ),
             aliases=["Portal-Kombat", "Pravda Network IMS"],
-            first_seen="2023-06-24T00:00:00Z",
+            first_seen=datetime(2023, 6, 24, 0, 0, 0, tzinfo=timezone.utc),
             goals=[
                 "Undermine Western unity",
                 "Promote Russian narratives",
@@ -74,18 +102,16 @@ class ConverterToStix:
             ],
             resource_level="government",
             primary_motivation="ideology",
-            created_by_ref=self.author_id,
-            object_marking_refs=[self.tlp_marking_id],
-            allow_custom=True,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
 
-    def _create_campaign(self, year: int) -> stix2.Campaign:
+    def _create_campaign(self, year: int) -> Campaign:
         name = f"Pravda Network Campaigns {year}"
         first_seen = (
             "2023-09-01T00:00:00Z" if year == 2023 else f"{year}-01-01T00:00:00Z"
         )
-        return stix2.Campaign(
-            id=Campaign.generate_id(name=name),
+        return Campaign(
             name=name,
             description=(
                 "Coordinated FIMI campaign spreading pro-Russian narratives "
@@ -97,144 +123,326 @@ class ConverterToStix:
                 "Manipulate public opinion, undermine trust in Western "
                 "institutions, justify Russian actions"
             ),
-            created_by_ref=self.author_id,
-            object_marking_refs=[self.tlp_marking_id],
-            allow_custom=True,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
 
-    def get_campaign_for_year(
-        self, year: int
-    ) -> tuple[stix2.Campaign, stix2.Relationship]:
-        """Return (Campaign, attributed-to Relationship) for the given year, cached."""
-        if year not in self._campaign_cache:
-            campaign = self._create_campaign(year=year)
-            attributed_to = self.create_relationship(
-                source_id=campaign.id,
-                relationship_type="attributed-to",
-                target_id=self.intrusion_set.id,
-            )
-            self._campaign_cache[year] = (campaign, attributed_to)
-        return self._campaign_cache[year]
-
-    def create_channel(
-        self, *, name: str, source_url: str | None = None
-    ) -> CustomObjectChannel:
-        external_refs: list[stix2.ExternalReference] = []
+    def create_channel(self, name: str, source_url: str | None = None) -> Channel:
+        external_refs: list[ExternalReference] = []
         if source_url:
             external_refs.append(
-                stix2.ExternalReference(source_name="source", url=source_url)
+                ExternalReference(source_name="source", url=source_url)
             )
 
         is_telegram = source_url is not None and source_url.startswith("https://t.me/")
-        channel = CustomObjectChannel(
-            id=Channel.generate_id(name=name),
+        channel = Channel(
             name=name,
             channel_types=["channel"] if is_telegram else ["website"],
-            created_by_ref=self.author_id,
-            object_marking_refs=[self.tlp_marking_id],
+            author=self.author,
+            markings=[self.tlp_marking],
             external_references=external_refs,
-            allow_custom=True,
         )
         return channel
 
     def create_media_content(
         self,
-        *,
         title: str | None,
         description: str | None,
         url: str,
         publication_date: datetime,
-    ) -> CustomObservableMediaContent:
-        media = CustomObservableMediaContent(
+    ) -> MediaContent:
+        media = MediaContent(
             title=title,
             description=description,
             url=url,
             publication_date=publication_date,
-            object_marking_refs=[self.tlp_marking_id],
-            custom_properties={
-                "x_opencti_created_by_ref": self.author_id,
-            },
+            author=self.author,
+            markings=[self.tlp_marking],
         )
         return media
 
-    def create_domain_name(
-        self, *, value: str, first_seen: str | None = None
-    ) -> stix2.DomainName:
-        custom: dict = {"x_opencti_created_by_ref": self.author_id}
-        if first_seen:
-            custom["x_opencti_first_seen_at"] = first_seen
-        return stix2.DomainName(
+    @lru_cache  # same domain name shared by many articles
+    def create_domain_name(self, value: str) -> DomainName:
+        return DomainName(
             value=value,
-            object_marking_refs=[self.tlp_marking_id],
-            custom_properties=custom,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
 
-    def create_ipv4_address(
-        self,
-        *,
-        value: str,
-        first_seen: str | None = None,
-        last_seen: str | None = None,
-    ) -> stix2.IPv4Address:
-        custom: dict = {"x_opencti_created_by_ref": self.author_id}
-        if first_seen:
-            custom["x_opencti_first_seen_at"] = first_seen
-        if last_seen:
-            custom["x_opencti_last_seen_at"] = last_seen
-        return stix2.IPv4Address(
+    def create_ipv4_address(self, value: str) -> IPV4Address:
+        return IPV4Address(
             value=value,
-            object_marking_refs=[self.tlp_marking_id],
-            custom_properties=custom,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
 
     def create_infrastructure(
-        self, *, name: str, first_seen: datetime | str | None = None
-    ) -> stix2.Infrastructure:
-        custom: dict = {"x_opencti_created_by_ref": self.author_id}
-        if first_seen:
-            custom["x_opencti_first_seen_at"] = first_seen
-        return stix2.Infrastructure(
-            id=Infrastructure.generate_id(name=name),
+        self, name: str, first_seen: datetime | str | None = None
+    ) -> Infrastructure:
+        return Infrastructure(
             name=name,
             infrastructure_types=["hosting-infrastructure"],
             first_seen=first_seen,
-            created_by_ref=self.author_id,
-            object_marking_refs=[self.tlp_marking_id],
-            custom_properties=custom,
-            allow_custom=True,
+            author=self.author,
+            markings=[self.tlp_marking],
         )
 
-    def create_url(self, *, value: str) -> stix2.URL:
-        return stix2.URL(
+    def create_url(self, value: str) -> URL:
+        return URL(
             value=value,
-            object_marking_refs=[self.tlp_marking_id],
-            custom_properties={
-                "x_opencti_created_by_ref": self.author_id,
-            },
+            author=self.author,
+            markings=[self.tlp_marking],
         )
 
     def create_relationship(
         self,
-        *,
-        source_id: str,
+        source: BaseIdentifiedEntity,
         relationship_type: str,
-        target_id: str,
+        target: BaseIdentifiedEntity,
         start_time: datetime | None = None,
         stop_time: datetime | None = None,
-    ) -> stix2.Relationship:
-        rel = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type,
-                source_id,
-                target_id,
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author_id,
-            object_marking_refs=[self.tlp_marking_id],
-            allow_custom=True,
+    ) -> Relationship:
+        rel = Relationship(
+            type=relationship_type,
+            source=source,
+            target=target,
+            author=self.author,
+            markings=[self.tlp_marking],
             start_time=start_time,
             stop_time=stop_time,
         )
         return rel
+
+    @lru_cache  # cache campaigns by year to reuse across articles from the same year
+    def get_campaign_for_year(self, year: int) -> tuple[Campaign, Relationship]:
+        """Return (Campaign, attributed-to Relationship) for the given year, cached."""
+        campaign = self._create_campaign(year=year)
+        attributed_to = self.create_relationship(
+            source=campaign,
+            relationship_type="attributed-to",
+            target=self.intrusion_set,
+        )
+
+        return campaign, attributed_to
+
+    def convert_pravda_network_infrastructure(
+        self, campaign: Campaign
+    ) -> list[BaseIdentifiedEntity]:
+        """Create a list of OpenCTI objects based on known Pravda network infrastructure.
+        Relationships per domain:
+        - Campaign 2023 → attributed-to → IntrusionSet
+        - Campaign 2023 → uses [first_observed] → Infrastructure
+        - Infrastructure → consists-of → DomainName
+        - Infrastructure → consists-of → IPv4Address (with stop_time)
+        - Subdomain [first_observed] → related-to → Infrastructure
+
+        Call this method only when starting from page 1 (first run or force_reprocess)
+        to create the base infrastructure objects and relationships, then rely on get_campaign_for_year()
+        for subsequent pages/years to reuse the same Campaign and IntrusionSet objects.
+        """
+        try:
+            octi_objects = []
+
+            ipv4 = self.create_ipv4_address(value=PRAVDA_IP["IP"])
+            octi_objects.append(ipv4)
+
+            for entry in PRAVDA_DOMAINS:
+                first_observed = entry["first_observed"]
+
+                infrastructure = self.create_infrastructure(
+                    name=entry["domain"],
+                    first_seen=first_observed,
+                )
+                octi_objects.append(infrastructure)
+
+                domain_name = self.create_domain_name(value=entry["domain"])
+                octi_objects.append(domain_name)
+
+                # Campaign → uses → Infrastructure
+                octi_objects.append(
+                    self.create_relationship(
+                        source=campaign,
+                        relationship_type="uses",
+                        target=infrastructure,
+                        start_time=first_observed,
+                    )
+                )
+                # Infrastructure → consists-of → DomainName
+                octi_objects.append(
+                    self.create_relationship(
+                        source=infrastructure,
+                        relationship_type="consists-of",
+                        target=domain_name,
+                        start_time=first_observed,
+                    )
+                )
+                # Infrastructure → consists-of → IPv4Address (with temporal bounds)
+                octi_objects.append(
+                    self.create_relationship(
+                        source=infrastructure,
+                        relationship_type="consists-of",
+                        target=ipv4,
+                        start_time=first_observed,
+                        stop_time=PRAVDA_IP["last_seen"],
+                    )
+                )
+                # Subdomains → related-to → Infrastructure
+                for subdomain in entry.get("subdomains", []):
+                    sub_domain_name = self.create_domain_name(value=subdomain)
+                    octi_objects.append(sub_domain_name)
+                    octi_objects.append(
+                        self.create_relationship(
+                            source=sub_domain_name,
+                            relationship_type="related-to",
+                            target=infrastructure,
+                            start_time=first_observed,
+                        )
+                    )
+
+            # To limit duplicates, do not return shared entities such as Author, IntrusionSet or Campaign
+            return octi_objects
+        except Exception as err:
+            raise ConversionError(
+                f"Error converting Pravda network infrastructure: {err}"
+            ) from err
+
+    def convert_article(
+        self, article: Article, campaign: Campaign
+    ) -> list[BaseIdentifiedEntity]:
+        """Convert a Article representing an article into a list of OpenCTI objects."""
+
+        try:
+            octi_objects = []
+
+            # --- Domain observable (extracted from article URL) ---
+            article_domain = urlparse(article.url).netloc
+            domain_name = self.create_domain_name(value=article_domain)
+            # --- Infrastructure wrapping the publishing domain ---
+            infrastructure = self.create_infrastructure(
+                name=article_domain,
+                first_seen=article.published_date,
+            )
+            # --- Channel as website (the publishing domain/subdomain) ---
+            channel = self.create_channel(
+                name=article_domain,
+                source_url=article.url,
+            )
+            # --- Source as Channel (Telegram or website origin) ---
+            source_channel = self.create_channel(
+                name=article.source_title,
+                source_url=article.source_url,
+            )
+            # --- Content (article) ---
+            content = self.create_media_content(
+                title=article.title,
+                description=article.og_description,
+                url=article.url,
+                publication_date=article.published_date,
+            )
+
+            # --- Relationships ---
+            # Campaign → uses → Infrastructure
+            campaign_uses_infra = self.create_relationship(
+                source=campaign,
+                relationship_type="uses",
+                target=infrastructure,
+            )
+            # Campaign → uses → Channel as website
+            campaign_uses_channel = self.create_relationship(
+                source=campaign,
+                relationship_type="uses",
+                target=channel,
+                start_time=article.published_date,
+            )
+            # Infrastructure → consists-of → DomainName
+            infra_consists_of_domain = self.create_relationship(
+                source=infrastructure,
+                relationship_type="consists-of",
+                target=domain_name,
+            )
+            # Channel as website → related-to → Infrastructure
+            channel_related_to_infra = self.create_relationship(
+                source=channel,
+                relationship_type="related-to",
+                target=infrastructure,
+                start_time=article.published_date,
+            )
+            # DomainName → related-to → Channel as website
+            domain_related_to_channel = self.create_relationship(
+                source=domain_name,
+                relationship_type="related-to",
+                target=channel,
+                start_time=article.published_date,
+            )
+            # Channel as website → publishes → Content
+            publishes = self.create_relationship(
+                source=channel,
+                relationship_type="publishes",
+                target=content,
+                start_time=article.published_date,
+            )
+            # Channel as website → related-to → Source as Channel
+            channel_uses_source = self.create_relationship(
+                source=channel,
+                relationship_type="related-to",
+                target=source_channel,
+                start_time=article.published_date,
+            )
+            # Content → related-to → Source as Channel
+            content_related_to_source = self.create_relationship(
+                source=content,
+                relationship_type="related-to",
+                target=source_channel,
+                start_time=article.published_date,
+            )
+
+            octi_objects.extend(
+                [
+                    domain_name,
+                    infrastructure,
+                    channel,
+                    source_channel,
+                    content,
+                    campaign_uses_infra,
+                    campaign_uses_channel,
+                    infra_consists_of_domain,
+                    channel_related_to_infra,
+                    domain_related_to_channel,
+                    publishes,
+                    channel_uses_source,
+                    content_related_to_source,
+                ]
+            )
+
+            # If the article domain is a known news-pravda.com subdomain,
+            # link the Channel as website to its parent pravda-XX.com domain.
+            parent_domain_str = SUBDOMAIN_TO_DOMAIN.get(article_domain)
+            if parent_domain_str:
+                parent_domain_name = self.create_domain_name(value=parent_domain_str)
+                octi_objects.append(parent_domain_name)
+                octi_objects.append(
+                    self.create_relationship(
+                        source=channel,
+                        relationship_type="related-to",
+                        target=parent_domain_name,
+                        start_time=article.published_date,
+                    )
+                )
+
+            # Content → related-to → alternate URLs
+            for alt in parse_alternates(article.alternates_urls):
+                alt_url = self.create_url(value=alt)
+                alt_rel = self.create_relationship(
+                    source=content,
+                    relationship_type="related-to",
+                    target=alt_url,
+                    start_time=article.published_date,
+                )
+                octi_objects.extend([alt_url, alt_rel])
+
+            # To limit duplicates, do not return shared entities such as Author, IntrusionSet or Campaign
+            return octi_objects
+        except Exception as err:
+            raise ConversionError(
+                f"Error converting article to OpenCTI objects: {err}"
+            ) from err
