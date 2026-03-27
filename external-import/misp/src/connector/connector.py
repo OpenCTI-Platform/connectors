@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
 from connector.use_cases import ConverterError, EventConverter
-from datasize import DataSize
 from exceptions import MispWorkProcessingError
 from utils.batch_processor import BatchProcessor
 from utils.threats_guesser import ThreatsGuesser
@@ -77,31 +76,6 @@ class Misp:
 
         self._current_bundle = None
 
-    @staticmethod
-    def _get_serialized_size_bytes(
-        entities: "list[stix2.v21._STIXBase21]|stix2.v21._STIXBase21",
-    ) -> int:
-        """Estimate network payload size from serialized UTF-8 JSON bytes."""
-        if isinstance(entities, list):
-            if not entities:
-                return 2  # []
-
-            # Add separators and brackets without building one giant string.
-            return (
-                2  # Brackets []
-                + (len(entities) - 1)  # Commas between items
-                # Size of each item in the list
-                + sum(Misp._get_serialized_size_bytes(item) for item in entities)
-            )
-
-        serialize = getattr(entities, "serialize", None)
-        if callable(serialize):
-            return len(serialize().encode("utf-8"))
-
-        # Invalid entity that cannot be serialized, return 0 as it will not contribute
-        # to the batch size.
-        return 0
-
     def _split_entities_to_fit_batch_size(
         self,
         entities: "list[stix2.v21._STIXBase21]",
@@ -114,80 +88,12 @@ class Misp:
             Chunks of entities that fit within the configured batch size limit,
             including the author and markings in the size calculation.
         """
-        if not entities:
-            return
-
-        if not self.config.misp.batch_size_limit:
-            yield entities
-            return
-
-        batch_size_limit = DataSize(self.config.misp.batch_size_limit)
         metadata_entities = [author, *markings]
-        metadata_entities_size = self._get_serialized_size_bytes(metadata_entities)
-        candidate_size = metadata_size = DataSize(metadata_entities_size)
-
-        current_chunk: list[stix2.v21._STIXBase21] = []
-
-        entities_size = self._get_serialized_size_bytes(entities)
-        if metadata_size + DataSize(entities_size) <= int(batch_size_limit):
-            self.logger.debug(
-                "All entities fit in the batch size limit, no need to split",
-                {
-                    "prefix": LOG_PREFIX,
-                    "entities_size": f"{DataSize(entities_size):.2a}",
-                    "metadata_size": f"{metadata_size:.2a}",
-                    "batch_size_limit": f"{batch_size_limit:.2a}",
-                },
-            )
-            yield entities
-            return
-
-        for entity in entities:
-            entity_size = DataSize(self._get_serialized_size_bytes(entity))
-            candidate_size += entity_size
-
-            if int(candidate_size) <= int(batch_size_limit):
-                current_chunk.append(entity)
-                continue
-
-            if current_chunk:
-                self.logger.debug(
-                    "Current chunk reached batch size limit, yielding chunk",
-                    {
-                        "prefix": LOG_PREFIX,
-                        "chunk_size": f"{DataSize(self._get_serialized_size_bytes(current_chunk)):.2a}",
-                        "metadata_size": f"{metadata_size:.2a}",
-                        "batch_size_limit": f"{batch_size_limit:.2a}",
-                    },
-                )
-                yield current_chunk
-                # Reset candidate size to metadata size for the next chunk
-                current_chunk = []
-                candidate_size = metadata_size
-
-            single_entity_size = metadata_size + entity_size
-            if int(single_entity_size) > int(batch_size_limit):
-                self.logger.info(
-                    "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
-                    {
-                        "prefix": LOG_PREFIX,
-                        "entity_size": f"{entity_size:.2a}",
-                        "metadata_size": f"{metadata_size:.2a}",
-                        "batch_size_limit": f"{batch_size_limit:.2a}",
-                    },
-                )
-                yield [entity]
-            else:
-                current_chunk = [entity]
-
-        if current_chunk:
-            self.logger.debug(
-                "Yielding last chunk",
-                {
-                    "prefix": LOG_PREFIX,
-                },
-            )
-            yield current_chunk
+        yield from self.batch_processor.split_items_to_fit_size_limit(
+            items=entities,
+            batch_size_limit=self.config.misp.batch_size_limit,
+            additional_overhead_items=metadata_entities,
+        )
 
     def _check_batch_size_and_flush(
         self,
@@ -199,50 +105,11 @@ class Misp:
             all_entities: list of entities to be added
 
         """
-        current_batch_length = self.batch_processor.get_current_batch_length()
-        if self.config.misp.batch_size_limit:
-            current_batch_size = self.batch_processor.get_current_batch_size()
-            batch_size_limit = DataSize(self.config.misp.batch_size_limit)
-            incoming_size = DataSize(self._get_serialized_size_bytes(all_entities))
-            projected_batch_size = DataSize(current_batch_size + incoming_size)
-
-            self.logger.debug(
-                "Projected batch size and batch size limit",
-                {
-                    "prefix": LOG_PREFIX,
-                    # Datasize format 'a' will choose a unit defaulting to the largest
-                    # size with a quantity >= 1
-                    # (e.g. 1.5KB instead of 1536B, or 2MB instead of 2048KB)
-                    "projected_batch_size": f"{projected_batch_size:.2a}",
-                    "batch_size_limit": f"{batch_size_limit:.2a}",
-                },
-            )
-
-            if current_batch_length > 0 and projected_batch_size >= int(
-                batch_size_limit
-            ):
-                self.logger.debug(
-                    "Current and incoming batch size exceed the configured batch size limit, flushing batch",
-                    {
-                        "prefix": LOG_PREFIX,
-                        "current_batch_size": f"{current_batch_size:.2a}",
-                        "incoming_batch_size": f"{incoming_size:.2a}",
-                        "projected_batch_size": f"{projected_batch_size:.2a}",
-                        "batch_size_limit": f"{batch_size_limit:.2a}",
-                    },
-                )
-                self.batch_processor.flush()
-                return
-
-        if (
-            current_batch_length > 0
-            and (current_batch_length + len(all_entities))
-            >= self.config.misp.batch_count * 2
+        if self.batch_processor.should_flush_before_adding(
+            incoming_items=all_entities,
+            batch_size_limit=self.config.misp.batch_size_limit,
+            max_batch_length=self.config.misp.batch_count * 2,
         ):
-            self.logger.debug(
-                "Need to Flush before adding next items to preserve consistency of the bundle",
-                {"prefix": LOG_PREFIX},
-            )
             self.batch_processor.flush()
 
     def _check_and_add_entities_to_batch(

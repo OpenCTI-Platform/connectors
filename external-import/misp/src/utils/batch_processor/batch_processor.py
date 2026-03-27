@@ -5,6 +5,7 @@ handle configurable sizes and provide consistent work management.
 """
 
 import json
+from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
 import stix2
@@ -233,6 +234,158 @@ class BatchProcessor:
 
         """
         return DataSize(self._get_serialized_size_bytes(self._current_batch))
+
+    def should_flush_before_adding(
+        self,
+        incoming_items: list[stix2.v21._STIXBase21],
+        *,
+        batch_size_limit: str | None = None,
+        max_batch_length: int | None = None,
+    ) -> bool:
+        """Determine whether current batch should be flushed before adding items.
+
+        Args:
+            incoming_items: Items planned to be added to the current batch
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            max_batch_length: Optional max number of items in current + incoming
+
+        Returns:
+            True when the current batch should be flushed first
+        """
+        current_batch_length = self.get_current_batch_length()
+        if current_batch_length == 0:
+            return False
+
+        if batch_size_limit:
+            current_batch_size = self.get_current_batch_size()
+            incoming_size = DataSize(self._get_serialized_size_bytes(incoming_items))
+            projected_batch_size = DataSize(current_batch_size + incoming_size)
+            size_limit = DataSize(batch_size_limit)
+
+            self._logger.debug(
+                "Projected batch size and batch size limit",
+                {
+                    "prefix": LOG_PREFIX,
+                    "projected_batch_size": f"{projected_batch_size:.2a}",
+                    "batch_size_limit": f"{size_limit:.2a}",
+                },
+            )
+
+            if projected_batch_size >= int(size_limit):
+                self._logger.debug(
+                    "Current and incoming batch size exceed the configured batch size limit, flushing batch",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "current_batch_size": f"{current_batch_size:.2a}",
+                        "incoming_batch_size": f"{incoming_size:.2a}",
+                        "projected_batch_size": f"{projected_batch_size:.2a}",
+                        "batch_size_limit": f"{size_limit:.2a}",
+                    },
+                )
+                return True
+
+        if (
+            max_batch_length is not None
+            and (current_batch_length + len(incoming_items)) >= max_batch_length
+        ):
+            self._logger.debug(
+                "Need to flush before adding next items to preserve bundle consistency",
+                {"prefix": LOG_PREFIX},
+            )
+            return True
+
+        return False
+
+    def split_items_to_fit_size_limit(
+        self,
+        items: list[stix2.v21._STIXBase21],
+        *,
+        batch_size_limit: str | None,
+        additional_overhead_items: list[Any] | None = None,
+    ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
+        """Yield item chunks that fit in the configured serialized size limit.
+
+        Args:
+            items: Items to split into size-safe chunks
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            additional_overhead_items: Optional items always present with each chunk
+
+        Yields:
+            Chunks of items whose serialized size respects the configured limit
+        """
+        if not items:
+            return
+
+        if not batch_size_limit:
+            yield items
+            return
+
+        size_limit = DataSize(batch_size_limit)
+        overhead_size = DataSize(
+            self._get_serialized_size_bytes(additional_overhead_items or [])
+        )
+        candidate_size = overhead_size
+        current_chunk: list[stix2.v21._STIXBase21] = []
+
+        items_size = DataSize(self._get_serialized_size_bytes(items))
+        if overhead_size + items_size <= int(size_limit):
+            self._logger.debug(
+                "All entities fit in the batch size limit, no need to split",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entities_size": f"{items_size:.2a}",
+                    "metadata_size": f"{overhead_size:.2a}",
+                    "batch_size_limit": f"{size_limit:.2a}",
+                },
+            )
+            yield items
+            return
+
+        for item in items:
+            item_size = DataSize(self._get_serialized_size_bytes(item))
+            candidate_size += item_size
+
+            if int(candidate_size) <= int(size_limit):
+                current_chunk.append(item)
+                continue
+
+            if current_chunk:
+                self._logger.debug(
+                    "Current chunk reached batch size limit, yielding chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "chunk_size": f"{DataSize(self._get_serialized_size_bytes(current_chunk)):.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{size_limit:.2a}",
+                    },
+                )
+                yield current_chunk
+                current_chunk = []
+                candidate_size = overhead_size
+
+            single_item_size = overhead_size + item_size
+            if int(single_item_size) > int(size_limit):
+                self._logger.warning(
+                    "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_size": f"{item_size:.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{size_limit:.2a}",
+                    },
+                )
+                yield [item]
+            else:
+                current_chunk = [item]
+
+        if current_chunk:
+            self._logger.debug(
+                "Yielding last chunk",
+                {
+                    "prefix": LOG_PREFIX,
+                },
+            )
+            yield current_chunk
 
     @staticmethod
     def _get_serialized_size_bytes(value: Any) -> int:
