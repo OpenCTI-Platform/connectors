@@ -54,11 +54,9 @@ def collect_snort(
         logger=logger,
     )
 
-    works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
-    )
+    if stix_objects:
+        works.send_bundle(
+            helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
+        )
+    works.finish_work(helper=helper, logger=logger, work_id=work_id, work_name=source_name)
     logger.info("[SNORT] Data Source Completed!")
