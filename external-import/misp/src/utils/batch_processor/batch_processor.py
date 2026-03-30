@@ -233,7 +233,7 @@ class BatchProcessor:
             Total size of current batch in bytes
 
         """
-        return DataSize(self._get_serialized_size_bytes(self._current_batch))
+        return self._get_serialized_size_bytes(self._current_batch)
 
     def should_flush_before_adding(
         self,
@@ -258,7 +258,7 @@ class BatchProcessor:
 
         if batch_size_limit:
             current_batch_size = self.get_current_batch_size()
-            incoming_size = DataSize(self._get_serialized_size_bytes(incoming_items))
+            incoming_size = self._get_serialized_size_bytes(incoming_items)
             projected_batch_size = DataSize(current_batch_size + incoming_size)
 
             self._logger.debug(
@@ -299,8 +299,8 @@ class BatchProcessor:
         self,
         items: list[stix2.v21._STIXBase21],
         *,
-        batch_size_limit: DataSize | None,
-        additional_overhead_items: list[Any] | None = None,
+        additional_overhead_items: list[stix2.v21._STIXBase21],
+        batch_size_limit: DataSize | None = None,
     ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
         """Yield item chunks that fit in the configured serialized size limit.
 
@@ -319,13 +319,11 @@ class BatchProcessor:
             yield items
             return
 
-        overhead_size = DataSize(
-            self._get_serialized_size_bytes(additional_overhead_items or [])
-        )
+        overhead_size = self._get_serialized_size_bytes(additional_overhead_items)
         candidate_size = overhead_size
         current_chunk: list[stix2.v21._STIXBase21] = []
 
-        items_size = DataSize(self._get_serialized_size_bytes(items))
+        items_size = self._get_serialized_size_bytes(items)
         if overhead_size + items_size <= int(batch_size_limit):
             self._logger.debug(
                 "All entities fit in the batch size limit, no need to split",
@@ -340,7 +338,7 @@ class BatchProcessor:
             return
 
         for item in items:
-            item_size = DataSize(self._get_serialized_size_bytes(item))
+            item_size = self._get_serialized_size_bytes(item)
             candidate_size += item_size
 
             if int(candidate_size) <= int(batch_size_limit):
@@ -352,7 +350,7 @@ class BatchProcessor:
                     "Current chunk reached batch size limit, yielding chunk",
                     {
                         "prefix": LOG_PREFIX,
-                        "chunk_size": f"{DataSize(self._get_serialized_size_bytes(current_chunk)):.2a}",
+                        "chunk_size": f"{self._get_serialized_size_bytes(current_chunk):.2a}",
                         "metadata_size": f"{overhead_size:.2a}",
                         "batch_size_limit": f"{batch_size_limit:.2a}",
                     },
@@ -386,13 +384,13 @@ class BatchProcessor:
             yield current_chunk
 
     @staticmethod
-    def _get_serialized_size_bytes(value: Any) -> int:
+    def _get_serialized_size_bytes(value: Any) -> DataSize:
         """Estimate payload size from serialized UTF-8 JSON bytes."""
         if isinstance(value, list):
             if not value:
-                return 2  # []
+                return DataSize(2)  # []
             # Account for commas and brackets without materializing the full list JSON.
-            return (
+            return DataSize(
                 2
                 + (len(value) - 1)
                 + sum(BatchProcessor._get_serialized_size_bytes(item) for item in value)
@@ -400,14 +398,16 @@ class BatchProcessor:
 
         serialize = getattr(value, "serialize", None)
         if callable(serialize):
-            return len(serialize().encode("utf-8"))
+            return DataSize(len(serialize().encode("utf-8")))
 
-        return len(
-            json.dumps(
-                value,
-                separators=(",", ":"),
-                default=str,
-            ).encode("utf-8"),
+        return DataSize(
+            len(
+                json.dumps(
+                    value,
+                    separators=(",", ":"),
+                    default=str,
+                ).encode("utf-8"),
+            )
         )
 
     def get_failed_items(self) -> list[Any]:
