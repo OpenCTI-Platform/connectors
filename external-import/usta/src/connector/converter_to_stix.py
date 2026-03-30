@@ -516,7 +516,9 @@ class ConverterToStix:
         stix_objects.extend(observable_objects)
 
         # --- Build pattern (URL-centric for phishing) ---
-        pattern = pattern_parts[0] if pattern_parts else f"[url:value = '{normalized_url}']"
+        pattern = (
+            pattern_parts[0] if pattern_parts else f"[url:value = '{normalized_url}']"
+        )
 
         indicator_name = f"{host_value or normalized_url}"
 

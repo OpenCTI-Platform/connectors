@@ -363,7 +363,9 @@ class UstaConnector:
                                     buf = io.BytesIO()
                                     total = 0
                                     too_large = False
-                                    for chunk in response.iter_content(chunk_size=65536):
+                                    for chunk in response.iter_content(
+                                        chunk_size=65536
+                                    ):
                                         total += len(chunk)
                                         if total > _MAX_PDF_BYTES:
                                             too_large = True
