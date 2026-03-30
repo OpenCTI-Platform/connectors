@@ -3,7 +3,21 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-VERSION="${1:?Usage: $0 <version>}"
+PUSH=false
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --push) PUSH=true; shift ;;
+        -*) echo "Unknown option: $1" >&2; echo "Usage: $0 [--push] <version>" >&2; exit 1 ;;
+        *) break ;;
+    esac
+done
+
+VERSION="${1:?Usage: $0 [--push] <version>}"
+
+BUILD_ARGS=""
+if [ "${PUSH}" = true ]; then
+    BUILD_ARGS="--push"
+fi
 
 CONNECTORS="
     external-import/alienvault
@@ -42,7 +56,7 @@ for connector in ${CONNECTORS}; do
     echo "=========================================="
     echo "Building ${connector}..."
     echo "=========================================="
-    if "${SCRIPT_DIR}/build_ubi9.sh" "${connector}" "${VERSION}"; then
+    if "${SCRIPT_DIR}/build_ubi9.sh" ${BUILD_ARGS} "${connector}" "${VERSION}"; then
         echo "OK: ${connector}"
     else
         echo "FAILED: ${connector}"
