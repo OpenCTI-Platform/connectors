@@ -1,4 +1,3 @@
-from collections.abc import Generator
 from datetime import datetime, timedelta, timezone
 from enum import Enum, auto
 from typing import TYPE_CHECKING
@@ -75,25 +74,6 @@ class Misp:
         )
 
         self._current_bundle = None
-
-    def _split_entities_to_fit_batch_size(
-        self,
-        entities: "list[stix2.v21._STIXBase21]",
-        author: "stix2.Identity",
-        markings: "list[stix2.MarkingDefinition]",
-    ) -> "Generator[list[stix2.v21._STIXBase21], None, None]":
-        """Split entities into chunks respecting configured size limits.
-
-        Yields:
-            Chunks of entities that fit within the configured batch size limit,
-            including the author and markings in the size calculation.
-        """
-        metadata_entities = [author, *markings]
-        yield from self.batch_processor.split_items_to_fit_size_limit(
-            items=entities,
-            batch_size_limit=self.config.misp.batch_size_limit,
-            additional_overhead_items=metadata_entities,
-        )
 
     def _check_batch_size_and_flush(
         self,
@@ -349,10 +329,10 @@ class Misp:
             batch_chunk_size,
         ):
             bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
-            sized_subchunks = self._split_entities_to_fit_batch_size(
-                entities=bundle_objects_chunk,
-                author=author,
-                markings=markings,
+            sized_subchunks = self.batch_processor.split_items_to_fit_size_limit(
+                items=bundle_objects_chunk,
+                batch_size_limit=self.config.misp.batch_size_limit,
+                additional_overhead_items=[author, *markings],
             )
 
             for subchunk in sized_subchunks:
