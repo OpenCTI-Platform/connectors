@@ -47,4 +47,8 @@ set -- "$@" --build-arg "CONNECTOR_TYPE=${CONNECTOR_TYPE}"
 set -- "$@" -t "opencti/connector-${CONNECTOR_NAME}:${VERSION}-ubi9"
 set -- "$@" "${CONNECTOR_DIR}"
 
-MSYS_NO_PATHCONV=1 podman build "$@"
+if command -v podman >/dev/null 2>&1; then
+    MSYS_NO_PATHCONV=1 podman build "$@"
+else
+    MSYS_NO_PATHCONV=1 docker build "$@"
+fi
