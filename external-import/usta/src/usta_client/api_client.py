@@ -21,10 +21,22 @@ from limiter import Limiter
 from pycti import OpenCTIConnectorHelper
 from tenacity import (
     retry,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential_jitter,
 )
+
+
+def _is_retryable_error(exc: BaseException) -> bool:
+    """Return True only for transient errors worth retrying (timeouts, 429, 5xx)."""
+    if isinstance(exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+        return True
+    if isinstance(exc, requests.exceptions.HTTPError):
+        response = exc.response
+        return response is not None and (
+            response.status_code == 429 or response.status_code >= 500
+        )
+    return False
 
 
 class UstaClientError(Exception):
@@ -84,13 +96,7 @@ class UstaClient:
     @retry(
         stop=stop_after_attempt(5),
         wait=wait_exponential_jitter(initial=2, max=120, jitter=2),
-        retry=retry_if_exception_type(
-            (
-                requests.exceptions.ConnectionError,
-                requests.exceptions.Timeout,
-                requests.exceptions.HTTPError,
-            )
-        ),
+        retry=retry_if_exception(_is_retryable_error),
     )
     def _request(self, url: str, params: dict[str, Any] | None = None) -> dict:
         """

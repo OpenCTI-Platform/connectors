@@ -312,6 +312,8 @@ class TestCollectors:
             mock_resp = MagicMock()
             mock_resp.iter_content.return_value = [b"%PDF-1.4 test"]
             mock_resp.raise_for_status = MagicMock()
+            mock_resp.__enter__ = MagicMock(return_value=mock_resp)
+            mock_resp.__exit__ = MagicMock(return_value=False)
             mock_requests.get.return_value = mock_resp
             conn._collect_deep_sight_tickets("t")
         # The converter must have been called with _pdf_data/_pdf_filename injected

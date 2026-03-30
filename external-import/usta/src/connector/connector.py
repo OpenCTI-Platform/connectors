@@ -341,17 +341,19 @@ class UstaConnector:
                     if report_url:
                         filename = self._extract_filename_from_url(report_url)
                         try:
-                            response = requests.get(report_url, timeout=60, stream=True)
-                            response.raise_for_status()
-                            chunks: list[bytes] = []
-                            total = 0
-                            too_large = False
-                            for chunk in response.iter_content(chunk_size=65536):
-                                total += len(chunk)
-                                if total > _MAX_PDF_BYTES:
-                                    too_large = True
-                                    break
-                                chunks.append(chunk)
+                            with requests.get(
+                                report_url, timeout=60, stream=True
+                            ) as response:
+                                response.raise_for_status()
+                                chunks: list[bytes] = []
+                                total = 0
+                                too_large = False
+                                for chunk in response.iter_content(chunk_size=65536):
+                                    total += len(chunk)
+                                    if total > _MAX_PDF_BYTES:
+                                        too_large = True
+                                        break
+                                    chunks.append(chunk)
                             if too_large:
                                 self.helper.connector_logger.warning(
                                     "[CONNECTOR] Deep Sight report PDF exceeds size"
