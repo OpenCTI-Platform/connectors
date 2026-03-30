@@ -27,30 +27,21 @@ CONNECTOR_TYPE="$(echo "${TOP_DIR}" | tr '[:lower:]-' '[:upper:]_')"
 
 CONNECTOR_NAME="$(basename "${CONNECTOR_DIR}")"
 
-# Defaults for optional build args
-EXTRA_PACKAGES=""
-CONNECTOR_CMD=""
-CONNECTOR_WORKDIR=""
-POST_INSTALL=""
-
-# Load connector-specific overrides if present
-ENV_FILE="${CONNECTOR_DIR}/.build.env"
-if [ -f "${ENV_FILE}" ]; then
-    . "${ENV_FILE}"
-fi
-
-# Build argument list using positional params (handles spaces correctly)
+# Build argument list
 set -- -f "${SCRIPT_DIR}/Dockerfile_ubi9"
 set -- "$@" --build-arg "CONNECTOR_TYPE=${CONNECTOR_TYPE}"
-[ -n "${EXTRA_PACKAGES}" ]    && set -- "$@" --build-arg "EXTRA_PACKAGES=${EXTRA_PACKAGES}"
-[ -n "${CONNECTOR_CMD}" ]     && set -- "$@" --build-arg "CONNECTOR_CMD=${CONNECTOR_CMD}"
-[ -n "${CONNECTOR_WORKDIR}" ] && set -- "$@" --build-arg "CONNECTOR_WORKDIR=${CONNECTOR_WORKDIR}"
-[ -n "${POST_INSTALL}" ]      && set -- "$@" --build-arg "POST_INSTALL=${POST_INSTALL}"
+
+# Append connector-specific overrides from env file as --build-arg flags
+ENV_FILE="${CONNECTOR_DIR}/.build.env"
+if [ -f "${ENV_FILE}" ]; then
+    eval set -- '"$@"' $(sed '/^$/d; /^#/d; s/^/--build-arg /' "${ENV_FILE}")
+fi
+
 set -- "$@" -t "opencti/connector-${CONNECTOR_NAME}:${VERSION}-ubi9"
 set -- "$@" "${CONNECTOR_DIR}"
 
 if command -v podman >/dev/null 2>&1; then
-    MSYS_NO_PATHCONV=1 podman build "$@"
+    podman build "$@"
 else
-    MSYS_NO_PATHCONV=1 docker build "$@"
+    docker build "$@"
 fi
