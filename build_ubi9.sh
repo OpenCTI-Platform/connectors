@@ -43,7 +43,7 @@ set -- "$@" --build-arg "CONNECTOR_TYPE=${CONNECTOR_TYPE}"
 
 # Append connector-specific overrides from env file as --build-arg flags
 if [ -f "${ENV_FILE}" ]; then
-    eval set -- '"$@"' $(sed '/^$/d; /^#/d; s/^/--build-arg /' "${ENV_FILE}")
+    set -- "$@" $(sed '/^$/d; /^#/d; s/^/--build-arg /' "${ENV_FILE}")
 fi
 
 set -- "$@" -t "${IMAGE}"
