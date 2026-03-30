@@ -159,7 +159,21 @@ class UstaClient:
                 f"Permanent HTTP error {response.status_code} for {full_url}: "
                 f"{response.text[:200]}"
             ) from exc
-        return response.json()
+        try:
+            return response.json()
+        except ValueError as exc:
+            self.helper.connector_logger.warning(
+                "[USTA_CLIENT] Failed to decode JSON response",
+                {
+                    "url": full_url,
+                    "http_status": response.status_code,
+                    "content_type": response.headers.get("Content-Type"),
+                    "response_preview": response.text[:500],
+                },
+            )
+            raise UstaClientError(
+                f"Non-JSON response from {full_url} (status {response.status_code})"
+            ) from exc
 
     # ------------------------------------------------------------------
     # Cursor-based pagination (malicious-urls and malware-hashes)

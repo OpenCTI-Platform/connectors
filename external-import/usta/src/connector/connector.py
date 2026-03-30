@@ -11,6 +11,7 @@ Orchestrates the full import lifecycle:
 
 from __future__ import annotations
 
+import io
 import sys
 import time
 from dataclasses import dataclass
@@ -339,53 +340,67 @@ class UstaConnector:
                     content = record.get("content") or {}
                     report_url = content.get("report")
                     if report_url:
-                        filename = self._extract_filename_from_url(report_url)
-                        try:
-                            with requests.get(
-                                report_url, timeout=60, stream=True
-                            ) as response:
-                                response.raise_for_status()
-                                chunks: list[bytes] = []
-                                total = 0
-                                too_large = False
-                                for chunk in response.iter_content(chunk_size=65536):
-                                    total += len(chunk)
-                                    if total > _MAX_PDF_BYTES:
-                                        too_large = True
-                                        break
-                                    chunks.append(chunk)
-                            if too_large:
-                                self.helper.connector_logger.warning(
-                                    "[CONNECTOR] Deep Sight report PDF exceeds size"
-                                    " limit — skipping attachment",
-                                    {
-                                        "ticket_id": record_id,
-                                        "limit_bytes": _MAX_PDF_BYTES,
-                                    },
-                                )
-                            else:
-                                record["_pdf_data"] = b"".join(chunks)
-                                record["_pdf_filename"] = filename
-                                self.helper.connector_logger.debug(
-                                    "[CONNECTOR] Downloaded Deep Sight report PDF",
-                                    {
-                                        "ticket_id": record_id,
-                                        "filename": filename,
-                                        "file_size_bytes": total,
-                                    },
-                                )
-                        except (
-                            Exception  # pylint: disable=broad-exception-caught
-                        ) as dl_err:
+                        parsed_url = urlparse(report_url)
+                        if parsed_url.scheme != "https" or not parsed_url.hostname:
                             self.helper.connector_logger.warning(
-                                "[CONNECTOR] Failed to download Deep Sight report PDF"
-                                " — continuing without attachment",
+                                "[CONNECTOR] Deep Sight report URL is not HTTPS"
+                                " — skipping attachment download",
                                 {
                                     "ticket_id": record_id,
-                                    "error_type": type(dl_err).__name__,
-                                    "error": str(dl_err),
+                                    "report_url": report_url,
                                 },
                             )
+                        else:
+                            filename = self._extract_filename_from_url(report_url)
+                            try:
+                                with requests.get(
+                                    report_url,
+                                    timeout=60,
+                                    stream=True,
+                                    allow_redirects=False,
+                                ) as response:
+                                    response.raise_for_status()
+                                    buf = io.BytesIO()
+                                    total = 0
+                                    too_large = False
+                                    for chunk in response.iter_content(chunk_size=65536):
+                                        total += len(chunk)
+                                        if total > _MAX_PDF_BYTES:
+                                            too_large = True
+                                            break
+                                        buf.write(chunk)
+                                if too_large:
+                                    self.helper.connector_logger.warning(
+                                        "[CONNECTOR] Deep Sight report PDF exceeds size"
+                                        " limit — skipping attachment",
+                                        {
+                                            "ticket_id": record_id,
+                                            "limit_bytes": _MAX_PDF_BYTES,
+                                        },
+                                    )
+                                else:
+                                    record["_pdf_data"] = buf.getvalue()
+                                    record["_pdf_filename"] = filename
+                                    self.helper.connector_logger.debug(
+                                        "[CONNECTOR] Downloaded Deep Sight report PDF",
+                                        {
+                                            "ticket_id": record_id,
+                                            "filename": filename,
+                                            "file_size_bytes": total,
+                                        },
+                                    )
+                            except (
+                                Exception  # pylint: disable=broad-exception-caught
+                            ) as dl_err:
+                                self.helper.connector_logger.warning(
+                                    "[CONNECTOR] Failed to download Deep Sight report PDF"
+                                    " — continuing without attachment",
+                                    {
+                                        "ticket_id": record_id,
+                                        "error_type": type(dl_err).__name__,
+                                        "error": str(dl_err),
+                                    },
+                                )
 
                     converted = self.converter.convert_deep_sight_ticket(record)
                     for obj in converted:

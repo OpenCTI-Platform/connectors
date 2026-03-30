@@ -485,17 +485,19 @@ class ConverterToStix:
         if not url_value:
             return stix_objects
 
-        # Parse host from URL
-        parsed = urlparse(url_value if "://" in url_value else f"http://{url_value}")
-        host_value = parsed.hostname or ""
+        # Normalize to a full URL so the observable, pattern, and host extraction
+        # are all consistent. Without a scheme, urlparse treats the whole string as
+        # a path and yields no hostname.
+        normalized_url = url_value if "://" in url_value else f"http://{url_value}"
+        host_value = urlparse(normalized_url).hostname or ""
 
         observable_objects: list = []
         pattern_parts: list[str] = []
 
-        # Create URL observable
-        url_obs = self._create_url_observable(url_value)
+        # Create URL observable using the normalized value
+        url_obs = self._create_url_observable(normalized_url)
         observable_objects.append(url_obs)
-        pattern_parts.append(f"[url:value = '{url_value}']")
+        pattern_parts.append(f"[url:value = '{normalized_url}']")
 
         # Create domain observable if applicable
         if host_value and not self._is_ip(host_value):
@@ -514,9 +516,9 @@ class ConverterToStix:
         stix_objects.extend(observable_objects)
 
         # --- Build pattern (URL-centric for phishing) ---
-        pattern = pattern_parts[0] if pattern_parts else f"[url:value = '{url_value}']"
+        pattern = pattern_parts[0] if pattern_parts else f"[url:value = '{normalized_url}']"
 
-        indicator_name = f"{host_value or url_value}"
+        indicator_name = f"{host_value or normalized_url}"
 
         indicator = stix2.Indicator(
             id=PyctiIndicator.generate_id(pattern),
