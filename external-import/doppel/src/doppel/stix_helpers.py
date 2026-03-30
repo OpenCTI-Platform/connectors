@@ -140,17 +140,16 @@ def build_custom_properties(alert, author_id) -> dict:
         score = int(float(raw_score) * 100) if raw_score is not None else 0
     except (ValueError, TypeError):
         score = 0
+
     custom_properties["x_opencti_created_by_ref"] = author_id
     custom_properties["x_opencti_score"] = score
     custom_properties["x_opencti_workflow_id"] = alert.get(
         "id"
     )  # Store alert_id for lookup
-
-    if alert.get("product") == "telco":
-        custom_properties["x_opencti_labels"] = build_labels(alert)
-        custom_properties["x_opencti_external_references"] = build_external_references(
-            alert
-        )
+    custom_properties["x_opencti_labels"] = build_labels(alert)
+    custom_properties["x_opencti_external_references"] = build_external_references(
+        alert
+    )
 
     x_opencti_description = build_description(alert)
     if x_opencti_description:
