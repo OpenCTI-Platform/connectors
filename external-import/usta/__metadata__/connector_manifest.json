@@ -1,8 +1,8 @@
 {
   "title": "USTA",
   "slug": "usta",
-  "description": "The USTA connector leverages the USTA Threat Stream API to import comprehensive cyber threat intelligence, including malicious URLs, phishing sites, malware hashes, compromised credentials, and credit card fraud alerts.",
-  "short_description": "Import malicious URLs, phishing sites, malware hashes, compromised credentials and credit card fraud alerts from USTA",
+  "description": "The USTA connector leverages the USTA Threat Stream API to import comprehensive cyber threat intelligence, including malicious URLs, phishing sites, malware hashes, compromised credentials, credit card fraud alerts, and Deep Sight tickets.",
+  "short_description": "Import malicious URLs, phishing sites, malware hashes, compromised credentials, credit card fraud alerts and Deep Sight tickets from USTA",
   "logo": "external-import/usta/__metadata__/logo.png",
   "use_cases": [
     "Commercial Threat Intel"

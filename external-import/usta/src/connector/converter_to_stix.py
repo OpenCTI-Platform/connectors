@@ -37,9 +37,6 @@ from pycti import Report as PyctiReport
 from pycti import StixCoreRelationship
 from pycti import ThreatActor as PyctiThreatActor
 
-# Regex to strip protocol prefix and trailing paths for host extraction
-_HOST_RE = re.compile(r"^(?:https?://)?([^/:]+)")
-
 
 class ConverterToStix:
     """
@@ -129,11 +126,31 @@ class ConverterToStix:
 
     @staticmethod
     def _extract_host(url_string: str) -> str:
-        """Extract the host portion from a URL-like string."""
-        match = _HOST_RE.match(url_string)
-        if match:
-            return match.group(1)
-        return url_string.split(":")[0] if ":" in url_string else url_string
+        """Extract the host portion from a URL-like string, including IPv6 literals."""
+        if not url_string:
+            return ""
+
+        # Standard URL parsing handles bracketed IPv6 (e.g. http://[2001:db8::1]:443/)
+        parsed = urlparse(url_string)
+        if parsed.hostname:
+            return parsed.hostname
+
+        # Bare bracketed IPv6 literal: "[2001:db8::1]:443"
+        if url_string.startswith("["):
+            end_bracket = url_string.find("]")
+            if end_bracket != -1:
+                return url_string[1:end_bracket]
+
+        # Unbracketed IPv6 with optional port: "2001:db8::1:443"
+        if ":" in url_string:
+            host_candidate = url_string.rsplit(":", 1)[0]
+            try:
+                ipaddress.ip_address(host_candidate)
+                return host_candidate
+            except ValueError:
+                return url_string.split(":", 1)[0]
+
+        return url_string
 
     @staticmethod
     def _is_ip(value: str) -> bool:
@@ -498,7 +515,6 @@ class ConverterToStix:
         # --- Build pattern (URL-centric for phishing) ---
         pattern = pattern_parts[0] if pattern_parts else f"[url:value = '{url_value}']"
 
-        # Calculate valid_until as 1 year from created
         indicator_name = f"{host_value or url_value}"
 
         indicator = stix2.Indicator(
@@ -672,10 +688,20 @@ class ConverterToStix:
             labels: Optional list of label strings attached via
                 x_opencti_labels (e.g. "corporate", "personal", "malware").
         """
+        record_id_str = str(record_id).strip() if record_id is not None else ""
+        if record_id_str:
+            uuid_name = record_id_str
+        else:
+            if not account_login:
+                raise ValueError(
+                    "Cannot generate deterministic UserAccount ID: both record_id "
+                    "and account_login are empty."
+                )
+            uuid_name = f"login:{account_login}"
         deterministic_id = "user-account--" + str(
             uuid.uuid5(
                 uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"),
-                name=str(record_id),
+                name=uuid_name,
             )
         )
         custom: dict[str, Any] = {"x_opencti_created_by_ref": self.author.id}
@@ -739,8 +765,10 @@ class ConverterToStix:
           - Relationships       (incident targets user-account, incident related-to
                                  observables, incident uses malware)
 
-        IMPORTANT: Raw passwords are NEVER stored in any STIX object.
-        Only the password_complexity metadata is preserved.
+        IMPORTANT: Raw passwords are NOT stored by default.
+        They are only placed in the User-Account ``credential`` field when
+        ``store_credential_password`` is explicitly enabled.
+        Only the password_complexity metadata is preserved otherwise.
         """
         stix_objects: list = []
 
