@@ -1,14 +1,14 @@
 import logging
-import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 # Add src to Python path for imports
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.doppel.converter_to_stix import ConverterToStix
+from doppel.converter_to_stix import ConverterToStix
 
 
 @pytest.fixture(autouse=True)

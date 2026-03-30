@@ -1,4 +1,4 @@
-from src.doppel.stix_helpers import (
+from doppel.stix_helpers import (
     build_custom_properties,
     build_description,
     build_external_references,
