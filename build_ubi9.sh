@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 usage() {
     echo "Usage: $0 <connector-dir> <version>" >&2
     echo "  connector-dir  Path to the connector (e.g. external-import/crowdstrike)" >&2
@@ -38,7 +40,7 @@ if [ -f "${ENV_FILE}" ]; then
 fi
 
 # Build argument list using positional params (handles spaces correctly)
-set -- -f Dockerfile_ubi9
+set -- -f "${SCRIPT_DIR}/Dockerfile_ubi9"
 set -- "$@" --build-arg "CONNECTOR_TYPE=${CONNECTOR_TYPE}"
 [ -n "${EXTRA_PACKAGES}" ]    && set -- "$@" --build-arg "EXTRA_PACKAGES=${EXTRA_PACKAGES}"
 [ -n "${CONNECTOR_CMD}" ]     && set -- "$@" --build-arg "CONNECTOR_CMD=${CONNECTOR_CMD}"

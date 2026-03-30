@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 VERSION="${1:?Usage: $0 <version>}"
 
 CONNECTORS="
@@ -40,7 +42,7 @@ for connector in ${CONNECTORS}; do
     echo "=========================================="
     echo "Building ${connector}..."
     echo "=========================================="
-    if ./build_ubi9.sh "${connector}" "${VERSION}"; then
+    if "${SCRIPT_DIR}/build_ubi9.sh" "${connector}" "${VERSION}"; then
         echo "OK: ${connector}"
     else
         echo "FAILED: ${connector}"
