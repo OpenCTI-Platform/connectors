@@ -239,7 +239,7 @@ class BatchProcessor:
         self,
         incoming_items: list[stix2.v21._STIXBase21],
         *,
-        batch_size_limit: str | None = None,
+        batch_size_limit: DataSize | None = None,
         max_batch_length: int | None = None,
     ) -> bool:
         """Determine whether current batch should be flushed before adding items.
@@ -260,18 +260,17 @@ class BatchProcessor:
             current_batch_size = self.get_current_batch_size()
             incoming_size = DataSize(self._get_serialized_size_bytes(incoming_items))
             projected_batch_size = DataSize(current_batch_size + incoming_size)
-            size_limit = DataSize(batch_size_limit)
 
             self._logger.debug(
                 "Projected batch size and batch size limit",
                 {
                     "prefix": LOG_PREFIX,
                     "projected_batch_size": f"{projected_batch_size:.2a}",
-                    "batch_size_limit": f"{size_limit:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
                 },
             )
 
-            if projected_batch_size >= int(size_limit):
+            if projected_batch_size >= int(batch_size_limit):
                 self._logger.debug(
                     "Current and incoming batch size exceed the configured batch size limit, flushing batch",
                     {
@@ -279,7 +278,7 @@ class BatchProcessor:
                         "current_batch_size": f"{current_batch_size:.2a}",
                         "incoming_batch_size": f"{incoming_size:.2a}",
                         "projected_batch_size": f"{projected_batch_size:.2a}",
-                        "batch_size_limit": f"{size_limit:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
                     },
                 )
                 return True
@@ -300,7 +299,7 @@ class BatchProcessor:
         self,
         items: list[stix2.v21._STIXBase21],
         *,
-        batch_size_limit: str | None,
+        batch_size_limit: DataSize | None,
         additional_overhead_items: list[Any] | None = None,
     ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
         """Yield item chunks that fit in the configured serialized size limit.
@@ -320,7 +319,6 @@ class BatchProcessor:
             yield items
             return
 
-        size_limit = DataSize(batch_size_limit)
         overhead_size = DataSize(
             self._get_serialized_size_bytes(additional_overhead_items or [])
         )
@@ -328,14 +326,14 @@ class BatchProcessor:
         current_chunk: list[stix2.v21._STIXBase21] = []
 
         items_size = DataSize(self._get_serialized_size_bytes(items))
-        if overhead_size + items_size <= int(size_limit):
+        if overhead_size + items_size <= int(batch_size_limit):
             self._logger.debug(
                 "All entities fit in the batch size limit, no need to split",
                 {
                     "prefix": LOG_PREFIX,
                     "entities_size": f"{items_size:.2a}",
                     "metadata_size": f"{overhead_size:.2a}",
-                    "batch_size_limit": f"{size_limit:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
                 },
             )
             yield items
@@ -345,7 +343,7 @@ class BatchProcessor:
             item_size = DataSize(self._get_serialized_size_bytes(item))
             candidate_size += item_size
 
-            if int(candidate_size) <= int(size_limit):
+            if int(candidate_size) <= int(batch_size_limit):
                 current_chunk.append(item)
                 continue
 
@@ -356,7 +354,7 @@ class BatchProcessor:
                         "prefix": LOG_PREFIX,
                         "chunk_size": f"{DataSize(self._get_serialized_size_bytes(current_chunk)):.2a}",
                         "metadata_size": f"{overhead_size:.2a}",
-                        "batch_size_limit": f"{size_limit:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
                     },
                 )
                 yield current_chunk
@@ -364,14 +362,14 @@ class BatchProcessor:
                 candidate_size = overhead_size
 
             single_item_size = overhead_size + item_size
-            if int(single_item_size) > int(size_limit):
+            if int(single_item_size) > int(batch_size_limit):
                 self._logger.warning(
                     "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
                     {
                         "prefix": LOG_PREFIX,
                         "entity_size": f"{item_size:.2a}",
                         "metadata_size": f"{overhead_size:.2a}",
-                        "batch_size_limit": f"{size_limit:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
                     },
                 )
                 yield [item]
