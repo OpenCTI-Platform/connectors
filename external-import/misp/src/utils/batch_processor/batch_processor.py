@@ -4,7 +4,6 @@ This module provides a flexible processor that can work with any data type,
 handle configurable sizes and provide consistent work management.
 """
 
-import json
 from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
@@ -400,15 +399,9 @@ class BatchProcessor:
         if callable(serialize):
             return DataSize(len(serialize().encode("utf-8")))
 
-        return DataSize(
-            len(
-                json.dumps(
-                    value,
-                    separators=(",", ":"),
-                    default=str,
-                ).encode("utf-8"),
-            )
-        )
+        # Invalid entity that cannot be serialized, return 0 as it will not contribute
+        # to the batch size
+        return DataSize(0)
 
     def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.
