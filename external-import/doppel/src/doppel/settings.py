@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Literal
+from typing import Literal, Optional
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -36,10 +36,10 @@ class DoppelConfig(BaseConfigModel):
 
     api_key: str = Field(description="API key for authentication.")
 
-    user_api_key: str = Field(description="Used for user-specific identity")
+    user_api_key: Optional[str] = Field(description="Used for user-specific identity")
 
-    organization_code: str = Field(
-        description="Identifies the specific organizational workspane for multi-tenant keys"
+    organization_code: Optional[str] = Field(
+        description="Identifies the specific organizational workspace for multi-tenant keys"
     )
 
     tlp_level: Literal[
@@ -59,7 +59,7 @@ class DoppelConfig(BaseConfigModel):
         default="/alerts",
     )
 
-    historical_days: int = Field(
+    historical_polling_days: int = Field(
         description="Determines the time-window for initial data fetching", default=30
     )
 

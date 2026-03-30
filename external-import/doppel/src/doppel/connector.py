@@ -21,8 +21,8 @@ class DoppelConnector:
 
     def _get_last_run(self, current_state, start_datetime: datetime) -> datetime:
         """
-        Retrieve last_run from current state or the
-        start date depending on historical_days from config
+        Retrieve previous run from current state or the
+        start date depending on historical_polling_days from config
         :params:
             start_datetime (datetime): datetime when process started
         :return: datetime
@@ -32,18 +32,18 @@ class DoppelConnector:
                 "Resuming from last run timestamp",
                 {"last_run": current_state["last_run"]},
             )
-            last_run = current_state["last_run"]
+            previous_run = current_state["last_run"]
         else:
             default_start = start_datetime - timedelta(
-                days=self.config.doppel.historical_days
+                days=self.config.doppel.historical_polling_days
             )
-            last_run = default_start.strftime("%Y-%m-%d %H:%M:%S")
+            previous_run = default_start.strftime("%Y-%m-%d %H:%M:%S")
             self.helper.connector_logger.info(
                 "No previous state found. Using historical polling window",
-                {"start_date": last_run},
+                {"start_date": previous_run},
             )
 
-        return last_run
+        return previous_run
 
     def process_message(self) -> None:
         """
@@ -52,24 +52,26 @@ class DoppelConnector:
         """
         self.helper.connector_logger.info("[DoppelConnector] Running scheduled fetch")
         work_id = None
-        now = datetime.now()
-        current_timestamp = int(datetime.timestamp(now))
         start_datetime = datetime.now(tz=timezone.utc)
+        current_timestamp = int(datetime.timestamp(start_datetime))
         current_state = self.helper.get_state()
 
         try:
-            last_run = self._get_last_run(current_state, start_datetime)
-
             # Perform collection of intelligence
-            formatted_last_run = datetime.fromisoformat(last_run).isoformat(
+
+            previous_run = self._get_last_run(current_state, start_datetime)
+            # Format previous_run for api call (format: 'yyyy-mm-ddThh:mm:ss')
+            formatted_previous_run = datetime.fromisoformat(previous_run).isoformat(
                 timespec="seconds"
             )
             alerts = self.client.get_alerts(
-                formatted_last_run, page_size=self.config.doppel.page_size
+                formatted_previous_run, page_size=self.config.doppel.page_size
             )
+
             if alerts:
-                now = datetime.now(tz=timezone.utc)
-                friendly_name = f"Doppel run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
+                friendly_name = (
+                    f"Doppel run @ {start_datetime.strftime('%Y-%m-%d %H:%M:%S')}"
+                )
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
@@ -89,8 +91,7 @@ class DoppelConnector:
                 "Getting current state and update it with last run of the connector",
                 {"current_timestamp": current_timestamp},
             )
-            current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+            current_state_datetime = start_datetime.strftime("%Y-%m-%d %H:%M:%S")
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:
@@ -98,7 +99,7 @@ class DoppelConnector:
             self.helper.set_state(current_state)
 
             self.helper.connector_logger.info(
-                "Updated last run state", {"last_run": last_run}
+                "Updated last run state", {"last_run": current_state_datetime}
             )
 
         except (KeyboardInterrupt, SystemExit):

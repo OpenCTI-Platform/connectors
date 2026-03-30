@@ -188,7 +188,7 @@ class ConverterToStix:
         )
 
     def create_note(
-        self, note_content: str, note_body: str, note_refs: str, note_timestamp
+        self, note_content: str, note_body: str, note_refs: list, note_timestamp
     ) -> Note:
         """
         Create Note object
@@ -342,6 +342,8 @@ class ConverterToStix:
         """
         Handle state transitions based on queue_state if observable already exists
 
+        Warning: self.helper.api calls may cause latency in the process.
+
         :param alert_queue_state: queue_state of alert
         :param current_observable: DomainName or PhoneNumber entity
         :param alert: dict of alert data
@@ -355,9 +357,17 @@ class ConverterToStix:
         )
 
         if observable_octi:
+            self.helper.connector_logger.debug(
+                "[Handle state transition] Observable found in OCTI",
+                {
+                    "current_observable_id": current_observable.id,
+                    "observable_octi": observable_octi,
+                },
+            )
             is_takedown_now = is_takedown_state(alert_queue_state)
             is_reverted = is_reverted_state(alert_queue_state)
             was_takedown = False
+            previous_queue_state = None
 
             # Retrieve previous queue_state from the observable
             label_queue_state = [
@@ -368,10 +378,21 @@ class ConverterToStix:
             if label_queue_state:
                 previous_queue_state = label_queue_state[0].replace("queue_state:", "")
                 was_takedown = is_takedown_state(previous_queue_state)
+                self.helper.api.stix_cyber_observable.remove_label(
+                    id=observable_octi["id"], label_name=label_queue_state
+                )
 
             # Transition: TO_TAKEDOWN
             # If Doppel marks the alert as “taken down”
             if is_takedown_now and not was_takedown:
+                self.helper.connector_logger.debug(
+                    "[Handle state transition] Transition to process takedown",
+                    {
+                        "current_observable_id": current_observable.id,
+                        "is_takedown_now": is_takedown_now,
+                        "previous_queue_state": previous_queue_state,
+                    },
+                )
                 self._process_takedown(
                     alert, current_observable.id, stix_objects, observable_name
                 )
@@ -379,12 +400,27 @@ class ConverterToStix:
             # Transition: REVERSION
             # If the alert moves from Actioned/Taken Down back to unresolved
             elif was_takedown and not is_takedown_now:
+                self.helper.connector_logger.debug(
+                    "[Handle state transition] Transition to process reversion",
+                    {
+                        "current_observable_id": current_observable.id,
+                        "is_takedown_now": is_takedown_now,
+                        "previous_queue_state": previous_queue_state,
+                    },
+                )
                 self._process_reversion(
                     alert, current_observable.id, stix_objects, observable_name
                 )
 
             # Handle case where previous_state is null but we have an active indicator in reverted state
             elif previous_queue_state is None and is_reverted and not is_takedown_now:
+                self.helper.connector_logger.debug(
+                    "[Handle state transition] Transition to process reversion",
+                    {
+                        "current_observable_id": current_observable.id,
+                        "previous_queue_state": previous_queue_state,
+                    },
+                )
                 self._process_reversion(
                     alert, current_observable.id, stix_objects, observable_name
                 )
@@ -475,7 +511,7 @@ class ConverterToStix:
         entity_content = alert.get("entity_content", {})
         root_domain = entity_content.get("root_domain", {})
         domain_name = root_domain.get("domain")
-        ipv4_address = root_domain.get("ipv4_address", "")
+        ipv4_address = root_domain.get("ip_address", "")
         phone_value = alert.get("entity")
 
         # Parse timestamps once for indicator/note reuse
@@ -506,16 +542,16 @@ class ConverterToStix:
                 if indicator["revoked"]:
                     self.helper.connector_logger.info(
                         "[DoppelConverter] Un-revoking indicator after re-takedown",
-                        {"alert_id": alert_id, "indicator_id": indicator.id},
+                        {"alert_id": alert_id, "indicator_id": indicator["id"]},
                     )
 
                     # Update to revoked=false
                     self.helper.api.indicator.update_field(
-                        id=indicator.id, input={"key": "revoked", "value": False}
+                        id=indicator["id"], input={"key": "revoked", "value": False}
                     )
 
                 # Always record note when takedown/actioned occurs
-                note_refs = [indicator.id, observable_id]
+                note_refs = [indicator["id"], observable_id]
                 note = self.create_note(
                     note_content, note_body, note_refs, note_timestamp
                 )
@@ -540,6 +576,14 @@ class ConverterToStix:
                 alert, pattern, name, created_at, modified_at
             )
             stix_objects.append(indicator)
+            self.helper.connector_logger.debug(
+                "[Process taken down] New Indicator created",
+                {
+                    "alert_id": alert_id,
+                    "name": name,
+                    "indicator_pattern": indicator.pattern,
+                },
+            )
 
             # Create based-on relationship to primary observable
             indicator_relationship = self.create_relationship(
@@ -624,7 +668,7 @@ class ConverterToStix:
                 # Use OpenCTI API to revoke the indicator
                 try:
                     self.helper.api.indicator.update_field(
-                        id=indicator.id, input={"key": "revoked", "value": True}
+                        id=indicator["id"], input={"key": "revoked", "value": True}
                     )
 
                     # Add revoked-false-positive label
@@ -654,7 +698,7 @@ class ConverterToStix:
             if note_refs:
                 reversion_note = Note(
                     id=PyctiNote.generate_id(
-                        content=note_refs,
+                        content=str(note_refs),
                         created=modified,
                     ),
                     abstract="Moved from taken down back to unresolved",

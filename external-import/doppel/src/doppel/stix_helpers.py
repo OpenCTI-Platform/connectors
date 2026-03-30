@@ -68,6 +68,10 @@ def build_external_references(alert) -> list:
 def build_description(alert) -> str:
     """
     Build description field from alert data
+
+    NOTE: The screenshot_url value is always regenerated with each API call.
+    Therefore, the description will always be updated.
+
     :param alert: Doppel alert
     :return: Description string
     """
@@ -131,7 +135,9 @@ def build_custom_properties(alert, author_id) -> dict:
     custom_properties = {}
     raw_score = alert.get("score")
     try:
-        score = int(float(raw_score)) if raw_score is not None else 0
+        # Source API returns a score like 0.34
+        # It has to be scaled to 34 in OpenCTI (multiplied by 100)
+        score = int(float(raw_score) * 100) if raw_score is not None else 0
     except (ValueError, TypeError):
         score = 0
     custom_properties["x_opencti_created_by_ref"] = author_id

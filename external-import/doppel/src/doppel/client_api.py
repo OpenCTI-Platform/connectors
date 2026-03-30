@@ -122,9 +122,6 @@ class ConnectorClient:
         """
         url = f"{self.config.doppel.api_base_url}{self.config.doppel.alerts_endpoint}"
 
-        if last_activity_timestamp.endswith("+00:00"):
-            last_activity_timestamp = last_activity_timestamp.replace("+00:00", "")
-
         # Dynamically set retry settings
         self._request_data.retry.wait = wait_fixed(self.config.doppel.retry_delay)
         self._request_data.retry.stop = stop_after_attempt(
