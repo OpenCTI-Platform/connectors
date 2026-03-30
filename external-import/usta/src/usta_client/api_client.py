@@ -29,7 +29,9 @@ from tenacity import (
 
 def _is_retryable_error(exc: BaseException) -> bool:
     """Return True only for transient errors worth retrying (timeouts, 429, 5xx)."""
-    if isinstance(exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)):
+    if isinstance(
+        exc, (requests.exceptions.ConnectionError, requests.exceptions.Timeout)
+    ):
         return True
     if isinstance(exc, requests.exceptions.HTTPError):
         response = exc.response

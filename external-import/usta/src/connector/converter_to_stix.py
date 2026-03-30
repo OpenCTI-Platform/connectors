@@ -1110,7 +1110,9 @@ class ConverterToStix:
             ]
 
             kwargs: dict[str, Any] = {
-                "id": PyctiThreatActor.generate_id(name=nickname, opencti_type="Threat-Actor-Individual"),
+                "id": PyctiThreatActor.generate_id(
+                    name=nickname, opencti_type="Threat-Actor-Individual"
+                ),
                 "name": nickname,
                 "threat_actor_types": ["unknown"],
                 "created_by_ref": self.author.id,
