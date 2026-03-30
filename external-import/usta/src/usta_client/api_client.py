@@ -112,8 +112,9 @@ class UstaClient:
             Parsed JSON response as a dict.
 
         Raises:
-            UstaClientError: On non-retryable API errors.
-            requests.exceptions.HTTPError: On retryable HTTP errors (triggers retry).
+            UstaClientError: On all permanent errors (401, 403, and non-retryable 4xx).
+            requests.exceptions.HTTPError: On transient errors (429, 5xx) — consumed
+                internally by the tenacity retry decorator.
         """
         # Build absolute URL if a relative path was given
         if url.startswith("http://") or url.startswith("https://"):
@@ -149,7 +150,15 @@ class UstaClient:
                 },
             )
 
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as exc:
+            if _is_retryable_error(exc):
+                raise  # Let the tenacity retry decorator handle transient errors
+            raise UstaClientError(
+                f"Permanent HTTP error {response.status_code} for {full_url}: "
+                f"{response.text[:200]}"
+            ) from exc
         return response.json()
 
     # ------------------------------------------------------------------

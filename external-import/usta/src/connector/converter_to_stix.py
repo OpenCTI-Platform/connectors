@@ -126,31 +126,32 @@ class ConverterToStix:
 
     @staticmethod
     def _extract_host(url_string: str) -> str:
-        """Extract the host portion from a URL-like string, including IPv6 literals."""
-        if not url_string:
+        """Extract the host from a URL-like string, handling IPv6 literals and bare hosts."""
+        if not url_string or url_string.startswith("/"):
             return ""
 
-        # Standard URL parsing handles bracketed IPv6 (e.g. http://[2001:db8::1]:443/)
+        # Full URL with scheme: http://host:port/path, http://[::1]:443/
         parsed = urlparse(url_string)
         if parsed.hostname:
             return parsed.hostname
 
-        # Bare bracketed IPv6 literal: "[2001:db8::1]:443"
-        if url_string.startswith("["):
-            end_bracket = url_string.find("]")
-            if end_bracket != -1:
-                return url_string[1:end_bracket]
+        # Scheme-relative parse covers: bare "host", "host/path", "host:port",
+        # bracketed "[::1]:port", and IPv4-with-port in one shot
+        parsed = urlparse(f"//{url_string}")
+        if parsed.hostname:
+            return parsed.hostname
 
-        # Unbracketed IPv6 with optional port: "2001:db8::1:443"
+        # Last resort: unbracketed IPv6 that is invalid in standard URL syntax
+        # but may appear in raw API data (e.g. "2001:db8::1" or "2001:db8::1:443")
         if ":" in url_string:
             host_candidate = url_string.rsplit(":", 1)[0]
             try:
                 ipaddress.ip_address(host_candidate)
                 return host_candidate
             except ValueError:
-                return url_string.split(":", 1)[0]
+                pass
 
-        return url_string
+        return ""
 
     @staticmethod
     def _is_ip(value: str) -> bool:
