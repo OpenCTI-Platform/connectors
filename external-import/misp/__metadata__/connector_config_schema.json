@@ -286,6 +286,11 @@
       "default": null,
       "description": "The timeout for the requests to the MISP API in seconds. None means no timeout.",
       "type": "number"
+    },
+    "MISP_SEARCH_LIMIT": {
+      "default": 10,
+      "description": "Limit the number of results returned per page request to MISP server.",
+      "type": "integer"
     }
   },
   "required": [
