@@ -1,9 +1,12 @@
+from datetime import datetime, timezone
+
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_BOTNET
 from vclib.util.config import (
     SCOPE_INFRASTRUCTURE,
+    SCOPE_REPORT,
     SCOPE_VULNERABILITY,
     compare_config_to_target_scope,
 )
@@ -57,13 +60,14 @@ def _extract_stix_from_botnet(
 
     logger.info("[BOTNET] Parsing data into STIX objects")
     for entity in entities:
+        entity_objects = []
         infrastructure = None
 
         if SCOPE_INFRASTRUCTURE in target_scope and entity.botnet_name is not None:
             infrastructure = _create_infra(
                 converter_to_stix=converter_to_stix, entity=entity, logger=logger
             )
-            result.append(infrastructure)
+            entity_objects.append(infrastructure)
 
         if SCOPE_VULNERABILITY in target_scope and entity.cve is not None:
             for cve in entity.cve:
@@ -72,9 +76,9 @@ def _extract_stix_from_botnet(
                     cve=cve,
                     logger=logger,
                 )
-                result.append(vuln)
+                entity_objects.append(vuln)
                 if infrastructure is not None:
-                    result.append(
+                    entity_objects.append(
                         _create_rel_related_to(
                             infrastructure=infrastructure,
                             vulnerability=vuln,
@@ -87,6 +91,24 @@ def _extract_stix_from_botnet(
                             logger=logger,
                         )
                     )
+
+        if SCOPE_REPORT in target_scope and entity_objects:
+            cve_count = len(entity.cve) if entity.cve else 0
+            description = (
+                f"{entity.botnet_name} is a botnet known to exploit "
+                f"{cve_count} {'vulnerability' if cve_count == 1 else 'vulnerabilities'} "
+                f"as tracked by VulnCheck."
+            )
+            report = converter_to_stix.create_report(
+                name=entity.botnet_name,
+                published=datetime.now(timezone.utc),
+                object_refs=[obj["id"] for obj in entity_objects],
+                description=description,
+                labels=[entity.botnet_name],
+            )
+            entity_objects.append(report)
+
+        result.extend(entity_objects)
     return result
 
 
@@ -95,7 +117,7 @@ def collect_botnets(
 ) -> None:
     # Check if data source is in scope for this run
     source_name = "Botnet"
-    target_scope = [SCOPE_INFRASTRUCTURE, SCOPE_VULNERABILITY]
+    target_scope = [SCOPE_INFRASTRUCTURE, SCOPE_VULNERABILITY, SCOPE_REPORT]
     target_scope = compare_config_to_target_scope(
         config=config,
         target_scope=target_scope,

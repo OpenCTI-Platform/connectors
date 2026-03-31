@@ -5,6 +5,7 @@ import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from vclib.util.config import (
     SCOPE_EXTERNAL_REF,
+    SCOPE_REPORT,
     SCOPE_THREAT_ACTOR,
     SCOPE_VULNERABILITY,
     compare_config_to_target_scope,
@@ -151,7 +152,8 @@ def _extract_stix_from_threat_actors(
             logger=logger,
         )
 
-        stix_objects.extend(
+        entity_objects = list(vulnerabilities)
+        entity_objects.extend(
             _extract_threat_actors(
                 entity=entity,
                 external_refs=external_refs,
@@ -161,6 +163,23 @@ def _extract_stix_from_threat_actors(
                 logger=logger,
             )
         )
+
+        if SCOPE_REPORT in target_scope and entity_objects:
+            description = (
+                entity.misp_threat_actor.description
+                if entity.misp_threat_actor and entity.misp_threat_actor.description
+                else ""
+            )
+            report = converter_to_stix.create_report(
+                name=entity.threat_actor_name,
+                published=datetime.fromisoformat(entity.date_added),
+                object_refs=[obj["id"] for obj in entity_objects],
+                description=description,
+                labels=[entity.threat_actor_name],
+            )
+            entity_objects.append(report)
+
+        stix_objects.extend(entity_objects)
     return stix_objects
 
 
@@ -174,7 +193,12 @@ def collect_threat_actors(
 ) -> None:
     # Check if data source is in scope for this run
     source_name = "Threat Actors"
-    target_scope = [SCOPE_THREAT_ACTOR, SCOPE_VULNERABILITY, SCOPE_EXTERNAL_REF]
+    target_scope = [
+        SCOPE_THREAT_ACTOR,
+        SCOPE_VULNERABILITY,
+        SCOPE_EXTERNAL_REF,
+        SCOPE_REPORT,
+    ]
     target_scope = compare_config_to_target_scope(
         config=config,
         target_scope=target_scope,
@@ -201,5 +225,7 @@ def collect_threat_actors(
                 helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
             )
 
-    works.finish_work(helper=helper, logger=logger, work_id=work_id, work_name=source_name)
+    works.finish_work(
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
+    )
     logger.info("[THREAT ACTORS] Data Source Completed!")
