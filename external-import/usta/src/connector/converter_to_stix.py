@@ -818,7 +818,11 @@ class ConverterToStix:
 
         # --- URL SCO (target login page) ---
         if target_url:
-            url_obs = self._create_url_observable(target_url)
+            # Normalize once: ensures a valid URL SCO value and consistent parsing.
+            normalised_target_url = (
+                target_url if "://" in target_url else f"http://{target_url}"
+            )
+            url_obs = self._create_url_observable(normalised_target_url)
             stix_objects.append(url_obs)
             observable_scos.append(url_obs)
             # Direct link: user-account → related-to → url so the target URL
@@ -827,11 +831,8 @@ class ConverterToStix:
                 self._make_relationship("related-to", user_account.id, url_obs.id)
             )
 
-            # Extract domain from target URL
-            parsed = urlparse(
-                target_url if "://" in target_url else f"http://{target_url}"
-            )
-            hostname = parsed.hostname or ""
+            # Extract domain from the already-normalised URL
+            hostname = urlparse(normalised_target_url).hostname or ""
             if hostname and not self._is_ip(hostname):
                 domain_obs = self._create_domain_observable(hostname)
                 stix_objects.append(domain_obs)
@@ -1258,7 +1259,7 @@ class ConverterToStix:
         ip_addresses: list[str],
     ) -> str:
         """Determine the x_opencti_main_observable_type for an indicator."""
-        if is_domain and host_value:
+        if is_domain and host_value and not ConverterToStix._is_ip(host_value):
             return "Domain-Name"
         if ip_addresses:
             for addr_str in ip_addresses:
