@@ -484,6 +484,7 @@ class UstaConnector:
         (with in_error=True on failure) so OpenCTI never has orphaned works.
         """
         try:
+            run_start_mono = time.monotonic()
             run_start = datetime.now(timezone.utc)
             current_start_iso = run_start.isoformat()
             current_state = self._get_state()
@@ -627,7 +628,7 @@ class UstaConnector:
 
             self.helper.set_state(new_state)
 
-            elapsed = time.time() - run_start.timestamp()
+            elapsed = time.monotonic() - run_start_mono
             self.helper.connector_logger.info(
                 "[CONNECTOR] Import run completed",
                 {

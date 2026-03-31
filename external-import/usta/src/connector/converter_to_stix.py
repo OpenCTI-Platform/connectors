@@ -169,15 +169,23 @@ class ConverterToStix:
         if parsed.hostname:
             return parsed.hostname
 
-        # Last resort: unbracketed IPv6 that is invalid in standard URL syntax
-        # but may appear in raw API data (e.g. "2001:db8::1" or "2001:db8::1:443")
+        # Last resort: raw IP literals that may be invalid in standard URL syntax.
+        # First, handle bare IPv4/IPv6 like "2001:db8::1" which urlparse() cannot
+        # treat as a hostname when unbracketed.
+        try:
+            ipaddress.ip_address(url_string)
+            return url_string
+        except ValueError:
+            pass
+            # Then handle unbracketed IPv6 with an appended port, e.g. "2001:db8::1:443".
         if ":" in url_string:
-            host_candidate = url_string.rsplit(":", 1)[0]
-            try:
-                ipaddress.ip_address(host_candidate)
-                return host_candidate
-            except ValueError:
-                pass
+            host_candidate, _sep, _port = url_string.rpartition(":")
+            if host_candidate:
+                try:
+                    ipaddress.ip_address(host_candidate)
+                    return host_candidate
+                except ValueError:
+                    pass
 
         return ""
 
@@ -416,6 +424,9 @@ class ConverterToStix:
                 normalised_url = f"http://{normalised_url}"
             url_obs = self._create_url_observable(normalised_url)
             observable_objects.append(url_obs)
+            # Include the full URL in the pattern to avoid collapsing distinct
+            # URLs on the same host/IP into a single Indicator.
+            pattern_parts.append(f"[url:value = '{normalised_url}']")
 
         stix_objects.extend(observable_objects)
 
