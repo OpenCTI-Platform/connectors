@@ -59,7 +59,6 @@ class GTIIPToSTIXIP(BaseMapper):
                 marking_ids=src_entity.object_marking_refs,
                 created=datetime.now(tz=timezone.utc),
                 modified=datetime.now(tz=timezone.utc),
-                description=f"Indicator indicates {src_entity.__class__.__name__}",
             )
         else:
             return OctiRelationshipModel.create(
@@ -70,7 +69,6 @@ class GTIIPToSTIXIP(BaseMapper):
                 marking_ids=src_entity.object_marking_refs,
                 created=datetime.now(tz=timezone.utc),
                 modified=datetime.now(tz=timezone.utc),
-                description=f"{src_entity.__class__.__name__} {relation_type} {target_entity.__class__.__name__}",
             )
 
     def __init__(
