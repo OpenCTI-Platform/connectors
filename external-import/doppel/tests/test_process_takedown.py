@@ -32,7 +32,7 @@ def expected_log_messages_without_indicator_creation() -> list[str]:
     """Fixture for expected log messages in report orchestration."""
     return [
         "[DoppelConverter] Processing takedown workflow - {'alert_id': 'test id', 'queue_state': 'taken down'}",
-        "[DoppelConverter] Un-revoking indicator after re-takedown - {'alert_id': 'test id', 'indicator_id': 'indicator--867322cc-57e2-4027-8dee-3802c6c33ecd'}",
+        "[DoppelConverter] Un-revoking indicator after re-takedown - {'alert_id': 'test id', 'indicator_standard_id': 'indicator--867322cc-57e2-4027-8dee-3802c6c33ecd'}",
     ]
 
 

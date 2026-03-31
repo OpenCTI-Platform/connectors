@@ -148,7 +148,7 @@ class ConverterToStix:
         Create Grouping case object
         """
         priority = calculate_priority(alert["score"])
-        grouping_name = f"Case for Alert {alert["id"]}"
+        grouping_name = f"Case for Alert {alert['id']}"
         case_labels = build_labels(alert)
         case_labels.append(f"priority:{priority}")
 
@@ -542,16 +542,20 @@ class ConverterToStix:
                 if indicator["revoked"]:
                     self.helper.connector_logger.info(
                         "[DoppelConverter] Un-revoking indicator after re-takedown",
-                        {"alert_id": alert_id, "indicator_id": indicator["id"]},
+                        {
+                            "alert_id": alert_id,
+                            "indicator_standard_id": indicator["standard_id"],
+                        },
                     )
 
                     # Update to revoked=false
                     self.helper.api.indicator.update_field(
-                        id=indicator["id"], input={"key": "revoked", "value": False}
+                        id=indicator["standard_id"],
+                        input={"key": "revoked", "value": False},
                     )
 
                 # Always record note when takedown/actioned occurs
-                note_refs = [indicator["id"], observable_id]
+                note_refs = [indicator["standard_id"], observable_id]
                 note = self.create_note(
                     note_content, note_body, note_refs, note_timestamp
                 )
