@@ -4,9 +4,11 @@ This module provides a flexible processor that can work with any data type,
 handle configurable sizes and provide consistent work management.
 """
 
+from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
 import stix2
+from datasize import DataSize
 from exceptions import MispWorkProcessingError
 
 if TYPE_CHECKING:
@@ -214,7 +216,7 @@ class BatchProcessor:
         """
         self._current_batch.clear()
 
-    def get_current_batch_size(self) -> int:
+    def get_current_batch_length(self) -> int:
         """Get the number of items in the current batch.
 
         Returns:
@@ -222,6 +224,184 @@ class BatchProcessor:
 
         """
         return len(self._current_batch)
+
+    def get_current_batch_size(self) -> DataSize:
+        """Get the total size of the current batch in bytes.
+
+        Returns:
+            Total size of current batch in bytes
+
+        """
+        return self._get_serialized_size_bytes(self._current_batch)
+
+    def should_flush_before_adding(
+        self,
+        incoming_items: list[stix2.v21._STIXBase21],
+        *,
+        batch_size_limit: DataSize | None = None,
+        max_batch_length: int | None = None,
+    ) -> bool:
+        """Determine whether current batch should be flushed before adding items.
+
+        Args:
+            incoming_items: Items planned to be added to the current batch
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            max_batch_length: Optional max number of items in current + incoming
+
+        Returns:
+            True when the current batch should be flushed first
+        """
+        current_batch_length = self.get_current_batch_length()
+        if current_batch_length == 0:
+            return False
+
+        if batch_size_limit:
+            current_batch_size = self.get_current_batch_size()
+            incoming_size = self._get_serialized_size_bytes(incoming_items)
+            projected_batch_size = DataSize(current_batch_size + incoming_size)
+
+            self._logger.debug(
+                "Projected batch size and batch size limit",
+                {
+                    "prefix": LOG_PREFIX,
+                    "projected_batch_size": f"{projected_batch_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+
+            if projected_batch_size >= int(batch_size_limit):
+                self._logger.debug(
+                    "Current and incoming batch size exceed the configured batch size limit, flushing batch",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "current_batch_size": f"{current_batch_size:.2a}",
+                        "incoming_batch_size": f"{incoming_size:.2a}",
+                        "projected_batch_size": f"{projected_batch_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                return True
+
+        if (
+            max_batch_length is not None
+            and (current_batch_length + len(incoming_items)) >= max_batch_length
+        ):
+            self._logger.debug(
+                "Need to flush before adding next items to preserve bundle consistency",
+                {"prefix": LOG_PREFIX},
+            )
+            return True
+
+        return False
+
+    def split_items_to_fit_size_limit(
+        self,
+        items: list[stix2.v21._STIXBase21],
+        *,
+        additional_overhead_items: list[stix2.v21._STIXBase21],
+        batch_size_limit: DataSize | None = None,
+    ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
+        """Yield item chunks that fit in the configured serialized size limit.
+
+        Args:
+            items: Items to split into size-safe chunks
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            additional_overhead_items: Optional items always present with each chunk
+
+        Yields:
+            Chunks of items whose serialized size respects the configured limit
+        """
+        if not items:
+            return
+
+        if not batch_size_limit:
+            yield items
+            return
+
+        overhead_size = self._get_serialized_size_bytes(additional_overhead_items)
+        candidate_size = overhead_size
+        current_chunk: list[stix2.v21._STIXBase21] = []
+
+        items_size = self._get_serialized_size_bytes(items)
+        if overhead_size + items_size <= int(batch_size_limit):
+            self._logger.debug(
+                "All entities fit in the batch size limit, no need to split",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entities_size": f"{items_size:.2a}",
+                    "metadata_size": f"{overhead_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+            yield items
+            return
+
+        for item in items:
+            item_size = self._get_serialized_size_bytes(item)
+            candidate_size += item_size
+
+            if int(candidate_size) <= int(batch_size_limit):
+                current_chunk.append(item)
+                continue
+
+            if current_chunk:
+                self._logger.debug(
+                    "Current chunk reached batch size limit, yielding chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "chunk_size": f"{self._get_serialized_size_bytes(current_chunk):.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield current_chunk
+                current_chunk = []
+                candidate_size = overhead_size
+
+            single_item_size = overhead_size + item_size
+            if int(single_item_size) > int(batch_size_limit):
+                self._logger.warning(
+                    "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_size": f"{item_size:.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield [item]
+            else:
+                current_chunk = [item]
+
+        if current_chunk:
+            self._logger.debug(
+                "Yielding last chunk",
+                {
+                    "prefix": LOG_PREFIX,
+                },
+            )
+            yield current_chunk
+
+    @staticmethod
+    def _get_serialized_size_bytes(value: Any) -> DataSize:
+        """Estimate payload size from serialized UTF-8 JSON bytes."""
+        if isinstance(value, list):
+            if not value:
+                return DataSize(2)  # []
+            # Account for commas and brackets without materializing the full list JSON.
+            return DataSize(
+                2
+                + (len(value) - 1)
+                + sum(BatchProcessor._get_serialized_size_bytes(item) for item in value)
+            )
+
+        serialize = getattr(value, "serialize", None)
+        if callable(serialize):
+            return DataSize(len(serialize().encode("utf-8")))
+
+        # Invalid entity that cannot be serialized, return 0 as it will not contribute
+        # to the batch size
+        return DataSize(0)
 
     def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.
