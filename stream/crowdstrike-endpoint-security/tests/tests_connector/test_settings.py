@@ -79,6 +79,25 @@ from crowdstrike_connector import ConnectorSettings
             },
             id="metrics_disabled_with_placeholder_addr_and_port_is_valid",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "action_on_ip": "no_action",
+                    "action_on_domain": "detect",
+                    "action_on_hash": "prevent",
+                },
+            },
+            id="valid_action_settings",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -210,6 +229,60 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "metrics.port",
             id="invalid_metrics_port_when_enabled",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "action_on_ip": "prevent",
+                },
+            },
+            "crowdstrike.action_on_ip",
+            id="invalid_action_on_ip",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "action_on_domain": "prevent",
+                },
+            },
+            "crowdstrike.action_on_domain",
+            id="invalid_action_on_domain",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                },
+                "crowdstrike": {
+                    "client_id": "test-client-id",
+                    "client_secret": "test-client-secret",
+                    "action_on_hash": "invalid_action",
+                },
+            },
+            "crowdstrike.action_on_hash",
+            id="invalid_action_on_hash",
         ),
     ],
 )
