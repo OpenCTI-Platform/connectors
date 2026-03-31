@@ -11,7 +11,7 @@ Handles six data families:
   - Malware Hashes           →  Indicator + File (StixFile) + Malware SDO
   - Compromised Credentials  →  Incident + UserAccount + URL + IPv4-Addr + Malware SDO + Note
   - Credit Card Tickets      →  Incident + Identity + Note
-  - Deep Sight Tickets       →  Incident + Note
+  - Deep Sight Tickets       →  Report + ThreatActor / Identity + Relationships + Note
 """
 
 # pylint: disable=too-many-lines
