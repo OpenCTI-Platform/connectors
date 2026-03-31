@@ -214,7 +214,7 @@ jobs:
               | circleci tests run \
                   --split-by=timings \
                   --command="xargs bash run_test.sh"
-        # Save JUnit so CircleCI can show pass/fail per connector and build timings history
+      # Save JUnit so CircleCI can show pass/fail per connector and build timings history
       - store_test_results:
           path: test_outputs
 
