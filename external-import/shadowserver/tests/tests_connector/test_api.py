@@ -84,6 +84,43 @@ class TestShadowserverAPI:
         assert len(report_list) > 0
         assert len(report_list) == 12
 
+    def test_get_report_list_with_type(self, shadow_server_api, mocker):
+        """Test get_report_list passes the type parameter to _request."""
+        mock_request = mocker.patch.object(shadow_server_api, "_request")
+        mock_request.return_value = []
+
+        shadow_server_api.get_report_list(date=self.default_date, type=["scan_http"])
+
+        call_args = mock_request.call_args
+        assert call_args.kwargs["request"]["type"] == ["scan_http"]
+        assert "reports" not in call_args.kwargs["request"]
+
+    def test_get_report_list_with_reports_and_type(self, shadow_server_api, mocker):
+        """Test get_report_list passes both reports and type to _request."""
+        mock_request = mocker.patch.object(shadow_server_api, "_request")
+        mock_request.return_value = []
+
+        shadow_server_api.get_report_list(
+            date=self.default_date,
+            reports=["my_report"],
+            type=["scan_http"],
+        )
+
+        call_args = mock_request.call_args
+        assert call_args.kwargs["request"]["reports"] == ["my_report"]
+        assert call_args.kwargs["request"]["type"] == ["scan_http"]
+
+    def test_get_report_list_without_optional_params(self, shadow_server_api, mocker):
+        """Test get_report_list omits reports and type when not provided."""
+        mock_request = mocker.patch.object(shadow_server_api, "_request")
+        mock_request.return_value = []
+
+        shadow_server_api.get_report_list(date=self.default_date)
+
+        call_args = mock_request.call_args
+        assert "reports" not in call_args.kwargs["request"]
+        assert "type" not in call_args.kwargs["request"]
+
     def test_get_subscriptions(self, shadow_server_api, mocker):
         """Test the get_subscriptions method."""
         self.shadowserver_fixture(
