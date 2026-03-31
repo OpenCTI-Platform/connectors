@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Any, Callable
 
 import requests
+
 from vclib.sources.botnets import collect_botnets
 from vclib.sources.epss import collect_epss
 from vclib.sources.exploits import collect_exploits

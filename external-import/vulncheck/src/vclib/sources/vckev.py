@@ -1,8 +1,9 @@
 import stix2
-import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import SCOPE_VULNERABILITY, compare_config_to_target_scope
 from vulncheck_sdk.models.advisory_vuln_check_kev import AdvisoryVulnCheckKEV
+
+import vclib.util.works as works
+from vclib.util.config import SCOPE_VULNERABILITY, compare_config_to_target_scope
 
 
 def _create_vckev_vuln(
