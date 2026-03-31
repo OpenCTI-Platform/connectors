@@ -1,4 +1,3 @@
-import re
 import warnings
 from datetime import timedelta
 from typing import Annotated, Any, Literal
@@ -293,19 +292,6 @@ class MispConfig(BaseConfigModel):
         description="The timeout for the requests to the MISP API in seconds. None means no timeout.",
         default=None,
     )
-
-    @field_validator("batch_size_limit", mode="before")
-    @classmethod
-    def validate_batch_size_limit(cls, value: Any) -> Any:
-        """Validate that batch_size_limit is a human-readable file size (e.g. '10MB', '500KB')."""
-        if value is None or value == "":
-            return None
-        if not re.fullmatch(r"\d+(\.\d+)?(B|KB|MB|GB|TB)", str(value), re.IGNORECASE):
-            raise ValueError(
-                f"Invalid batch_size_limit '{value}'. "
-                "Expected a human-readable file size like '10MB', '500KB', '1.5GB'."
-            )
-        return value
 
     @field_validator("reference_url", mode="before")
     @classmethod
