@@ -308,11 +308,7 @@ class TestCollectors:
                 ]
             ],
         )
-        # Simulate the hostname resolving to a public IP so the SSRF check passes
-        public_addr_info = [(2, 1, 6, "", ("1.1.1.1", 0))]
-        with patch(
-            "connector.connector.socket.getaddrinfo", return_value=public_addr_info
-        ), patch("connector.connector.requests") as mock_requests:
+        with patch("connector.connector.requests") as mock_requests:
             mock_resp = MagicMock()
             mock_resp.iter_content.return_value = [b"%PDF-1.4 test"]
             mock_resp.raise_for_status = MagicMock()
@@ -350,10 +346,7 @@ class TestCollectors:
                 ]
             ],
         )
-        public_addr_info = [(2, 1, 6, "", ("1.1.1.1", 0))]
-        with patch(
-            "connector.connector.socket.getaddrinfo", return_value=public_addr_info
-        ), patch("connector.connector.requests") as mock_requests:
+        with patch("connector.connector.requests") as mock_requests:
             mock_requests.get.side_effect = Exception("connection timeout")
             objs, _ = conn._collect_deep_sight_tickets("t")
         # Record still converted — just without _pdf_data

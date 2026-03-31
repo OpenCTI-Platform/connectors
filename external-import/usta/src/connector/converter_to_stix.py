@@ -41,7 +41,20 @@ from pycti import ThreatActor as PyctiThreatActor
 
 class ConverterToStix:
     """
-    Converts USTA IOC records and ticket data to STIX 2.1 bundles.
+    Converts USTA Threat Stream API records into STIX 2.1 objects for OpenCTI.
+
+    Each public ``convert_*`` method accepts a single raw API record dict and
+    returns a flat list of STIX objects (SDOs, SCOs, SROs) ready to be added
+    to a bundle.  All IDs are generated deterministically so that re-importing
+    the same record produces identical IDs, enabling correct deduplication on
+    the OpenCTI platform.
+
+    TLP is applied at the connector level via *tlp_level*, but individual Deep
+    Sight ticket records may carry their own TLP that overrides the default.
+    The connector must include all four standard TLP marking definitions in
+    every bundle (available via ``TLP_MARKINGS``) to prevent
+    ``cleanup_inconsistent_bundle`` from dropping objects whose per-record TLP
+    differs from the connector default.
     """
 
     # Map motivation strings from the API to STIX 2.1 motivation vocabulary values
@@ -52,6 +65,8 @@ class ConverterToStix:
         "state_supported_operation": "organizational-gain",
     }
 
+    # Map TLP level strings to their corresponding STIX 2.1 MarkingDefinition objects.
+    # "clear" and "white" both resolve to TLP:WHITE for backwards compatibility.
     TLP_MARKING_MAP: dict[str, stix2.MarkingDefinition] = {
         "clear": stix2.TLP_WHITE,
         "white": stix2.TLP_WHITE,
@@ -69,6 +84,7 @@ class ConverterToStix:
         stix2.TLP_RED,
     ]
 
+    # Base URL for deep-linking tickets back to the USTA portal via ExternalReference
     USTA_TICKET_BASE_URL = "https://usta.prodaft.com/intelligence/tickets/"
 
     def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -79,6 +95,25 @@ class ConverterToStix:
         confidence_level: int = 80,
         store_credential_password: bool = False,
     ) -> None:
+        """
+        Initialise the converter with connector-wide defaults.
+
+        Args:
+            helper: OpenCTI connector helper, used for logging throughout
+                conversion.
+            author_name: Display name for the STIX Identity SDO that will be
+                set as the ``created_by_ref`` on every produced object.
+            tlp_level: Default TLP marking level applied to all produced
+                objects.  Accepted values: ``"clear"``, ``"white"``,
+                ``"green"``, ``"amber"``, ``"red"``.  Deep Sight ticket
+                records may carry their own TLP that overrides this default.
+            confidence_level: Integer 0–100 assigned to all produced STIX
+                objects.
+            store_credential_password: When ``True``, raw passwords from
+                Account Takeover Prevention records are written to the STIX
+                UserAccount credential field.  Disabled by default to avoid
+                storing plaintext credentials in the platform.
+        """
         self.helper = helper
         self.confidence = confidence_level
         self.store_credential_password = store_credential_password
@@ -95,9 +130,10 @@ class ConverterToStix:
             name=author_name,
             identity_class="organization",
             description=(
-                "USTA Threat Intelligence Platform. "
-                "Provides IOC feeds including malicious URLs, "
-                "phishing sites, and malware hashes."
+                "USTA Threat Intelligence Platform — PRODAFT's threat-intelligence "
+                "service covering malicious URLs, phishing sites, malware hashes, "
+                "compromised credentials, credit-card fraud, and Deep Sight "
+                "intelligence reports."
             ),
         )
 
@@ -990,6 +1026,9 @@ class ConverterToStix:
         stix_objects.append(company_identity)
 
         # --- Incident SDO ---
+        usta_ticket_url = f"{self.USTA_TICKET_BASE_URL}{ticket_id}"
+        ext_ref = self._make_usta_ext_ref(ticket_id)
+
         incident_name = f"{masked_number} (USTA Ticket <#{ticket_id}>)"
         incident_description = "\n".join(
             [
@@ -1003,13 +1042,6 @@ class ConverterToStix:
                 f"- Affected Company: {company_name}",
             ]
         )
-
-        usta_ticket_url = f"{self.USTA_TICKET_BASE_URL}{ticket_id}"
-        ext_ref = stix2.ExternalReference(
-            source_name="USTA",
-            url=usta_ticket_url,
-            description=f"USTA ticket <#{ticket_id}>",
-        )
         incident = stix2.Incident(
             id=PyctiIncident.generate_id(incident_name, created),
             name=incident_name,
@@ -1021,7 +1053,7 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking.id],
             confidence=self.confidence,
             allow_custom=True,
-            external_references=[ext_ref],
+            external_references=[ext_ref] if ext_ref else None,
             custom_properties={
                 "incident_type": "credit-card-compromise",
                 "severity": "high",

@@ -2,12 +2,12 @@
 USTA API client.
 
 Handles communication with all six USTA Threat Stream v4 endpoints:
-  - /ioc/malicious-urls                    (cursor-based pagination)
-  - /ioc/phishing-sites                    (page-based pagination)
-  - /ioc/malware-hashes                    (cursor-based pagination)
-  - /account-takeover-prevention/compromised-credentials-tickets  (page-based, order param)
-  - /fraud-intelligence/credit-card-tickets                       (page-based, ordering param)
-  - /deep-sight/tickets                                           (cursor-based pagination)
+  - .../security-intelligence/ioc/malicious-urls                                          (cursor-based pagination)
+  - .../security-intelligence/ioc/phishing-sites                                          (page-based pagination)
+  - .../security-intelligence/ioc/malware-hashes                                          (cursor-based pagination)
+  - .../security-intelligence/account-takeover-prevention/compromised-credentials-tickets (page-based, order param)
+  - .../fraud-intelligence/credit-card-tickets                                            (page-based, ordering param)
+  - .../deep-sight-tickets                                                                (page-based pagination)
 
 Implements rate limiting (via limiter) and retry logic (via tenacity)
 as prescribed by the OpenCTI connector specification.
@@ -16,6 +16,7 @@ as prescribed by the OpenCTI connector specification.
 from __future__ import annotations
 
 from typing import Any, Generator
+from urllib.parse import urljoin
 
 import requests
 from limiter import Limiter
@@ -50,14 +51,13 @@ class UstaClient:
     """
     Client for the USTA Threat Stream v4 Security Intelligence API.
 
-    Supports automatic pagination across all five IOC / ticket endpoint families.
+    Supports automatic pagination across all six IOC / ticket endpoint families.
     """
 
-    API_PREFIX_IOC = "/api/threat-stream/v4/security-intelligence/ioc"
-    API_PREFIX_ATP = (
-        "/api/threat-stream/v4/security-intelligence/account-takeover-prevention"
-    )
-    API_PREFIX_FRAUD = "/api/threat-stream/v4/fraud-intelligence"
+    API_PREFIX = "/api/threat-stream/v4"
+    API_PREFIX_IOC = f"{API_PREFIX}/security-intelligence/ioc"
+    API_PREFIX_ATP = f"{API_PREFIX}/security-intelligence/account-takeover-prevention"
+    API_PREFIX_FRAUD = f"{API_PREFIX}/fraud-intelligence"
 
     ENDPOINT_MALICIOUS_URLS = f"{API_PREFIX_IOC}/malicious-urls"
     ENDPOINT_PHISHING_SITES = f"{API_PREFIX_IOC}/phishing-sites"
@@ -66,7 +66,7 @@ class UstaClient:
         f"{API_PREFIX_ATP}/compromised-credentials-tickets"
     )
     ENDPOINT_CREDIT_CARDS = f"{API_PREFIX_FRAUD}/credit-card-tickets"
-    ENDPOINT_DEEP_SIGHT_TICKETS = "/api/threat-stream/v4/deep-sight-tickets"
+    ENDPOINT_DEEP_SIGHT_TICKETS = f"{API_PREFIX}/deep-sight-tickets"
 
     def __init__(
         self,
@@ -93,7 +93,7 @@ class UstaClient:
         self.rate_limiter = Limiter(
             rate=10,
             capacity=20,
-            bucket="usta",
+            bucket=b"usta",
         )
 
     @retry(
@@ -121,7 +121,7 @@ class UstaClient:
         if url.startswith("http://") or url.startswith("https://"):
             full_url = url
         else:
-            full_url = f"{self.base_url}{url}"
+            full_url = urljoin(self.base_url, url)
 
         with self.rate_limiter:
             self.helper.connector_logger.debug(
@@ -213,16 +213,10 @@ class UstaClient:
         }
 
         url = endpoint
-        is_first_request = True
         page_num = 0
 
         while True:
-            if is_first_request:
-                data = self._request(url, params=params)
-                is_first_request = False
-            else:
-                # Subsequent requests use the full "next" URL provided by API
-                data = self._request(url)
+            data = self._request(url, params=params)
 
             page_num += 1
             results = data.get("results", [])
@@ -235,6 +229,7 @@ class UstaClient:
                     "has_next": bool(data.get("next")),
                 },
             )
+
             if results:
                 yield results
 
@@ -247,6 +242,8 @@ class UstaClient:
                 break
 
             url = next_url
+            if params:
+                params = {}
 
     # ------------------------------------------------------------------
     # Page-based pagination (phishing-sites)
@@ -290,15 +287,10 @@ class UstaClient:
             params["start"] = start
 
         url = endpoint
-        is_first_request = True
         page_num = 0
 
         while True:
-            if is_first_request:
-                data = self._request(url, params=params)
-                is_first_request = False
-            else:
-                data = self._request(url)
+            data = self._request(url, params=params)
 
             page_num += 1
             total_count = data.get("count")
@@ -329,6 +321,8 @@ class UstaClient:
                 break
 
             url = next_url
+            if params:
+                params = {}
 
     # ------------------------------------------------------------------
     # Public high-level methods

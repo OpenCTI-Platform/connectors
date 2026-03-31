@@ -57,6 +57,7 @@
     },
     "USTA_API_KEY": {
       "description": "USTA API bearer token for authentication.",
+      "format": "password",
       "type": "string"
     },
     "USTA_IMPORT_START_DATE": {

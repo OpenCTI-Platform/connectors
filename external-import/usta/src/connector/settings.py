@@ -11,7 +11,7 @@ from abc import ABC
 from datetime import timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, SecretStr, field_serializer
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,7 +23,11 @@ class BaseConfigModel(BaseModel, ABC):
 
 class _OpenCTIConfig(BaseConfigModel):
     url: HttpUrl = Field(description="The base URL of the OpenCTI instance.")
-    token: str = Field(description="The API token to connect to OpenCTI.")
+    token: SecretStr = Field(description="The API token to connect to OpenCTI.")
+
+    @field_serializer("token")
+    def _serialize_token(self, v: SecretStr) -> str:
+        return v.get_secret_value()
 
 
 class _BaseConnectorConfig(BaseConfigModel, ABC):
@@ -98,9 +102,14 @@ class UstaConfig(BaseConfigModel):
         description="USTA API base URL.",
         default="https://usta.prodaft.com",
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="USTA API bearer token for authentication.",
     )
+
+    @field_serializer("api_key")
+    def _serialize_api_key(self, v: SecretStr) -> str:
+        return v.get_secret_value()
+
     import_start_date: timedelta = Field(
         description=(
             "ISO 8601 duration string specifying how far back to import data "
