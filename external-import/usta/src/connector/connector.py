@@ -12,6 +12,8 @@ Orchestrates the full import lifecycle:
 from __future__ import annotations
 
 import io
+import ipaddress
+import socket
 import sys
 import time
 from dataclasses import dataclass
@@ -340,14 +342,17 @@ class UstaConnector:
                     content = record.get("content") or {}
                     report_url = content.get("report")
                     if report_url:
-                        parsed_url = urlparse(report_url)
-                        if parsed_url.scheme != "https" or not parsed_url.hostname:
+                        url_safe, url_reject_reason = self._check_report_url_safe(
+                            report_url
+                        )
+                        if not url_safe:
                             self.helper.connector_logger.warning(
-                                "[CONNECTOR] Deep Sight report URL is not HTTPS"
+                                "[CONNECTOR] Deep Sight report URL rejected"
                                 " — skipping attachment download",
                                 {
                                     "ticket_id": record_id,
                                     "report_url": report_url,
+                                    "reason": url_reject_reason,
                                 },
                             )
                         else:
@@ -435,6 +440,44 @@ class UstaConnector:
             },
         )
         return stix_objects, last_created
+
+    @staticmethod
+    def _check_report_url_safe(url: str) -> tuple[bool, str]:
+        """
+        Validate a report download URL against SSRF risks.
+
+        Checks performed in order:
+          1. Scheme must be HTTPS.
+          2. Hostname must be present and resolvable.
+          3. Every resolved IP must be a globally-routable public address
+             (no loopback, link-local, private, multicast, or reserved ranges).
+
+        Returns:
+            (True, "") if the URL passes all checks.
+            (False, reason) describing the first failing check.
+        """
+        parsed = urlparse(url)
+        if parsed.scheme != "https":
+            return False, f"scheme is '{parsed.scheme}', expected 'https'"
+        hostname = parsed.hostname
+        if not hostname:
+            return False, "URL has no hostname"
+        try:
+            addr_infos = socket.getaddrinfo(hostname, None)
+        except socket.gaierror as exc:
+            return False, f"DNS resolution failed: {exc}"
+        for addr_info in addr_infos:
+            raw_ip = addr_info[4][0]
+            try:
+                ip = ipaddress.ip_address(raw_ip)
+            except ValueError:
+                return False, f"unparseable IP address: {raw_ip}"
+            if not ip.is_global:
+                return False, (
+                    f"{hostname} resolves to non-public address {ip}"
+                    " (private/loopback/link-local/reserved/multicast)"
+                )
+        return True, ""
 
     @staticmethod
     def _extract_filename_from_url(url: str) -> str:

@@ -1,12 +1,13 @@
 """
 USTA API client.
 
-Handles communication with all five USTA Threat Stream v4 endpoints:
+Handles communication with all six USTA Threat Stream v4 endpoints:
   - /ioc/malicious-urls                    (cursor-based pagination)
   - /ioc/phishing-sites                    (page-based pagination)
   - /ioc/malware-hashes                    (cursor-based pagination)
   - /account-takeover-prevention/compromised-credentials-tickets  (page-based, order param)
   - /fraud-intelligence/credit-card-tickets                       (page-based, ordering param)
+  - /deep-sight/tickets                                           (cursor-based pagination)
 
 Implements rate limiting (via limiter) and retry logic (via tenacity)
 as prescribed by the OpenCTI connector specification.

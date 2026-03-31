@@ -5,12 +5,13 @@ Converts raw USTA Threat Stream API responses into valid STIX 2.1 objects
 suitable for ingestion by OpenCTI.  Uses deterministic IDs via pycti's
 generate_id() to ensure correct deduplication on the platform.
 
-Handles five data families:
+Handles six data families:
   - Malicious URLs           →  Indicator + IPv4-Addr / DomainName / URL + Malware SDO
   - Phishing Sites           →  Indicator + DomainName / URL
   - Malware Hashes           →  Indicator + File (StixFile) + Malware SDO
   - Compromised Credentials  →  Incident + UserAccount + URL + IPv4-Addr + Malware SDO + Note
   - Credit Card Tickets      →  Incident + Identity + Note
+  - Deep Sight Tickets       →  Incident + Note
 """
 
 # pylint: disable=too-many-lines
@@ -49,15 +50,6 @@ class ConverterToStix:
         "ideological": "ideology",
         "individual_satisfaction": "personal-satisfaction",
         "state_supported_operation": "organizational-gain",
-    }
-
-    # Map TLP level strings to STIX marking-definition IDs
-    TLP_MAP: dict[str, str] = {
-        "clear": stix2.TLP_WHITE.id,
-        "white": stix2.TLP_WHITE.id,
-        "green": stix2.TLP_GREEN.id,
-        "amber": stix2.TLP_AMBER.id,
-        "red": stix2.TLP_RED.id,
     }
 
     TLP_MARKING_MAP: dict[str, stix2.MarkingDefinition] = {
