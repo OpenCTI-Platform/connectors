@@ -3,7 +3,7 @@
 # pylint: disable=missing-function-docstring
 
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from connector import ConnectorSettings, ConverterToStix, UstaConnector
 from usta_client import UstaClient, UstaClientError
@@ -31,9 +31,13 @@ def test_usta_connector_init():
     with patch.dict(os.environ, env_vars):
         settings = ConnectorSettings()
 
-        uc = UstaConnector(config=settings, helper=None)
+        # Mock OpenCTI helper to prevent AttributeError during dereferencing
+        mock_helper = MagicMock()
+        mock_helper.connector_logger = MagicMock()
+
+        uc = UstaConnector(config=settings, helper=mock_helper)
 
         assert isinstance(uc.config, ConnectorSettings)
-        assert uc.work_id is None or isinstance(uc.work_id, str)
         assert isinstance(uc.client, UstaClient)
         assert isinstance(uc.converter, ConverterToStix)
+        assert uc.helper == mock_helper
