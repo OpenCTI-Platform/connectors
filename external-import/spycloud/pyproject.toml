@@ -13,7 +13,7 @@ authors = [
 ]
 requires-python = ">= 3.11, <3.13"
 dependencies = [
-    "pycti==7.260326.0",
+    "pycti==7.260401.0",
     "validators~=0.35.0",
 ]
 

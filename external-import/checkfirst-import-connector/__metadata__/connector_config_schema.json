@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/checkfirst-import-connector_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Checkfirst Import Connector",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "checkfirst"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P7D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CHECKFIRST_API_URL": {
+      "description": "Base URL for the API endpoint (e.g., https://api.example.com).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CHECKFIRST_API_ENDPOINT": {
+      "default": "/v1/articles",
+      "description": "API endpoint path (e.g., /v1/articles).",
+      "type": "string"
+    },
+    "CHECKFIRST_API_KEY": {
+      "description": "API key for authentication (sent in Api-Key header).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CHECKFIRST_SINCE": {
+      "default": "2025-04-01T12:43:27.542432Z",
+      "description": "Only ingest articles published on or after this date. Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) or durations relative to now (e.g., P365D, P1Y, P6M, P4W). Defaults to 1 year ago.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "CHECKFIRST_FORCE_REPROCESS": {
+      "default": false,
+      "description": "If true, ignore any saved connector state and start from page 1. Useful for debugging or re-importing all data.",
+      "type": "boolean"
+    },
+    "CHECKFIRST_TLP_LEVEL": {
+      "description": "TLP marking level applied to created STIX entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    },
+    "CHECKFIRST_MAX_ROW_BYTES": {
+      "default": null,
+      "description": "Skip any API row larger than this approximate number of bytes.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CHECKFIRST_API_URL",
+    "CHECKFIRST_API_KEY"
+  ],
+  "additionalProperties": true
+}

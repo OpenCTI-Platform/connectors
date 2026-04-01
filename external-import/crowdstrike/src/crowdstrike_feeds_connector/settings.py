@@ -226,6 +226,14 @@ class CrowdstrikeConfig(BaseConfigModel):
         default_factory=_get_default_timestamp_30_days_ago,
         description="Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
     )
+    vulnerability_import_affected_products: bool = Field(
+        default=False,
+        description=(
+            "Whether to import affected products from vulnerability data. "
+            "When enabled, creates STIX Software observables and 'has' relationships "
+            "linking each product to its parent vulnerability."
+        ),
+    )
 
     # [DEPRECATED] Interval configuration
     interval_sec: SkipValidation[PositiveInt] = DeprecatedField(

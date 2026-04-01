@@ -20,3 +20,6 @@ black
 .pytest_cache
 external-import/loaderinsightagency
 .cursor
+.coverage
+**/*coverage.xml
+**/junit.xml

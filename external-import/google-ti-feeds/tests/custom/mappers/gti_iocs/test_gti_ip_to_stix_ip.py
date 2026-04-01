@@ -285,7 +285,7 @@ def test_gti_ipv4_to_stix_minimal_data(
     _then_stix_ipv4_has_correct_properties(
         ip_observable, minimal_ipv4_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_indicator_has_unknown_type(indicator)
+    _then_stix_indicator_has_no_type(indicator)
 
 
 # Scenario: Convert GTI IPv6 with minimal data to STIX objects
@@ -310,7 +310,7 @@ def test_gti_ipv6_to_stix_minimal_data(
     _then_stix_ipv6_has_correct_properties(
         ip_observable, minimal_ipv6_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_indicator_has_unknown_type(indicator)
+    _then_stix_indicator_has_no_type(indicator)
 
 
 # Scenario: Convert GTI IP with timestamps to STIX objects
@@ -489,7 +489,7 @@ def test_gti_ip_to_stix_without_attributes(
     # Then objects should still be created with fallback behavior
     _then_stix_objects_created_successfully(stix_objects)
     ip_observable, indicator, relationship = stix_objects
-    _then_stix_indicator_has_unknown_type(indicator)
+    _then_stix_indicator_has_no_type(indicator)
 
 
 # Scenario: Convert GTI IP with empty verdict to STIX objects
@@ -508,10 +508,10 @@ def test_gti_ip_to_stix_with_empty_verdict(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX objects should be created with unknown indicator type
+    # Then STIX objects should be created with no indicator type
     _then_stix_objects_created_successfully(stix_objects)
     ip_observable, indicator, relationship = stix_objects
-    _then_stix_indicator_has_unknown_type(indicator)
+    _then_stix_indicator_has_no_type(indicator)
 
 
 # Scenario: Convert GTI IP with invalid timestamps to STIX objects
@@ -779,8 +779,8 @@ def test_determine_indicator_types_without_verdict(
     # When determining indicator types
     indicator_types = mapper._determine_indicator_types()
 
-    # Then unknown indicator type should be returned
-    assert indicator_types == [IndicatorTypeOV.UNKNOWN]  # noqa: S101
+    # Then no indicator type should be returned
+    assert indicator_types == []  # noqa: S101
 
 
 # Scenario: Test create STIX IPv4 method
@@ -936,9 +936,12 @@ def _then_stix_indicator_has_type(
     assert expected_type in indicator.indicator_types  # noqa: S101
 
 
-def _then_stix_indicator_has_unknown_type(indicator: Any) -> None:
-    """Assert that STIX indicator has unknown type."""
-    _then_stix_indicator_has_type(indicator, IndicatorTypeOV.UNKNOWN)
+def _then_stix_indicator_has_no_type(indicator: Any) -> None:
+    """Assert that STIX indicator has no type."""
+    indicator_types = getattr(indicator, "indicator_types", None)
+    assert (
+        indicator_types == []
+    ), f"Expected empty indicator_types, got: {indicator_types}"  # noqa: S101
 
 
 def _then_stix_indicator_has_correct_timestamps(
