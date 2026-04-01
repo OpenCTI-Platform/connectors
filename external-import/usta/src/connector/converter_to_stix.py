@@ -400,7 +400,9 @@ class ConverterToStix:
             # Domain observable
             domain_obs = self._create_domain_observable(host_value)
             observable_objects.append(domain_obs)
-            pattern_parts.append(f"[domain-name:value = '{self._escape_stix_value(host_value)}']")
+            pattern_parts.append(
+                f"[domain-name:value = '{self._escape_stix_value(host_value)}']"
+            )
         elif ip_addresses:
             for ip_addr in ip_addresses:
                 escaped_ip = self._escape_stix_value(ip_addr)
@@ -544,7 +546,9 @@ class ConverterToStix:
         # Create URL observable using the normalized value
         url_obs = self._create_url_observable(normalized_url)
         observable_objects.append(url_obs)
-        pattern_parts.append(f"[url:value = '{self._escape_stix_value(normalized_url)}']")
+        pattern_parts.append(
+            f"[url:value = '{self._escape_stix_value(normalized_url)}']"
+        )
 
         # Create domain observable if applicable
         if host_value and not self._is_ip(host_value):
