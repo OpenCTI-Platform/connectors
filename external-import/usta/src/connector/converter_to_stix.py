@@ -142,6 +142,11 @@ class ConverterToStix:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def _escape_stix_value(value: str) -> str:
+        """Escape backslashes and single quotes for STIX patterns."""
+        return value.replace("\\", "\\\\").replace("'", "\\'")
+
+    @staticmethod
     def _parse_datetime(value: str | None) -> str:
         """Safely parse an ISO datetime string, normalize to UTC with Z suffix."""
         if not value:
@@ -395,26 +400,28 @@ class ConverterToStix:
             # Domain observable
             domain_obs = self._create_domain_observable(host_value)
             observable_objects.append(domain_obs)
-            pattern_parts.append(f"[domain-name:value = '{host_value}']")
+            pattern_parts.append(f"[domain-name:value = '{self._escape_stix_value(host_value)}']")
         elif ip_addresses:
             for ip_addr in ip_addresses:
+                escaped_ip = self._escape_stix_value(ip_addr)
                 if self._is_ipv6(ip_addr):
                     ip_obs = self._create_ipv6_observable(ip_addr)
                     observable_objects.append(ip_obs)
-                    pattern_parts.append(f"[ipv6-addr:value = '{ip_addr}']")
+                    pattern_parts.append(f"[ipv6-addr:value = '{escaped_ip}']")
                 elif self._is_ip(ip_addr):
                     ip_obs = self._create_ipv4_observable(ip_addr)
                     observable_objects.append(ip_obs)
-                    pattern_parts.append(f"[ipv4-addr:value = '{ip_addr}']")
+                    pattern_parts.append(f"[ipv4-addr:value = '{escaped_ip}']")
         elif host_value:
+            escaped_host = self._escape_stix_value(host_value)
             if self._is_ip(host_value):
                 ip_obs = self._create_ipv4_observable(host_value)
                 observable_objects.append(ip_obs)
-                pattern_parts.append(f"[ipv4-addr:value = '{host_value}']")
+                pattern_parts.append(f"[ipv4-addr:value = '{escaped_host}']")
             else:
                 domain_obs = self._create_domain_observable(host_value)
                 observable_objects.append(domain_obs)
-                pattern_parts.append(f"[domain-name:value = '{host_value}']")
+                pattern_parts.append(f"[domain-name:value = '{escaped_host}']")
 
         # Also create a URL observable if the url field contains a path or port
         if url_value and ("/" in url_value or ":" in url_value):
@@ -426,7 +433,8 @@ class ConverterToStix:
             observable_objects.append(url_obs)
             # Include the full URL in the pattern to avoid collapsing distinct
             # URLs on the same host/IP into a single Indicator.
-            pattern_parts.append(f"[url:value = '{normalised_url}']")
+            escaped_url = self._escape_stix_value(normalised_url)
+            pattern_parts.append(f"[url:value = '{escaped_url}']")
 
         stix_objects.extend(observable_objects)
 
@@ -437,7 +445,7 @@ class ConverterToStix:
                 url_value_norm = f"http://{url_value}"
             else:
                 url_value_norm = url_value
-            pattern = f"[url:value = '{url_value_norm}']"
+            pattern = f"[url:value = '{self._escape_stix_value(url_value_norm)}']"
         elif len(pattern_parts) == 1:
             pattern = pattern_parts[0]
         else:
@@ -536,7 +544,7 @@ class ConverterToStix:
         # Create URL observable using the normalized value
         url_obs = self._create_url_observable(normalized_url)
         observable_objects.append(url_obs)
-        pattern_parts.append(f"[url:value = '{normalized_url}']")
+        pattern_parts.append(f"[url:value = '{self._escape_stix_value(normalized_url)}']")
 
         # Create domain observable if applicable
         if host_value and not self._is_ip(host_value):
@@ -556,7 +564,9 @@ class ConverterToStix:
 
         # --- Build pattern (URL-centric for phishing) ---
         pattern = (
-            pattern_parts[0] if pattern_parts else f"[url:value = '{normalized_url}']"
+            pattern_parts[0]
+            if pattern_parts
+            else f"[url:value = '{self._escape_stix_value(normalized_url)}']"
         )
 
         indicator_name = f"{host_value or normalized_url}"
