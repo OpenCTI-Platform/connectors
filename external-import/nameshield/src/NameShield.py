@@ -184,7 +184,7 @@ class NameShield:
             )
             r_json = response.json()
             if "errors" in r_json:
-                error = r_json["errors"]
+                error = r_json["errors"][0]
                 self.helper.connector_logger.error(
                     f"Error NameShield: {error['code']} {error['message']}"
                 )
