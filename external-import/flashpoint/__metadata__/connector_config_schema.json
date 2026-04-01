@@ -69,16 +69,6 @@
       "description": "Whether to import reports from Flashpoint or not.",
       "type": "boolean"
     },
-    "FLASHPOINT_INDICATORS_IN_REPORTS": {
-      "default": false,
-      "description": "Whether to include indicators in the reports imported from MispFeed or not.",
-      "type": "boolean"
-    },
-    "FLASHPOINT_CREATE_REPORTS": {
-      "default": false,
-      "description": "Whether to create reports or groupings from MispFeed events or not.",
-      "type": "boolean"
-    },
     "FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS": {
       "default": false,
       "description": "Whether to guess relationships between entities or not.",
@@ -86,7 +76,7 @@
     },
     "FLASHPOINT_IMPORT_INDICATORS": {
       "default": true,
-      "description": "WHether to import indicators of compromise (IoCs) or not.",
+      "description": "Whether to import indicators of compromise (IoCs) or not.",
       "type": "boolean"
     },
     "FLASHPOINT_IMPORT_ALERTS": {
@@ -124,6 +114,18 @@
       "default": true,
       "description": "Whether to import only fresh Compromised Credentials Monitoring alerts or all of them.",
       "type": "boolean"
+    },
+    "FLASHPOINT_INDICATOR_TLP": {
+      "default": "TLP:CLEAR",
+      "description": "TLP marking applied to imported indicators.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
     }
   },
   "required": [
