@@ -320,7 +320,9 @@ def _collect_nist_nvd2_from_backup(
                                 work_id=work_id,
                             )
 
-    works.finish_work(helper=helper, logger=logger, work_id=work_id, work_name=source_name)
+    works.finish_work(
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
+    )
     logger.info("Finished parsing STIX from NIST-NVD2 backup!")
     if cleanup:
         os.remove(filepath)

@@ -121,5 +121,7 @@ def collect_initial_access(
                 helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
             )
 
-    works.finish_work(helper=helper, logger=logger, work_id=work_id, work_name=source_name)
+    works.finish_work(
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
+    )
     logger.info("[INITIAL ACCESS] Data Source Completed!")
