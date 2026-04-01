@@ -1321,7 +1321,6 @@ class ConverterToStix:
                     )
                 except ValueError:
                     continue
-            return "IPv4-Addr"
         if host_value:
             try:
                 addr = ipaddress.ip_address(host_value)
