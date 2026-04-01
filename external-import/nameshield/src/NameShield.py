@@ -190,7 +190,9 @@ class NameShield:
                             f"Error NameShield: {one_error['code']} {one_error['message']}"
                         )
                     self.helper.set_state(
-                        {"Error": f"Error NameShield: {r_json["errors"][0]['code']} {r_json["errors"][0]['message']}"}
+                        {
+                            "Error": f"Error NameShield: {r_json["errors"][0]['code']} {r_json["errors"][0]['message']}"
+                        }
                     )
                 elif isinstance(r_json["errors"], dict):
                     error = r_json["errors"]
@@ -199,7 +201,9 @@ class NameShield:
                             f"Error NameShield: {error['code']} {error['message']}"
                         )
                         self.helper.set_state(
-                            {"Error": f"Error NameShield: {error['code']} {error['message']}"}
+                            {
+                                "Error": f"Error NameShield: {error['code']} {error['message']}"
+                            }
                         )
                     else:
                         self.helper.connector_logger.error(
