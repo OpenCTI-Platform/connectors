@@ -425,8 +425,14 @@ class ConverterToStix:
                 observable_objects.append(domain_obs)
                 pattern_parts.append(f"[domain-name:value = '{escaped_host}']")
 
-        # Also create a URL observable if the url field contains a path or port
-        if url_value and ("/" in url_value or ":" in url_value):
+        # Also create a URL observable if the url field contains a path or port.
+        # Skip path-only values (starting with /) — prepending a scheme would
+        # produce an invalid URL like http:///path/to/resource.
+        if (
+            url_value
+            and not url_value.startswith("/")
+            and ("/" in url_value or ":" in url_value)
+        ):
             # Normalise to include scheme for URL observable if missing
             normalised_url = url_value
             if not normalised_url.startswith(("http://", "https://")):
@@ -442,6 +448,10 @@ class ConverterToStix:
 
         # --- Build the STIX pattern ---
         if not pattern_parts:
+            # Path-only values (e.g. /api/path) cannot be given a valid absolute
+            # URL scheme — no meaningful indicator can be created.
+            if url_value.startswith("/"):
+                return stix_objects
             # Fallback: treat entire url value as a URL pattern
             if not url_value.startswith(("http://", "https://")):
                 url_value_norm = f"http://{url_value}"
@@ -531,7 +541,7 @@ class ConverterToStix:
         ip_addresses = record.get("ip_addresses", [])
         created = self._parse_datetime(record.get("created"))
 
-        if not url_value:
+        if not url_value or url_value.startswith("/"):
             return stix_objects
 
         # Normalize to a full URL so the observable, pattern, and host extraction
@@ -870,7 +880,8 @@ class ConverterToStix:
         observable_scos: list = [user_account]
 
         # --- URL SCO (target login page) ---
-        if target_url:
+        # Skip path-only values — prepending a scheme would produce an invalid URL.
+        if target_url and not target_url.startswith("/"):
             # Normalize once: ensures a valid URL SCO value and consistent parsing.
             normalised_target_url = (
                 target_url if "://" in target_url else f"http://{target_url}"

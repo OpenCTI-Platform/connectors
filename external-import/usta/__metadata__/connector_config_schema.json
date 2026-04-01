@@ -20,7 +20,7 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": "indicator,observable,malware,identity,incident,user-account,report,threat-actor",
+      "default": "indicator,observable,malware,identity,incident,user-account,report,threat-actor,report,threat-actor",
       "description": "The scope of the connector.",
       "type": "string"
     },

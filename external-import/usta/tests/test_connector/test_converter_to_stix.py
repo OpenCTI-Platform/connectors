@@ -319,13 +319,10 @@ class TestConvertMaliciousUrl:
         types = {o.type for o in result}
         assert "domain-name" in types
 
-    def test_convert_malicious_url_fallback_no_scheme(self, mock_helper):
+    def test_convert_malicious_url_path_only_skipped(self, mock_helper):
+        """Path-only URLs (no host, no scheme) must not produce an indicator."""
         converter = ConverterToStix(mock_helper)
 
-        converter._extract_host = MagicMock(return_value="")
-        converter._is_ip = MagicMock(return_value=False)
-
-        # Act as path in URL and no host
         record = {
             "url": "/api/v1/malware",
             "host": "",
@@ -337,8 +334,7 @@ class TestConvertMaliciousUrl:
 
         result = converter.convert_malicious_url(record)
 
-        indicator = next(o for o in result if o["type"] == "indicator")
-        assert "url:value = 'http:///api/v1/malware'" in indicator["pattern"]
+        assert not any(o["type"] == "indicator" for o in result)
 
     def test_convert_malicious_url_fallback_with_scheme(self, mock_helper):
         converter = ConverterToStix(mock_helper)
