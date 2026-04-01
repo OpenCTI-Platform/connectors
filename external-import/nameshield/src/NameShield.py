@@ -184,13 +184,30 @@ class NameShield:
             )
             r_json = response.json()
             if "errors" in r_json:
-                error = r_json["errors"][0]
-                self.helper.connector_logger.error(
-                    f"Error NameShield: {error['code']} {error['message']}"
-                )
-                self.helper.set_state(
-                    {"Error": f"Error NameShield: {error['code']} {error['message']}"}
-                )
+                if isinstance(r_json["errors"], list):
+                    for one_error in r_json["errors"]:
+                        self.helper.connector_logger.error(
+                            f"Error NameShield: {one_error['code']} {one_error['message']}"
+                        )
+                    self.helper.set_state(
+                        {"Error": f"Error NameShield: {r_json["errors"][0]['code']} {r_json["errors"][0]['message']}"}
+                    )
+                elif isinstance(r_json["errors"], dict):
+                    error = r_json["errors"]
+                    if "code" in error and "message" in error:
+                        self.helper.connector_logger.error(
+                            f"Error NameShield: {error['code']} {error['message']}"
+                        )
+                        self.helper.set_state(
+                            {"Error": f"Error NameShield: {error['code']} {error['message']}"}
+                        )
+                    else:
+                        self.helper.connector_logger.error(
+                            f"Abnormal Error NameShield: {str(error)}"
+                        )
+                        self.helper.set_state(
+                            {"Error": f"Abnormal Error NameShield: {str(error)}"}
+                        )
                 return None
             # Check is a message has arrived
             if "message" in r_json:
