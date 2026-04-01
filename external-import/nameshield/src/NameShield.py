@@ -127,36 +127,26 @@ class NameShield:
         )
 
     def set_marking(self):
-        if (
-            self.nameshield_marking == "TLP:WHITE"
-            or self.nameshield_marking == "TLP:CLEAR"
-        ):
-            marking = stix2.TLP_WHITE
-        elif self.nameshield_marking == "TLP:GREEN":
-            marking = stix2.TLP_GREEN
-        elif self.nameshield_marking == "TLP:AMBER":
-            marking = stix2.TLP_AMBER
-        elif self.nameshield_marking == "TLP:AMBER+STRICT":
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                allow_custom=True,
-                x_opencti_definition_type="TLP",
-                x_opencti_definition="TLP:AMBER+STRICT",
-            )
-        elif self.nameshield_marking == "TLP:RED":
-            marking = stix2.TLP_RED
-        else:
-            marking = stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="TLP",
-                definition={"TLP": "AMBER+STRICT"},
-                allow_custom=True,
-                x_opencti_definition_type="TLP",
-                x_opencti_definition="TLP:AMBER+STRICT",
-            )
+        amber_strict_marking = stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            allow_custom=True,
+            x_opencti_definition_type="TLP",
+            x_opencti_definition="TLP:AMBER+STRICT",
+        )
 
+        markings_by_label = {
+            "TLP:WHITE": stix2.TLP_WHITE,
+            "TLP:CLEAR": stix2.TLP_WHITE,
+            "TLP:GREEN": stix2.TLP_GREEN,
+            "TLP:AMBER": stix2.TLP_AMBER,
+            "TLP:AMBER+STRICT": amber_strict_marking,
+            "TLP:RED": stix2.TLP_RED,
+        }
+
+        # Use default when the configured marking is invalid
+        marking = markings_by_label.get(self.nameshield_marking, amber_strict_marking)
         self.nameshield_marking = marking
 
     def make_url_dom_list(self):
