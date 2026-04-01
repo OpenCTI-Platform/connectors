@@ -20,7 +20,7 @@ def expected_report_log_messages() -> list[str]:
         "[DoppelConverter] Processing reversion workflow - {'alert_id': 'test id', 'queue_state': 'unresolved'}",
         "[DoppelConverter] Revoking indicator - {'alert_id': 'test id', 'indicator_id': 'fakeid'}",
         "[DoppelConverter] Successfully revoked indicator via API - {'alert_id': 'test id', 'indicator_id': 'fakeid'}",
-        "[DoppelConverter] Revoked indicators - {'alert_id': 'test id', 'count': 1}",
+        "[DoppelConverter] Revoked indicators - {'alert_id': 'test id', 'revoked_indicators_count': 1}",
     ]
 
 

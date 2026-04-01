@@ -662,6 +662,7 @@ class ConverterToStix:
             )
 
             revoked_indicator_refs = []
+            revoked_indicators_count = 0
             for indicator in indicators_to_revoke:
                 self.helper.connector_logger.info(
                     "[DoppelConverter] Revoking indicator",
@@ -685,6 +686,7 @@ class ConverterToStix:
                         "[DoppelConverter] Successfully revoked indicator via API",
                         {"alert_id": alert_id, "indicator_id": indicator["id"]},
                     )
+                    revoked_indicators_count += 1
                 except Exception as e:
                     self.helper.connector_logger.error(
                         "[DoppelConverter] Error revoking indicator via API",
@@ -718,5 +720,8 @@ class ConverterToStix:
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Revoked indicators",
-                {"alert_id": alert_id, "count": len(indicators_to_revoke)},
+                {
+                    "alert_id": alert_id,
+                    "revoked_indicators_count": revoked_indicators_count,
+                },
             )
