@@ -1,21 +1,21 @@
 opencti:
   url: 'http://localhost'
-  token: 'changeMe'
+  token: 'ChangeMe'
 
 connector:
   type: 'EXTERNAL_IMPORT'
-  id: 'changeMe'      # Valid UUIDv4
+  id: 'ChangeMe'  # Valid UUIDv4
   name: 'Doppel Threat Intelligence'
   scope: 'doppel'
   log_level: 'info'
-  duration_period: 'PT1H'  # ISO-8601 format for 1 hour
+  duration_period: 'PT1H'  # Interval given for scheduler process in ISO-8601 format
 
 doppel:
   api_base_url: 'https://api.doppel.com/v1'
-  api_key: 'changeMe'
-  user_api_key: 'changeMe'
-  organization_code: 'changeMe'
-  tlp_level: 'clear'  # Options: clear, white, green, amber, amber+strict, red
+  api_key: 'ChangeMe'
+  user_api_key: 'ChangeMe'
+  organization_code: 'ChangeMe'
+  tlp_level: 'clear'  # available values are: clear, white, green, amber, amber+strict, red
   alerts_endpoint: '/alerts'
   historical_polling_days: 30
   max_retries: 3
