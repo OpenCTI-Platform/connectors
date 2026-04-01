@@ -43,7 +43,10 @@ class VirusTotalBuilder:
         self.opencti_entity = opencti_entity
         self.stix_entity = stix_entity
         self.attributes = data["attributes"]
-        self.score = self._compute_score(self.attributes["last_analysis_stats"])
+        self.score = self._compute_score(
+            self.attributes["last_analysis_stats"],
+            self.attributes.get("gti_assessment"),
+        )
         self.include_attributes_in_note = include_attributes_in_note
         self.url_related_object_data = url_related_object_data
 
@@ -63,7 +66,7 @@ class VirusTotalBuilder:
         else:
             self.external_reference = None
 
-    def _compute_score(self, stats: dict) -> int:
+    def _compute_score(self, stats: dict, gti_assessment: dict | None) -> int:
         """
         Compute the score for the observable.
 
@@ -79,6 +82,19 @@ class VirusTotalBuilder:
         int
             Score, in percent, rounded.
         """
+        # Retrieve score from GTI assessment if it exists
+        if (
+            gti_assessment is not None
+            and (threat_score := gti_assessment.get("threat_score")) is not None
+        ):
+            self.helper.log_debug(
+                f"[VirusTotal] GTI assessment found with threat score {threat_score}, using it as score"
+            )
+            if (vt_score := threat_score.get("value")) is not None:
+                return vt_score
+
+        # Fallback to computing score from last_analysis_stats if GTI assessment
+        # is not available or doesn't contain a threat score
         try:
             vt_score = round(
                 (
@@ -109,7 +125,7 @@ class VirusTotalBuilder:
     def create_asn_belongs_to(self):
         """Create AutonomousSystem and Relationship between the observable."""
         if self.attributes.get("asn", None):
-            self.helper.log_debug(f'[VirusTotal] creating asn {self.attributes["asn"]}')
+            self.helper.log_debug(f"[VirusTotal] creating asn {self.attributes['asn']}")
             as_stix = stix2.AutonomousSystem(
                 number=self.attributes.get("asn"),
                 name=self.attributes.get("as_owner", None),
@@ -282,7 +298,7 @@ class VirusTotalBuilder:
         """Create a Location and link it to the observable."""
         if self.attributes.get("country", None):
             self.helper.log_debug(
-                f'[VirusTotal] creating location with country {self.attributes["country"]}'
+                f"[VirusTotal] creating location with country {self.attributes['country']}"
             )
             location_stix = stix2.Location(
                 id=Location.generate_id(self.attributes["country"], "Country"),
@@ -458,17 +474,22 @@ class VirusTotalBuilder:
             id=Indicator.generate_id(plyara.utils.rebuild_yara_rule(rule[0])),
             created_by_ref=self.author,
             name=yara.get("rule_name", "No rulename provided"),
-            description=f"""```\n{json.dumps(
-                {
-                    "description": yara.get("description", "No description provided"),
-                    "author": yara.get("author", "No author provided"),
-                    "source": yara.get("source", "No source provided"),
-                    "ruleset_id": ruleset_id,
-                    "ruleset_name": yara.get(
-                        "ruleset_name", "No ruleset name provided"
-                    ),
-                }, indent=2
-            )}\n```""",
+            description=f"""```\n{
+                json.dumps(
+                    {
+                        "description": yara.get(
+                            "description", "No description provided"
+                        ),
+                        "author": yara.get("author", "No author provided"),
+                        "source": yara.get("source", "No source provided"),
+                        "ruleset_id": ruleset_id,
+                        "ruleset_name": yara.get(
+                            "ruleset_name", "No ruleset name provided"
+                        ),
+                    },
+                    indent=2,
+                )
+            }\n```""",
             confidence=self.helper.connect_confidence_level,
             pattern=plyara.utils.rebuild_yara_rule(rule[0]),
             pattern_type="yara",
@@ -545,7 +566,7 @@ class VirusTotalBuilder:
         """Update the hashes (md5 and sha1) of the file."""
         for algo in ("MD5", "SHA-1", "SHA-256"):
             self.helper.log_debug(
-                f'[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace("-", "")]}'
+                f"[VirusTotal] updating hash {algo}: {self.attributes[algo.lower().replace('-', '')]}"
             )
             self.stix_entity["hashes"][algo] = self.attributes[
                 algo.lower().replace("-", "")
@@ -554,7 +575,7 @@ class VirusTotalBuilder:
     def update_labels(self):
         """Update the labels of the file using the tags."""
         self.helper.log_debug(
-            f'[VirusTotal] updating labels with {self.attributes["tags"]}'
+            f"[VirusTotal] updating labels with {self.attributes['tags']}"
         )
         for tag in self.attributes["tags"]:
             OpenCTIStix2.put_attribute_in_extension(
@@ -575,7 +596,7 @@ class VirusTotalBuilder:
             If True, update the main name.
         """
         self.helper.log_debug(
-            f'[VirusTotal] updating names with {self.attributes["names"]}'
+            f"[VirusTotal] updating names with {self.attributes['names']}"
         )
         names = self.attributes["names"]
         if len(names) > 0 and main:
@@ -596,7 +617,7 @@ class VirusTotalBuilder:
     def update_size(self):
         """Update the size of the file."""
         self.helper.log_debug(
-            f'[VirusTotal] updating size with {self.attributes["size"]}'
+            f"[VirusTotal] updating size with {self.attributes['size']}"
         )
         self.stix_entity["size"] = self.attributes["size"]
 
