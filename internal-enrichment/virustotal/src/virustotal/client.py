@@ -27,6 +27,7 @@ class VirusTotalClient:
         self.headers = {
             "x-apikey": token,
             "accept": "application/json",
+            "x-tool": f"OpenCTI VirusTotal Connector {self.helper.connector_id}",
         }
 
     def _query(self, url):
