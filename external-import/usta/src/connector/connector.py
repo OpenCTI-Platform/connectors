@@ -657,7 +657,7 @@ class UstaConnector:
         """
         Start the connector with scheduled execution.
 
-        Uses schedule_process() as required since OpenCTI 6.2.12.
+        Uses schedule_process() for scheduled execution.
         Handles both periodic and run-and-terminate modes automatically.
         """
         self.helper.schedule_process(
