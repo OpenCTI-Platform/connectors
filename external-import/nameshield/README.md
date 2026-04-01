@@ -2,7 +2,7 @@
 
 ## Installation
 
-This connector facilitates domain names import of from the NameShield registrat.
+This connector facilitates the import of domain names from the Nameshield registrar.
 
 ## Configuration
 
