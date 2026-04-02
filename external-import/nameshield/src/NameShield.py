@@ -258,70 +258,101 @@ class NameShield:
         # We generate STIX objects from each domain entry
         description = ""
         for one in threat.keys():
-            value_loc = threat[one]
-            description += str(one).rjust(25, " ") + " : " + str(value_loc) + "\n"
+            value_loc = threat.get(one, "")
+            if value_loc:
+                description += str(one).rjust(25, " ") + " : " + str(value_loc) + "  \n"
         description += "\n\nImported from NameShield API."
         # STIX: Domain-Name
         try:
-            pattern = f"[domain-name:value = '{threat['unicode']}']"
-            observable_type = "Domain-Name"
-            name = threat["unicode"]
-            observable = stix2.DomainName(
-                value=name,
-                object_marking_refs=[self.nameshield_marking],
-                custom_properties={
-                    "x_opencti_score": 80,
-                    "x_opencti_description": description,
-                    "created_by_ref": identity_id,
-                },
-            )
-            stix_objects.append(observable)
+            name = str(threat.get("unicode"))
+            if len(name) < 3:
+                self.helper.connector_logger.error(
+                    f"Domain name really too short: {threat}."
+                )
+                return None
+            else:
+                pattern = f"[domain-name:value = '{name}']"
+                observable_type = "Domain-Name"
+                observable = stix2.DomainName(
+                    value=name,
+                    object_marking_refs=[self.nameshield_marking],
+                    custom_properties={
+                        "x_opencti_score": 80,
+                        "x_opencti_description": description,
+                        "created_by_ref": identity_id,
+                    },
+                )
+                stix_objects.append(observable)
         except Exception as e:
             self.helper.connector_logger.error(
                 f"Error while creating STIX object from threat: {threat}, error: {e}"
             )
             return None
+        creation_date = None
+        valid_until_date = None
+        try:
+            creation_date = datetime.datetime.fromisoformat(
+                str(threat.get("nicCreationDate"))
+            ).replace(tzinfo=datetime.timezone.utc)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Error while parsing creation date for threat: {threat}, error: {e}"
+            )
+        try:
+            valid_until_date = datetime.datetime.fromisoformat(
+                str(threat.get("expirationDate"))
+            ).replace(tzinfo=datetime.timezone.utc)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Error while parsing expiration date for threat: {threat}, error: {e}"
+            )
+
         # STIX: Indicator
-        indicator = stix2.Indicator(
-            id=Indicator.generate_id(pattern),
-            name=name,
-            pattern=pattern,
-            pattern_type="stix",
-            description=description,
-            created_by_ref=identity_id,
-            created=datetime.datetime.strptime(
-                str(threat["nicCreationDate"]), "%Y-%m-%d"
-            ),
-            valid_until=datetime.datetime.strptime(
-                str(threat["expirationDate"]), "%Y-%m-%d"
-            ),
-            modified=datetime.datetime.now(),
-            labels=[threat["class"], threat["property"]],
-            object_marking_refs=[self.nameshield_marking],
-            custom_properties={
-                "x_opencti_score": threat["threat_level"],
-                "x_opencti_main_observable_type": observable_type,
-            },
-        )
-        stix_objects.append(indicator)
+        try:
+            indicator = stix2.Indicator(
+                id=Indicator.generate_id(pattern),
+                name=name,
+                pattern=pattern,
+                pattern_type="stix",
+                description=description,
+                created_by_ref=identity_id,
+                created=creation_date,
+                valid_until=valid_until_date,
+                modified=datetime.datetime.now(tz=datetime.timezone.utc),
+                labels=[threat.get("class", ""), threat.get("property", "")],
+                object_marking_refs=[self.nameshield_marking],
+                custom_properties={
+                    "x_opencti_score": threat.get("threat_level"),
+                    "x_opencti_main_observable_type": observable_type,
+                },
+            )
+            stix_objects.append(indicator)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Error while creating  indicator for threat: {threat}, error: {e}"
+            )
+            # Indicator is mandatory for the next created elements, if we can't create it we return the list of STIX objects created until now (Domain-Name only in this case)
+            return stix_objects
         # STIX: Relationship Indicator --> Observable
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                "based-on", indicator["id"], observable["id"]
-            ),
-            relationship_type="based-on",
-            source_ref=indicator["id"],
-            target_ref=observable["id"],
-            created_by_ref=identity_id,
-            start_time=datetime.datetime.strptime(
-                str(threat["nicCreationDate"]), "%Y-%m-%d"
-            ),
-            stop_time=datetime.datetime.strptime(
-                str(threat["expirationDate"]), "%Y-%m-%d"
-            ),
-            object_marking_refs=[self.nameshield_marking],
-        )
-        stix_objects.append(relationship)
+        try:
+            relationship = stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on", indicator["id"], observable["id"]
+                ),
+                relationship_type="based-on",
+                source_ref=indicator["id"],
+                target_ref=observable["id"],
+                created_by_ref=identity_id,
+                start_time=creation_date,
+                stop_time=valid_until_date,
+                object_marking_refs=[self.nameshield_marking],
+            )
+            stix_objects.append(relationship)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"Error while creating  Relationship Indicator --> Observable for threat: {threat}, error: {e}"
+            )
+            # Relationship is not mandatory for further elements, keep going
 
         # STIX: Relationships to Identities
         if len(self.nameshield_link_to_identities) > 20:
@@ -338,12 +369,8 @@ class NameShield:
                         relationship_type="attributed-to",
                         source_ref=indicator["id"],
                         target_ref=identity_id2,
-                        start_time=datetime.datetime.strptime(
-                            str(threat["nicCreationDate"]), "%Y-%m-%d"
-                        ),
-                        stop_time=datetime.datetime.strptime(
-                            str(threat["expirationDate"]), "%Y-%m-%d"
-                        ),
+                        start_time=creation_date,
+                        stop_time=valid_until_date,
                         created_by_ref=identity_id,
                         object_marking_refs=[self.nameshield_marking],
                     )
