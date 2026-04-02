@@ -1,9 +1,8 @@
-.PHONY: help install clean setup-vocabulary run docker-build docker-up docker-down
+.PHONY: help install clean run docker-build docker-up docker-down
 
 help:
 	@echo "Available targets:"
 	@echo "  install      - Install dependencies"
-	@echo "  setup-vocabulary - Ensure the Scout custom vocabulary exists in OpenCTI"
 	@echo "  run          - Run the connector"
 	@echo "  clean        - Clean up temporary files"
 	@echo "  docker-build - Build Docker image"
@@ -11,13 +10,10 @@ help:
 	@echo "  docker-down  - Stop docker-compose"
 
 install:
-	pip install -r requirements.txt
+	pip install -r src/requirements.txt
 
-setup-vocabulary:
-	python setup_pattern_type.py
-
-run: setup-vocabulary
-	python -m src.scout_search_connector.main
+run:
+	cd src && python main.py
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +

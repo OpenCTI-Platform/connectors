@@ -91,7 +91,7 @@ services:
 
 1. Clone the repository
 2. Copy `.env.sample` to `.env` and configure
-3. Install dependencies: `pip install -r requirements.txt`
+3. Install dependencies: `pip install -r src/requirements.txt`
 4. Run the connector
 
 ---
@@ -168,4 +168,4 @@ This connector is currently in early access. Please report any issues or feedbac
 
 ### Use Case
 
-This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create a Indicator observable with your search query and trigger enrichment.
+This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create an Indicator observable with your search query and trigger enrichment.

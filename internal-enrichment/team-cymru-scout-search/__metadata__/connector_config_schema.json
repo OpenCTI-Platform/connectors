@@ -21,7 +21,7 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Text"
+        "Indicator"
       ],
       "description": "The scope of the connector.",
       "items": {
@@ -71,6 +71,16 @@
       "default": 1,
       "description": "Search interval in days (default: 1)",
       "type": "integer"
+    },
+    "PURE_SIGNAL_SCOUT_INDICATOR_PATTERN_TYPE": {
+      "default": "pure-signal-scout",
+      "description": "Pattern type for Scout indicators",
+      "type": "string"
+    },
+    "PURE_SIGNAL_SCOUT_PATTERN_DESCRIPTION": {
+      "default": "Scout Search Query Pattern",
+      "description": "Description for the Scout pattern type",
+      "type": "string"
     }
   },
   "required": [
