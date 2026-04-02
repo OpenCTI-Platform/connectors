@@ -6,7 +6,7 @@ opencti:
 #  type: 'INTERNAL_ENRICHMENT'
 #  id: 'ChangeMe'
 #  name: 'VirusTotal'
-#  scope: 'StixFile,Artifact,IPv4-Addr,Domain-Name,Url'
+#  scope: 'StixFile,Artifact,IPv4-Addr,Domain-Name,Url,Indicator'
 #  auto: false # Enable/disable auto-enrichment of observables
 #  log_level: 'error'
 #  expose_metrics: false
