@@ -255,6 +255,8 @@ class VirusTotalClient:
         """
         base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
         results = self._query(base64_url)
+        if results is None:
+            return None
         if "error" in results:
             sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}"
             results = self._query(sha256_url)
@@ -353,6 +355,8 @@ class VirusTotalClient:
         """
         base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}/{relationship}"
         results = self._query(base64_url)
+        if results is None:
+            return None
         if "error" in results:
             sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}/{relationship}"
             results = self._query(sha256_url)

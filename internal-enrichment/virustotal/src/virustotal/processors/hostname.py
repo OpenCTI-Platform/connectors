@@ -16,7 +16,7 @@ class HostnameProcessor(EntityProcessor):
         if self.connector.domain_add_relationships:
             for ip in [
                 r["value"]
-                for r in json_data["data"]["attributes"]["last_dns_records"]
+                for r in json_data["data"]["attributes"].get("last_dns_records", [])
                 if r["type"] == "A"
             ]:
                 self.helper.log_debug(

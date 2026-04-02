@@ -237,19 +237,19 @@ class VirusTotalConnector:
                 f"[VirusTotal] enriching indicator "
                 f"'{opencti_entity.get('name', '?')}' "
                 f"with {len(observables)} observable(s): "
-                f"{[(t, v) for t, v in observables]}"
+                f"{observables}"
             )
             results = []
-            for entity_type, observable_value in observables:
+            for obs_type, observable_value in observables:
                 # Build a synthetic entity that looks like an observable so
                 # processors can access observable_value and entity_type uniformly.
                 synthetic_entity = {
-                    "entity_type": entity_type,
+                    "entity_type": obs_type,
                     "observable_value": observable_value,
                     "objectMarking": object_markings,
                 }
                 result = self._get_processor(
-                    entity_type, stix_objects, stix_entity, synthetic_entity, True
+                    obs_type, stix_objects, stix_entity, synthetic_entity, True
                 ).process()
                 results.append(result)
             return "; ".join(r for r in results if r is not None)
