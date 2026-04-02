@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Virustotal client module."""
 
 import base64
@@ -78,6 +77,10 @@ class VirusTotalClient:
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
             self.helper.metric.inc("client_error_count")
+
+        if response is None:
+            return None
+
         try:
             self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
@@ -134,6 +137,10 @@ class VirusTotalClient:
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
             self.helper.metric.inc("client_error_count")
+
+        if response is None:
+            return None
+
         try:
             self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
