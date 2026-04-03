@@ -16,6 +16,7 @@ class RiskList(threading.Thread):
         risk_list_threshold,
         risklist_related_entities,
         riskrules_as_label,
+        ta_to_intrusion_set=None,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -24,6 +25,7 @@ class RiskList(threading.Thread):
         self.risk_list_threshold = risk_list_threshold
         self.risklist_related_entities = risklist_related_entities
         self.riskrules_as_label = riskrules_as_label
+        self.ta_to_intrusion_set = ta_to_intrusion_set
 
     def run(self):
         try:
@@ -201,7 +203,12 @@ class RiskList(threading.Thread):
                         last_seen=last_seen,
                     )
 
-                    stix_obj.map_data(row, self.tlp, self.risklist_related_entities)
+                    stix_obj.map_data(
+                        row,
+                        self.tlp,
+                        self.risklist_related_entities,
+                        ta_to_intrusion_set=self.ta_to_intrusion_set,
+                    )
 
                     stix_obj.add_description(description)
                     if self.riskrules_as_label:
