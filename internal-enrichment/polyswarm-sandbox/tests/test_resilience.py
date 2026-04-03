@@ -170,14 +170,13 @@ class TestCircuitBreakerRecovery:
         assert cb.state == "CLOSED"
 
     def test_failure_in_half_open_reopens(self):
-        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=9999)
+        cb = CircuitBreaker(failure_threshold=2, cooldown_seconds=0.01)
         # Trip the breaker
         cb.record_failure()
         cb.record_failure()
         assert cb.state == "OPEN"
-        # Manually force HALF_OPEN by backdating opened_at
-        with cb._lock:
-            cb._opened_at = 0  # Expired long ago
+        # Wait for cooldown to expire naturally
+        time.sleep(0.02)
         assert cb.state == "HALF_OPEN"
         # Another failure should re-open with fresh cooldown
         cb.record_failure()
