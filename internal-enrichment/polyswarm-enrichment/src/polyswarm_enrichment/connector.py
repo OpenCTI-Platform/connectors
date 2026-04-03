@@ -503,7 +503,7 @@ class ConnectorTemplate:
                                 enriched_obs["name"] = hash_value
                             else:
                                 enriched_obs["name"] = (
-                                    f"file_unknown_{str(uuid.uuid4())[:8]}"
+                                    f"file_unknown_{observable_id[-8:]}"
                                 )
                                 self.helper.log_warning(
                                     "[CONNECTOR] No usable file name or valid hash found. Using UUID fallback."

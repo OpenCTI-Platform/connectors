@@ -1544,7 +1544,10 @@ class ConverterToStix:
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         if self._is_ipv6(value):
-            obs_id = obs_id or f"ipv6-addr--{str(uuid.uuid4())}"
+            obs_id = (
+                obs_id
+                or f"ipv6-addr--{str(uuid.uuid5(uuid.NAMESPACE_URL, f'ipv6:{value}'))}"
+            )
             return {
                 "type": "ipv6-addr",
                 "spec_version": "2.1",
@@ -1555,7 +1558,10 @@ class ConverterToStix:
                 "x_opencti_created_by_ref": self.author["id"],
             }
         if self._is_ipv4(value):
-            obs_id = obs_id or f"ipv4-addr--{str(uuid.uuid4())}"
+            obs_id = (
+                obs_id
+                or f"ipv4-addr--{str(uuid.uuid5(uuid.NAMESPACE_URL, f'ipv4:{value}'))}"
+            )
             return {
                 "type": "ipv4-addr",
                 "spec_version": "2.1",
@@ -1566,7 +1572,10 @@ class ConverterToStix:
                 "x_opencti_created_by_ref": self.author["id"],
             }
         if self._is_domain(value):
-            obs_id = obs_id or f"domain-name--{str(uuid.uuid4())}"
+            obs_id = (
+                obs_id
+                or f"domain-name--{str(uuid.uuid5(uuid.NAMESPACE_URL, f'domain:{value}'))}"
+            )
             return {
                 "type": "domain-name",
                 "spec_version": "2.1",
