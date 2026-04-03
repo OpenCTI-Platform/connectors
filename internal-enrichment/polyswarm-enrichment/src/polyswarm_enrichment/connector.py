@@ -14,7 +14,6 @@ Enriches file observables with comprehensive threat intelligence including:
 """
 
 import traceback
-import uuid
 from datetime import datetime, timezone
 
 from pycti import Note, OpenCTIConnectorHelper
@@ -503,7 +502,7 @@ class ConnectorTemplate:
                                 enriched_obs["name"] = hash_value
                             else:
                                 enriched_obs["name"] = (
-                                    f"file_unknown_{observable_id[-8:]}"
+                                    f"file_unknown_{observable['id'][-8:]}"
                                 )
                                 self.helper.log_warning(
                                     "[CONNECTOR] No usable file name or valid hash found. Using UUID fallback."

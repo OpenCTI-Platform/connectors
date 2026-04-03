@@ -267,7 +267,7 @@ class PolySwarmConnector:
             opencti_entity.get("standard_id")
             or opencti_entity.get("stix_id")
             or opencti_entity.get("id")
-            or f"file--{uuid.uuid5(uuid.NAMESPACE_URL, f'polyswarm:unknown:{entity_id}')}"
+            or f"file--{uuid.uuid5(uuid.NAMESPACE_URL, f'polyswarm:unknown:{opencti_entity.get("id", "unknown")}')}"
         )
 
         normalized["name"] = opencti_entity.get("name") or opencti_entity.get(

@@ -113,7 +113,7 @@ class StixBuilder:
         self._max_enrichment_depth = 2
 
     @staticmethod
-    def _cfg(config, key: str, default=None):
+    def _cfg(config, key: str, default=None) -> object:
         """Access config value — works with both Pydantic ConnectorSettings and plain dicts."""
         if hasattr(config, "polyswarm"):
             return getattr(config.polyswarm, key, default)
