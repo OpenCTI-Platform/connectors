@@ -119,6 +119,7 @@ def main():
         pycti=get_pycti(),
         tags=get_tags(),
         repo=REPOSITORY,
+        release_ref=os.getenv("RELEASE_REF", ""),
     )
     write_config(config)
 

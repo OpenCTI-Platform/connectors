@@ -90,3 +90,66 @@ class TestCrowdstrikeConnector(object):
         indicator_severity = self.mock_client._map_severity(self.ioc_data)
 
         assert indicator_severity is None
+
+    @pytest.mark.parametrize(
+        "ioc_type, config_attr, config_value, expected_action",
+        [
+            ("ipv4", "action_on_ip", "detect", "detect"),
+            ("ipv4", "action_on_ip", "no_action", "no_action"),
+            ("ipv6", "action_on_ip", "detect", "detect"),
+            ("domain", "action_on_domain", "detect", "detect"),
+            ("domain", "action_on_domain", "no_action", "no_action"),
+            ("sha256", "action_on_hash", "detect", "detect"),
+            ("sha256", "action_on_hash", "prevent", "prevent"),
+            ("sha256", "action_on_hash", "allow", "allow"),
+            ("sha256", "action_on_hash", "no_action", "no_action"),
+            ("md5", "action_on_hash", "prevent", "prevent"),
+            ("unknown_type", "action_on_ip", "no_action", "detect"),
+        ],
+    )
+    def test_resolve_action(
+        self, ioc_type: str, config_attr: str, config_value: str, expected_action: str
+    ) -> None:
+        """
+        Check that _resolve_action returns the correct action based on config
+        """
+        setattr(self.mock_config, config_attr, config_value)
+        action = self.mock_client._resolve_action(ioc_type)
+        assert action == expected_action
+
+    def test_generate_indicator_body_uses_configured_action(self) -> None:
+        """
+        Check that _generate_indicator_body sets the action from config
+        """
+        self.mock_config.action_on_hash = "prevent"
+        self.mock_helper.get_attribute_in_extension.return_value = 50
+        self.mock_helper.get_attribute_in_mitre_extension.return_value = None
+
+        data = {
+            "pattern": "[file:hashes.'SHA-256' = 'abc123']",
+            "labels": ["test"],
+        }
+        body = self.mock_client._generate_indicator_body(data, "abc123")
+
+        assert body is not None
+        indicator = body["indicators"][0]
+        assert indicator["action"] == "prevent"
+        assert indicator["mobile_action"] == "prevent"
+
+    def test_generate_indicator_body_default_detect_for_ip(self) -> None:
+        """
+        Check that _generate_indicator_body defaults to detect for IP
+        """
+        self.mock_config.action_on_ip = "detect"
+        self.mock_helper.get_attribute_in_extension.return_value = 70
+        self.mock_helper.get_attribute_in_mitre_extension.return_value = None
+
+        data = {
+            "pattern": "[ipv4-addr:value = '1.2.3.4']",
+        }
+        body = self.mock_client._generate_indicator_body(data, "1.2.3.4")
+
+        assert body is not None
+        indicator = body["indicators"][0]
+        assert indicator["action"] == "detect"
+        assert indicator["mobile_action"] == "detect"

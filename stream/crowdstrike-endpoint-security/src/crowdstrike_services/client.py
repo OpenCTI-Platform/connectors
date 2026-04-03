@@ -2,7 +2,11 @@ from typing import TYPE_CHECKING
 
 from falconpy import IOC as CrowdstrikeIOC
 
-from .constants import observable_type_mapper, platform_mapper, severity_mapper
+from .constants import (
+    observable_type_mapper,
+    platform_mapper,
+    severity_mapper,
+)
 
 if TYPE_CHECKING:
     from crowdstrike_connector.settings import CrowdstrikeEndpointSecurityConfig
@@ -95,6 +99,21 @@ class CrowdstrikeClient:
         # If OpenCTI observable type is not in Crowdstrike
         return None
 
+    def _resolve_action(self, ioc_type: str) -> str:
+        """
+        Resolve the CrowdStrike action for a given IOC type based on config.
+        Falls back to 'detect' for unknown IOC types not covered by the config.
+        """
+        action_map = {
+            "ipv4": self.config.action_on_ip,
+            "ipv6": self.config.action_on_ip,
+            "domain": self.config.action_on_domain,
+            "sha256": self.config.action_on_hash,
+            "md5": self.config.action_on_hash,
+        }
+        action = action_map.get(ioc_type, "detect")
+        return action
+
     def _map_severity(self, data: dict) -> str:
         """
         Map OpenCTI indicator score to severity value from Crowdstrike
@@ -184,6 +203,7 @@ class CrowdstrikeClient:
 
         # IOC type is required, return None if no type
         if ioc_type is not None:
+            ioc_action = self._resolve_action(ioc_type)
             ioc_description = data.get("description", None)
             ioc_valid_until = data.get("valid_until", None)
             ioc_tags = data.get("labels", None)
@@ -191,8 +211,8 @@ class CrowdstrikeClient:
             ioc_platforms = self._map_platform(data)
 
             indicator = {
-                "action": "detect",  # "Detect only" on Falcon web UI
-                "mobile_action": "detect",  # "Detect only" on Falcon web UI
+                "action": ioc_action,
+                "mobile_action": ioc_action,
                 "type": ioc_type,
                 "value": ioc_value,
                 "severity": ioc_severity,

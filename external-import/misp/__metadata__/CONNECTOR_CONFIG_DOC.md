@@ -49,4 +49,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT | `boolean` |  | boolean | `true` | Whether to import unsupported observable as x_opencti_text or not (just with the value). |
 | MISP_PROPAGATE_LABELS | `boolean` |  | boolean | `false` | Whether to apply labels from MISP events to OpenCTI observables on top of MISP Attribute labels or not. |
 | MISP_BATCH_COUNT | `integer` |  | integer | `9999` | The max number of items per batch when splitting STIX bundles. |
+| MISP_BATCH_SIZE_LIMIT | `string` |  | string | `null` | Max size of batches (in human-readable file size, e.g., '10MB', '500KB', '1.5GB') when splitting STIX bundles. `None` means no limit. |
 | MISP_REQUEST_TIMEOUT | `number` |  | number | `null` | The timeout for the requests to the MISP API in seconds. None means no timeout. |

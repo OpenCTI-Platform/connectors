@@ -1,12 +1,47 @@
 import base64
 import re
 import urllib.parse
+from typing import Dict, List, Mapping, Optional
 from urllib.parse import urlparse
 
 import requests
-from pycti import OpenCTIConnectorHelper, get_config_variable
+import stix2
+from pycti import MarkingDefinition, OpenCTIConnectorHelper, get_config_variable
 
 from .config_variables import ConfigConnector
+
+ALLOWED_TLPS = {
+    "tlp:clear",
+    "tlp:white",
+    "tlp:green",
+    "tlp:amber",
+    "tlp:amber+strict",
+    "tlp:red",
+}
+
+
+def create_tlp_marking(tlp_value: str) -> stix2.MarkingDefinition:
+    tlp_value_lower = tlp_value.lower()
+
+    if tlp_value_lower == "tlp:clear" or tlp_value_lower == "tlp:white":
+        return stix2.TLP_WHITE
+    if tlp_value_lower == "tlp:green":
+        return stix2.TLP_GREEN
+    if tlp_value_lower == "tlp:amber":
+        return stix2.TLP_AMBER
+    if tlp_value_lower == "tlp:amber+strict":
+        return stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            allow_custom=True,
+            x_opencti_definition_type="TLP",
+            x_opencti_definition="TLP:AMBER+STRICT",
+        )
+    if tlp_value_lower == "tlp:red":
+        return stix2.TLP_RED
+
+    raise ValueError(f"unknown TLP value {tlp_value}")
 
 
 class EsetConnector:
@@ -100,9 +135,18 @@ class EsetConnector:
 
         return None
 
+    def _get_tlp_from_labels(self, labels: List[Dict]) -> Optional[str]:
+        """Returns valid TLP value from object labels."""
+        if labels:
+            for label in labels:
+                if label["value"].lower() in ALLOWED_TLPS:
+                    return label["value"]
+
+        return None
+
     def enrich_report(
         self, report_object: dict, api_url: str, report_name: str
-    ) -> None:
+    ) -> Dict:
         """Download report from ESET portal and updates report STIX object."""
         with requests.get(
             api_url,
@@ -113,17 +157,16 @@ class EsetConnector:
             response.raise_for_status()
             content = response.content
 
+        file = {
+            "name": report_name,
+            "data": base64.b64encode(content).decode("utf-8"),
+            "mime_type": "application/octet-pdf",
+        }
         files = report_object.get("x_opencti_files", [])
-
-        files.append(
-            {
-                "name": report_name,
-                "data": base64.b64encode(content).decode("utf-8"),
-                "mime_type": "application/octet-pdf",
-            }
-        )
+        files.append(file)
 
         report_object["x_opencti_files"] = files
+        return file
 
     # noinspection PyMethodMayBeStatic
     def has_attachment(self, import_files: list, attachment_name: str) -> bool:
@@ -180,7 +223,40 @@ class EsetConnector:
             {"entity_id": entity_id, "name": report_name, "url": url},
         )
 
-        self.enrich_report(stix_object, url, report_name)
+        file = self.enrich_report(stix_object, url, report_name)
+
+        # Add TLP marking for file data. If the report has non-default TLP, use it.
+        # Otherwise, assign TLP specified as label.
+        tlp_marking: Optional[Mapping] = None
+
+        if enrichment_entity["objectMarking"]:
+            for marking_definition in enrichment_entity["objectMarking"]:
+                if marking_definition["definition_type"] == "TLP":
+                    tlp_marking = marking_definition
+
+        tlp_value_label: Optional[str] = self._get_tlp_from_labels(
+            enrichment_entity.get("objectLabel")
+        )
+
+        if (not tlp_value_label and tlp_marking) or (
+            tlp_marking
+            and (
+                tlp_marking["definition"].lower() != "tlp:clear"
+                and tlp_marking["definition"].lower() != "tlp:white"
+            )
+        ):
+            file["object_marking_refs"] = tlp_marking["standard_id"]
+        elif tlp_value_label:
+            tlp_marking = create_tlp_marking(tlp_value_label)
+
+            self.helper.log_debug(
+                "Adding TLP marking found as label",
+                {"entity_id": entity_id, "tlp": tlp_value_label},
+            )
+
+            stix_objects.append(tlp_marking)
+            file["object_marking_refs"] = tlp_marking["id"]
+
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
 
         self.helper.log_debug(

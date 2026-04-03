@@ -29,6 +29,7 @@ def test_connector_initialization(mocked_helper) -> None:
         "scan_http",
         "open_dns_resolvers",
     ]
+    assert connector.config.shadowserver.report_names == ["company"]
     assert connector.config.shadowserver.initial_lookback == 45
     assert connector.config.shadowserver.lookback == 7
 
@@ -176,3 +177,51 @@ def test_connector_run(
     else:
         mocked_helper.api.work.initiate_work.assert_not_called()
         mocked_helper.api.work.to_processed.assert_not_called()
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_collect_intelligence_passes_report_names_and_types(
+    mocked_helper, mocker
+) -> None:
+    """Test _collect_intelligence passes report_names and report_types to the API."""
+    connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
+    connector.lookback = 0  # Single iteration
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = [
+        {"id": "report-1", "report": "scan_http"}
+    ]
+    mock_api_instance.get_stix_report.return_value = [
+        stix2.Identity(
+            id=pycti.Identity.generate_id(name="test", identity_class="organization"),
+            name="test",
+        )
+    ]
+    mocker.patch(
+        "shadowserver.connector.ShadowserverAPI",
+        return_value=mock_api_instance,
+    )
+
+    results = list(connector._collect_intelligence())
+
+    # Verify report_names and report_types are passed to get_report_list
+    mock_api_instance.get_report_list.assert_called_once_with(
+        date="2025-07-01",
+        reports=["company"],
+        type=["scan_http", "open_dns_resolvers"],
+    )
+
+    # Verify log messages for both report_names and report_types
+    log_calls = [c.args[0] for c in mocked_helper.connector_logger.info.call_args_list]
+    assert any("Report names to retrieve: company." in msg for msg in log_calls)
+    assert any(
+        "Report types to retrieve: scan_http, open_dns_resolvers." in msg
+        for msg in log_calls
+    )
+
+    # Verify results are yielded
+    assert len(results) == 1
+    stix_objects, date_str = results[0]
+    assert date_str == "2025-07-01"
+    assert len(stix_objects) == 1

@@ -47,4 +47,5 @@ services:
       #- MISP_PROPAGATE_LABELS=false
       #- MISP_BATCH_COUNT=9999
       #- MISP_REQUEST_TIMEOUT=
+      #- MISP_BATCH_SIZE_LIMIT=
     restart: always

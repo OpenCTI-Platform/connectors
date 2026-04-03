@@ -85,6 +85,7 @@ There are a number of configuration options, which are set either in `docker-com
 | MITRE ATT&CK Enterprise URL | crowdstrike.attack_enterprise_url       | `CROWDSTRIKE_ATTACK_ENTERPRISE_URL`          |                                                      | No        | Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. If set, this URL is used instead of constructing one from the ATT&CK version (useful for air-gapped or mirrored environments). |
 | Actor Start Timestamp       | crowdstrike.actor_start_timestamp       | `CROWDSTRIKE_ACTOR_START_TIMESTAMP`          | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL actors.                             |
 | Vulnerability Start Timestamp | crowdstrike.vulnerability_start_timestamp | `CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP` | 30 days ago                   | No        | `0`                                                                  | The Vulnerabilities updated after this timestamp will be imported. Timestamp in UNIX Epoch time, UTC. Default is 30 days ago. |
+| Vulnerability Import Affected Products | crowdstrike.vulnerability_import_affected_products | `CROWDSTRIKE_VULNERABILITY_IMPORT_AFFECTED_PRODUCTS` | false | No | When `true`, creates a `Software` observable for each entry in the vulnerability's `affected_products` array, and links it to the parent vulnerability via a `has` relationship. Disabled by default — existing deployments are unaffected until opt-in. |
 | Malware Start Timestamp     | crowdstrike.malware_start_timestamp     | `CROWDSTRIKE_MALWARE_START_TIMESTAMP`        | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL malware.                             |
 | Report Start Timestamp      | crowdstrike.report_start_timestamp      | `CROWDSTRIKE_REPORT_START_TIMESTAMP`         | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL reports.                            |
 | Report Status               | crowdstrike.report_status               | `CROWDSTRIKE_REPORT_STATUS`                  | New                                                  | No        | Status for imported reports.                                                     |
@@ -204,6 +205,7 @@ graph LR
         Reports[Reports]
         Indicators[Indicators]
         YARA[YARA Rules]
+        Vulnerabilities[Vulnerabilities]
     end
 
     subgraph OpenCTI
@@ -215,6 +217,8 @@ graph LR
         YARAInd[YARA Indicator]
         Malware[Malware]
         AttackPattern[Attack Pattern]
+        Vuln[Vulnerability]
+        Software[Software]
     end
 
     Actors --> IntrusionSet
@@ -224,6 +228,8 @@ graph LR
     Indicators --> Indicator
     Indicators --> Observable
     YARA --> YARAInd
+    Vulnerabilities --> Vuln
+    Vulnerabilities -.->|opt-in| Software
 ```
 
 ### Supported Scopes
@@ -233,6 +239,7 @@ graph LR
 | actor         | Threat actors as Intrusion Sets with TTPs         |
 | report        | Intelligence reports with related entities        |
 | indicator     | IOCs (IPs, domains, hashes, URLs, etc.)           |
+| vulnerability | CVEs with CVSS scores and optional affected products |
 | yara_master   | YARA detection rules                              |
 | snort_master  | Snort/Suricata network detection rules            |
 
@@ -246,6 +253,8 @@ graph LR
 | Indicator (Domain)   | Domain-Name         | Domain observables                               |
 | Indicator (Hash)     | File                | File hash observables                            |
 | Indicator (URL)      | URL                 | URL observables                                  |
+| Vulnerability        | Vulnerability       | CVE with CVSS scores and descriptions            |
+| Affected Product     | Software            | Vendor/product observable linked to its CVE via `has` (opt-in) |
 | YARA Rule            | Indicator (YARA)    | YARA pattern indicators                          |
 | Snort Rule           | Indicator (Snort)   | Snort/Suricata pattern indicators                |
 

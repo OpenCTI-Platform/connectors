@@ -9,13 +9,16 @@ from connectors_sdk import (
     DatetimeFromIsoString,
     ListFromString,
 )
+from datasize import DataSize
 from pydantic import (
     AfterValidator,
+    BeforeValidator,
     Field,
     HttpUrl,
     PlainSerializer,
     SecretStr,
     SerializationInfo,
+    WithJsonSchema,
     field_validator,
     model_validator,
 )
@@ -65,6 +68,33 @@ DictFromString = Annotated[
     str,
     AfterValidator(comma_separated_dict),
     PlainSerializer(pycti_dict_serializer, when_used="json"),
+]
+
+# Allow to use custom types from third-party libs, like `DataSize` from `datasize` lib
+BaseConfigModel.model_config["arbitrary_types_allowed"] = True
+
+
+def parse_batch_datasize(value: Any) -> DataSize | None:
+    """Validate that batch_size_limit is a human-readable file size (e.g. '10MB', '500KB')."""
+    if isinstance(value, str):
+        if not value.strip().upper().endswith(("B", "KB", "MB", "GB", "TB")):
+            raise ValueError(
+                f"Invalid batch_size_limit '{value}'. "
+                "Expected a human-readable file size like '10MB', '500KB', '1.5GB'."
+            )
+
+        return DataSize(value)
+
+    return value
+
+
+DataSizeFromString = Annotated[
+    DataSize,
+    BeforeValidator(parse_batch_datasize),
+    PlainSerializer(lambda x: f"{x:.2a}", return_type=str),
+    WithJsonSchema(
+        {"type": "string"}
+    ),  # input type must be str (human-readable file size)
 ]
 
 
@@ -250,6 +280,14 @@ class MispConfig(BaseConfigModel):
         description="The max number of items per batch when splitting STIX bundles.",
         default=9999,
     )
+    batch_size_limit: DataSizeFromString | None = Field(
+        description=(
+            "Max size of batches (in human-readable file size, e.g., '10MB', "
+            "'500KB', '1.5GB') when splitting STIX bundles. `None` means no limit."
+        ),
+        default=None,
+    )
+
     request_timeout: float | None = Field(
         description="The timeout for the requests to the MISP API in seconds. None means no timeout.",
         default=None,

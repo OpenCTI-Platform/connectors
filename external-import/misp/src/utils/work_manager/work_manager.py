@@ -54,6 +54,25 @@ class WorkManager:
         """
         return self._helper.check_connector_buffering()
 
+    def check_connector_run_and_terminate(self) -> bool:
+        """Check whether the connector is in 'run and terminate' mode.
+
+        This helper indicates if the connector is configured to run once and then
+        terminate, either explicitly via ``connect_run_and_terminate`` or
+        implicitly via a ``duration_period`` of zero seconds.
+
+        Returns:
+            bool: True if run-and-terminate mode is active
+                  (``helper.connect_run_and_terminate`` is truthy or the
+                  configured ``duration_period`` is 0 seconds), False otherwise.
+
+        """
+        # Run-and-terminate mode is enabled either by the helper flag or by
+        # configuring a zero-second duration period.
+        return bool(self._helper.connect_run_and_terminate) or (
+            self._config.connector.duration_period.total_seconds() == 0
+        )
+
     @staticmethod
     def _is_valid_iso_format(date_string: str) -> bool:
         """Check if a string is a valid ISO format date.

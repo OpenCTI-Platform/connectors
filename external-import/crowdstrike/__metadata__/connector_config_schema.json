@@ -271,6 +271,11 @@
       "description": "Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
       "type": "integer"
     },
+    "CROWDSTRIKE_VULNERABILITY_IMPORT_AFFECTED_PRODUCTS": {
+      "default": false,
+      "description": "Whether to import affected products from vulnerability data. When enabled, creates STIX Software observables and 'has' relationships linking each product to its parent vulnerability.",
+      "type": "boolean"
+    },
     "CROWDSTRIKE_INTERVAL_SEC": {
       "default": null,
       "deprecated": true,

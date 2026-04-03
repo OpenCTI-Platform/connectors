@@ -132,6 +132,27 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
             },
             id="full_valid_settings_dict_attribute_filter_filled",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "misp": {
+                    "url": "http://test.com",
+                    "key": "test-api-key",
+                    "batch_size_limit": "10MB",
+                },
+            },
+            id="valid_misp_batch_size_limit",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -274,6 +295,28 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "misp.date_filter_field",
             id="invalid_misp_date_filter_field",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "misp": {
+                    "url": "http://test.com",
+                    "key": "test-api-key",
+                    "batch_size_limit": "10 MB",
+                },
+            },
+            "misp.batch_size_limit",
+            id="invalid_misp_batch_size_limit_with_space",
         ),
     ],
 )

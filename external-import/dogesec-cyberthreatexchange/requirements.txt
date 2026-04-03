@@ -1,0 +1,2 @@
+pycti==7.260401.0
+requests

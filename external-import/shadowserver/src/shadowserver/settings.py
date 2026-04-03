@@ -85,6 +85,10 @@ class ShadowserverConfig(BaseConfigModel):
         description="List of report types to retrieve. If empty, all report types will be retrieved.",
         default=[],
     )
+    report_names: ListFromString = Field(
+        description="List of report names to retrieve. If empty, all report names will be retrieved.",
+        default=[],
+    )
     initial_lookback: int = Field(
         description="Number of days to look back for reports during the first run.",
         default=30,

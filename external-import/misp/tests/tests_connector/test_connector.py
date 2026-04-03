@@ -4,8 +4,12 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pycti
+import stix2
 from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
+from connector.connector import ProcessingOutcome
+from datasize import DataSize
 from freezegun import freeze_time
 from pycti import OpenCTIConnectorHelper
 
@@ -37,6 +41,15 @@ def fake_misp_connector(config_dict: dict) -> Misp:
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
     return Misp(config=settings, helper=helper)
+
+
+def _make_identity(name: str, description: str | None = None) -> stix2.Identity:
+    return stix2.Identity(
+        id=pycti.Identity.generate_id(name=name, identity_class="organization"),
+        name=name,
+        identity_class="organization",
+        description=description,
+    )
 
 
 def test_get_event_datetime_with_timestamp(mock_opencti_connector_helper, mock_py_misp):
@@ -528,6 +541,472 @@ def test_connector_creates_misp_client_with_request_timeout_none(
         assert call_kwargs["timeout"] is None
 
 
+def test_check_and_add_entities_to_batch_flushes_existing_buffer_on_size_limit(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_size_limit"] = "1KB"
+    config_dict["misp"]["batch_count"] = 9999
+    connector = fake_misp_connector(config_dict)
+
+    buffered_object = _make_identity(name="buffered-object", description="X" * 10_000)
+    connector.batch_processor.add_item(buffered_object)
+
+    max_size_limit = DataSize(config_dict["misp"]["batch_size_limit"])
+    assert connector.batch_processor.get_current_batch_size() >= max_size_limit
+
+    author = _make_identity(name="author")
+    entities = [_make_identity(name="entity-1"), _make_identity(name="entity-2")]
+
+    with patch.object(
+        connector.batch_processor,
+        "flush",
+        side_effect=lambda: connector.batch_processor.clear_current_batch(),
+    ) as mock_flush:
+        connector._check_and_add_entities_to_batch(
+            all_entities=entities, author=author, markings=[]
+        )
+
+    assert mock_flush.call_count == 1
+    assert connector.batch_processor.get_current_batch_length() == 1 + len(entities)
+
+
+def test_check_and_add_entities_to_batch_flushes_on_projected_size_limit(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_size_limit"] = "30KB"
+    config_dict["misp"]["batch_count"] = 9999
+    connector = fake_misp_connector(config_dict)
+
+    connector.batch_processor.add_item(_make_identity(name="already-buffered"))
+
+    max_size_limit = DataSize(config_dict["misp"]["batch_size_limit"])
+    assert connector.batch_processor.get_current_batch_size() < max_size_limit
+
+    author = _make_identity(name="author")
+    entities = [
+        _make_identity(name="entity-1", description="Y" * 50_000),
+        _make_identity(name="entity-2"),
+    ]
+
+    with patch.object(
+        connector.batch_processor,
+        "flush",
+        side_effect=lambda: connector.batch_processor.clear_current_batch(),
+    ) as mock_flush:
+        connector._check_and_add_entities_to_batch(
+            all_entities=entities, author=author, markings=[]
+        )
+
+    assert mock_flush.call_count == 1
+    assert connector.batch_processor.get_current_batch_length() == 1 + len(entities)
+
+
+def test_check_and_add_entities_to_batch_keeps_count_based_flush_without_size_limit(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    connector.batch_processor.add_item(_make_identity(name="already-buffered-1"))
+    connector.batch_processor.add_item(_make_identity(name="already-buffered-2"))
+
+    author = _make_identity(name="author")
+    entities = [_make_identity(name="entity-1"), _make_identity(name="entity-2")]
+
+    with patch.object(
+        connector.batch_processor,
+        "flush",
+        side_effect=lambda: connector.batch_processor.clear_current_batch(),
+    ) as mock_flush:
+        connector._check_and_add_entities_to_batch(
+            all_entities=entities, author=author, markings=[]
+        )
+
+    assert mock_flush.call_count == 1
+    assert connector.batch_processor.get_current_batch_length() == 1 + len(entities)
+
+
+def test_check_batch_size_and_flush_does_not_flush_empty_batch_for_oversize_chunk(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_size_limit"] = "1KB"
+    connector = fake_misp_connector(config_dict)
+
+    oversized_entities = [_make_identity(name="too-large", description="A" * 120_000)]
+
+    with (
+        patch.object(
+            connector.batch_processor,
+            "get_current_batch_length",
+            return_value=0,
+        ),
+        patch.object(connector.batch_processor, "flush") as mock_flush,
+    ):
+        connector._check_batch_size_and_flush(oversized_entities)
+
+    assert mock_flush.call_count == 0
+
+
+def test_process_bundle_in_batch_sends_forced_oversize_single_entity_with_warning(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["batch_size_limit"] = "10KB"
+    config_dict["misp"]["batch_count"] = 100
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    markings = []
+    bundle_objects = [
+        _make_identity(name="small-1"),
+        _make_identity(name="huge", description="B" * 200_000),
+        _make_identity(name="small-2"),
+    ]
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "id": "1",
+                "uuid": "event-1",
+                "timestamp": str(
+                    int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+                ),
+            }
+        }
+    )
+
+    with (
+        patch.object(
+            connector.work_manager,
+            "get_state",
+            return_value={"remaining_objects_count": len(bundle_objects)},
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_run_and_terminate",
+            return_value=True,
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_buffering",
+            return_value=False,
+        ),
+        patch.object(connector.work_manager, "update_state") as mock_update_state,
+        patch.object(
+            connector,
+            "_check_and_add_entities_to_batch",
+        ) as mock_add_entities,
+        patch.object(connector, "_flush_batch_processor"),
+        patch.object(connector.logger, "warning") as mock_warning,
+    ):
+        outcome = connector._process_bundle_in_batch(
+            event=event,
+            bundle_objects=bundle_objects,
+            author=author,
+            markings=markings,
+        )
+
+    sent_entities_count = sum(
+        len(call.args[0]) for call in mock_add_entities.call_args_list
+    )
+    assert outcome is ProcessingOutcome.COMPLETED
+    assert sent_entities_count == len(bundle_objects)
+    assert mock_warning.call_count >= 1
+    assert mock_update_state.call_count >= 1
+
+
+def test_process_bundle_in_batch_buffering_keeps_remaining_count_when_batch_empty(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    markings = []
+    bundle_objects = [
+        _make_identity(name="entity-1"),
+        _make_identity(name="entity-2"),
+        _make_identity(name="entity-3"),
+    ]
+    initial_remaining = len(bundle_objects)
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "id": "42",
+                "uuid": "event-42",
+                "timestamp": str(
+                    int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+                ),
+            }
+        }
+    )
+
+    state_updates = []
+
+    def track_update_state(state_update=None, **kwargs):
+        if state_update:
+            state_updates.append(state_update)
+
+    with (
+        patch.object(
+            connector.work_manager,
+            "get_state",
+            return_value={"remaining_objects_count": initial_remaining},
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_run_and_terminate",
+            return_value=False,
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_buffering",
+            return_value=True,
+        ),
+        patch.object(
+            connector.batch_processor,
+            "get_current_batch_length",
+            return_value=0,
+        ),
+        patch.object(connector.batch_processor, "clear_current_batch") as mock_clear,
+        patch.object(
+            connector.work_manager,
+            "update_state",
+            side_effect=track_update_state,
+        ),
+    ):
+        outcome = connector._process_bundle_in_batch(
+            event=event,
+            bundle_objects=bundle_objects,
+            author=author,
+            markings=markings,
+        )
+
+    assert outcome is ProcessingOutcome.BUFFERING
+    assert mock_clear.call_count == 1
+    assert state_updates
+    assert state_updates[-1]["remaining_objects_count"] == initial_remaining
+
+
+def test_process_bundle_in_batch_sets_work_name_completion_to_100_on_last_chunk(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    config_dict["misp"]["batch_count"] = 10
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    markings = []
+    bundle_objects = [
+        _make_identity(name="entity-1"),
+        _make_identity(name="entity-2"),
+        _make_identity(name="entity-3"),
+    ]
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "id": "12",
+                "uuid": "event-12",
+                "timestamp": str(
+                    int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+                ),
+            }
+        }
+    )
+
+    with (
+        patch.object(
+            connector.work_manager,
+            "get_state",
+            return_value={"remaining_objects_count": len(bundle_objects)},
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_run_and_terminate",
+            return_value=True,
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_buffering",
+            return_value=False,
+        ),
+        patch.object(connector.work_manager, "update_state"),
+        patch.object(
+            connector,
+            "_check_and_add_entities_to_batch",
+        ),
+        patch.object(connector, "_flush_batch_processor"),
+    ):
+        outcome = connector._process_bundle_in_batch(
+            event=event,
+            bundle_objects=bundle_objects,
+            author=author,
+            markings=markings,
+        )
+
+    assert outcome is ProcessingOutcome.COMPLETED
+    assert "Completion 100%" in connector.batch_processor.work_name_template
+
+
+def test_process_bundle_in_batch_completion_progression_matches_processed_batches(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    markings = []
+    bundle_objects = [
+        _make_identity(name="entity-1"),
+        _make_identity(name="entity-2"),
+        _make_identity(name="entity-3"),
+        _make_identity(name="entity-4"),
+        _make_identity(name="entity-5"),
+        _make_identity(name="entity-6"),
+        _make_identity(name="entity-7"),
+        _make_identity(name="entity-8"),
+        _make_identity(name="entity-9"),
+    ]
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "id": "13",
+                "uuid": "event-13",
+                "timestamp": str(
+                    int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+                ),
+            }
+        }
+    )
+
+    work_name_snapshots = []
+
+    def capture_and_skip_add(*args, **kwargs):
+        work_name_snapshots.append(connector.batch_processor.work_name_template)
+
+    with (
+        patch.object(
+            connector.work_manager,
+            "get_state",
+            return_value={"remaining_objects_count": len(bundle_objects)},
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_run_and_terminate",
+            return_value=True,
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_buffering",
+            return_value=False,
+        ),
+        patch.object(connector.work_manager, "update_state"),
+        patch.object(
+            connector,
+            "_check_and_add_entities_to_batch",
+            side_effect=capture_and_skip_add,
+        ),
+        patch.object(connector, "_flush_batch_processor"),
+    ):
+        outcome = connector._process_bundle_in_batch(
+            event=event,
+            bundle_objects=bundle_objects,
+            author=author,
+            markings=markings,
+        )
+
+    assert outcome is ProcessingOutcome.COMPLETED
+    assert len(work_name_snapshots) == 5
+    assert "Completion 0%" in work_name_snapshots[0]
+    assert "Completion 22%" in work_name_snapshots[1]
+    assert "Completion 44%" in work_name_snapshots[2]
+    assert "Completion 66%" in work_name_snapshots[3]
+    assert "Completion 88%" in work_name_snapshots[4]
+
+
+def test_process_bundle_in_batch_completion_starts_from_resume_object_index(
+    mock_opencti_connector_helper, mock_py_misp
+):
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "timestamp"
+    config_dict["misp"]["batch_count"] = 2
+    connector = fake_misp_connector(config_dict)
+
+    author = _make_identity(name="author")
+    markings = []
+    bundle_objects = [
+        _make_identity(name="entity-1"),
+        _make_identity(name="entity-2"),
+        _make_identity(name="entity-3"),
+        _make_identity(name="entity-4"),
+        _make_identity(name="entity-5"),
+        _make_identity(name="entity-6"),
+        _make_identity(name="entity-7"),
+        _make_identity(name="entity-8"),
+        _make_identity(name="entity-9"),
+    ]
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "id": "14",
+                "uuid": "event-14",
+                "timestamp": str(
+                    int(datetime(2026, 1, 2, tzinfo=timezone.utc).timestamp())
+                ),
+            }
+        }
+    )
+
+    work_name_snapshots = []
+
+    def capture_and_skip_add(*args, **kwargs):
+        work_name_snapshots.append(connector.batch_processor.work_name_template)
+
+    with (
+        patch.object(
+            connector.work_manager,
+            "get_state",
+            # Resume at object_index = 2 on bundle of 9
+            return_value={"remaining_objects_count": 7},
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_run_and_terminate",
+            return_value=True,
+        ),
+        patch.object(
+            connector.work_manager,
+            "check_connector_buffering",
+            return_value=False,
+        ),
+        patch.object(connector.work_manager, "update_state"),
+        patch.object(
+            connector,
+            "_check_and_add_entities_to_batch",
+            side_effect=capture_and_skip_add,
+        ),
+        patch.object(connector, "_flush_batch_processor"),
+    ):
+        outcome = connector._process_bundle_in_batch(
+            event=event,
+            bundle_objects=bundle_objects,
+            author=author,
+            markings=markings,
+        )
+
+    assert outcome is ProcessingOutcome.COMPLETED
+    # First visible progress should reflect resumed index (2/9 ~= 22%).
+    assert "Completion 22%" in work_name_snapshots[0]
+
+
 def test_connector_does_not_validate_event_already_processed_by_update_datetime(
     mock_opencti_connector_helper, mock_py_misp
 ):
@@ -578,9 +1057,16 @@ def _make_publish_timestamp_event(event_id: str, ts: int) -> EventRestSearchList
     )
 
 
-def _run_process_events(connector, events, buffering_sequence, initial_state=None):
+def _run_process_events(
+    connector, events, buffering_at_event_index=None, initial_state=None
+):
     """
     Run `process_events` with all external dependencies mocked.
+
+    Args:
+        buffering_at_event_index: 0-based index of the event call at which
+            ``_process_bundle_in_batch`` should return
+            ``ProcessingOutcome.BUFFERING``.  ``None`` means no buffering.
 
     Returns:
         (state dict, mock for _process_bundle_in_batch, process_events return value)
@@ -590,6 +1076,20 @@ def _run_process_events(connector, events, buffering_sequence, initial_state=Non
     def track_update_state(state_update=None, **kwargs):
         if state_update:
             state.update(state_update)
+
+    call_count = [0]
+
+    def process_bundle_side_effect(event, bundle_objects, author, markings):
+        idx = call_count[0]
+        call_count[0] += 1
+        if buffering_at_event_index is not None and idx == buffering_at_event_index:
+            # Simulate what the real _process_bundle_in_batch does when it
+            # detects buffering: persist the checkpoint state and signal the
+            # caller to stop the event loop.
+            state["last_event_date"] = connector._get_event_datetime(event).isoformat()
+            state["remaining_objects_count"] = len(bundle_objects)
+            return ProcessingOutcome.BUFFERING
+        return ProcessingOutcome.COMPLETED
 
     with (
         patch.object(connector, "helper") as mock_helper,
@@ -604,10 +1104,8 @@ def _run_process_events(connector, events, buffering_sequence, initial_state=Non
 
         mock_wm.get_state.side_effect = lambda: dict(state)
         mock_wm.update_state.side_effect = track_update_state
-        if isinstance(buffering_sequence, list):
-            mock_wm.check_connector_buffering.side_effect = buffering_sequence
-        else:
-            mock_wm.check_connector_buffering.return_value = buffering_sequence
+
+        mock_process.side_effect = process_bundle_side_effect
 
         mock_api.search_events.return_value = iter(events)
         mock_converter.process.return_value = (MagicMock(), [], [MagicMock()])
@@ -622,15 +1120,18 @@ def test_process_events_state_set_to_buffered_event_date_on_buffering(
     mock_opencti_connector_helper, mock_py_misp
 ):
     """
-    Test that when buffering is detected, `last_event_date` is saved to the
-    buffered event's timestamp so the next run restarts from that event.
+    Test that when buffering is detected inside _process_bundle_in_batch for
+    event B, ``last_event_date`` is saved to event B's timestamp so the next
+    run restarts from that event.
 
     Scenario:
     - Event A (earlier timestamp): processed normally.
-    - Event B (later timestamp): buffering detected → loop breaks.
+    - Event B (later timestamp): _process_bundle_in_batch detects buffering
+      mid-chunk → returns ProcessingOutcome.BUFFERING → loop breaks.
 
-    Expected: after the run, `last_event_date` equals event B's timestamp (not
-    A's), so the next run re-processes event B.
+    Expected: after the run, ``last_event_date`` equals event B's timestamp
+    (not A's), so the next run re-processes event B from the saved chunk
+    offset.
     """
     config_dict = deepcopy(minimal_config_dict)
     config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
@@ -642,9 +1143,9 @@ def test_process_events_state_set_to_buffered_event_date_on_buffering(
     event_a = _make_publish_timestamp_event("1", ts_a)
     event_b = _make_publish_timestamp_event("2", ts_b)
 
-    # No buffering for A, buffering triggers on B
+    # Buffering triggers on the second _process_bundle_in_batch call (event B)
     state, _, result = _run_process_events(
-        connector, [event_a, event_b], buffering_sequence=[False, True]
+        connector, [event_a, event_b], buffering_at_event_index=1
     )
 
     expected = datetime.fromtimestamp(ts_b, tz=timezone.utc).isoformat()
@@ -652,13 +1153,19 @@ def test_process_events_state_set_to_buffered_event_date_on_buffering(
 
 
 @freeze_time("2026-01-01 00:00:00")
-def test_process_events_buffered_event_not_processed(
+def test_process_events_buffering_breaks_event_loop(
     mock_opencti_connector_helper, mock_py_misp
 ):
     """
-    Test that when buffering is detected for event B, `_process_bundle_in_batch`
-    is NOT called for it — even though the state has already been advanced to
-    its timestamp.
+    Test that when ``_process_bundle_in_batch`` returns
+    ``ProcessingOutcome.BUFFERING`` for event B, the event loop is broken
+    immediately — event B itself IS passed to the method (buffering is
+    detected inside it), but any subsequent events are not processed at all.
+
+    Scenario:
+    - Event A: _process_bundle_in_batch returns COMPLETED.
+    - Event B: _process_bundle_in_batch returns BUFFERING → loop breaks.
+    - Event C: never reached.
     """
     config_dict = deepcopy(minimal_config_dict)
     config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
@@ -666,17 +1173,21 @@ def test_process_events_buffered_event_not_processed(
 
     ts_a = int(time.time())
     ts_b = int(time.time() + 1)
+    ts_c = int(time.time() + 2)
 
     event_a = _make_publish_timestamp_event("1", ts_a)
     event_b = _make_publish_timestamp_event("2", ts_b)
+    event_c = _make_publish_timestamp_event("3", ts_c)
 
     state, mock_process, _ = _run_process_events(
-        connector, [event_a, event_b], buffering_sequence=[False, True]
+        connector, [event_a, event_b, event_c], buffering_at_event_index=1
     )
 
-    # Only event A should have been processed
-    assert mock_process.call_count == 1
-    assert mock_process.call_args[1]["event"] == event_a
+    # Both event A and event B were passed to _process_bundle_in_batch;
+    # event C was never reached because the loop broke after event B.
+    assert mock_process.call_count == 2
+    assert mock_process.call_args_list[0][1]["event"] == event_a
+    assert mock_process.call_args_list[1][1]["event"] == event_b
 
 
 def test_process_events_adds_one_second_after_loop_completion(
@@ -696,9 +1207,7 @@ def test_process_events_adds_one_second_after_loop_completion(
         event = _make_publish_timestamp_event("1", ts)
 
         # No buffering — loop completes normally
-        state, _, result = _run_process_events(
-            connector, [event], buffering_sequence=False
-        )
+        state, _, result = _run_process_events(connector, [event])
 
         # ts == Now: process_events does not update last_event_date (handled
         # by _process_bundle_in_batch, which is mocked here).
@@ -706,9 +1215,7 @@ def test_process_events_adds_one_second_after_loop_completion(
         assert result is None
 
         frozen_time.move_to("2026-01-01 00:00:01")
-        state, _, result = _run_process_events(
-            connector, [event], buffering_sequence=False
-        )
+        state, _, result = _run_process_events(connector, [event])
         expected = (
             datetime.fromtimestamp(ts, tz=timezone.utc) + timedelta(seconds=1)
         ).isoformat()

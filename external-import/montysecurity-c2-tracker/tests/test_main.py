@@ -42,8 +42,8 @@ class StubConnectorSettings(ConnectorSettings):
                     "duration_period": "PT5M",
                 },
                 "montysecurity_c2_tracker": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
+                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
                     "tlp_level": "clear",
                 },
             }
