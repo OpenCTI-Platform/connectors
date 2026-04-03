@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
 
 try:
-    from connector.ttp_mapping import MITRE_KILL_CHAIN, TTP_DATABASE, get_ttp_info
+    from connector.ttp_mapping import MITRE_KILL_CHAIN, get_ttp_info
 except ImportError:
     TTP_DATABASE = {}
     MITRE_KILL_CHAIN = "mitre-attack"
