@@ -42,9 +42,15 @@ pytestmark = pytest.mark.skipif(
 KEYDOOR_SHA256 = "83a37ac38e86dfcccbf405650ef0ef655e2a4671bf5d8b3c405af18fb37bcb89"
 
 KEYDOOR_EXPECTED_IPS = {
-    "175.126.111.143", "20.72.205.209", "211.43.203.28",
-    "23.38.111.119", "23.62.100.184", "72.145.35.144",
-    "74.178.76.128", "74.178.76.44", "85.234.74.60",
+    "175.126.111.143",
+    "20.72.205.209",
+    "211.43.203.28",
+    "23.38.111.119",
+    "23.62.100.184",
+    "72.145.35.144",
+    "74.178.76.128",
+    "74.178.76.44",
+    "85.234.74.60",
 }
 
 # Timeouts — Keydoor's ~26 object bundle should ingest in ~3-4 min.
@@ -83,6 +89,7 @@ def get_octi():
     global _octi_client
     if _octi_client is None:
         from pycti import OpenCTIApiClient
+
         _octi_client = OpenCTIApiClient(OPENCTI_URL, OPENCTI_TOKEN)
     return _octi_client
 
@@ -93,7 +100,7 @@ def create_observable(sha256: str, description: str = "") -> dict:
         observableData={
             "type": "file",
             "hashes": {"SHA-256": sha256},
-            "x_opencti_description": description or f"E2E Keydoor test",
+            "x_opencti_description": description or "E2E Keydoor test",
         },
         x_opencti_score=50,
     )
@@ -339,9 +346,7 @@ class TestKeydoorNetworkIOCs:
                     found_ips.add(node["observable_value"])
 
         missing = KEYDOOR_EXPECTED_IPS - found_ips
-        assert not missing, (
-            f"Expected IPs not found: {missing}. Found: {found_ips}"
-        )
+        assert not missing, f"Expected IPs not found: {missing}. Found: {found_ips}"
 
     def test_ip_count_matches(self, keydoor_enriched):
         rels = get_relationships_from(
@@ -354,18 +359,18 @@ class TestKeydoorNetworkIOCs:
                 if node.get("entity_type") in ("IPv4-Addr", "IPv6-Addr"):
                     ip_rels.append(rel)
                     break
-        assert len(ip_rels) == len(KEYDOOR_EXPECTED_IPS), (
-            f"Expected {len(KEYDOOR_EXPECTED_IPS)} IP relationships, got {len(ip_rels)}"
-        )
+        assert len(ip_rels) == len(
+            KEYDOOR_EXPECTED_IPS
+        ), f"Expected {len(KEYDOOR_EXPECTED_IPS)} IP relationships, got {len(ip_rels)}"
 
     def test_communicates_with_confidence_is_low(self, keydoor_enriched):
         rels = get_relationships_from(
             keydoor_enriched["id"], rel_type="communicates-with"
         )
         for rel in rels:
-            assert rel.get("confidence", 0) <= 50, (
-                f"Expected low confidence, got {rel.get('confidence')}"
-            )
+            assert (
+                rel.get("confidence", 0) <= 50
+            ), f"Expected low confidence, got {rel.get('confidence')}"
 
     def test_relationship_source_is_file(self, keydoor_enriched):
         rels = get_relationships_from(
@@ -375,6 +380,6 @@ class TestKeydoorNetworkIOCs:
             from_node = rel.get("from") or {}
             to_node = rel.get("to") or {}
             entity_types = {from_node.get("entity_type"), to_node.get("entity_type")}
-            assert "StixFile" in entity_types, (
-                f"Expected StixFile in relationship, got {entity_types}"
-            )
+            assert (
+                "StixFile" in entity_types
+            ), f"Expected StixFile in relationship, got {entity_types}"

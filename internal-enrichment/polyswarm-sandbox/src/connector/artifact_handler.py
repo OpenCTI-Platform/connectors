@@ -2,12 +2,16 @@ from typing import Any
 
 
 class ArtifactHandler:
-    def __init__(self, helper, max_file_size: int = 33554432, download_enabled: bool = True) -> None:
+    def __init__(
+        self, helper, max_file_size: int = 33554432, download_enabled: bool = True
+    ) -> None:
         self.helper = helper
         self.max_file_size: int = max_file_size
         self.download_enabled: bool = download_enabled
 
-    def download_artifact(self, entity: dict[str, Any]) -> tuple[bytes | None, str | None]:
+    def download_artifact(
+        self, entity: dict[str, Any]
+    ) -> tuple[bytes | None, str | None]:
         """Download artifact from OpenCTI, enforcing max_file_size.
 
         Returns:

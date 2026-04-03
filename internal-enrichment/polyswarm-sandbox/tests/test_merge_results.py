@@ -1,10 +1,5 @@
 """Unit tests for sandbox result merging and deduplication."""
 
-import json
-from unittest.mock import MagicMock
-
-import pytest
-
 from tests.test_connector import make_connector
 
 # ── _merge_sandbox_results ──────────────────────────────────────────────────

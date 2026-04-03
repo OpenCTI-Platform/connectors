@@ -10,7 +10,6 @@ import types
 import pytest
 from conftest import StubHelper
 
-
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 
@@ -48,7 +47,8 @@ def _make_polyswarm_data(
         "sha1": "c" * 40,
         "mime_type": "application/x-dosexec",
         "file_type": "PE",
-        "permalink": permalink or "https://polyswarm.network/scan/results/file/" + "a" * 64,
+        "permalink": permalink
+        or "https://polyswarm.network/scan/results/file/" + "a" * 64,
         "polyswarm_id": "ps-123",
         "polyscore": score / 100.0,
         "first_seen": "2024-01-01T00:00:00Z",
@@ -85,7 +85,9 @@ class TestSdkAttributeErrorHandling:
             json={"detections": {"malicious": 5, "total": 10}},
         )
         # getattr with default should not raise
-        polyunite_data = getattr(result.metadata, "polyunite", None) if result.metadata else None
+        polyunite_data = (
+            getattr(result.metadata, "polyunite", None) if result.metadata else None
+        )
         assert polyunite_data is None
 
     def test_getattr_with_missing_key(self):
@@ -129,7 +131,9 @@ class TestMalwareFamilyNormalization:
     def test_no_malware_for_non_families(self, family):
         converter = _make_converter()
         data = _make_polyswarm_data(family=family)
-        malware_obj, _, _ = converter.create_malware_from_polyswarm(data, _make_observable())
+        malware_obj, _, _ = converter.create_malware_from_polyswarm(
+            data, _make_observable()
+        )
         assert malware_obj is None
 
 
@@ -200,19 +204,25 @@ class TestNoMalwareForUnknownFamily:
     def test_skip_malware_for_none_family(self):
         converter = _make_converter()
         data = _make_polyswarm_data(family=None)
-        malware_obj, _, _ = converter.create_malware_from_polyswarm(data, _make_observable())
+        malware_obj, _, _ = converter.create_malware_from_polyswarm(
+            data, _make_observable()
+        )
         assert malware_obj is None
 
     def test_skip_malware_for_unknown_family(self):
         converter = _make_converter()
         data = _make_polyswarm_data(family="Unknown")
-        malware_obj, _, _ = converter.create_malware_from_polyswarm(data, _make_observable())
+        malware_obj, _, _ = converter.create_malware_from_polyswarm(
+            data, _make_observable()
+        )
         assert malware_obj is None
 
     def test_creates_malware_for_real_family(self):
         converter = _make_converter()
         data = _make_polyswarm_data(family="DTrack")
-        malware_obj, _, _ = converter.create_malware_from_polyswarm(data, _make_observable())
+        malware_obj, _, _ = converter.create_malware_from_polyswarm(
+            data, _make_observable()
+        )
         assert malware_obj is not None
         assert malware_obj["name"] == "DTrack"
 

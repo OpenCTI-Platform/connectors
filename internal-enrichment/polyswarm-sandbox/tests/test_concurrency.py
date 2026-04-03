@@ -9,8 +9,6 @@ import sys
 import threading
 import time
 
-import pytest
-
 SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "src")
 sys.path.insert(0, os.path.abspath(SRC_DIR))
 

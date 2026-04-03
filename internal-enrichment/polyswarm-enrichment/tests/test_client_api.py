@@ -1,7 +1,6 @@
 """Tests for ConnectorClient.query_polyswarm() using VCR cassettes."""
 
 import pytest
-
 from polyswarm_enrichment.client_api import ConnectorClient
 
 # EICAR SHA-256 — universally known, always present in PolySwarm
@@ -89,7 +88,9 @@ class TestQueryTTPRichHash:
         labels = data["x_opencti_labels"]
         # Keydoor is classified as virus, greyware, trojan, spyware
         malware_type_labels = [l for l in labels if l.startswith("malware_type:")]
-        assert len(malware_type_labels) > 0, "Should have malware_type labels from PolyUnite"
+        assert (
+            len(malware_type_labels) > 0
+        ), "Should have malware_type labels from PolyUnite"
 
     def test_high_polyscore(self, client, vcr_instance):
         with vcr_instance.use_cassette("query_keydoor_hash.yaml"):

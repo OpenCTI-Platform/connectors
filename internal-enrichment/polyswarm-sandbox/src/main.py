@@ -7,9 +7,8 @@ Runs as a long-lived process inside Docker or locally during development.
 
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from connector import ConnectorSettings, PolySwarmSandboxConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:

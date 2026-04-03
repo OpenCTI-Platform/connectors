@@ -1,10 +1,10 @@
 """VCR-based tests for ScanProcessor — uses real API data from cassettes."""
 
 import pytest
-
 from connector.scan_processor import ScanProcessor
 from polyswarm_api.api import PolyswarmAPI
-from tests.conftest import EICAR_SHA256, WANNACRY_SHA256, SAMPLE_SHA256
+
+from tests.conftest import EICAR_SHA256, SAMPLE_SHA256, WANNACRY_SHA256
 
 
 @pytest.fixture
@@ -88,7 +88,10 @@ class TestScanProcessorWannaCry:
         with vcr_instance.use_cassette("hash_search_wannacry.yaml"):
             for r in api.search(WANNACRY_SHA256):
                 result = ScanProcessor.process(r.json)
-                assert "wannacry" in result["family"].lower() or "wanacry" in result["family"].lower()
+                assert (
+                    "wannacry" in result["family"].lower()
+                    or "wanacry" in result["family"].lower()
+                )
                 break
 
     def test_has_engine_detections(self, api, vcr_instance):
@@ -107,7 +110,10 @@ class TestScanProcessorWannaCry:
             for r in api.search(WANNACRY_SHA256):
                 result = ScanProcessor.process(r.json)
                 api_detections = r.json.get("detections", {})
-                assert result["detection_stats"]["malicious"] == api_detections["malicious"]
+                assert (
+                    result["detection_stats"]["malicious"]
+                    == api_detections["malicious"]
+                )
                 assert result["detection_stats"]["total"] == api_detections["total"]
                 break
 
@@ -131,6 +137,7 @@ class TestScanProcessorSample:
                 assert "SHA-256" in hashes
                 assert "MD5" in hashes
                 # Extended hashes from metadata hash tool
-                assert "SSDEEP" in hashes or "TLSH" in hashes, \
-                    f"Expected extended hashes, got: {list(hashes.keys())}"
+                assert (
+                    "SSDEEP" in hashes or "TLSH" in hashes
+                ), f"Expected extended hashes, got: {list(hashes.keys())}"
                 break

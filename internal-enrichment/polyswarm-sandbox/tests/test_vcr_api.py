@@ -7,20 +7,18 @@ To re-record: POLYSWARM_API_KEY=<key> python tests/record_cassettes.py
 import io
 
 import pytest
-
+from connector.polyswarm_client import PolySwarmClient
+from connector.sandbox_processor import SandboxProcessor
+from connector.scan_processor import ScanProcessor
 from polyswarm_api.api import PolyswarmAPI
 
-from connector.polyswarm_client import PolySwarmClient
-from connector.scan_processor import ScanProcessor
-from connector.sandbox_processor import SandboxProcessor
 from tests.conftest import (
     EICAR_SHA256,
-    WANNACRY_SHA256,
-    SAMPLE_SHA256,
     RHADAMANTHYS_SHA256,
+    SAMPLE_SHA256,
+    WANNACRY_SHA256,
     StubHelper,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 
@@ -204,7 +202,11 @@ class TestSandboxResults:
         with vcr_instance.use_cassette("sandbox_latest_wannacry_cape.yaml"):
             task = api.sandbox_task_latest(WANNACRY_SHA256, "cape")
             processed = SandboxProcessor.process(task.json)
-            assert processed["family"].lower() in ("wanacry", "wannacry", "wannacryptor")
+            assert processed["family"].lower() in (
+                "wanacry",
+                "wannacry",
+                "wannacryptor",
+            )
 
     def test_cape_wannacry_ttps(self, api, vcr_instance):
         with vcr_instance.use_cassette("sandbox_latest_wannacry_cape.yaml"):
@@ -244,8 +246,18 @@ class TestSandboxResults:
         with vcr_instance.use_cassette("sandbox_latest_wannacry_cape.yaml"):
             task = api.sandbox_task_latest(WANNACRY_SHA256, "cape")
             processed = SandboxProcessor.process(task.json)
-            for key in ("provider", "family", "score", "ttps", "domains", "ips",
-                        "signatures", "sha256", "permalink", "summary"):
+            for key in (
+                "provider",
+                "family",
+                "score",
+                "ttps",
+                "domains",
+                "ips",
+                "signatures",
+                "sha256",
+                "permalink",
+                "summary",
+            ):
                 assert key in processed, f"Missing key: {key}"
 
     # ── Triage parsing — WannaCry ─────────────────────────────────────
@@ -337,10 +349,10 @@ class TestSandboxResults:
             processed = SandboxProcessor.process(task.json)
             ttps = processed.get("ttps", [])
             assert len(ttps) >= 10
-            assert "T1055" in ttps   # Process Injection
-            assert "T1003" in ttps   # OS Credential Dumping
-            assert "T1082" in ttps   # System Information Discovery
-            assert "T1071" in ttps   # Application Layer Protocol
+            assert "T1055" in ttps  # Process Injection
+            assert "T1003" in ttps  # OS Credential Dumping
+            assert "T1082" in ttps  # System Information Discovery
+            assert "T1071" in ttps  # Application Layer Protocol
 
     def test_cape_sample_signatures(self, api, vcr_instance):
         with vcr_instance.use_cassette("sandbox_latest_sample_cape.yaml"):
@@ -435,6 +447,7 @@ class TestVCRToSTIX:
     @pytest.fixture
     def builder(self, stub_helper):
         from connector.stix_builder import StixBuilder
+
         return StixBuilder(helper=stub_helper)
 
     @pytest.fixture
@@ -446,7 +459,16 @@ class TestVCRToSTIX:
             "hashes": {"SHA-256": WANNACRY_SHA256},
         }
 
-    def _build_stix(self, api, vcr_instance, builder, entity, scan_cassette, sandbox_cassette, sandbox_provider):
+    def _build_stix(
+        self,
+        api,
+        vcr_instance,
+        builder,
+        entity,
+        scan_cassette,
+        sandbox_cassette,
+        sandbox_provider,
+    ):
         """Helper: load cassette data, process, and build STIX bundle."""
         # Process scan
         scan_mapped = None
@@ -471,53 +493,93 @@ class TestVCRToSTIX:
             sandbox_results=sandbox_processed,
         )
 
-    def test_wannacry_cape_produces_stix_objects(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_cape_produces_stix_objects(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         assert len(stix_objects) > 0
         types = {obj.get("type") for obj in stix_objects}
         assert "identity" in types  # PolySwarm author
         assert "note" in types  # scan/sandbox notes
 
-    def test_wannacry_cape_has_malware_object(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_cape_has_malware_object(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         malware_objects = [o for o in stix_objects if o.get("type") == "malware"]
         assert len(malware_objects) >= 1
         families = [m.get("name", "").lower() for m in malware_objects]
-        assert any("wana" in f or "wannacry" in f for f in families), f"Expected WannaCry family, got: {families}"
+        assert any(
+            "wana" in f or "wannacry" in f for f in families
+        ), f"Expected WannaCry family, got: {families}"
 
-    def test_wannacry_cape_has_attack_patterns(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_cape_has_attack_patterns(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            None, "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            None,
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         attack_patterns = [o for o in stix_objects if o.get("type") == "attack-pattern"]
-        assert len(attack_patterns) >= 5, f"Expected >=5 ATT&CK patterns, got {len(attack_patterns)}"
+        assert (
+            len(attack_patterns) >= 5
+        ), f"Expected >=5 ATT&CK patterns, got {len(attack_patterns)}"
         # Check they have MITRE external references
         for ap in attack_patterns:
             ext_refs = ap.get("external_references", [])
-            assert any(r.get("source_name") == "mitre-attack" for r in ext_refs), \
-                f"Attack pattern {ap.get('name')} missing MITRE reference"
+            assert any(
+                r.get("source_name") == "mitre-attack" for r in ext_refs
+            ), f"Attack pattern {ap.get('name')} missing MITRE reference"
 
-    def test_wannacry_cape_has_relationships(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_cape_has_relationships(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         relationships = [o for o in stix_objects if o.get("type") == "relationship"]
         assert len(relationships) >= 5
         rel_types = {r.get("relationship_type") for r in relationships}
         assert "uses" in rel_types or "related-to" in rel_types
 
-    def test_wannacry_cape_has_indicator(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_cape_has_indicator(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         indicators = [o for o in stix_objects if o.get("type") == "indicator"]
         assert len(indicators) >= 1
@@ -525,20 +587,35 @@ class TestVCRToSTIX:
         patterns = [i.get("pattern", "") for i in indicators]
         assert any(WANNACRY_SHA256 in p for p in patterns)
 
-    def test_wannacry_cape_has_network_observables(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_cape_has_network_observables(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            None, "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            None,
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         ip_objects = [o for o in stix_objects if o.get("type") == "ipv4-addr"]
-        domain_objects = [o for o in stix_objects if o.get("type") == "domain-name"]
         # WannaCry has 19 IPs and 1 domain in Cape sandbox
-        assert len(ip_objects) >= 5, f"Expected >=5 IP observables, got {len(ip_objects)}"
+        assert (
+            len(ip_objects) >= 5
+        ), f"Expected >=5 IP observables, got {len(ip_objects)}"
 
-    def test_wannacry_triage_produces_stix(self, api, vcr_instance, builder, wannacry_entity):
+    def test_wannacry_triage_produces_stix(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            None, "sandbox_latest_wannacry_triage.yaml", "triage",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            None,
+            "sandbox_latest_wannacry_triage.yaml",
+            "triage",
         )
         assert len(stix_objects) > 0
         types = {obj.get("type") for obj in stix_objects}
@@ -546,15 +623,27 @@ class TestVCRToSTIX:
         assert "malware" in types
         assert "note" in types
 
-    def test_stix_ids_are_deterministic(self, api, vcr_instance, builder, wannacry_entity):
+    def test_stix_ids_are_deterministic(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         """Running the same data twice should produce identical STIX IDs."""
         objs1 = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         objs2 = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         ids1 = sorted(o.get("id", "") for o in objs1 if o.get("id"))
         ids2 = sorted(o.get("id", "") for o in objs2 if o.get("id"))
@@ -588,17 +677,41 @@ class TestVCRToSTIX:
         attack_patterns = [o for o in stix_objects if o.get("type") == "attack-pattern"]
         assert len(attack_patterns) >= 5
 
-    def test_all_objects_have_valid_types(self, api, vcr_instance, builder, wannacry_entity):
+    def test_all_objects_have_valid_types(
+        self, api, vcr_instance, builder, wannacry_entity
+    ):
         stix_objects = self._build_stix(
-            api, vcr_instance, builder, wannacry_entity,
-            "hash_search_wannacry.yaml", "sandbox_latest_wannacry_cape.yaml", "cape",
+            api,
+            vcr_instance,
+            builder,
+            wannacry_entity,
+            "hash_search_wannacry.yaml",
+            "sandbox_latest_wannacry_cape.yaml",
+            "cape",
         )
         valid_types = {
-            "identity", "malware", "indicator", "note", "relationship",
-            "attack-pattern", "ipv4-addr", "ipv6-addr", "domain-name",
-            "url", "threat-actor", "intrusion-set", "vulnerability",
-            "location", "campaign", "tool", "artifact", "file",
-            "marking-definition", "report",
+            "identity",
+            "malware",
+            "indicator",
+            "note",
+            "relationship",
+            "attack-pattern",
+            "ipv4-addr",
+            "ipv6-addr",
+            "domain-name",
+            "url",
+            "threat-actor",
+            "intrusion-set",
+            "vulnerability",
+            "location",
+            "campaign",
+            "tool",
+            "artifact",
+            "file",
+            "marking-definition",
+            "report",
         }
         for obj in stix_objects:
-            assert obj.get("type") in valid_types, f"Invalid STIX type: {obj.get('type')}"
+            assert (
+                obj.get("type") in valid_types
+            ), f"Invalid STIX type: {obj.get('type')}"

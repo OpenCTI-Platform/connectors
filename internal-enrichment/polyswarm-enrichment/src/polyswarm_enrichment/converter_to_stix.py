@@ -901,7 +901,11 @@ class ConverterToStix:
             malware_name = malware_families[0] if malware_families else None
 
             # Guard: skip malware creation when family is None/Unknown/empty
-            if not malware_name or str(malware_name).strip().lower() in ("unknown", "none", ""):
+            if not malware_name or str(malware_name).strip().lower() in (
+                "unknown",
+                "none",
+                "",
+            ):
                 self.helper.connector_logger.info(
                     "[CONVERTER] No malware family identified, skipping malware object"
                 )
@@ -1383,9 +1387,11 @@ class ConverterToStix:
                 obs = self._create_ioc_ip(ip_str, current_time, ioc_score)
                 if obs:
                     objects.append(obs)
-                    objects.append(self._create_ioc_relationship(
-                        observable_id, obs["id"], current_time
-                    ))
+                    objects.append(
+                        self._create_ioc_relationship(
+                            observable_id, obs["id"], current_time
+                        )
+                    )
                     count += 1
 
         # --- Domains (extracted from URLs) ---
@@ -1396,9 +1402,11 @@ class ConverterToStix:
                 obs = self._create_ioc_domain(domain, current_time, ioc_score)
                 if obs:
                     objects.append(obs)
-                    objects.append(self._create_ioc_relationship(
-                        observable_id, obs["id"], current_time
-                    ))
+                    objects.append(
+                        self._create_ioc_relationship(
+                            observable_id, obs["id"], current_time
+                        )
+                    )
                     count += 1
 
         # --- Full URLs ---
@@ -1409,9 +1417,11 @@ class ConverterToStix:
                 obs = self._create_ioc_url(url, current_time, ioc_score)
                 if obs:
                     objects.append(obs)
-                    objects.append(self._create_ioc_relationship(
-                        observable_id, obs["id"], current_time
-                    ))
+                    objects.append(
+                        self._create_ioc_relationship(
+                            observable_id, obs["id"], current_time
+                        )
+                    )
                     count += 1
 
         if count > 0:

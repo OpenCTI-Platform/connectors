@@ -5,12 +5,11 @@ to verify correct behaviour in isolation, plus TestEnrichFileOrchestration
 verifies the full pipeline end-to-end with mocked dependencies.
 """
 
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tests.test_connector import make_connector, _mock_polyswarm_config
+from tests.test_connector import make_connector
 
 ENTITY_ID = "artifact--00000000-0000-0000-0000-000000000001"
 HASH_SHA256 = "a" * 64
@@ -47,15 +46,21 @@ class TestPhaseDownload:
 
     def test_success(self):
         c = make_connector()
-        c.artifact_handler.download_artifact = MagicMock(return_value=(b"file-data", None))
-        file_data, filename, password, mime_type = c._phase_download(_entity(), _opencti_entity(), HASH_SHA256)
+        c.artifact_handler.download_artifact = MagicMock(
+            return_value=(b"file-data", None)
+        )
+        file_data, filename, password, mime_type = c._phase_download(
+            _entity(), _opencti_entity(), HASH_SHA256
+        )
         assert file_data == b"file-data"
         assert filename == "sample.exe"
         assert mime_type == "application/x-dosexec"
 
     def test_download_error_raises(self):
         c = make_connector()
-        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "File too large"))
+        c.artifact_handler.download_artifact = MagicMock(
+            return_value=(None, "File too large")
+        )
         with pytest.raises(ValueError, match="File too large"):
             c._phase_download(_entity(), _opencti_entity(), HASH_SHA256)
 
@@ -95,7 +100,9 @@ class TestPhaseSubmit:
     def test_scan_success_no_sandbox(self):
         c = make_connector(polyswarm_overrides={"sandbox_enabled": False})
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-001")
-        scan_id, sandbox_tasks = c._phase_submit(_entity(), b"data", "sample.exe", "application/octet-stream", None)
+        scan_id, sandbox_tasks = c._phase_submit(
+            _entity(), b"data", "sample.exe", "application/octet-stream", None
+        )
         assert scan_id == "scan-001"
         assert sandbox_tasks == {}
 
@@ -106,22 +113,34 @@ class TestPhaseSubmit:
             c._phase_submit(_entity(), b"data", "sample.exe", None, None)
 
     def test_sandbox_submission(self):
-        c = make_connector(polyswarm_overrides={"sandbox_enabled": True, "sandbox_provider": "cape"})
+        c = make_connector(
+            polyswarm_overrides={"sandbox_enabled": True, "sandbox_provider": "cape"}
+        )
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-001")
         c.polyswarm_client.submit_sandbox_async = MagicMock(return_value="sb-001")
-        c.polyswarm_client.get_provider_slugs = MagicMock(return_value=["cape", "triage"])
+        c.polyswarm_client.get_provider_slugs = MagicMock(
+            return_value=["cape", "triage"]
+        )
         c.polyswarm_client.get_default_vm_for_provider = MagicMock(return_value=None)
-        scan_id, sandbox_tasks = c._phase_submit(_entity(), b"data", "sample.exe", None, None)
+        scan_id, sandbox_tasks = c._phase_submit(
+            _entity(), b"data", "sample.exe", None, None
+        )
         assert scan_id == "scan-001"
         assert "cape" in sandbox_tasks
 
     def test_sandbox_failure_non_fatal(self):
-        c = make_connector(polyswarm_overrides={"sandbox_enabled": True, "sandbox_provider": "cape"})
+        c = make_connector(
+            polyswarm_overrides={"sandbox_enabled": True, "sandbox_provider": "cape"}
+        )
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-001")
         c.polyswarm_client.submit_sandbox_async = MagicMock(return_value=None)
-        c.polyswarm_client.get_provider_slugs = MagicMock(return_value=["cape", "triage"])
+        c.polyswarm_client.get_provider_slugs = MagicMock(
+            return_value=["cape", "triage"]
+        )
         c.polyswarm_client.get_default_vm_for_provider = MagicMock(return_value=None)
-        scan_id, sandbox_tasks = c._phase_submit(_entity(), b"data", "sample.exe", None, None)
+        scan_id, sandbox_tasks = c._phase_submit(
+            _entity(), b"data", "sample.exe", None, None
+        )
         assert scan_id == "scan-001"
         assert sandbox_tasks == {}
 
@@ -209,7 +228,9 @@ class TestEnrichFileOrchestration:
         )
         c.artifact_handler.download_artifact = MagicMock(return_value=(b"data", None))
         c.polyswarm_client.submit_file_async = MagicMock(return_value="scan-001")
-        c.polyswarm_client.get_scan_results = MagicMock(return_value={"result": "detections", "failed": False})
+        c.polyswarm_client.get_scan_results = MagicMock(
+            return_value={"result": "detections", "failed": False}
+        )
         c.stix_builder.build_bundle = MagicMock(
             return_value=[
                 {"type": "identity", "id": "identity--ps"},
@@ -217,7 +238,9 @@ class TestEnrichFileOrchestration:
             ]
         )
 
-        with patch("time.sleep"), patch("connector.polyswarm_connector.ScanProcessor") as sp:
+        with patch("time.sleep"), patch(
+            "connector.polyswarm_connector.ScanProcessor"
+        ) as sp:
             sp.process.return_value = {"score": 80, "family": "TestMalware"}
             result = c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
 
@@ -226,7 +249,9 @@ class TestEnrichFileOrchestration:
 
     def test_download_failure_returns_error(self):
         c = make_connector()
-        c.artifact_handler.download_artifact = MagicMock(return_value=(None, "Download disabled"))
+        c.artifact_handler.download_artifact = MagicMock(
+            return_value=(None, "Download disabled")
+        )
         result = c._enrich_file(ENTITY_ID, _entity(), _opencti_entity(), [])
         assert result["status"] == "error"
         assert "disabled" in result["error"].lower()

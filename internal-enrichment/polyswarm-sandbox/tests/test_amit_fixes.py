@@ -7,10 +7,7 @@ permalink formats, _cfg helper, backward compat auto-detection.
 import types
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from connector.stix_builder import StixBuilder
-
 
 # ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -128,7 +125,9 @@ class TestPdfPolling:
     def test_polling_success(self, mock_sleep):
         client = self._make_client()
         report_stub = types.SimpleNamespace(id="rpt-1")
-        finished_stub = types.SimpleNamespace(state="SUCCEEDED", url="https://example.com/pdf")
+        finished_stub = types.SimpleNamespace(
+            state="SUCCEEDED", url="https://example.com/pdf"
+        )
         client._retry_sdk_call = MagicMock(side_effect=[report_stub, finished_stub])
         resp = MagicMock()
         resp.status_code = 200
@@ -150,7 +149,7 @@ class TestPdfPolling:
 
         # create succeeds, waits raise NotFoundException
         call_count = [0]
-        orig_retry = MagicMock()
+        MagicMock()
 
         def _retry(func, *a, **kw):
             call_count[0] += 1
@@ -197,7 +196,9 @@ class TestPerProviderDedup:
 
         results = {"triage": triage, "cape": cape}
         objects = builder.build_bundle(
-            entity=ENTITY, sandbox_results=results, config={},
+            entity=ENTITY,
+            sandbox_results=results,
+            config={},
         )
         # Count domain objects
         domains = [o for o in objects if o.get("type") == "domain-name"]
@@ -217,7 +218,9 @@ class TestPerProviderScore:
         triage = _sandbox_result("triage", score=40, family="TestMal")
         cape = _sandbox_result("cape", score=85, family="TestMal")
         results = {"triage": triage, "cape": cape}
-        objects = builder.build_bundle(entity=ENTITY, sandbox_results=results, config={})
+        objects = builder.build_bundle(
+            entity=ENTITY, sandbox_results=results, config={}
+        )
         indicators = [o for o in objects if o.get("type") == "indicator"]
         if indicators:
             assert indicators[0].get("x_opencti_score", 0) >= 85
@@ -235,7 +238,9 @@ class TestPerProviderFamily:
         triage = _sandbox_result("triage", score=40, family="Emotet")
         cape = _sandbox_result("cape", score=90, family="WannaCry")
         results = {"triage": triage, "cape": cape}
-        objects = builder.build_bundle(entity=ENTITY, sandbox_results=results, config={})
+        objects = builder.build_bundle(
+            entity=ENTITY, sandbox_results=results, config={}
+        )
         malware_objs = [o for o in objects if o.get("type") == "malware"]
         if malware_objs:
             assert malware_objs[0]["name"] == "WannaCry"
@@ -251,7 +256,9 @@ class TestPerProviderExternalRefs:
         builder = _make_builder()
         triage = _sandbox_result("triage", permalink="https://example.com/triage")
         cape = _sandbox_result("cape", permalink="https://example.com/cape")
-        refs = builder._build_external_refs(None, None, sandbox_results={"triage": triage, "cape": cape})
+        refs = builder._build_external_refs(
+            None, None, sandbox_results={"triage": triage, "cape": cape}
+        )
         urls = [r["url"] for r in refs]
         assert "https://example.com/triage" in urls
         assert "https://example.com/cape" in urls
@@ -266,9 +273,13 @@ class TestSandboxPermalink:
 
     def test_sandbox_permalink_format(self):
         sha = "b" * 64
-        result = _sandbox_result("triage", sha256=sha, sandbox_id="sb-999", permalink=None)
+        result = _sandbox_result(
+            "triage", sha256=sha, sandbox_id="sb-999", permalink=None
+        )
         # The helper constructs this — verify the format
-        expected = f"https://polyswarm.network/sandbox/detail/file/{sha}?sandboxId=sb-999"
+        expected = (
+            f"https://polyswarm.network/sandbox/detail/file/{sha}?sandboxId=sb-999"
+        )
         assert result["permalink"] == expected
 
 
@@ -297,7 +308,10 @@ class TestLabelGeneration:
         triage = _sandbox_result("triage", family="Emotet")
         cape = _sandbox_result("cape", family="WannaCry")
         labels = builder._collect_labels(
-            None, None, None, sandbox_results={"triage": triage, "cape": cape},
+            None,
+            None,
+            None,
+            sandbox_results={"triage": triage, "cape": cape},
         )
         assert "triage_malware_family:Emotet" in labels
         assert "cape_malware_family:WannaCry" in labels

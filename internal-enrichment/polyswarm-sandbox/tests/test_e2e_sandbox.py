@@ -82,6 +82,7 @@ def get_octi():
     global _octi_client
     if _octi_client is None:
         from pycti import OpenCTIApiClient
+
         _octi_client = OpenCTIApiClient(OPENCTI_URL, OPENCTI_TOKEN)
     return _octi_client
 
@@ -233,7 +234,9 @@ def get_attack_patterns_for_observable(observable_id: str) -> list[dict]:
     return patterns
 
 
-def wait_for_sandbox_enrichment(artifact_id: str, timeout: int = ENRICHMENT_TIMEOUT) -> dict:
+def wait_for_sandbox_enrichment(
+    artifact_id: str, timeout: int = ENRICHMENT_TIMEOUT
+) -> dict:
     """Poll until sandbox enrichment creates Notes on the artifact."""
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -277,7 +280,7 @@ def ghostrat_enriched():
     gh0stRAT/Pincav produces rich sandbox results: process injection,
     credential dumping, C2 domain (wuoqmoaa.st), 12 TTPs, 19 signatures.
     """
-    print(f"\nDownloading gh0stRAT sample from PolySwarm...")
+    print("\nDownloading gh0stRAT sample from PolySwarm...")
     sample_data = download_sample(GHOSTRAT_SHA256)
     print(f"  Downloaded {len(sample_data)} bytes")
 
@@ -308,10 +311,13 @@ class TestSandboxConnectorRegistration:
     def test_connector_active(self):
         result = graphql("{ connectors { name active connector_type } }")
         sandbox = [
-            c for c in result["connectors"]
+            c
+            for c in result["connectors"]
             if SANDBOX_CONNECTOR_NAME in c["name"].lower()
         ]
-        assert len(sandbox) >= 1, f"Sandbox connector not found. Connectors: {[c['name'] for c in result['connectors']]}"
+        assert (
+            len(sandbox) >= 1
+        ), f"Sandbox connector not found. Connectors: {[c['name'] for c in result['connectors']]}"
         assert sandbox[0]["active"] is True
         assert sandbox[0]["connector_type"] == "INTERNAL_ENRICHMENT"
 
@@ -325,16 +331,21 @@ class TestSandboxCreatesNote:
 
     def test_note_has_polyswarm(self, ghostrat_enriched):
         notes = get_notes_for_observable(ghostrat_enriched["id"])
-        all_content = " ".join(n.get("content", "") + " " + n.get("attribute_abstract", "") for n in notes)
-        assert "polyswarm" in all_content.lower(), f"Expected PolySwarm mention in notes. Content: {all_content[:200]}"
+        all_content = " ".join(
+            n.get("content", "") + " " + n.get("attribute_abstract", "") for n in notes
+        )
+        assert (
+            "polyswarm" in all_content.lower()
+        ), f"Expected PolySwarm mention in notes. Content: {all_content[:200]}"
 
     def test_note_has_scan_data(self, ghostrat_enriched):
         """At least one note should have scan detection data."""
         notes = get_notes_for_observable(ghostrat_enriched["id"])
         all_content = " ".join(n.get("content", "") for n in notes)
         # Scan note should mention detection ratio or score
-        assert "score" in all_content.lower() or "/" in all_content, \
-            f"Expected scan data in notes. Content: {all_content[:300]}"
+        assert (
+            "score" in all_content.lower() or "/" in all_content
+        ), f"Expected scan data in notes. Content: {all_content[:300]}"
 
 
 class TestSandboxCreatesRelationships:
@@ -342,13 +353,16 @@ class TestSandboxCreatesRelationships:
 
     def test_has_relationships(self, ghostrat_enriched):
         rels = get_relationships_from(ghostrat_enriched["id"])
-        assert len(rels) >= 1, "Expected at least one relationship from sandbox enrichment"
+        assert (
+            len(rels) >= 1
+        ), "Expected at least one relationship from sandbox enrichment"
 
     def test_has_indicator_relationship(self, ghostrat_enriched):
         rels = get_relationships_from(ghostrat_enriched["id"])
         rel_types = {r["relationship_type"] for r in rels}
-        assert "based-on" in rel_types or "related-to" in rel_types, \
-            f"Expected based-on or related-to. Got: {rel_types}"
+        assert (
+            "based-on" in rel_types or "related-to" in rel_types
+        ), f"Expected based-on or related-to. Got: {rel_types}"
 
 
 class TestSandboxCreatesMalware:
@@ -357,15 +371,14 @@ class TestSandboxCreatesMalware:
     def test_malware_linked(self, ghostrat_enriched):
         rels = get_relationships_from(ghostrat_enriched["id"])
         malware_rels = [
-            r for r in rels
+            r
+            for r in rels
             if r["relationship_type"] == "related-to"
-            and any(
-                (r.get(side) or {}).get("malware_types")
-                for side in ("from", "to")
-            )
+            and any((r.get(side) or {}).get("malware_types") for side in ("from", "to"))
         ]
-        assert len(malware_rels) >= 1, \
-            f"Expected malware relationship. Rel types: {[r['relationship_type'] for r in rels]}"
+        assert (
+            len(malware_rels) >= 1
+        ), f"Expected malware relationship. Rel types: {[r['relationship_type'] for r in rels]}"
 
 
 class TestSandboxScore:

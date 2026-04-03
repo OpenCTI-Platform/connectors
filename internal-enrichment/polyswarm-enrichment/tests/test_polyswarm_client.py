@@ -5,11 +5,15 @@ import polyswarm_api.settings
 
 def test_user_agent_patched():
     """After importing polyswarm_client, the user-agent must contain our prefix."""
-    from polyswarm_enrichment import polyswarm_client  # noqa: F401 — import triggers the patch
+    from polyswarm_enrichment import (  # noqa: F401 — import triggers the patch
+        polyswarm_client,
+    )
 
     ua = polyswarm_api.settings.DEFAULT_USER_AGENT
     assert "opencti_polyswarm_api/" in ua, f"Expected patched UA, got: {ua}"
-    assert ua.startswith("opencti_polyswarm_api/"), f"UA should start with our prefix, got: {ua}"
+    assert ua.startswith(
+        "opencti_polyswarm_api/"
+    ), f"UA should start with our prefix, got: {ua}"
 
 
 def test_polyswarm_api_importable():

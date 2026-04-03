@@ -1,10 +1,9 @@
 """Integration tests: full enrichment pipeline from hash to STIX bundle."""
 
 import pytest
-
+from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
 from polyswarm_enrichment.client_api import ConnectorClient
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
-from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
 
 # EICAR SHA-256
 EICAR_SHA256 = "275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f"
@@ -34,7 +33,10 @@ def converter(stub_helper, profile_loader):
 @pytest.fixture()
 def attack_handler(stub_helper, converter):
     from conftest import MOCK_ATTACK_PATTERNS_RESPONSE
-    return AttackPatternHandler(stub_helper, converter.author["id"], ttp_data=MOCK_ATTACK_PATTERNS_RESPONSE)
+
+    return AttackPatternHandler(
+        stub_helper, converter.author["id"], ttp_data=MOCK_ATTACK_PATTERNS_RESPONSE
+    )
 
 
 # ------------------------------------------------------------------
@@ -54,14 +56,22 @@ class TestFullEnrichmentPipeline:
             "hashes": {"SHA-256": EICAR_SHA256},
         }
 
-        indicator = converter.create_indicator_from_polyswarm(observable, polyswarm_data)
+        indicator = converter.create_indicator_from_polyswarm(
+            observable, polyswarm_data
+        )
         assert indicator is not None
         assert indicator["type"] == "indicator"
 
         malware_family = polyswarm_data.get("poly_unite", ["Unknown"])[0]
-        profile = converter.profile_loader.get_profile(malware_family) if converter.profile_loader else None
-        malware, additional_objs, relationships = converter.create_malware_from_polyswarm(
-            polyswarm_data, observable=observable, profile=profile
+        profile = (
+            converter.profile_loader.get_profile(malware_family)
+            if converter.profile_loader
+            else None
+        )
+        malware, additional_objs, relationships = (
+            converter.create_malware_from_polyswarm(
+                polyswarm_data, observable=observable, profile=profile
+            )
         )
 
         stix_objects = [converter.author, indicator]
@@ -72,10 +82,12 @@ class TestFullEnrichmentPipeline:
 
             malware_types = malware.get("malware_types", [])
             if malware_types:
-                patterns, pattern_rels = attack_handler.create_attack_patterns_for_malware(
-                    malware_types=malware_types,
-                    malware_id=malware["id"],
-                    malware_name=malware["name"],
+                patterns, pattern_rels = (
+                    attack_handler.create_attack_patterns_for_malware(
+                        malware_types=malware_types,
+                        malware_id=malware["id"],
+                        malware_name=malware["name"],
+                    )
                 )
                 stix_objects.extend(patterns)
                 stix_objects.extend(pattern_rels)
@@ -107,14 +119,22 @@ class TestTTPEnrichmentPipeline:
         }
 
         # Create indicator
-        indicator = converter.create_indicator_from_polyswarm(observable, polyswarm_data)
+        indicator = converter.create_indicator_from_polyswarm(
+            observable, polyswarm_data
+        )
         assert indicator is not None
 
         # Create malware
         malware_family = polyswarm_data["poly_unite"][0]
-        profile = converter.profile_loader.get_profile(malware_family) if converter.profile_loader else None
-        malware, additional_objs, relationships = converter.create_malware_from_polyswarm(
-            polyswarm_data, observable=observable, profile=profile
+        profile = (
+            converter.profile_loader.get_profile(malware_family)
+            if converter.profile_loader
+            else None
+        )
+        malware, additional_objs, relationships = (
+            converter.create_malware_from_polyswarm(
+                polyswarm_data, observable=observable, profile=profile
+            )
         )
         assert malware is not None
         assert malware["name"] == "Keydoor"
@@ -124,7 +144,9 @@ class TestTTPEnrichmentPipeline:
         polyunite_types = [
             l.split(":", 1)[1] for l in labels if l.startswith("malware_type:")
         ]
-        assert len(polyunite_types) > 0, "Keydoor should have PolyUnite malware_type labels"
+        assert (
+            len(polyunite_types) > 0
+        ), "Keydoor should have PolyUnite malware_type labels"
 
         # Create attack patterns from the PolyUnite-derived types
         patterns, pattern_rels = attack_handler.create_attack_patterns_for_malware(
@@ -132,9 +154,9 @@ class TestTTPEnrichmentPipeline:
             malware_id=malware["id"],
             malware_name=malware["name"],
         )
-        assert len(patterns) > 0, (
-            f"PolyUnite types {polyunite_types} should produce attack patterns"
-        )
+        assert (
+            len(patterns) > 0
+        ), f"PolyUnite types {polyunite_types} should produce attack patterns"
         assert len(pattern_rels) == len(patterns)
 
         # Verify attack patterns have proper STIX structure
@@ -156,11 +178,20 @@ class TestTTPEnrichmentPipeline:
             result = client.query_polyswarm(KEYDOOR_SHA256)
 
         polyswarm_data = result["data"]
-        observable = {"id": "file--keydoor-bundle", "hashes": {"SHA-256": KEYDOOR_SHA256}}
+        observable = {
+            "id": "file--keydoor-bundle",
+            "hashes": {"SHA-256": KEYDOOR_SHA256},
+        }
 
-        indicator = converter.create_indicator_from_polyswarm(observable, polyswarm_data)
+        indicator = converter.create_indicator_from_polyswarm(
+            observable, polyswarm_data
+        )
         malware_family = polyswarm_data["poly_unite"][0]
-        profile = converter.profile_loader.get_profile(malware_family) if converter.profile_loader else None
+        profile = (
+            converter.profile_loader.get_profile(malware_family)
+            if converter.profile_loader
+            else None
+        )
         malware, extra_objs, rels = converter.create_malware_from_polyswarm(
             polyswarm_data, observable=observable, profile=profile
         )
@@ -172,12 +203,16 @@ class TestTTPEnrichmentPipeline:
             stix_objects.extend(rels)
 
             labels = polyswarm_data.get("x_opencti_labels", [])
-            polyunite_types = [l.split(":", 1)[1] for l in labels if l.startswith("malware_type:")]
+            polyunite_types = [
+                l.split(":", 1)[1] for l in labels if l.startswith("malware_type:")
+            ]
             if polyunite_types:
-                patterns, pattern_rels = attack_handler.create_attack_patterns_for_malware(
-                    malware_types=polyunite_types,
-                    malware_id=malware["id"],
-                    malware_name=malware["name"],
+                patterns, pattern_rels = (
+                    attack_handler.create_attack_patterns_for_malware(
+                        malware_types=polyunite_types,
+                        malware_id=malware["id"],
+                        malware_name=malware["name"],
+                    )
                 )
                 stix_objects.extend(patterns)
                 stix_objects.extend(pattern_rels)
@@ -186,7 +221,9 @@ class TestTTPEnrichmentPipeline:
         assert "identity" in types_present, "Author identity must be present"
         assert "indicator" in types_present, "Indicator must be present"
         assert "malware" in types_present, "Malware must be present"
-        assert "attack-pattern" in types_present, "Attack patterns from PolyUnite types must be present"
+        assert (
+            "attack-pattern" in types_present
+        ), "Attack patterns from PolyUnite types must be present"
         assert "relationship" in types_present, "Relationships must be present"
 
 
@@ -205,6 +242,7 @@ class TestBundleDeduplication:
         connector.settings = None
 
         from polyswarm_enrichment.converter_to_stix import ConverterToStix
+
         converter = ConverterToStix(stub_helper)
         connector.converter_to_stix = converter
 
@@ -241,9 +279,15 @@ class TestBundleDeduplication:
         polyswarm_data = result["data"]
         observable = {"id": "file--dedup-test", "hashes": {"SHA-256": KEYDOOR_SHA256}}
 
-        indicator = converter.create_indicator_from_polyswarm(observable, polyswarm_data)
+        indicator = converter.create_indicator_from_polyswarm(
+            observable, polyswarm_data
+        )
         malware_family = polyswarm_data["poly_unite"][0]
-        profile = converter.profile_loader.get_profile(malware_family) if converter.profile_loader else None
+        profile = (
+            converter.profile_loader.get_profile(malware_family)
+            if converter.profile_loader
+            else None
+        )
         malware, extra_objs, rels = converter.create_malware_from_polyswarm(
             polyswarm_data, observable=observable, profile=profile
         )
@@ -255,21 +299,25 @@ class TestBundleDeduplication:
             stix_objects.extend(rels)
 
             labels = polyswarm_data.get("x_opencti_labels", [])
-            polyunite_types = [l.split(":", 1)[1] for l in labels if l.startswith("malware_type:")]
+            polyunite_types = [
+                l.split(":", 1)[1] for l in labels if l.startswith("malware_type:")
+            ]
             if polyunite_types:
-                patterns, pattern_rels = attack_handler.create_attack_patterns_for_malware(
-                    malware_types=polyunite_types,
-                    malware_id=malware["id"],
-                    malware_name=malware["name"],
+                patterns, pattern_rels = (
+                    attack_handler.create_attack_patterns_for_malware(
+                        malware_types=polyunite_types,
+                        malware_id=malware["id"],
+                        malware_name=malware["name"],
+                    )
                 )
                 stix_objects.extend(patterns)
                 stix_objects.extend(pattern_rels)
 
         # Every ID should be unique — no duplicates produced by the pipeline
         ids = [obj["id"] for obj in stix_objects if "id" in obj]
-        assert len(ids) == len(set(ids)), (
-            f"Duplicate STIX IDs found: {[x for x in ids if ids.count(x) > 1]}"
-        )
+        assert len(ids) == len(
+            set(ids)
+        ), f"Duplicate STIX IDs found: {[x for x in ids if ids.count(x) > 1]}"
 
 
 # ------------------------------------------------------------------
@@ -278,9 +326,17 @@ class TestBundleDeduplication:
 RHADAMANTHYS_SHA256 = "7c34cccd3f58c144f561493c511a1a96a227cba58d4e1a737c4cd1b3a8a407ff"
 
 RHADAMANTHYS_EXPECTED_IPS = {
-    "179.43.142.201", "74.178.76.44", "23.38.111.119", "199.232.210.172",
-    "199.232.214.172", "135.233.95.144", "40.119.249.228", "52.123.251.28",
-    "52.185.211.133", "52.191.219.104", "72.147.149.16",
+    "179.43.142.201",
+    "74.178.76.44",
+    "23.38.111.119",
+    "199.232.210.172",
+    "199.232.214.172",
+    "135.233.95.144",
+    "40.119.249.228",
+    "52.123.251.28",
+    "52.185.211.133",
+    "52.191.219.104",
+    "72.147.149.16",
 }
 
 
@@ -329,9 +385,15 @@ class TestNetworkIOCPipeline:
 
         # Pin exact IPs from cassette
         expected_ips = {
-            "175.126.111.143", "20.72.205.209", "211.43.203.28",
-            "23.38.111.119", "23.62.100.184", "72.145.35.144",
-            "74.178.76.128", "74.178.76.44", "85.234.74.60",
+            "175.126.111.143",
+            "20.72.205.209",
+            "211.43.203.28",
+            "23.38.111.119",
+            "23.62.100.184",
+            "72.145.35.144",
+            "74.178.76.128",
+            "74.178.76.44",
+            "85.234.74.60",
         }
         assert set(ioc_data["ips"]) == expected_ips
         assert ioc_data["imphash"] == "46d622f7b3a9583c2976072cd46d3373"

@@ -702,14 +702,12 @@ class ConnectorTemplate:
                     if sha256:
                         ioc_data = self.client.fetch_iocs(sha256)
                         if ioc_data:
-                            ioc_objects = (
-                                self.converter_to_stix.create_ioc_observables(
-                                    observable_id=observable["id"],
-                                    ioc_data=ioc_data,
-                                    max_count=self.ioc_max_count,
-                                    ioc_score=self.ioc_score,
-                                    enabled_types=self.ioc_types,
-                                )
+                            ioc_objects = self.converter_to_stix.create_ioc_observables(
+                                observable_id=observable["id"],
+                                ioc_data=ioc_data,
+                                max_count=self.ioc_max_count,
+                                ioc_score=self.ioc_score,
+                                enabled_types=self.ioc_types,
                             )
                             if ioc_objects:
                                 stix_objects.extend(ioc_objects)

@@ -1,8 +1,8 @@
 """Unit tests for ArtifactHandler — download success/failure, size limits."""
 
-import pytest
 from unittest.mock import MagicMock
 
+import pytest
 from connector.artifact_handler import ArtifactHandler
 
 
@@ -104,14 +104,18 @@ class TestIOErrors:
     """Verify I/O and unexpected exceptions are caught and returned as error strings."""
 
     def test_io_error_handled(self, handler):
-        handler.helper.api.fetch_opencti_file = MagicMock(side_effect=IOError("disk full"))
+        handler.helper.api.fetch_opencti_file = MagicMock(
+            side_effect=IOError("disk full")
+        )
         entity = {"importFiles": [{"id": "f1", "name": "test.exe"}]}
         data, err = handler.download_artifact(entity)
         assert data is None
         assert "I/O error" in err
 
     def test_unexpected_error_handled(self, handler):
-        handler.helper.api.fetch_opencti_file = MagicMock(side_effect=RuntimeError("boom"))
+        handler.helper.api.fetch_opencti_file = MagicMock(
+            side_effect=RuntimeError("boom")
+        )
         entity = {"importFiles": [{"id": "f1", "name": "test.exe"}]}
         data, err = handler.download_artifact(entity)
         assert data is None

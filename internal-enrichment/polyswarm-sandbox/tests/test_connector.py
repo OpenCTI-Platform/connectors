@@ -1,13 +1,13 @@
 """Unit tests for PolySwarmConnector — config, TLP, scope, sandbox providers."""
 
-import json
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
 
 ENTITY_ID = "artifact--00000000-0000-0000-0000-000000000001"
 
@@ -87,7 +87,9 @@ def make_connector(polyswarm_overrides=None, connector_overrides=None):
     c = PolySwarmConnector.__new__(PolySwarmConnector)
     c.helper = MagicMock()
     c.helper.connect_scope = "Artifact"
-    c.helper.stix2_create_bundle = MagicMock(side_effect=lambda objs: {"type": "bundle", "objects": objs})
+    c.helper.stix2_create_bundle = MagicMock(
+        side_effect=lambda objs: {"type": "bundle", "objects": objs}
+    )
     c.helper.send_stix2_bundle = MagicMock(return_value=["bundle-1"])
     c.helper.check_max_tlp = MagicMock(return_value=True)
 
@@ -249,7 +251,9 @@ class TestVMSlug:
 
     def test_api_default_used_for_triage(self):
         c = make_connector(polyswarm_overrides={"sandbox_vm": None})
-        c.polyswarm_client.get_default_vm_for_provider.return_value = "windows11-21h2-x64"
+        c.polyswarm_client.get_default_vm_for_provider.return_value = (
+            "windows11-21h2-x64"
+        )
         assert c._get_vm_for_provider("triage") == "windows11-21h2-x64"
 
     def test_hardcoded_fallback_when_api_unavailable(self):

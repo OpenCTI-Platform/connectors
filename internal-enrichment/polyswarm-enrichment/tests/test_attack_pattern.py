@@ -1,15 +1,16 @@
 """Tests for AttackPatternHandler — TTP mapping and STIX Attack Pattern creation."""
 
 import pytest
-
-from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
 from conftest import MOCK_ATTACK_PATTERNS_RESPONSE
+from polyswarm_enrichment.attack_pattern_handler import AttackPatternHandler
 
 
 @pytest.fixture()
 def handler(stub_helper):
     author_id = "identity--test-author-id"
-    return AttackPatternHandler(stub_helper, author_id, ttp_data=MOCK_ATTACK_PATTERNS_RESPONSE)
+    return AttackPatternHandler(
+        stub_helper, author_id, ttp_data=MOCK_ATTACK_PATTERNS_RESPONSE
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -18,8 +19,12 @@ def handler(stub_helper):
 class TestTTPMapping:
     def test_ransomware_maps_to_expected_ttps(self, handler):
         ttps = handler.get_ttps_for_malware_types(["ransomware"])
-        assert "T1486" in ttps, "Ransomware should map to T1486 (Data Encrypted for Impact)"
-        assert "T1490" in ttps, "Ransomware should map to T1490 (Inhibit System Recovery)"
+        assert (
+            "T1486" in ttps
+        ), "Ransomware should map to T1486 (Data Encrypted for Impact)"
+        assert (
+            "T1490" in ttps
+        ), "Ransomware should map to T1490 (Inhibit System Recovery)"
 
     def test_unknown_type_returns_empty(self, handler):
         ttps = handler.get_ttps_for_malware_types(["nonexistent_malware_type_xyz"])
@@ -62,7 +67,9 @@ class TestCreateAttackPattern:
         assert ap is not None
         refs = ap["external_references"]
         urls = [r["url"] for r in refs]
-        assert any("T1059/001" in u for u in urls), "Sub-technique URL should use / separator"
+        assert any(
+            "T1059/001" in u for u in urls
+        ), "Sub-technique URL should use / separator"
 
     def test_unknown_ttp_returns_none(self, handler):
         ap = handler.create_attack_pattern("T9999")

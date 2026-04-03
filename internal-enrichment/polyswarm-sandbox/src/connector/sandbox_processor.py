@@ -99,7 +99,10 @@ class SandboxProcessor:
                 return slug
 
         # Check for Triage-specific fields
-        if config.get("triage_static_score") is not None or config.get("traige_analysis_score") is not None:
+        if (
+            config.get("triage_static_score") is not None
+            or config.get("traige_analysis_score") is not None
+        ):
             return "triage"
 
         # Check for Cape-specific fields
@@ -130,13 +133,19 @@ class SandboxProcessor:
 
         # === SCORES ===
         # Behavioral score from config (note: typo in API - "traige_analysis_score")
-        triage_behavioral_score = int(SandboxProcessor._safe_num(config.get("traige_analysis_score")))
+        triage_behavioral_score = int(
+            SandboxProcessor._safe_num(config.get("traige_analysis_score"))
+        )
         # Static score from config
-        triage_static_score = int(SandboxProcessor._safe_num(config.get("triage_static_score")))
+        triage_static_score = int(
+            SandboxProcessor._safe_num(config.get("triage_static_score"))
+        )
         # Sandbox score from report.targets[].score
         triage_sandbox_score = 0
         if targets and isinstance(targets[0], dict):
-            triage_sandbox_score = int(SandboxProcessor._safe_num(targets[0].get("score")))
+            triage_sandbox_score = int(
+                SandboxProcessor._safe_num(targets[0].get("score"))
+            )
 
         # Use highest score (convert to 0-100 scale if needed)
         score = max(triage_behavioral_score, triage_static_score, triage_sandbox_score)
@@ -202,7 +211,9 @@ class SandboxProcessor:
                 continue
             # Domains from targets[].iocs.domains
             for domain in iocs.get("domains", []) or []:
-                if isinstance(domain, str) and not SandboxProcessor._is_benign_domain(domain):
+                if isinstance(domain, str) and not SandboxProcessor._is_benign_domain(
+                    domain
+                ):
                     ioc_domains.add(domain)
             # IPs from targets[].iocs.ips
             for ip in iocs.get("ips", []) or []:
@@ -245,7 +256,9 @@ class SandboxProcessor:
             "extracted_configs": extracted_configs,
             "domains": [{"domain": d} for d in ioc_domains],
             "ips": list(ioc_ips),
-            "c2_candidates": SandboxProcessor._extract_c2_from_extracted(extracted_configs),
+            "c2_candidates": SandboxProcessor._extract_c2_from_extracted(
+                extracted_configs
+            ),
             "summary": summary,
             "permalink": permalink,
             "sandbox_id": sandbox_id,
@@ -322,7 +335,11 @@ class SandboxProcessor:
                 ioc_domains.add(domain)
             for answer in dns.get("answers", []):
                 ip = answer.get("data", "")
-                if ip and SandboxProcessor._is_valid_ip(ip) and not SandboxProcessor._is_benign_ip(ip):
+                if (
+                    ip
+                    and SandboxProcessor._is_valid_ip(ip)
+                    and not SandboxProcessor._is_benign_ip(ip)
+                ):
                     ioc_ips.add(ip)
 
         # Domains list
@@ -361,7 +378,9 @@ class SandboxProcessor:
         suricata = report.get("suricata", {})
         for tls in suricata.get("tls", []):
             subject = tls.get("subject", "")
-            if subject and any(x in subject.lower() for x in ["rat", "malware", "dcrat"]):
+            if subject and any(
+                x in subject.lower() for x in ["rat", "malware", "dcrat"]
+            ):
                 c2_candidates.append(
                     {
                         "ip": tls.get("dstip"),
@@ -371,7 +390,9 @@ class SandboxProcessor:
                 )
 
         # === BUILD SUMMARY - Only Cape Malscore, no Report Malscore ===
-        summary = SandboxProcessor._build_cape_summary(cape_malscore, family, signature_names)
+        summary = SandboxProcessor._build_cape_summary(
+            cape_malscore, family, signature_names
+        )
 
         # Get permalink or construct it
         permalink = result.get("permalink")
@@ -407,7 +428,9 @@ class SandboxProcessor:
         report = result.get("report", {})
         config = result.get("config", {})
 
-        score = SandboxProcessor._safe_num(report.get("score")) or SandboxProcessor._safe_num(config.get("score"))
+        score = SandboxProcessor._safe_num(
+            report.get("score")
+        ) or SandboxProcessor._safe_num(config.get("score"))
 
         sha256 = result.get("sha256")
         sandbox_id = result.get("id")
@@ -476,7 +499,9 @@ class SandboxProcessor:
                         key_kind = key.get("kind", "")
                         key_value = key.get("value", "N/A")
                         if key_kind:
-                            lines.append(f"- **{key_name}** ({key_kind}): `{key_value}`")
+                            lines.append(
+                                f"- **{key_name}** ({key_kind}): `{key_value}`"
+                            )
                         else:
                             lines.append(f"- **{key_name}:** `{key_value}`")
                 if cfg.get("attr"):
@@ -497,7 +522,9 @@ class SandboxProcessor:
         return "\n".join(lines)
 
     @staticmethod
-    def _build_cape_summary(cape_malscore: int, family: str | None, signatures: list) -> str:
+    def _build_cape_summary(
+        cape_malscore: int, family: str | None, signatures: list
+    ) -> str:
         """Build analysis summary for Cape results - Only Cape Malscore."""
         lines = []
 

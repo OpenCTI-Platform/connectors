@@ -8,20 +8,22 @@ Tests connector behavior when external services fail:
 - Circuit breaker recovery after cooldown
 """
 
-import io
 import os
 import sys
 import time
+from unittest.mock import MagicMock
 
 import pytest
-from unittest.mock import MagicMock, patch
-
 import requests
 
 SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "src")
 sys.path.insert(0, os.path.abspath(SRC_DIR))
 
-from connector.polyswarm_client import CircuitBreaker, PolySwarmClient, PolySwarmAPIError
+from connector.polyswarm_client import (
+    CircuitBreaker,
+    PolySwarmAPIError,
+    PolySwarmClient,
+)
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -46,7 +48,9 @@ class TestTimeoutResilience:
 
     def test_scan_submit_timeout(self):
         client = _make_client()
-        client.api.submit = MagicMock(side_effect=requests.Timeout("Connection timed out"))
+        client.api.submit = MagicMock(
+            side_effect=requests.Timeout("Connection timed out")
+        )
         result = client.submit_file_async(b"test", "test.exe")
         assert result is None  # Should return None, not crash
 
@@ -64,7 +68,9 @@ class TestTimeoutResilience:
 
     def test_sandbox_results_timeout(self):
         client = _make_client()
-        client.api.sandbox_task_status = MagicMock(side_effect=requests.Timeout("Timed out"))
+        client.api.sandbox_task_status = MagicMock(
+            side_effect=requests.Timeout("Timed out")
+        )
         result = client.get_sandbox_results("task-123")
         assert result is None
 
@@ -101,7 +107,9 @@ class TestNetworkDropResilience:
 
     def test_connection_error_on_poll(self):
         client = _make_client()
-        client.api.lookup = MagicMock(side_effect=ConnectionError("Network unreachable"))
+        client.api.lookup = MagicMock(
+            side_effect=ConnectionError("Network unreachable")
+        )
         result = client.get_scan_results("scan-123")
         assert result is None
 
@@ -218,7 +226,9 @@ class TestActionableErrors:
         client.api.submit = MagicMock(side_effect=error)
         with pytest.raises(PolySwarmAPIError) as exc_info:
             client._retry_sdk_call(client.api.submit, operation="test")
-        assert "Access" in exc_info.value.category or "Denied" in exc_info.value.category
+        assert (
+            "Access" in exc_info.value.category or "Denied" in exc_info.value.category
+        )
 
     def test_429_raises_rate_limit(self):
         client = _make_client()

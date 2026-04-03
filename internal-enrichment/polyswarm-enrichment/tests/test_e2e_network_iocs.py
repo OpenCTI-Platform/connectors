@@ -109,6 +109,7 @@ def get_octi():
     global _octi_client
     if _octi_client is None:
         from pycti import OpenCTIApiClient
+
         _octi_client = OpenCTIApiClient(OPENCTI_URL, OPENCTI_TOKEN)
     return _octi_client
 
@@ -369,9 +370,9 @@ class TestRhadamanthysNetworkIOCs:
         rels = get_relationships_from(
             rhadamanthys_enriched["id"], rel_type="communicates-with"
         )
-        assert len(rels) > 0, (
-            "Expected communicates-with relationships for Rhadamanthys"
-        )
+        assert (
+            len(rels) > 0
+        ), "Expected communicates-with relationships for Rhadamanthys"
 
     def test_expected_ips_created(self, rhadamanthys_enriched):
         """All expected public IPs should appear as observables."""
@@ -423,9 +424,13 @@ class TestRhadamanthysNetworkIOCs:
                     # Look up the full IP observable to check labels
                     ip_obs_list = get_observables_by_type("IPv4-Addr", search=ip_value)
                     if not ip_obs_list:
-                        ip_obs_list = get_observables_by_type("IPv6-Addr", search=ip_value)
+                        ip_obs_list = get_observables_by_type(
+                            "IPv6-Addr", search=ip_value
+                        )
                     if ip_obs_list:
-                        labels = [l["value"] for l in ip_obs_list[0].get("objectLabel", [])]
+                        labels = [
+                            l["value"] for l in ip_obs_list[0].get("objectLabel", [])
+                        ]
                         assert "polyswarm:sandbox-observed" in labels, (
                             f"IP {ip_value} missing sandbox-observed label. "
                             f"Labels: {labels}"
@@ -445,9 +450,9 @@ class TestRhadamanthysNetworkIOCs:
                     ip_obs_list = get_observables_by_type("IPv4-Addr", search=ip_value)
                     if ip_obs_list:
                         score = ip_obs_list[0].get("x_opencti_score", 0)
-                        assert score <= 30, (
-                            f"IP {ip_value} has score {score}, expected <= 30"
-                        )
+                        assert (
+                            score <= 30
+                        ), f"IP {ip_value} has score {score}, expected <= 30"
                     break
 
     def test_ip_observables_created_by_polyswarm(self, rhadamanthys_enriched):
@@ -463,9 +468,9 @@ class TestRhadamanthysNetworkIOCs:
                     ip_obs_list = get_observables_by_type("IPv4-Addr", search=ip_value)
                     if ip_obs_list and ip_obs_list[0].get("createdBy"):
                         author = ip_obs_list[0]["createdBy"]["name"]
-                        assert "polyswarm" in author.lower(), (
-                            f"IP {ip_value} createdBy {author}, expected PolySwarm"
-                        )
+                        assert (
+                            "polyswarm" in author.lower()
+                        ), f"IP {ip_value} createdBy {author}, expected PolySwarm"
                     break
 
     def test_communicates_with_confidence_is_low(self, rhadamanthys_enriched):
@@ -475,9 +480,9 @@ class TestRhadamanthysNetworkIOCs:
         )
         for rel in rels:
             conf = rel.get("confidence", 0)
-            assert conf <= 50, (
-                f"Expected low confidence on communicates-with, got {conf}"
-            )
+            assert (
+                conf <= 50
+            ), f"Expected low confidence on communicates-with, got {conf}"
 
 
 # ---------------------------------------------------------------------------
@@ -491,9 +496,9 @@ class TestDTrackNoNetworkIOCs:
         rels = get_relationships_from(
             dtrack_enriched["id"], rel_type="communicates-with"
         )
-        assert len(rels) == 0, (
-            f"Expected 0 communicates-with for DTrack, got {len(rels)}"
-        )
+        assert (
+            len(rels) == 0
+        ), f"Expected 0 communicates-with for DTrack, got {len(rels)}"
 
     def test_enrichment_still_created_note(self, dtrack_enriched):
         """Even without IOCs, enrichment should still create a PolySwarm Note."""
@@ -502,12 +507,10 @@ class TestDTrackNoNetworkIOCs:
 
     def test_enrichment_still_created_malware(self, dtrack_enriched):
         """DTrack should still have malware/related-to relationships."""
-        rels = get_relationships_from(
-            dtrack_enriched["id"], rel_type="related-to"
-        )
-        assert len(rels) >= 1, (
-            "DTrack should still have related-to relationships (malware family)"
-        )
+        rels = get_relationships_from(dtrack_enriched["id"], rel_type="related-to")
+        assert (
+            len(rels) >= 1
+        ), "DTrack should still have related-to relationships (malware family)"
 
 
 # ---------------------------------------------------------------------------
@@ -529,9 +532,9 @@ class TestRelationshipStructure:
                 from_node.get("entity_type"),
                 to_node.get("entity_type"),
             }
-            assert "StixFile" in entity_types, (
-                f"Expected StixFile in relationship, got types: {entity_types}"
-            )
+            assert (
+                "StixFile" in entity_types
+            ), f"Expected StixFile in relationship, got types: {entity_types}"
 
     def test_relationship_targets_are_network_observables(self, rhadamanthys_enriched):
         """Targets of communicates-with should be network observables."""

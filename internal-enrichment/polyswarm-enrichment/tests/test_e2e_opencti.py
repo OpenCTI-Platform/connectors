@@ -85,6 +85,7 @@ def get_octi():
     global _octi_client
     if _octi_client is None:
         from pycti import OpenCTIApiClient
+
         _octi_client = OpenCTIApiClient(OPENCTI_URL, OPENCTI_TOKEN)
     return _octi_client
 
@@ -280,7 +281,10 @@ def wait_for_enrichment(sha256: str, timeout: int = ENRICHMENT_TIMEOUT) -> dict:
                 while time.time() < rel_deadline:
                     rels = get_relationships_from(obs["id"])
                     cur_count = len(rels)
-                    if cur_count >= MIN_OBSERVABLE_RELATIONSHIPS and cur_count == prev_count:
+                    if (
+                        cur_count >= MIN_OBSERVABLE_RELATIONSHIPS
+                        and cur_count == prev_count
+                    ):
                         stable_checks += 1
                         if stable_checks >= 2:
                             return obs
@@ -334,9 +338,9 @@ def wannacry_enriched():
     obs = get_observable_by_hash(sha256)
     if not obs:
         result = create_observable_via_pycti(sha256, "E2E test: WannaCry")
-        obs_id = result["id"]
+        result["id"]
     else:
-        obs_id = obs["id"]
+        obs["id"]
 
     enriched = wait_for_enrichment(sha256)
     yield enriched
@@ -350,9 +354,9 @@ def mimikatz_enriched():
     obs = get_observable_by_hash(sha256)
     if not obs:
         result = create_observable_via_pycti(sha256, "E2E test: Mimikatz")
-        obs_id = result["id"]
+        result["id"]
     else:
-        obs_id = obs["id"]
+        obs["id"]
 
     enriched = wait_for_enrichment(sha256)
     yield enriched
@@ -385,8 +389,7 @@ class TestConnectorRegistration:
     def test_connector_active(self):
         result = graphql("{ connectors { name active connector_type } }")
         polyswarm = [
-            c for c in result["connectors"]
-            if "polyswarm" in c["name"].lower()
+            c for c in result["connectors"] if "polyswarm" in c["name"].lower()
         ]
         assert len(polyswarm) == 1
         assert polyswarm[0]["active"] is True

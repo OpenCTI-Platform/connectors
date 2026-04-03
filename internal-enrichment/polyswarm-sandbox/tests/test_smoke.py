@@ -4,10 +4,7 @@ Verifies: all modules import, core classes instantiate, config loads,
 and StixBuilder produces valid output structure.
 """
 
-import types
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 
 class StubHelper:
@@ -108,7 +105,9 @@ class TestClassInstantiation:
 
 
 class TestStixBuilderOutput:
-    @patch("connector.stix_builder.StixBuilder._fetch_polykg_profile", return_value=None)
+    @patch(
+        "connector.stix_builder.StixBuilder._fetch_polykg_profile", return_value=None
+    )
     def test_build_bundle_returns_list(self, _mock):
         from connector.stix_builder import StixBuilder
 
@@ -140,7 +139,9 @@ class TestStixBuilderOutput:
             assert isinstance(obj, dict)
             assert "type" in obj
 
-    @patch("connector.stix_builder.StixBuilder._fetch_polykg_profile", return_value=None)
+    @patch(
+        "connector.stix_builder.StixBuilder._fetch_polykg_profile", return_value=None
+    )
     def test_bundle_contains_author(self, _mock):
         from connector.stix_builder import StixBuilder
 
@@ -152,7 +153,9 @@ class TestStixBuilderOutput:
             "hashes": {"SHA-256": "a" * 64},
             "standard_id": "file--test",
         }
-        result = builder.build_bundle(entity=entity, scan_data={"score": 50, "sha256": "a" * 64}, config={})
+        result = builder.build_bundle(
+            entity=entity, scan_data={"score": 50, "sha256": "a" * 64}, config={}
+        )
         identities = [o for o in result if o.get("type") == "identity"]
         assert len(identities) >= 1
         assert any("PolySwarm" in i.get("name", "") for i in identities)

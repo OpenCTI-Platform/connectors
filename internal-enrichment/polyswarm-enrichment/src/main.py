@@ -8,9 +8,8 @@ initialises the OpenCTI helper, and starts the enrichment listener.
 import sys
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from polyswarm_enrichment import ConnectorSettings, ConnectorTemplate
+from pycti import OpenCTIConnectorHelper
 
 
 def main():

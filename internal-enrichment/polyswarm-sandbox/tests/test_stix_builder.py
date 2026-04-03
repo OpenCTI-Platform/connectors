@@ -83,7 +83,9 @@ class TestAuthor:
         assert b1.author["id"] == b2.author["id"]
 
     def test_author_always_in_bundle(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         author_objs = [o for o in objects if o.get("type") == "identity"]
         assert len(author_objs) >= 1
 
@@ -141,7 +143,9 @@ class TestPolyKGProfile:
         assert profile is not None
 
     def test_profile_creates_actors(self, builder, polykg_mock):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         actors = [o for o in objects if o.get("type") == "threat-actor"]
         assert any("Lazarus" in a.get("name", "") for a in actors)
 
@@ -166,7 +170,9 @@ class TestMalware:
     """Verify Malware SDO creation: deterministic ID, is_family=True, created_by_ref."""
 
     def test_malware_created_when_family_known(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         malware_objs = [o for o in objects if o.get("type") == "malware"]
         assert any(m.get("name") == "DTrack" for m in malware_objs)
 
@@ -180,12 +186,16 @@ class TestMalware:
         assert id1 == id2
 
     def test_malware_has_created_by_ref(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         mal = next(o for o in objects if o.get("type") == "malware")
         assert mal["created_by_ref"] == builder.author_id
 
     def test_malware_is_family_true(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         mal = next(o for o in objects if o.get("type") == "malware")
         assert mal["is_family"] is True
 
@@ -197,9 +207,13 @@ class TestBundleDedup:
     """Verify the final bundle contains no duplicate STIX IDs."""
 
     def test_no_duplicate_ids(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG
+        )
         ids = [o.get("id") for o in objects if o.get("id")]
-        assert len(ids) == len(set(ids)), f"Duplicate IDs: {[i for i in ids if ids.count(i) > 1]}"
+        assert len(ids) == len(
+            set(ids)
+        ), f"Duplicate IDs: {[i for i in ids if ids.count(i) > 1]}"
 
 
 # ── replace_with_lower_score (#39) ───────────────────────────────────────────
@@ -211,15 +225,21 @@ class TestReplaceWithLowerScore:
     def test_score_kept_when_existing_higher(self, builder):
         entity_with_score = dict(ENTITY, x_opencti_score=95)
         config_no_replace = dict(CONFIG, replace_with_lower_score=False)
-        objects = builder.build_bundle(entity=entity_with_score, scan_data=SCAN_DATA, config=config_no_replace)
+        objects = builder.build_bundle(
+            entity=entity_with_score, scan_data=SCAN_DATA, config=config_no_replace
+        )
         update = next((o for o in objects if o.get("id") == ENTITY_ID), None)
         assert update is not None
-        assert update.get("x_opencti_score") is None or update.get("x_opencti_score") >= 95
+        assert (
+            update.get("x_opencti_score") is None or update.get("x_opencti_score") >= 95
+        )
 
     def test_score_updated_when_replace_true(self, builder):
         entity_with_score = dict(ENTITY, x_opencti_score=95)
         config_replace = dict(CONFIG, replace_with_lower_score=True)
-        objects = builder.build_bundle(entity=entity_with_score, scan_data=SCAN_DATA, config=config_replace)
+        objects = builder.build_bundle(
+            entity=entity_with_score, scan_data=SCAN_DATA, config=config_replace
+        )
         update = next((o for o in objects if o.get("id") == ENTITY_ID), None)
         assert update is not None
         assert "x_opencti_score" in update

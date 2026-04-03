@@ -14,7 +14,12 @@ def _is_private_or_noise(ip_str: str) -> bool:
     """Filter out private, multicast, loopback, link-local IPs."""
     try:
         addr = ipaddress.ip_address(ip_str)
-        return addr.is_private or addr.is_multicast or addr.is_loopback or addr.is_link_local
+        return (
+            addr.is_private
+            or addr.is_multicast
+            or addr.is_loopback
+            or addr.is_link_local
+        )
     except ValueError:
         return False
 
@@ -102,7 +107,11 @@ class ConnectorClient:
 
         # PolySwarm SDK Initialization
         api_key = config.api_key
-        self.polyswarm_api_key = api_key.get_secret_value() if hasattr(api_key, "get_secret_value") else api_key
+        self.polyswarm_api_key = (
+            api_key.get_secret_value()
+            if hasattr(api_key, "get_secret_value")
+            else api_key
+        )
         self.polyswarm_community = config.community
 
         # Circuit breakers for each community
@@ -191,18 +200,24 @@ class ConnectorClient:
             # Extract malware family (READ-5: formatted for readability)
             # NOTE: PolySwarm SDK uses __getattr__ that raises AttributeError
             # for missing keys — must use getattr() with default, not direct access
-            polyunite_data = getattr(result.metadata, "polyunite", None) if result.metadata else None
+            polyunite_data = (
+                getattr(result.metadata, "polyunite", None) if result.metadata else None
+            )
             malware_family = (
-                polyunite_data.get("malware_family")
-                if polyunite_data
-                else None
+                polyunite_data.get("malware_family") if polyunite_data else None
             )
             # Normalize: treat None, empty string, and "Unknown" as no family
-            if not malware_family or str(malware_family).strip().lower() in ("unknown", "none", ""):
+            if not malware_family or str(malware_family).strip().lower() in (
+                "unknown",
+                "none",
+                "",
+            ):
                 malware_family = None
 
             # Extract file type
-            exiftool_data = getattr(result.metadata, "exiftool", None) if result.metadata else None
+            exiftool_data = (
+                getattr(result.metadata, "exiftool", None) if result.metadata else None
+            )
             if exiftool_data:
                 file_type = exiftool_data.get("filetype", result.mimetype)
             else:
@@ -222,9 +237,7 @@ class ConnectorClient:
 
             # Get operating system labels
             os_labels = (
-                polyunite_data.get("operating_system", [])
-                if polyunite_data
-                else []
+                polyunite_data.get("operating_system", []) if polyunite_data else []
             )
             if os_labels:
                 for os_label in os_labels:
@@ -252,7 +265,9 @@ class ConnectorClient:
             )
 
             # Extended hashes from metadata (top-level sha256/sha1/md5 used directly below)
-            hash_data = getattr(result.metadata, "hash", None) if result.metadata else {}
+            hash_data = (
+                getattr(result.metadata, "hash", None) if result.metadata else {}
+            )
             hash_data = hash_data or {}
 
             # Fetch curated platform tags via TagLink API
@@ -764,17 +779,13 @@ class ConnectorClient:
             )
 
             if resp.status_code == 404:
-                self.helper.log_debug(
-                    f"[CLIENT] No polykg profile for: {family_name}"
-                )
+                self.helper.log_debug(f"[CLIENT] No polykg profile for: {family_name}")
                 return None
 
             resp.raise_for_status()
             circuit.record_success()
             profile = resp.json()
-            self.helper.log_info(
-                f"[CLIENT] Fetched polykg profile for: {family_name}"
-            )
+            self.helper.log_info(f"[CLIENT] Fetched polykg profile for: {family_name}")
             return profile
 
         except requests.exceptions.ConnectionError:
@@ -856,9 +867,7 @@ class ConnectorClient:
 
         try:
             self.helper.log_info(f"[CLIENT] Fetching IOCs for hash: {sha256}")
-            result = self.polyswarm.iocs_by_hash(
-                "sha256", sha256, hide_known_good=True
-            )
+            result = self.polyswarm.iocs_by_hash("sha256", sha256, hide_known_good=True)
             data = result.json
 
             # Filter IPs: remove private, multicast, loopback, link-local

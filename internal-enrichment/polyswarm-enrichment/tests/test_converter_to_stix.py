@@ -1,9 +1,8 @@
 """Tests for ConverterToStix STIX object creation."""
 
 import pytest
-
-from polyswarm_enrichment.converter_to_stix import ConverterToStix
 from polyswarm_enrichment.client_api import ConnectorClient
+from polyswarm_enrichment.converter_to_stix import ConverterToStix
 
 
 # ---------------------------------------------------------------------------
@@ -110,21 +109,31 @@ class TestCreateAuthor:
 # ---------------------------------------------------------------------------
 class TestCreateIndicator:
     def test_indicator_type(self, converter, sample_observable, sample_polyswarm_data):
-        ind = converter.create_indicator_from_polyswarm(sample_observable, sample_polyswarm_data)
+        ind = converter.create_indicator_from_polyswarm(
+            sample_observable, sample_polyswarm_data
+        )
         assert ind is not None
         assert ind["type"] == "indicator"
 
-    def test_pattern_contains_hash(self, converter, sample_observable, sample_polyswarm_data):
-        ind = converter.create_indicator_from_polyswarm(sample_observable, sample_polyswarm_data)
+    def test_pattern_contains_hash(
+        self, converter, sample_observable, sample_polyswarm_data
+    ):
+        ind = converter.create_indicator_from_polyswarm(
+            sample_observable, sample_polyswarm_data
+        )
         assert "SHA256" in ind["pattern"]
         assert sample_polyswarm_data["sha256"] in ind["pattern"]
 
     def test_valid_from_set(self, converter, sample_observable, sample_polyswarm_data):
-        ind = converter.create_indicator_from_polyswarm(sample_observable, sample_polyswarm_data)
+        ind = converter.create_indicator_from_polyswarm(
+            sample_observable, sample_polyswarm_data
+        )
         assert "valid_from" in ind
 
     def test_score_set(self, converter, sample_observable, sample_polyswarm_data):
-        ind = converter.create_indicator_from_polyswarm(sample_observable, sample_polyswarm_data)
+        ind = converter.create_indicator_from_polyswarm(
+            sample_observable, sample_polyswarm_data
+        )
         assert ind["x_opencti_score"] == 97
 
 
@@ -132,38 +141,56 @@ class TestCreateIndicator:
 # Malware WITH profile (DTrack)
 # ---------------------------------------------------------------------------
 class TestCreateMalwareWithProfile:
-    def test_returns_malware_object(self, converter, dtrack_polyswarm_data, profile_loader):
+    def test_returns_malware_object(
+        self, converter, dtrack_polyswarm_data, profile_loader
+    ):
         profile = profile_loader.get_profile("DTrack")
-        malware, objs, rels = converter.create_malware_from_polyswarm(dtrack_polyswarm_data, profile=profile)
+        malware, objs, rels = converter.create_malware_from_polyswarm(
+            dtrack_polyswarm_data, profile=profile
+        )
         assert malware is not None
         assert malware["type"] == "malware"
 
     def test_is_family(self, converter, dtrack_polyswarm_data, profile_loader):
         profile = profile_loader.get_profile("DTrack")
-        malware, _, _ = converter.create_malware_from_polyswarm(dtrack_polyswarm_data, profile=profile)
+        malware, _, _ = converter.create_malware_from_polyswarm(
+            dtrack_polyswarm_data, profile=profile
+        )
         assert malware["is_family"] is True
 
     def test_malware_types(self, converter, dtrack_polyswarm_data, profile_loader):
         profile = profile_loader.get_profile("DTrack")
-        malware, _, _ = converter.create_malware_from_polyswarm(dtrack_polyswarm_data, profile=profile)
+        malware, _, _ = converter.create_malware_from_polyswarm(
+            dtrack_polyswarm_data, profile=profile
+        )
         assert "malware_types" in malware
         assert "Backdoor" in malware["malware_types"]
 
-    def test_has_related_objects(self, converter, dtrack_polyswarm_data, profile_loader):
+    def test_has_related_objects(
+        self, converter, dtrack_polyswarm_data, profile_loader
+    ):
         profile = profile_loader.get_profile("DTrack")
-        _, objs, rels = converter.create_malware_from_polyswarm(dtrack_polyswarm_data, profile=profile)
+        _, objs, rels = converter.create_malware_from_polyswarm(
+            dtrack_polyswarm_data, profile=profile
+        )
         assert len(objs) > 0, "Expected additional STIX objects from profile enrichment"
         assert len(rels) > 0, "Expected relationships from profile enrichment"
 
-    def test_contains_threat_actor(self, converter, dtrack_polyswarm_data, profile_loader):
+    def test_contains_threat_actor(
+        self, converter, dtrack_polyswarm_data, profile_loader
+    ):
         profile = profile_loader.get_profile("DTrack")
-        _, objs, _ = converter.create_malware_from_polyswarm(dtrack_polyswarm_data, profile=profile)
+        _, objs, _ = converter.create_malware_from_polyswarm(
+            dtrack_polyswarm_data, profile=profile
+        )
         actor_objs = [o for o in objs if o["type"] == "threat-actor"]
         assert any("Lazarus" in a["name"] for a in actor_objs)
 
     def test_contains_locations(self, converter, dtrack_polyswarm_data, profile_loader):
         profile = profile_loader.get_profile("DTrack")
-        _, objs, _ = converter.create_malware_from_polyswarm(dtrack_polyswarm_data, profile=profile)
+        _, objs, _ = converter.create_malware_from_polyswarm(
+            dtrack_polyswarm_data, profile=profile
+        )
         location_objs = [o for o in objs if o["type"] == "location"]
         location_names = {loc["name"] for loc in location_objs}
         # DTrack originates from North Korea, targets India among others
@@ -183,7 +210,9 @@ class TestCreateMalwareWithoutProfile:
         assert malware["type"] == "malware"
         assert malware["name"] == "EICAR"
 
-    def test_no_additional_objects_without_profile(self, converter_no_profiles, sample_polyswarm_data):
+    def test_no_additional_objects_without_profile(
+        self, converter_no_profiles, sample_polyswarm_data
+    ):
         _, objs, rels = converter_no_profiles.create_malware_from_polyswarm(
             sample_polyswarm_data, profile=None
         )

@@ -17,9 +17,8 @@ import pytest
 SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "src")
 sys.path.insert(0, os.path.abspath(SRC_DIR))
 
-from stix2validator import ValidationOptions, validate_string
-
 from connector.stix_builder import StixBuilder
+from stix2validator import ValidationOptions, validate_string
 
 # ── Fixtures ──────────────────────────────────────────────────────────────
 
@@ -113,27 +112,43 @@ class TestSTIXBundleValidation:
     """Validate generated bundles against STIX 2.1 specification."""
 
     def test_scan_only_bundle_valid(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         assert len(objects) > 0, "Bundle should not be empty"
         results = _validate_bundle(objects)
-        assert results.is_valid, f"STIX validation errors: {[str(e) for e in results.errors]}"
+        assert (
+            results.is_valid
+        ), f"STIX validation errors: {[str(e) for e in results.errors]}"
 
     def test_sandbox_only_bundle_valid(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, sandbox_data=SANDBOX_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, sandbox_data=SANDBOX_DATA, config=CONFIG
+        )
         assert len(objects) > 0
         results = _validate_bundle(objects)
-        assert results.is_valid, f"STIX validation errors: {[str(e) for e in results.errors]}"
+        assert (
+            results.is_valid
+        ), f"STIX validation errors: {[str(e) for e in results.errors]}"
 
     def test_combined_bundle_valid(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG
+        )
         assert len(objects) > 0
         results = _validate_bundle(objects)
-        assert results.is_valid, f"STIX validation errors: {[str(e) for e in results.errors]}"
+        assert (
+            results.is_valid
+        ), f"STIX validation errors: {[str(e) for e in results.errors]}"
 
     def test_error_note_valid(self, builder):
-        note = builder.create_error_note(ENTITY, "Test Error", "Something went wrong", ["Fix it"])
+        note = builder.create_error_note(
+            ENTITY, "Test Error", "Something went wrong", ["Fix it"]
+        )
         results = _validate_bundle([note])
-        assert results.is_valid, f"STIX validation errors: {[str(e) for e in results.errors]}"
+        assert (
+            results.is_valid
+        ), f"STIX validation errors: {[str(e) for e in results.errors]}"
 
 
 class TestSTIXDeterministicIDs:
@@ -164,30 +179,44 @@ class TestSTIXRelationshipIntegrity:
     """Verify all relationships reference valid objects in the bundle."""
 
     def test_all_relationship_refs_exist(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG
+        )
         obj_ids = {o.get("id") for o in objects if o.get("id")}
         relationships = [o for o in objects if o.get("type") == "relationship"]
         for rel in relationships:
             src = rel.get("source_ref")
             tgt = rel.get("target_ref")
-            assert src in obj_ids, f"Relationship {rel['id']} references missing source: {src}"
-            assert tgt in obj_ids, f"Relationship {rel['id']} references missing target: {tgt}"
+            assert (
+                src in obj_ids
+            ), f"Relationship {rel['id']} references missing source: {src}"
+            assert (
+                tgt in obj_ids
+            ), f"Relationship {rel['id']} references missing target: {tgt}"
 
     def test_no_duplicate_ids_in_bundle(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG
+        )
         ids = [o.get("id") for o in objects if o.get("id")]
         dupes = [i for i in ids if ids.count(i) > 1]
         assert len(dupes) == 0, f"Duplicate IDs in bundle: {set(dupes)}"
 
     def test_all_objects_have_type(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, sandbox_data=SANDBOX_DATA, config=CONFIG
+        )
         for obj in objects:
             assert "type" in obj, f"Object missing 'type': {obj.get('id', 'unknown')}"
 
     def test_created_by_refs_valid(self, builder):
-        objects = builder.build_bundle(entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG)
+        objects = builder.build_bundle(
+            entity=ENTITY, scan_data=SCAN_DATA, config=CONFIG
+        )
         obj_ids = {o.get("id") for o in objects}
         for obj in objects:
             cbr = obj.get("created_by_ref")
             if cbr:
-                assert cbr in obj_ids, f"Object {obj['id']} has invalid created_by_ref: {cbr}"
+                assert (
+                    cbr in obj_ids
+                ), f"Object {obj['id']} has invalid created_by_ref: {cbr}"

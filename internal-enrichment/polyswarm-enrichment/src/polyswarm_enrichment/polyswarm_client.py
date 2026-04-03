@@ -14,7 +14,7 @@ polyswarm_api.settings.DEFAULT_USER_AGENT = (
     )
 )
 
-from polyswarm_api.api import PolyswarmAPI  # noqa: E402
 from polyswarm_api import exceptions as polyswarm_exceptions  # noqa: E402
+from polyswarm_api.api import PolyswarmAPI  # noqa: E402
 
 __all__ = ["PolyswarmAPI", "polyswarm_exceptions"]

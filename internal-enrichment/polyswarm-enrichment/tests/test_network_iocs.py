@@ -11,9 +11,9 @@ Tests cover:
 
 import ipaddress
 import os
+
 import pytest
 import vcr
-
 from polyswarm_enrichment.client_api import ConnectorClient, _is_private_or_noise
 from polyswarm_enrichment.converter_to_stix import ConverterToStix
 

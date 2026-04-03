@@ -4,12 +4,7 @@ Verifies: all modules import, core classes instantiate, config loads,
 and ConverterToStix produces valid output structure.
 """
 
-from unittest.mock import MagicMock
-
-import pytest
-
 from conftest import StubHelper
-
 
 # ── 1. All modules import without error ───────────────────────────────────────
 

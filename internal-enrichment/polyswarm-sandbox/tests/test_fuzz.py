@@ -12,13 +12,11 @@ Tests connector resilience against:
 import os
 import sys
 
-import pytest
-
 SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "src")
 sys.path.insert(0, os.path.abspath(SRC_DIR))
 
-from connector.scan_processor import ScanProcessor
 from connector.sandbox_processor import SandboxProcessor
+from connector.scan_processor import ScanProcessor
 
 # ── Scan Processor Fuzz ──────────────────────────────────────────────────
 
@@ -43,7 +41,9 @@ class TestScanProcessorFuzz:
 
     def test_polyscore_as_string(self):
         result = ScanProcessor.process({"polyscore": "not_a_number"})
-        assert result is None or isinstance(result.get("score"), (int, float, type(None)))
+        assert result is None or isinstance(
+            result.get("score"), (int, float, type(None))
+        )
 
     def test_polyscore_negative(self):
         result = ScanProcessor.process({"polyscore": -0.5})
@@ -65,7 +65,9 @@ class TestScanProcessorFuzz:
         result = ScanProcessor.process(
             {
                 "polyscore": 0.5,
-                "assertions": [{"verdict": None, "author_name": None, "metadata": None}],
+                "assertions": [
+                    {"verdict": None, "author_name": None, "metadata": None}
+                ],
                 "metadata": [{"tool": None, "tool_metadata": None}],
             }
         )
@@ -154,7 +156,10 @@ class TestSandboxProcessorFuzz:
         result = SandboxProcessor.process(
             {
                 "sandbox": "triage",
-                "report": {"targets": [{"score": 5, "iocs": {}}], "ttp": [None, "T1055", None]},
+                "report": {
+                    "targets": [{"score": 5, "iocs": {}}],
+                    "ttp": [None, "T1055", None],
+                },
             }
         )
         assert result is None or isinstance(result, dict)
@@ -169,7 +174,12 @@ class TestSandboxProcessorFuzz:
                         {
                             "score": 5,
                             "iocs": {
-                                "domains": ["evil.com", {"domain": "bad.net"}, 42, None],
+                                "domains": [
+                                    "evil.com",
+                                    {"domain": "bad.net"},
+                                    42,
+                                    None,
+                                ],
                                 "ips": [],
                             },
                         }
@@ -203,7 +213,10 @@ class TestSandboxProcessorFuzz:
         result = SandboxProcessor.process(
             {
                 "sandbox": "triage",
-                "report": {"targets": [{"score": 5, "signatures": sigs, "iocs": {}}], "ttp": []},
+                "report": {
+                    "targets": [{"score": 5, "signatures": sigs, "iocs": {}}],
+                    "ttp": [],
+                },
             }
         )
         assert result is None or isinstance(result, dict)

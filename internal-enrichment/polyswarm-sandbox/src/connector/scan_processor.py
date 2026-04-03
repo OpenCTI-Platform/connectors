@@ -56,10 +56,14 @@ class ScanProcessor:
         engine_detections = ScanProcessor._extract_engine_detections(raw_assertions)
 
         # Hashes — use top-level fields + metadata hash tool for extended hashes
-        hashes = ScanProcessor._extract_hashes(result, metadata if isinstance(metadata, list) else [])
+        hashes = ScanProcessor._extract_hashes(
+            result, metadata if isinstance(metadata, list) else []
+        )
 
         # File metadata — PE/exiftool/LIEF (no top-level equivalent)
-        file_info = ScanProcessor._extract_file_info(result, metadata if isinstance(metadata, list) else [])
+        file_info = ScanProcessor._extract_file_info(
+            result, metadata if isinstance(metadata, list) else []
+        )
 
         # STIX labels
         stix_labels = []
@@ -81,9 +85,11 @@ class ScanProcessor:
             "labels": labels,
             "stix_labels": stix_labels,
             "operating_systems": operating_systems,
-            "permalink": f"https://polyswarm.network/scan/results/file/{result.get('sha256')}"
-            if result.get("sha256")
-            else result.get("permalink"),
+            "permalink": (
+                f"https://polyswarm.network/scan/results/file/{result.get('sha256')}"
+                if result.get("sha256")
+                else result.get("permalink")
+            ),
             "sha256": result.get("sha256"),
             "sha1": result.get("sha1"),
             "md5": result.get("md5"),
@@ -113,8 +119,12 @@ class ScanProcessor:
                 detections.append(
                     {
                         "engine": assertion.get("author_name"),
-                        "family": assertion.get("metadata", {}).get("malware_family", "Malicious"),
-                        "engine_info": assertion.get("engine", {}).get("description", "")[:200],
+                        "family": assertion.get("metadata", {}).get(
+                            "malware_family", "Malicious"
+                        ),
+                        "engine_info": assertion.get("engine", {}).get(
+                            "description", ""
+                        )[:200],
                     }
                 )
         return detections

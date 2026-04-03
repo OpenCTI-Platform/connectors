@@ -74,7 +74,9 @@ def record_hash_search(name, sha256):
         try:
             results = api.search(sha256)
             for r in results:
-                print(f"  Found: polyscore={r.polyscore}, assertions={len(r.assertions)}, family={getattr(r, 'metadata', None) and r.metadata.polyunite and r.metadata.polyunite.get('malware_family', '?')}")
+                print(
+                    f"  Found: polyscore={r.polyscore}, assertions={len(r.assertions)}, family={getattr(r, 'metadata', None) and r.metadata.polyunite and r.metadata.polyunite.get('malware_family', '?')}"
+                )
                 break
         except Exception as e:
             print(f"  Result: {e}")
@@ -95,7 +97,9 @@ def record_scan_submit():
         for attempt in range(60):
             result = api.lookup(instance.id)
             if result.failed or result.window_closed:
-                print(f"  Complete after {attempt + 1} polls. failed={result.failed}, window_closed={result.window_closed}")
+                print(
+                    f"  Complete after {attempt + 1} polls. failed={result.failed}, window_closed={result.window_closed}"
+                )
                 break
             time.sleep(5)
         else:
@@ -159,16 +163,39 @@ if __name__ == "__main__":
     recordings = [
         ("sandbox_providers", record_sandbox_providers),
         ("hash_search_eicar", lambda: record_hash_search("eicar", EICAR_SHA256)),
-        ("hash_search_wannacry", lambda: record_hash_search("wannacry", WANNACRY_SHA256)),
+        (
+            "hash_search_wannacry",
+            lambda: record_hash_search("wannacry", WANNACRY_SHA256),
+        ),
         ("hash_search_sample", lambda: record_hash_search("sample", SAMPLE_SHA256)),
-        ("hash_search_rhadamanthys", lambda: record_hash_search("rhadamanthys", RHADAMANTHYS_SHA256)),
+        (
+            "hash_search_rhadamanthys",
+            lambda: record_hash_search("rhadamanthys", RHADAMANTHYS_SHA256),
+        ),
         ("scan_submit", record_scan_submit),
         ("sandbox_submit_eicar", record_sandbox_submit_eicar),
-        ("sandbox_latest_wannacry_cape", lambda: record_sandbox_latest("wannacry_cape", WANNACRY_SHA256, "cape")),
-        ("sandbox_latest_wannacry_triage", lambda: record_sandbox_latest("wannacry_triage", WANNACRY_SHA256, "triage")),
-        ("sandbox_latest_sample_cape", lambda: record_sandbox_latest("sample_cape", SAMPLE_SHA256, "cape")),
-        ("sandbox_latest_rhadamanthys_cape", lambda: record_sandbox_latest("rhadamanthys_cape", RHADAMANTHYS_SHA256, "cape")),
-        ("sandbox_latest_eicar_cape", lambda: record_sandbox_latest("eicar_cape", EICAR_SHA256, "cape")),
+        (
+            "sandbox_latest_wannacry_cape",
+            lambda: record_sandbox_latest("wannacry_cape", WANNACRY_SHA256, "cape"),
+        ),
+        (
+            "sandbox_latest_wannacry_triage",
+            lambda: record_sandbox_latest("wannacry_triage", WANNACRY_SHA256, "triage"),
+        ),
+        (
+            "sandbox_latest_sample_cape",
+            lambda: record_sandbox_latest("sample_cape", SAMPLE_SHA256, "cape"),
+        ),
+        (
+            "sandbox_latest_rhadamanthys_cape",
+            lambda: record_sandbox_latest(
+                "rhadamanthys_cape", RHADAMANTHYS_SHA256, "cape"
+            ),
+        ),
+        (
+            "sandbox_latest_eicar_cape",
+            lambda: record_sandbox_latest("eicar_cape", EICAR_SHA256, "cape"),
+        ),
     ]
 
     for name, func in recordings:

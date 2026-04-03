@@ -2,16 +2,14 @@
 
 import io
 import time
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-
 from connector.polyswarm_client import (
     CircuitBreaker,
     PolySwarmAPIError,
     PolySwarmClient,
-    _HTTP_ERROR_MAP,
 )
 
 # ── CircuitBreaker ──────────────────────────────────────────────────────────
@@ -189,7 +187,9 @@ class TestHTTPErrorMapping:
         func = MagicMock(side_effect=exc)
         with pytest.raises(PolySwarmAPIError) as exc_info:
             client._retry_sdk_call(func, operation="test")
-        assert str(status_code) in exc_info.value.detail or "HTTP" in exc_info.value.detail
+        assert (
+            str(status_code) in exc_info.value.detail or "HTTP" in exc_info.value.detail
+        )
 
     def test_429_raises_rate_limit(self, client):
         resp = MagicMock()
@@ -253,7 +253,9 @@ class TestPDFGeneration:
         finished = MagicMock(state="SUCCEEDED", url="https://example.com/report.pdf")
         client.api.report_create = MagicMock(return_value=report)
         client.api.report_wait_for = MagicMock(return_value=finished)
-        client._session.get.return_value = MagicMock(status_code=200, content=b"PDF-DATA")
+        client._session.get.return_value = MagicMock(
+            status_code=200, content=b"PDF-DATA"
+        )
 
         result = client.generate_pdf("scan-123", "scan")
         assert result == b"PDF-DATA"
@@ -293,7 +295,9 @@ class TestLLMReport:
     def test_collect_llm_report_success(self, client):
         task = MagicMock(state="SUCCEEDED", url="https://example.com/llm.txt")
         client.api.llm_report_get = MagicMock(return_value=task)
-        client._session.get.return_value = MagicMock(status_code=200, text="LLM analysis...")
+        client._session.get.return_value = MagicMock(
+            status_code=200, text="LLM analysis..."
+        )
 
         result = client.collect_llm_report("llm-task-1", timeout=5, poll_interval=0.01)
         assert result == "LLM analysis..."

@@ -1,6 +1,5 @@
 """Unit tests for SandboxProcessor."""
 
-import pytest
 from connector.sandbox_processor import SandboxProcessor
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -119,27 +118,41 @@ class TestTriageProcessing:
         assert result["family"] == "Rhadamanthys"
 
     def test_ttps_extracted(self):
-        result = SandboxProcessor.process(_triage_result(ttps=["T1486", "T1490", "T1082"]))
+        result = SandboxProcessor.process(
+            _triage_result(ttps=["T1486", "T1490", "T1082"])
+        )
         assert "T1486" in result["ttps"]
         assert "T1490" in result["ttps"]
 
     def test_domains_extracted(self):
-        result = SandboxProcessor.process(_triage_result(domains=["evil.com", "bad.net"]))
-        domain_values = [d.get("domain") if isinstance(d, dict) else d for d in result["domains"]]
+        result = SandboxProcessor.process(
+            _triage_result(domains=["evil.com", "bad.net"])
+        )
+        domain_values = [
+            d.get("domain") if isinstance(d, dict) else d for d in result["domains"]
+        ]
         assert "evil.com" in domain_values
 
     def test_signatures_extracted(self):
-        result = SandboxProcessor.process(_triage_result(signatures=["process_injection", "registry_modification"]))
+        result = SandboxProcessor.process(
+            _triage_result(signatures=["process_injection", "registry_modification"])
+        )
         assert "process_injection" in result["signatures"]
 
     def test_benign_domain_filtered(self):
-        result = SandboxProcessor.process(_triage_result(domains=["microsoft.com", "windowsupdate.com", "evil.c2.io"]))
-        domain_values = [d.get("domain") if isinstance(d, dict) else d for d in result["domains"]]
+        result = SandboxProcessor.process(
+            _triage_result(domains=["microsoft.com", "windowsupdate.com", "evil.c2.io"])
+        )
+        domain_values = [
+            d.get("domain") if isinstance(d, dict) else d for d in result["domains"]
+        ]
         assert "microsoft.com" not in domain_values
         assert "evil.c2.io" in domain_values
 
     def test_benign_ip_filtered(self):
-        result = SandboxProcessor.process(_triage_result(ips=["192.168.1.1", "10.0.0.1", "203.0.113.5"]))
+        result = SandboxProcessor.process(
+            _triage_result(ips=["192.168.1.1", "10.0.0.1", "203.0.113.5"])
+        )
         assert "192.168.1.1" not in result["ips"]
         assert "10.0.0.1" not in result["ips"]
         assert "203.0.113.5" in result["ips"]
@@ -164,7 +177,9 @@ class TestCapeProcessing:
         assert "T1059.001" in result["ttps"]
 
     def test_signatures_extracted(self):
-        result = SandboxProcessor.process(_cape_result(signatures=["process_hollowing", "antiav"]))
+        result = SandboxProcessor.process(
+            _cape_result(signatures=["process_hollowing", "antiav"])
+        )
         assert "process_hollowing" in result["signatures"]
 
     def test_cape_malscore_field_present(self):
@@ -174,7 +189,9 @@ class TestCapeProcessing:
     def test_network_ips_extracted(self):
         result = SandboxProcessor.process(_cape_result(ips=["203.0.113.20"]))
         # IPs come through hosts or c2_candidates
-        all_ips = result.get("ips", []) + [c.get("ip") for c in result.get("c2_candidates", []) if isinstance(c, dict)]
+        all_ips = result.get("ips", []) + [
+            c.get("ip") for c in result.get("c2_candidates", []) if isinstance(c, dict)
+        ]
         assert "203.0.113.20" in all_ips
 
 
@@ -193,7 +210,9 @@ class TestBenignFiltering:
 
     def test_public_ip_not_filtered(self):
         assert not SandboxProcessor._is_benign_ip("203.0.113.1")
-        assert not SandboxProcessor._is_benign_ip("8.8.8.8") or True  # DNS — may be filtered, that's fine
+        assert (
+            not SandboxProcessor._is_benign_ip("8.8.8.8") or True
+        )  # DNS — may be filtered, that's fine
 
     def test_benign_domain_filtered(self):
         for d in ("microsoft.com", "windowsupdate.com", "ocsp.digicert.com"):

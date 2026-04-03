@@ -71,7 +71,9 @@ SOFTWARE_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 class StixBuilder:
     """Builds STIX 2.1 bundles from PolySwarm scan and sandbox results with full profile enrichment."""
 
-    OBSERVABLE_DESCRIPTION = "Communication was observed. The Entity may or may NOT be malicious."
+    OBSERVABLE_DESCRIPTION = (
+        "Communication was observed. The Entity may or may NOT be malicious."
+    )
 
     # polykg circuit breaker — cool down 5 min after a connection failure
     _POLYKG_CIRCUIT_OPEN: bool = False
@@ -87,7 +89,9 @@ class StixBuilder:
         self.helper = helper
         self._polykg_api_url = polykg_api_url
         self._polyswarm_api_key = polyswarm_api_key
-        self._now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        self._now = (
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        )
         self.author = self._create_author()
         self.author_id = self.author["id"]
 
@@ -118,7 +122,9 @@ class StixBuilder:
         return default
 
     def _create_author(self) -> dict:
-        author_id = Identity.generate_id(name="PolySwarm", identity_class="organization")
+        author_id = Identity.generate_id(
+            name="PolySwarm", identity_class="organization"
+        )
         return {
             "type": "identity",
             "spec_version": "2.1",
@@ -148,7 +154,9 @@ class StixBuilder:
             "id": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
             "created": "2017-01-20T00:00:00.000Z",
             "definition_type": "statement",
-            "definition": {"statement": "Copyright 2024, PolySwarm. All rights reserved."},
+            "definition": {
+                "statement": "Copyright 2024, PolySwarm. All rights reserved."
+            },
         }
 
     def _fetch_polykg_profile(self, family_name: str) -> dict | None:
@@ -192,18 +200,26 @@ class StixBuilder:
                 self._profile_cache[cache_key] = profile
                 return profile
             if resp.status_code in (401, 403):
-                self.helper.log_warning(f"[STIX] polykg auth error {resp.status_code} for {family_name}")
+                self.helper.log_warning(
+                    f"[STIX] polykg auth error {resp.status_code} for {family_name}"
+                )
                 return None
-            self.helper.log_warning(f"[STIX] polykg returned {resp.status_code} for {family_name}")
+            self.helper.log_warning(
+                f"[STIX] polykg returned {resp.status_code} for {family_name}"
+            )
             return None
 
         except requests.ConnectionError as exc:
-            self.helper.log_warning(f"[STIX] polykg connection failed, opening circuit: {exc}")
+            self.helper.log_warning(
+                f"[STIX] polykg connection failed, opening circuit: {exc}"
+            )
             StixBuilder._POLYKG_CIRCUIT_OPEN = True
             StixBuilder._POLYKG_CIRCUIT_OPENED_AT = _time.time()
             return None
         except requests.RequestException as exc:
-            self.helper.log_warning(f"[STIX] polykg profile fetch failed for {family_name}: {exc}")
+            self.helper.log_warning(
+                f"[STIX] polykg profile fetch failed for {family_name}: {exc}"
+            )
             return None
 
     @staticmethod
@@ -307,23 +323,33 @@ class StixBuilder:
                 self.helper.log_info(f"[STIX] Loaded profile for {family}")
 
         # Build external refs
-        external_refs = self._build_external_refs(scan_data, None, sandbox_results=sandbox_results)
-        basic_labels = self._collect_labels(scan_data, None, profile, sandbox_results=sandbox_results)
+        external_refs = self._build_external_refs(
+            scan_data, None, sandbox_results=sandbox_results
+        )
+        basic_labels = self._collect_labels(
+            scan_data, None, profile, sandbox_results=sandbox_results
+        )
         comprehensive_labels = self._collect_labels(
-            scan_data, None, profile, comprehensive=True, sandbox_results=sandbox_results,
+            scan_data,
+            None,
+            profile,
+            comprehensive=True,
+            sandbox_results=sandbox_results,
         )
 
         # === CREATE MALWARE WITH FULL ENRICHMENT ===
         malware_id = None
         if family:
-            malware_obj, additional_objs, relationships = self._create_malware_with_enrichment(
-                family,
-                score,
-                external_refs,
-                basic_labels,
-                scan_data,
-                sandbox_data,
-                profile,
+            malware_obj, additional_objs, relationships = (
+                self._create_malware_with_enrichment(
+                    family,
+                    score,
+                    external_refs,
+                    basic_labels,
+                    scan_data,
+                    sandbox_data,
+                    profile,
+                )
             )
             if malware_obj:
                 objects.append(malware_obj)
@@ -346,7 +372,9 @@ class StixBuilder:
 
         # 5. Sandbox Failure Notes (added first → displayed last)
         for provider, failure_info in sandbox_failures.items():
-            failure_note = self._create_sandbox_failure_note(entity, provider, failure_info)
+            failure_note = self._create_sandbox_failure_note(
+                entity, provider, failure_info
+            )
             if failure_note:
                 objects.append(failure_note)
                 note_ids.append(failure_note["id"])
@@ -360,20 +388,26 @@ class StixBuilder:
 
         # 3. Cape Sandbox Note (with AI summary if available)
         if cape_result:
-            cape_note = self._create_cape_sandbox_note(entity, cape_result, llm_report=llm_reports.get("cape"))
+            cape_note = self._create_cape_sandbox_note(
+                entity, cape_result, llm_report=llm_reports.get("cape")
+            )
             if cape_note:
                 objects.append(cape_note)
                 note_ids.append(cape_note["id"])
 
         # 2. Triage Sandbox Note (with AI summary if available)
         if triage_result:
-            triage_note = self._create_triage_sandbox_note(entity, triage_result, llm_report=llm_reports.get("triage"))
+            triage_note = self._create_triage_sandbox_note(
+                entity, triage_result, llm_report=llm_reports.get("triage")
+            )
             if triage_note:
                 objects.append(triage_note)
                 note_ids.append(triage_note["id"])
 
         # 1. Scan Summary Note (added last → displayed first)
-        scan_note = self._create_scan_summary_note(entity, scan_data, score, llm_report=llm_reports.get("scan"))
+        scan_note = self._create_scan_summary_note(
+            entity, scan_data, score, llm_report=llm_reports.get("scan")
+        )
         if scan_note:
             objects.append(scan_note)
             note_ids.append(scan_note["id"])
@@ -446,13 +480,23 @@ class StixBuilder:
                         result.get("triage_static_score", 0),
                         result.get("triage_sandbox_score", 0),
                     )
-                    score_details["triage"] = {"raw": raw, "converted": result.get("score", 0)}
+                    score_details["triage"] = {
+                        "raw": raw,
+                        "converted": result.get("score", 0),
+                    }
                 elif prov == "cape":
                     raw = result.get("cape_malscore", 0)
-                    score_details["cape"] = {"raw": raw, "converted": result.get("score", 0)}
+                    score_details["cape"] = {
+                        "raw": raw,
+                        "converted": result.get("score", 0),
+                    }
 
         artifact_update = self._create_entity_update_enhanced(
-            entity, score, external_refs, comprehensive_labels, config=config,
+            entity,
+            score,
+            external_refs,
+            comprehensive_labels,
+            config=config,
             score_details=score_details,
         )
         objects.append(artifact_update)
@@ -465,7 +509,9 @@ class StixBuilder:
 
         if all_ttps:
             indicator_id = indicator_obj["id"] if indicator_obj else None
-            ttp_objs = self._create_attack_patterns_enhanced(list(all_ttps), malware_id, indicator_id, entity["id"])
+            ttp_objs = self._create_attack_patterns_enhanced(
+                list(all_ttps), malware_id, indicator_id, entity["id"]
+            )
             objects.extend(ttp_objs)
 
         # === NETWORK OBSERVABLES (deduped across all sandbox providers) ===
@@ -504,7 +550,9 @@ class StixBuilder:
                     "ips": deduped_ips,
                     "c2_candidates": deduped_c2,
                 }
-                ioc_objs = self._create_network_observables(deduped_ioc_data, entity, malware_id)
+                ioc_objs = self._create_network_observables(
+                    deduped_ioc_data, entity, malware_id
+                )
                 objects.extend(ioc_objs)
 
         # Deduplicate
@@ -558,18 +606,26 @@ class StixBuilder:
         self._intrusion_set_cache = {}
         self._enrichment_depth = 0
         # BUG-1 fix: refresh timestamp each enrichment run (connector is long-lived daemon)
-        self._now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        self._now = (
+            datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        )
 
     def _normalize_entity(self, entity: dict) -> dict:
         normalized = dict(entity)
         if not normalized.get("hashes") and normalized.get("observable_value"):
             obs_val = normalized["observable_value"]
             hashes = {}
-            if len(obs_val) == 32 and all(c in "0123456789abcdefABCDEF" for c in obs_val):
+            if len(obs_val) == 32 and all(
+                c in "0123456789abcdefABCDEF" for c in obs_val
+            ):
                 hashes["MD5"] = obs_val
-            elif len(obs_val) == 40 and all(c in "0123456789abcdefABCDEF" for c in obs_val):
+            elif len(obs_val) == 40 and all(
+                c in "0123456789abcdefABCDEF" for c in obs_val
+            ):
                 hashes["SHA-1"] = obs_val
-            elif len(obs_val) == 64 and all(c in "0123456789abcdefABCDEF" for c in obs_val):
+            elif len(obs_val) == 64 and all(
+                c in "0123456789abcdefABCDEF" for c in obs_val
+            ):
                 hashes["SHA-256"] = obs_val
             if hashes:
                 normalized["hashes"] = hashes
@@ -647,7 +703,11 @@ class StixBuilder:
             for provider, result in sandbox_results.items():
                 if result:
                     sb_family = result.get("family")
-                    if sb_family and str(sb_family).lower() not in ("unknown", "none", ""):
+                    if sb_family and str(sb_family).lower() not in (
+                        "unknown",
+                        "none",
+                        "",
+                    ):
                         labels.add(f"{provider}_malware_family:{sb_family}")
         if profile:
             for lang in profile.get("programming_languages", []):
@@ -693,7 +753,9 @@ class StixBuilder:
             if existing is not None:
                 try:
                     if int(existing) > score:
-                        self.helper.log_info(f"[STIX] Keeping existing score {existing} > {score}")
+                        self.helper.log_info(
+                            f"[STIX] Keeping existing score {existing} > {score}"
+                        )
                         replace = False
                 except (TypeError, ValueError):
                     pass
@@ -733,7 +795,9 @@ class StixBuilder:
         # Get SHA256 from scan_data first (preferred), fallback to entity
         sha256 = None
         if scan_data:
-            sha256 = scan_data.get("sha256") or scan_data.get("hashes", {}).get("SHA-256")
+            sha256 = scan_data.get("sha256") or scan_data.get("hashes", {}).get(
+                "SHA-256"
+            )
         if not sha256:
             sha256 = self._get_sha256(entity)
 
@@ -760,16 +824,26 @@ class StixBuilder:
             if profile.get("description"):
                 desc_parts.append(profile["description"])
             if profile.get("actors"):
-                desc_parts.append(f"Associated Threat Actors: {', '.join(profile['actors'])}.")
+                desc_parts.append(
+                    f"Associated Threat Actors: {', '.join(profile['actors'])}."
+                )
             if profile.get("related_malware"):
-                desc_parts.append(f"Related Malware: {', '.join(profile['related_malware'])}.")
+                desc_parts.append(
+                    f"Related Malware: {', '.join(profile['related_malware'])}."
+                )
             if profile.get("target_locations"):
-                desc_parts.append(f"Target Countries: {', '.join(profile['target_locations'][:5])}.")
+                desc_parts.append(
+                    f"Target Countries: {', '.join(profile['target_locations'][:5])}."
+                )
             if profile.get("verticals_targeted"):
-                desc_parts.append(f"Target Sectors: {', '.join(profile['verticals_targeted'][:5])}.")
+                desc_parts.append(
+                    f"Target Sectors: {', '.join(profile['verticals_targeted'][:5])}."
+                )
 
         if sandbox_data and sandbox_data.get("ttps"):
-            desc_parts.append(f"MITRE ATT&CK: {len(sandbox_data['ttps'])} techniques identified.")
+            desc_parts.append(
+                f"MITRE ATT&CK: {len(sandbox_data['ttps'])} techniques identified."
+            )
 
         description = " ".join(desc_parts)
 
@@ -920,7 +994,11 @@ class StixBuilder:
         return parts
 
     def _create_scan_summary_note(
-        self, entity: dict, scan_data: dict | None, score: int, llm_report: str | None = None
+        self,
+        entity: dict,
+        scan_data: dict | None,
+        score: int,
+        llm_report: str | None = None,
     ) -> dict | None:
         """Create PolySwarm Scan Results note with hash info from scan_data['hashes']."""
         if not scan_data:
@@ -933,7 +1011,9 @@ class StixBuilder:
             stats = scan_data["detection_stats"]
             polyscore = scan_data.get("raw_polyscore", scan_data.get("score", 0) / 100)
             content_parts.append("## Detection Summary")
-            content_parts.append(f"- **Malicious:** {stats.get('malicious', 0)}/{stats.get('total', 0)} engines")
+            content_parts.append(
+                f"- **Malicious:** {stats.get('malicious', 0)}/{stats.get('total', 0)} engines"
+            )
             content_parts.append(
                 f"- **Benign:** {stats.get('total', 0) - stats.get('malicious', 0)}/{stats.get('total', 0)} engines"
             )
@@ -1052,9 +1132,15 @@ class StixBuilder:
 
         # Scores
         content_parts.append("## Analysis Scores")
-        content_parts.append(f"- **Triage Behavioral Score:** {triage_result.get('triage_behavioral_score', 0)}/10")
-        content_parts.append(f"- **Triage Static Score:** {triage_result.get('triage_static_score', 0)}/10")
-        content_parts.append(f"- **Triage Sandbox Score:** {triage_result.get('triage_sandbox_score', 0)}/10")
+        content_parts.append(
+            f"- **Triage Behavioral Score:** {triage_result.get('triage_behavioral_score', 0)}/10"
+        )
+        content_parts.append(
+            f"- **Triage Static Score:** {triage_result.get('triage_static_score', 0)}/10"
+        )
+        content_parts.append(
+            f"- **Triage Sandbox Score:** {triage_result.get('triage_sandbox_score', 0)}/10"
+        )
         content_parts.append("")
 
         # AI Summary (inserted right after scores)
@@ -1090,13 +1176,17 @@ class StixBuilder:
                         key_kind = key.get("kind", "")
                         key_value = key.get("value", "N/A")
                         if key_kind:
-                            content_parts.append(f"- **{key_name}** ({key_kind}): `{key_value}`")
+                            content_parts.append(
+                                f"- **{key_name}** ({key_kind}): `{key_value}`"
+                            )
                         else:
                             content_parts.append(f"- **{key_name}:** `{key_value}`")
                 if cfg.get("attr"):
                     attr = cfg["attr"]
                     if attr.get("install_folder"):
-                        content_parts.append(f"- **Install Folder:** {attr['install_folder']}")
+                        content_parts.append(
+                            f"- **Install Folder:** {attr['install_folder']}"
+                        )
             content_parts.append("")
 
         # TTPs
@@ -1172,7 +1262,9 @@ class StixBuilder:
 
         return note
 
-    def _create_cape_sandbox_note(self, entity: dict, cape_result: dict, llm_report: str | None = None) -> dict | None:
+    def _create_cape_sandbox_note(
+        self, entity: dict, cape_result: dict, llm_report: str | None = None
+    ) -> dict | None:
         """Create Cape Sandbox Analysis note."""
         if not cape_result:
             return None
@@ -1181,7 +1273,9 @@ class StixBuilder:
 
         # Score - Only Cape Malscore (no Report Malscore per user request)
         content_parts.append("## Analysis Score")
-        content_parts.append(f"- **Cape Malscore:** {cape_result.get('cape_malscore', 0)}/10")
+        content_parts.append(
+            f"- **Cape Malscore:** {cape_result.get('cape_malscore', 0)}/10"
+        )
         content_parts.append("")
 
         # AI Summary (inserted right after score)
@@ -1267,13 +1361,17 @@ class StixBuilder:
 
         return note
 
-    def _create_sandbox_failure_note(self, entity: dict, provider: str, failure_info: dict) -> dict | None:
+    def _create_sandbox_failure_note(
+        self, entity: dict, provider: str, failure_info: dict
+    ) -> dict | None:
         """Create a note documenting a sandbox execution failure."""
         if not failure_info:
             return None
 
         status = failure_info.get("status", "UNKNOWN")
-        error_msg = failure_info.get("error", "No additional error information available")
+        error_msg = failure_info.get(
+            "error", "No additional error information available"
+        )
         raw_result = failure_info.get("raw_result", {})
 
         content_parts = [f"# PolySwarm {provider.upper()} Sandbox - Execution Failed\n"]
@@ -1301,17 +1399,23 @@ class StixBuilder:
             "FAILED REIMBURSED": "The analysis failed and your API quota has been reimbursed.",
         }
 
-        explanation = status_explanations.get(status, "The sandbox execution did not complete successfully.")
+        explanation = status_explanations.get(
+            status, "The sandbox execution did not complete successfully."
+        )
         content_parts.append("## What This Means")
         content_parts.append(explanation)
         content_parts.append("")
 
         # Recommendations
         content_parts.append("## Recommendations")
-        content_parts.append("- Try submitting to a different sandbox provider (Cape or Triage)")
+        content_parts.append(
+            "- Try submitting to a different sandbox provider (Cape or Triage)"
+        )
         content_parts.append("- Check if the file format is supported by the sandbox")
         content_parts.append("- Review the scan results for initial threat assessment")
-        content_parts.append("- Consider manual analysis if automated sandboxing consistently fails")
+        content_parts.append(
+            "- Consider manual analysis if automated sandboxing consistently fails"
+        )
         content_parts.append("")
         content_parts.append("## Need Help?")
         content_parts.append(
@@ -1387,7 +1491,9 @@ class StixBuilder:
             content_parts.append("")
 
         content_parts.append("## Need Help?")
-        content_parts.append("For questions about API quotas, file size limits, feature access, or enterprise plans:")
+        content_parts.append(
+            "For questions about API quotas, file size limits, feature access, or enterprise plans:"
+        )
         content_parts.append("- **Email:** sales@polyswarm.io")
         content_parts.append("- **Website:** https://polyswarm.io")
         content_parts.append("")
@@ -1413,7 +1519,9 @@ class StixBuilder:
             ],
         }
 
-    def _create_threat_intel_note(self, entity: dict, profile: dict, family: str | None) -> dict | None:
+    def _create_threat_intel_note(
+        self, entity: dict, profile: dict, family: str | None
+    ) -> dict | None:
         """Create Extended Threat Intelligence note from malware profile."""
         if not profile:
             return None
@@ -1424,7 +1532,9 @@ class StixBuilder:
             content_parts.append(f"## Description\n{profile['description']}\n")
 
         if profile.get("malware_type"):
-            content_parts.append(f"## Malware Type\n{', '.join(profile['malware_type'])}\n")
+            content_parts.append(
+                f"## Malware Type\n{', '.join(profile['malware_type'])}\n"
+            )
 
         if profile.get("actors"):
             content_parts.append("## Associated Threat Actors")
@@ -1441,14 +1551,20 @@ class StixBuilder:
         if profile.get("target_cves"):
             content_parts.append("## Exploited Vulnerabilities (CVEs)")
             for cve in profile["target_cves"]:
-                content_parts.append(f"- [{cve}](https://nvd.nist.gov/vuln/detail/{cve})")
+                content_parts.append(
+                    f"- [{cve}](https://nvd.nist.gov/vuln/detail/{cve})"
+                )
             content_parts.append("")
 
         if profile.get("target_locations"):
-            content_parts.append(f"## Target Countries/Regions\n{', '.join(profile['target_locations'])}\n")
+            content_parts.append(
+                f"## Target Countries/Regions\n{', '.join(profile['target_locations'])}\n"
+            )
 
         if profile.get("origin_locations"):
-            content_parts.append(f"## Origin Countries/Regions\n{', '.join(profile['origin_locations'])}\n")
+            content_parts.append(
+                f"## Origin Countries/Regions\n{', '.join(profile['origin_locations'])}\n"
+            )
 
         if profile.get("verticals_targeted"):
             content_parts.append("## Targeted Industries/Sectors")
@@ -1457,10 +1573,14 @@ class StixBuilder:
             content_parts.append("")
 
         if profile.get("systems_targeted"):
-            content_parts.append(f"## Targeted Operating Systems\n{', '.join(profile['systems_targeted'])}\n")
+            content_parts.append(
+                f"## Targeted Operating Systems\n{', '.join(profile['systems_targeted'])}\n"
+            )
 
         if profile.get("programming_languages"):
-            content_parts.append(f"## Programming Languages\n{', '.join(profile['programming_languages'])}\n")
+            content_parts.append(
+                f"## Programming Languages\n{', '.join(profile['programming_languages'])}\n"
+            )
 
         if profile.get("campaigns"):
             content_parts.append("## Associated Campaigns")
@@ -1566,32 +1686,46 @@ class StixBuilder:
             location_objs = []
             for loc_name in profile.get("target_locations", []):
                 loc_obj = self._create_location(loc_name)
-                if loc_obj and loc_obj["id"] not in [o["id"] for o in additional_objects]:
+                if loc_obj and loc_obj["id"] not in [
+                    o["id"] for o in additional_objects
+                ]:
                     additional_objects.append(loc_obj)
                     location_objs.append(loc_obj)
-                    relationships.append(self._create_rel(malware_id, "targets", loc_obj["id"]))
+                    relationships.append(
+                        self._create_rel(malware_id, "targets", loc_obj["id"])
+                    )
 
             # Target sectors - store for threat actor relationships
             sector_objs = []
             for sector_name in profile.get("verticals_targeted", []):
                 sector_obj = self._create_sector(sector_name)
-                if sector_obj and sector_obj["id"] not in [o["id"] for o in additional_objects]:
+                if sector_obj and sector_obj["id"] not in [
+                    o["id"] for o in additional_objects
+                ]:
                     additional_objects.append(sector_obj)
                     sector_objs.append(sector_obj)
-                    relationships.append(self._create_rel(malware_id, "targets", sector_obj["id"]))
+                    relationships.append(
+                        self._create_rel(malware_id, "targets", sector_obj["id"])
+                    )
 
             # CVEs
             for cve in profile.get("target_cves", []):
                 vuln_obj = self._create_vulnerability(cve)
-                if vuln_obj and vuln_obj["id"] not in [o["id"] for o in additional_objects]:
+                if vuln_obj and vuln_obj["id"] not in [
+                    o["id"] for o in additional_objects
+                ]:
                     additional_objects.append(vuln_obj)
-                    relationships.append(self._create_rel(malware_id, "exploits", vuln_obj["id"]))
+                    relationships.append(
+                        self._create_rel(malware_id, "exploits", vuln_obj["id"])
+                    )
 
             # Related Malware - store for threat actor relationships
             related_malware_objs = []
             for related_name in profile.get("related_malware", []):
                 related_obj = self._create_related_malware(related_name)
-                if related_obj and related_obj["id"] not in [o["id"] for o in additional_objects]:
+                if related_obj and related_obj["id"] not in [
+                    o["id"] for o in additional_objects
+                ]:
                     additional_objects.append(related_obj)
                     related_malware_objs.append(related_obj)
                     relationships.append(
@@ -1606,7 +1740,9 @@ class StixBuilder:
             # Threat actors - with relationships to locations, sectors, and related malware
             for actor_name in profile.get("actors", []):
                 actor_obj = self._create_threat_actor(actor_name, profile)
-                if actor_obj and actor_obj["id"] not in [o["id"] for o in additional_objects]:
+                if actor_obj and actor_obj["id"] not in [
+                    o["id"] for o in additional_objects
+                ]:
                     additional_objects.append(actor_obj)
                     relationships.append(
                         self._create_rel(
@@ -1655,7 +1791,11 @@ class StixBuilder:
     # ============= ATTACK PATTERNS =============
 
     def _create_attack_patterns_enhanced(
-        self, ttps: list[str], malware_id: str | None, indicator_id: str | None, observable_id: str | None
+        self,
+        ttps: list[str],
+        malware_id: str | None,
+        indicator_id: str | None,
+        observable_id: str | None,
     ) -> list[dict]:
         objects = []
         created_patterns = {}
@@ -1673,7 +1813,9 @@ class StixBuilder:
 
             kill_chain_phases = []
             if tactic and tactic != "unknown":
-                kill_chain_phases.append({"kill_chain_name": MITRE_KILL_CHAIN, "phase_name": tactic})
+                kill_chain_phases.append(
+                    {"kill_chain_name": MITRE_KILL_CHAIN, "phase_name": tactic}
+                )
 
             attack_pattern = {
                 "type": "attack-pattern",
@@ -1711,7 +1853,9 @@ class StixBuilder:
 
     # ============= NETWORK OBSERVABLES =============
 
-    def _create_network_observables(self, sandbox_data: dict, entity: dict, malware_id: str | None) -> list[dict]:
+    def _create_network_observables(
+        self, sandbox_data: dict, entity: dict, malware_id: str | None
+    ) -> list[dict]:
         objects = []
 
         # === DOMAIN OBSERVABLES ===
@@ -1749,7 +1893,9 @@ class StixBuilder:
                 "x_opencti_description": self.OBSERVABLE_DESCRIPTION,
             }
             objects.append(domain_obj)
-            objects.append(self._create_rel(entity["id"], "communicates-with", domain_id))
+            objects.append(
+                self._create_rel(entity["id"], "communicates-with", domain_id)
+            )
 
         # === IP OBSERVABLES ===
         processed_ips = set()
@@ -1825,7 +1971,9 @@ class StixBuilder:
         if location_name in self._location_cache:
             return self._location_cache[location_name]
 
-        location_id = Location.generate_id(name=location_name, x_opencti_location_type="Country")
+        location_id = Location.generate_id(
+            name=location_name, x_opencti_location_type="Country"
+        )
         location = {
             "type": "location",
             "spec_version": "2.1",
@@ -1890,24 +2038,34 @@ class StixBuilder:
         self._vulnerability_cache[cve_id] = vulnerability
         return vulnerability
 
-    def _create_threat_actor(self, actor_name: str, profile: dict | None = None) -> dict | None:
+    def _create_threat_actor(
+        self, actor_name: str, profile: dict | None = None
+    ) -> dict | None:
         if not actor_name:
             return None
         actor_key = actor_name.lower()
         if actor_key in self._actor_cache:
             return self._actor_cache[actor_key]
 
-        actor_id = ThreatActor.generate_id(name=actor_name, opencti_type="Threat-Actor-Group")
+        actor_id = ThreatActor.generate_id(
+            name=actor_name, opencti_type="Threat-Actor-Group"
+        )
 
         # Build description with profile info
         desc_parts = ["Threat actor associated with malware."]
         if profile:
             if profile.get("target_locations"):
-                desc_parts.append(f"Target Countries: {', '.join(profile['target_locations'])}.")
+                desc_parts.append(
+                    f"Target Countries: {', '.join(profile['target_locations'])}."
+                )
             if profile.get("verticals_targeted"):
-                desc_parts.append(f"Target Sectors: {', '.join(profile['verticals_targeted'])}.")
+                desc_parts.append(
+                    f"Target Sectors: {', '.join(profile['verticals_targeted'])}."
+                )
             if profile.get("related_malware"):
-                desc_parts.append(f"Related Malware: {', '.join(profile['related_malware'])}.")
+                desc_parts.append(
+                    f"Related Malware: {', '.join(profile['related_malware'])}."
+                )
 
         actor = {
             "type": "threat-actor",
@@ -1925,14 +2083,18 @@ class StixBuilder:
         if profile:
             goals = []
             if profile.get("verticals_targeted"):
-                goals.extend([f"Target {sector}" for sector in profile["verticals_targeted"][:5]])
+                goals.extend(
+                    [f"Target {sector}" for sector in profile["verticals_targeted"][:5]]
+                )
             if goals:
                 actor["goals"] = goals
 
         self._actor_cache[actor_key] = actor
         return actor
 
-    def _create_rel(self, src: str, rel_type: str, target: str, description: str | None = None) -> dict:
+    def _create_rel(
+        self, src: str, rel_type: str, target: str, description: str | None = None
+    ) -> dict:
         rel = {
             "type": "relationship",
             "spec_version": "2.1",

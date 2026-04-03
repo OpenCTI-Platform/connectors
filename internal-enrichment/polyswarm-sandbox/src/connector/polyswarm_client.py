@@ -11,11 +11,10 @@ import time
 from typing import Any
 
 import requests
+from connector.polyswarm import PolyswarmAPI
 from polyswarm_api.exceptions import NotFoundException
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
-
-from connector.polyswarm import PolyswarmAPI
 
 
 class CircuitBreaker:
@@ -35,7 +34,9 @@ class CircuitBreaker:
     OPEN = "OPEN"
     HALF_OPEN = "HALF_OPEN"
 
-    def __init__(self, failure_threshold: int = 5, cooldown_seconds: float = 300.0) -> None:
+    def __init__(
+        self, failure_threshold: int = 5, cooldown_seconds: float = 300.0
+    ) -> None:
         self._lock = threading.Lock()
         self.failure_threshold = failure_threshold
         self.cooldown_seconds = cooldown_seconds
@@ -103,7 +104,9 @@ class PolySwarmAPIError(Exception):
         recommendations: List of suggested actions for the user
     """
 
-    def __init__(self, category: str, detail: str, recommendations: list | None = None) -> None:
+    def __init__(
+        self, category: str, detail: str, recommendations: list | None = None
+    ) -> None:
         self.category = category
         self.detail = detail
         self.recommendations = recommendations or [
@@ -184,9 +187,13 @@ class PolySwarmClient:
     @staticmethod
     def is_sandbox_terminal(status: str) -> bool:
         """Check if a sandbox status is terminal (no longer pending)."""
-        return PolySwarmClient.is_sandbox_success(status) or PolySwarmClient.is_sandbox_failure(status)
+        return PolySwarmClient.is_sandbox_success(
+            status
+        ) or PolySwarmClient.is_sandbox_failure(status)
 
-    def __init__(self, api_key: str, api_url: str, community: str, timeout: int, helper: object) -> None:
+    def __init__(
+        self, api_key: str, api_url: str, community: str, timeout: int, helper: object
+    ) -> None:
         """Initialise client with SDK, retry session, and circuit breaker.
 
         Args:
@@ -198,9 +205,15 @@ class PolySwarmClient:
         """
         self.helper = helper
         # The SDK expects the /v3 path; append it when the user supplies just the host.
-        if api_url and "api.polyswarm.network" in api_url and not api_url.endswith("/v3"):
+        if (
+            api_url
+            and "api.polyswarm.network" in api_url
+            and not api_url.endswith("/v3")
+        ):
             api_url = f"{api_url.rstrip('/')}/v3"
-        self.api = PolyswarmAPI(key=api_key, uri=api_url, community=community, timeout=timeout)
+        self.api = PolyswarmAPI(
+            key=api_key, uri=api_url, community=community, timeout=timeout
+        )
 
         # PROD-01 + PROD-09: Shared session with retry and connection pooling.
         # Used for non-SDK HTTP calls (LLM report download, PDF download).
@@ -214,7 +227,11 @@ class PolySwarmClient:
         self._providers_cache_time: float = 0.0
 
     def _retry_sdk_call(
-        self, func: object, *args: object, operation: str = "SDK call", **kwargs: object,
+        self,
+        func: object,
+        *args: object,
+        operation: str = "SDK call",
+        **kwargs: object,
     ) -> object | None:
         """
         Retry wrapper for PolySwarm SDK calls that use the SDK's internal HTTP client.
@@ -226,7 +243,8 @@ class PolySwarmClient:
         """
         if not self._breaker.allow_request():
             self.helper.log_warning(
-                f"[POLYSWARM] {operation} blocked by circuit breaker (OPEN). " f"Skipping until cooldown expires."
+                f"[POLYSWARM] {operation} blocked by circuit breaker (OPEN). "
+                f"Skipping until cooldown expires."
             )
             return None
 
@@ -243,7 +261,11 @@ class PolySwarmClient:
                 return result
             except requests.HTTPError as e:
                 # Check for actionable HTTP status codes
-                status_code = getattr(e.response, "status_code", None) if hasattr(e, "response") else None
+                status_code = (
+                    getattr(e.response, "status_code", None)
+                    if hasattr(e, "response")
+                    else None
+                )
                 if status_code and status_code in _HTTP_ERROR_MAP:
                     category, detail, recs = _HTTP_ERROR_MAP[status_code]
                     raise PolySwarmAPIError(
@@ -268,7 +290,9 @@ class PolySwarmClient:
             ) as e:
                 # Check if wrapped exception has an HTTP response with actionable status
                 resp = getattr(e, "response", None)
-                status_code = getattr(resp, "status_code", None) if resp is not None else None
+                status_code = (
+                    getattr(resp, "status_code", None) if resp is not None else None
+                )
                 if status_code and status_code in _HTTP_ERROR_MAP:
                     category, detail, recs = _HTTP_ERROR_MAP[status_code]
                     raise PolySwarmAPIError(
@@ -300,11 +324,15 @@ class PolySwarmClient:
                             recommendations=recs,
                         ) from e
                 # Non-retryable error
-                self.helper.log_error(f"[POLYSWARM] {operation} non-retryable error: {type(e).__name__}: {e}")
+                self.helper.log_error(
+                    f"[POLYSWARM] {operation} non-retryable error: {type(e).__name__}: {e}"
+                )
                 self._breaker.record_failure()
                 return None
 
-        self.helper.log_error(f"[POLYSWARM] {operation} failed after {self.SDK_MAX_RETRIES} attempts: {last_error}")
+        self.helper.log_error(
+            f"[POLYSWARM] {operation} failed after {self.SDK_MAX_RETRIES} attempts: {last_error}"
+        )
         self._breaker.record_failure()
         return None
 
@@ -342,7 +370,9 @@ class PolySwarmClient:
     ) -> str | None:
         """Submit file for scanning asynchronously. Returns scan instance ID or None on failure."""
         try:
-            self.helper.log_info(f"[POLYSWARM] Submitting file for scan: {filename} ({len(file_data)} bytes)")
+            self.helper.log_info(
+                f"[POLYSWARM] Submitting file for scan: {filename} ({len(file_data)} bytes)"
+            )
             # Password-protected archives need server-side unzipping before scan
             prep = {"type": "zip", "password": str(password)} if password else None
             instance = self._retry_sdk_call(
@@ -354,11 +384,15 @@ class PolySwarmClient:
                 operation="scan submit",
             )
             if instance and instance.id:
-                self.helper.log_info(f"[POLYSWARM] Scan submitted, instance_id: {instance.id}")
+                self.helper.log_info(
+                    f"[POLYSWARM] Scan submitted, instance_id: {instance.id}"
+                )
                 return instance.id
             return None
         except Exception as e:
-            self.helper.log_error(f"[POLYSWARM] Scan submit unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_error(
+                f"[POLYSWARM] Scan submit unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
 
     def submit_sandbox_async(
@@ -389,11 +423,15 @@ class PolySwarmClient:
                 operation=f"sandbox submit ({provider})",
             )
             if task and task.id:
-                self.helper.log_info(f"[POLYSWARM] Sandbox submitted, task_id: {task.id}")
+                self.helper.log_info(
+                    f"[POLYSWARM] Sandbox submitted, task_id: {task.id}"
+                )
                 return task.id
             return None
         except Exception as e:
-            self.helper.log_error(f"[POLYSWARM] Sandbox submit unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_error(
+                f"[POLYSWARM] Sandbox submit unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
 
     def get_scan_results(self, scan_id: str) -> dict[str, Any] | None:
@@ -409,12 +447,18 @@ class PolySwarmClient:
                     f"[POLYSWARM] Scan status: failed={result.failed}, window_closed={result.window_closed}"
                 )
             # window_closed means all engines have reported; failed means infra error
-            return result.json if (result and (result.failed or result.window_closed)) else None
+            return (
+                result.json
+                if (result and (result.failed or result.window_closed))
+                else None
+            )
         except (requests.RequestException, KeyError, AttributeError) as e:
             self.helper.log_warning(f"[POLYSWARM] Get scan results error: {str(e)}")
             return None
         except Exception as e:
-            self.helper.log_warning(f"[POLYSWARM] Get scan results unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_warning(
+                f"[POLYSWARM] Get scan results unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
 
     def get_sandbox_results(self, task_id: str) -> dict[str, Any] | None:
@@ -427,12 +471,18 @@ class PolySwarmClient:
             task = self.api.sandbox_task_status(task_id)
             if task:
                 self.helper.log_debug(f"[POLYSWARM] Sandbox status: {task.status}")
-            return task.json if (task and self.is_sandbox_terminal(str(task.status))) else None
+            return (
+                task.json
+                if (task and self.is_sandbox_terminal(str(task.status)))
+                else None
+            )
         except (requests.RequestException, KeyError, AttributeError) as e:
             self.helper.log_warning(f"[POLYSWARM] Get sandbox results error: {str(e)}")
             return None
         except Exception as e:
-            self.helper.log_warning(f"[POLYSWARM] Get sandbox results unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_warning(
+                f"[POLYSWARM] Get sandbox results unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
 
     def get_available_providers(self) -> list[dict]:
@@ -442,7 +492,10 @@ class PolySwarmClient:
         Falls back to a static default if the API call fails.
         """
         now = time.monotonic()
-        if self._providers_cache is not None and (now - self._providers_cache_time) < self._PROVIDERS_CACHE_TTL:
+        if (
+            self._providers_cache is not None
+            and (now - self._providers_cache_time) < self._PROVIDERS_CACHE_TTL
+        ):
             return self._providers_cache
 
         try:
@@ -453,12 +506,14 @@ class PolySwarmClient:
             if providers_result:
                 providers = []
                 for p in providers_result:
-                    providers.append({
-                        "slug": p.slug,
-                        "name": p.name,
-                        "tool": p.tool,
-                        "vms": p.vms,
-                    })
+                    providers.append(
+                        {
+                            "slug": p.slug,
+                            "name": p.name,
+                            "tool": p.tool,
+                            "vms": p.vms,
+                        }
+                    )
                 self._providers_cache = providers
                 self._providers_cache_time = now
                 self.helper.log_info(
@@ -467,7 +522,9 @@ class PolySwarmClient:
                 )
                 return providers
         except Exception as e:
-            self.helper.log_warning(f"[POLYSWARM] Failed to fetch sandbox providers: {e}")
+            self.helper.log_warning(
+                f"[POLYSWARM] Failed to fetch sandbox providers: {e}"
+            )
 
         # Fallback if cache exists but refresh failed
         if self._providers_cache is not None:
@@ -475,8 +532,10 @@ class PolySwarmClient:
 
         # Hard fallback — shouldn't happen in practice
         self.helper.log_warning("[POLYSWARM] Using fallback provider list")
-        return [{"slug": "cape", "name": "Cape", "tool": "cape", "vms": []},
-                {"slug": "triage", "name": "Triage", "tool": "triage", "vms": []}]
+        return [
+            {"slug": "cape", "name": "Cape", "tool": "cape", "vms": []},
+            {"slug": "triage", "name": "Triage", "tool": "triage", "vms": []},
+        ]
 
     def get_provider_slugs(self) -> list[str]:
         """Return just the slug names of available providers."""
@@ -501,13 +560,17 @@ class PolySwarmClient:
                 return slugs[0] if slugs else None
         return None
 
-    def create_llm_report(self, instance_id: str | None = None, sandbox_task_id: str | None = None) -> str | None:
+    def create_llm_report(
+        self, instance_id: str | None = None, sandbox_task_id: str | None = None
+    ) -> str | None:
         """
         Create an LLM report task (non-blocking). Returns the report task ID immediately.
         Call collect_llm_report() later to poll and download the result.
         """
         if not instance_id and not sandbox_task_id:
-            self.helper.log_warning("[POLYSWARM] LLM report requires instance_id or sandbox_task_id")
+            self.helper.log_warning(
+                "[POLYSWARM] LLM report requires instance_id or sandbox_task_id"
+            )
             return None
 
         try:
@@ -516,7 +579,9 @@ class PolySwarmClient:
                 source_desc.append(f"instance_id={instance_id}")
             if sandbox_task_id:
                 source_desc.append(f"sandbox_task_id={sandbox_task_id}")
-            self.helper.log_info(f"[POLYSWARM] Creating LLM report ({', '.join(source_desc)})")
+            self.helper.log_info(
+                f"[POLYSWARM] Creating LLM report ({', '.join(source_desc)})"
+            )
 
             report_task = self._retry_sdk_call(
                 self.api.llm_report_create,
@@ -526,7 +591,9 @@ class PolySwarmClient:
             )
 
             if not report_task or not report_task.id:
-                self.helper.log_warning("[POLYSWARM] LLM report creation returned no task ID")
+                self.helper.log_warning(
+                    "[POLYSWARM] LLM report creation returned no task ID"
+                )
                 return None
 
             self.helper.log_info(
@@ -538,10 +605,14 @@ class PolySwarmClient:
             self.helper.log_warning(f"[POLYSWARM] LLM report creation failed: {str(e)}")
             return None
         except Exception as e:
-            self.helper.log_warning(f"[POLYSWARM] LLM report creation unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_warning(
+                f"[POLYSWARM] LLM report creation unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
 
-    def collect_llm_report(self, llm_task_id: str, timeout: int = 120, poll_interval: int = 5) -> str | None:
+    def collect_llm_report(
+        self, llm_task_id: str, timeout: int = 120, poll_interval: int = 5
+    ) -> str | None:
         """Poll an existing LLM report task until complete, then download the result.
 
         Separated from ``create_llm_report`` so callers can fire creation early
@@ -562,14 +633,20 @@ class PolySwarmClient:
                 time.sleep(poll_interval)
                 report_task = self.api.llm_report_get(llm_task_id)
                 elapsed = int(time.monotonic() - start)
-                self.helper.log_debug(f"[POLYSWARM] LLM report polling... {elapsed}s, state: {report_task.state}")
+                self.helper.log_debug(
+                    f"[POLYSWARM] LLM report polling... {elapsed}s, state: {report_task.state}"
+                )
 
             if report_task.state == "PENDING":
-                self.helper.log_warning(f"[POLYSWARM] LLM report {llm_task_id} timed out after {timeout}s")
+                self.helper.log_warning(
+                    f"[POLYSWARM] LLM report {llm_task_id} timed out after {timeout}s"
+                )
                 return None
 
             if report_task.state == "FAILED":
-                self.helper.log_warning(f"[POLYSWARM] LLM report {llm_task_id} generation failed")
+                self.helper.log_warning(
+                    f"[POLYSWARM] LLM report {llm_task_id} generation failed"
+                )
                 return None
 
             if report_task.state == "SUCCEEDED" and report_task.url:
@@ -578,19 +655,29 @@ class PolySwarmClient:
                 response = self._session.get(report_task.url, timeout=60)
                 if response.status_code == 200:
                     report_text = response.text
-                    self.helper.log_info(f"[POLYSWARM] LLM report {llm_task_id} downloaded ({len(report_text)} chars)")
+                    self.helper.log_info(
+                        f"[POLYSWARM] LLM report {llm_task_id} downloaded ({len(report_text)} chars)"
+                    )
                     return report_text
-                self.helper.log_warning(f"[POLYSWARM] LLM report download failed: HTTP {response.status_code}")
+                self.helper.log_warning(
+                    f"[POLYSWARM] LLM report download failed: HTTP {response.status_code}"
+                )
                 return None
 
-            self.helper.log_warning(f"[POLYSWARM] LLM report unexpected state: {report_task.state}")
+            self.helper.log_warning(
+                f"[POLYSWARM] LLM report unexpected state: {report_task.state}"
+            )
             return None
 
         except (OSError, requests.RequestException, AttributeError) as e:
-            self.helper.log_warning(f"[POLYSWARM] LLM report collection failed: {str(e)}")
+            self.helper.log_warning(
+                f"[POLYSWARM] LLM report collection failed: {str(e)}"
+            )
             return None
         except Exception as e:
-            self.helper.log_warning(f"[POLYSWARM] LLM report collection unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_warning(
+                f"[POLYSWARM] LLM report collection unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
 
     def close(self) -> None:
@@ -610,12 +697,16 @@ class PolySwarmClient:
             Raw PDF bytes, or None if generation/download fails.
         """
         try:
-            self.helper.log_info(f"[POLYSWARM] Generating {report_type} PDF report for ID: {task_id}")
+            self.helper.log_info(
+                f"[POLYSWARM] Generating {report_type} PDF report for ID: {task_id}"
+            )
 
             # Template sections differ: scans show engine verdicts; sandboxes show
             # behavioral analysis, dropped files, extracted configs, and network IOCs.
             if report_type == "scan":
-                template_metadata = {"includes": ["summary", "detections", "fileMetadata"]}
+                template_metadata = {
+                    "includes": ["summary", "detections", "fileMetadata"]
+                }
             else:
                 template_metadata = {
                     "includes": [
@@ -637,7 +728,9 @@ class PolySwarmClient:
                 operation=f"PDF report create ({report_type})",
             )
             if not report or not report.id:
-                self.helper.log_warning("[POLYSWARM] PDF report creation returned no report object")
+                self.helper.log_warning(
+                    "[POLYSWARM] PDF report creation returned no report object"
+                )
                 return None
 
             # Poll for PDF report completion every 15s for up to 5 minutes.
@@ -663,7 +756,13 @@ class PolySwarmClient:
                             f"[POLYSWARM] PDF report ready after {elapsed}s ({attempt} polls)"
                         )
                         break
-                except (ConnectionError, TimeoutError, OSError, ValueError, NotFoundException) as wait_err:
+                except (
+                    ConnectionError,
+                    TimeoutError,
+                    OSError,
+                    ValueError,
+                    NotFoundException,
+                ) as wait_err:
                     self.helper.log_debug(
                         f"[POLYSWARM] PDF report poll [{elapsed}s/{poll_timeout}s]: {wait_err}"
                     )
@@ -678,7 +777,9 @@ class PolySwarmClient:
                 # PROD-03: No stream=True — we read .content anyway. Uses retry session.
                 response = self._session.get(finished.url, timeout=60)
                 if response.status_code == 200:
-                    self.helper.log_info(f"[POLYSWARM] Successfully downloaded {report_type} PDF report")
+                    self.helper.log_info(
+                        f"[POLYSWARM] Successfully downloaded {report_type} PDF report"
+                    )
                     return response.content
 
             self.helper.log_warning(
@@ -689,5 +790,7 @@ class PolySwarmClient:
             self.helper.log_warning(f"[POLYSWARM] PDF generation skipped: {str(e)}")
             return None
         except Exception as e:
-            self.helper.log_warning(f"[POLYSWARM] PDF generation unexpected error: {type(e).__name__}: {str(e)}")
+            self.helper.log_warning(
+                f"[POLYSWARM] PDF generation unexpected error: {type(e).__name__}: {str(e)}"
+            )
             return None
