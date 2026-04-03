@@ -15,7 +15,7 @@
   "max_confidence_level": 80,
   "support_version": ">=6.8.12",
   "subscription_link": "https://polyswarm.network",
-  "source_code": "https://github.com/polyswarm/opencti-connectors/tree/main/polyswarm-enrichment",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/polyswarm-enrichment",
   "manager_supported": false,
   "container_version": "rolling",
   "container_image": "opencti/connector-polyswarm-enrichment",
