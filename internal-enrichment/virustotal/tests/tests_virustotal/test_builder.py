@@ -145,6 +145,8 @@ class VirusTotalBuilderTest(unittest.TestCase):
         observable = {
             "standard_id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82",
             "id": "94a2e4e9-bb9a-544a-b379-44923d37ca82",
+            "entity_type": "Url",
+            "observable_value": "http://soclosebutyetqq.com/69.exe",
         }
         stix_entity = {"id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82"}
         builder = VirusTotalBuilder(
@@ -159,13 +161,19 @@ class VirusTotalBuilderTest(unittest.TestCase):
         builder.create_notes()
         # Bundle should have 3 elements: the author, the asn and the relationship.
         self.assertEqual(len(builder.bundle), 4)
-        self.assertEqual(builder.bundle[2].abstract, "VirusTotal Results")
+        self.assertEqual(
+            builder.bundle[2].abstract,
+            "VirusTotal Results (Url: http://soclosebutyetqq.com/69.exe)",
+        )
         self.assertTrue("Sangfor" in builder.bundle[2].content)
         self.assertEqual(builder.bundle[2].created_by_ref, self.author.id)
         self.assertTrue(
             "url--94a2e4e9-bb9a-544a-b379-44923d37ca82" in builder.bundle[2].object_refs
         )
-        self.assertEqual(builder.bundle[3].abstract, "VirusTotal Categories")
+        self.assertEqual(
+            builder.bundle[3].abstract,
+            "VirusTotal Categories (Url: http://soclosebutyetqq.com/69.exe)",
+        )
         self.assertTrue("Sophos" in builder.bundle[3].content)
         self.assertEqual(builder.bundle[2].created_by_ref, self.author.id)
         self.assertEqual(builder.bundle[3].created_by_ref, self.author.id)

@@ -391,7 +391,8 @@ class VirusTotalBuilder:
                 else ""
             )
             self.create_note(
-                "VirusTotal Results",
+                f"VirusTotal Results ({self.opencti_entity['entity_type']}: "
+                f"{self.opencti_entity['observable_value']})",
                 content,
             )
 
@@ -405,7 +406,11 @@ class VirusTotalBuilder:
                 if self.include_attributes_in_note
                 else ""
             )
-            self.create_note("VirusTotal Categories", content)
+            self.create_note(
+                f"VirusTotal Categories ({self.opencti_entity['entity_type']}: "
+                f"{self.opencti_entity['observable_value']})",
+                content,
+            )
 
     def create_yara(self, yara: dict, ruleset: dict, valid_from: float | None = None):
         """
@@ -630,7 +635,10 @@ class VirusTotalBuilder:
             for attribute, value in attributes_scope.items():
                 attributes_content += f"| {attribute} | {str(value or 'N/A')} | \n"
             if attributes_content:
-                content = "## Attributes Info\n\n"
+                content = (
+                    f"## Attributes Info ({self.opencti_entity['entity_type']}: "
+                    f"{self.opencti_entity['observable_value']}) \n\n"
+                )
                 content += "Any falsy value will be replaced by ‘N/A’\n"
                 content += "| Attributes |      |\n"
                 content += "|--------|----------|\n"
