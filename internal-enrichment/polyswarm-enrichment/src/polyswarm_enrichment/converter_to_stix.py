@@ -18,7 +18,7 @@ import ipaddress
 import traceback
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import validators
 from dateutil import parser as dateutil_parser
@@ -80,7 +80,7 @@ class ConverterToStix:
         self._enrichment_depth = 0
         self.helper.log_debug("[CONVERTER] Cleared object cache")
 
-    def _get_cached_profile(self, name: str) -> Optional[Dict]:
+    def _get_cached_profile(self, name: str) -> dict | None:
         """
         PERF-4: Get profile with caching to avoid duplicate lookups.
         """
@@ -113,7 +113,7 @@ class ConverterToStix:
             return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     @staticmethod
-    def create_author() -> Optional[dict]:
+    def create_author() -> dict | None:
         """
         Create Author (Organization Identity) as plain dict.
         """
@@ -122,7 +122,7 @@ class ConverterToStix:
         )
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-        author = {
+        return {
             "type": "identity",
             "spec_version": "2.1",
             "id": author_id,
@@ -152,8 +152,6 @@ class ConverterToStix:
             "x_opencti_type": "Organization",
         }
 
-        return author
-
     def create_relationship(
         self,
         source_id: str,
@@ -161,7 +159,7 @@ class ConverterToStix:
         target_id: str,
         description: str = None,
         confidence: int = 100,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Creates Relationship object as a plain dictionary.
         """
@@ -195,7 +193,7 @@ class ConverterToStix:
 
     def create_indicator_from_polyswarm(
         self, observable: dict, polyswarm_data: dict
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Create a STIX Indicator from PolySwarm enrichment data as plain dict.
         """
@@ -267,7 +265,7 @@ class ConverterToStix:
 
     # ============= LOCATION CREATION =============
 
-    def _create_location(self, location_name: str) -> Optional[dict]:
+    def _create_location(self, location_name: str) -> dict | None:
         """
         Create or retrieve cached Location object with proper STIX format.
         """
@@ -310,7 +308,7 @@ class ConverterToStix:
 
     def _create_threat_actor(
         self, actor_name: str, profile: dict = None, all_actors: list = None
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Create comprehensive Threat Actor object with profile enrichment.
         If profile is provided, adds locations, sectors, and related context.
@@ -431,7 +429,7 @@ class ConverterToStix:
 
     def _create_intrusion_set(
         self, campaign_name: str, context: str = None
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Create Intrusion Set (Campaign) object.
         """
@@ -474,7 +472,7 @@ class ConverterToStix:
 
     # ============= VULNERABILITY CREATION =============
 
-    def _create_vulnerability(self, cve_id: str) -> Optional[dict]:
+    def _create_vulnerability(self, cve_id: str) -> dict | None:
         """
         Create Vulnerability object for CVE.
         """
@@ -520,7 +518,7 @@ class ConverterToStix:
 
     # ============= SECTOR CREATION =============
 
-    def _create_sector(self, sector_name: str) -> Optional[dict]:
+    def _create_sector(self, sector_name: str) -> dict | None:
         """
         Create or retrieve cached Sector object (as Identity SDO).
         """
@@ -560,7 +558,7 @@ class ConverterToStix:
 
     # ============= SOFTWARE (OS) CREATION =============
 
-    def _create_software(self, os_name: str) -> Optional[dict]:
+    def _create_software(self, os_name: str) -> dict | None:
         """
         Create or retrieve cached Software SDO for an Operating System.
         """
@@ -655,11 +653,10 @@ class ConverterToStix:
             # Build labels
             labels = [f"malware-family:{malware_name.lower().replace(' ', '-')}"]
 
-            if related_profile:
+            if related_profile and related_profile.get("programming_languages"):
                 # Add programming language labels
-                if related_profile.get("programming_languages"):
-                    for lang in related_profile["programming_languages"]:
-                        labels.append(f"language:{lang.lower().replace(' ', '-')}")
+                for lang in related_profile["programming_languages"]:
+                    labels.append(f"language:{lang.lower().replace(' ', '-')}")
 
             malware = {
                 "type": "malware",
@@ -929,13 +926,12 @@ class ConverterToStix:
             # Build comprehensive labels
             labels = polyswarm_data.get("x_opencti_labels", [])
 
-            if profile:
+            if profile and profile.get("programming_languages"):
                 # Add programming language labels
-                if profile.get("programming_languages"):
-                    for lang in profile["programming_languages"]:
-                        label = f"language:{lang.lower().replace(' ', '-')}"
-                        if label not in labels:
-                            labels.append(label)
+                for lang in profile["programming_languages"]:
+                    label = f"language:{lang.lower().replace(' ', '-')}"
+                    if label not in labels:
+                        labels.append(label)
 
             # Create malware object
             malware = {
@@ -1303,7 +1299,7 @@ class ConverterToStix:
 
     def create_indicator_malware_relationship(
         self, indicator_id: str, malware_id: str, polyswarm_data: dict
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Creates the 'indicates' relationship between indicator and malware.
         """
@@ -1331,7 +1327,7 @@ class ConverterToStix:
 
     def create_observable_indicator_relationship(
         self, observable_id: str, indicator_id: str
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """
         Creates the 'based-on' relationship between indicator and observable.
         """
@@ -1361,11 +1357,11 @@ class ConverterToStix:
     def create_ioc_observables(
         self,
         observable_id: str,
-        ioc_data: Dict[str, Any],
+        ioc_data: dict[str, Any],
         max_count: int = 20,
         ioc_score: int = 20,
-        enabled_types: List[str] | None = None,
-    ) -> List[dict]:
+        enabled_types: list[str] | None = None,
+    ) -> list[dict]:
         """Create STIX observables + relationships for network IOCs.
 
         Fills IPs first, then domains, then URLs, stops at max_count.
@@ -1376,7 +1372,7 @@ class ConverterToStix:
             enabled_types = ["ip", "domain", "url"]
 
         current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        objects: List[dict] = []
+        objects: list[dict] = []
         count = 0
 
         # --- IPs (highest priority) ---
@@ -1432,9 +1428,7 @@ class ConverterToStix:
 
         return objects
 
-    def _create_ioc_ip(
-        self, ip_str: str, current_time: str, score: int
-    ) -> Optional[dict]:
+    def _create_ioc_ip(self, ip_str: str, current_time: str, score: int) -> dict | None:
         """Create an IPv4 or IPv6 observable for a network IOC."""
         if self._is_ipv4(ip_str):
             obs_type = "ipv4-addr"
@@ -1459,7 +1453,7 @@ class ConverterToStix:
 
     def _create_ioc_domain(
         self, domain: str, current_time: str, score: int
-    ) -> Optional[dict]:
+    ) -> dict | None:
         """Create a domain-name observable for a network IOC."""
         if not self._is_domain(domain):
             return None
@@ -1478,9 +1472,7 @@ class ConverterToStix:
             "created_by_ref": self.author["id"],
         }
 
-    def _create_ioc_url(
-        self, url: str, current_time: str, score: int
-    ) -> Optional[dict]:
+    def _create_ioc_url(self, url: str, current_time: str, score: int) -> dict | None:
         """Create a url observable for a network IOC."""
         if not url or not url.startswith(("http://", "https://")):
             return None
@@ -1543,9 +1535,9 @@ class ConverterToStix:
     @staticmethod
     def _is_domain(value: str) -> bool:
         is_valid_domain = validators.domain(value)
-        return True if is_valid_domain else False
+        return bool(is_valid_domain)
 
-    def create_obs(self, value: str, obs_id: str = None) -> Optional[dict]:
+    def create_obs(self, value: str, obs_id: str = None) -> dict | None:
         """
         Create observable as plain dict.
         """
@@ -1562,7 +1554,7 @@ class ConverterToStix:
                 "value": value,
                 "x_opencti_created_by_ref": self.author["id"],
             }
-        elif self._is_ipv4(value):
+        if self._is_ipv4(value):
             obs_id = obs_id or f"ipv4-addr--{str(uuid.uuid4())}"
             return {
                 "type": "ipv4-addr",
@@ -1573,7 +1565,7 @@ class ConverterToStix:
                 "value": value,
                 "x_opencti_created_by_ref": self.author["id"],
             }
-        elif self._is_domain(value):
+        if self._is_domain(value):
             obs_id = obs_id or f"domain-name--{str(uuid.uuid4())}"
             return {
                 "type": "domain-name",
@@ -1584,9 +1576,8 @@ class ConverterToStix:
                 "value": value,
                 "x_opencti_created_by_ref": self.author["id"],
             }
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )
-            return None
+        self.helper.connector_logger.error(
+            "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
+            {"value": value},
+        )
+        return None

@@ -105,7 +105,7 @@ class TestIOErrors:
 
     def test_io_error_handled(self, handler):
         handler.helper.api.fetch_opencti_file = MagicMock(
-            side_effect=IOError("disk full")
+            side_effect=OSError("disk full")
         )
         entity = {"importFiles": [{"id": "f1", "name": "test.exe"}]}
         data, err = handler.download_artifact(entity)

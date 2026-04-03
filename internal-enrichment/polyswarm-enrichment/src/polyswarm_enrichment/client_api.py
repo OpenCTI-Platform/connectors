@@ -2,7 +2,7 @@ import ipaddress
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
@@ -38,7 +38,7 @@ class CircuitBreaker:
         self.failure_threshold = failure_threshold
         self.cooldown_seconds = cooldown_seconds
         self.failure_count = 0
-        self.last_failure_time: Optional[datetime] = None
+        self.last_failure_time: datetime | None = None
         self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
 
     def record_success(self) -> None:
@@ -54,7 +54,7 @@ class CircuitBreaker:
         if self.failure_count >= self.failure_threshold:
             self.state = "OPEN"
 
-    def can_execute(self) -> Tuple[bool, Optional[str]]:
+    def can_execute(self) -> tuple[bool, str | None]:
         """
         Check if a request can be executed.
         Returns: (can_execute, reason_if_blocked)
@@ -62,26 +62,24 @@ class CircuitBreaker:
         if self.state == "CLOSED":
             return True, None
 
-        if self.state == "OPEN":
+        if self.state == "OPEN" and self.last_failure_time:
             # Check if cooldown period has passed
-            if self.last_failure_time:
-                elapsed = datetime.now() - self.last_failure_time
-                if elapsed > timedelta(seconds=self.cooldown_seconds):
-                    self.state = "HALF_OPEN"
-                    return True, None
-                else:
-                    remaining = self.cooldown_seconds - elapsed.total_seconds()
-                    return (
-                        False,
-                        f"Circuit breaker OPEN. {int(remaining)}s until retry.",
-                    )
+            elapsed = datetime.now() - self.last_failure_time
+            if elapsed > timedelta(seconds=self.cooldown_seconds):
+                self.state = "HALF_OPEN"
+                return True, None
+            remaining = self.cooldown_seconds - elapsed.total_seconds()
+            return (
+                False,
+                f"Circuit breaker OPEN. {int(remaining)}s until retry.",
+            )
 
         if self.state == "HALF_OPEN":
             return True, None
 
         return True, None
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Get circuit breaker status for logging."""
         return {
             "state": self.state,
@@ -115,7 +113,7 @@ class ConnectorClient:
         self.polyswarm_community = config.community
 
         # Circuit breakers for each community
-        self._circuit_breakers: Dict[str, CircuitBreaker] = {}
+        self._circuit_breakers: dict[str, CircuitBreaker] = {}
 
         # Initialize primary PolySwarm SDK instance
         self.polyswarm = PolyswarmAPI(
@@ -124,7 +122,7 @@ class ConnectorClient:
         self._circuit_breakers[self.polyswarm_community] = CircuitBreaker()
 
         # If community is "private", also initialize default community instance
-        self.polyswarm_default: Optional[PolyswarmAPI] = None
+        self.polyswarm_default: PolyswarmAPI | None = None
         if self.polyswarm_community.lower() == "private":
             self.polyswarm_default = PolyswarmAPI(
                 key=self.polyswarm_api_key, community="default"
@@ -188,7 +186,7 @@ class ConnectorClient:
                     "Will retry on first enrichment."
                 )
 
-    def _parse_result(self, result, community_name: str) -> Optional[Dict[str, Any]]:
+    def _parse_result(self, result, community_name: str) -> dict[str, Any] | None:
         """Parse a single PolySwarm result into a data dictionary."""
         try:
             if result.failed or not result.assertions:
@@ -295,7 +293,7 @@ class ConnectorClient:
                 self.helper.log_debug(f"[CLIENT] TagLink fetch failed: {e}")
 
             # Build data dictionary
-            data = {
+            return {
                 "community": community_name,
                 "confidence": 100,
                 "x_opencti_score": poly_score_int,
@@ -323,13 +321,11 @@ class ConnectorClient:
                 "detections": {"malicious": positives, "total": total},
             }
 
-            return data
-
         except (AttributeError, TypeError, KeyError) as e:
             self.helper.log_error(f"Error parsing PolySwarm result: {str(e)}")
             return None
 
-    def _parse_api_error(self, error: Exception, community_name: str) -> Dict[str, Any]:
+    def _parse_api_error(self, error: Exception, community_name: str) -> dict[str, Any]:
         """Parse API error and return structured error info."""
         error_str = str(error)
         error_info = {
@@ -402,7 +398,7 @@ class ConnectorClient:
 
     def _query_single_community(
         self, hash_value: str, polyswarm_instance: PolyswarmAPI, community_name: str
-    ) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
         """
         Query a single PolySwarm community with circuit breaker protection.
 
@@ -535,7 +531,7 @@ class ConnectorClient:
             error_info = self._parse_api_error(e, community_name)
             return None, error_info
 
-    def query_polyswarm(self, hash_value: str) -> Dict[str, Any]:
+    def query_polyswarm(self, hash_value: str) -> dict[str, Any]:
         """
         Query PolySwarm API with circuit breaker protection.
 
@@ -756,7 +752,7 @@ class ConnectorClient:
                 "Profile enrichment will attempt lookups on demand."
             )
 
-    def get_profile(self, family_name: str) -> Optional[Dict]:
+    def get_profile(self, family_name: str) -> dict | None:
         """Fetch a malware family profile from the polykg knowledge graph.
 
         Returns the profile dict or None if not found / unreachable.
@@ -813,7 +809,7 @@ class ConnectorClient:
         except requests.RequestException:
             return False
 
-    def fetch_attack_patterns(self) -> Optional[Dict[str, Any]]:
+    def fetch_attack_patterns(self) -> dict[str, Any] | None:
         """Fetch TTP database and type mappings from polykg.
 
         Returns dict with 'techniques' and 'type_mappings' keys,
@@ -856,7 +852,7 @@ class ConnectorClient:
     # Network IOC extraction
     # ------------------------------------------------------------------
 
-    def fetch_iocs(self, sha256: str) -> Optional[Dict[str, Any]]:
+    def fetch_iocs(self, sha256: str) -> dict[str, Any] | None:
         """Fetch network IOCs for a hash from the PolySwarm IOC API.
 
         Returns parsed dict with keys: ips, urls, domains, ttps, imphash.

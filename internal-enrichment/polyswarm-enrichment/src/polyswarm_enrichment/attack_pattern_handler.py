@@ -9,7 +9,6 @@ has no network dependencies — it is a pure STIX factory.
 
 import traceback
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
 
 from pycti import AttackPattern, StixCoreRelationship
 
@@ -28,7 +27,7 @@ class AttackPatternHandler:
         self,
         helper,
         author_id: str,
-        ttp_data: Optional[Dict] = None,
+        ttp_data: dict | None = None,
     ):
         """
         Initialize the Attack Pattern Handler.
@@ -41,10 +40,10 @@ class AttackPatternHandler:
         """
         self.helper = helper
         self.author_id = author_id
-        self._attack_pattern_cache: Dict[str, dict] = {}
+        self._attack_pattern_cache: dict[str, dict] = {}
 
-        self._ttp_database: Dict[str, dict] = {}
-        self._type_ttp_map: Dict[str, List[str]] = {}
+        self._ttp_database: dict[str, dict] = {}
+        self._type_ttp_map: dict[str, list[str]] = {}
 
         if ttp_data:
             techniques = ttp_data.get("techniques", {})
@@ -62,7 +61,7 @@ class AttackPatternHandler:
         """Clear the attack pattern cache."""
         self._attack_pattern_cache = {}
 
-    def _get_ttp_info(self, ttp_id: str) -> Optional[dict]:
+    def _get_ttp_info(self, ttp_id: str) -> dict | None:
         """Look up technique metadata from loaded TTP database."""
         info = self._ttp_database.get(ttp_id)
         if not info:
@@ -76,7 +75,7 @@ class AttackPatternHandler:
             }
         return None
 
-    def get_ttps_for_malware_types(self, malware_types: List[str]) -> List[str]:
+    def get_ttps_for_malware_types(self, malware_types: list[str]) -> list[str]:
         """
         Get relevant TTP IDs based on malware types.
 
@@ -105,7 +104,7 @@ class AttackPatternHandler:
 
         return list(ttps)
 
-    def create_attack_pattern(self, ttp_id: str) -> Optional[Dict]:
+    def create_attack_pattern(self, ttp_id: str) -> dict | None:
         """
         Create a STIX Attack Pattern object for a TTP.
 
@@ -182,11 +181,11 @@ class AttackPatternHandler:
 
     def create_attack_patterns_for_malware(
         self,
-        malware_types: List[str],
+        malware_types: list[str],
         malware_id: str,
         malware_name: str,
-        explicit_ttps: List[str] = None,
-    ) -> Tuple[List[Dict], List[Dict]]:
+        explicit_ttps: list[str] = None,
+    ) -> tuple[list[dict], list[dict]]:
         """
         Create attack patterns and relationships for a malware based on its types.
 
@@ -267,8 +266,8 @@ class AttackPatternHandler:
         self,
         actor_id: str,
         actor_name: str,
-        ttp_ids: List[str],
-    ) -> Tuple[List[Dict], List[Dict]]:
+        ttp_ids: list[str],
+    ) -> tuple[list[dict], list[dict]]:
         """
         Create attack patterns and relationships for a threat actor.
 

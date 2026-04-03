@@ -197,7 +197,7 @@ class ConnectorTemplate:
         stable_content = f"polyswarm-enrichment:{observable_id}:{community}"
         note_id = Note.generate_id(created=None, content=stable_content)
 
-        note = {
+        return {
             "type": "note",
             "spec_version": "2.1",
             "id": note_id,
@@ -208,8 +208,6 @@ class ConnectorTemplate:
             "created_by_ref": self.converter_to_stix.author["id"],
             "object_refs": [observable_id],
         }
-
-        return note
 
     def _create_error_note(self, observable_id: str, errors: list) -> dict:
         """Create a STIX Note reporting API errors to the user."""
@@ -273,7 +271,7 @@ class ConnectorTemplate:
         stable_content = f"polyswarm-error:{observable_id}"
         note_id = Note.generate_id(created=None, content=stable_content)
 
-        note = {
+        return {
             "type": "note",
             "spec_version": "2.1",
             "id": note_id,
@@ -284,8 +282,6 @@ class ConnectorTemplate:
             "created_by_ref": self.converter_to_stix.author["id"],
             "object_refs": [observable_id],
         }
-
-        return note
 
     def _create_hash_not_found_note(self, observable_id: str, hash_value: str) -> dict:
         """Create a STIX Note informing the user the hash was not found in PolySwarm."""
@@ -472,17 +468,17 @@ class ConnectorTemplate:
                         valid_hashes["SHA-1"] = enrichment_data["sha1"]
 
                     # Failsafe for missing hashes
-                    if not valid_hashes:
-                        if "hashes" in observable and observable["hashes"]:
-                            for hash_type, hash_value in observable["hashes"].items():
-                                if (
-                                    hash_type in ["SHA-256", "MD5", "SHA-1"]
-                                    and hash_value
-                                ):
-                                    valid_hashes[hash_type] = hash_value
-                                    self.helper.log_warning(
-                                        f"[CONNECTOR] Restoring original query hash {hash_type} as failsafe."
-                                    )
+                    if (
+                        not valid_hashes
+                        and "hashes" in observable
+                        and observable["hashes"]
+                    ):
+                        for hash_type, hash_value in observable["hashes"].items():
+                            if hash_type in ["SHA-256", "MD5", "SHA-1"] and hash_value:
+                                valid_hashes[hash_type] = hash_value
+                                self.helper.log_warning(
+                                    f"[CONNECTOR] Restoring original query hash {hash_type} as failsafe."
+                                )
 
                     if not valid_hashes:
                         self.helper.log_error(
@@ -862,15 +858,12 @@ class ConnectorTemplate:
                                     f"[CONNECTOR] Could not update score: {score_err}"
                                 )
                     return result
-                else:
-                    return "[CONNECTOR] No intelligence found or created"
-            else:
-                if not data.get("event_type"):
-                    return self._send_bundle(self.stix_objects_list)
-                else:
-                    raise ValueError(
-                        f"Entity type {opencti_entity['entity_type']} not supported"
-                    )
+                return "[CONNECTOR] No intelligence found or created"
+            if not data.get("event_type"):
+                return self._send_bundle(self.stix_objects_list)
+            raise ValueError(
+                f"Entity type {opencti_entity['entity_type']} not supported"
+            )
         except Exception as err:
             error_msg = f"[CONNECTOR] Unexpected error: {str(err)}"
             self.helper.connector_logger.error(error_msg, {"error_message": str(err)})
@@ -909,8 +902,7 @@ class ConnectorTemplate:
             stix_objects_bundle = self.helper.stix2_create_bundle(unique_objects)
             bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
 
-            info_msg = f"[CONNECTOR] Successfully sent {len(bundles_sent)} bundle(s)"
-            return info_msg
+            return f"[CONNECTOR] Successfully sent {len(bundles_sent)} bundle(s)"
 
         except Exception as e:
             error_msg = f"[CONNECTOR] Error sending bundle: {str(e)}"

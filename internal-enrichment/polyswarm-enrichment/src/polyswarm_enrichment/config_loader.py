@@ -24,9 +24,9 @@ class ConfigConnector:
         config = {}
         if os.path.isfile(config_file_path):
             try:
-                with open(config_file_path, "r", encoding="utf-8") as config_file:
+                with open(config_file_path, encoding="utf-8") as config_file:
                     config = yaml.safe_load(config_file) or {}
-            except (yaml.YAMLError, IOError, OSError) as e:
+            except (yaml.YAMLError, OSError) as e:
                 # Log warning but continue - env vars may provide config
                 import sys
 
