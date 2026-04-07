@@ -17,12 +17,12 @@ def test_config() -> None:
 
     microsoft_sentinel_intel = config["microsoft_sentinel_intel"]
     assert len(microsoft_sentinel_intel) == 16
-    assert microsoft_sentinel_intel["batch_mode"] == False
+    assert not microsoft_sentinel_intel["batch_mode"]
     assert microsoft_sentinel_intel["batch_size"] == 100
     assert microsoft_sentinel_intel["batch_timeout"] == 30
     assert microsoft_sentinel_intel["client_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["client_secret"].get_secret_value() == "ChangeMe"
-    assert microsoft_sentinel_intel["delete_extensions"] == True
+    assert microsoft_sentinel_intel["delete_extensions"]
     assert microsoft_sentinel_intel["extra_labels"] == ["label"]
     assert microsoft_sentinel_intel["management_api_version"] == "2025-03-01"
     assert microsoft_sentinel_intel["resource_group"] == "default"

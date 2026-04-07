@@ -4,9 +4,13 @@ import traceback
 
 from filigran_sseclient.sseclient import Event
 from microsoft_sentinel_intel.client import ConnectorClient
-from microsoft_sentinel_intel.errors import ConnectorError, ConnectorWarning
+from microsoft_sentinel_intel.errors import (
+    ConnectorClientError,
+    ConnectorError,
+    ConnectorWarning,
+)
 from microsoft_sentinel_intel.settings import ConnectorSettings
-from microsoft_sentinel_intel.utils import is_stix_indicator
+from microsoft_sentinel_intel.utils import extract_pattern_type, is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
 
@@ -32,18 +36,23 @@ class Connector:
             )
         return stix_object
 
-    def _process_event(self, event_type: str, stix_object: dict) -> None:
-        """
-        This method can handle any type of event with the same logic (_prepare_stix_object)
+    def _process_event(self, event_type: str, stix_object: dict) -> bool:
+        """Process a single STIX event by dispatching to the appropriate API call.
 
-        The API used (upload_stix_objects) to upload the stix objects to Sentinel can handle
-          Indicators, AttackPatterns, Identity, ThreatActors and Relationships.
+        The upload API (upload_stix_objects) handles Indicators, AttackPatterns,
+        Identity, ThreatActors, and Relationships.
+
+        :param event_type: One of "create", "update", or "delete".
+        :param stix_object: STIX object data dict.
+        :return: True if the event was processed, False if filtered out by event_types config.
+        :raises ConnectorClientError: If the API call fails.
+        :raises ConnectorWarning: If event_type is unsupported.
         """
         if event_type not in self.config.microsoft_sentinel_intel.event_types:
             self.helper.connector_logger.info(
                 message=f"[{event_type.upper()}] Event type filtered out, skipping"
             )
-            return
+            return False
 
         match event_type:
             case "create" | "update":
@@ -53,11 +62,16 @@ class Connector:
                     source_system=self.config.microsoft_sentinel_intel.source_system,
                 )
             case "delete":
-                self.client.delete_indicator_by_id(stix_object["id"])
+                self.client.delete_indicator_by_id(
+                    stix_object["id"],
+                    source_system=self.config.microsoft_sentinel_intel.source_system,
+                    pattern_type=extract_pattern_type(stix_object.get("pattern", "")),
+                )
             case _:
                 raise ConnectorWarning(
                     message=f"Unsupported event type: {event_type}, Skipping..."
                 )
+        return True
 
     def _handle_event(self, event: Event):
         try:
@@ -77,11 +91,12 @@ class Connector:
                 message=f"[{event.event.upper()}] Processing message",
                 meta={"data": data, "event": event.event},
             )
-            self._process_event(event_type=event.event, stix_object=data)
-            self.helper.connector_logger.info(
-                message=f"[{event.event.upper()}] Indicator processed",
-                meta={"opencti_id": data["id"]},
-            )
+            processed = self._process_event(event_type=event.event, stix_object=data)
+            if processed:
+                self.helper.connector_logger.info(
+                    message=f"[{event.event.upper()}] Indicator processed",
+                    meta={"opencti_id": data["id"]},
+                )
         else:
             self.helper.connector_logger.info(
                 message=f"[{event.event.upper()}] Entity not supported"
@@ -121,7 +136,7 @@ class Connector:
             if not events:
                 return
 
-            unique_objects: dict[str, dict] = {}
+            unique_objects: dict[str, tuple[str, dict]] = {}
             for event in events:
                 try:
                     parsed = json.loads(event.data)
@@ -142,28 +157,49 @@ class Connector:
                 if event.event not in self.config.microsoft_sentinel_intel.event_types:
                     continue
 
-                if event.event == "delete":
-                    self.helper.connector_logger.info(
-                        message="[BATCH] Ignoring delete event in batch mode"
-                    )
-                    continue
-
-                unique_objects[data["id"]] = data
+                unique_objects[data["id"]] = (event.event, data)
 
             if not unique_objects:
                 return
 
-            prepared_objects = [
-                self._prepare_stix_object(obj) for obj in unique_objects.values()
-            ]
+            objects_to_upload = []
+            objects_to_delete = []
+            for event_type, data in unique_objects.values():
+                if event_type in ("create", "update"):
+                    objects_to_upload.append(data)
+                elif event_type == "delete":
+                    objects_to_delete.append(data)
 
-            self.helper.connector_logger.info(
-                message=f"[BATCH] Uploading {len(prepared_objects)} objects",
-            )
-            self.client.upload_stix_objects(
-                stix_objects=prepared_objects,
-                source_system=self.config.microsoft_sentinel_intel.source_system,
-            )
+            if objects_to_upload:
+                prepared_objects = [
+                    self._prepare_stix_object(obj) for obj in objects_to_upload
+                ]
+                self.helper.connector_logger.info(
+                    message=f"[BATCH] Uploading {len(prepared_objects)} objects",
+                )
+                self.client.upload_stix_objects(
+                    stix_objects=prepared_objects,
+                    source_system=self.config.microsoft_sentinel_intel.source_system,
+                )
+
+            for data in objects_to_delete:
+                try:
+                    self.helper.connector_logger.info(
+                        message="[BATCH] Deleting indicator",
+                        meta={"opencti_id": data["id"]},
+                    )
+                    self.client.delete_indicator_by_id(
+                        data["id"],
+                        source_system=self.config.microsoft_sentinel_intel.source_system,
+                        pattern_type=extract_pattern_type(
+                            data.get("pattern", "")
+                        ),
+                    )
+                except ConnectorClientError as err:
+                    self.helper.connector_logger.error(
+                        message=f"[BATCH] Failed to delete indicator {data['id']}",
+                        meta=err.metadata,
+                    )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("Connector stopped by user.")
             sys.exit(0)
@@ -189,11 +225,6 @@ class Connector:
             self.helper.connector_logger.info(
                 message=f"[BATCH] Batch mode enabled (batch_size={self.config.microsoft_sentinel_intel.batch_size}, batch_timeout={self.config.microsoft_sentinel_intel.batch_timeout}s, max_per_minute=100)",
             )
-            if "delete" in self.config.microsoft_sentinel_intel.event_types:
-                self.helper.connector_logger.warning(
-                    message="[BATCH] Delete events are not supported in batch mode and will be skipped. "
-                    "Consider running a separate real-time instance with event_types=delete.",
-                )
             callback = self.helper.create_batch_callback(
                 batch_callback=self.process_batch,
                 batch_size=self.config.microsoft_sentinel_intel.batch_size,

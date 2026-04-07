@@ -88,7 +88,7 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         ge=1,
     )
     event_types: ListFromString = Field(
-        description="Comma-separated list of event types to process (create, update, delete). Useful for running separate connector instances for batch uploads and deletions.",
+        description="Comma-separated list of event types to process (create, update, delete). Defaults to all three; a single instance handles every event type. Restrict this only if you want to split the workload across dedicated instances.",
         default=["create", "update", "delete"],
     )
 
