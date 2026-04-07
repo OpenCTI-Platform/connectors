@@ -10,9 +10,6 @@ The VX Vault connector imports URLs of potential malicious payloads from [VX Vau
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -34,42 +31,10 @@ The VX Vault connector imports URLs of potential malicious payloads from [VX Vau
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter         | config.yml      | Docker environment variable  | Default            | Mandatory | Description                                                                            |
-| ----------------- | --------------- | ---------------------------- | ------------------ | --------- | -------------------------------------------------------------------------------------- |
-| Connector ID      | id              | `CONNECTOR_ID`               | /                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                              |
-| Connector Type    | type            | `CONNECTOR_TYPE`             | EXTERNAL_IMPORT    | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                          |
-| Connector Name    | name            | `CONNECTOR_NAME`             | VX Vault URL list  | Yes       | Name of the connector.                                                                 |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`            | vxvault            | Yes       | The scope or type of data the connector is importing.                                  |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`        | info               | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`  | P3D                | Yes       | ISO 8601 duration between connector runs (e.g., `P3D` for 3 days, `PT12H` for 12h).   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter         | config.yml        | Docker environment variable  | Default                             | Mandatory | Description                                                    |
-| ----------------- | ----------------- | ---------------------------- | ----------------------------------- | --------- | -------------------------------------------------------------- |
-| VXVault URL       | url               | `VXVAULT_URL`                | https://vxvault.net/URL_List.php    | No        | The URL of the VX Vault dataset to fetch.                      |
-| Create Indicators | create_indicators | `VXVAULT_CREATE_INDICATORS`  | true                                | No        | If true, create indicators from the imported URLs.             |
-| SSL Verify        | ssl_verify        | `VXVAULT_SSL_VERIFY`         | false                               | No        | Whether to verify SSL certificates when fetching the dataset.  |
-
-> **Deprecated:** `VXVAULT_INTERVAL` (polling interval in days) is deprecated. Use `CONNECTOR_DURATION_PERIOD` instead. The old variable is still accepted for backward compatibility.
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
