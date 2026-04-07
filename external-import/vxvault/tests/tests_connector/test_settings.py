@@ -1,3 +1,5 @@
+import warnings
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -143,3 +145,39 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_settings_should_migrate_deprecated_interval():
+    """
+    Test that the deprecated `VXVAULT_INTERVAL` (days) is automatically migrated
+    to `CONNECTOR_DURATION_PERIOD` via `DeprecatedField` metadata in `BaseConnectorSettings`.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {
+                        "url": "http://localhost:8080",
+                        "token": "test-token",
+                    },
+                    "connector": {
+                        "id": "connector-id",
+                        "name": "Test Connector",
+                        "scope": "test, connector",
+                    },
+                    "vxvault": {
+                        "url": "https://vxvault.net/URL_List.php",
+                        "interval": 5,
+                    },
+                }
+            )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        settings = FakeConnectorSettings()
+
+    assert settings.connector.duration_period == timedelta(days=5)
+    warning_messages = [str(warning.message) for warning in w]
+    assert any("interval" in msg.lower() for msg in warning_messages)

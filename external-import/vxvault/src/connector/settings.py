@@ -1,13 +1,13 @@
-import warnings
 from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, model_validator
+from pydantic import Field
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -47,10 +47,12 @@ class VxvaultConfig(BaseConfigModel):
         description="If true, create indicators from the imported URLs.",
         default=True,
     )
-    interval: int = Field(
-        description="Polling interval in days.",
-        default=3,
+    interval: int | None = DeprecatedField(
+        default=None,
         deprecated="Use 'CONNECTOR_DURATION_PERIOD' in the 'connector' section instead.",
+        new_namespace="connector",
+        new_namespaced_var="duration_period",
+        new_value_factory=lambda x: timedelta(days=int(x)),
     )
     ssl_verify: bool = Field(
         description="Whether to verify SSL certificates when fetching the dataset.",
@@ -67,26 +69,3 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     vxvault: VxvaultConfig = Field(default_factory=VxvaultConfig)
-
-    @model_validator(mode="before")
-    @classmethod
-    def migrate_deprecated_interval(cls, data: dict) -> dict:
-        """
-        Env var `VXVAULT_INTERVAL` is deprecated.
-        This is a workaround to keep the old config working while we migrate to `CONNECTOR_DURATION_PERIOD`.
-        """
-        connector_data: dict = data.get("connector", {})
-        vxvault_data: dict = data.get("vxvault", {})
-        if interval := vxvault_data.pop("interval", None):
-            if connector_data.get("duration_period") is not None:
-                warnings.warn(
-                    "Both 'VXVAULT_INTERVAL' and 'CONNECTOR_DURATION_PERIOD' are set. "
-                    "'CONNECTOR_DURATION_PERIOD' will take precedence."
-                )
-            else:
-                warnings.warn(
-                    "Env var 'VXVAULT_INTERVAL' is deprecated. Use 'CONNECTOR_DURATION_PERIOD' instead."
-                )
-                connector_data["duration_period"] = timedelta(days=int(interval))
-
-        return data
