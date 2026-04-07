@@ -191,9 +191,7 @@ class Connector:
                     self.client.delete_indicator_by_id(
                         data["id"],
                         source_system=self.config.microsoft_sentinel_intel.source_system,
-                        pattern_type=extract_pattern_type(
-                            data.get("pattern", "")
-                        ),
+                        pattern_type=extract_pattern_type(data.get("pattern", "")),
                     )
                 except ConnectorClientError as err:
                     self.helper.connector_logger.error(
