@@ -23,7 +23,6 @@ def mock_obfuscate(monkeypatch):
 def connector(helper_mock, mock_config, mock_session, mock_opencti_client):
     """Provide a ZscalerConnector instance with mocked config, session and OpenCTI client"""
 
-
     zscaler_connector = zscaler.ZscalerConnector(
         config_path=None,
         helper=helper_mock,
