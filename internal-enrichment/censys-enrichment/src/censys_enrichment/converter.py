@@ -458,7 +458,7 @@ class Converter:
         Yields:
             BaseObject: STIX objects representing certificates and their relationships
         """
-        observable = EmbeddedIdentifiedStixObject(stix_object=stix_entity)
+        observable = Reference(id=stix_entity.get("id"))
 
         yield from [
             self.author,
