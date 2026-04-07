@@ -1,22 +1,26 @@
-import pytest
-from pytest_bdd import scenarios, given, when, then
 from unittest.mock import Mock
 
+import pytest
+from pytest_bdd import given, scenarios, then, when
+
 scenarios("./reauthentication_fails.constraint.feature")
+
 
 @pytest.fixture(autouse=True)
 def mock_obfuscate(monkeypatch):
     monkeypatch.setattr(
         "stream_connector.connector.obfuscate_api_key",
-        lambda api_key, timestamp: "dummy-obfuscated"
+        lambda api_key, timestamp: "dummy-obfuscated",
     )
+
 
 @pytest.fixture(autouse=True)
 def mock_authenticate(monkeypatch):
     monkeypatch.setattr(
         "stream_connector.connector.ZscalerConnector.authenticate_with_zscaler",
-        lambda self: None
+        lambda self: None,
     )
+
 
 @pytest.fixture
 def expired_connector(connector, mock_session):

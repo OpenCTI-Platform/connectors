@@ -1,8 +1,10 @@
-from pytest_bdd import scenarios, given, when, then
 from unittest.mock import Mock
+
+from pytest_bdd import given, scenarios, then, when
 from requests.cookies import RequestsCookieJar
 
 scenarios("./zscaler_session.feature")
+
 
 @given("a valid authenticated Zscaler session")
 def valid_session(connector):
@@ -16,6 +18,7 @@ def valid_session(connector):
     connector.session.post = Mock(return_value=mock_response)
     connector.session.cookies = cookie_jar
 
+
 # ----------------
 # Scenario: Request succeeds with a valid session
 @when("a request is made to Zscaler")
@@ -27,7 +30,10 @@ def make_request(connector):
 def request_succeeds(connector):
     jsessionid = connector.session.cookies.get("JSESSIONID")
     assert jsessionid == "initial-session"
+
+
 # ----------------
+
 
 # ----------------
 # Scenario: Request auto-reconnects on expired session
@@ -51,14 +57,17 @@ def session_expires(connector, monkeypatch):
 
     monkeypatch.setattr(
         "stream_connector.connector.ZscalerConnector.authenticate_with_zscaler",
-        fake_authenticate
+        fake_authenticate,
     )
 
     connector.session.post = Mock(side_effect=[resp_401, resp_200])
     connector._last_response = connector.handle_rate_limit(connector.session.post)
 
+
 @then("the connector should re-authenticate and succeed")
 def reauth_success(connector):
     assert connector._last_response.status_code == 200
     assert connector.session.cookies.get("JSESSIONID") == "new-session"
+
+
 # ----------------

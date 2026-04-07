@@ -1,24 +1,30 @@
-import pytest
-from unittest.mock import Mock
-import sys
 import os
+import sys
+from unittest.mock import Mock
+
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from stream_connector import ZscalerConnector
-from stream_connector.utils import obfuscate_api_key
 from pycti import OpenCTIConnectorHelper
+from stream_connector import connector as zscaler
+
 
 @pytest.fixture(autouse=True)
 def mock_obfuscate(monkeypatch):
     """Mock obfuscate_api_key to return a dummy string."""
-    monkeypatch.setattr("stream_connector.utils.obfuscate_api_key", lambda api_key, timestamp: "dummy-obfuscated")
+    monkeypatch.setattr(
+        "stream_connector.utils.obfuscate_api_key",
+        lambda api_key, timestamp: "dummy-obfuscated",
+    )
+
 
 @pytest.fixture
 def connector(helper_mock, mock_config, mock_session, mock_opencti_client):
     """Provide a ZscalerConnector instance with mocked config, session and OpenCTI client"""
-    from stream_connector import connector
 
-    zscaler_connector = connector.ZscalerConnector(
+
+    zscaler_connector = zscaler.ZscalerConnector(
         config_path=None,
         helper=helper_mock,
         opencti_url=mock_config.opencti.url,
@@ -31,6 +37,7 @@ def connector(helper_mock, mock_config, mock_session, mock_opencti_client):
     )
     zscaler_connector.session = mock_session
     return zscaler_connector
+
 
 @pytest.fixture
 def mock_config():
@@ -45,15 +52,18 @@ def mock_config():
     mock.zscaler.blacklist_name = "blacklist"
     return mock
 
+
 @pytest.fixture
 def mock_opencti_client(monkeypatch):
     mock_client = Mock()
     mock_client.health_check.return_value = True
 
-    from stream_connector import connector
-    monkeypatch.setattr(connector, "OpenCTIApiClient", lambda *args, **kwargs: mock_client)
+    monkeypatch.setattr(
+        zscaler, "OpenCTIApiClient", lambda *args, **kwargs: mock_client
+    )
 
     return mock_client
+
 
 @pytest.fixture
 def helper_mock():
@@ -63,10 +73,11 @@ def helper_mock():
     helper.listen_stream = Mock()
     return helper
 
+
 @pytest.fixture
 def mock_session(monkeypatch):
     """Patch requests.Session to avoid real HTTP calls"""
-    from stream_connector import connector
+
     mock_sess = Mock()
-    monkeypatch.setattr(connector.requests, "Session", lambda: mock_sess)
+    monkeypatch.setattr(zscaler.requests, "Session", lambda: mock_sess)
     return mock_sess

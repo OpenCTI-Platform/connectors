@@ -47,7 +47,7 @@ class ZscalerConnector:
             self.opencti_url, self.opencti_token, ssl_verify=self.ssl_verify
         )
 
-        self.zscaler_base_url="https://zsapi.zscalertwo.net/api/v1"
+        self.zscaler_base_url = "https://zsapi.zscalertwo.net/api/v1"
         self.session = requests.Session()
 
         self.rate_limit = 400  # Limit to 400 requests per hour
@@ -98,7 +98,6 @@ class ZscalerConnector:
                 f"Failed to authenticate with Zscaler: {status_code} - {text}"
             )
 
-
     def handle_rate_limit(self, request_func, *args, **kwargs):
         """Handle rate limits for the Zscaler API by applying a delay if the limit is reached."""
 
@@ -117,11 +116,13 @@ class ZscalerConnector:
                 time.sleep(int(retry_after))
 
             if response and response.status_code == 401:
-                msg = f"Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
+                msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
                 self.helper.connector_logger.warning(msg)
                 self.authenticate_with_zscaler()
                 if not self.session.cookies.get("JSESSIONID"):
-                    self.helper.connector_logger.error("Re-authentication failed, aborting retry.")
+                    self.helper.connector_logger.error(
+                        "Re-authentication failed, aborting retry."
+                    )
                     return None
                 continue
             else:
@@ -151,9 +152,7 @@ class ZscalerConnector:
         lookup_url = f"{self.zscaler_base_url}/urlLookup"
         payload = json.dumps([domain])
 
-        response = self.handle_rate_limit(
-            self.session.post, lookup_url, data=payload
-        )
+        response = self.handle_rate_limit(self.session.post, lookup_url, data=payload)
 
         msg = f"=== Checking domain {domain} ==="
         self.helper.connector_logger.debug(msg)
@@ -229,9 +228,7 @@ class ZscalerConnector:
             "urls": [domain],
         }
 
-        response = self.handle_rate_limit(
-            self.session.put, base_url, json=payload
-        )
+        response = self.handle_rate_limit(self.session.put, base_url, json=payload)
 
         if response and response.status_code == 200:
             msg = f"Successfully sent {event_type} for {domain}."
