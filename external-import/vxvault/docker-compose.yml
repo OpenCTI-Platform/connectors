@@ -12,5 +12,5 @@ services:
       - VXVAULT_URL=https://vxvault.net/URL_List.php
       - VXVAULT_CREATE_INDICATORS=true
       - VXVAULT_INTERVAL=3 # In days, must be strictly greater than 1
-      - VXVAULT_SSL_VERIFY=False
+      - VXVAULT_SSL_VERIFY=false
     restart: always
