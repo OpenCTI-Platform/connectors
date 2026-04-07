@@ -293,6 +293,11 @@ class MispConfig(BaseConfigModel):
         default=None,
     )
 
+    search_limit: int = Field(
+        description="Limit the number of results returned per page request to MISP server.",
+        default=10,
+    )
+
     @field_validator("reference_url", mode="before")
     @classmethod
     def validate_reference_url(cls, value: Any) -> Any:
