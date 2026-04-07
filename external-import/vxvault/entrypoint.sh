@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-vxvault
 
 # Start the connector
-python3 vxvault.py
+python3 main.py
