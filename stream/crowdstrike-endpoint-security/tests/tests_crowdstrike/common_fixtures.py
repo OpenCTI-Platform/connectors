@@ -18,6 +18,9 @@ def setup_config(request):
         api_base_url="https://api.crowdstrike.com",
         client_id="test-client-id",
         client_secret=SecretStr("test-client-secret"),
+        action_on_ip="detect",
+        action_on_domain="detect",
+        action_on_hash="detect",
     )
 
     request.cls.mock_client = CrowdstrikeClient(

@@ -51,3 +51,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_BATCH_COUNT | `integer` |  | integer | `9999` | The max number of items per batch when splitting STIX bundles. |
 | MISP_BATCH_SIZE_LIMIT | `string` |  | string | `null` | Max size of batches (in human-readable file size, e.g., '10MB', '500KB', '1.5GB') when splitting STIX bundles. `None` means no limit. |
 | MISP_REQUEST_TIMEOUT | `number` |  | number | `null` | The timeout for the requests to the MISP API in seconds. None means no timeout. |
+| MISP_SEARCH_LIMIT | `integer` |  | integer | `10` | Limit the number of results returned per page request to MISP server. |

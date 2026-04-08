@@ -103,7 +103,7 @@ class MontysecurityC2TrackerConnector:
                 relationship = self.converter_to_stix.create_relationship(
                     source_obj=ip_indicator,
                     target_obj=malware_stix,
-                    relationship_type=RelationshipType.INDICATES,
+                    relationship_type=RelationshipType.RELATED_TO,
                 )
                 entities.append(relationship)
 
