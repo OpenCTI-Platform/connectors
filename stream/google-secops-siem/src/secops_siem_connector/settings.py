@@ -17,12 +17,16 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
         description="The name of the connector.",
         default="GoogleSecOpsSIEM",
     )
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="9257254e-b4ef-4592-ab11-6d37d4aa321f",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector",
         default=["google-secops-siem"],
     )
     live_stream_id: str = Field(
-        description="The ID of the live stream to connect to.",
+        description="ID of the live stream to connect to (created in the OpenCTI UI).",
     )
 
 
