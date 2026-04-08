@@ -1,17 +1,22 @@
 import time
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from google.auth.transport import requests as ChronicleRequests
 from google.oauth2 import service_account
 from requests import Response
 from requests.exceptions import ConnectionError, HTTPError, Timeout
 
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
+    from secops_siem_connector.settings import SecOpsSIEMConfig
+
+
 SECOPS_SIEM_API_BASE_URL = "https://chronicle.googleapis.com"
 SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
 class SecOpsEntitiesClient:
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "SecOpsSIEMConfig"):
         """
         Init Chronicle API client.
         :param helper: Connector's helper from PyCTI
@@ -224,11 +229,17 @@ class SecOpsEntitiesClient:
                 entities=entities, retry_status_forcelist=[429]
             )
 
-            if response.status_code == 200:
+            if response is not None and response.status_code == 200:
                 # Google returns True for response.ok when the request is successful
                 return response.ok
             else:
-                response.raise_for_status()
+                if response is not None:
+                    response.raise_for_status()
+                else:
+                    self.helper.connector_logger.error(
+                        "[API] Request failed after retries with no response received."
+                    )
+                    return None
 
         except HTTPError as err:
             self.helper.connector_logger.error(

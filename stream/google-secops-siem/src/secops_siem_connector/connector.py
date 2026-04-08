@@ -38,7 +38,7 @@ class SecOpsSIEMConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-    def handle_logger_info(self, data: dict, event_context: dict = None) -> None:
+    def handle_logger_info(self, data: dict, event_context: dict | None = None) -> None:
         """
         Updates the connector logger with information about the current action being processed.
 
@@ -73,7 +73,7 @@ class SecOpsSIEMConnector:
             {"indicator_id": data["id"]},
         )
 
-    def validate_json(self, msg) -> dict | JSONDecodeError:
+    def validate_json(self, msg) -> dict:
         """
         Validate the JSON data from the stream
         :param msg: Message event from stream
@@ -147,7 +147,7 @@ class SecOpsSIEMConnector:
             data = parsed_msg["data"]
 
             # When an IOC is updated, get the context of the update event
-            event_context = parsed_msg["context"] if "context" in parsed_msg else None
+            event_context = parsed_msg.get("context")
 
             # Extract data and handle only entity type 'Indicator' from stream
             if data["type"] == "indicator" and data["pattern_type"] in ["stix"]:
@@ -162,7 +162,7 @@ class SecOpsSIEMConnector:
                     self._upsert_ioc_rule(data)
 
                 # Handle update
-                if msg.event == "update":
+                elif msg.event == "update":
                     self.handle_logger_info(data, event_context)
                     self._upsert_ioc_rule(data)
 
