@@ -3,20 +3,21 @@ import sys
 from json import JSONDecodeError
 
 from pycti import OpenCTIConnectorHelper
-from secops_siem_services import ConfigConnector, CTIConverter, SecOpsEntitiesClient
+from secops_siem_connector.settings import ConnectorSettings
+from secops_siem_services import CTIConverter, SecOpsEntitiesClient
 
 
 class SecOpsSIEMConnector:
-
-    def __init__(self):
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
-
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = CTIConverter(self.helper, self.config)
-        self.api_client = SecOpsEntitiesClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        self.converter = CTIConverter(helper, config.secops_siem)
+        self.api_client = SecOpsEntitiesClient(helper, config.secops_siem)
 
     def check_stream_id(self) -> None:
         """
