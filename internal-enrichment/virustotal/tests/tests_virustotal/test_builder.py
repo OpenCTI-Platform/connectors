@@ -55,7 +55,58 @@ class VirusTotalBuilderTest(unittest.TestCase):
             self.load_file("vt_test_file.json")["data"],
         )
         attributes = self.load_file("vt_test_file.json")["data"]["attributes"]
-        self.assertEqual(builder._compute_score(attributes["last_analysis_stats"]), 72)
+        self.assertEqual(
+            builder._compute_score(attributes["last_analysis_stats"], {}), 72
+        )
+
+    def test_compute_score_with_gti_assessment(self):
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [],
+            {"id": "fakeid"},
+            {"id": "fakeid"},
+            self.load_file("vt_test_file.json")["data"],
+        )
+        attributes = self.load_file("vt_test_file.json")["data"]["attributes"]
+        gti_assessment = {"threat_score": {"value": 85}}
+        self.assertEqual(
+            builder._compute_score(attributes["last_analysis_stats"], gti_assessment),
+            85,
+        )
+
+    def test_compute_score_gti_assessment_no_threat_score(self):
+        """GTI assessment present but missing threat_score falls back to stats."""
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [],
+            {"id": "fakeid"},
+            {"id": "fakeid"},
+            self.load_file("vt_test_file.json")["data"],
+        )
+        attributes = self.load_file("vt_test_file.json")["data"]["attributes"]
+        self.assertEqual(
+            builder._compute_score(attributes["last_analysis_stats"], {}), 72
+        )
+
+    def test_compute_score_gti_assessment_none(self):
+        """gti_assessment=None falls back to stats-based computation."""
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [],
+            {"id": "fakeid"},
+            {"id": "fakeid"},
+            self.load_file("vt_test_file.json")["data"],
+        )
+        attributes = self.load_file("vt_test_file.json")["data"]["attributes"]
+        self.assertEqual(
+            builder._compute_score(attributes["last_analysis_stats"], None), 72
+        )
 
     def test_create_asn_belongs_to(self):
         observable = {

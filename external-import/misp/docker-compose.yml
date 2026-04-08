@@ -48,4 +48,5 @@ services:
       #- MISP_BATCH_COUNT=9999
       #- MISP_REQUEST_TIMEOUT=
       #- MISP_BATCH_SIZE_LIMIT=
+      #- MISP_SEARCH_LIMIT=10
     restart: always
