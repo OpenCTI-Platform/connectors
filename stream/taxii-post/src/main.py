@@ -106,10 +106,6 @@ class TaxiiPostConnector:
         try:
             data_object = data
             data_object["spec_version"] = self.taxii_stix_version
-            if "object_marking_refs" in data_object:
-                del data_object["object_marking_refs"]
-            if "created_by_ref" in data_object:
-                del data_object["created_by_ref"]
             if self.taxii_stix_version != "2.1":
                 del data_object["extensions"]
                 if "spec_version" in data_object:
