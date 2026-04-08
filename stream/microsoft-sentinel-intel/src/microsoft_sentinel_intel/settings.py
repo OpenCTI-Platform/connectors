@@ -78,9 +78,10 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         default=False,
     )
     batch_size: int = Field(
-        description="Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled.",
+        description="Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled. Maxed at 100 because the Sentinel Upload Indicators API rejects requests containing more than 100 STIX objects.",
         default=100,
         ge=1,
+        le=100,
     )
     batch_timeout: int = Field(
         description="Maximum time in seconds to wait before flushing a partial batch. Only used when batch_mode is enabled.",
