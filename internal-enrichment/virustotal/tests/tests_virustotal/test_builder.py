@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Virustotal builder unittest."""
 
 import datetime
@@ -8,8 +7,9 @@ import unittest
 from unittest.mock import MagicMock, PropertyMock
 
 import stix2
-from pycti import Identity
+from pycti import STIX_EXT_OCTI, Identity
 from virustotal.builder import VirusTotalBuilder
+from virustotal.models.configs.virustotal_configs import IndicatorConfig
 
 
 class VirusTotalBuilderTest(unittest.TestCase):
@@ -18,7 +18,9 @@ class VirusTotalBuilderTest(unittest.TestCase):
         cls.helper = MagicMock()
         cls.confidence_level = PropertyMock(return_value=49)
         type(cls.helper).connect_confidence_level = cls.confidence_level
-        cls.helper.api.stix2.format_date.return_value = datetime.datetime.utcnow()
+        cls.helper.api.stix2.format_date.return_value = datetime.datetime.now(
+            datetime.timezone.utc
+        )
 
         # Setup author
         cls.author = stix2.Identity(
@@ -194,6 +196,8 @@ class VirusTotalBuilderTest(unittest.TestCase):
         observable = {
             "standard_id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82",
             "id": "94a2e4e9-bb9a-544a-b379-44923d37ca82",
+            "entity_type": "Url",
+            "observable_value": "http://soclosebutyetqq.com/69.exe",
         }
         stix_entity = {"id": "url--94a2e4e9-bb9a-544a-b379-44923d37ca82"}
         builder = VirusTotalBuilder(
@@ -208,13 +212,19 @@ class VirusTotalBuilderTest(unittest.TestCase):
         builder.create_notes()
         # Bundle should have 3 elements: the author, the asn and the relationship.
         self.assertEqual(len(builder.bundle), 4)
-        self.assertEqual(builder.bundle[2].abstract, "VirusTotal Results")
+        self.assertEqual(
+            builder.bundle[2].abstract,
+            "VirusTotal Results (Url: http://soclosebutyetqq.com/69.exe)",
+        )
         self.assertTrue("Sangfor" in builder.bundle[2].content)
         self.assertEqual(builder.bundle[2].created_by_ref, self.author.id)
         self.assertTrue(
             "url--94a2e4e9-bb9a-544a-b379-44923d37ca82" in builder.bundle[2].object_refs
         )
-        self.assertEqual(builder.bundle[3].abstract, "VirusTotal Categories")
+        self.assertEqual(
+            builder.bundle[3].abstract,
+            "VirusTotal Categories (Url: http://soclosebutyetqq.com/69.exe)",
+        )
         self.assertTrue("Sophos" in builder.bundle[3].content)
         self.assertEqual(builder.bundle[2].created_by_ref, self.author.id)
         self.assertEqual(builder.bundle[3].created_by_ref, self.author.id)
@@ -283,6 +293,74 @@ class VirusTotalBuilderTest(unittest.TestCase):
             ),
             "https://www.virustotal.com/gui/url/7d83e9f686ff0122ded311f27aababf6922800a45a23a4dacc860b56ccada4cb",
         )
+
+    def test_is_indicator_skips_create_indicator_based_on(self):
+        """When is_indicator=True, create_indicator_based_on must be a no-op."""
+
+        stix_entity = {"id": "indicator--aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"}
+        opencti_entity = {
+            "entity_type": "IPv4-Addr",
+            "observable_value": "1.2.3.4",
+        }
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [stix_entity],
+            stix_entity,
+            opencti_entity,
+            self.load_file("vt_test_ipv4.json")["data"],
+            is_indicator=True,
+        )
+        initial_bundle_len = len(builder.bundle)
+        config = IndicatorConfig(threshold=1, valid_minutes=2880, detect=True)
+        builder.create_indicator_based_on(config, "[ipv4-addr:value = '1.2.3.4']")
+        # Bundle must not grow — no new indicator was created.
+        self.assertEqual(len(builder.bundle), initial_bundle_len)
+
+    def test_is_indicator_sets_score_via_octi_extension(self):
+        """When is_indicator=True, the STIX_EXT_OCTI extension should carry the score."""
+
+        stix_entity = {"id": "indicator--aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"}
+        opencti_entity = {
+            "entity_type": "IPv4-Addr",
+            "observable_value": "1.2.3.4",
+        }
+        _ = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [stix_entity],
+            stix_entity,
+            opencti_entity,
+            self.load_file("vt_test_ipv4.json")["data"],
+            is_indicator=True,
+        )
+        ext_data = stix_entity.get("extensions", {}).get(STIX_EXT_OCTI, {})
+        self.assertIn("score", ext_data)
+
+    def test_update_labels_for_indicator(self):
+        """When is_indicator=True, update_labels should set labels directly on stix_entity."""
+        stix_entity = {"id": "indicator--aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"}
+        opencti_entity = {
+            "entity_type": "StixFile",
+            "observable_value": "abc123",
+        }
+        builder = VirusTotalBuilder(
+            self.helper,
+            self.author,
+            True,
+            [stix_entity],
+            stix_entity,
+            opencti_entity,
+            self.load_file("vt_test_file.json")["data"],
+            is_indicator=True,
+        )
+        builder.update_labels()
+        # Tags from vt_test_file should now be in stix_entity["labels"].
+        self.assertIn("labels", stix_entity)
+        self.assertIsInstance(stix_entity["labels"], list)
+        self.assertTrue(len(stix_entity["labels"]) > 0)
 
     @staticmethod
     def load_file(filename: str):
