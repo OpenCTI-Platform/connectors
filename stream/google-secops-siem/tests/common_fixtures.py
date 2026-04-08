@@ -3,7 +3,7 @@ import os
 from unittest.mock import MagicMock, Mock
 
 import pytest
-from src.secops_siem_services import CTIConverter
+from secops_siem_services import CTIConverter
 
 
 @pytest.fixture(scope="class")
