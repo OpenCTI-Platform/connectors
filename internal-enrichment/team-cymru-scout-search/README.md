@@ -24,7 +24,7 @@
   - [Debugging](#debugging)
   - [Additional Information](#additional-information)
     - [Early Access](#early-access)
-    - [Use Case](#use-case)
+    - [Use Case](#use-case-playbook-based-scout-query-enrichment)
 
 ---
 
@@ -157,6 +157,46 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 
 ---
 
+### Use Case: Playbook-Based Scout Query Enrichment
+
+This connector is designed for playbook-based searches where Scout query patterns are used to enrich indicators with threat intelligence data. Below is a step-by-step guide to set up automated enrichment.
+
+#### Step 1: Verify Connector Installation
+
+1. Navigate to **Data > Ingestion > Monitoring** in OpenCTI.
+2. Confirm the **Scout Search Connector** appears in the list and is running.
+
+#### Step 2: Create and Configure a Playbook
+
+1. Navigate to **Data > Processing > Automation**.
+2. Click **Create Playbook**, enter a name and description, then confirm.
+3. In the playbook editor, click the empty run step and select a trigger type:
+   - **Manual execution:** Select _"Available for manual enrollment / trigger"_.
+   - **Scheduled execution:** Select _"Query knowledge on a regular basis"_.
+4. Add a **Pattern type** filter and set the value to `pure-signal-scout`.
+5. Add the **"Enrich through connector"** component and select **Scout Search Connector**.
+6. Add the **"Send for ingestion"** component to store enriched data.
+7. Start the playbook via the three-dot menu and verify it shows _"Playbook is running"_.
+
+#### Step 3: Create an Indicator
+
+1. Navigate to **Observations > Indicators**.
+2. Click **Create Indicator** and configure:
+   - **Pattern type:** `pure-signal-scout`
+   - **Pattern:** A Scout query (e.g., `ip = 45.169.110.205` or `asn = "131279, 20485, 134544" comms.tag2 = "astrill-vpn, anydesk, pikvm"`)
+   - **Main observable type:** Text
+   - **Marking:** TLP:GREEN (or appropriate level within the configured max TLP)
+3. Click **Create** to save.
+
+#### Step 4: Run and Verify Enrichment
+
+1. Open the indicator detail page.
+2. Click **"Enroll in playbook"** and start the playbook, or use **manual enrichment** via the three-dot menu > Enrichment.
+3. Wait for the enrichment and ingestion processes to complete.
+4. Verify the **Knowledge** tab shows enriched relationships (IP addresses, indicators, autonomous systems, locations, etc.).
+
+---
+
 ## Additional Information
 
 - [Team Cymru](https://www.team-cymru.com/)
@@ -165,7 +205,3 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 ### Early Access
 
 This connector is currently in early access. Please report any issues or feedback to help improve the connector.
-
-### Use Case
-
-This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create an Indicator observable with your search query and trigger enrichment.
