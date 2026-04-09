@@ -1,8 +1,8 @@
 # OpenCTI YARA Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Community | -    | -       |
+| Status   | Date       | Comment |
+|----------|------------|---------|
+| Verified | 2026-04-09 | -       |
 
 ## Table of Contents
 
@@ -59,7 +59,6 @@ When a YARA rule matches an artifact, the connector creates a relationship betwe
 | `connector_name` | `CONNECTOR_NAME` | Yes | Set to "YARA" |
 | `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `Artifact` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
 
 ---
@@ -84,7 +83,6 @@ services:
       - CONNECTOR_NAME=YARA
       - CONNECTOR_SCOPE=Artifact
       - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=100
       - CONNECTOR_LOG_LEVEL=error
     restart: always
 ```

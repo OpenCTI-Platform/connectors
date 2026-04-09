@@ -1,11 +1,11 @@
 import os
-import sys
-import time
+import traceback
 
+import stix2
 import yaml
 import yara
 from pycti import (
-    OpenCTIApiClient,
+    Identity,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     get_config_variable,
@@ -22,11 +22,14 @@ class YaraConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config)
-        self.client = OpenCTIApiClient(
-            url=self.helper.get_opencti_url(), token=self.helper.get_opencti_token()
-        )
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
+        )
+        self.author = stix2.Identity(
+            id=Identity.generate_id("YARA", "organization"),
+            name="YARA",
+            identity_class="organization",
+            description="YARA connector for OpenCTI",
         )
 
     def _get_artifact_contents(self, artifact) -> list[bytes]:
@@ -39,7 +42,9 @@ class YaraConnector:
         :return: List of the binary contents of the files associated with the artefact, returns an empty list `[]`
                  if no files are associated.
         """
-        self.helper.log_debug("Getting Artifact contents (bytes) from OpenCTI")
+        self.helper.connector_logger.debug(
+            "Getting Artifact contents (bytes) from OpenCTI"
+        )
 
         artifact_files_contents = artifact.get("importFiles", [])
 
@@ -51,17 +56,18 @@ class YaraConnector:
                 file_url = self.octi_api_url + "/storage/get/" + file_id
                 file_content = self.helper.api.fetch_opencti_file(file_url, binary=True)
                 files_contents.append(file_content)
-                self.helper.log_debug(
+                self.helper.connector_logger.debug(
                     f"Associated file found in Artifact with file_name :{file_name}"
                 )
         else:
-            self.helper.log_debug("No associated files found in Artifact")
+            self.helper.connector_logger.debug("No associated files found in Artifact")
         return files_contents
 
     def _get_yara_indicators(self) -> list:
-        self.helper.log_debug("Getting all YARA Indicators in OpenCTI")
+        self.helper.connector_logger.debug("Getting all YARA Indicators in OpenCTI")
 
         data = {"pagination": {"hasNextPage": True, "endCursor": None}}
+        all_entities = []
         customAttributes = """
         id
         name
@@ -84,10 +90,11 @@ class YaraConnector:
                 withPagination=True,
                 customAttributes=customAttributes,
             )
-        return data["entities"]
+            all_entities += data["entities"]
+        return all_entities
 
-    def _scan_artifact(self, artifact, yara_indicators) -> None:
-        self.helper.log_debug("Scanning Artifact contents with YARA")
+    def _scan_artifact(self, artifact, yara_indicators) -> list:
+        self.helper.connector_logger.debug("Scanning Artifact contents with YARA")
 
         artifact_contents = self._get_artifact_contents(artifact)
 
@@ -98,7 +105,7 @@ class YaraConnector:
                     rule_content = indicator["pattern"]
                     rule = yara.compile(source=rule_content)
                 except yara.SyntaxError:
-                    self.helper.log_error(
+                    self.helper.connector_logger.error(
                         f"Encountered YARA syntax error {indicator['name']}"
                     )
                     continue
@@ -112,40 +119,63 @@ class YaraConnector:
                             indicator["standard_id"],
                         ),
                         relationship_type="related-to",
+                        created_by_ref=self.author["id"],
                         object_marking_refs=[TLP_WHITE],
                         source_ref=artifact["standard_id"],
                         target_ref=indicator["standard_id"],
                         description="YARA rule matched for this Artifact",
                     )
                     bundle_objects.append(relationship)
-                    self.helper.log_debug(
+                    self.helper.connector_logger.debug(
                         f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
                     )
 
-        if any(bundle_objects):
-            bundle = Bundle(objects=bundle_objects).serialize()
-            self.helper.send_stix2_bundle(bundle)
+        return bundle_objects
 
     def _process_message(self, data: dict) -> str:
         entity_id = data["entity_id"]
-        self.helper.log_info(f"Enriching {entity_id}")
+        stix_objects = data.get("stix_objects", [])
+
+        # Check scope — forward original bundle if entity type is out of scope
+        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
+        entity_type = entity_id.split("--")[0].lower()
+        if entity_type not in scopes:
+            self.helper.connector_logger.info(
+                "Entity type not in connector scope, forwarding original bundle",
+                {"entity_id": entity_id, "entity_type": entity_type},
+            )
+            if stix_objects:
+                bundle = Bundle(objects=stix_objects).serialize()
+                self.helper.send_stix2_bundle(bundle)
+            return "Entity type not in scope"
+
+        self.helper.connector_logger.info(f"Enriching {entity_id}")
         artifact = data["enrichment_entity"]
 
-        response = "Done"
         yara_indicators = self._get_yara_indicators()
-        if any(yara_indicators):
-            rule_count = len(yara_indicators)
-            self.helper.log_debug(f"Scanning an Artifact with {rule_count} rules")
-            self._scan_artifact(artifact, yara_indicators)
-        else:
-            self.helper.log_debug("No YARA Indicators to match")
-            response = "No YARA Indicators to match"
+        if not yara_indicators:
+            self.helper.connector_logger.debug("No YARA Indicators to match")
+            return "No YARA Indicators to match"
 
-        return response
+        rule_count = len(yara_indicators)
+        self.helper.connector_logger.debug(
+            f"Scanning an Artifact with {rule_count} rules"
+        )
+        new_objects = self._scan_artifact(artifact, yara_indicators)
+
+        if new_objects:
+            all_objects = stix_objects + [self.author] + new_objects
+            bundle = Bundle(objects=all_objects).serialize()
+            self.helper.send_stix2_bundle(bundle)
+        elif stix_objects:
+            bundle = Bundle(objects=stix_objects).serialize()
+            self.helper.send_stix2_bundle(bundle)
+
+        return "Done"
 
     # Start the main loop
     def start(self) -> None:
-        self.helper.log_info("YARA connector started")
+        self.helper.connector_logger.info("YARA connector started")
         self.helper.listen(message_callback=self._process_message)
 
 
@@ -153,7 +183,6 @@ if __name__ == "__main__":
     try:
         connector = YaraConnector()
         connector.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        exit(1)
