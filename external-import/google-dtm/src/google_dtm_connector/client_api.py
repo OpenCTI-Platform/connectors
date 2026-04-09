@@ -56,16 +56,42 @@ class GoogleDTMAPIClient:
         }
         dtm_alerts_url = self.base_url + "/alerts"
         has_more = True
+        page = 1
+        self.helper.connector_logger.info(
+            "[API] Start fetching DTM alerts",
+            {
+                "since": since_date,
+                "severity": alert_severity,
+                "alert_type": alert_type,
+            },
+        )
         while has_more:
             try:
                 response = self.session.get(dtm_alerts_url, params=params)
                 response.raise_for_status()
                 data = response.json()
-                if "alerts" in data and data.get("alerts"):
-                    alerts.extend(data.get("alerts"))
-                if "link" in response.headers:
-                    dtm_alerts_url = response.links["next"]["url"]
+                page_alerts = data.get("alerts", [])
+                if page_alerts:
+                    alerts.extend(page_alerts)
+
+                self.helper.connector_logger.info(
+                    "[API] DTM alerts page fetched",
+                    {
+                        "page": page,
+                        "fetched_count": len(page_alerts),
+                        "total_count": len(alerts),
+                    },
+                )
+
+                next_url = response.links.get("next", {}).get("url")
+                if next_url:
+                    self.helper.connector_logger.info(
+                        "[API] Continue DTM alerts pagination",
+                        {"page": page + 1},
+                    )
+                    dtm_alerts_url = next_url
                     params = {}
+                    page += 1
                 else:
                     has_more = False
             except Exception as err:
@@ -75,4 +101,9 @@ class GoogleDTMAPIClient:
                     )
                 )
                 raise ex
+
+        self.helper.connector_logger.info(
+            "[API] Finished fetching DTM alerts",
+            {"total_count": len(alerts), "pages": page},
+        )
         return alerts
