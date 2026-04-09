@@ -499,7 +499,7 @@ class ConverterToStix:
         :return:
         """
         stix_related_entities = []
-        if "login" in dtm_alert.get("doc").get("service_account", {}):
+        if "login" in dtm_alert.get("doc", {}).get("service_account", {}):
             password = None
             if (
                 "plain_text"
