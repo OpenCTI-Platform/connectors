@@ -28,7 +28,7 @@ the RabbitMQ on the port configured in the OpenCTI platform.
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260401.0
+- OpenCTI Platform >= 7.260409.0
 
 ### Configuration
 
