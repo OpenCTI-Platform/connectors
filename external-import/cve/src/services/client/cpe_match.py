@@ -4,13 +4,13 @@ CPE_MATCH_BASE_URL = "https://services.nvd.nist.gov/rest/json/cpematch/2.0"
 
 
 class CPEMatchClient(CVEClient):
-    """Client for the NVD CPE Match API.
+    """Async client for the NVD CPE Match API.
 
     Resolves CPE names associated with a given CVE ID.
     API documentation: https://nvd.nist.gov/developers/products
     """
 
-    def get_cpes_for_cve(self, cve_id: str) -> list[str]:
+    async def get_cpes_for_cve(self, cve_id: str) -> list[str]:
         """Retrieve all unique CPE names associated with a CVE.
 
         Calls the NVD CPE Match API with the given CVE ID, handles pagination,
@@ -23,19 +23,21 @@ class CPEMatchClient(CVEClient):
             A deduplicated list of CPE Name strings (format cpe:2.3:...).
         """
         cpe_names: set[str] = set()
-        params = {"cveId": cve_id}
+        params: dict = {"cveId": cve_id}
 
         info_msg = f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
         self.helper.connector_logger.info(info_msg)
 
         try:
-            first_response = self._request_data(self, CPE_MATCH_BASE_URL, params)
-            if first_response is None:
-                warn_msg = f"[CPE MATCH API] No response for {cve_id}, skipping CPE resolution."
+            data = await self.get_complete_collection(CPE_MATCH_BASE_URL, params)
+            if data is None:
+                warn_msg = (
+                    f"[CPE MATCH API] No response for {cve_id}, "
+                    f"skipping CPE resolution."
+                )
                 self.helper.connector_logger.warning(warn_msg)
                 return []
 
-            data = first_response.json()
             self._extract_cpe_names(data, cpe_names)
 
             # Handle pagination
@@ -49,12 +51,11 @@ class CPEMatchClient(CVEClient):
                     "startIndex": start_index,
                     "resultsPerPage": results_per_page,
                 }
-                response = self._request_data(
-                    self, CPE_MATCH_BASE_URL, paginated_params
+                page_data = await self.get_complete_collection(
+                    CPE_MATCH_BASE_URL, paginated_params
                 )
-                if response is None:
+                if page_data is None:
                     break
-                page_data = response.json()
                 self._extract_cpe_names(page_data, cpe_names)
                 results_per_page = page_data.get("resultsPerPage", 0)
                 start_index += results_per_page
