@@ -1,91 +1,103 @@
-import time
+import asyncio
+import logging
 
-import requests
-from requests.adapters import HTTPAdapter
-from src.services.client.endpoints import BASE_URL
-from urllib3.util import Retry
+import aiohttp
+from src.services.client.endpoints import BASE_URL  # noqa: F401
+from src.services.utils.rate_limiter import AsyncRateLimiter
+
+logger = logging.getLogger(__name__)
 
 
 class CVEClient:
-    """
-    Working with CVE API
-    """
+    """Async HTTP client for the NVD API (CVE & CPE Match)."""
 
-    def __init__(self, api_key, helper, header):
-        """
-        Initialize CVE API with necessary configurations
-        :param api_key: API key in string
-        :param helper: OCTI helper
-        :param header:
-        """
-        headers = {"apiKey": api_key, "User-Agent": header}
+    def __init__(
+        self,
+        api_key: str,
+        helper,
+        header: str,
+        rate_limiter: AsyncRateLimiter,
+    ):
         self.token = api_key
         self.helper = helper
-        self.session = requests.Session()
-        self.session.headers.update(headers)
+        self._rate_limiter = rate_limiter
+        self._headers = {"apiKey": api_key, "User-Agent": header}
+        self._session: aiohttp.ClientSession | None = None
 
-    @staticmethod
-    def _request_data(self, api_url: str, params=None):
-        """
-        Internal method to handle API requests
-        :return: Response in JSON format
-        """
-        try:
-            response = self.request(api_url, params)
+    async def _get_session(self) -> aiohttp.ClientSession:
+        if self._session is None or self._session.closed:
+            timeout = aiohttp.ClientTimeout(total=60)
+            self._session = aiohttp.ClientSession(
+                headers=self._headers,
+                timeout=timeout,
+            )
+        return self._session
 
-            info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
-            self.helper.connector_logger.info(info_msg)
+    async def close(self) -> None:
+        if self._session and not self._session.closed:
+            await self._session.close()
 
-            response.raise_for_status()
-            return response
+    async def request(self, api_url: str, params: dict | None = None):
+        """Make a rate-limited GET request with retry logic."""
+        max_retries = 4
+        backoff_factor = 6
+        retryable_statuses = {429, 500, 502, 503, 504}
 
-        except requests.RequestException as err:
-            error_msg = f"[API] Error while fetching data from {api_url}: {str(err)}"
-            self.helper.connector_logger.error(error_msg, meta={"error": str(err)})
-            return None
+        for attempt in range(max_retries + 1):
+            await self._rate_limiter.acquire()
+            session = await self._get_session()
 
-    def request(self, api_url, params):
-        # Define the retry strategy
-        retry_strategy = Retry(
-            total=4,  # Maximum number of retries
-            backoff_factor=6,  # Exponential backoff factor (e.g., 2 means 1, 2, 4, 8 seconds, ...)
-            status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-        )
-        # Create an HTTP adapter with the retry strategy and mount it to session
-        adapter = HTTPAdapter(max_retries=retry_strategy)
+            try:
+                async with session.get(api_url, params=params) as response:
+                    if response.status == 200:
+                        return await response.json()
 
-        self.session.mount("http://", adapter)
-        self.session.mount("https://", adapter)
+                    if response.status == 404:
+                        error_data = dict(response.headers)
+                        if error_data.get("message") == "Invalid apiKey.":
+                            raise Exception(
+                                "[API] Invalid API Key provided. "
+                                "Please check your configuration."
+                            )
+                        raise Exception(f"[API] Error: {error_data.get('message')}")
 
-        response = self.session.get(api_url, params=params)
+                    if response.status in retryable_statuses and attempt < max_retries:
+                        wait = backoff_factor * (2**attempt)
+                        self.helper.connector_logger.warning(
+                            f"[API] Retryable status {response.status}, "
+                            f"waiting {wait}s (attempt {attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(wait)
+                        continue
 
-        if response.status_code == 200:
-            # It is recommended that users "sleep" their scripts for six seconds between requests (NIST)
-            time.sleep(6)
-            return response
-        elif response.status_code == 404:
-            error_data = response.headers
-            if error_data.get("message") == "Invalid apiKey.":
-                raise Exception(
-                    "[API] Invalid API Key provided. Please check your configuration."
-                )
-            else:
-                raise Exception(f"[API] Error: {error_data.get('message')}")
+                    raise Exception(
+                        f"[API] Request to {api_url} failed with status "
+                        f"{response.status}"
+                    )
+            except aiohttp.ClientError as err:
+                if attempt < max_retries:
+                    wait = backoff_factor * (2**attempt)
+                    self.helper.connector_logger.warning(
+                        f"[API] Connection error, waiting {wait}s "
+                        f"(attempt {attempt + 1}/{max_retries}): {err}"
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                raise
+
         raise Exception(
             "[API] Attempting to retrieve data failed. Wait for connector to re-run..."
         )
 
-    def get_complete_collection(self, cve_params=None):
-        """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param cve_params: Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
-        """
+    async def get_complete_collection(self, api_url: str, params: dict | None = None):
+        """Fetch a JSON collection from the given NVD API endpoint."""
         try:
-            response = self._request_data(self, BASE_URL, params=cve_params)
+            info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
+            self.helper.connector_logger.info(info_msg)
 
-            cve_collection = response.json()
-            return cve_collection
+            data = await self.request(api_url, params)
+            return data
 
         except Exception as err:
-            self.helper.connector_logger.error(err, meta={"error": str(err)})
+            self.helper.connector_logger.error(str(err), meta={"error": str(err)})
+            return None
