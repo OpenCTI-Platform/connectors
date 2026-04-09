@@ -1,3 +1,4 @@
+import asyncio
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -79,6 +80,29 @@ class CVEConnector:
             + " hours"
         )
 
+    async def _async_ingest(self, cve_params: dict, work_id: str) -> None:
+        """Run the two-phase async ingestion pipeline.
+
+        Phase 1: Fetch CVEs → convert to STIX2 → send bundles immediately.
+        Phase 2: Resolve CPEs in parallel → send Software bundles in batches
+                 (only when import_software is enabled).
+        """
+        # Reset rate limiter state to avoid stale asyncio.Lock across runs
+        self.converter._rate_limiter.reset()
+        try:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Phase 1: CVE ingestion (immediate bundle sends)"
+            )
+            cpe_work = await self.converter.send_cve_bundles(cve_params, work_id)
+
+            if cpe_work:
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Phase 2: Parallel CPE resolution"
+                )
+                await self.converter.send_cpe_bundles(cpe_work, work_id)
+        finally:
+            await self.converter.close()
+
     def _import_recent(self, now: datetime, work_id: str) -> None:
         """
         Import the most recent CVEs depending on date range chosen
@@ -96,7 +120,7 @@ class CVEConnector:
 
         cve_params = self._update_cve_params(start_date, now)
 
-        self.converter.send_bundle(cve_params, work_id)
+        asyncio.run(self._async_ingest(cve_params, work_id))
 
     def _import_history(
         self, start_date: datetime, end_date: datetime, work_id: str
@@ -142,12 +166,11 @@ class CVEConnector:
                     end_date_current_year = start_date_current_year + timedelta(
                         days=days_in_year
                     )
-                    # Update date range
                     cve_params = self._update_cve_params(
                         start_date_current_year, end_date_current_year
                     )
 
-                    self.converter.send_bundle(cve_params, work_id)
+                    asyncio.run(self._async_ingest(cve_params, work_id))
                     days_in_year = 0
 
                 """
@@ -155,23 +178,21 @@ class CVEConnector:
                 1 year % 120 days => 5 or 6 (depends if it is a leap year or not)
                 """
                 if days_in_year > 6:
-                    # Update date range
                     cve_params = self._update_cve_params(
                         start_date_current_year, end_date_current_year
                     )
 
-                    self.converter.send_bundle(cve_params, work_id)
+                    asyncio.run(self._async_ingest(cve_params, work_id))
                     start_date_current_year += timedelta(days=MAX_AUTHORIZED)
                     days_in_year -= MAX_AUTHORIZED
                 else:
                     end_date_current_year = start_date_current_year + timedelta(
                         days=days_in_year
                     )
-                    # Update date range
                     cve_params = self._update_cve_params(
                         start_date_current_year, end_date_current_year
                     )
-                    self.converter.send_bundle(cve_params, work_id)
+                    asyncio.run(self._async_ingest(cve_params, work_id))
                     days_in_year = 0
 
             info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
@@ -190,9 +211,8 @@ class CVEConnector:
 
         last_run_ts = datetime.fromtimestamp(last_run, tz=timezone.utc)
 
-        # Update date range
         cve_params = self._update_cve_params(last_run_ts, now)
-        self.converter.send_bundle(cve_params, work_id)
+        asyncio.run(self._async_ingest(cve_params, work_id))
 
     @staticmethod
     def _update_cve_params(start_date: datetime, end_date: datetime) -> dict:
