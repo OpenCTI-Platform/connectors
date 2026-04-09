@@ -30,9 +30,14 @@ class ExportFileCsv:
             []
         )  # error holder to be reset before each new process
 
-    def export_dict_list_to_csv(self, data):
+    def export_dict_list_to_csv(self, data, columns=[]):
         output = io.StringIO()
-        headers = sorted(set().union(*(d.keys() for d in data)))
+        data_headers = sorted(set().union(*(d.keys() for d in data)))
+        headers = (
+            [header for header in columns if header in data_headers]
+            if len(columns) != 0
+            else data_headers
+        )
         if "hashes" in headers:
             headers = headers + [
                 "hashes.MD5",
@@ -123,7 +128,9 @@ class ExportFileCsv:
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
-        csv_data = self.export_dict_list_to_csv(entities_list)
+        list_params = data.get("list_params")
+        visible_columns = list_params.get("visible_columns", [])
+        csv_data = self.export_dict_list_to_csv(entities_list, visible_columns)
         self.helper.log_info(
             "Uploading: " + entity_type + "/" + export_type + " to " + file_name
         )
