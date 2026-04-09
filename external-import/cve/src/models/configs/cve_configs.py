@@ -41,3 +41,11 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
         default=False,
         description="⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform. Each CVE may resolve to dozens of CPE matches, resulting in massive amounts of Software entities and relationships. Use with caution. If set to `True`, resolve CPEs associated with each CVE via the NVD CPE Match API and import them as Software objects with 'has' relationships to vulnerabilities.",
     )
+    cpe_max_concurrency: PositiveInt = Field(
+        default=10,
+        description="Maximum number of concurrent CPE resolution tasks when import_software is enabled.",
+    )
+    cpe_bundle_batch_size: PositiveInt = Field(
+        default=100,
+        description="Number of resolved CVEs whose CPE data to accumulate before sending a STIX bundle.",
+    )
