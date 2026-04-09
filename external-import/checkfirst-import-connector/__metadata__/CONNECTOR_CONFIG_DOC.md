@@ -16,7 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P7D"` | The period of time to await between two runs of the connector. |
 | CHECKFIRST_API_ENDPOINT | `string` |  | string | `"/v1/articles"` | API endpoint path (e.g., /v1/articles). |
-| CHECKFIRST_SINCE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"2025-04-01T12:43:27.542432Z"` | Only ingest articles published on or after this date. Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) or durations relative to now (e.g., P365D, P1Y, P6M, P4W). Defaults to 1 year ago. |
+| CHECKFIRST_SINCE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"2025-04-09T13:41:25.978807Z"` | Only ingest articles published on or after this date. Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) or durations relative to now (e.g., P365D, P1Y, P6M, P4W). Defaults to 1 year ago. |
 | CHECKFIRST_FORCE_REPROCESS | `boolean` |  | boolean | `false` | If true, ignore any saved connector state and start from page 1. Useful for debugging or re-importing all data. |
 | CHECKFIRST_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"clear"` | TLP marking level applied to created STIX entities. |
 | CHECKFIRST_MAX_ROW_BYTES | `integer` |  | integer | `null` | Skip any API row larger than this approximate number of bytes. |

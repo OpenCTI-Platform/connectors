@@ -8,7 +8,7 @@ Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Requires-Python: <3.13,>=3.11
 Description-Content-Type: text/markdown
-Requires-Dist: pycti==7.260401.0
+Requires-Dist: pycti==7.260409.0
 Requires-Dist: aiohttp<4,>=3.7.4
 Requires-Dist: limiter==0.5.0
 Requires-Dist: yarl<2,>=1.10.1
