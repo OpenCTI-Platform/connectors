@@ -31,6 +31,11 @@ The National Vulnerability Database (NVD) is the U.S. government repository of s
 
 The connector supports both incremental updates (maintaining data since last run) and historical import (pulling all CVEs from a specified year). It can also optionally resolve CPEs (Common Platform Enumerations) associated with each CVE via the [NVD CPE Match API](https://nvd.nist.gov/developers/products) and import them as Software entities linked to Vulnerabilities.
 
+> [!WARNING]
+> **`import_software` option — High data volume risk**
+>
+> Enabling the `CVE_IMPORT_SOFTWARE` option can lead to the ingestion of a **very significant volume of data** into the platform. Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and `has` relationships being created. This dramatically increases storage usage, ingestion time, and API calls to the NVD. **Enable this option only if you fully understand the impact and have sized your platform accordingly.**
+
 ## Installation
 
 ### Requirements
@@ -69,7 +74,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Maintain Data      | cve.maintain_data    | `CVE_MAINTAIN_DATA`         | true                                         | No        | Import CVEs from last run to current time (incremental updates).            |
 | Pull History       | cve.pull_history     | `CVE_PULL_HISTORY`          | false                                        | No        | Import all CVEs from `history_start_year`. Requires `history_start_year`.   |
 | History Start Year | cve.history_start_year | `CVE_HISTORY_START_YEAR`  | 2019                                         | No        | Required if `pull_history=true`. Minimum 2019 (CVSS v3.1 release).          |
-| Import Software    | cve.import_software    | `CVE_IMPORT_SOFTWARE`     | false                                        | No        | If `true`, resolve CPEs for each CVE via the NVD CPE Match API and import them as Software objects with `has` relationships to Vulnerabilities. **Warning:** this can generate a large volume of data and additional API calls. |
+| Import Software    | cve.import_software    | `CVE_IMPORT_SOFTWARE`     | false                                        | No        | If `true`, resolve CPEs for each CVE via the NVD CPE Match API and import them as Software objects with `has` relationships to Vulnerabilities. **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform. Each CVE may resolve to dozens of CPE matches, resulting in massive amounts of Software entities and relationships. Use with caution and ensure your platform is sized accordingly.** |
 
 ## Deployment
 
@@ -238,7 +243,7 @@ When the `import_software` option is enabled, the connector resolves CPEs (Commo
    - Creates Software entities with vendor, product, version, and CPE URI
    - Links each Software to its Vulnerability with a `has` relationship
    - Can be combined with any operating mode (incremental or historical)
-   - **Warning:** This generates a significant volume of additional data and API calls (one extra API call per CVE). Consider the impact on API rate limits and OpenCTI storage.
+   - **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform.** Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and relationships. This also generates one additional NVD API call per CVE, significantly impacting rate limits and ingestion time. **Ensure your platform is sized accordingly before enabling this option.**
 
 ### Processing Details
 
