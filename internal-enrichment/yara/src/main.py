@@ -10,7 +10,7 @@ from pycti import (
     StixCoreRelationship,
     get_config_variable,
 )
-from stix2 import TLP_WHITE, Bundle, Relationship
+from stix2 import Bundle, Relationship
 
 
 class YaraConnector:
@@ -74,6 +74,9 @@ class YaraConnector:
         standard_id
         pattern
         pattern_type
+        objectMarking {
+            standard_id
+        }
         """
         while data["pagination"]["hasNextPage"]:
             after = data["pagination"]["endCursor"]
@@ -93,26 +96,42 @@ class YaraConnector:
             all_entities += data["entities"]
         return all_entities
 
-    def _scan_artifact(self, artifact, yara_indicators) -> list:
+    @staticmethod
+    def _collect_marking_refs(artifact, indicator):
+        """Collect unique marking definition refs from both entities."""
+        marking_refs = set()
+        for marking in artifact.get("objectMarking", []):
+            std_id = marking.get("standard_id")
+            if std_id:
+                marking_refs.add(std_id)
+        for marking in indicator.get("objectMarking", []):
+            std_id = marking.get("standard_id")
+            if std_id:
+                marking_refs.add(std_id)
+        return list(marking_refs) if marking_refs else None
+
+    def _scan_artifact(self, artifact, yara_indicators) -> tuple[list, list[str]]:
         self.helper.connector_logger.debug("Scanning Artifact contents with YARA")
 
         artifact_contents = self._get_artifact_contents(artifact)
 
         bundle_objects = []
+        errors = []
         for artifact_content in artifact_contents:
             for indicator in yara_indicators:
                 try:
                     rule_content = indicator["pattern"]
                     rule = yara.compile(source=rule_content)
-                except yara.SyntaxError:
-                    self.helper.connector_logger.error(
-                        f"Encountered YARA syntax error {indicator['name']}"
-                    )
+                except yara.SyntaxError as e:
+                    msg = f"YARA syntax error in rule '{indicator['name']}': {e}"
+                    self.helper.connector_logger.error(msg)
+                    errors.append(msg)
                     continue
 
                 results = rule.match(data=artifact_content, timeout=60)
                 if results:
-                    relationship = Relationship(
+                    marking_refs = self._collect_marking_refs(artifact, indicator)
+                    relationship_kwargs = dict(
                         id=StixCoreRelationship.generate_id(
                             "related-to",
                             artifact["standard_id"],
@@ -120,17 +139,19 @@ class YaraConnector:
                         ),
                         relationship_type="related-to",
                         created_by_ref=self.author["id"],
-                        object_marking_refs=[TLP_WHITE],
                         source_ref=artifact["standard_id"],
                         target_ref=indicator["standard_id"],
                         description="YARA rule matched for this Artifact",
                     )
+                    if marking_refs:
+                        relationship_kwargs["object_marking_refs"] = marking_refs
+                    relationship = Relationship(**relationship_kwargs)
                     bundle_objects.append(relationship)
                     self.helper.connector_logger.debug(
                         f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
                     )
 
-        return bundle_objects
+        return bundle_objects, errors
 
     def _process_message(self, data: dict) -> str:
         entity_id = data["entity_id"]
@@ -161,7 +182,7 @@ class YaraConnector:
         self.helper.connector_logger.debug(
             f"Scanning an Artifact with {rule_count} rules"
         )
-        new_objects = self._scan_artifact(artifact, yara_indicators)
+        new_objects, errors = self._scan_artifact(artifact, yara_indicators)
 
         if new_objects:
             all_objects = stix_objects + [self.author] + new_objects
@@ -170,6 +191,9 @@ class YaraConnector:
         elif stix_objects:
             bundle = Bundle(objects=stix_objects).serialize()
             self.helper.send_stix2_bundle(bundle)
+
+        if errors:
+            return f"Completed with {len(errors)} YARA error(s): {'; '.join(errors)}"
 
         return "Done"
 
