@@ -95,7 +95,6 @@ class ConverterToStix:
         :return: A boolean
         """
         is_valid_domain = validators.domain(value)
-
         if is_valid_domain:
             return True
         else:
@@ -106,7 +105,7 @@ class ConverterToStix:
         :param dtm_channel:
         :return:
         """
-        channel_type = dtm_channel.get("messenger").get("name")
+        channel_type = dtm_channel.get("messenger", {}).get("name")
         channel_name = dtm_channel.get("name")
         channel_description = dtm_channel.get("channel_info").get("description")
         channel_url = dtm_channel.get("channel_url")
@@ -220,22 +219,23 @@ class ConverterToStix:
         :return:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
+        dtm_alert_doc = dtm_alert.get("doc", {})
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Source URL**: {dtm_alert.get("doc").get("source_url")}
-- **Collected**: {dtm_alert.get("doc").get("ingested")}
-- **Published**: {dtm_alert.get("doc").get("timestamp")}
-- **Source File**: {dtm_alert.get("doc").get("source_file").get("filename")}
-- **MD5**: {dtm_alert.get("doc").get("source_file").get("hashes").get("md5")}
-- **SHA1**: {dtm_alert.get("doc").get("source_file").get("hashes").get("sha1")}
-- **SHA256**: {dtm_alert.get("doc").get("source_file").get("hashes").get("sha256")}
+- **Source URL**: {dtm_alert_doc.get("source_url")}
+- **Collected**: {dtm_alert_doc.get("ingested")}
+- **Published**: {dtm_alert_doc.get("timestamp")}
+- **Source File**: {dtm_alert_doc.get("source_file").get("filename")}
+- **MD5**: {dtm_alert_doc.get("source_file").get("hashes").get("md5")}
+- **SHA1**: {dtm_alert_doc.get("source_file").get("hashes").get("sha1")}
+- **SHA256**: {dtm_alert_doc.get("source_file").get("hashes").get("sha256")}
 ### Content
-- **Service URL**: {dtm_alert.get("doc").get("service_account").get("service").get("inet_location").get("domain")}
-- **Service Domain**: {dtm_alert.get("doc").get("service_account").get("service").get("inet_location").get("url")}
-- **Email Domain**: {dtm_alert.get("doc").get("service_account").get("email_domain")}
-- **Login**: {dtm_alert.get("doc").get("service_account").get("login")}
-- **Password**: {dtm_alert.get("doc").get("service_account").get("password").get("plain_text")}
+- **Service URL**: {dtm_alert_doc.get("service_account").get("service").get("inet_location").get("domain")}
+- **Service Domain**: {dtm_alert_doc.get("service_account").get("service").get("inet_location").get("url")}
+- **Email Domain**: {dtm_alert_doc.get("service_account").get("email_domain")}
+- **Login**: {dtm_alert_doc.get("service_account").get("login")}
+- **Password**: {dtm_alert_doc.get("service_account").get("password").get("plain_text")}
 """
         return markdown_content
 
@@ -245,20 +245,21 @@ class ConverterToStix:
         :return:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
+        dtm_alert_doc = dtm_alert.get("doc", {})
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert.get("doc").get("ingested")}
-- **Channel**: {dtm_alert.get("doc").get("channel").get("name")}
-- **Channel URL**: {dtm_alert.get("doc").get("channel").get("channel_url")}
-- **Channel Description**: {dtm_alert.get("doc").get("channel").get("channel_info").get("description")}
-- **Messenger**: {dtm_alert.get("doc").get("channel").get("messenger").get("name")}
-- **Author**: {dtm_alert.get("doc").get("sender").get("identity").get("name")}
-- **Message Id**: {dtm_alert.get("doc").get("message_id")}
+- **Created**: {dtm_alert_doc.get("ingested")}
+- **Channel**: {dtm_alert_doc.get("channel").get("name")}
+- **Channel URL**: {dtm_alert_doc.get("channel").get("channel_url")}
+- **Channel Description**: {dtm_alert_doc.get("channel").get("channel_info").get("description")}
+- **Messenger**: {dtm_alert_doc.get("channel").get("messenger").get("name")}
+- **Author**: {dtm_alert_doc.get("sender").get("identity").get("name")}
+- **Message Id**: {dtm_alert_doc.get("message_id")}
 
 ### Content
 ```
-{dtm_alert.get("doc").get("body")}
+{dtm_alert_doc.get("body")}
 ```
 """
         return markdown_content
@@ -269,16 +270,17 @@ class ConverterToStix:
         :return:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
+        dtm_alert_doc = dtm_alert.get("doc", {})
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert.get("doc").get("timestamp")}
-- **Title**: {dtm_alert.get("doc").get("title")}
-- **URL**: {dtm_alert.get("doc").get("inet_location", {}).get("url", "")}
+- **Created**: {dtm_alert_doc.get("timestamp")}
+- **Title**: {dtm_alert_doc.get("title")}
+- **URL**: {dtm_alert_doc.get("inet_location", {}).get("url", "")}
 
 ### Content
 ```
-{dtm_alert.get("doc").get("text") if "text" in dtm_alert.get("doc") else dtm_alert.get("doc").get("raw_text")}
+{dtm_alert_doc.get("text") if "text" in dtm_alert_doc else dtm_alert_doc.get("raw_text")}
 ```
 """
         return markdown_content
@@ -291,12 +293,13 @@ class ConverterToStix:
         :return:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
+        dtm_alert_doc = dtm_alert.get("doc", {})
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert.get("doc").get("timestamp")}
-- **Domain**: {dtm_alert.get("doc").get("domain")}
-- **Source**: {dtm_alert.get("doc").get("source")}
+- **Created**: {dtm_alert_doc.get("timestamp")}
+- **Domain**: {dtm_alert_doc.get("domain")}
+- **Source**: {dtm_alert_doc.get("source")}
 """
         return markdown_content
 
@@ -306,18 +309,19 @@ class ConverterToStix:
         :return:
         """
         metadata_part = self.get_common_content_metadata_part(dtm_alert)
+        dtm_alert_doc = dtm_alert.get("doc", {})
         markdown_content = f"""
 {metadata_part}
 ### Source Information
-- **Created**: {dtm_alert.get("doc").get("ingested")}
-- **URL**: {dtm_alert.get("doc").get("listing_url", {}).get("url")}
-- **Shop Name**: {dtm_alert.get("doc").get("shop", {}).get("name")}
-- **Price**: {str(dtm_alert.get("doc").get("price", ""))+dtm_alert.get("doc").get("currency", "")}
-- **Quantity**: {dtm_alert.get("doc").get("item_qty", "")}
-- **Seller**: {dtm_alert.get("doc").get("seller", {}).get("identity", {}).get("name")}
-- **Listing ID**: {dtm_alert.get("doc").get("listing_id", "")}
-- **Listing URL**: {dtm_alert.get("doc").get("listing_url", {}).get("url", "")}
-- **Item Type**: {dtm_alert.get("doc").get("item_type")}
+- **Created**: {dtm_alert_doc.get("ingested")}
+- **URL**: {dtm_alert_doc.get("listing_url", {}).get("url")}
+- **Shop Name**: {dtm_alert_doc.get("shop", {}).get("name")}
+- **Price**: {str(dtm_alert_doc.get("price", "")) + dtm_alert_doc.get("currency", "")}
+- **Quantity**: {dtm_alert_doc.get("item_qty", "")}
+- **Seller**: {dtm_alert_doc.get("seller", {}).get("identity", {}).get("name")}
+- **Listing ID**: {dtm_alert_doc.get("listing_id", "")}
+- **Listing URL**: {dtm_alert_doc.get("listing_url", {}).get("url", "")}
+- **Item Type**: {dtm_alert_doc.get("item_type")}
 """
         return markdown_content
 
@@ -358,33 +362,34 @@ class ConverterToStix:
         incident_type = dtm_alert.get("alert_type")
 
         # generate a content based on alert useful information
+        doc_type = dtm_alert.get("doc").get("__type")
         files = []
         try:
-            if dtm_alert.get("doc").get("__type") == "message":
+            if doc_type == "message":
                 markdown_content = self.convert_message_type_alert_to_markdown_content(
                     dtm_alert
                 )
-            elif dtm_alert.get("doc").get("__type") == "web_content_publish":
+            elif doc_type == "web_content_publish":
                 markdown_content = self.convert_web_content_alert_to_markdown_content(
                     dtm_alert
                 )
-            elif dtm_alert.get("doc").get("__type") == "account_discovery":
+            elif doc_type == "account_discovery":
                 markdown_content = (
                     self.convert_account_discovery_alert_to_markdown_content(dtm_alert)
                 )
-            elif dtm_alert.get("doc").get("__type") == "document_analysis":
+            elif doc_type == "document_analysis":
                 markdown_content = (
                     self.convert_document_analysis_alert_to_markdown_content(dtm_alert)
                 )
-            elif dtm_alert.get("doc").get("__type") == "paste":
+            elif doc_type == "paste":
                 markdown_content = self.convert_paste_alert_to_markdown_content(
                     dtm_alert
                 )
-            elif dtm_alert.get("doc").get("__type") == "shop_listing":
+            elif doc_type == "shop_listing":
                 markdown_content = self.convert_shop_list_alert_to_markdown_content(
                     dtm_alert
                 )
-            elif dtm_alert.get("doc").get("__type") == "domain_discovery":
+            elif doc_type == "domain_discovery":
                 markdown_content = (
                     self.convert_domain_discovery_alert_to_markdown_content(dtm_alert)
                 )
@@ -455,13 +460,13 @@ class ConverterToStix:
 
         related_stix_entities = []
         # process 'account_discovery' related entities
-        if dtm_alert.get("doc").get("__type") == "account_discovery":
+        if doc_type == "account_discovery":
             related_stix_entities = self.generate_account_discovery_related_entities(
                 dtm_alert
             )
 
         # process 'domain_discovery' related entities
-        if dtm_alert.get("doc").get("__type") == "domain_discovery":
+        if doc_type == "domain_discovery":
             related_stix_entities = self.generate_domain_discovery_related_entities(
                 dtm_alert
             )
@@ -566,22 +571,18 @@ class ConverterToStix:
             )
             stix_related_entities.append(stix_domain)
         if "filename" in dtm_alert.get("doc").get("source_file", {}):
+            source_file = dtm_alert.get("doc", {}).get("source_file", {})
+            hashes = source_file.get("hashes", {})
+            stix_hashes = {}
+            if hashes.get("sha256"):
+                stix_hashes["SHA-256"] = hashes["sha256"]
+            if hashes.get("sha1"):
+                stix_hashes["SHA-1"] = hashes["sha1"]
+            if hashes.get("md5"):
+                stix_hashes["MD5"] = hashes["md5"]
             stix_file = stix2.File(
-                hashes={
-                    "SHA-256": dtm_alert.get("doc")
-                    .get("source_file", {})
-                    .get("hashes", {})
-                    .get("sha256"),
-                    "SHA-1": dtm_alert.get("doc")
-                    .get("source_file", {})
-                    .get("hashes", {})
-                    .get("sha1"),
-                    "MD5": dtm_alert.get("doc")
-                    .get("source_file", {})
-                    .get("hashes", {})
-                    .get("md5"),
-                },
-                name=dtm_alert.get("doc").get("source_file", {}).get("name"),
+                hashes=stix_hashes,
+                name=source_file.get("name"),
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,
@@ -596,9 +597,9 @@ class ConverterToStix:
         :return:
         """
         stix_related_entities = []
-        if "domain" in dtm_alert.get("doc") and dtm_alert.get("doc").get("domain"):
+        if domain := dtm_alert.get("doc", {}).get("domain"):
             stix_account = stix2.DomainName(
-                value=dtm_alert.get("doc").get("domain"),
+                value=domain,
                 object_marking_refs=[self.tlp_marking.get("id")],
                 custom_properties={
                     "created_by_ref": self.author.id,
