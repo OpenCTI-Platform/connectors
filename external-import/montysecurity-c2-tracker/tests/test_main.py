@@ -1,99 +1,109 @@
-from typing import Any
-from unittest.mock import MagicMock
-
 import pytest
-from connector import ConnectorSettings, MontysecurityC2TrackerConnector
-from pycti import OpenCTIConnectorHelper
+from connector import ConnectorSettings
+from connectors_sdk.models.enums import RelationshipType
 
 
-@pytest.fixture
-def mock_opencti_connector_helper(monkeypatch):
-    """Mock all heavy dependencies of OpenCTIConnectorHelper, typically API calls to OpenCTI."""
-
-    module_import_path = "pycti.connector.opencti_connector_helper"
-    monkeypatch.setattr(f"{module_import_path}.killProgramHook", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.sched.scheduler", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.ConnectorInfo", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIApiClient", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIConnector", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIMetricHandler", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
-
-
-class StubConnectorSettings(ConnectorSettings):
-    """
-    Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
-    It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
-    """
-
-    @classmethod
-    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-        return handler(
-            {
-                "opencti": {
-                    "url": "http://localhost:8080",
-                    "token": "test-token",
-                },
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "test, connector",
-                    "log_level": "error",
-                    "duration_period": "PT5M",
-                },
-                "montysecurity_c2_tracker": {
-                    "malware_list_url": "https://github.com/montysecurity/C2-Tracker/tree/main/data",
-                    "malware_ips_base_url": "https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/",
-                    "tlp_level": "clear",
-                },
-            }
-        )
-
-
-def test_connector_settings_is_instantiated():
+def test_connector_settings_is_instantiated(mock_connector_settings):
     """
     Test that the implementation of `BaseConnectorSettings` (from `connectors-sdk`) can be instantiated successfully:
         - the implemented class MUST have a method `to_helper_config` (inherited from `BaseConnectorSettings`)
         - the method `to_helper_config` MUST return a dict (as in base class)
     """
-    settings = StubConnectorSettings()
-
-    assert isinstance(settings, ConnectorSettings)
-    assert isinstance(settings.to_helper_config(), dict)
+    assert isinstance(mock_connector_settings, ConnectorSettings)
+    assert isinstance(mock_connector_settings.to_helper_config(), dict)
 
 
-def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper):
+def test_opencti_connector_helper_is_instantiated(mock_connector_helper):
     """
     Test that `OpenCTIConnectorHelper` (from `pycti`) can be instantiated successfully:
         - the value of `settings.to_helper_config` MUST be the expected dict for `OpenCTIConnectorHelper`
         - the helper MUST be able to get its instance's attributes from the config dict
 
-    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    :param mock_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
     """
-    settings = StubConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-
-    assert helper.opencti_url == "http://localhost:8080/"
-    assert helper.opencti_token == "test-token"
-    assert helper.connect_id == "connector-id"
-    assert helper.connect_name == "Test Connector"
-    assert helper.connect_scope == "test,connector"
-    assert helper.log_level == "ERROR"
-    assert helper.connect_duration_period == "PT5M"
+    assert mock_connector_helper.opencti_url == "http://localhost:8080/"
+    assert mock_connector_helper.opencti_token == "test-token"
+    assert mock_connector_helper.connect_id == "connector-id"
+    assert mock_connector_helper.connect_name == "Test Connector"
+    assert mock_connector_helper.connect_scope == "test,connector"
+    assert mock_connector_helper.log_level == "ERROR"
+    assert mock_connector_helper.connect_duration_period == "PT5M"
 
 
-def test_connector_is_instantiated(mock_opencti_connector_helper):
+def test_connector_is_instantiated(
+    mock_connector, mock_connector_settings, mock_connector_helper
+):
     """
     Test that the connector's main class can be instantiated successfully:
         - the connector's main class MUST be able to access env/config vars through `self.config`
         - the connector's main class MUST be able to access `pycti` API through `self.helper`
 
-    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    :param mock_connector: Fixture - MontySecurityC2TrackerConnector is mocked
+    :param mock_connector_settings: Fixture - Connector Settings is mocked
+    :param mock_connector_helper: Fixture - `OpenCTIConnectorHelper` is mocked
     """
-    settings = StubConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    assert mock_connector.config == mock_connector_settings
+    assert mock_connector.helper == mock_connector_helper
 
-    connector = MontysecurityC2TrackerConnector(config=settings, helper=helper)
 
-    assert connector.config == settings
-    assert connector.helper == helper
+@pytest.mark.parametrize(
+    "malware_list, ips, expected_ip_count, expected_entities",
+    [
+        ([], [], 0, 0),
+        (['"Malware01"'], ["8.8.8.8"], 1, 5),
+        (['"Malware02"'], ["2001:db8::1"], 1, 5),
+        (['"Malware03"'], ["bad-ip"], 0, 3),
+        (['"Malware04"'], ["1.2.3.4", "2001:db8::2"], 2, 7),
+        (['"Malware05"', '"Malware06"'], ["8.8.8.8", "2001:db8::1"], 4, 12),
+    ],
+    ids=[
+        "No_malware",
+        "IPv4_single",
+        "IPv6_single",
+        "Invalid_IP_skipped",
+        "Multi_IP_valid",
+        "Multiple_malware",
+    ],
+)
+def test_collect_intelligence(
+    mock_connector, malware_list, ips, expected_ip_count, expected_entities
+):
+
+    mock_connector.client.get_malware_list.return_value = malware_list
+    mock_connector.client.get_ips.return_value = ips
+
+    entities = mock_connector._collect_intelligence()
+    observable_list = [
+        observable
+        for observable in entities
+        if observable.__class__.__name__ in ("IPV4Address", "IPV6Address")
+    ]
+    # Check that we have the final number of observable correct
+    assert len(observable_list) == expected_ip_count
+
+    entities_list = [
+        entitie
+        for entitie in entities
+        if entitie.__class__.__name__
+        in (
+            "IPV4Address",
+            "IPV6Address",
+            "Malware",
+            "Relationship",
+            "TLPMarking",
+            "OrganizationAuthor",
+        )
+    ]
+    # Check that we have the final number of entities correct.
+    assert len(entities_list) == expected_entities
+
+    relationship_list = [
+        relationship
+        for relationship in entities
+        if relationship.__class__.__name__ == "Relationship"
+    ]
+    for relationship in relationship_list:
+        assert relationship.source.__class__.__name__ in ("IPV4Address", "IPV6Address")
+        assert relationship.target.__class__.__name__ == "Malware"
+        # Check that the relationship type is "related_to"
+        assert relationship.type == RelationshipType.RELATED_TO

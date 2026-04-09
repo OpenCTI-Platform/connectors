@@ -95,13 +95,13 @@ class MontysecurityC2TrackerConnector:
             ips = self.client.get_ips(malware)
 
             for ip in ips:
-                ip_indicator = self.converter_to_stix.convert_ip(ip)
-                if not ip_indicator:
+                observable_stix = self.converter_to_stix.convert_ip(ip)
+                if not observable_stix:
                     continue
-                entities.append(ip_indicator)
+                entities.append(observable_stix)
 
                 relationship = self.converter_to_stix.create_relationship(
-                    source_obj=ip_indicator,
+                    source_obj=observable_stix,
                     target_obj=malware_stix,
                     relationship_type=RelationshipType.RELATED_TO,
                 )
