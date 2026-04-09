@@ -39,5 +39,5 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
     )
     import_software: bool = Field(
         default=False,
-        description="If set to `True`, resolve CPEs associated with each CVE via the NVD CPE Match API and import them as Software objects with 'has' relationships to vulnerabilities. Warning: this can generate a large volume of data.",
+        description="⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform. Each CVE may resolve to dozens of CPE matches, resulting in massive amounts of Software entities and relationships. Use with caution. If set to `True`, resolve CPEs associated with each CVE via the NVD CPE Match API and import them as Software objects with 'has' relationships to vulnerabilities.",
     )
