@@ -1,9 +1,8 @@
 import sys
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from models import ConfigLoader
+from pycti import OpenCTIConnectorHelper
 from ransomwarelive.ransom_conn import RansomwareAPIConnector
 
 if __name__ == "__main__":
