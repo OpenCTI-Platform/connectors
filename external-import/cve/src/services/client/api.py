@@ -92,7 +92,7 @@ class CVEClient:
         """Fetch a JSON collection from the given NVD API endpoint."""
         try:
             info_msg = f"[API] HTTP Get Request to endpoint for path ({api_url})"
-            self.helper.connector_logger.info(info_msg)
+            self.helper.connector_logger.debug(info_msg)
 
             data = await self.request(api_url, params)
             return data
