@@ -2,17 +2,15 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
-connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'ChangeMe'
-  name: 'VX Vault URL list'
-  scope: 'vxvault'
-  create_indicator: False
-  log_level: 'info'
+# connector:
+#   id: 'd790f4c0-84c1-4e91-8e6b-3a6f3a0e3b7a'
+#   name: 'VX Vault URL list'
+#   scope: 'vxvault'
+#   log_level: 'error'
+#   duration_period: 'P3D' # ISO 8601 duration (3 days)
 
-vxvault:
-  url: 'https://vxvault.net/URL_List.php'
-  create_indicators: True
-  interval: 3 # In days, must be strictly greater than 1
-  ssl_verify: False
+# vxvault:
+#   url: 'https://vxvault.net/URL_List.php'
+#   create_indicators: true
+#   ssl_verify: false
 
