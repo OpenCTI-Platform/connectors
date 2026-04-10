@@ -45,7 +45,3 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
         default=10,
         description="Maximum number of concurrent CPE resolution tasks when import_software is enabled.",
     )
-    cpe_bundle_batch_size: PositiveInt = Field(
-        default=100,
-        description="Number of resolved CVEs whose CPE data to accumulate before sending a STIX bundle.",
-    )
