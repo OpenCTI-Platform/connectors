@@ -46,8 +46,8 @@ class CVEConnector:
         :return: Work id in string
         """
         now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-        friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-            "%Y-%m-%d %H:%M:%S"
+        friendly_name = (
+            f"{self.helper.connect_name} run @ {now.strftime('%Y-%m-%d %H:%M:%S')}"
         )
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
@@ -64,9 +64,11 @@ class CVEConnector:
         :param current_time: Time in int
         :param work_id: Work id in string
         """
+        last_run_dt = datetime.fromtimestamp(current_time, tz=timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         msg = (
-            f"[CONNECTOR] Connector successfully run, storing last_run as "
-            f"{datetime.fromtimestamp(current_time, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"[CONNECTOR] Connector successfully run, storing last_run as {last_run_dt}"
         )
         self.helper.connector_logger.info(msg)
         self.helper.api.work.to_processed(work_id, msg)
@@ -74,9 +76,7 @@ class CVEConnector:
 
         interval_in_hours = round(self.interval / 60 / 60, 2)
         self.helper.connector_logger.info(
-            "[CONNECTOR] Last_run stored, next run in: "
-            + str(interval_in_hours)
-            + " hours"
+            f"[CONNECTOR] Last_run stored, next run in: {interval_in_hours} hours"
         )
 
     async def _async_ingest(self, cve_params: dict, work_id: str) -> None:
@@ -103,9 +103,7 @@ class CVEConnector:
         :param work_id: Work id in string
         """
         if self.config.cve.max_date_range > MAX_AUTHORIZED:
-            error_msg = "The max_date_range cannot exceed {} days".format(
-                MAX_AUTHORIZED
-            )
+            error_msg = f"The max_date_range cannot exceed {MAX_AUTHORIZED} days"
             raise Exception(error_msg)
 
         date_range = timedelta(days=self.config.cve.max_date_range)
