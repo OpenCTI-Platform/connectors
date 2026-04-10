@@ -3,10 +3,10 @@ import sys
 import time
 from datetime import datetime, timedelta, timezone
 
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti import OpenCTIConnectorHelper
 from src import ConfigLoader
-from src.services import CVEConverter  # type: ignore
-from src.services.utils import (  # type: ignore
+from src.services import CVEConverter
+from src.services.utils import (
     MAX_AUTHORIZED,
     convert_hours_to_seconds,
 )
@@ -17,7 +17,6 @@ class CVEConnector:
         """
         Initialize the CVEConnector with necessary configurations
         """
-
         # Load configuration file and connection helper
         # Instantiate the connector helper from config
         self.config = ConfigLoader()
@@ -81,25 +80,19 @@ class CVEConnector:
         )
 
     async def _async_ingest(self, cve_params: dict, work_id: str) -> None:
-        """Run the two-phase async ingestion pipeline.
+        """Run the streaming async ingestion pipeline.
 
-        Phase 1: Fetch CVEs → convert to STIX2 → send bundles immediately.
-        Phase 2: Resolve CPEs in parallel → send Software bundles in batches
-                 (only when import_software is enabled).
+        CVE bundles are sent as pages arrive from the NVD API.
+        CPE resolution starts immediately and runs concurrently
+        with further CVE fetching (bounded by cpe_max_concurrency).
         """
         # Reset rate limiter state to avoid stale asyncio.Lock across runs
         self.converter._rate_limiter.reset()
         try:
             self.helper.connector_logger.info(
-                "[CONNECTOR] Phase 1: CVE ingestion (immediate bundle sends)"
+                "[CONNECTOR] Starting CVE+CPE streaming pipeline"
             )
-            cpe_work = await self.converter.send_cve_bundles(cve_params, work_id)
-
-            if cpe_work:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Phase 2: Parallel CPE resolution"
-                )
-                await self.converter.send_cpe_bundles(cpe_work, work_id)
+            await self.converter.ingest(cve_params, work_id)
         finally:
             await self.converter.close()
 
@@ -239,9 +232,10 @@ class CVEConnector:
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
 
-                msg = "[CONNECTOR] Connector last run: " + datetime.fromtimestamp(
+                last_run_dt = datetime.fromtimestamp(
                     last_run, tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
+                msg = f"[CONNECTOR] Connector last run: {last_run_dt}"
                 self.helper.connector_logger.info(msg)
             else:
                 last_run = None
@@ -297,9 +291,8 @@ class CVEConnector:
                 new_interval = self.interval - (current_time - last_run)
                 new_interval_in_hours = round(new_interval / 60 / 60, 2)
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector will not run, next run in: "
-                    + str(new_interval_in_hours)
-                    + " hours"
+                    f"[CONNECTOR] Connector will not run, next run in: "
+                    f"{new_interval_in_hours} hours"
                 )
 
             time.sleep(5)
@@ -309,5 +302,5 @@ class CVEConnector:
             self.helper.connector_logger.info(msg)
             sys.exit(0)
         except Exception as e:
-            error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
+            error_msg = f"[CONNECTOR] Error while processing data: {e}"
             self.helper.connector_logger.error(error_msg, meta={"error": str(e)})
