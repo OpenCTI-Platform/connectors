@@ -1,8 +1,6 @@
 import sys
 from pathlib import Path
 
-import pytest
-
 # Add connector src/ to sys.path so `src.*` imports resolve.
 _src_root = Path(__file__).resolve().parent.parent / "src"
 if str(_src_root) not in sys.path:
@@ -52,13 +50,3 @@ def make_cpe_name(
     vendor: str = "vendor", product: str = "product", version: str = "1.0"
 ) -> str:
     return f"cpe:2.3:a:{vendor}:{product}:{version}:*:*:*:*:*:*:*"
-
-
-# ---------------------------------------------------------------------------
-# pytest-asyncio configuration
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def anyio_backend():
-    return "asyncio"
