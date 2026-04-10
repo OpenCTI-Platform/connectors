@@ -1,2 +1,2 @@
-pycti==7.260309.0.2
+pycti==7.260309.0.3
 typing-extensions==4.15.0
