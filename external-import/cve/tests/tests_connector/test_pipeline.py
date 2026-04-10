@@ -116,7 +116,13 @@ def _make_converter(
     converter.helper = mock_helper
     converter.import_software = import_software
     converter.cpe_max_concurrency = cpe_max_concurrency
+    converter.work_id = None
     converter.author = CVEConverter._create_author()
+
+    # Mock work initiation so lazy _initiate_work succeeds
+    mock_helper.api.work.initiate_work.return_value = "test-work-id"
+    mock_helper.connect_id = "test-connector-id"
+    mock_helper.connect_name = "CVE Test"
 
     # Mock the clients
     converter.client_api = MagicMock()
@@ -150,7 +156,7 @@ async def test_one_bundle_per_cve():
     total_cves = 3 * 5
 
     converter, tracker = _make_converter(num_pages=3, vulns_per_page=5)
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["bundles_sent"]) == total_cves
 
@@ -159,7 +165,7 @@ async def test_bundle_is_self_contained():
     """Every bundle must contain the vulnerability referenced by its
     relationships, ensuring OpenCTI can resolve all refs in one bundle."""
     converter, tracker = _make_converter(num_pages=1, vulns_per_page=3, cpes_per_cve=2)
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     for bundle in tracker["bundles_sent"]:
         objects = bundle["objects"]
@@ -183,7 +189,7 @@ async def test_bundle_contains_vulnerability_software_and_relationships():
     converter, tracker = _make_converter(
         num_pages=1, vulns_per_page=2, cpes_per_cve=cpes_per_cve
     )
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     for bundle in tracker["bundles_sent"]:
         objects = bundle["objects"]
@@ -211,7 +217,7 @@ async def test_all_cpes_resolved_no_data_loss():
         vulns_per_page=vulns_per_page,
         cpes_per_cve=cpes_per_cve,
     )
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["cpe_resolve_log"]) == total_cves
 
@@ -234,7 +240,7 @@ async def test_concurrency_bounded_by_semaphore():
         cpe_delay=0.02,
         cpe_max_concurrency=max_concurrency,
     )
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     observed_max = tracker["concurrent_cpe_gauge"]["max"]
     assert observed_max <= max_concurrency, (
@@ -249,7 +255,7 @@ async def test_no_cpe_work_when_import_software_disabled():
     converter, tracker = _make_converter(
         num_pages=2, vulns_per_page=5, import_software=False
     )
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["bundles_sent"]) == 2 * 5
     assert len(tracker["cpe_resolve_log"]) == 0
@@ -271,7 +277,7 @@ async def test_empty_page_does_not_send_bundle():
 
     converter.client_api.get_vulnerabilities = fake_gen
 
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["bundles_sent"]) == 1
 
@@ -294,7 +300,7 @@ async def test_cpe_resolve_error_propagates_via_exception_group():
     converter.cpe_match_client.get_cpes_for_cve = flaky_resolve
 
     with pytest.raises(ExceptionGroup) as exc_info:
-        await converter.ingest({}, "work-1")
+        await converter.ingest({})
 
     errors = exc_info.value.exceptions
     assert any(isinstance(e, RuntimeError) for e in errors)
@@ -303,7 +309,7 @@ async def test_cpe_resolve_error_propagates_via_exception_group():
 async def test_every_bundle_includes_author():
     """Every bundle must include the NIST NVD identity object."""
     converter, tracker = _make_converter(num_pages=1, vulns_per_page=3, cpes_per_cve=1)
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["bundles_sent"]) > 0
     for bundle in tracker["bundles_sent"]:
@@ -327,7 +333,7 @@ async def test_high_concurrency_no_data_corruption():
         cpe_max_concurrency=15,
         cpe_delay=0.005,
     )
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["cpe_resolve_log"]) == total_cves
     assert len(tracker["bundles_sent"]) == total_cves
@@ -355,7 +361,7 @@ async def test_cpe_resolution_starts_before_all_pages_fetched():
 
     converter.client_api.get_vulnerabilities = delayed_gen
 
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     first_cpe_start = min(start for _, start, _ in tracker["cpe_resolve_log"])
     last_page_yield = pages_yielded_at[-1]
@@ -369,7 +375,7 @@ async def test_no_software_in_bundle_when_zero_cpes():
     """If CPE resolution returns empty, bundles should only contain
     vulnerability + author (no software/relationship)."""
     converter, tracker = _make_converter(num_pages=2, vulns_per_page=3, cpes_per_cve=0)
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     assert len(tracker["bundles_sent"]) == 6
     counts = _count_types(tracker["bundles_sent"])
@@ -386,7 +392,7 @@ async def test_bundles_sent_concurrently_not_sequentially():
         cpe_delay=0.05,
         cpe_max_concurrency=6,
     )
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     send_times = tracker["bundle_send_times"]
     assert len(send_times) == 6
@@ -402,7 +408,7 @@ async def test_bundles_sent_concurrently_not_sequentially():
 async def test_no_duplicate_stix_objects_in_bundle():
     """Each bundle should not contain duplicate STIX objects (same ID)."""
     converter, tracker = _make_converter(num_pages=1, vulns_per_page=5, cpes_per_cve=3)
-    await converter.ingest({}, "work-1")
+    await converter.ingest({})
 
     for i, bundle in enumerate(tracker["bundles_sent"]):
         ids = [o["id"] for o in bundle["objects"]]
