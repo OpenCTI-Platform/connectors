@@ -2,7 +2,6 @@ import asyncio
 import logging
 
 import aiohttp
-from src.services.client.endpoints import BASE_URL  # noqa: F401
 from src.services.utils.rate_limiter import AsyncRateLimiter
 
 logger = logging.getLogger(__name__)
