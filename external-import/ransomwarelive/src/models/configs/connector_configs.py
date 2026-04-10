@@ -2,8 +2,9 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from models.configs import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
+
+from models.configs import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
@@ -58,6 +59,10 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     create_threat_actor: bool = Field(
         default=False,
         description="Whether to create a Threat Actor object",
+    )
+    create_intrusion_set: bool = Field(
+        default=True,
+        description="Whether to create Intrusion Set objects. If False, only creates relationships if the Intrusion Set already exists",
     )
 
     @field_validator("type")

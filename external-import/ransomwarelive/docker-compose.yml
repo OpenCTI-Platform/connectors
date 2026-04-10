@@ -9,4 +9,9 @@ services:
       - CONNECTOR_NAME=RansomwareLive
       - CONNECTOR_SCOPE=ransomwarelive
       - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT10M
+      - CONNECTOR_PULL_HISTORY=false
+      - CONNECTOR_HISTORY_START_YEAR=2023
+      - CONNECTOR_CREATE_THREAT_ACTOR=false
+      - CONNECTOR_CREATE_INTRUSION_SET=true
     restart: always

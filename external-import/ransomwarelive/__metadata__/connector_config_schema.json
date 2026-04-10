@@ -73,6 +73,11 @@
       "default": false,
       "description": "Whether to create a Threat Actor object",
       "type": "boolean"
+    },
+    "CONNECTOR_CREATE_INTRUSION_SET": {
+      "default": true,
+      "description": "Whether to create Intrusion Set objects. If False, only creates relationships if the Intrusion Set already exists",
+      "type": "boolean"
     }
   },
   "required": [

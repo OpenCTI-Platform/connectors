@@ -16,3 +16,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_PULL_HISTORY | `boolean` |  | boolean | `false` | Whether to pull historic data. It is not recommended to set it to true as there will a large influx of data |
 | CONNECTOR_HISTORY_START_YEAR | `integer` |  | `0 < x ` | `2023` | The year to start from |
 | CONNECTOR_CREATE_THREAT_ACTOR | `boolean` |  | boolean | `false` | Whether to create a Threat Actor object |
+| CONNECTOR_CREATE_INTRUSION_SET | `boolean` |  | boolean | `true` | Whether to create Intrusion Set objects. If False, only creates relationships if the Intrusion Set already exists |

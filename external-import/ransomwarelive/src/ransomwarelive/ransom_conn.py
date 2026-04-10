@@ -3,8 +3,9 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
-from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
+
+from models.configs.config_loader import ConfigLoader
 from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
 from ransomwarelive.converter_to_stix import ConverterToStix
 from ransomwarelive.utils import domain_extractor, is_domain, safe_datetime
@@ -133,6 +134,49 @@ class RansomwareAPIConnector:
             )
             return None
 
+    def intrusion_set_fetcher(self, intrusion_set_name: str):
+        """
+        Fetch the intrusion-set object from OpenCTI by name
+        Param:
+            intrusion_set_name: name of the intrusion set
+        Return:
+            intrusion-set stix object if it exists, otherwise None
+        """
+        if not intrusion_set_name:
+            return None
+
+        try:
+            # Handle lockbit special cases
+            search_name = intrusion_set_name
+            if intrusion_set_name in ["lockbit3", "lockbit2"]:
+                search_name = "lockbit"
+
+            intrusion_set_id = pycti.IntrusionSet.generate_id(search_name)
+            intrusion_set_out = self.helper.api.stix_domain_object.read(
+                id=intrusion_set_id
+            )
+
+            if intrusion_set_out and intrusion_set_out.get("standard_id").startswith(
+                "intrusion-set--"
+            ):
+                intrusion_set_obj = (
+                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
+                        entity_type="Intrusion-Set",
+                        entity_id=intrusion_set_out["standard_id"],
+                        only_entity=True,
+                    )
+                )
+                return intrusion_set_obj
+            else:
+                return None
+
+        except Exception as e:
+            self.helper.connector_logger.debug(
+                "Intrusion set not found",
+                {"intrusion_set": intrusion_set_name, "error": e},
+            )
+            return None
+
     def create_bundle_list(self, item, group_data):
         """
         Retrieve STIX objects from the ransomware.live API data and add it in bundle list
@@ -175,20 +219,40 @@ class RansomwareAPIConnector:
 
         # Creating Intrusion Set object
         intrusion_set_name = item.get("group")
-        intrusion_set, relation_victim_intrusion = (
-            self.converter_to_stix.process_intrusion_set(
-                intrusion_set_name=intrusion_set_name,
-                group_data=group_data,
-                group_name_lockbit=item.get("lockbit3"),
-                victim=victim,
-                attack_date_iso=attack_date_iso,
-                discovered_iso=discovered_iso,
-            )
-        )
-        bundle_objects.append(intrusion_set)
-        bundle_objects.append(relation_victim_intrusion)
+        intrusion_set = None
+        relation_victim_intrusion = None
 
-        if self.config.connector.create_threat_actor:
+        if self.config.connector.create_intrusion_set:
+            # Create new intrusion set
+            intrusion_set, relation_victim_intrusion = (
+                self.converter_to_stix.process_intrusion_set(
+                    intrusion_set_name=intrusion_set_name,
+                    group_data=group_data,
+                    group_name_lockbit=item.get("lockbit3"),
+                    victim=victim,
+                    attack_date_iso=attack_date_iso,
+                    discovered_iso=discovered_iso,
+                )
+            )
+            bundle_objects.append(intrusion_set)
+            bundle_objects.append(relation_victim_intrusion)
+        else:
+            # Check if intrusion set already exists
+            intrusion_set = self.intrusion_set_fetcher(intrusion_set_name)
+            if intrusion_set:
+                # Create relationship only if intrusion set exists
+                relation_victim_intrusion = self.converter_to_stix.create_relationship(
+                    source_ref=intrusion_set.get("id"),
+                    target_ref=victim.get("id"),
+                    relationship_type="targets",
+                    start_time=attack_date_iso,
+                    created=discovered_iso,
+                )
+                bundle_objects.append(relation_victim_intrusion)
+
+        # Create relationship between intrusion set and threat actor if both exist
+        relation_intrusion_threat_actor = None
+        if self.config.connector.create_threat_actor and intrusion_set:
             relation_intrusion_threat_actor = (
                 self.converter_to_stix.create_relationship(
                     intrusion_set.get("id"), threat_actor.get("id"), "attributed-to"
@@ -202,12 +266,18 @@ class RansomwareAPIConnector:
         # Creating Report object
         object_refs = [
             victim.get("id"),
-            intrusion_set.get("id"),
-            relation_victim_intrusion.get("id"),
         ]
+
+        # Only add intrusion set refs if intrusion set exists
+        if intrusion_set:
+            object_refs.append(intrusion_set.get("id"))
+        if relation_victim_intrusion:
+            object_refs.append(relation_victim_intrusion.get("id"))
+
         if self.config.connector.create_threat_actor:
             object_refs.append(target_relation.get("id"))
-            object_refs.append(relation_intrusion_threat_actor.get("id"))
+            if relation_intrusion_threat_actor:
+                object_refs.append(relation_intrusion_threat_actor.get("id"))
 
         report = self.converter_to_stix.process_report(
             report_name=item.get("group"),
@@ -249,8 +319,13 @@ class RansomwareAPIConnector:
 
                 bundle_objects.append(relation_sector_victim)
                 report.get("object_refs").append(relation_sector_victim.get("id"))
-                bundle_objects.append(relation_intrusion_sector)
-                report.get("object_refs").append(relation_intrusion_sector.get("id"))
+
+                # Only add intrusion-sector relationship if intrusion set exists
+                if intrusion_set and relation_intrusion_sector:
+                    bundle_objects.append(relation_intrusion_sector)
+                    report.get("object_refs").append(
+                        relation_intrusion_sector.get("id")
+                    )
 
         domain_name = None
 
@@ -303,7 +378,10 @@ class RansomwareAPIConnector:
 
                 bundle_objects.append(location)
                 bundle_objects.append(location_relation)
-                bundle_objects.append(relation_intrusion_location)
+
+                # Only add intrusion-location relationship if intrusion set exists
+                if intrusion_set and relation_intrusion_location:
+                    bundle_objects.append(relation_intrusion_location)
 
                 if self.config.connector.create_threat_actor:
                     bundle_objects.append(relation_threat_actor_location)
@@ -312,7 +390,10 @@ class RansomwareAPIConnector:
                     )
 
                 report.get("object_refs").append(location.get("id"))
-                report.get("object_refs").append(relation_intrusion_location.get("id"))
+                if intrusion_set and relation_intrusion_location:
+                    report.get("object_refs").append(
+                        relation_intrusion_location.get("id")
+                    )
                 report.get("object_refs").append(location_relation.get("id"))
 
         bundle_objects.append(report)
