@@ -9,14 +9,13 @@ Validates that:
 import asyncio
 import time
 
-import pytest
+import src.services.utils.rate_limiter as rl_module
 from src.services.utils.rate_limiter import (
     NVD_MAX_REQUESTS,
     AsyncRateLimiter,
 )
 
 
-@pytest.mark.asyncio
 async def test_acquire_within_limit_does_not_block():
     """Acquiring fewer slots than the max should return instantly."""
     limiter = AsyncRateLimiter()
@@ -29,7 +28,6 @@ async def test_acquire_within_limit_does_not_block():
     assert elapsed < 1.0, f"Expected no blocking, took {elapsed:.2f}s"
 
 
-@pytest.mark.asyncio
 async def test_acquire_over_limit_blocks():
     """The (max+1)-th acquire must block until the window slides."""
     limiter = AsyncRateLimiter()
@@ -56,7 +54,6 @@ async def test_acquire_over_limit_blocks():
         pass
 
 
-@pytest.mark.asyncio
 async def test_concurrent_acquires_respect_limit():
     """Launch many concurrent acquire() calls; verify at most
     NVD_MAX_REQUESTS succeed within the window."""
@@ -88,7 +85,6 @@ async def test_concurrent_acquires_respect_limit():
             pass
 
 
-@pytest.mark.asyncio
 async def test_reset_clears_state():
     """After reset(), the full budget should be available again."""
     limiter = AsyncRateLimiter()
@@ -108,7 +104,6 @@ async def test_reset_clears_state():
     ), f"After reset, acquires should be instant, took {elapsed:.2f}s"
 
 
-@pytest.mark.asyncio
 async def test_reset_invalidates_lock():
     """reset() must set _lock to None so a fresh Lock is created
     in the next event loop (cross-asyncio.run safety)."""
@@ -126,11 +121,9 @@ async def test_reset_invalidates_lock():
     assert limiter._lock is not old_lock
 
 
-@pytest.mark.asyncio
 async def test_sliding_window_releases_slots():
     """Slots should free up after the window interval passes."""
     # Use a patched short interval for speed
-    import src.services.utils.rate_limiter as rl_module
 
     original_interval = rl_module.NVD_INTERVAL_SECONDS
     original_max = rl_module.NVD_MAX_REQUESTS

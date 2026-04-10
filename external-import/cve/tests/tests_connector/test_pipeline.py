@@ -147,7 +147,6 @@ def _make_converter(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
 async def test_cve_bundles_sent_before_all_cpes_resolved():
     """CVE bundles must be sent while CPE resolution is still running,
     proving true streaming (not sequential two-phase)."""
@@ -172,7 +171,6 @@ async def test_cve_bundles_sent_before_all_cpes_resolved():
     )
 
 
-@pytest.mark.asyncio
 async def test_all_cves_produce_bundles():
     """Every page of CVEs must produce exactly one CVE bundle."""
     num_pages = 5
@@ -192,7 +190,6 @@ async def test_all_cves_produce_bundles():
         assert len(vuln_objects) == vulns_per_page
 
 
-@pytest.mark.asyncio
 async def test_all_cpes_resolved_no_data_loss():
     """Every CVE should have its CPEs resolved and sent."""
     num_pages = 3
@@ -229,7 +226,6 @@ async def test_all_cpes_resolved_no_data_loss():
     )
 
 
-@pytest.mark.asyncio
 async def test_concurrency_bounded_by_semaphore():
     """At no point should more than cpe_max_concurrency CPE resolutions
     run simultaneously."""
@@ -253,7 +249,6 @@ async def test_concurrency_bounded_by_semaphore():
     assert observed_max > 1, f"Expected some parallelism (>1), got {observed_max}"
 
 
-@pytest.mark.asyncio
 async def test_cpe_bundle_batching():
     """CPE objects should be batched according to cpe_bundle_batch_size."""
     batch_size = 6
@@ -272,7 +267,6 @@ async def test_cpe_bundle_batching():
     assert len(tracker["cpe_bundles_sent"]) > 1, "Expected multiple batched CPE bundles"
 
 
-@pytest.mark.asyncio
 async def test_no_cpe_work_when_import_software_disabled():
     """When import_software is False, no CPE resolution should happen."""
     converter, tracker = _make_converter(
@@ -288,7 +282,6 @@ async def test_no_cpe_work_when_import_software_disabled():
     assert len(tracker["cpe_resolve_log"]) == 0
 
 
-@pytest.mark.asyncio
 async def test_empty_page_does_not_send_bundle():
     """Pages with no vulnerabilities after filtering should not send bundles."""
     converter, tracker = _make_converter(num_pages=1, vulns_per_page=3)
@@ -308,7 +301,6 @@ async def test_empty_page_does_not_send_bundle():
     assert len(tracker["cve_bundles_sent"]) == 1
 
 
-@pytest.mark.asyncio
 async def test_cpe_resolve_error_does_not_crash_pipeline():
     """If a single CPE resolution raises, the TaskGroup should propagate
     the error, but the other CVEs should still have been processed."""
@@ -338,7 +330,6 @@ async def test_cpe_resolve_error_does_not_crash_pipeline():
     assert any(isinstance(e, RuntimeError) for e in errors)
 
 
-@pytest.mark.asyncio
 async def test_consumer_flushes_remainder_on_sentinel():
     """The consumer must send any remaining batch when it receives
     the None sentinel, even if batch_size hasn't been reached."""
@@ -355,7 +346,6 @@ async def test_consumer_flushes_remainder_on_sentinel():
     assert len(tracker["cpe_bundles_sent"]) == 1
 
 
-@pytest.mark.asyncio
 async def test_cve_and_cpe_bundles_both_include_author():
     """Every bundle (CVE and CPE) must include the NIST NVD identity."""
     converter, tracker = _make_converter(
@@ -375,7 +365,6 @@ async def test_cve_and_cpe_bundles_both_include_author():
         assert any(o["name"] == "NIST NVD" for o in identity_objects)
 
 
-@pytest.mark.asyncio
 async def test_high_concurrency_no_data_corruption():
     """Stress test: many CVEs with high concurrency to detect
     race conditions in queue/batch handling."""
@@ -414,7 +403,6 @@ async def test_high_concurrency_no_data_corruption():
     assert len(tracker["cve_bundles_sent"]) == num_pages
 
 
-@pytest.mark.asyncio
 async def test_cve_bundles_ordered_by_page():
     """CVE bundles must be sent in the same order as pages arrive."""
     converter, tracker = _make_converter(
@@ -428,7 +416,6 @@ async def test_cve_bundles_ordered_by_page():
     assert send_times == sorted(send_times), "CVE bundles should be sent in page order"
 
 
-@pytest.mark.asyncio
 async def test_cpe_resolution_starts_before_all_pages_fetched():
     """CPE resolution for page 1 should start before page N is fetched,
     proving the pipeline doesn't buffer all pages first."""
@@ -461,7 +448,6 @@ async def test_cpe_resolution_starts_before_all_pages_fetched():
     ), "CPE resolution should start before all pages are fetched"
 
 
-@pytest.mark.asyncio
 async def test_no_cpe_bundles_when_zero_cpes():
     """If CPE resolution returns empty lists, no CPE bundles should be sent."""
     converter, tracker = _make_converter(
