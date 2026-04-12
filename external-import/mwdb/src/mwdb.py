@@ -588,6 +588,8 @@ class MWDB:
 
     def start_up(self):
         while True:
+            in_error = None
+            message = ""
             try:
                 timestamp = int(time.time())
                 now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
@@ -635,16 +637,25 @@ class MWDB:
                         utc_time = calendar.timegm(date.utctimetuple())
                         state = {"last_run": utc_time}
                         self.helper.set_state(state)
+                        message = "Done"
                     except Exception as e:
                         self.helper.log_error(str(e))
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                message = "Connector stop"
+                in_error = True
+                self.helper.log_info(message)
                 sys.exit(0)
             except Exception as e:
-                self.helper.log_error(str(e))
+                message = str(e)
+                in_error = True
+                self.helper.log_error(message)
+            finally:
+                self.helper.api.work.to_processed(self.workid, message, in_error=in_error)
 
             if self.helper.connect_run_and_terminate:
-                self.helper.log_info("Connector stop")
+                message = "Connector stop"
+                self.helper.api.work.to_processed(self.workid, message, in_error=True)
+                self.helper.log_info(message)
                 self.helper.force_ping()
                 sys.exit(0)
             time.sleep(60)
