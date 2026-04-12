@@ -82,6 +82,7 @@ class AbuseSSLConnector:
                     + " events have been processed), storing last_run as "
                     + str(now)
                 )
+                self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
                 self.helper.set_state(
                     {
