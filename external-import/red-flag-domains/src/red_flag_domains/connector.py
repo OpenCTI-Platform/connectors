@@ -39,6 +39,9 @@ class RedFlagDomainImportConnector:
         """
         Process the data
         """
+        work_id = None
+        in_error = False
+        message = ""
         try:
             current_state = self.helper.get_state()
             now = datetime.now(tz=timezone.utc)
@@ -67,10 +70,17 @@ class RedFlagDomainImportConnector:
             self.helper.log_info(message)
             self.helper.set_state({"last_run": now.timestamp()})
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            message = "Connector stop"
+            in_error = True
+            self.helper.log_info(message)
             exit(0)
         except Exception as exception:
-            self.helper.log_error(str(exception))
+            message = "Failed: {0}".format(str(exception))
+            in_error = True
+            self.helper.log_error(message)
+        finally:
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 
     def get_domains(self, url):
         self.helper.log_info("Enumerating domains")
