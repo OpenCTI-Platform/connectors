@@ -73,6 +73,9 @@ class SekoiaConnector(object):
         self.helper.connector_logger.info(f"Starting with {cursor}")
 
         friendly_name = "SEKOIA run @ " + datetime.now(timezone.utc).isoformat()
+        work_id = None
+        in_error = False
+        message = ""
         try:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
@@ -82,17 +85,21 @@ class SekoiaConnector(object):
             self.helper.connector_logger.info(message)
             self.helper.api.work.to_processed(work_id, message)
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info("Connector stop")
-            self.helper.api.work.to_processed(work_id, "Connector is stopping")
+            message = "Connector stop"
+            self.helper.connector_logger.info(message)
+            in_error = True
             sys.exit(0)
         except Exception as ex:
             # In case of error try to get the last updated cursor
             # since `_run` updates it after every successful request
+            in_error = True
             state = self.helper.get_state() or {}
             cursor = state.get("last_cursor", cursor)
             self.helper.connector_logger.error(str(ex))
             message = f"Connector encountered an error, cursor updated to {cursor}"
-            self.helper.api.work.to_processed(work_id, message)
+        finally:
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 
     def run(self):
         self.helper.schedule_iso(
