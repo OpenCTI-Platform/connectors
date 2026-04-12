@@ -8,13 +8,14 @@ from typing import Any, Dict, List
 
 import stix2
 from pycti import Identity as PyctiIdentity
+from ipqs.builder import IPQSBuilder  # pylint: disable=import-error
+from ipqs.client import IPQSClient  # pylint: disable=import-error
 from pycti import Note as PyctiNote
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
 from yaml import FullLoader, load
 
-from ipqs.builder import IPQSBuilder  # pylint: disable=import-error
-from ipqs.client import IPQSClient  # pylint: disable=import-error
+
 
 
 class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
