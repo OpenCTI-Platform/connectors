@@ -14,8 +14,5 @@ connector:
 ipqs_analyzer:
   server: "https://www.ipqualityscore.com/api/json"
   api_key: "ChangeMe"
-  default_color: "#54483b" # Default label color
-  classifications_color: "#54483b" # Label color for classifications
-  threat_names_color: "#0059f7" # Label color for threat names
   default_tlp: "TLP:CLEAR"
   max_tlp: "TLP:AMBER"

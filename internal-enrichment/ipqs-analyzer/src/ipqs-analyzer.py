@@ -7,20 +7,21 @@ from os import path
 from typing import Any, Dict, List
 
 import stix2
-from ipqs.builder import IPQSBuilder  # pylint: disable=import-error
-from ipqs.client import IPQSClient  # pylint: disable=import-error
 from pycti import Identity as PyctiIdentity
 from pycti import Note as PyctiNote
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
 from yaml import FullLoader, load
 
+from ipqs.builder import IPQSBuilder  # pylint: disable=import-error
+from ipqs.client import IPQSClient  # pylint: disable=import-error
+
 
 class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
     """IPQS connector."""
 
     _SOURCE_NAME = "IPQS"
-    _CONFIDENCE_LEVEL = 100
+    _DEFAULT_SCORE = 50
 
     def __init__(self):
         # Instantiate the connector helper from config
@@ -144,12 +145,29 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
             self.helper.log_error(f"Failed to process file {file_name}: {e}")
             return
 
+        if response is None:
+            self.helper.log_error(
+                f"No response received from IPQS for file {file_name}. "
+                "Skipping enrichment."
+            )
+            self._send_failure_note(
+                {
+                    "success": False,
+                    "message": "No response received from IPQS API.",
+                },
+                observable,
+            )
+            return
         if not response.get("success"):
             self._send_failure_note(response, observable)
             return
         engine = self.build_ipqs_result_summary(response)
+        detected = self.is_detected(response)
+        score = 100 if detected else self._DEFAULT_SCORE
         response = self.flatten_json(response)
-        self._summarize_enrichment(response, observable, file_name, engine)
+        self._summarize_enrichment(
+            response, observable, file_name, engine, score, detected
+        )
 
     def _process_url(self, observable):
         if observable.get("entity_type") != "Url":
@@ -171,18 +189,54 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
             self.helper.log_error(f"Error processing URL observable: {e}")
             return
 
+        if response is None:
+            self.helper.log_error(
+                "No response received from IPQS for URL "
+                f"{observable.get('value')}. Skipping enrichment."
+            )
+            self._send_failure_note(
+                {
+                    "success": False,
+                    "message": "No response received from IPQS API.",
+                },
+                observable,
+            )
+            return
+
+        if not isinstance(response, dict):
+            self.helper.log_error(
+                "IPQS client returned an invalid or empty response for URL observable."
+            )
+            return
+
         if not response.get("success"):
             self._send_failure_note(response, observable)
             return
 
         engine = self.build_ipqs_result_summary(response)
+        detected = self.is_detected(response)
+        score = 100 if detected else self._DEFAULT_SCORE
         response = self.flatten_json(response)
         self._summarize_enrichment(
-            response,
-            observable,
-            observable["value"],
-            engine,
+            response, observable, observable["value"], engine, score, detected
         )
+
+    def is_detected(self, response: Dict[str, Any]) -> bool:
+        """
+        Return True if at least one 'detected' is True in result list,
+        otherwise return False.
+        """
+        results = response.get("result", [])
+
+        # Ensure results is a list
+        if not isinstance(results, list):
+            return False
+
+        for item in results:
+            if isinstance(item, dict) and item.get("detected") is True:
+                return True
+
+        return False
 
     def build_ipqs_result_summary(self, ipqs: Dict[str, Any]) -> str:
         """Return a formatted summary of each engine result.
@@ -214,6 +268,7 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
 
         content = f"IPQS enrichment failed: {message}"
         note_id = PyctiNote.generate_id(created=None, content=content)
+        object_marking_refs = observable.get("object_marking_refs") or []
         note = stix2.Note(
             id=note_id,
             content=content,
@@ -221,6 +276,7 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
             created_by_ref=self.author,
             confidence=50,
             labels=labels,
+            object_marking_refs=object_marking_refs,
         )
         self.helper.send_stix2_bundle(stix2.Bundle(note).serialize())
 
@@ -230,11 +286,11 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
         observable: Dict[str, Any],
         indicator_value: str,
         engine_summary: str,
+        score: int = _DEFAULT_SCORE,
+        detected: bool = False,
     ) -> None:
         """Build indicator from API response and send bundle."""
-        builder = IPQSBuilder(
-            self.helper, self.author, observable, self._CONFIDENCE_LEVEL
-        )
+        builder = IPQSBuilder(self.helper, self.author, observable, score)
 
         res_format = ""
         for field, label in self.client.file_enrich_fields.items():
@@ -243,19 +299,27 @@ class IPQSFileAnalyzerConnector:  # pylint: disable=too-many-instance-attributes
         res_format += engine_summary
 
         file_sha256 = response.get("file_hash")
+        pattern = None
+
         if file_sha256:
             pattern = f"[file:hashes.'SHA-256' = '{file_sha256}']"
         else:
-            pattern = None
+            # For URL enrichments, build a pattern based on the URL value
+            entity_type = observable.get("entity_type")
+            if entity_type == "Url" and indicator_value:
+                # Escape single quotes in the value to keep the STIX pattern valid
+                safe_value = indicator_value.replace("\\", "\\\\").replace("'", "\\'")
+                pattern = f"[url:value = '{safe_value}']"
 
-        labels = builder.malware_file_detection(response.get("detected", False))
-        builder.create_indicator_based_on(
-            labels=labels,
-            pattern=pattern,
-            indicator_value=indicator_value,
-            description=res_format,
-            detection=response.get("detected", False),
-        )
+        labels = builder.malware_file_detection(detected)
+        if pattern is not None:
+            builder.create_indicator_based_on(
+                labels=labels,
+                pattern=pattern,
+                indicator_value=indicator_value,
+                description=res_format,
+                detection=detected,
+            )
         # propagate reference to IPQS scan
         builder.add_reference(response, observable)
         builder.send_bundle()

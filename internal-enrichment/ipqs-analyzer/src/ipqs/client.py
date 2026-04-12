@@ -31,7 +31,6 @@ class IPQSClient:  # pylint: disable=too-few-public-methods
             "detected": "Detected",
             "total_scans": "Total Scans",
             "status": "Status",
-            "resut": "Result",
             "file_size": "File Size",
             "file_type": "File Type",
             "sha1": "SHA1",
@@ -78,6 +77,7 @@ class IPQSClient:  # pylint: disable=too-few-public-methods
         Returns the IPQS data.
         """
 
+        response = None
         try:
             if file or params:
                 response = self._query(
@@ -85,6 +85,11 @@ class IPQSClient:  # pylint: disable=too-few-public-methods
                     file=file,
                     params=params,
                 )
+                if response is None:
+                    self.helper.log_error(
+                        "No response received from IPQS lookup request."
+                    )
+                    return None
                 if response.get("status") == "cached":
                     return response
                 response = self._query(
@@ -92,11 +97,29 @@ class IPQSClient:  # pylint: disable=too-few-public-methods
                     file=file,
                     params=params,
                 )
+                if response is None:
+                    self.helper.log_error(
+                        "No response received from IPQS scan request."
+                    )
+                    return None
                 retry = 0
-                max_retry = 8
+                max_retry = 9
                 polling_interval = 10
-                params = {"request_id": response.get("request_id")}
-                while retry <= max_retry:
+                request_id = (
+                    response.get("request_id") if response is not None else None
+                )
+                if not request_id:
+                    self.helper.log_error(
+                        "Scan response missing 'request_id'; cannot poll for results."
+                    )
+                    return response
+                params = {"request_id": request_id}
+                while retry < max_retry:
+                    if response is None:
+                        self.helper.log_error(
+                            "No response received from IPQS during postback polling."
+                        )
+                        break
                     if not response.get("success"):
                         self.helper.log_error(
                             f"Enrichment failed: {response.get('message')}"

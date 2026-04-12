@@ -31,6 +31,27 @@ class IPQSBuilder:
             input={"key": "x_opencti_score", "value": str(self.score)},
         )
 
+    def _get_object_marking_refs(self) -> list[str]:
+        """
+        Extract object marking references from the observable.
+        This prefers the GraphQL-style `objectMarking` field (list of dicts with
+        `standard_id`), but will also handle a direct `object_marking_refs` list
+        of IDs if present.
+        """
+        object_marking_refs: list[str] = []
+        # OpenCTI enrichment observables often expose markings via "objectMarking"
+        raw_markings = self.observable.get("objectMarking")
+        if raw_markings is None:
+            # Fallback: some representations may already provide marking IDs directly.
+            raw_markings = self.observable.get("object_marking_refs")
+        if isinstance(raw_markings, list):
+            for marking in raw_markings:
+                if isinstance(marking, dict) and "standard_id" in marking:
+                    object_marking_refs.append(marking["standard_id"])
+                elif isinstance(marking, str):
+                    object_marking_refs.append(marking)
+        return object_marking_refs
+
     def create_indicator_based_on(  # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         labels,
@@ -52,6 +73,8 @@ class IPQSBuilder:
 
         self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
 
+        object_marking_refs = self._get_object_marking_refs()
+
         indicator = Indicator(
             id=PyctiIndicator.generate_id(pattern),
             created_by_ref=self.author,
@@ -65,6 +88,7 @@ class IPQSBuilder:
                 "x_opencti_detection": detection,
             },
             labels=labels["value"],
+            object_marking_refs=object_marking_refs,
         )
         self.helper.log_debug(f"[IPQS] detection indicator: {detection}")
         relationship = Relationship(
@@ -79,6 +103,7 @@ class IPQSBuilder:
             target_ref=self.observable["standard_id"],
             confidence=self.helper.connect_confidence_level,
             allow_custom=True,
+            object_marking_refs=object_marking_refs,
         )
         self.bundle += [indicator, relationship]
 

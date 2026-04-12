@@ -2,10 +2,9 @@ version: "3"
 services:
   connector-ipqs-analyzer:
     image: opencti/connector-ipqs-analyzer:latest
-    build: .
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_URL=http://opencti
+      - OPENCTI_TOKEN=changeMe
       - CONNECTOR_ID=IPQS_Analyzer
       - CONNECTOR_NAME=IPQS Malware And Virus File Scanner
       - CONNECTOR_SCOPE=Artifact,Url
@@ -14,9 +13,7 @@ services:
       - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=info
       - IPQS_ANALYZER_SERVER=https://ipqualityscore.com/api/json
-      - IPQS_ANALYZER_API_KEY=ChangeMe
-      - IPQS_ANALYZER_DEFAULT_COLOR=#54483b
-      - IPQS_ANALYZER_CLASSIFICATIONS_COLOR=#54483b
+      - IPQS_ANALYZER_API_KEY=changeMe
       - IPQS_ANALYZER_DEFAULT_TLP=TLP:CLEAR
       - IPQS_ANALYZER_MAX_TLP=TLP:AMBER
     restart: always
