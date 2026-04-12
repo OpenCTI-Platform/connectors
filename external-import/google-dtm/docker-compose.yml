@@ -1,0 +1,29 @@
+version: '3'
+services:
+  connector-google-dtm:
+    image: opencti/connector-google-dtm:6.9.10
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe # Valid UUIDv4
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - "CONNECTOR_NAME=Google DTM"
+      - CONNECTOR_SCOPE=google-dtm
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H # ISO8601 format in String, start with 'P...' for Period
+
+      # Connector's definition parameters OPTIONAL
+      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
+      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
+      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
+      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
+
+      # Connector's custom execution parameters
+      - GOOGLE_DTM_API_KEY=ChangeMe # Google DTM API Key
+      - GOOGLE_DTM_TLP=red # Default Traffic Light Protocol (TLP) marking for imported data. Available values are: clear, white, green, amber, amber+strict, red. Default: 'clear'
+      - GOOGLE_DTM_IMPORT_START_DATE=PD10 # ISO 8601 duration string specifying how far back to import alerts (e.g., P1D for 1 day, P7D for 7 days). Default: 'P10D'
+      - GOOGLE_DTM_ALERT_SEVERITY= # Comma-separated list of alert types to ingest. Leave blank to retrieve alerts of all types. Available values are: "Compromised Credentials, Domain Discovery, Email, Forum Post, Message, Paste, Shop Listing, Tweet, Web Content". Default: empty (all alert types)
+      - GOOGLE_DTM_ALERT_TYPE= # Comma-separated list of alert severities to ingest. Leave blank to retrieve alerts of all severities. Supported values: 'high', 'medium', 'low'. Default: empty (all alert severities)
+    restart: always

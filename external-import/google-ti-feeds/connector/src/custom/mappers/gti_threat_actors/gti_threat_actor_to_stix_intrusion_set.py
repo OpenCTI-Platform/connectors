@@ -55,7 +55,6 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             marking_ids=src_entity.object_marking_refs,
             created=datetime.now(tz=timezone.utc),
             modified=datetime.now(tz=timezone.utc),
-            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )
 
     def __init__(

@@ -1,6 +1,6 @@
 services:
   connector-checkfirst-import-connector:
-    build: .
+    image: opencti/connector-checkfirst-import-connector:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -12,13 +12,5 @@ services:
       - CHECKFIRST_API_URL=${CHECKFIRST_API_URL}
       - CHECKFIRST_API_KEY=${CHECKFIRST_API_KEY}
       - CHECKFIRST_API_ENDPOINT=${CHECKFIRST_API_ENDPOINT}
-      - CHECKFIRST_SINCE=${CHECKFIRST_SINCE:-P365D}
+      - CHECKFIRST_SINCE=${CHECKFIRST_SINCE}
       - CHECKFIRST_TLP_LEVEL=${CHECKFIRST_TLP_LEVEL}
-    networks:
-      - default
-    restart: unless-stopped
-
-networks:
-  default:
-    external: true
-    name: docker_default

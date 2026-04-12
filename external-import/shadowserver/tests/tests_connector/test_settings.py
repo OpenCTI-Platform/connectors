@@ -44,6 +44,23 @@ from shadowserver import ConnectorSettings
             },
             id="minimal_valid_settings_dict",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {},
+                "shadowserver": {
+                    "api_key": "SecretStr",
+                    "api_secret": "SecretStr",
+                    "marking": "TLP:CLEAR",
+                    "create_incident": False,
+                    "incident_severity": "low",
+                    "incident_priority": "P4",
+                    "report_names": "scan_http,blocklist",
+                    "report_types": "scan_http",
+                },
+            },
+            id="valid_settings_with_report_names_and_types",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):

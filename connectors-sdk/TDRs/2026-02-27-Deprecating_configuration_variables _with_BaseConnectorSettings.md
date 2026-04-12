@@ -78,7 +78,7 @@ This validator:
 The SDK introduces `DeprecatedField`, a helper built on top of `pydantic.Field`, allowing deprecation metadata to be declared directly on fields.
 
 Supported metadata includes:
-- `deprecated`: deprecation flag or message (already present on pydanctic.Field)
+- `deprecated`: deprecation flag or message (already present on pydantic.Field)
 - `new_namespace`: destination namespace
 - `new_namespaced_var`: destination variable name
 - `new_value_factory`: optional value transformation function
@@ -108,9 +108,14 @@ Variable migration supports:
 
 ### Deprecated variable inside a configuration model
 
+Preferred: using `DeprecatedField`:
+
 ```python
+from pydantic import Field
+from connectors_sdk import BaseConfigModel, DeprecatedField
+
 class MyConfig(BaseConfigModel):
-    old_var: SkipValidation[int] = DeprecatedField(
+    old_var: int = DeprecatedField(
         deprecated="Use new_var instead",
         new_namespaced_var="new_var",
         new_value_factory=lambda x: x * 60,  # Optional transformation
@@ -119,11 +124,33 @@ class MyConfig(BaseConfigModel):
     new_var: int = Field(description="New variable")
 ```
 
+Alternative: using `Deprecate` annotation metadata:
+
+```python
+from typing import Annotated
+from pydantic import Field
+from connectors_sdk import BaseConfigModel, Deprecate
+
+class MyConfig(BaseConfigModel):
+    old_var: Annotated[
+        int,
+        Deprecate(
+            new_namespaced_var="new_var",
+            new_value_factory=lambda x: x * 60,  # Optional transformation
+            removal_date="2026-12-31",  # Optional informative removal deadline
+        ),
+    ]
+    new_var: int = Field(description="New variable")
+```
+
 ### Deprecated namespace at connector settings level
 
 ```python
+from pydantic import Field
+from connectors_sdk import BaseConnectorSettings, DeprecatedField
+
 class ConnectorSettings(BaseConnectorSettings):
-    old_namespace: SkipValidation[MyConfig] = DeprecatedField(
+    old_namespace: MyConfig = DeprecatedField(
         deprecated="Use new_namespace instead",
         new_namespace="new_namespace",
         removal_date="2026-12-31",  # Optional informative removal deadline
@@ -166,3 +193,16 @@ If both old and new settings are present, new settings take precedence
 This change introduces a declarative, centralized framework for configuration deprecation in connectors.
 
 By moving migration logic into the SDK and driving it through field metadata, it eliminates duplicated code, enforces a single validated configuration schema, and provides a clear and explicit deprecation path for users.
+
+---
+
+## Update (2026-03-13)
+
+This TDR is amended to clarify the recommended public API for field deprecation declarations.
+
+- `DeprecatedField` is the preferred and documented way to mark configuration fields as deprecated.
+- `Deprecate` exists as a lower-level annotation and is available for direct `Annotated[...]` usage if preferred.
+- `DeprecatedField` uses `Deprecate` metadata under the hood in `BaseConnectorSettings`, so both declaration syntaxes behave the same.
+- `pydantic.SkipValidation` remains supported for backward compatibility, but it is no longer required when using `DeprecatedField`/`Deprecate`.
+
+This update is a documentation clarification only (code examples have been updated). It does not change migration behavior.

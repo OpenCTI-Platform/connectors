@@ -75,7 +75,7 @@ class MISPClient:
         excluded_org_creators: list,
         enforce_warning_list: bool,
         with_attachments: bool,
-        limit: int = 10,
+        limit: int,
         page: int = 1,
     ) -> Generator[EventRestSearchListItem, None, None]:
         """

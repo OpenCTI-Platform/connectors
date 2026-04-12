@@ -16,6 +16,7 @@ connector:
 taxii:
   url: 'https://taxii.changeme.com' # The URL of the TAXII Server
   ssl_verify: true
+  api_root: 'root' # The TAXII API root (path segment between server URL and /collections/)
   collection_id: 'ChangeMe' # The collection ID
   token: '' # Token for bearer auth (if set, will ignore basic auth params)
   login: 'ChangeMe' # Login for basic auth

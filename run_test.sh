@@ -36,8 +36,8 @@ do
   project_has_changed=$(git diff "$base_commit" HEAD "$project/..")
   project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$project/.." || true)
 
-  if [ "$CIRCLE_BRANCH" = "master" ]; then
-    echo "🔄 On master branch, running all tests for: " "$project"
+  if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-"master"}" ]; then
+    echo "🔄 On ${RELEASE_REF:-"master"} branch, running all tests for: " "$project"
   elif [ -n "$changes_outside_of_connectors_scope" ] ; then
     echo "🔄 Changes detected outside of connectors scope - running all tests for: " "$project"
   elif [ -n "$sdk_has_change" ] && [ -n "$project_has_sdk_dependency" ] ; then
@@ -56,7 +56,7 @@ do
   mkdir -p "$OUT_DIR"
 
   echo 'Creating isolated virtual environment'
-  python -m venv "$venv_name"
+  uv venv -p 3.12 "$venv_name"
   if [ -f "$venv_name/bin/activate" ]; then
     source "$venv_name/bin/activate"  # Linux/MacOS
   elif [ -f "$venv_name/Scripts/activate" ]; then
@@ -66,7 +66,13 @@ do
   echo 'Installing requirements'
   uv pip install -q -r "$requirements_file"
 
-  uv pip freeze | grep "connectors-sdk\|pycti" || true
+  if uv pip show pytest-cov >/dev/null 2>&1; then
+    pytest_cov_installed_by_requirements="true"
+    echo 'pytest-cov is provided by test requirements'
+  else
+    pytest_cov_installed_by_requirements="false"
+    echo 'pytest-cov is not provided by test requirements'
+  fi
 
   if [ -n "$project_has_sdk_dependency" ] ; then
       echo 'Installing connectors-sdk local version'
@@ -74,17 +80,27 @@ do
       uv pip install -q ./connectors-sdk
   fi
 
-  uv pip freeze | grep "connectors-sdk\|pycti" || true
-
   echo 'Installing latest version of pycti'
   uv pip uninstall pycti
-  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python
+  REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
+  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   uv pip check || exit 1  # exit if dependencies are broken
 
   echo 'Running tests'
-  python -m pytest "$project" --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  if [ "$pytest_cov_installed_by_requirements" = "true" ]; then
+    echo 'Using project pytest configuration'
+    # --cov is not needed because already configured as addopts in pyproject.toml
+    # --cov-append is needed to merge coverage results from multiple test runs
+    python -m pytest "$project" --cov-append --cov-report=xml \
+      --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  else
+    echo 'Installing pytest-cov and using explicit coverage arguments'
+    uv pip install -q pytest-cov
+    python -m pytest "$project" --cov --cov-append \
+      --cov-report=xml --junitxml="$OUT_DIR/junit.xml" -q -rA  # exit non zero if no test run
+  fi
 
   echo 'Removing virtual environment'
   deactivate

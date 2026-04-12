@@ -46,4 +46,6 @@ misp:
   #import_unsupported_observables_as_text_transparent: true # Optional (default: true)
   #propagate_labels: false # Optional (default: false)
   batch_count: 9999 # Optional (default: 9999)
+  # batch_size_limit: null # Optional (default: null; examples: '10MB', '500KB', '1.5GB' - no spaces)
+  # search_limit: 10 # Optional, set a result limit for queries (default: 10)
   # request_timeout: null # Optional (default: null)

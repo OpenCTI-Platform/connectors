@@ -33,7 +33,6 @@ SLEEP_INTERVAL = 250
 
 
 class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
-
     def __init__(self):
         super().__init__()
         self._get_config_variables()
@@ -206,7 +205,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
                 stix_malware_with_relationship.append(observable_to_malware)
 
     def _generate_stix_note(self, results):
-        now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         classification = results["classification"]
         platform = results["platform"]
         configuration = results["configuration"]
@@ -261,9 +259,10 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
 
         # Create Note
         stix_note = stix2.Note(
-            id=Note.generate_id(now, content),
+            id=Note.generate_id(analysis_time, content),
             abstract=abstract,
             content=content,
+            created=analysis_time,
             created_by_ref=self.reversinglabs_identity["standard_id"],
             object_refs=[self.stix_entity["id"]],
             object_marking_refs=[stix2.TLP_AMBER],
@@ -480,7 +479,6 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
 
             # Submit File for analysis
             if is_archive == False:
-
                 file = open(sample_name, "wb")
                 file.write(file_content)
                 file.close()

@@ -1,5 +1,6 @@
 """Composite mapper that handles report to locations, identity, and report conversion in one step."""
 
+from datetime import datetime, timezone
 from typing import Any
 
 from connector.src.custom.mappers.gti_reports.gti_report_to_stix_identity import (
@@ -15,6 +16,7 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
     GTIReportToSTIXSector,
 )
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
+from connector.src.stix.octi.models.note_model import OctiNoteModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
     OrganizationAuthor,
@@ -94,4 +96,40 @@ class GTIReportToSTIXComposite(BaseMapper):
 
         all_entities.append(report_stix)
 
+        note = self._create_analyst_comment_note(report_stix)
+        if note is not None:
+            all_entities.append(note)
+
         return all_entities
+
+    def _create_analyst_comment_note(self, report_stix: Any) -> Any:
+        """Create a STIX Note from the analyst_comment field if present.
+
+        Args:
+            report_stix: The STIX report object to attach the note to
+
+        Returns:
+            A STIX Note object, or None if no analyst_comment is present
+
+        """
+        attributes = self.report.attributes
+        if not attributes or not attributes.analyst_comment:
+            return None
+
+        created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
+        modified = datetime.fromtimestamp(
+            attributes.last_modification_date, tz=timezone.utc
+        )
+
+        note_model = OctiNoteModel.create(
+            content=attributes.analyst_comment,
+            abstract=f"Analyst Comment & News Analysis Rating - {attributes.name}",
+            created=created,
+            modified=modified,
+            organization_id=self.organization.id,
+            marking_ids=[self.tlp_marking.id],
+            object_refs=[report_stix.id],
+            authors=["Google Threat Intelligence"],
+        )
+
+        return note_model.to_stix2_object()

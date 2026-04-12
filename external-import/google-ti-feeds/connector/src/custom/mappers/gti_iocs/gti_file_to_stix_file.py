@@ -3,6 +3,9 @@
 from datetime import datetime, timezone
 from typing import Any
 
+from connector.src.custom.mappers.gti_iocs.indicator_type_helpers import (
+    indicator_types_from_verdict,
+)
 from connector.src.custom.models.gti.gti_file_model import (
     GTIFileData,
 )
@@ -52,7 +55,6 @@ class GTIFileToSTIXFile(BaseMapper):
                 marking_ids=src_entity.object_marking_refs,
                 created=datetime.now(tz=timezone.utc),
                 modified=datetime.now(tz=timezone.utc),
-                description=f"Indicator indicates {src_entity.__class__.__name__}",
             )
         else:
             return OctiRelationshipModel.create(
@@ -63,7 +65,6 @@ class GTIFileToSTIXFile(BaseMapper):
                 marking_ids=src_entity.object_marking_refs,
                 created=datetime.now(tz=timezone.utc),
                 modified=datetime.now(tz=timezone.utc),
-                description=f"{src_entity.__class__.__name__} {relation_type} {target_entity.__class__.__name__}",
             )
 
     def __init__(
@@ -302,37 +303,13 @@ class GTIFileToSTIXFile(BaseMapper):
             return f"[file:hashes.'SHA-256' = '{self.file.id}']"
 
     def _determine_indicator_types(self) -> list[IndicatorTypeOV]:
-        """Determine indicator types based on file attributes.
+        """Determine indicator types from the GTI assessment verdict.
 
         Returns:
-            list[IndicatorTypeOV]: list of indicator types
+            list[IndicatorTypeOV]: list of indicator types, empty when no
+            classification is available (field should be omitted downstream).
 
         """
-        indicator_types = []
-
-        gti_types = self._get_types_from_gti_assessment()
-        if gti_types:
-            indicator_types.extend(gti_types)
-
-        if not indicator_types:
-            indicator_types.append(IndicatorTypeOV.UNKNOWN)
-
-        return indicator_types
-
-    def _get_types_from_gti_assessment(self) -> list[IndicatorTypeOV]:
-        """Extract indicator types from GTI assessment verdict.
-
-        Returns:
-            list[IndicatorTypeOV]: list of indicator types from GTI assessment
-
-        """
-        if not (self.file.attributes and self.file.attributes.gti_assessment):
+        if not self.file.attributes:
             return []
-
-        gti_assessment = self.file.attributes.gti_assessment
-        if not (gti_assessment.verdict and gti_assessment.verdict.value):
-            return []
-
-        verdict = gti_assessment.verdict.value.upper()
-
-        return [IndicatorTypeOV(verdict)]
+        return indicator_types_from_verdict(self.file.attributes.gti_assessment)

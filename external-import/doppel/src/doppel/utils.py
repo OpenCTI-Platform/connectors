@@ -7,6 +7,6 @@ def parse_iso_datetime(timestamp_str: str) -> datetime:
     :return: datetime
     """
     try:
-        return datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S.%f")
+        return datetime.fromisoformat(timestamp_str)
     except ValueError:
         return None

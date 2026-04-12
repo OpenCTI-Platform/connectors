@@ -1,5 +1,6 @@
 import pytest
 from connectors_sdk.models.domain_name import DomainName
+from connectors_sdk.models.ipv4_address import IPV4Address
 from pydantic import ValidationError
 from stix2.v21 import DomainName as Stix2DomainName
 
@@ -20,12 +21,18 @@ def test_domain_name_class_should_not_accept_invalid_input():
 
 def test_domain_name_to_stix2_object_returns_valid_stix_object():
     """Test that DomainName to_stix2_object method returns a valid STIX2.1 DomainName."""
-    # Given: A valid DomainName instance
-    domain_name = DomainName(value="test.com")
+    # Given: A valid DomainName instance with resolves_to refs
+    ipv4_address = IPV4Address(value="1.1.1.1")
+    second_domain = DomainName(value="cdn.test.com")
+    domain_name = DomainName(
+        value="test.com",
+        resolves_to=[ipv4_address, second_domain],
+    )
     # When: calling to_stix2_object method
     stix2_obj = domain_name.to_stix2_object()
     # Then: A valid STIX2.1 DomainName is returned
     assert isinstance(stix2_obj, Stix2DomainName)
+    assert stix2_obj.resolves_to_refs == [ipv4_address.id, second_domain.id]
 
 
 def test_domain_name_to_stix2_object(

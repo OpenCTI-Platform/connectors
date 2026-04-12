@@ -1,1 +1,0 @@
-"""Checkfirst OpenCTI connector package."""

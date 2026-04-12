@@ -55,9 +55,14 @@ class CustomConnector(ExternalImportConnector):
             marking_refs=marking_refs,
         )
         report_types = self.config.shadowserver.report_types
+        report_names = self.config.shadowserver.report_names
         if report_types:
             self.helper.connector_logger.info(
                 f"Report types to retrieve: {', '.join(report_types)}."
+            )
+        if report_names:
+            self.helper.connector_logger.info(
+                f"Report names to retrieve: {', '.join(report_names)}."
             )
 
         for days_lookback in range(self.lookback, -1, -1):
@@ -66,7 +71,7 @@ class CustomConnector(ExternalImportConnector):
             date_str = date.strftime("%Y-%m-%d")
             self.helper.connector_logger.info(f"Getting reports for {date_str}.")
             report_list = shadowserver_api.get_report_list(
-                date=date_str, reports=report_types
+                date=date_str, reports=report_names, type=report_types
             )
             if not report_list:
                 self.helper.connector_logger.info(f"No reports found for {date_str}.")

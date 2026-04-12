@@ -43,4 +43,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_INDICATOR_UNWANTED_LABELS | `array` |  | string |  | `[]` | Comma-separated list of unwanted labels to filter out indicators. Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'. |
 | CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT | `boolean` |  | boolean |  | `true` | Whether to trigger import without file dependencies. |
 | CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP | `integer` |  | integer |  |  | Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities! |
+| CROWDSTRIKE_VULNERABILITY_IMPORT_AFFECTED_PRODUCTS | `boolean` |  | boolean |  | `false` | Whether to import affected products from vulnerability data. When enabled, creates STIX Software observables and 'has' relationships linking each product to its parent vulnerability. |
 | CROWDSTRIKE_INTERVAL_SEC | `integer` |  | `0 < x ` | ⛔️ | `null` | Use CONNECTOR_DURATION_PERIOD instead. |
