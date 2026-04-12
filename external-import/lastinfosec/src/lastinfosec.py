@@ -148,6 +148,8 @@ class LastInfoSec:
                 self.push_data(lastinfosec_data, timestamp, work_id)
             stop = time.perf_counter()
             process_time_seconds = stop - start
+            message = "Done in {0} seconds".format(process_time_seconds)
+            self.helper.api.work.to_processed(work_id, message)
             time_to_sleep = run_interval - process_time_seconds
         else:
             message = "Connector error run, storing last_run as {0}".format(timestamp)
@@ -166,7 +168,6 @@ class LastInfoSec:
                 timestamp
             )
             self.helper.set_state({"last_run": timestamp})
-            self.helper.api.work.to_processed(work_id, message)
             self.helper.log_info(message)
 
 
