@@ -132,9 +132,12 @@
       "type": "boolean"
     },
     "RECORDED_FUTURE_TA_TO_INTRUSION_SET": {
-      "default": false,
-      "description": "Whether to convert Threat Actor entities to Intrusion Set entities.",
-      "type": "boolean"
+      "default": [],
+      "description": "Comma-separated list of submodules where Threat Actor entities are mapped to Intrusion Set instead of Threat Actor. Available values: risk_list, analyst_notesExample: 'risk_list,analyst_notes'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "RECORDED_FUTURE_RISK_AS_SCORE": {
       "default": true,
