@@ -151,8 +151,6 @@ class RestoreFilesConnector:
                         self.helper.api.stix2.import_bundle_from_json(
                             json.dumps(bundle), True
                         )
-                    # 06 - Save the state
-                    self.helper.set_state({"current": entry.name})
                 else:
                     self.helper.log_info("restore dir (worker bundles):" + entry.name)
                     self.helper.send_stix2_bundle(
@@ -161,9 +159,9 @@ class RestoreFilesConnector:
                     message = "Restore dir run, storing last_run as {0}".format(
                         entry.name
                     )
-                    self.helper.api.work.to_processed(work_id, message)
-                    # 06 - Save the state
-                    self.helper.set_state({"current": entry.name})
+                self.helper.api.work.to_processed(work_id, message)
+                # 06 - Save the state
+                self.helper.set_state({"current": entry.name})
         self.helper.log_info("restore run completed")
 
     def start(self):
