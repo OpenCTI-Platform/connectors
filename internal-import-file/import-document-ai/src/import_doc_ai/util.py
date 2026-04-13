@@ -494,68 +494,6 @@ def filter_bundle_observables(bundle: stix2.Bundle) -> stix2.Bundle:
     )
 
 
-def filter_relationship_types(
-    bundle: stix2.Bundle, allowed_types: set[str]
-) -> stix2.Bundle:
-    """Filter relationship objects from a STIX bundle.
-
-    Note:
-        This only remove relationships and their references in container objects, but
-        leaves all other objects intact.
-
-    Args:
-        bundle (stix2.Bundle): The STIX bundle to process.
-        allowed_types (set[str]): The set of allowed relationship types to keep.
-
-    Returns:
-        (stix2.Bundle): The processed STIX bundle without relationship objects.
-
-    Examples:
-        >>> import stix2
-        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
-        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
-        >>> relationship = stix2.Relationship(
-        ...     source_ref=identity["id"],
-        ...     target_ref=malware["id"],
-        ...     relationship_type="uses",
-        ... )
-        >>> report = stix2.Report(
-        ...     name="Example Report",
-        ...     description="An example report containing relationships.",
-        ...     object_refs=[identity["id"], malware["id"], relationship["id"]],
-        ...     published="2024-10-01T12:00:00Z",
-        ... )
-        >>> bundle = stix2.Bundle(
-        ...     objects=[
-        ...         identity,
-        ...         malware,
-        ...         relationship,
-        ...         report,
-        ...     ],
-        ...     allow_custom=True,
-        ... )
-        >>> filtered_bundle = filter_relationships(bundle, allowed_types={"uses"})
-    """
-    # remove relationships from the bundle if not in allowed relationship_types
-    relationship_ids_to_remove = [
-        obj["id"]
-        for obj in bundle.get("objects", [])
-        if obj.get("type") != "relationship"
-        and obj.get("relationship_type", "") not in allowed_types
-    ]
-    # remove all references to relationships in container objects
-    bundle = remove_from_object_refs(bundle, references=relationship_ids_to_remove)
-    return stix2.Bundle(
-        type=bundle["type"],
-        objects=[
-            obj
-            for obj in bundle.get("objects", [])
-            if not (obj.get("id", "") in relationship_ids_to_remove)
-        ],
-        allow_custom=True,
-    )
-
-
 def filter_relationship_triplets(
     bundle: stix2.Bundle, allowed_types: set[tuple[str, str, str]]
 ) -> stix2.Bundle:
