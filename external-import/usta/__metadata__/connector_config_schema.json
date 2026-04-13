@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/usta_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "USTA",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "indicator,observable,malware,identity,incident,user-account,report,threat-actor",
+      "description": "The scope of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT30M",
+      "description": "The period of time to await between two runs.",
+      "format": "duration",
+      "type": "string"
+    },
+    "USTA_API_BASE_URL": {
+      "default": "https://usta.prodaft.com",
+      "description": "USTA API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "USTA_API_KEY": {
+      "description": "USTA API bearer token for authentication.",
+      "format": "password",
+      "type": "string"
+    },
+    "USTA_IMPORT_START_DATE": {
+      "default": "P90D",
+      "description": "ISO 8601 duration string specifying how far back to import data (e.g., P90D for 90 days, P30D for 30 days). Only used on the very first run when no state exists.",
+      "format": "duration",
+      "type": "string"
+    },
+    "USTA_PAGE_SIZE": {
+      "default": 100,
+      "description": "Number of records to fetch per API page.",
+      "maximum": 500,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "USTA_IMPORT_MALICIOUS_URLS": {
+      "default": true,
+      "description": "Enable import of malicious URL indicators.",
+      "type": "boolean"
+    },
+    "USTA_IMPORT_PHISHING_SITES": {
+      "default": true,
+      "description": "Enable import of phishing site indicators.",
+      "type": "boolean"
+    },
+    "USTA_IMPORT_MALWARE_HASHES": {
+      "default": true,
+      "description": "Enable import of malware hash indicators.",
+      "type": "boolean"
+    },
+    "USTA_IMPORT_COMPROMISED_CREDENTIALS": {
+      "default": true,
+      "description": "Enable import of compromised credentials tickets (Account Takeover Prevention).",
+      "type": "boolean"
+    },
+    "USTA_IMPORT_CREDIT_CARDS": {
+      "default": true,
+      "description": "Enable import of compromised credit card tickets (Fraud Intelligence).",
+      "type": "boolean"
+    },
+    "USTA_IMPORT_DEEP_SIGHT_TICKETS": {
+      "default": true,
+      "description": "Enable import of Deep Sight intelligence tickets (threat reports, leaks, APT activity).",
+      "type": "boolean"
+    },
+    "USTA_STORE_CREDENTIAL_PASSWORD": {
+      "default": false,
+      "description": "When enabled, the raw password from Account Takeover Prevention records is stored in the STIX User-Account credential field. Disabled by default for security reasons.",
+      "type": "boolean"
+    },
+    "USTA_TLP_LEVEL": {
+      "default": "red",
+      "description": "TLP marking level to apply to imported data.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "red"
+      ],
+      "type": "string"
+    },
+    "USTA_CONFIDENCE_LEVEL": {
+      "default": 99,
+      "description": "Confidence level for created STIX objects (0-100).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "USTA_API_KEY"
+  ],
+  "additionalProperties": true
+}
