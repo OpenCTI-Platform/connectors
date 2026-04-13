@@ -797,7 +797,6 @@ def convert_location_to_octi_location(
                 stix_object=stix_location,
                 extend=True,
             )
-        return stix_location
     return stix_location
 
 
