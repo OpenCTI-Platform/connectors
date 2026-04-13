@@ -63,10 +63,10 @@ class ImportDocumentAIClient:
             response.raise_for_status()
             return response
 
-        except ConnectionError:
-            raise ConnectionError(
-                "ImportDocumentAI webservice seems to be unreachable, \
-                have you configured your connector properly ?"
+        except requests.ConnectionError:
+            raise requests.ConnectionError(
+                "ImportDocumentAI webservice seems to be unreachable, "
+                "have you configured your connector properly ?"
             )
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
@@ -80,7 +80,7 @@ class ImportDocumentAIClient:
         file_name: str,
         file_mime: str,
         file_data: BytesIO,
-        keep_only_relationship_triplets: tuple[str, str, str],
+        allowed_relationship_triplets: set[tuple[str, str, str]],
     ) -> stix2.Bundle:
         """
         Fetch the bundle from the API
@@ -98,7 +98,7 @@ class ImportDocumentAIClient:
             bundle = deduplicate_bundle_objects(bundle)
             # filter relationships
             bundle = filter_relationship_triplets(
-                bundle, keep_only_relationship_triplets
+                bundle, allowed_relationship_triplets
             )
             return bundle
         except stix2.exceptions.STIXError as e:

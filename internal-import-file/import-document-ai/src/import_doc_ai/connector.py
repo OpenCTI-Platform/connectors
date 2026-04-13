@@ -76,7 +76,7 @@ class Connector:
             file_name=file.name,
             file_mime=file.mime_type,
             file_data=file.buffered_data,
-            keep_only_relationship_triplets=self.allowed_relationships_triplets,
+            allowed_relationship_triplets=self.allowed_relationships_triplets,
         )
         # Handle Attack pattern special case reunification if already present in OCTI platform
         for ai_attack_pattern in filter_bundle_entities_by_type(
