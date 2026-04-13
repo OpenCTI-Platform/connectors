@@ -98,8 +98,8 @@ class GTICampaignToSTIXCampaign(BaseMapper):
 
         """
         if (
-                not hasattr(attributes, "alt_names_details")
-                or not attributes.alt_names_details
+            not hasattr(attributes, "alt_names_details")
+            or not attributes.alt_names_details
         ):
             return None
 
