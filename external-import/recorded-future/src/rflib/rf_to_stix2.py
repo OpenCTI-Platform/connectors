@@ -197,7 +197,9 @@ class Indicator(RFStixEntity):
             allow_custom=True,
         )
 
-    def map_data(self, rf_indicator, tlp, risklist_related_entities):
+    def map_data(
+        self, rf_indicator, tlp, risklist_related_entities, ta_to_intrusion_set=None
+    ):
         handled_related_entities_types = risklist_related_entities
         try:
             self.risk_score = int(rf_indicator["Risk"])
@@ -226,9 +228,13 @@ class Indicator(RFStixEntity):
                             for rf_related_element in element["entities"]:
                                 type_ = element["type"]["name"]
                                 name_ = rf_related_element["name"]
-                                related_element = ENTITY_TYPE_MAPPER[type_](
-                                    name_, type_, self.author, tlp
+                                cls = _resolve_entity_class(
+                                    type_,
+                                    enabled=_ta_to_intrusion_set_enabled(
+                                        ta_to_intrusion_set, "risk_list"
+                                    ),
                                 )
+                                related_element = cls(name_, type_, self.author, tlp)
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
 
@@ -245,7 +251,7 @@ class Indicator(RFStixEntity):
         for entity in self.related_entities:
             if entity["type"] in ["indicator"]:
                 relationships.append(self._create_rel("related-to", entity.id))
-            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
+            if entity["type"] in _STIX_DIRECTIONAL_REL_TYPES:
                 relationships.append(self._create_rel("indicates", entity.id))
         self.objects.extend(relationships)
 
@@ -830,7 +836,9 @@ class Vulnerability(RFStixEntity):
     def add_labels(self, labels):
         self.labels = labels
 
-    def map_data(self, rf_vuln, tlp, risklist_related_entities):
+    def map_data(
+        self, rf_vuln, tlp, risklist_related_entities, ta_to_intrusion_set=None
+    ):
         handled_related_entities_types = risklist_related_entities
         try:
             self.risk_score = int(rf_vuln["Risk"])
@@ -859,9 +867,13 @@ class Vulnerability(RFStixEntity):
                             for rf_related_element in element["entities"]:
                                 type_ = element["type"]["name"]
                                 name_ = rf_related_element["name"]
-                                related_element = ENTITY_TYPE_MAPPER[type_](
-                                    name_, type_, self.author, tlp
+                                cls = _resolve_entity_class(
+                                    type_,
+                                    enabled=_ta_to_intrusion_set_enabled(
+                                        ta_to_intrusion_set, "risk_list"
+                                    ),
                                 )
+                                related_element = cls(name_, type_, self.author, tlp)
                                 stix_objs = related_element.to_stix_objects()
                                 self.related_entities.extend(stix_objs)
 
@@ -878,7 +890,7 @@ class Vulnerability(RFStixEntity):
         for entity in self.related_entities:
             if entity["type"] in ["indicator"]:
                 relationships.append(self._create_rel("related-to", entity.id))
-            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
+            if entity["type"] in _STIX_DIRECTIONAL_REL_TYPES:
                 relationships.append(self._create_rel("targets", entity.id))
         self.objects.extend(relationships)
 
@@ -1022,6 +1034,24 @@ ENTITY_TYPE_MAPPER = {
     "Threat Actor": ThreatActor,
 }
 
+
+def _ta_to_intrusion_set_enabled(ta_to_intrusion_set, submodule: str) -> bool:
+    return submodule in (ta_to_intrusion_set or ())
+
+
+def _resolve_entity_class(type_: str, enabled: bool = False):
+    if enabled and type_ == "Threat Actor":
+        return IntrusionSet
+    return ENTITY_TYPE_MAPPER[type_]
+
+
+# STIX types that justify a directional relationship (indicates / targets)
+# rather than the generic "related-to" used for other indicators.
+_STIX_DIRECTIONAL_REL_TYPES = frozenset(
+    ["attack-pattern", "malware", "threat-actor", "intrusion-set"]
+)
+
+
 # maps RF types to the corresponding url to get the risk score
 INDICATOR_TYPE_URL_MAPPER = {
     "IpAddress": "ip",
@@ -1116,7 +1146,7 @@ class StixNote:
         tas,
         rfapi,
         person_to_ta=False,
-        ta_to_intrusion_set=False,
+        ta_to_intrusion_set=(),
         risk_as_score=False,
         risk_threshold=None,
         analyst_notes_guess_relationships=False,
@@ -1187,7 +1217,12 @@ class StixNote:
             if self.person_to_ta and type_ == "Person":
                 stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
             elif entity["id"] in self.tas:
-                if self.ta_to_intrusion_set and type_ != "Person":
+                if (
+                    _ta_to_intrusion_set_enabled(
+                        self.ta_to_intrusion_set, "analyst_notes"
+                    )
+                    and type_ != "Person"
+                ):
                     stix_objs = IntrusionSet(
                         name, type_, self.author, tlp
                     ).to_stix_objects()

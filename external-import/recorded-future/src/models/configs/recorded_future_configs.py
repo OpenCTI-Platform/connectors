@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import ClassVar, Literal, Optional
 
 from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
@@ -63,11 +63,42 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         alias="person_to_TA",
         description="Whether to convert Person entities to Threat Actor entities.",
     )
-    ta_to_intrusion_set: bool = Field(
-        default=False,
-        alias="TA_to_intrusion_set",
-        description="Whether to convert Threat Actor entities to Intrusion Set entities.",
+    ta_to_intrusion_set: Optional[ListFromString] = Field(
+        default=[],
+        description=(
+            "Comma-separated list of submodules where Threat Actor entities are mapped to "
+            "Intrusion Set instead of Threat Actor. "
+            "Available values: risk_list, analyst_notes"
+            "Example: 'risk_list,analyst_notes'."
+        ),
     )
+
+    _VALID_TA_TO_INTRUSION_SET_VALUES: ClassVar[frozenset] = frozenset(
+        {"risk_list", "analyst_notes"}
+    )
+
+    @field_validator("ta_to_intrusion_set", mode="before")
+    @classmethod
+    def backward_compat_ta_to_intrusion_set(cls, v):
+        """Backward compat: convert legacy boolean to list."""
+        if isinstance(v, bool):
+            return "risk_list,analyst_notes" if v else ""
+        return v
+
+    @field_validator("ta_to_intrusion_set", mode="after")
+    @classmethod
+    def validate_ta_to_intrusion_set_values(cls, v):
+        """Ensure every listed submodule name is a recognised value."""
+        if not v:
+            return v
+        invalid = set(v) - cls._VALID_TA_TO_INTRUSION_SET_VALUES
+        if invalid:
+            raise ValueError(
+                f"Invalid ta_to_intrusion_set value(s): {sorted(invalid)}. "
+                f"Must be a subset of: {sorted(cls._VALID_TA_TO_INTRUSION_SET_VALUES)}."
+            )
+        return v
+
     risk_as_score: bool = Field(
         default=True,
         description="Whether to import risk scores as confidence scores in OpenCTI.",
