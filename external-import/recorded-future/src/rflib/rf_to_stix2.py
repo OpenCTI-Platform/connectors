@@ -1039,7 +1039,7 @@ def _ta_to_intrusion_set_enabled(ta_to_intrusion_set, submodule: str) -> bool:
     return submodule in (ta_to_intrusion_set or ())
 
 
-def _resolve_entity_class(type_: str, enabled: bool = True):
+def _resolve_entity_class(type_: str, enabled: bool = False):
     if enabled and type_ == "Threat Actor":
         return IntrusionSet
     return ENTITY_TYPE_MAPPER[type_]

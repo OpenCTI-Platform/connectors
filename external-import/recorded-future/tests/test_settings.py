@@ -197,7 +197,7 @@ def test_ta_to_intrusion_set_legacy_true_maps_to_all_submodules():
     config = _ConfigLoaderRecordedFuture(**kwargs)
 
     # Then ta_to_intrusion_set maps to all submodules
-    assert sorted(config.ta_to_intrusion_set) == ["alert", "analyst_notes", "risk_list"]
+    assert sorted(config.ta_to_intrusion_set) == ["analyst_notes", "risk_list"]
 
 
 # Scenario: Legacy boolean False disables all submodules via backward compatibility

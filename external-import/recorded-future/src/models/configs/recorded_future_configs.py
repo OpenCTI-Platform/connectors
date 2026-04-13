@@ -68,13 +68,13 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description=(
             "Comma-separated list of submodules where Threat Actor entities are mapped to "
             "Intrusion Set instead of Threat Actor. "
-            "Available values: risk_list, analyst_notes, alert. "
+            "Available values: risk_list, analyst_notes"
             "Example: 'risk_list,analyst_notes'."
         ),
     )
 
     _VALID_TA_TO_INTRUSION_SET_VALUES: ClassVar[frozenset] = frozenset(
-        {"risk_list", "analyst_notes", "alert"}
+        {"risk_list", "analyst_notes"}
     )
 
     @field_validator("ta_to_intrusion_set", mode="before")
@@ -82,7 +82,7 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
     def backward_compat_ta_to_intrusion_set(cls, v):
         """Backward compat: convert legacy boolean to list."""
         if isinstance(v, bool):
-            return "risk_list,analyst_notes,alert" if v else ""
+            return "risk_list,analyst_notes" if v else ""
         return v
 
     @field_validator("ta_to_intrusion_set", mode="after")

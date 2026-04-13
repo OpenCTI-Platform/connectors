@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-recorded-future:
     image: opencti/connector-recorded-future:latest
@@ -19,7 +19,7 @@ services:
       - RECORDED_FUTURE_INSIKT_ONLY=True #optional, can remove
       - RECORDED_FUTURE_PULL_SIGNATURES=False #optional, can remove
       - RECORDED_FUTURE_PERSON_TO_TA=False #optional, can remove
-      - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False #optional, can remove
+      - RECORDED_FUTURE_TA_TO_INTRUSION_SET="" #optional, can remove, possible values: risk_list, analyst_notes
       - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
       - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
       - RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS=False #optional, can remove
