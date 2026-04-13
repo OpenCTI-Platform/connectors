@@ -171,7 +171,7 @@ class OCTITriggeringEntity:
         self,
         id: str,
         opencti_type: str,
-        object_marking_refs: list[str] = [],
+        object_marking_refs: list[str] | None = None,
         author_id: str = None,
     ):
         """Initialize the TriggeringEntity.
@@ -181,7 +181,9 @@ class OCTITriggeringEntity:
         """
         self.id = id
         self.opencti_type = opencti_type
-        self.object_marking_refs = object_marking_refs
+        self.object_marking_refs = (
+            list(object_marking_refs) if object_marking_refs is not None else []
+        )
         self.author_id = author_id
 
     def get_stix(self, helper) -> stix2.v21._STIXBase21:
