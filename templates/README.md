@@ -392,16 +392,35 @@ self.helper.schedule_iso(
 )
 ```
 
-- **Initiate a new work**
+- **Using the Work API to provide progress feedback**
 
-Initialize a new job and process it once data is imported
+A Connector performing an import should follow the following sequence:
+
+* Initialize a new `work` by calling `initiate_work`
+* Generate one or more STIX bundles and send them using the `send_stix2_bundle` helper with the
+correct `work_id` argument
+* Notify the backend that all bundles got sent or that an error occurred via `to_processed`.
+Forgetting to call `to_processed` will prevent the Work from transitioning to the `complete` state.
 
 ```python
-work_id = self.helper.api.work.initiate_work(
-    self.helper.connect_id, friendly_name
-)
-
-self.helper.api.work.to_processed(work_id, message)
+work_id = None
+message = "Done"
+is_error = False
+try:
+  work_id = self.helper.api.work.initiate_work(
+      self.helper.connect_id, friendly_name
+  )
+  # Here you typically want to call `self.helper.send_stix2_bundle(bundle, work_id=work_id) for each
+  # data bundle to push it on the queue and let the workers import them in the platform.
+except Exception as ex:
+  # You might want to treat several error cases differently, this is a basic handling
+  message = "Failed: {}".format(str(ex))
+  is_error = True
+finally:
+  # It's important to notify the backend that the connector finished pushing all bundles on the queue.
+  # The Work will be able to transition to `complete` when all bundles get treated by the workers.
+  if work_id is not None:
+    self.helper.api.work.to_processed(work_id, message, is_error=is_error)
 ```
 
 Get current state
