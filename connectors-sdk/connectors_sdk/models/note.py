@@ -58,19 +58,12 @@ class Note(BaseIdentifiedEntity):
 
     def to_stix2_object(self) -> Stix2Note:
         """Make stix object."""
-        try:
-            note_id = PyctiNote.generate_id(
+        return NoteStix(
+            id=PyctiNote.generate_id(
                 content=self.content,
                 created=self.publication_date,
                 abstract=self.abstract,
-            )
-        except TypeError:
-            note_id = PyctiNote.generate_id(
-                content=self.content,
-                created=self.publication_date,
-            )
-        return NoteStix(
-            id=note_id,
+            ),
             abstract=self.abstract,
             content=self.content,
             labels=self.labels,
