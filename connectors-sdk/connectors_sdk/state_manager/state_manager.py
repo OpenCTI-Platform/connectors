@@ -57,12 +57,20 @@ class ConnectorStateManager(BaseModel):
         """Overwrite instance's fields with the connector's state stored on OpenCTI."""
         state = self._helper.get_state() or {}
         for key in state:
+            # Prevent potential conflicts with `_helper` private attribute (not likely but possible)
+            if key == "_helper":
+                continue
+
             setattr(self, key, state[key])
 
     def save(self) -> None:
         """Save instance's fields as connector's state on OpenCTI."""
         declared_fields = set(type(self).model_fields)
+
         state_dict = self.model_dump(mode="json", include=declared_fields)
+        # Send both declared _and_ extra fields (to not delete any connector state's attributes on OpenCTI)
+        if self.model_extra:
+            state_dict.update(self.model_extra)
 
         self._helper.set_state(state_dict)
         self._helper.force_ping()  # ensure the state is updated immediately on OpenCTI

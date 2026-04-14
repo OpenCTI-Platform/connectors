@@ -88,6 +88,24 @@ def test_connector_state_manager_load(
     assert dummy_connector_state_manager.custom_value == "test"
 
 
+def test_connector_state_manager_load_ignores_helper_key(
+    dummy_connector_state_manager, mock_opencti_connector_helper
+):
+    """Test that `ConnectorStateManager` instance loads state from OpenCTI correctly."""
+    # Given: a state stored on OpenCTI
+    mock_opencti_connector_helper.get_state.return_value = {"_helper": "test"}
+
+    # When: loading the state into a `ConnectorStateManager` instance
+    original_helper = dummy_connector_state_manager._helper
+    dummy_connector_state_manager.load()
+
+    # Then: `OpenCTIConnectorHelper.get_state` method should be called and
+    # the `dummy_connector_state_manager` fields should be updated with the loaded state
+    mock_opencti_connector_helper.get_state.assert_called_once()
+    assert dummy_connector_state_manager.last_run is None
+    assert dummy_connector_state_manager._helper == original_helper
+
+
 def test_connector_state_manager_save(
     dummy_connector_state_manager, mock_opencti_connector_helper
 ):
@@ -101,5 +119,23 @@ def test_connector_state_manager_save(
     # the state should be updated immediately on OpenCTI (`force_ping` called)
     mock_opencti_connector_helper.set_state.assert_called_once_with(
         {"last_run": "2024-01-01T00:00:00Z"}
+    )
+    mock_opencti_connector_helper.force_ping.assert_called_once()
+
+
+def test_connector_state_manager_save_sends_extra_fields(
+    dummy_connector_state_manager, mock_opencti_connector_helper
+):
+    """Test that `ConnectorStateManager` instance saves extra fields onto OpenCTI correctly."""
+    # Given: an instance of `ConnectorStateManager` with extra fields
+    dummy_connector_state_manager.last_run = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    dummy_connector_state_manager.custom_value = "test"
+
+    # When: saving the state to OpenCTI
+    dummy_connector_state_manager.save()
+
+    # Then: `OpenCTIConnectorHelper.set_state` method should be called with the correct dict including extra fields
+    mock_opencti_connector_helper.set_state.assert_called_once_with(
+        {"last_run": "2024-01-01T00:00:00Z", "custom_value": "test"}
     )
     mock_opencti_connector_helper.force_ping.assert_called_once()
