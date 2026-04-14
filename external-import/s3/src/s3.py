@@ -587,7 +587,9 @@ class S3Connector:
                 else:
                     note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Title"
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key, abstract=note_abstract),
+                    id=Note.generate_id(
+                        obj["created"], note_key, abstract=note_abstract
+                    ),
                     created=obj["created"],
                     abstract=note_abstract,
                     content=obj.get("x_title"),
@@ -616,7 +618,9 @@ class S3Connector:
                 else:
                     note_key = obj.get("x_acti_uuid") + " - " + obj_name + " - Analysis"
                 note = stix2.Note(
-                    id=Note.generate_id(obj["created"], note_key, abstract=note_abstract),
+                    id=Note.generate_id(
+                        obj["created"], note_key, abstract=note_abstract
+                    ),
                     created=obj["created"],
                     abstract=note_abstract,
                     content=obj["x_analysis"],
