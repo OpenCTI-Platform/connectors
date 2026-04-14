@@ -1,6 +1,5 @@
 """Note."""
 
-import inspect
 from collections import OrderedDict
 
 import stix2.properties
@@ -10,10 +9,6 @@ from connectors_sdk.models.reference import Reference
 from pycti import Note as PyctiNote
 from pydantic import AwareDatetime, Field
 from stix2.v21 import Note as Stix2Note
-
-_GENERATE_ID_SUPPORTS_ABSTRACT = (
-    "abstract" in inspect.signature(PyctiNote.generate_id).parameters
-)
 
 
 class NoteStix(Stix2Note):  # type: ignore[misc]
@@ -63,14 +58,19 @@ class Note(BaseIdentifiedEntity):
 
     def to_stix2_object(self) -> Stix2Note:
         """Make stix object."""
-        generate_id_kwargs: dict = {
-            "content": self.content,
-            "created": self.publication_date,
-        }
-        if _GENERATE_ID_SUPPORTS_ABSTRACT:
-            generate_id_kwargs["abstract"] = self.abstract
+        try:
+            note_id = PyctiNote.generate_id(
+                content=self.content,
+                created=self.publication_date,
+                abstract=self.abstract,
+            )
+        except TypeError:
+            note_id = PyctiNote.generate_id(
+                content=self.content,
+                created=self.publication_date,
+            )
         return NoteStix(
-            id=PyctiNote.generate_id(**generate_id_kwargs),
+            id=note_id,
             abstract=self.abstract,
             content=self.content,
             labels=self.labels,
