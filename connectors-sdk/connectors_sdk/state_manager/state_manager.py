@@ -14,7 +14,7 @@ from datetime import datetime
 from typing import Any
 
 from pycti import OpenCTIConnectorHelper
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_serializer
 
 
 class ConnectorStateManager(BaseModel):
@@ -52,6 +52,17 @@ class ConnectorStateManager(BaseModel):
             )
 
         self._helper = helper
+
+    @field_serializer("*", mode="wrap", when_used="json")
+    def _serialize_datetimes(self, value: Any, handler: Any) -> Any:
+        """Replace the default JSON serializer, in order to use +00:00 offset instead of Z prefix.
+        This is convenient so `assert self.model_dump(mode="json")["last_run"] == self.last_run.isoformat()`
+        is `True` across both codebase and tests (using the same serializer).
+        Consistent with `DatetimeFromIsoString` in `connectors_sdk.settings.annotated_types` module too.
+        """
+        if isinstance(value, datetime):
+            return value.isoformat()  # Override default JSON serializer
+        return handler(value)
 
     def load(self) -> None:
         """Overwrite instance's fields with the connector's state stored on OpenCTI."""
