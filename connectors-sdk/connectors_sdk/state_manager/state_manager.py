@@ -11,9 +11,10 @@ Architecture:
 """
 
 from datetime import datetime
+from typing import Any
 
 from pycti import OpenCTIConnectorHelper
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class ConnectorStateManager(BaseModel):
@@ -29,23 +30,32 @@ class ConnectorStateManager(BaseModel):
         validate_assignment=True,  # ensure model is revalidate when setting properties
     )
 
+    _helper: OpenCTIConnectorHelper = PrivateAttr()
+
     last_run: datetime | None = Field(default=None)
 
-    def __init__(self, helper: OpenCTIConnectorHelper):
+    def __init__(self, helper: OpenCTIConnectorHelper, **kwargs: Any) -> None:
         """Initialize the state manager with the connector helper.
         By default, the fields of the state manager are not populated.
         The `load` method must be called to populate the fields with the state stored on OpenCTI.
 
         Arguments:
             helper: The `OpenCTIConnectorHelper` instance to communicate with the OpenCTI platform.
+            **kwargs: Any fields to set on the state manager (these fields will also be stored on OpenCTI).
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
-        self.helper = helper
+        # Validate `helper` argument as Pydantic will not do it since it's a private attribute
+        if not isinstance(helper, OpenCTIConnectorHelper):
+            raise ValueError(
+                "`helper` argument is required and must be an instance of `pycti.OpenCTIConnectorHelper`"
+            )
+
+        self._helper = helper
 
     def load(self) -> None:
         """Overwrite instance's fields with the connector's state stored on OpenCTI."""
-        state = self.helper.get_state() or {}
+        state = self._helper.get_state() or {}
         for key in state:
             setattr(self, key, state[key])
 
@@ -54,5 +64,5 @@ class ConnectorStateManager(BaseModel):
         declared_fields = set(type(self).model_fields)
         state_dict = self.model_dump(mode="json", include=declared_fields)
 
-        self.helper.set_state(state_dict)
-        self.helper.force_ping()  # ensure the state is updated immediately on OpenCTI
+        self._helper.set_state(state_dict)
+        self._helper.force_ping()  # ensure the state is updated immediately on OpenCTI

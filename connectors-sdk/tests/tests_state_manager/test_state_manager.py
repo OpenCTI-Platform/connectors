@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 import pytest
 from connectors_sdk.state_manager.state_manager import ConnectorStateManager
+from pycti import OpenCTIConnectorHelper
 from pydantic import BaseModel
 
 
@@ -16,6 +17,25 @@ def test_connector_state_manager_is_pydantic_model():
     # Given: the `ConnectorStateManager` class
     # Then: it should be a subclass of pydantic.BaseModel
     assert issubclass(ConnectorStateManager, BaseModel)
+
+
+def test_connector_state_manager_has_helper_attribute(dummy_connector_state_manager):
+    """Test that `ConnectorStateManager` instance has a `_helper` attribute."""
+    # Given: an instance of `ConnectorStateManager`
+    # Then: it should have a `_helper` attribute that is an instance of `OpenCTIConnectorHelper`
+    assert hasattr(dummy_connector_state_manager, "_helper")
+    assert isinstance(dummy_connector_state_manager._helper, OpenCTIConnectorHelper)
+
+
+def test_connector_state_manager_validates_helper_argument():
+    """Test that `ConnectorStateManager` raises a `ValueError` if the `helper` argument is invalid."""
+    # Given: an invalid `helper` argument (not an instance of `OpenCTIConnectorHelper`)
+    invalid_helper = "not a helper"
+
+    # When: initializing a `ConnectorStateManager` instance with the invalid helper
+    # Then: it should raise a `ValueError`
+    with pytest.raises(ValueError):
+        ConnectorStateManager(helper=invalid_helper)  # type: ignore
 
 
 def test_connector_state_manager_has_default_values(dummy_connector_state_manager):
