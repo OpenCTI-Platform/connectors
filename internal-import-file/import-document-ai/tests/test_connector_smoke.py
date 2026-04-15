@@ -17,7 +17,6 @@ sys.path.append(str((Path(__file__).resolve().parent.parent / "src")))
 sys.path.append(str((Path(__file__).resolve().parent.parent / "dev")))
 
 from fake_rest import app, generate_fake_certificate
-
 from import_doc_ai.connector import Connector
 from import_doc_ai.util import OpenCTIFileObject
 
