@@ -96,7 +96,7 @@ class AkamaiConnector:
         Handle OpenCTI stream message.
         """
         try:
-            
+
             payload = msg.data
             if isinstance(payload, str):
                 payload = json.loads(payload)
@@ -128,9 +128,7 @@ class AkamaiConnector:
                 self._remove_ip(ip)
 
         except Exception as e:
-            self.helper.connector_logger.error(
-                f"Error processing message: {str(e)}"
-            )
+            self.helper.connector_logger.error(f"Error processing message: {str(e)}")
 
     def _add_ip(self, ip):
         """

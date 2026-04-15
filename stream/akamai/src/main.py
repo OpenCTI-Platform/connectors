@@ -19,17 +19,14 @@ if __name__ == "__main__":
 
         # Instantiate the Akamai connector with the loaded configuration
         # Using **config allows flexible and clean parameter passing
-        connector = AkamaiConnector(
-            helper=helper,
-            **config
-        )
+        connector = AkamaiConnector(helper=helper, **config)
 
         # Start the connector
         # This will listen to the OpenCTI live stream and process events
         connector.run()
 
     except Exception:
-        
+
         traceback.print_exc()
 
         # Small delay before exit to avoid crash loops in container environments
