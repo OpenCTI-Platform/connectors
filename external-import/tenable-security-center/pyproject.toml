@@ -27,7 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 # Define extras for testing and development
 test = [
-    "pytest>=8.1.1,<9",             # Pytest for running tests
+    "pytest>=9.0.3,<10",             # Pytest for running tests
 ]
 dev = [
     "black>=26.1,<27",  # Code formatter
