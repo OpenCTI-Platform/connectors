@@ -14,11 +14,14 @@ from pycti import (
 
 class DomainEnricher:
     def __init__(
-        self, connector_logger: logging.Logger, client: CriminalIpClient, author
+        self,
+        connector_logger: logging.Logger,
+        client: CriminalIpClient,
+        converter_to_stix,
     ):
         self.connector_logger = connector_logger
         self.client = client
-        self.author = author
+        self.converter_to_stix = converter_to_stix
 
     def process_domain_scan(self, domain_value: str) -> list:
         scan_id = None
@@ -69,6 +72,10 @@ class DomainEnricher:
         self, domain_name_value: str, domain_data: Dict[str, Any]
     ) -> List[Any]:
         objects = []
+
+        author = self.converter_to_stix.create_author()
+        objects.append(author.to_stix2_object())
+
         domain_stix = stix2.DomainName(value=domain_name_value)
         objects.append(domain_stix)
 
@@ -104,7 +111,7 @@ class DomainEnricher:
                 confidence=phishing_prob,
                 labels=list(set(labels)),
                 description="\n".join(description_parts),
-                created_by_ref=self.author.id,
+                created_by_ref=author.id,
             )
             objects.append(indicator)
 
@@ -117,7 +124,7 @@ class DomainEnricher:
                     relationship_type="based-on",
                     source_ref=indicator.id,
                     target_ref=domain_stix.id,
-                    created_by_ref=self.author.id,
+                    created_by_ref=author.id,
                 )
             )
 
@@ -136,7 +143,7 @@ class DomainEnricher:
                         relationship_type="resolves-to",
                         source_ref=domain_stix.id,
                         target_ref=ip_stix.id,
-                        created_by_ref=self.author.id,
+                        created_by_ref=author.id,
                     )
                 )
 
@@ -165,7 +172,7 @@ class DomainEnricher:
                         f"Domain {domain_name_value} associated with"
                         f" servers in {country_code.upper()}."
                     ),
-                    created_by_ref=self.author.id,
+                    created_by_ref=author.id,
                 )
             )
 

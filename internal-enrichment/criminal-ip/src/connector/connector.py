@@ -1,7 +1,7 @@
+from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.use_cases.enrich_domain import DomainEnricher
 from connector.use_cases.enrich_ipv4 import Ipv4Enricher
-from connectors_sdk.models import OrganizationAuthor
 from criminalip_client import CriminalIpClient
 from pycti import OpenCTIConnectorHelper
 
@@ -15,20 +15,15 @@ class CriminalIPConnector:
         self.max_tlp = self.config.criminal_ip.max_tlp
         self.client = CriminalIpClient(helper=self.helper, token=self.token)
 
-        self.author = OrganizationAuthor(
-            name="Criminal IP",
-            description="Criminal IP Cyber Threat Intelligence",
-        )
-
         self.domain_enricher = DomainEnricher(
             connector_logger=self.helper.connector_logger,
             client=self.client,
-            author=self.author,
+            converter_to_stix=ConverterToStix(self.helper),
         )
         self.ipv4_enricher = Ipv4Enricher(
             connector_logger=self.helper.connector_logger,
             client=self.client,
-            author=self.author,
+            converter_to_stix=ConverterToStix(self.helper),
         )
 
     def _extract_and_check_markings(self, entity):
@@ -61,18 +56,13 @@ class CriminalIPConnector:
                 {"type": obs_type, "value": obs_value},
             )
 
-            # Add author to bundle
-            enrichment_objects = [self.author.to_stix2_object()]
-
             if obs_type == "ipv4-addr":
-                enrichment_objects += self.ipv4_enricher.process_ipv4_enrichment(
+                enrichment_objects = self.ipv4_enricher.process_ipv4_enrichment(
                     obs_value
                 )
 
             elif obs_type == "domain-name":
-                enrichment_objects += self.domain_enricher.process_domain_scan(
-                    obs_value
-                )
+                enrichment_objects = self.domain_enricher.process_domain_scan(obs_value)
 
             else:
                 return f"[CONNECTOR] Unsupported type: {obs_type}"

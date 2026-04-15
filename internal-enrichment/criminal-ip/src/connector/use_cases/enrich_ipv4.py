@@ -7,18 +7,19 @@ from criminalip_client import CriminalIpClient
 from pycti import Indicator as PyctiIndicator
 from pycti import Location as PyctiLocation
 from pycti import Location as PyctiVulnerability
-from pycti import (
-    StixCoreRelationship,
-)
+from pycti import StixCoreRelationship
 
 
 class Ipv4Enricher:
     def __init__(
-        self, connector_logger: logging.Logger, client: CriminalIpClient, author
+        self,
+        connector_logger: logging.Logger,
+        client: CriminalIpClient,
+        converter_to_stix,
     ):
         self.connector_logger = connector_logger
         self.client = client
-        self.author = author
+        self.converter_to_stix = converter_to_stix
 
     def process_ipv4_enrichment(self, obs_value: str) -> List[Any]:
         objects = []
@@ -28,6 +29,9 @@ class Ipv4Enricher:
             ip_value = ip_data.get("ip")
             if not ip_value:
                 return []
+
+            author = self.converter_to_stix.create_author()
+            objects.append(author.to_stix2_object())
 
             # IPv4 observable
             ipv4_stix = stix2.IPv4Address(value=ip_value)
@@ -76,7 +80,7 @@ class Ipv4Enricher:
                 pattern=indicator_pattern,
                 confidence=overall_confidence,
                 labels=list(set(labels)),
-                created_by_ref=self.author.id,
+                created_by_ref=author.id,
                 description=(
                     f"- x_criminalip_inbound_score: {inbound_score_str}\n"
                     f"- x_criminalip_outbound_score: {outbound_score_str}"
@@ -93,7 +97,7 @@ class Ipv4Enricher:
                     relationship_type="based-on",
                     source_ref=indicator.id,
                     target_ref=ipv4_stix.id,
-                    created_by_ref=self.author.id,
+                    created_by_ref=author.id,
                 )
             )
 
@@ -132,7 +136,7 @@ class Ipv4Enricher:
                         relationship_type="belongs-to",
                         source_ref=ipv4_stix.id,
                         target_ref=as_stix.id,
-                        created_by_ref=self.author.id,
+                        created_by_ref=author.id,
                     )
                 )
             if loc_stix:
@@ -144,7 +148,7 @@ class Ipv4Enricher:
                         relationship_type="located-at",
                         source_ref=ipv4_stix.id,
                         target_ref=loc_stix.id,
-                        created_by_ref=self.author.id,
+                        created_by_ref=author.id,
                     )
                 )
 
@@ -157,7 +161,7 @@ class Ipv4Enricher:
                         id=PyctiVulnerability.generate_id(cve_id),
                         name=cve_id,
                         description=vuln.get("cve_description"),
-                        created_by_ref=self.author.id,
+                        created_by_ref=author.id,
                     )
                     objects.append(vuln_stix)
                     objects.append(
@@ -168,7 +172,7 @@ class Ipv4Enricher:
                             relationship_type="indicates",
                             source_ref=indicator.id,
                             target_ref=vuln_stix.id,
-                            created_by_ref=self.author.id,
+                            created_by_ref=author.id,
                         )
                     )
 
