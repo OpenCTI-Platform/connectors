@@ -199,6 +199,7 @@ class OCTITriggeringEntity:
         )
         return stix2.parse(entity_stix, allow_custom=True)
 
+
 # TODO put example of output in docstring
 def fetch_octi_allowed_stix_relations_triplets(
     helper,

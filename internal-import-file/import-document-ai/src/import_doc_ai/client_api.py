@@ -20,20 +20,13 @@ class ImportDocumentAIClient:
         self.helper = helper
         self.config = config
 
-        self._opencti_instance_id = (
-            self.helper.api.query(
-                """
+        self._opencti_instance_id = self.helper.api.query("""
                 query SettingsQuery {
                     settings {
                         id
                         }
                     }
-            """
-            )
-            .get("data", {})
-            .get("settings", {})
-            .get("id", "")
-        )
+            """).get("data", {}).get("settings", {}).get("id", "")
 
         # Define headers in session and update when needed
         headers = {
@@ -97,9 +90,7 @@ class ImportDocumentAIClient:
             # deduplicate objects based on their id
             bundle = deduplicate_bundle_objects(bundle)
             # filter relationships
-            bundle = filter_relationship_triplets(
-                bundle, allowed_relationship_triplets
-            )
+            bundle = filter_relationship_triplets(bundle, allowed_relationship_triplets)
             return bundle
         except stix2.exceptions.STIXError as e:
             self.helper.connector_logger.error(
