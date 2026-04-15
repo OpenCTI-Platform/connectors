@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock
 from urllib.parse import urlparse
 
+import pycti
 import pytest
 import requests
 import stix2
@@ -317,13 +318,19 @@ def test_process_message_with_container_triggering_entity_updates_object_refs(
 ) -> None:
     # Given a contextual import triggered from a report that already references one object
     existing_identity = stix2.Identity(
+        id=pycti.Identity.generate_id(
+            "Existing Container Object",
+            "organization",
+        ),
         name="Existing Container Object",
         identity_class="organization",
     )
+    report_published = "2026-01-01T00:00:00Z"
     triggering_entity_stix = stix2.Report(
+        id=pycti.Report.generate_id("Triggering Report", report_published),
         name="Triggering Report",
         description="Contextual smoke test report",
-        published="2026-01-01T00:00:00Z",
+        published=report_published,
         report_types=["threat-report"],
         object_refs=[existing_identity["id"]],
         allow_custom=True,
@@ -369,11 +376,13 @@ def test_process_message_with_observed_data_triggering_entity_updates_only_obser
 ) -> None:
     # Given a contextual import triggered from observed-data that already references one observable
     existing_observable = stix2.MACAddress(value="00:11:22:33:44:55")
+    observed_object_ids = [existing_observable["id"]]
     triggering_entity_stix = stix2.ObservedData(
+        id=pycti.ObservedData.generate_id(observed_object_ids),
         first_observed="2026-01-01T00:00:00Z",
         last_observed="2026-01-01T00:00:00Z",
         number_observed=1,
-        object_refs=[existing_observable["id"]],
+        object_refs=observed_object_ids,
         allow_custom=True,
     )
     triggering_entity = build_triggering_entity_mock(
@@ -420,6 +429,7 @@ def test_process_message_with_non_container_triggering_entity_creates_related_to
 ) -> None:
     # Given a contextual import triggered from a non-container entity
     triggering_entity_stix = stix2.Identity(
+        id=pycti.Identity.generate_id("Triggering Identity", "organization"),
         name="Triggering Identity",
         identity_class="organization",
     )
