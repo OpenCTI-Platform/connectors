@@ -105,6 +105,9 @@ class GoogleDTMConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id = None
+        error_flag = False
+
         try:
             # Get the current state
             now = datetime.now(tz=timezone.utc)
@@ -184,13 +187,22 @@ class GoogleDTMConnector:
             self.helper.set_state(current_state)
 
         except (KeyboardInterrupt, SystemExit):
+            error_flag = True
+            message = "Connector stopped by user or system."
             self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.helper.connect_name},
+                f"[CONNECTOR] {message}", {"connector_name": self.helper.connect_name}
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            error_flag = True
+            message = (
+                "An unexpected error occurred, see connector's logs for more details."
+            )
+            self.helper.connector_logger.error(f"[CONNECTOR] {message}", {"error": err})
+        finally:
+            # Ensure work is processed even if an exception occurred
+            if work_id and error_flag:
+                self.helper.api.work.to_processed(work_id, message, in_error=error_flag)
 
     def run(self) -> None:
         """
