@@ -2,9 +2,8 @@ import sys
 import time
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from akamai_connector.connector import AkamaiConnector
+from pycti import OpenCTIConnectorHelper
 from settings import get_config
 
 if __name__ == "__main__":
