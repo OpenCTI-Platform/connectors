@@ -162,6 +162,14 @@ class GoogleDTMConnector:
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
 
+                message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(now_utc_str)
+                )
+
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.connector_logger.info(message)
+
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
                 "Getting current state and update it with last run of the connector",
@@ -176,14 +184,6 @@ class GoogleDTMConnector:
                 current_state["last_alert_date"] = most_recent_alert
 
             self.helper.set_state(current_state)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(now_utc_str)
-            )
-
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
