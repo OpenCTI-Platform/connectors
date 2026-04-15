@@ -1,3 +1,4 @@
 from .connector import GoogleDTMConnector
+from .settings import ConnectorSettings
 
-__all__ = ["GoogleDTMConnector"]
+__all__ = ["ConnectorSettings", "GoogleDTMConnector"]

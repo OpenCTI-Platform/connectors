@@ -1,12 +1,13 @@
 import sys
 from datetime import datetime, timezone
-from typing import Any
-
-from pycti import OpenCTIConnectorHelper
-from src import ConfigLoader
+from typing import TYPE_CHECKING, Any
 
 from .client_api import GoogleDTMAPIClient
 from .converter_to_stix import ConverterToStix
+
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
+    from src.google_dtm_connector.settings import ConnectorSettings
 
 
 class GoogleDTMConnector:
@@ -45,12 +46,14 @@ class GoogleDTMConnector:
 
     """
 
-    def __init__(self):
+    def __init__(
+        self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
+        self.config = config
+        self.helper = helper
 
         # Load configuration file and connection helper
         self.client = GoogleDTMAPIClient(
@@ -205,5 +208,5 @@ class GoogleDTMConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period,
+            duration_period=self.config.connector.duration_period,  # type: ignore[arg-type]
         )
