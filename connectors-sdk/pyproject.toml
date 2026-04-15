@@ -22,7 +22,7 @@ dev = [
 test = [
     "freezegun>=1.5.5,<2",
     "pip-audit==2.10.0",
-    "pytest>=8.3.5,<9",
+    "pytest>=9.0.3,<10",
     "pytest-cov>=7,<8",
     "pydocstyle>=6.3.0,<7",
     "mypy>=1.15.0,<2",
