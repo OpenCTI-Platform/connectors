@@ -108,6 +108,7 @@ class GoogleDTMConnector:
         try:
             # Get the current state
             now = datetime.now(tz=timezone.utc)
+            now_utc_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -130,15 +131,6 @@ class GoogleDTMConnector:
                 f"Going to fetch alerts since: {last_alert_date}"
             )
 
-            # Friendly name will be displayed on OpenCTI platform
-            now_utc_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-            friendly_name = f"Google DTM Connector run @ {now_utc_str}"
-
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
@@ -150,6 +142,12 @@ class GoogleDTMConnector:
             )
 
             if len(stix_objects):
+                # Initiate a new work
+                friendly_name = f"Google DTM Connector run @ {now_utc_str}"
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
