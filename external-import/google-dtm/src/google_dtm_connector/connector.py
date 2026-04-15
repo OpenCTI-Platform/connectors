@@ -2,8 +2,8 @@ import sys
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from .client_api import GoogleDTMAPIClient
-from .converter_to_stix import ConverterToStix
+from src.google_dtm_connector.client_api import GoogleDTMAPIClient
+from src.google_dtm_connector.converter_to_stix import ConverterToStix
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
