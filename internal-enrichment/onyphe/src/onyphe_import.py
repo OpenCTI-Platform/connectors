@@ -6,12 +6,12 @@ from internal_enrichment_connector.config_loader import ConfigConnector
 from onyphe_api import APIError, Onyphe
 from onyphe_references import (
     ANALYTICAL_PIVOTS,
+    CATEGORY_PROFILES,
+    DEFAULT_PIVOT_LABELS,
+    GENERATOR_TYPE_MAP,
     HASH_KEY_MAP,
     PIVOT_MAP,
     REVERSE_PIVOT_MAP,
-    SUMMARY_TITLES,
-    SUMMARYS,
-    TYPE_HANDLERS,
 )
 from pycti import (
     STIX_EXT_OCTI_SCO,
@@ -21,11 +21,96 @@ from pycti import (
     Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
+    Vulnerability,
 )
 
 
 class ONYPHEConnector:
-    # def __init__(self):
+    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
+        """
+        Initialize the Connector with necessary configurations
+        """
+
+        self.config = config
+        self.helper = helper
+
+        self.max_tlp = self.config.max_tlp
+
+        self.helper.log_debug(f"Config api_key : {config.api_key}")
+        self.helper.log_debug(f"Config base_url : {config.base_url}")
+
+        self._pattern_type_create(self.config.pattern_type)
+
+        self.onyphe_client = Onyphe(config.api_key, config.base_url)
+        self.onyphe_category = self.config.category
+
+        profile = CATEGORY_PROFILES.get(self.onyphe_category)
+        if profile is None:
+            raise ValueError(
+                f"Unsupported ONYPHE category: {self.onyphe_category!r}. "
+                f"Supported categories: {list(CATEGORY_PROFILES)}"
+            )
+        self.profile = profile
+
+        if config.enrichment_types:
+            self.helper.log_info(
+                f"Enrichment type filter active: {config.enrichment_types}"
+            )
+            self.profile = self._apply_enrichment_type_filter(
+                profile, config.enrichment_types
+            )
+
+        selected_labels = (
+            config.text_fingerprints
+            if config.text_fingerprints
+            else DEFAULT_PIVOT_LABELS
+        )
+        label_set = set(selected_labels)
+        self.active_pivots = [(f, l) for f, l in ANALYTICAL_PIVOTS if l in label_set]
+        self.helper.log_info(
+            f"Active fingerprint pivots: {[l for _, l in self.active_pivots]}"
+        )
+
+        # ONYPHE Identity
+        self.onyphe_identity = self.helper.api.identity.create(
+            type="Organization",
+            name=self.helper.get_name(),
+            description=f"Connector Enrichment {self.helper.get_name()}",
+        )
+
+    @staticmethod
+    def _apply_enrichment_type_filter(profile, enabled_types):
+        """Return a copy of *profile* with stix_generators filtered to only
+        include generators that produce one of the *enabled_types*.
+
+        Infrastructure generators (_generate_stix_identity, _upsert_stix_observable)
+        are always kept.  The hostname<->domain relationship generator is kept only
+        when both Hostname and Domain-Name are enabled.
+        """
+        from dataclasses import replace as dc_replace
+
+        enabled_lower = {t.lower() for t in enabled_types}
+
+        _ALWAYS_INCLUDE = {"_generate_stix_identity", "_upsert_stix_observable"}
+        _REL_GENERATOR = "_generate_stix_hostname_domain_relationships"
+        include_rel = "hostname" in enabled_lower and "domain-name" in enabled_lower
+
+        filtered_generators = {}
+        for obs_type, gen_list in profile.stix_generators.items():
+            new_list = []
+            for gen_name in gen_list:
+                if gen_name in _ALWAYS_INCLUDE:
+                    new_list.append(gen_name)
+                elif gen_name == _REL_GENERATOR:
+                    if include_rel:
+                        new_list.append(gen_name)
+                else:
+                    produced = GENERATOR_TYPE_MAP.get(gen_name, [])
+                    if any(t.lower() in enabled_lower for t in produced):
+                        new_list.append(gen_name)
+            filtered_generators[obs_type] = new_list
+
+        return dc_replace(profile, stix_generators=filtered_generators)
 
     def _safe_get(self, d, key, empty=(None, "", {}, [])):
         value = d.get(key)
@@ -42,36 +127,9 @@ class ONYPHEConnector:
 
         return current
 
-    def __init__(self, config: ConfigConnector, helper: OpenCTIConnectorHelper):
-        """
-        Initialize the Connector with necessary configurations
-        """
-
-        # Load configuration file and connection helper
-        self.config = config
-        self.helper = helper
-
-        self.max_tlp = self.config.max_tlp
-
-        self.helper.log_debug(f"Config api_key : {config.api_key}")
-        self.helper.log_debug(f"Config base_url : {config.base_url}")
-
-        self._pattern_type_create(self.config.pattern_type)
-
-        self.onyphe_client = Onyphe(config.api_key, config.base_url)
-        self.onyphe_category = "ctiscan"
-
-        # ONYPHE Identity
-        self.onyphe_identity = self.helper.api.identity.create(
-            type="Organization",
-            name=self.helper.get_name(),
-            description=f"Connector Enrichment {self.helper.get_name()}",
-        )
-
     def _pattern_type_create(self, pattern_type="onyphe"):
         VOCAB_KEY = "pattern_type_ov"
         try:
-            self.vocabulary_list = []
             existing_vocabulary = self.helper.api.vocabulary.list(
                 **{
                     "filters": {
@@ -108,26 +166,49 @@ class ONYPHEConnector:
                 f"Error occurred checking pattern_type taxonomies: {str(e)}"
             )
 
+    def _get_cert_dict(self, ojson):
+        """Return the dict containing cert fields for the current category model.
+
+        For ctiscan the cert data lives under ojson["cert"].
+        For riskscan/datascan the cert fields are at the document top level, so
+        we return ojson directly — but only when a fingerprint is present so we
+        don't mistake non-TLS records for cert records.
+        """
+        cert_root = self.profile.field_map.get("cert_root")
+        if cert_root:
+            return self._get_nested_values(ojson, cert_root)
+        # Flat model: cert fields are at the top level.  Only treat the document
+        # as a cert record when at least one fingerprint hash is present.
+        if self._get_nested_values(
+            ojson, "fingerprint.sha256"
+        ) or self._get_nested_values(ojson, "fingerprint.md5"):
+            return ojson
+        return None
+
     def _get_x509_from_onyphe(self, cert):
         self.helper.log_debug(f"Get x509 from ONYPHE : {cert}")
-        if "validity" in cert:
-            # time data '2025-03-31T08:56:25Z'
-            issued: datetime = datetime.strptime(
-                cert["validity"]["notbefore"], "%Y-%m-%dT%H:%M:%SZ"
-            )
-            expires: datetime = datetime.strptime(
-                cert["validity"]["notafter"], "%Y-%m-%dT%H:%M:%SZ"
-            )
-            validity_not_before = issued.isoformat().split(".")[0] + "Z"
-            validity_not_after = expires.isoformat().split(".")[0] + "Z"
+        validity_not_before = None
+        validity_not_after = None
+        if "validity" in cert and isinstance(cert["validity"], dict):
+            try:
+                issued: datetime = datetime.strptime(
+                    cert["validity"]["notbefore"], "%Y-%m-%dT%H:%M:%SZ"
+                )
+                expires: datetime = datetime.strptime(
+                    cert["validity"]["notafter"], "%Y-%m-%dT%H:%M:%SZ"
+                )
+                validity_not_before = issued.isoformat().split(".")[0] + "Z"
+                validity_not_after = expires.isoformat().split(".")[0] + "Z"
+            except (KeyError, ValueError):
+                pass
 
         hashes = None
-        if isinstance(cert["fingerprint"], dict):
+        fingerprint = cert.get("fingerprint")
+        if isinstance(fingerprint, dict):
             hash_map_2stix = {v: k for k, v in HASH_KEY_MAP.items()}
-            # Build the new dictionary
             hashes = {
                 hash_map_2stix[key]: value
-                for key, value in cert["fingerprint"].items()
+                for key, value in fingerprint.items()
                 if key in hash_map_2stix
             }
 
@@ -143,8 +224,12 @@ class ONYPHEConnector:
             if isinstance(certsubject, dict):
                 subject = ", ".join((f"{k}={v}" for k, v in certsubject.items()))
 
-        if "serial" in cert and "hex" in cert["serial"]:
-            serial_number = str(cert["serial"]["hex"])
+        # ctiscan stores serial as {"hex": "..."}, flat models store it as a string.
+        serial_data = cert.get("serial")
+        if isinstance(serial_data, dict):
+            serial_number = str(serial_data["hex"]) if serial_data.get("hex") else None
+        elif isinstance(serial_data, str) and serial_data:
+            serial_number = serial_data
         else:
             serial_number = None
 
@@ -152,12 +237,6 @@ class ONYPHEConnector:
             "x509-certificate", x509_hashes=hashes
         )
 
-        # TODO# not yet implemented in ctiscan
-        # signature_algorithm = cert["cert"]["sig_alg"]
-        # subject_public_key_algorithm = cert["cert"]["pubkey"]["type"]
-        # version = str(cert["cert"]["version"])
-
-        # Generate X509 certificate
         stix_x509 = stix2.X509Certificate(
             type="x509-certificate",
             issuer=issuer,
@@ -165,10 +244,7 @@ class ONYPHEConnector:
             validity_not_after=validity_not_after,
             subject=subject,
             serial_number=serial_number,
-            # signature_algorithm=signature_algorithm,
-            # subject_public_key_algorithm=subject_public_key_algorithm,
             hashes=hashes,
-            # version=version,
             custom_properties={
                 "x_opencti_created_by_ref": self.onyphe_identity["standard_id"],
                 "x_opencti_external_references": [external_ref],
@@ -203,39 +279,41 @@ class ONYPHEConnector:
             created_by_ref=self.onyphe_identity["standard_id"],
         )
 
-    def _generate_description(self, response):
-        # Generate Services Desc Block
-        self.helper.log_debug(f"Generate description (preview) : {str(response)[:500]}")
-        # parse json documents
+    def _generate_description_ctiscan(self, response):
+        """Build an enrichment description from ctiscan (layered model) results."""
+        self.helper.log_debug(
+            f"Generate ctiscan description (preview) : {str(response)[:500]}"
+        )
         count = str(len(response))
 
-        services_desc = "Services:\n"
+        service_parts = ["Services:\n"]
         for ojson in response:
             raw_text = self._get_nested_values(ojson, "app.data.text")
             if raw_text:
                 if not isinstance(raw_text, str):
-                    continue  # Skip if somehow not a string
+                    continue
                 if self.config.import_full_data:
                     service_data = raw_text.strip()
                 else:
                     service_data = (raw_text.strip())[0:2048]
 
-                if ojson["app"]["tls"]:
+                if ojson["app"]["tls"] == "true":
                     protocol_string = f"{str(ojson['app']['transport'])}/{str(ojson['app']['protocol'])}/tls"
                 else:
                     protocol_string = f"{str(ojson['app']['transport'])}/{str(ojson['app']['protocol'])}"
 
                 if isinstance(ojson["scanner"], dict):
-                    services_desc = (
-                        services_desc
-                        + f"\n**{str(ojson['ip']['dest'])}:{str(ojson[str(ojson['app']['transport'])]['dest'])} "
-                        + f"{protocol_string} seen from {str(ojson['scanner']['country'])} at {str(ojson['@timestamp'])} :**\n"
-                        + f"```\n{service_data}\n```"
+                    service_parts.append(
+                        f"\n**{str(ojson['ip']['dest'])}:{str(ojson[str(ojson['app']['transport'])]['dest'])} "
+                        f"{protocol_string} seen from {str(ojson['scanner']['country'])} at {str(ojson['@timestamp'])} :**\n"
+                        f"```\n{service_data}\n```"
                     )
 
-                services_desc = services_desc + "\n------------------"
+                service_parts.append("\n------------------")
             else:
-                continue  # Skip invalid or incomplete entries
+                continue
+
+        services_desc = "".join(service_parts)
 
         if response:
             if isinstance(response, list):
@@ -264,6 +342,74 @@ class ONYPHEConnector:
 
         return global_description
 
+    def _generate_description_riskscan(self, response):
+        """Build an enrichment description from riskscan (flat datascan model) results."""
+        self.helper.log_debug(
+            f"Generate riskscan description (preview) : {str(response)[:500]}"
+        )
+        count = str(len(response))
+
+        if not response:
+            return "No results"
+
+        first = response[0] if isinstance(response, list) else response
+        if isinstance(first, dict):
+            asn = first.get("asn", "N/A")
+            org = first.get("organization", "N/A")
+            country = first.get("country", "N/A")
+        else:
+            asn = org = country = "N/A"
+
+        service_parts = ["Risks identified:\n"]
+        for ojson in response:
+            if not isinstance(ojson, dict):
+                continue
+
+            ip = ojson.get("ip", "N/A")
+            port = ojson.get("port", "N/A")
+            protocol = ojson.get("protocol", "N/A")
+            transport = ojson.get("transport", "tcp")
+            tls = ojson.get("tls", False)
+            timestamp = ojson.get("@timestamp", "N/A")
+            tags = ojson.get("tag", [])
+            cves = ojson.get("cve", [])
+
+            if isinstance(tags, list):
+                risk_tags = [t for t in tags if t.startswith("risk::")]
+            else:
+                risk_tags = []
+
+            if isinstance(cves, str):
+                cves = [cves]
+            elif not isinstance(cves, list):
+                cves = []
+
+            # The API serialises boolean fields as strings; guard against
+            # "false" being truthy in Python.
+            tls_suffix = "/tls" if tls in (True, "true") else ""
+            service_parts.append(
+                f"\n**{ip}:{port} {transport}/{protocol}{tls_suffix} at {timestamp}:**\n"
+                f"- Risks: {', '.join(risk_tags) if risk_tags else 'none'}\n"
+                f"- CVEs: {', '.join(cves) if cves else 'none'}\n"
+            )
+            service_parts.append("------------------")
+
+        services_desc = "".join(service_parts)
+
+        return f"""
+**GeoIP Country:** {country}
+\n**Organization:** {org}  |  **ASN:** {asn}
+\n**Count of risk entries:** {count}
+
+--------------------------
+{services_desc}
+"""
+
+    def _generate_description(self, response):
+        if self.onyphe_category == "riskscan":
+            return self._generate_description_riskscan(response)
+        return self._generate_description_ctiscan(response)
+
     def _generate_labels(self, response):
         self.helper.log_debug(f"Generate labels for : {self.stix_entity.get('id')}")
         labels = set()
@@ -272,9 +418,7 @@ class ONYPHEConnector:
                 for tag in ojson["tag"]:
                     labels.add(tag)
 
-        # Create Labels
         try:
-            # Don't add labels to indicator. Maybe make this a configuration option?
             if self.stix_entity["type"] != "indicator":
                 for tag in labels:
                     self.helper.log_debug(f"Adding {tag} to : {self.stix_entity} ")
@@ -286,17 +430,17 @@ class ONYPHEConnector:
             return list(labels)
 
     def _generate_stix_external_reference(
-        self, type, value=None, x509_hashes=None, label_pivots=[]
+        self, type, value=None, x509_hashes=None, label_pivots=None
     ):
         self.helper.log_debug(f"Generating external reference for: {type}")
 
-        # Handle the type
-        if type not in TYPE_HANDLERS:
+        type_handlers = self.profile.type_handlers
+
+        if type not in type_handlers:
             return self.helper.log_debug(f"Unsupported observable type: {type}")
 
-        url_func, desc_template, id_func = TYPE_HANDLERS[type]
+        url_func, desc_template, id_func = type_handlers[type]
 
-        # Generate URL, description, and external_id
         if type == "x509-certificate":
             if not x509_hashes or not isinstance(x509_hashes, dict):
                 return self.helper.log_error(
@@ -367,8 +511,11 @@ class ONYPHEConnector:
                 )
 
             self.stix_objects.append(observable)
-            # always put IP address on left of relationship
-            if observable["type"] in ["ipv4-addr", "ipv6-addr"]:
+            if relationship_type == "resolves-to":
+                # resolves-to: hostname/domain-name --resolves-to--> ip
+                source_id = observable["id"]
+                target_id = self.stix_entity["id"]
+            elif observable["type"] in ["ipv4-addr", "ipv6-addr"]:
                 source_id = observable["id"]
                 target_id = self.stix_entity["id"]
             else:
@@ -388,11 +535,12 @@ class ONYPHEConnector:
             f"Generate organization identities for : {self.stix_entity.get('id')}"
         )
 
+        org_field = self.profile.field_map["ip_org"]
         org_dict = {}
         for ojson in response:
-            org = self._get_nested_values(ojson, "ip.organization")
+            org = self._get_nested_values(ojson, org_field)
             if org:
-                org_dict[org] = None  # Value doesn't matter
+                org_dict[org] = None
 
         def identity_processor(org_name, _):
             return stix2.Identity(
@@ -416,14 +564,15 @@ class ONYPHEConnector:
         )
         domains = set()
 
+        domain_fields = self.profile.field_map["dns_domain"]
         for ojson in response:
-            for section in ("dns", "cert"):
-                if (
-                    isinstance(ojson, dict)
-                    and section in ojson
-                    and isinstance(ojson[section], dict)
-                ):
-                    domains.update(map(str, ojson[section].get("domain", [])))
+            for field_path in domain_fields:
+                values = self._get_nested_values(ojson, field_path)
+                if values:
+                    if isinstance(values, list):
+                        domains.update(str(v) for v in values if v)
+                    else:
+                        domains.add(str(values))
 
         values_dict = {domain: {} for domain in domains}
         self._process_observable(values_dict, "domain-name", stix2.DomainName)
@@ -432,46 +581,118 @@ class ONYPHEConnector:
         self.helper.log_debug(f"Generate IP observables: {self.stix_entity.get('id')}")
         ips = {}
 
-        # Extract IPs and their versions
-        for ojson in response:
-            if (
-                isinstance(ojson, dict)
-                and "ip" in ojson
-                and isinstance(ojson["ip"], dict)
-            ):
-                ip_value = ojson["ip"].get("dest")
-                ip_version = ojson["ip"].get("version")
-                if ip_value and ip_version in (4, 6):
-                    ips[str(ip_value)] = ip_version
+        ip_dest_field = self.profile.field_map["ip_dest"]
+        ip_version_field = self.profile.field_map["ip_version"]
 
-        # Process each IP observable with _process_observable
+        for ojson in response:
+            ip_value = self._get_nested_values(ojson, ip_dest_field)
+            if ip_value:
+                raw_version = (
+                    self._get_nested_values(ojson, ip_version_field)
+                    if ip_version_field
+                    else None
+                )
+                if isinstance(raw_version, bool):
+                    # riskscan: ipv6 boolean field
+                    ip_version = 6 if raw_version else 4
+                elif raw_version in (4, 6):
+                    # ctiscan: integer version field
+                    ip_version = raw_version
+                else:
+                    # fallback: infer from address string
+                    ip_version = 6 if ":" in str(ip_value) else 4
+                ips[str(ip_value)] = ip_version
+
         for ip, version in ips.items():
             self.helper.log_debug(f"Generate IP v{version} observable: {ip}")
-
             observable_class = stix2.IPv4Address if version == 4 else stix2.IPv6Address
             observable_type = "ipv4-addr" if version == 4 else "ipv6-addr"
-
-            values_dict = {ip: {}}
-
-            self._process_observable(values_dict, observable_type, observable_class)
+            self._process_observable({ip: {}}, observable_type, observable_class)
 
     def _generate_stix_hostname(self, response):
         self.helper.log_debug(
             f"Generate hostname observables: {self.stix_entity.get('id')}"
         )
-        hostnames = set()
+        hostname_fields = self.profile.field_map["dns_hostname"]
+        hostname_rel_map = self.profile.field_map.get("dns_hostname_rel", {})
+
+        # Group hostnames by relationship type so DNS-sourced ones get resolves-to
+        # and cert/mixed-source ones get related-to.
+        # resolves-to is only valid from an IP observable; fall back to related-to
+        # when the enriched entity is an indicator.
+        is_indicator = self.stix_entity["type"] == "indicator"
+        rel_groups: Dict[str, set] = {}
+        for ojson in response:
+            for field_path in hostname_fields:
+                values = self._get_nested_values(ojson, field_path)
+                if values:
+                    rel_type = hostname_rel_map.get(field_path, "related-to")
+                    if is_indicator and rel_type == "resolves-to":
+                        rel_type = "related-to"
+                    if rel_type not in rel_groups:
+                        rel_groups[rel_type] = set()
+                    if isinstance(values, list):
+                        rel_groups[rel_type].update(str(v) for v in values if v)
+                    else:
+                        rel_groups[rel_type].add(str(values))
+
+        for rel_type, hostnames in rel_groups.items():
+            values_dict = {h: {} for h in hostnames}
+            self._process_observable(
+                values_dict,
+                "hostname",
+                CustomObservableHostname,
+                relationship_type=rel_type,
+            )
+
+    def _generate_stix_hostname_domain_relationships(self, response):
+        """Create hostname -related-to-> domain-name relationships.
+
+        ONYPHE pre-extracts domain names (handling public suffix lists), so for
+        every hostname in the results there will be a corresponding domain entry.
+        We match by suffix: if a hostname ends with '.<domain>' it is related to
+        that domain. No FQDN parsing is done here.
+        """
+        self.helper.log_debug(
+            f"Generate hostname->domain relationships: {self.stix_entity.get('id')}"
+        )
+        hostname_fields = self.profile.field_map["dns_hostname"]
+        domain_fields = self.profile.field_map["dns_domain"]
+
+        all_hostnames: set = set()
+        all_domains: set = set()
 
         for ojson in response:
-            for section in ("dns", "cert"):
-                if (
-                    isinstance(ojson, dict)
-                    and section in ojson
-                    and isinstance(ojson[section], dict)
-                ):
-                    hostnames.update(map(str, ojson[section].get("hostname", [])))
+            for field_path in hostname_fields:
+                values = self._get_nested_values(ojson, field_path)
+                if values:
+                    if isinstance(values, list):
+                        all_hostnames.update(str(v) for v in values if v)
+                    else:
+                        all_hostnames.add(str(values))
+            for field_path in domain_fields:
+                values = self._get_nested_values(ojson, field_path)
+                if values:
+                    if isinstance(values, list):
+                        all_domains.update(str(v) for v in values if v)
+                    else:
+                        all_domains.add(str(values))
 
-        values_dict = {hostname: {} for hostname in hostnames}
-        self._process_observable(values_dict, "hostname", CustomObservableHostname)
+        if not all_hostnames or not all_domains:
+            return
+
+        for hostname in all_hostnames:
+            for domain in all_domains:
+                if hostname.endswith("." + domain) or hostname == domain:
+                    hostname_obj = CustomObservableHostname(value=hostname)
+                    domain_obj = stix2.DomainName(value=domain)
+                    rel = self._generate_stix_relationship(
+                        hostname_obj["id"], "related-to", domain_obj["id"]
+                    )
+                    self.stix_objects.append(rel)
+                    self.helper.log_debug(
+                        f"New relationship appended for {hostname} - related-to - {domain}"
+                    )
 
     def _generate_stix_text(self, response):
         self.helper.log_debug(
@@ -480,7 +701,7 @@ class ONYPHEConnector:
 
         text_dict = {}
         for ojson in response:
-            for pivot, type in ANALYTICAL_PIVOTS:
+            for pivot, type in self.active_pivots:
                 value = self._get_nested_values(ojson, pivot)
                 if value:
                     text_dict[value] = type
@@ -512,11 +733,14 @@ class ONYPHEConnector:
         self.helper.log_debug(
             f"Generate asn observables for : {self.stix_entity.get('id')}"
         )
+        asn_field = self.profile.field_map["ip_asn"]
+        org_field = self.profile.field_map["ip_org"]
+
         asn_dict = {}
         for ojson in response:
-            asn = self._get_nested_values(ojson, "ip.asn")
+            asn = self._get_nested_values(ojson, asn_field)
             if asn:
-                asn_dict[str(asn)] = self._get_nested_values(ojson, "ip.organization")
+                asn_dict[str(asn)] = self._get_nested_values(ojson, org_field)
 
         def asn_processor(asn_value, org_name):
             number = int(asn_value.replace("AS", ""))
@@ -531,7 +755,6 @@ class ONYPHEConnector:
             )
 
         for asn_value, org in asn_dict.items():
-            # Determine relationship type: belongs-to or related-to
             rel_type = (
                 "belongs-to"
                 if self.stix_entity["type"] in ["ipv4-addr", "ipv6-addr"]
@@ -549,12 +772,17 @@ class ONYPHEConnector:
         self.helper.log_debug(
             f"Generate x509 observables for : {self.stix_entity.get('id')}"
         )
+        cert_sha256_field = self.profile.field_map.get("cert_sha256")
+        if not cert_sha256_field:
+            return
+
         cert_dict = {}
         for ojson in response:
-            if isinstance(ojson.get("cert"), dict):
-                sha256 = self._get_nested_values(ojson, "cert.fingerprint.sha256")
-                if sha256:
-                    cert_dict[str(sha256)] = ojson["cert"]
+            sha256 = self._get_nested_values(ojson, cert_sha256_field)
+            if sha256:
+                cert_data = self._get_cert_dict(ojson)
+                if cert_data:
+                    cert_dict[str(sha256)] = cert_data
 
         def x509_processor(_, cert_data):
             return self._get_x509_from_onyphe(cert_data)
@@ -566,6 +794,202 @@ class ONYPHEConnector:
             relationship_type="related-to",
             processor_func=x509_processor,
         )
+
+    def _build_frequency_summary_note(self, results):
+        """Build the classic top-N frequency table note (ctiscan style)."""
+        summarys = {summary: {} for summary, _ in self.profile.summarys}
+        for result in results:
+            for summary, _ in self.profile.summarys:
+                values = self._get_nested_values(result, summary)
+                if isinstance(values, list):
+                    for val in values:
+                        if val is not None:
+                            summarys[summary][val] = summarys[summary].get(val, 0) + 1
+                elif values is not None:
+                    summarys[summary][values] = summarys[summary].get(values, 0) + 1
+
+        top = {}
+        for summary, limit in self.profile.summarys:
+            sorted_items = sorted(
+                summarys[summary].items(), key=lambda item: item[1], reverse=True
+            )[:limit]
+            top[summary] = dict(sorted_items)
+
+        note_title = f"ONYPHE {self.onyphe_category.title()} Summary Information"
+        note_content = "### Global\n"
+        note_content += "| Value | Count |\n|------|-------|\n"
+        note_content += "| Total Results |" + str(len(results)) + " |\n"
+        for summary, _ in self.profile.summarys:
+            note_content += "### " + self.profile.summary_titles[summary] + "\n\n"
+            note_content += "| Value | Count |\n|------|-------|\n"
+            for value, count in top[summary].items():
+                note_content += "| " + str(value) + " |" + str(count) + " |\n"
+            note_content += "\n"
+        return note_title, note_content
+
+    def _build_findings_table_note(self, results):
+        """Build a structured findings table note (riskscan style).
+
+        Columns: Risk/CVE | IP:Port | Service | Hostname | Organization
+        One row per (finding, ip, port) combination; risk:: tags and CVEs
+        are treated as findings. Only tags prefixed with 'risk::' are included.
+        """
+        fm = self.profile.field_map
+        ip_dest_field = fm["ip_dest"]
+        cve_field = fm.get("cve")
+        hostname_fields = fm["dns_hostname"]
+
+        rows = []
+        for ojson in results:
+            ip = self._get_nested_values(ojson, ip_dest_field) or ""
+            port = self._get_nested_values(ojson, "port") or ""
+            transport = self._get_nested_values(ojson, "transport") or ""
+            protocol = self._get_nested_values(ojson, "protocol") or ""
+            tls_raw = self._get_nested_values(ojson, "tls")
+            tls_str = "/tls" if tls_raw in (True, "true") else ""
+            service = (
+                f"{transport}/{protocol}{tls_str}" if (transport or protocol) else ""
+            )
+
+            hostnames = []
+            for field_path in hostname_fields:
+                values = self._get_nested_values(ojson, field_path)
+                if values:
+                    if isinstance(values, list):
+                        hostnames.extend(str(v) for v in values if v)
+                    else:
+                        hostnames.append(str(values))
+            hostname_str = ", ".join(hostnames) if hostnames else ""
+
+            ip_port = f"{ip}:{port}" if port else str(ip)
+
+            findings = []
+            tags = self._get_nested_values(ojson, "tag") or []
+            if isinstance(tags, str):
+                tags = [tags]
+            findings.extend(
+                t for t in tags if isinstance(t, str) and t.startswith("risk::")
+            )
+            if cve_field:
+                cves = self._get_nested_values(ojson, cve_field) or []
+                if isinstance(cves, str):
+                    cves = [cves]
+                findings.extend(str(c) for c in cves if c)
+
+            for finding in findings:
+                rows.append((finding, ip_port, service, hostname_str))
+
+        # Deduplicate while preserving order
+        seen = set()
+        unique_rows = []
+        for row in rows:
+            if row not in seen:
+                seen.add(row)
+                unique_rows.append(row)
+
+        note_title = f"ONYPHE {self.onyphe_category.title()} Findings"
+        note_content = f"| Total Findings | {len(unique_rows)} |\n|------|-------|\n\n"
+        note_content += "| Risk / CVE | IP:Port | Service | Hostname |\n"
+        note_content += "|------------|---------|---------|----------|\n"
+        for finding, ip_port, service, hostname in unique_rows:
+            note_content += f"| {finding} | {ip_port} | {service} | {hostname} |\n"
+        return note_title, note_content
+
+    def _generate_stix_vulnerability(self, response):
+        self.helper.log_debug(
+            f"Generate vulnerability objects for : {self.stix_entity.get('id')}"
+        )
+        cve_field = self.profile.field_map.get("cve")
+        if not cve_field:
+            return
+
+        is_indicator = self.stix_entity["type"] == "indicator"
+        ip_dest_field = self.profile.field_map.get("ip_dest")
+        ip_version_field = self.profile.field_map.get("ip_version")
+
+        # Map CVE -> set of IPs (for indicator path) or collect unique CVEs (observable path)
+        cve_ips: Dict[str, set] = {}
+        for ojson in response:
+            values = self._get_nested_values(ojson, cve_field)
+            if not values:
+                continue
+            cve_ids = (
+                [str(v) for v in values if v]
+                if isinstance(values, list)
+                else [str(values)]
+            )
+
+            ip = None
+            if is_indicator and ip_dest_field:
+                ip = self._get_nested_values(ojson, ip_dest_field)
+                if ip:
+                    raw_version = (
+                        self._get_nested_values(ojson, ip_version_field)
+                        if ip_version_field
+                        else None
+                    )
+                    if isinstance(raw_version, bool):
+                        ip_version = 6 if raw_version else 4
+                    elif raw_version in (4, 6):
+                        ip_version = raw_version
+                    else:
+                        ip_version = 6 if ":" in str(ip) else 4
+                    ip = (str(ip), ip_version)
+
+            for cve_id in cve_ids:
+                if cve_id not in cve_ips:
+                    cve_ips[cve_id] = set()
+                if ip:
+                    cve_ips[cve_id].add(ip)
+
+        for cve_id, ips in cve_ips.items():
+            self.helper.log_debug(f"Creating vulnerability object for: {cve_id}")
+            stix_vuln = stix2.Vulnerability(
+                id=Vulnerability.generate_id(cve_id),
+                name=cve_id,
+                created_by_ref=self.onyphe_identity["standard_id"],
+                external_references=[
+                    stix2.ExternalReference(
+                        source_name="cve",
+                        external_id=cve_id,
+                        url=f"https://www.cve.org/CVERecord?id={cve_id}",
+                    )
+                ],
+            )
+            self.stix_objects.append(stix_vuln)
+
+            if is_indicator:
+                # indicator indicates vulnerability
+                rel = self._generate_stix_relationship(
+                    self.stix_entity["id"], "indicates", stix_vuln["id"]
+                )
+                self.stix_objects.append(rel)
+                self.helper.log_debug(
+                    f"New relationship appended for {self.stix_entity['id']} - indicates - {stix_vuln['id']}"
+                )
+                # ipv4-addr/ipv6-addr related-to vulnerability (one per source IP)
+                for ip_value, ip_version in ips:
+                    ip_class = (
+                        stix2.IPv4Address if ip_version == 4 else stix2.IPv6Address
+                    )
+                    ip_obj = ip_class(value=ip_value)
+                    self.stix_objects.append(ip_obj)
+                    rel = self._generate_stix_relationship(
+                        ip_obj["id"], "related-to", stix_vuln["id"]
+                    )
+                    self.stix_objects.append(rel)
+                    self.helper.log_debug(
+                        f"New relationship appended for {ip_obj['id']} ({ip_value}) - related-to - {stix_vuln['id']}"
+                    )
+            else:
+                # observable related-to vulnerability
+                rel = self._generate_stix_relationship(
+                    self.stix_entity["id"], "related-to", stix_vuln["id"]
+                )
+                self.stix_objects.append(rel)
+                self.helper.log_debug(
+                    f"New relationship appended for {self.stix_entity['id']} - related-to - {stix_vuln['id']}"
+                )
 
     def _upsert_stix_observable(self, description, labels):
         self.helper.log_debug(f"Upsert observables for: {self.stix_entity.get('id')}")
@@ -608,17 +1032,16 @@ class ONYPHEConnector:
             "x_opencti_created_by_ref": self.onyphe_identity["standard_id"],
         }
 
-        # Map of type to STIX class
         type_class_map = {
             "ipv4-addr": stix2.IPv4Address,
             "ipv6-addr": stix2.IPv6Address,
+            "domain-name": stix2.DomainName,
             "hostname": CustomObservableHostname,
             "text": CustomObservableText,
         }
 
         stix_observable = None
 
-        # Handle X.509
         if entity_type == "x509-certificate":
             x509_args = {
                 "issuer": self._safe_get(self.stix_entity, "issuer"),
@@ -647,14 +1070,13 @@ class ONYPHEConnector:
                 custom_properties=custom_properties,
             )
 
-        # If we managed to create something, append it
         if stix_observable:
             self.stix_objects.append(stix_observable)
 
             if self.config.create_note:
-                now = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+                note_id = Note.generate_id(None, description)
                 note = stix2.Note(
-                    id=Note.generate_id(now, description),
+                    id=note_id,
                     type="note",
                     abstract="ONYPHE Results",
                     content=description,
@@ -679,96 +1101,96 @@ class ONYPHEConnector:
         self.stix_objects = stix_objects
         self.stix_entity = stix_entity
 
-        # Generate Stix Object for bundle
         description = self._generate_description(data)
         labels = self._generate_labels(data)
 
-        self._generate_stix_identity(data)
-        self._generate_stix_domain(data)
-        self._generate_stix_asn(data)
-        if stix_entity["type"] in ["ipv4-addr", "ipv6-addr"]:
-            self._generate_stix_hostname(data)
-            self._generate_stix_x509(data)
-            self._generate_stix_text(data)
-            self._upsert_stix_observable(description, labels)
-        elif stix_entity["type"] == "hostname":
-            self._generate_stix_ip(data)
-            self._generate_stix_text(data)
-            self._upsert_stix_observable(description, labels)
-        elif stix_entity["type"] == "x509-certificate":
-            self._generate_stix_hostname(data)
-            self._generate_stix_ip(data)
-            self._generate_stix_text(data)
-            self._upsert_stix_observable(description, labels)
-        elif stix_entity["type"] == "text":
-            self._generate_stix_hostname(data)
-            self._generate_stix_ip(data)
-            self._generate_stix_x509(data)
-            self._upsert_stix_observable(description, labels)
-        elif stix_entity["type"] == "indicator":
-            self._generate_stix_ip(data)
-            self._generate_stix_hostname(data)
-            self._generate_stix_x509(data)
+        generators = self.profile.stix_generators.get(stix_entity["type"], [])
+        for gen_name in generators:
+            if gen_name == "_upsert_stix_observable":
+                self._upsert_stix_observable(description, labels)
+            else:
+                getattr(self, gen_name)(data)
 
+        if only_objects:
+            return self.stix_objects
         uniq_bundles_objects = list(
             {obj["id"]: obj for obj in self.stix_objects}.values()
         )
-        if only_objects:
-            return uniq_bundles_objects
         return self.helper.stix2_create_bundle(uniq_bundles_objects)
 
+    def _build_cert_fingerprint_filter(self, stix_entity):
+        """Build an OQL filter clause for an x509-certificate entity.
+
+        Returns the filter string, or raises ValueError if the entity has no
+        usable hashes or the profile has no cert fingerprint field mapping.
+        """
+        if "hashes" not in stix_entity:
+            raise ValueError(f"x509-certificate doesn't contain hashes: {stix_entity}")
+        hashes = stix_entity["hashes"]
+        if not isinstance(hashes, dict):
+            raise ValueError(
+                f"x509-certificate doesn't contain a dictionary of hashes: {hashes}"
+            )
+
+        cert_sha256_field = self.profile.field_map.get("cert_sha256")
+        if not cert_sha256_field:
+            raise ValueError(
+                f"x509-certificate not supported for category {self.onyphe_category!r}"
+            )
+
+        hash_type = next(iter(hashes))
+        hash_filter = HASH_KEY_MAP[hash_type]
+        hash_value = hashes[hash_type]
+
+        # cert_sha256_field is e.g. "cert.fingerprint.sha256" (ctiscan) or
+        # "fingerprint.sha256" (riskscan).  Strip the trailing ".sha256" to get
+        # the fingerprint prefix, then append the actual hash algorithm name.
+        fingerprint_prefix = cert_sha256_field.rsplit(".", 1)[0]
+        return f"{fingerprint_prefix}.{hash_filter}:{hash_value} "
+
     def _process_message(self, data: Dict):
-        # OpenCTI entity information retrieval
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
 
-        """
-        Extract TLP and we check if the variable "max_tlp" is less than
-        or equal to the markings access of the entity.
-        If this is true, we can send the data to connector for enrichment.
-        """
+        try:
+            return self._process_message_inner(
+                stix_objects, stix_entity, opencti_entity
+            )
+        except Exception:
+            bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.helper.send_stix2_bundle(bundle)
+            raise
+
+    def _process_message_inner(self, stix_objects, stix_entity, opencti_entity):
         self._extract_and_check_markings(opencti_entity)
 
         entity_value = self._safe_get(stix_entity, "value")
         is_observable = False
         ctifilter = ""
 
-        # Extract Value from opencti entity data
-        if stix_entity["type"] == "ipv4-addr":
-            ctifilter += f"ip.dest:{entity_value}"
-            is_observable = True
-        elif stix_entity["type"] == "hostname":
-            ctifilter += (
-                f"( ?dns.hostname:{entity_value} ?cert.hostname:{entity_value}) "
-            )
-            is_observable = True
-        elif stix_entity["type"] == "x509-certificate":
-            if "hashes" in stix_entity:
-                hashes = stix_entity["hashes"]
-            else:
-                return self.helper.log_error(
-                    f"x509-certificate doesn't contain hashes: {stix_entity}"
-                )
+        entity_type = stix_entity["type"]
 
-            if isinstance(hashes, dict):
-                hash_type = next(iter(hashes))
-                hash_filter = HASH_KEY_MAP[hash_type]
-                hash_value = hashes[hash_type]
-            else:
-                return self.helper.log_error(
-                    f"x509-certificate doesn't contain a dictionary of hashes: {hashes}"
-                )
+        if entity_type == "x509-certificate":
+            try:
+                ctifilter += self._build_cert_fingerprint_filter(stix_entity)
+                is_observable = True
+            except ValueError as e:
+                self.helper.log_error(str(e))
+                bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(bundle)
+                return str(e)
 
-            ctifilter += f"cert.fingerprint.{hash_filter}:{hash_value} "
-            is_observable = True
-        elif stix_entity["type"] == "text":
+        elif entity_type == "text":
+            if "text" not in self.profile.stix_generators:
+                raise ValueError(
+                    f"text observable not supported for category {self.onyphe_category!r}"
+                )
             labels = stix_entity.get("x_opencti_labels", [])
 
             self.helper.log_debug(f"Labels found on entity: {labels}")
             self.helper.log_debug(f"Pivot map values: {list(PIVOT_MAP.values())}")
 
-            # Text observable requires a label specifying the analytical pivot type, for example "ja3s-md5"
             onyphe_field = next(
                 (
                     field
@@ -782,38 +1204,48 @@ class ONYPHEConnector:
             )
             if onyphe_field is None:
                 self.helper.log_debug("No matching pivot label found.")
+                bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(bundle)
                 return "No matching pivot label found."
 
             ctifilter += f"{onyphe_field}:{entity_value}"
             is_observable = True
+
+        elif entity_type in self.profile.oql_filters:
+            oql_filter_fn = self.profile.oql_filters[entity_type]
+            if oql_filter_fn:
+                ctifilter += oql_filter_fn(entity_value)
+                is_observable = True
 
         if is_observable:
             try:
                 self.helper.log_info(
                     f"Processing {stix_entity['type']} observable: {entity_value}"
                 )
-                # Get ONYPHE ctiscan API Response
                 oql = f"category:{self.onyphe_category} {ctifilter} -since:{self.config.time_since}"
 
-                count = self.onyphe_client.count(oql)
-                if count > self.config.pivot_threshold:
+                response = self.onyphe_client.search_oql_paginated(
+                    oql, limit=self.config.pivot_threshold
+                )
+                if response.get("total", 0) > self.config.pivot_threshold:
+                    bundle = self.helper.stix2_create_bundle(stix_objects)
+                    self.helper.send_stix2_bundle(bundle)
                     return "Sent 0 bundles for import. Results over pivot threshold."
 
-                response = self.onyphe_client.search_oql(oql)
-
-                # Generate a stix bundle
                 bundle = self._generate_stix_bundle(
                     response["results"], stix_objects, stix_entity
                 )
 
-                # send stix2 bundle
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
                 return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
             except APIError as e:
-                # Handling specific errors for ONYPHE API
                 raise ValueError(f"ONYPHE API Error : {str(e)}")
             except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+                self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+                bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(bundle)
+                return f"Unexpected Error occurred: {str(e)}"
+
         elif (
             stix_entity["type"] == "indicator"
             and stix_entity["pattern_type"] == self.config.pattern_type
@@ -823,20 +1255,14 @@ class ONYPHEConnector:
             else:
                 score = self.helper.get_attribute_in_extension("score", stix_entity)
 
-            threats = []
-            # Resolve indicates
             relationships = self.helper.api.stix_core_relationship.list(
                 relationship_type="indicates", fromId=opencti_entity["id"]
             )
-            for relationship in relationships:
-                indicates_stix_entity = (
-                    self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
-                        entity_type=relationship["to"]["entity_type"],
-                        entity_id=relationship["to"]["id"],
-                        only_entity=True,
-                    )
-                )
-                threats.append(indicates_stix_entity)
+            threats = [
+                rel["to"]["standard_id"]
+                for rel in relationships
+                if rel.get("to") and rel["to"].get("standard_id")
+            ]
 
             ctifilter = stix_entity["pattern"]
 
@@ -847,67 +1273,69 @@ class ONYPHEConnector:
                 if "category:" not in ctifilter:
                     ctifilter = f"category:{self.onyphe_category} " + ctifilter
 
-                # TODO : Check to see if user has passed time functions
+                OQL_TIME_FILTERS = (
+                    "-since:",
+                    "-weekago:",
+                    "-dayago:",
+                    "-monthago:",
+                )
+                user_has_time_filter = any(tf in ctifilter for tf in OQL_TIME_FILTERS)
+                oql_parts = [ctifilter.strip()]
+                if not user_has_time_filter:
+                    oql_parts.append(f"-since:{self.config.time_since}")
+
                 if self.config.import_search_results:
-                    # Get full ONYPHE API Response
-                    oql = f"{ctifilter} -since:{self.config.time_since}"
+                    oql = " ".join(oql_parts)
                 else:
-                    # Get summary fields only
-                    summary_keys_csv = ",".join(summary for summary, _ in SUMMARYS)
-                    oql = f"{ctifilter} -since:{self.config.time_since} -fields:{summary_keys_csv}"
+                    summary_keys_csv = ",".join(
+                        summary for summary, _ in self.profile.summarys
+                    )
+                    oql_parts.append(f"-fields:{summary_keys_csv}")
+                    oql = " ".join(oql_parts)
 
                 self.helper.log_debug(f"Trying ONYPHE query for : {oql}")
 
-                response = self.onyphe_client.search_oql(oql)
+                first_page = self.onyphe_client.search_oql(oql)
+                total_available = first_page.get("total", 0)
+                if total_available > self.config.indicator_max_results:
+                    self.helper.log_info(
+                        f"Indicator query matched {total_available} results, "
+                        f"exceeding indicator_max_results ({self.config.indicator_max_results}). "
+                        "Query may be too imprecise — no results imported."
+                    )
+                    bundle = self.helper.stix2_create_bundle(stix_objects)
+                    self.helper.send_stix2_bundle(bundle)
+                    return (
+                        f"Sent 0 bundles for import. Indicator query returned "
+                        f"{total_available} results, over the {self.config.indicator_max_results} limit."
+                    )
+                all_results = first_page.get("results", [])
+                page = 2
+                while (
+                    len(all_results) < total_available
+                    and len(all_results) < self.config.indicator_max_results
+                ):
+                    page_response = self.onyphe_client.search_oql(oql, page=page)
+                    page_results = page_response.get("results", [])
+                    if not page_results:
+                        break
+                    all_results.extend(page_results)
+                    page += 1
+                response = {"total": total_available, "results": all_results}
                 self.helper.log_debug(f"Got json response: {response}")
                 results = response["results"]
                 number_processed = response["total"]
 
-                # Build summary note
                 self.helper.log_debug("Building summary")
-                # Initialize summary counts as a dictionary of dictionaries
-                summarys = {summary: {} for summary, _ in SUMMARYS}
+                if self.profile.summary_style == "findings_table":
+                    note_title, note_content = self._build_findings_table_note(results)
+                else:
+                    note_title, note_content = self._build_frequency_summary_note(
+                        results
+                    )
 
-                for result in results:
-                    for summary, _ in SUMMARYS:
-                        values = self._get_nested_values(result, summary)
-
-                        # Handle both single value and list (for wildcards)
-                        if isinstance(values, list):
-                            for val in values:
-                                if val is not None:
-                                    summarys[summary][val] = (
-                                        summarys[summary].get(val, 0) + 1
-                                    )
-                        elif values is not None:
-                            summarys[summary][values] = (
-                                summarys[summary].get(values, 0) + 1
-                            )
-
-                # Extract top N for each summary
-                top = {}
-                for summary, limit in SUMMARYS:
-                    sorted_items = sorted(
-                        summarys[summary].items(),
-                        key=lambda item: item[1],
-                        reverse=True,
-                    )[:limit]
-                    top[summary] = dict(sorted_items)
-
-                note_title = "ONYPHE Ctiscan Summary Information"
-                note_content = "### Global\n"
-                note_content += "| Value | Count |\n|------|-------|\n"
-                note_content += "| Total Results |" + str(len(results)) + " |\n"
-                for summary, limit in SUMMARYS:
-                    note_content += "### " + SUMMARY_TITLES[summary] + "\n\n"
-                    note_content += "| Value | Count |\n|------|-------|\n"
-                    for value, count in top[summary].items():
-                        note_content += "| " + str(value) + " |" + str(count) + " |\n"
-                    note_content += "\n"
-
-                created = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
                 note = stix2.Note(
-                    id=Note.generate_id(created, note_content),
+                    id=Note.generate_id(stix_entity["id"], note_title),
                     abstract=note_title,
                     content=note_content,
                     created_by_ref=self.onyphe_identity["standard_id"],
@@ -916,30 +1344,27 @@ class ONYPHEConnector:
                 self.helper.log_debug(f"Summary created as note : {note}")
                 bundle_objects.append(note)
 
-                # Import search results as observables
                 if self.config.import_search_results:
                     self.helper.log_debug("Importing search results as observables")
-                    # Generate a stix bundle
                     bundle = self._generate_stix_bundle(
                         results, stix_objects, stix_entity, score, True
                     )
-                    # create relationships to threats for observables
                     for bundle_object in bundle:
                         target_id = bundle_object["id"]
                         if bundle_object["type"] not in ["indicator", "relationship"]:
-                            for threat in threats:
-                                if target_id != threat["id"]:
+                            for threat_id in threats:
+                                if target_id != threat_id:
                                     rel = self._generate_stix_relationship(
-                                        target_id, "related-to", threat["id"]
+                                        target_id, "related-to", threat_id
                                     )
                                     bundle_objects.append(rel)
                                     self.helper.log_debug(
-                                        f"New relationship appended for {target_id} - related-to - {threat['id']}"
+                                        f"New relationship appended for {target_id} - related-to - {threat_id}"
                                     )
                     bundle_objects = bundle_objects + bundle
-                # send stix2 bundle
+
                 uniq_bundles_objects = list(
-                    {obj["id"]: obj for obj in bundle_objects}.values()
+                    {obj["id"]: obj for obj in stix_objects + bundle_objects}.values()
                 )
                 bundle = self.helper.stix2_create_bundle(uniq_bundles_objects)
                 bundles_sent = self.helper.send_stix2_bundle(bundle)
@@ -952,10 +1377,12 @@ class ONYPHEConnector:
                 )
                 return "Sent " + str(len(bundles_sent)) + " STIX bundle(s) for import"
             except APIError as e:
-                # Handling specific errors for ONYPHE API
                 raise ValueError(f"ONYPHE API Error : {str(e)}")
             except Exception as e:
-                return self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+                self.helper.log_error(f"Unexpected Error occurred: {str(e)}")
+                bundle = self.helper.stix2_create_bundle(stix_objects)
+                self.helper.send_stix2_bundle(bundle)
+                return f"Unexpected Error occurred: {str(e)}"
         else:
             if stix_entity["type"] == "indicator":
                 raise ValueError(
@@ -964,6 +1391,5 @@ class ONYPHEConnector:
             else:
                 raise ValueError("Unsupported type: " + stix_entity["type"])
 
-    # Start the main loop
     def run(self) -> None:
         self.helper.listen(message_callback=self._process_message)

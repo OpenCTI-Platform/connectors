@@ -1,11 +1,13 @@
 {
   "title": "ONYPHE",
   "slug": "onyphe",
-  "description": "The ONYPHE enrichment connector is designed to leverage the Ctiscan category of data to enrich observables, providing detailed Internet scan data\n and mapping for open ports, protocols, banners and relationships — including ASNs, organizations, certificates,\n DNS domains, technologies, ports, countries and analytical pivots such as Ja4s.\n In addition the Indicators can be enriched using the 'onyphe' pattern to run threat-hunting queries within the OpenCTI platform and import matching observables.",
-  "short_description": "ONYPHE connector enriches observables and indicators with Internet intelligence and mapping data.",
+  "description": "The ONYPHE enrichment connector supports two complementary use cases via separate data categories.\n\nFor threat intelligence (ctiscan), it enriches observables with detailed Internet scan data and mapping for open ports, protocols, banners and relationships — including ASNs, organizations, certificates, DNS domains, technologies, ports, countries and analytical pivots such as JA4S and HHHash.\n\nFor attack surface management (riskscan), it enriches IP addresses, hostnames and domains with exposure data: open services, risk tags (e.g. risk::opendatabase), CVE vulnerabilities and associated infrastructure.\n\nIn addition, Indicators can be enriched using the 'onyphe' pattern to run threat-hunting queries within the OpenCTI platform and import matching observables.\n\nMultiple instances of the connector can run side by side — one per category — each with independent scope, confidence and auto-enrichment settings.",
+  "short_description": "ONYPHE connector enriches observables and indicators with Internet intelligence for threat intelligence (ctiscan) and attack surface management (riskscan).",
   "logo": "internal-enrichment/onyphe/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Internet scan data & mapping"
+    "Commercial Internet scan data & mapping",
+    "Attack Surface Management",
+    "Threat Hunting"
   ],
   "verified": false,
   "last_verified_date": null,
