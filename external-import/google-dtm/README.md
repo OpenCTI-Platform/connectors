@@ -98,7 +98,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_DURATION_PERIOD=PT1H
       - GOOGLE_DTM_API_KEY=ChangeMe
       - GOOGLE_DTM_TLP=red
-      - GOOGLE_DTM_IMPORT_START_DATE=PD10
+      - GOOGLE_DTM_IMPORT_START_DATE=P10D
       - GOOGLE_DTM_ALERT_SEVERITY=
       - GOOGLE_DTM_ALERT_TYPE=
     restart: always
