@@ -1,0 +1,19 @@
+name: Auto-label new issues
+on:
+  issues:
+    types: [opened, reopened]
+jobs:
+  add-needs-triage:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['needs triage']
+            });
