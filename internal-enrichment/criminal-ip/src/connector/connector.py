@@ -2,10 +2,10 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-import requests
 import stix2
 from connector.settings import ConnectorSettings
 from connectors_sdk.models import OrganizationAuthor
+from criminalip_client import CriminalIpClient
 from pycti import (
     Indicator,
     Location,
@@ -20,72 +20,14 @@ class CriminalIPConnector:
         self.config = config
         self.helper = helper
 
-        self.base_url = "https://api.criminalip.io"
         self.token = self.config.criminal_ip.token.get_secret_value()
         self.max_tlp = self.config.criminal_ip.max_tlp
-        self.session = requests.Session()
-        self.session.headers.update({"x-api-key": self.token})
+        self.client = CriminalIpClient(helper=self.helper, token=self.token)
 
         self.author = OrganizationAuthor(
             name="Criminal IP",
             description="Criminal IP Cyber Threat Intelligence",
         )
-
-    def _call_api(self, endpoint: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        url = f"{self.base_url}{endpoint}"
-        try:
-            response = self.session.get(url, params=params or {}, timeout=20)
-            self.helper.connector_logger.info(
-                "[API] GET request", {"url_path": endpoint}
-            )
-            response.raise_for_status()
-            result = response.json()
-            if result.get("status") and result["status"] != 200:
-                self.helper.connector_logger.error(
-                    "[API] Criminal IP API returned error",
-                    {
-                        "url_path": endpoint,
-                        "status": result.get("status"),
-                        "message": result.get("message"),
-                    },
-                )
-                return None
-            return result
-        except requests.exceptions.RequestException as e:
-            self.helper.connector_logger.error(
-                "[API] Error calling Criminal IP API",
-                {"url": url, "error": str(e)},
-            )
-            return None
-
-    def _call_api_post(
-        self, endpoint: str, params: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
-        url = f"{self.base_url}{endpoint}"
-        try:
-            response = self.session.post(url, data=params or {}, timeout=20)
-            self.helper.connector_logger.info(
-                "[API] POST request", {"url_path": endpoint}
-            )
-            response.raise_for_status()
-            result = response.json()
-            if result.get("status") and result["status"] != 200:
-                self.helper.connector_logger.error(
-                    "[API] Criminal IP API returned error",
-                    {
-                        "url_path": endpoint,
-                        "status": result.get("status"),
-                        "message": result.get("message"),
-                    },
-                )
-                return None
-            return result
-        except requests.exceptions.RequestException as e:
-            self.helper.connector_logger.error(
-                "[API] Error calling Criminal IP API",
-                {"url": url, "error": str(e)},
-            )
-            return None
 
     @staticmethod
     def _convert_score_to_confidence(score_str: str) -> int:
@@ -284,8 +226,8 @@ class CriminalIPConnector:
             enrichment_objects = [self.author.to_stix2_object()]
 
             if obs_type == "ipv4-addr":
-                ip_data = self._call_api("/v1/asset/ip/report", {"ip": obs_value})
-                malicious_data = self._call_api(
+                ip_data = self.client.get_data("/v1/asset/ip/report", {"ip": obs_value})
+                malicious_data = self.client.get_data(
                     "/v1/feature/ip/malicious-info", {"ip": obs_value}
                 )
                 if ip_data:
@@ -430,7 +372,7 @@ class CriminalIPConnector:
     def _process_domain_scan(self, domain_value: str) -> list:
         scan_id = None
 
-        reports_data = self._call_api(
+        reports_data = self.client.get_data(
             "/v1/domain/reports", {"query": domain_value, "offset": 0}
         )
         if reports_data:
@@ -448,7 +390,7 @@ class CriminalIPConnector:
                         scan_id = reports_list[0].get("scan_id")
 
         if scan_id is None:
-            scan_response = self._call_api_post(
+            scan_response = self.client.post_data(
                 "/v1/domain/scan", {"query": domain_value}
             )
             if scan_response and scan_response.get("data"):
@@ -457,7 +399,7 @@ class CriminalIPConnector:
                 # Poll until scan completes (max 5 minutes)
                 max_attempts = 100
                 for _ in range(max_attempts):
-                    status_data = self._call_api(f"/v1/domain/status/{scan_id}")
+                    status_data = self.client.get_data(f"/v1/domain/status/{scan_id}")
                     if status_data and status_data.get("data"):
                         if status_data["data"].get("scan_percentage", 0) >= 100:
                             break
@@ -466,7 +408,7 @@ class CriminalIPConnector:
         if not scan_id:
             return []
 
-        domain_data = self._call_api(f"/v2/domain/report/{scan_id}")
+        domain_data = self.client.get_data(f"/v2/domain/report/{scan_id}")
         if domain_data and domain_data.get("data"):
             return self._to_stix_objects_for_domain(domain_value, domain_data["data"])
 
