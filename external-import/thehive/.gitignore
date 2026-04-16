@@ -1,0 +1,10 @@
+config.yml
+
+# Build artifacts
+dist
+
+# Cache directories
+__pycache__
+.ruff_cache
+.mypy_cache
+.pytest_cache
