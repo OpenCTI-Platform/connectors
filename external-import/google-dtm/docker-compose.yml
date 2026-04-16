@@ -13,9 +13,9 @@ services:
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT1H
        # Connector's custom execution parameters
-      - GOOGLE_DTM_API_KEY=ChangeMe 
+      - GOOGLE_DTM_API_KEY=ChangeMe
       - GOOGLE_DTM_TLP=amber+strict
       - GOOGLE_DTM_IMPORT_START_DATE=P10D
       - GOOGLE_DTM_ALERT_SEVERITY=
-      - GOOGLE_DTM_ALERT_TYPE= 
+      - GOOGLE_DTM_ALERT_TYPE=
     restart: always
