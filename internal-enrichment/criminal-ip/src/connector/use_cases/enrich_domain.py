@@ -3,13 +3,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-import stix2
 from criminalip_client import CriminalIpClient
-from pycti import Indicator as PyctiIndicator
-from pycti import Location as PyctiLocation
-from pycti import (
-    StixCoreRelationship,
-)
 
 
 class DomainEnricher:
@@ -76,8 +70,8 @@ class DomainEnricher:
         author = self.converter_to_stix.create_author()
         objects.append(author.to_stix2_object())
 
-        domain_stix = stix2.DomainName(value=domain_name_value)
-        objects.append(domain_stix)
+        domain_stix = self.converter_to_stix.create_domain(name=domain_name_value)
+        objects.append(domain_stix.to_stix2_object())
 
         summary = domain_data.get("summary", {})
         phishing_prob = summary.get("url_phishing_prob", 0)
@@ -103,29 +97,23 @@ class DomainEnricher:
             description_parts.append(f"- x_criminalip_phishing_prob: {phishing_prob}")
 
             indicator_pattern = f"[domain-name:value = '{domain_name_value}']"
-            indicator = stix2.Indicator(
-                id=PyctiIndicator.generate_id(indicator_pattern),
+            indicator = self.converter_to_stix.create_indicator(
                 name=f"Malicious domain: {domain_name_value}",
                 pattern_type="stix",
                 pattern=indicator_pattern,
-                confidence=phishing_prob,
+                # confidence=phishing_prob,
                 labels=list(set(labels)),
                 description="\n".join(description_parts),
-                created_by_ref=author.id,
             )
-            objects.append(indicator)
+            objects.append(indicator.to_stix2_object())
 
             # Indicator -> Observable (based-on)
             objects.append(
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "based-on", indicator.id, domain_stix.id
-                    ),
+                self.converter_to_stix.create_relationship(
                     relationship_type="based-on",
-                    source_ref=indicator.id,
-                    target_ref=domain_stix.id,
-                    created_by_ref=author.id,
-                )
+                    source_obj=indicator,
+                    target_obj=domain_stix,
+                ).to_stix2_object()
             )
 
         # Related IPs
@@ -133,18 +121,14 @@ class DomainEnricher:
         for ip_info in related_ips:
             ip_value = ip_info.get("ip")
             if ip_value:
-                ip_stix = stix2.IPv4Address(value=ip_value)
-                objects.append(ip_stix)
+                ip_stix = self.converter_to_stix.create_ipv4(ip=ip_value)
+                objects.append(ip_stix.to_stix2_object())
                 objects.append(
-                    stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "resolves-to", domain_stix.id, ip_stix.id
-                        ),
+                    self.converter_to_stix.create_relationship(
                         relationship_type="resolves-to",
-                        source_ref=domain_stix.id,
-                        target_ref=ip_stix.id,
-                        created_by_ref=author.id,
-                    )
+                        source_obj=domain_stix,
+                        target_obj=ip_stix,
+                    ).to_stix2_object()
                 )
 
         # Countries
@@ -154,26 +138,18 @@ class DomainEnricher:
         countries = list(filter(lambda x: x is not None, countries_data))
 
         for country_code in countries:
-            loc_stix = stix2.Location(
-                id=PyctiLocation.generate_id(country_code.upper(), "Country"),
-                country=country_code.upper(),
-                allow_custom=True,
-            )
-            objects.append(loc_stix)
+            loc_stix = self.converter_to_stix.create_country(name=country_code.upper())
+            objects.append(loc_stix.to_stix2_object())
             objects.append(
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", domain_stix.id, loc_stix.id
-                    ),
+                self.converter_to_stix.create_relationship(
                     relationship_type="related-to",
-                    source_ref=domain_stix.id,
-                    target_ref=loc_stix.id,
+                    source_obj=domain_stix,
+                    target_obj=loc_stix,
                     description=(
                         f"Domain {domain_name_value} associated with"
                         f" servers in {country_code.upper()}."
                     ),
-                    created_by_ref=author.id,
-                )
+                ).to_stix2_object()
             )
 
         return objects

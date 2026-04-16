@@ -1,13 +1,7 @@
 import logging
 from typing import Any, List
 
-import stix2
-from connector.utils import _convert_score_to_confidence
 from criminalip_client import CriminalIpClient
-from pycti import Indicator as PyctiIndicator
-from pycti import Location as PyctiLocation
-from pycti import Location as PyctiVulnerability
-from pycti import StixCoreRelationship
 
 
 class Ipv4Enricher:
@@ -34,8 +28,8 @@ class Ipv4Enricher:
             objects.append(author.to_stix2_object())
 
             # IPv4 observable
-            ipv4_stix = stix2.IPv4Address(value=ip_value)
-            objects.append(ipv4_stix)
+            ipv4_stix = self.converter_to_stix.create_ipv4(ip=ip_value)
+            objects.append(ipv4_stix.to_stix2_object())
 
             # Build labels from issues + categories + malicious info
             labels = []
@@ -67,89 +61,68 @@ class Ipv4Enricher:
             score_data = ip_data.get("score", {})
             inbound_score_str = score_data.get("inbound")
             outbound_score_str = score_data.get("outbound")
-            inbound_confidence = _convert_score_to_confidence(inbound_score_str)
-            outbound_confidence = _convert_score_to_confidence(outbound_score_str)
-            overall_confidence = max(inbound_confidence, outbound_confidence)
 
             # Indicator
             indicator_pattern = f"[ipv4-addr:value = '{ip_value}']"
-            indicator = stix2.Indicator(
-                id=PyctiIndicator.generate_id(indicator_pattern),
+            indicator = self.converter_to_stix.create_indicator(
                 name=f"Criminal IP Reputation for {ip_value}",
                 pattern_type="stix",
                 pattern=indicator_pattern,
-                confidence=overall_confidence,
                 labels=list(set(labels)),
-                created_by_ref=author.id,
                 description=(
                     f"- x_criminalip_inbound_score: {inbound_score_str}\n"
                     f"- x_criminalip_outbound_score: {outbound_score_str}"
                 ),
             )
-            objects.append(indicator)
+            objects.append(indicator.to_stix2_object())
 
             # Indicator -> Observable (based-on)
             objects.append(
-                stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "based-on", indicator.id, ipv4_stix.id
-                    ),
+                self.converter_to_stix.create_relationship(
                     relationship_type="based-on",
-                    source_ref=indicator.id,
-                    target_ref=ipv4_stix.id,
-                    created_by_ref=author.id,
-                )
+                    source_obj=indicator,
+                    target_obj=ipv4_stix,
+                ).to_stix2_object()
             )
 
             # Whois -> AS + Location
-            as_stix = None
+            autonomous_system = None
             loc_stix = None
             whois_data = ip_data.get("whois", {}).get("data")
             if whois_data:
                 whois_entry = whois_data[0]
                 as_number = whois_entry.get("as_no")
                 if as_number:
-                    as_stix = stix2.AutonomousSystem(
+                    autonomous_system = self.converter_to_stix.create_autonomous_system(
                         number=as_number, name=whois_entry.get("as_name")
                     )
-                    objects.append(as_stix)
+                    objects.append(autonomous_system.to_stix2_object())
 
                 country_code = whois_entry.get("org_country_code")
                 if country_code:
-                    loc_stix = stix2.Location(
-                        id=PyctiLocation.generate_id(country_code.upper(), "Country"),
-                        country=country_code.upper(),
-                        city=whois_entry.get("city"),
-                        region=whois_entry.get("region"),
+                    loc_stix = self.converter_to_stix.create_city(
+                        name=whois_entry.get("city"),
                         latitude=whois_entry.get("latitude"),
                         longitude=whois_entry.get("longitude"),
                     )
-                    objects.append(loc_stix)
+                    objects.append(loc_stix.to_stix2_object())
 
             # Relationships
-            if as_stix:
+            if autonomous_system:
                 objects.append(
-                    stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "belongs-to", ipv4_stix.id, as_stix.id
-                        ),
+                    self.converter_to_stix.create_relationship(
                         relationship_type="belongs-to",
-                        source_ref=ipv4_stix.id,
-                        target_ref=as_stix.id,
-                        created_by_ref=author.id,
-                    )
+                        source_obj=ipv4_stix,
+                        target_obj=autonomous_system,
+                    ).to_stix2_object()
                 )
             if loc_stix:
                 objects.append(
-                    stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "located-at", ipv4_stix.id, loc_stix.id
-                        ),
+                    self.converter_to_stix.create_relationship(
                         relationship_type="located-at",
-                        source_ref=ipv4_stix.id,
-                        target_ref=loc_stix.id,
-                        created_by_ref=author.id,
-                    )
+                        source_obj=ipv4_stix,
+                        target_obj=loc_stix,
+                    ).to_stix2_object()
                 )
 
             # Vulnerabilities
@@ -157,23 +130,17 @@ class Ipv4Enricher:
             for vuln in vulnerabilities:
                 cve_id = vuln.get("cve_id")
                 if cve_id:
-                    vuln_stix = stix2.Vulnerability(
-                        id=PyctiVulnerability.generate_id(cve_id),
+                    vuln_stix = self.converter_to_stix.create_vulnerability(
                         name=cve_id,
                         description=vuln.get("cve_description"),
-                        created_by_ref=author.id,
                     )
-                    objects.append(vuln_stix)
+                    objects.append(vuln_stix.to_stix2_object())
                     objects.append(
-                        stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "indicates", indicator.id, vuln_stix.id
-                            ),
+                        self.converter_to_stix.create_relationship(
                             relationship_type="indicates",
-                            source_ref=indicator.id,
-                            target_ref=vuln_stix.id,
-                            created_by_ref=author.id,
-                        )
+                            source_obj=indicator,
+                            target_obj=vuln_stix,
+                        ).to_stix2_object()
                     )
 
         return objects
