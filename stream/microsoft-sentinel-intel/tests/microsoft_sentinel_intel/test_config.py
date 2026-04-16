@@ -16,10 +16,13 @@ def test_config() -> None:
     assert config["connector"]["live_stream_id"] == "live-stream-id"
 
     microsoft_sentinel_intel = config["microsoft_sentinel_intel"]
-    assert len(microsoft_sentinel_intel) == 12
+    assert len(microsoft_sentinel_intel) == 16
+    assert not microsoft_sentinel_intel["batch_mode"]
+    assert microsoft_sentinel_intel["batch_size"] == 100
+    assert microsoft_sentinel_intel["batch_timeout"] == 30
     assert microsoft_sentinel_intel["client_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["client_secret"].get_secret_value() == "ChangeMe"
-    assert microsoft_sentinel_intel["delete_extensions"] == True
+    assert microsoft_sentinel_intel["delete_extensions"]
     assert microsoft_sentinel_intel["extra_labels"] == ["label"]
     assert microsoft_sentinel_intel["management_api_version"] == "2025-03-01"
     assert microsoft_sentinel_intel["resource_group"] == "default"
@@ -29,3 +32,4 @@ def test_config() -> None:
     assert microsoft_sentinel_intel["workspace_api_version"] == "2024-02-01-preview"
     assert microsoft_sentinel_intel["workspace_id"] == "ChangeMe"
     assert microsoft_sentinel_intel["workspace_name"] == "ChangeMe"
+    assert microsoft_sentinel_intel["event_types"] == ["create", "update", "delete"]

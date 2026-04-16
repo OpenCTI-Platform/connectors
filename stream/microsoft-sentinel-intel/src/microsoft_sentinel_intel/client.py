@@ -82,8 +82,13 @@ class ConnectorClient:
             ),
         )
 
-    def delete_indicator_by_id(self, indicator_id: str) -> HttpResponse:
-        response = self.query_indicators(content={"keywords": indicator_id})
+    def delete_indicator_by_id(
+        self, indicator_id: str, source_system: str, pattern_type: str | None = None
+    ) -> HttpResponse | None:
+        content: dict[str, Any] = {"keywords": indicator_id, "sources": [source_system]}
+        if pattern_type:
+            content["patternTypes"] = [pattern_type]
+        response = self.query_indicators(content=content)
 
         try:
             body = json.loads(response.body())
@@ -93,18 +98,48 @@ class ConnectorClient:
                 metadata={"error": str(e)},
             )
 
-        if len(body["value"]) != 1:
+        indicators = body.get("value")
+        if indicators is None:
             raise ConnectorClientError(
-                message=f"[API] Expected exactly one indicator, found {len(body['value'])}",
-                metadata={"indicators": body["value"]},
+                message="[API] Unexpected response format: missing 'value' key",
+                metadata={"response_body": str(body)},
+            )
+        if not indicators:
+            self.helper.connector_logger.warning(
+                message=f"[API] Indicator not found for source system '{source_system}', skipping deletion",
+                meta={"indicator_id": indicator_id, "source_system": source_system},
+            )
+            return None
+
+        if len(indicators) > 1:
+            self.helper.connector_logger.warning(
+                message=f"[API] Found {len(indicators)} indicators matching the query, deleting all",
+                meta={"indicator_id": indicator_id, "count": len(indicators)},
             )
 
-        return self._send_request(
-            client=self.management_client,
-            request=self.management_client.delete(
-                url=f"{self.management_endpoint}/indicators/{body['value'][0]['name']}",
-                params={
-                    "api-version": self.config.microsoft_sentinel_intel.management_api_version
-                },
-            ),
-        )
+        last_response = None
+        errors: list[ConnectorClientError] = []
+        for indicator in indicators:
+            try:
+                last_response = self._send_request(
+                    client=self.management_client,
+                    request=self.management_client.delete(
+                        url=f"{self.management_endpoint}/indicators/{indicator['name']}",
+                        params={
+                            "api-version": self.config.microsoft_sentinel_intel.management_api_version
+                        },
+                    ),
+                )
+            except ConnectorClientError as err:
+                self.helper.connector_logger.error(
+                    message=f"[API] Failed to delete indicator '{indicator['name']}'",
+                    meta=err.metadata,
+                )
+                errors.append(err)
+
+        if errors:
+            raise ConnectorClientError(
+                message=f"[API] Failed to delete {len(errors)}/{len(indicators)} indicators",
+                metadata={"errors": [str(e) for e in errors]},
+            )
+        return last_response
