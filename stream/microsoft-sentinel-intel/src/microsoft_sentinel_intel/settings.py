@@ -52,7 +52,6 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     resource_group: str = Field(
         description="The name of the resource group where the log analytics is",
         default="default",
-        deprecated=True,
     )
     source_system: str = Field(
         description="The name of the source system displayed in Microsoft Sentinel",
@@ -73,6 +72,25 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
     management_api_version: str = Field(
         description="API version of the Microsoft management interface",
         default="2025-03-01",
+    )
+    batch_mode: bool = Field(
+        description="Enable batch mode for bulk uploading STIX objects. When disabled (default), objects are sent individually in real-time.",
+        default=False,
+    )
+    batch_size: int = Field(
+        description="Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled. Maxed at 100 because the Sentinel Upload Indicators API rejects requests containing more than 100 STIX objects.",
+        default=100,
+        ge=1,
+        le=100,
+    )
+    batch_timeout: int = Field(
+        description="Maximum time in seconds to wait before flushing a partial batch. Only used when batch_mode is enabled.",
+        default=30,
+        ge=1,
+    )
+    event_types: ListFromString = Field(
+        description="Comma-separated list of event types to process (create, update, delete). Defaults to all three; a single instance handles every event type. Restrict this only if you want to split the workload across dedicated instances.",
+        default=["create", "update", "delete"],
     )
 
 

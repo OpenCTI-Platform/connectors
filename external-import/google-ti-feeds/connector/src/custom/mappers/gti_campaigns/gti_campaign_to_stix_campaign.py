@@ -61,12 +61,16 @@ class GTICampaignToSTIXCampaign(BaseMapper):
         modified = datetime.fromtimestamp(
             attributes.last_modification_date, tz=timezone.utc
         )
+
+        aliases = self._extract_aliases(attributes)
+
         first_seen, last_seen = self._get_activity_timestamps(attributes)
         labels = self._extract_labels(attributes)
         external_references = self._build_external_references(attributes)
 
         campaign_model = OctiCampaignModel.create(
             name=name,
+            aliases=aliases,
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             description=attributes.description,
@@ -81,6 +85,31 @@ class GTICampaignToSTIXCampaign(BaseMapper):
         )
 
         return campaign_model
+
+    @staticmethod
+    def _extract_aliases(attributes: CampaignModel) -> list[str] | None:
+        """Extract aliases from campaign attributes.
+
+        Args:
+            attributes: The campaign attributes
+
+        Returns:
+            list[str] | None: Extracted aliases or None if no aliases exist
+
+        """
+        if (
+            not hasattr(attributes, "alt_names_details")
+            or not attributes.alt_names_details
+        ):
+            return None
+
+        aliases = []
+        for alt_name in attributes.alt_names_details:
+            if hasattr(alt_name, "value") and alt_name.value:
+                alt_name = alt_name.value
+                aliases.append(alt_name)
+
+        return aliases if aliases else None
 
     @staticmethod
     def _get_activity_timestamps(

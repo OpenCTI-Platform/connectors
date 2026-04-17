@@ -224,7 +224,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
     assert entity.authors == ["Censys Enrichment Connector"]
     assert entity.content == "HTTP/1.1 301 Moved Permanently"
     assert entity.created_by_ref == "identity--6f9f67f6-7eb2-5397-a02f-d8130aadb954"
-    assert entity.id == "note--ec194bf2-4ee0-5338-857f-4c3f727b8ebf"
+    assert entity.id == "note--57d22a6d-39ea-591e-b86e-a40d31540c14"
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
     ]

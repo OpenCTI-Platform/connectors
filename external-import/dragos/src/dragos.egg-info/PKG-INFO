@@ -8,7 +8,7 @@ Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Requires-Python: <3.13,>=3.11
 Description-Content-Type: text/markdown
-Requires-Dist: pycti==7.260409.0
+Requires-Dist: pycti==7.260416.0
 Requires-Dist: aiohttp<4,>=3.7.4
 Requires-Dist: limiter==0.5.0
 Requires-Dist: yarl<2,>=1.10.1
@@ -17,7 +17,7 @@ Requires-Dist: markdownify<2,>=1.1.0
 Requires-Dist: pydantic<3,>=2.8.2
 Requires-Dist: connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
 Provides-Extra: test
-Requires-Dist: pytest<9,>=8.1.1; extra == "test"
+Requires-Dist: pytest<10,>=9.0.3; extra == "test"
 Requires-Dist: pytest-asyncio<2,>=1.2; extra == "test"
 Requires-Dist: freezegun<2,>=1.2.0; extra == "test"
 Provides-Extra: dev

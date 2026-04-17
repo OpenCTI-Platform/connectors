@@ -88,7 +88,6 @@
     },
     "MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP": {
       "default": "default",
-      "deprecated": true,
       "description": "The name of the resource group where the log analytics is",
       "type": "string"
     },
@@ -119,6 +118,36 @@
       "default": "2025-03-01",
       "description": "API version of the Microsoft management interface",
       "type": "string"
+    },
+    "MICROSOFT_SENTINEL_INTEL_BATCH_MODE": {
+      "default": false,
+      "description": "Enable batch mode for bulk uploading STIX objects. When disabled (default), objects are sent individually in real-time.",
+      "type": "boolean"
+    },
+    "MICROSOFT_SENTINEL_INTEL_BATCH_SIZE": {
+      "default": 100,
+      "description": "Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled. Maxed at 100 because the Sentinel Upload Indicators API rejects requests containing more than 100 STIX objects.",
+      "maximum": 100,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT": {
+      "default": 30,
+      "description": "Maximum time in seconds to wait before flushing a partial batch. Only used when batch_mode is enabled.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "MICROSOFT_SENTINEL_INTEL_EVENT_TYPES": {
+      "default": [
+        "create",
+        "update",
+        "delete"
+      ],
+      "description": "Comma-separated list of event types to process (create, update, delete). Defaults to all three; a single instance handles every event type. Restrict this only if you want to split the workload across dedicated instances.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
