@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -8,7 +8,7 @@ from connectors_sdk import (
     ListFromString,
 )
 from connectors_sdk.models.enums import TLPLevel
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, TypeAdapter
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -57,7 +57,12 @@ class CheckfirstImportConnectorConfig(BaseConfigModel):
             "or durations relative to now (e.g., P365D, P1Y, P6M, P4W). "
             "Defaults to 1 year ago."
         ),
-        default=datetime.now(tz=timezone.utc) - timedelta(days=365),
+        # `default_factory` is used to set a dynamic default value (datetime) at runtime
+        default_factory=lambda: TypeAdapter(DatetimeFromIsoString).validate_python(
+            "P1Y"
+        ),
+        # but a fixed default value (ISO string) must be used in the schema for documentation purposes
+        json_schema_extra={"default": "P1Y"},
     )
     force_reprocess: bool = Field(
         description=(

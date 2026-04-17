@@ -71,7 +71,7 @@
       "writeOnly": true
     },
     "CHECKFIRST_SINCE": {
-      "default": "2025-04-17T08:55:42.486050Z",
+      "default": "P1Y",
       "description": "Only ingest articles published on or after this date. Accepts ISO 8601 absolute dates (e.g., 2024-01-01T00:00:00Z) or durations relative to now (e.g., P365D, P1Y, P6M, P4W). Defaults to 1 year ago.",
       "format": "date-time",
       "type": "string"
