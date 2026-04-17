@@ -92,7 +92,10 @@ class DragosConfig(BaseConfigModel):
     )
     import_start_date: DatetimeFromIsoString = Field(
         description="Start date of first import (ISO format). Can be a relative or an absolute date.",
+        # `default_factory` is used to set a dynamic default value (datetime) at runtime
         default_factory=lambda: iso_string_validator("P30D"),  # 30 days ago
+        # but a fixed default value (ISO string) must be used in the schema for documentation purposes
+        json_schema_extra={"default": "P30D"},
     )
     tlp_level: Literal[
         "white",
