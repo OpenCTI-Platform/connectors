@@ -71,16 +71,40 @@ class ReportImporter:
             config,
             default=False,
         )
+        # xtm_one mode: route extraction through Copilot instead of the ML web service
+        self.mode = get_config_variable(
+            "CONNECTOR_MODE",
+            ["connector", "mode"],
+            config,
+            default="web_service",
+        )
+        self.agent_slug = get_config_variable(
+            "CONNECTOR_AGENT_SLUG",
+            ["connector", "agent_slug"],
+            config,
+            default="",
+        )
+        self.skip_memory = get_config_variable(
+            "CONNECTOR_SKIP_MEMORY",
+            ["connector", "skip_memory"],
+            config,
+            default=False,
+        )
+
         self.web_service_url = get_config_variable(
             "CONNECTOR_WEB_SERVICE_URL",
             ["connector", "web_service_url"],
             config,
             default="https://importdoc.ariane.testing.filigran.io",
         )
-        license_key_pem = get_config_variable(
-            "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
-        )
-        self.licence_key_base64 = base64.b64encode(license_key_pem.encode())
+        # Licence key is only required for web_service mode (ML extraction)
+        if self.mode != "xtm_one":
+            license_key_pem = get_config_variable(
+                "CONNECTOR_LICENCE_KEY_PEM", ["connector", "licence_key_pem"], config
+            )
+            self.licence_key_base64 = base64.b64encode(license_key_pem.encode())
+        else:
+            self.licence_key_base64 = None
 
         self.include_relationships = get_config_variable(
             "IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS",
@@ -89,21 +113,26 @@ class ReportImporter:
             default=True,
         )
 
-        # Retrieve the OpenCTI instance ID (used as a header for the ML service)
-        # TODO make the connector more resilient to OpenCTI being down at startup,
-        # by wraping the initial helper.api.query() in a try/except with retries and logging
-        self.instance_id = self.helper.api.query("""
-                query SettingsQuery {
-                    settings {
-                        id
+        # Web service mode: load ML-service-specific resources at startup
+        if self.mode != “xtm_one”:
+            # Retrieve the OpenCTI instance ID (used as a header for the ML service)
+            # TODO make the connector more resilient to OpenCTI being down at startup,
+            # by wraping the initial helper.api.query() in a try/except with retries and logging
+            self.instance_id = self.helper.api.query(“””
+                    query SettingsQuery {
+                        settings {
+                            id
+                            }
                         }
-                    }
-            """).get("data", {}).get("settings", {}).get("id", "")
+                “””).get(“data”, {}).get(“settings”, {}).get(“id”, “”)
 
-        # Cache OpenCTI “allowed relationship” matrix
-        # Loading this mapping costs one GraphQL call at startup,
-        # and subsequent lookups are constant time in Python dict.
-        self.allowed_relations = load_allowed_relations(self.helper)
+            # Cache OpenCTI “allowed relationship” matrix
+            # Loading this mapping costs one GraphQL call at startup,
+            # and subsequent lookups are constant time in Python dict.
+            self.allowed_relations = load_allowed_relations(self.helper)
+        else:
+            self.instance_id = “”
+            self.allowed_relations = {}
 
     @staticmethod
     def _sanitise_name(raw_text: str | None) -> str | None:
@@ -126,10 +155,87 @@ class ReportImporter:
         self.file: dict | None = None
         return self._process_import(data)
 
+    def _octi_token(self) -> str:
+        """Return the connector's own OpenCTI API token."""
+        return self.helper.opencti_token
+
+    def _invoke_via_chatbot_session(
+        self,
+        file_content: bytes,
+        file_name: str,
+        file_mime: str,
+        agent_slug: str,
+        entity_id: str | None,
+        bypass_validation: bool,
+        prompt: str = "",
+        skip_memory: bool = False,
+    ) -> str:
+        """Call a Copilot agent through the OpenCTI chatbot proxy using the
+        standard session flow: create session -> upload file -> send message.
+
+        Authentication: connector's own OpenCTI API token.
+        OCTI then proxies to Copilot with a user-scoped Ed25519 JWT.
+        """
+        base = self.helper.opencti_url.rstrip("/")
+        headers = {"Authorization": f"Bearer {self._octi_token()}"}
+
+        # 1. Create session
+        session_resp = requests.post(
+            f"{base}/chatbot/sessions",
+            json={"agent_slug": agent_slug, "skip_memory": skip_memory},
+            headers={**headers, "Content-Type": "application/json"},
+            timeout=15,
+        )
+        session_resp.raise_for_status()
+        conversation_id = session_resp.json()["conversation_id"]
+        self.helper.connector_logger.info(
+            f"Chatbot session created: {conversation_id}"
+        )
+
+        # 2. Upload file (multipart, no base64)
+        upload_resp = requests.post(
+            f"{base}/chatbot/conversations/{conversation_id}/upload",
+            files={"file": (file_name, file_content, file_mime)},
+            headers=headers,
+            timeout=60,
+        )
+        upload_resp.raise_for_status()
+        file_id = upload_resp.json()["file_id"]
+        self.helper.connector_logger.info(
+            f"File uploaded to chatbot session, file_id: {file_id}"
+        )
+
+        # 3. Send message (non-streaming — waits for full STIX bundle)
+        msg_resp = requests.post(
+            f"{base}/chatbot/messages",
+            json={
+                "content": prompt or "Extract all STIX entities and relationships from this document.",
+                "conversation_id": conversation_id,
+                "file_ids": [file_id],
+                "stream": False,
+            },
+            headers={**headers, "Content-Type": "application/json"},
+            timeout=300,
+        )
+        msg_resp.raise_for_status()
+        stix_bundle_str = msg_resp.json().get("content", "")
+
+        if not stix_bundle_str:
+            return f"Agent '{agent_slug}' returned no content (conversation: {conversation_id})"
+
+        self.helper.send_stix2_bundle(
+            bundle=stix_bundle_str,
+            bypass_validation=bypass_validation,
+            file_name=f"import-document-ai-{Path(file_name).stem}.json",
+            entity_id=entity_id,
+        )
+        return conversation_id
+
     def _process_import(self, data: dict) -> str:
         """Main method to handle the import logic of a document file:
             - Downloads the file
-            - Extracts entities and relationships via ML
+            - Extracts entities and relationships via ML (web_service mode)
+              OR via Copilot chatbot session (xtm_one mode)
             - Constructs and sends a STIX bundle to OpenCTI
 
         Args:
@@ -154,6 +260,25 @@ class ReportImporter:
         file_name, file_content_buffered = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
         bypass_validation = data.get("bypass_validation", False)
+
+        # xtm_one mode: route extraction through Copilot chatbot session
+        if self.mode == "xtm_one":
+            if not self.agent_slug:
+                raise ValueError(
+                    "CONNECTOR_AGENT_SLUG must be set when CONNECTOR_MODE=xtm_one"
+                )
+            file_content = file_content_buffered.read()
+            file_mime = data.get("file_mime", "application/octet-stream")
+            conversation_id = self._invoke_via_chatbot_session(
+                file_content=file_content,
+                file_name=file_name,
+                file_mime=file_mime,
+                agent_slug=self.agent_slug,
+                entity_id=entity_id,
+                bypass_validation=bypass_validation,
+                skip_memory=bool(self.skip_memory),
+            )
+            return f"Extraction via Copilot agent '{self.agent_slug}' complete (conversation: {conversation_id})"
         # If an entity_id was provided, fetch that STIX object
         entity = (
             self.helper.api.stix_core_object.read(id=entity_id)
