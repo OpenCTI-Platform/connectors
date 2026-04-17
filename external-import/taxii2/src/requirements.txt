@@ -1,4 +1,4 @@
-pycti==7.260416.0
+pycti==7.260417.0
 antlr4-python3-runtime
 chardet
 datefinder
