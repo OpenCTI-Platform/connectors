@@ -1,0 +1,20 @@
+{
+  "title": "Import Document LLM",
+  "slug": "import-document-llm",
+  "description": "This connector imports unstructured documents and uses configurable LLM providers to extract entities, observables, and relationships into OpenCTI.",
+  "short_description": "Import document connector with OpenAI, Azure OpenAI, and Ollama providers.",
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-import-file/import-document-llm",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-import-document-llm",
+  "container_type": "INTERNAL_IMPORT_FILE"
+}
