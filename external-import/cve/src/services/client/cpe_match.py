@@ -10,7 +10,9 @@ class CPEMatchClient(CVEClient):
     API documentation: https://nvd.nist.gov/developers/products
     """
 
-    async def get_cpes_for_cve(self, cve_id: str) -> list[str]:
+    async def get_cpes_for_cve(
+        self, cve_id: str, request_params: dict | None = None
+    ) -> list[str]:
         """Retrieve all unique CPE names associated with a CVE.
 
         Calls the NVD CPE Match API with the given CVE ID, handles pagination,
@@ -23,7 +25,7 @@ class CPEMatchClient(CVEClient):
             A deduplicated list of CPE Name strings (format cpe:2.3:...).
         """
         cpe_names: set[str] = set()
-        params: dict = {"cveId": cve_id}
+        params: dict = {"cveId": cve_id, **(request_params or {})}
 
         debug_msg = f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
         self.helper.connector_logger.debug(debug_msg)

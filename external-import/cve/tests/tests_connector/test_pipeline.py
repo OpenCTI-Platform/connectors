@@ -133,6 +133,7 @@ def _make_converter(
     converter.helper = mock_helper
     converter.import_software = import_software
     converter.cpe_max_concurrency = cpe_max_concurrency
+    converter.cpe_history_interval = None
     converter.cve_max_concurrency = cve_max_concurrency
     converter.work_id = None
     converter.author = CVEConverter._create_author()
