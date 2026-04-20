@@ -1,14 +1,15 @@
 import math
 import sys
 import time
+import uuid
 from datetime import datetime, timezone
-from uuid import uuid4
 
 import langcodes
 import requests
 import stix2
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
+from stix2.canonicalization.Canonicalize import canonicalize
 from urllib3.util import Retry
 
 from .settings import ConnectorSettings
@@ -111,17 +112,21 @@ class CPEConnector:
         """
         return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
-    def _get_id(self, type: str) -> str:
+    def _get_software_id(self, cpename: str) -> str:
         """
-        Generates a unique ID for a STIX2 object
+        Generates a deterministic ID for a Software STIX2 object derived from a CPE
 
         Args:
-            type (str): The type of the object to generate an ID for
+            cpename (str): The cpename associated to the software in question
 
         Returns:
-            str: A unique ID for the STIX object
+            str: A deterministic ID for the STIX object
         """
-        return f"{type}--{str(uuid4())}"
+        cpename = cpename.lower().strip()
+        data = {"cpename": cpename}
+        data = canonicalize(data, utf8=False)
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
+        return f"software--{id}"
 
     def _get_api_url(self, start_index, start_date, end_date) -> str:
         """
@@ -197,22 +202,19 @@ class CPEConnector:
         nb_results = json_objects["resultsPerPage"]
         stix_objects = []
         for i in range(nb_results):
-            cpe_infos = self._get_cpe_infos(
-                json_objects["products"][i]["cpe"]["cpeName"]
-            )
+            cpename = json_objects["products"][i]["cpe"]["cpeName"]
+            cpe_infos = self._get_cpe_infos(cpename)
             if (
                 json_objects["products"][i]["cpe"]["deprecated"] is False
                 and cpe_infos["is_hardware"] is False
             ):
-                self.helper.log_debug(
-                    f"Creating a software for the CPE: {json_objects['products'][i]['cpe']['cpeName']}"
-                )
+                self.helper.log_debug(f"Creating a software for the CPE: {cpename}")
                 software = stix2.Software(
                     type="software",
                     spec_version="2.1",
-                    id=self._get_id("software"),
+                    id=self._get_software_id(cpename),
                     name=self._get_cpe_title(json_objects["products"][i]["cpe"]),
-                    cpe=json_objects["products"][i]["cpe"]["cpeName"],
+                    cpe=cpename,
                     languages=cpe_infos["language"],
                     vendor=cpe_infos["vendor"],
                     version=cpe_infos["version"],
