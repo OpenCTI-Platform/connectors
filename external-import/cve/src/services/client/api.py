@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 
 import aiohttp
 from src.services.utils.rate_limiter import AsyncRateLimiter
@@ -25,7 +26,14 @@ class CVEClient:
 
     async def _get_session(self) -> aiohttp.ClientSession:
         if self._session is None or self._session.closed:
-            timeout = aiohttp.ClientTimeout(total=60)
+            # Use explicit read/connect phases and a larger budget than sync mode
+            # to reduce false positives on slow NVD responses.
+            timeout = aiohttp.ClientTimeout(
+                total=180,
+                connect=30,
+                sock_connect=30,
+                sock_read=120,
+            )
             self._session = aiohttp.ClientSession(
                 headers=self._headers,
                 timeout=timeout,
@@ -35,6 +43,18 @@ class CVEClient:
     async def close(self) -> None:
         if self._session and not self._session.closed:
             await self._session.close()
+
+    async def _reset_session(self) -> None:
+        """Drop current session so next retry gets a fresh TCP connection."""
+        if self._session and not self._session.closed:
+            await self._session.close()
+        self._session = None
+
+    @staticmethod
+    def _compute_retry_wait(attempt: int, backoff_factor: int) -> float:
+        # Exponential backoff + jitter to avoid synchronized retry bursts.
+        base_wait = backoff_factor * (2**attempt)
+        return base_wait + random.uniform(0.0, 1.0)
 
     async def request(self, api_url: str, params: dict | None = None):
         """Make a rate-limited GET request with retry logic."""
@@ -61,11 +81,18 @@ class CVEClient:
                         raise Exception(f"[API] Error: {error_data.get('message')}")
 
                     if response.status in retryable_statuses and attempt < max_retries:
-                        wait = backoff_factor * (2**attempt)
+                        retry_after = response.headers.get("Retry-After")
+                        wait = self._compute_retry_wait(attempt, backoff_factor)
+                        if retry_after:
+                            try:
+                                wait = max(wait, float(retry_after))
+                            except ValueError:
+                                pass
                         self.helper.connector_logger.warning(
                             f"[API] Retryable status {response.status}, "
-                            f"waiting {wait}s (attempt {attempt + 1}/{max_retries})"
+                            f"waiting {wait:.2f}s (attempt {attempt + 1}/{max_retries})"
                         )
+                        await self._reset_session()
                         await asyncio.sleep(wait)
                         continue
 
@@ -73,13 +100,17 @@ class CVEClient:
                         f"[API] Request to {api_url} failed with status "
                         f"{response.status}"
                     )
-            except aiohttp.ClientError as err:
+            except (aiohttp.ClientError, TimeoutError) as err:
+                # TimeoutError (asyncio.TimeoutError) is not a subclass of
+                # aiohttp.ClientError, so it must be caught separately.
                 if attempt < max_retries:
-                    wait = backoff_factor * (2**attempt)
+                    wait = self._compute_retry_wait(attempt, backoff_factor)
                     self.helper.connector_logger.warning(
-                        f"[API] Connection error, waiting {wait}s "
-                        f"(attempt {attempt + 1}/{max_retries}): {err}"
+                        f"[API] Transient error, waiting {wait}s "
+                        f"(attempt {attempt + 1}/{max_retries}); "
+                        f"{type(err).__name__}: {repr(err)}"
                     )
+                    await self._reset_session()
                     await asyncio.sleep(wait)
                     continue
                 raise

@@ -16,6 +16,8 @@ import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from src.services.client.api import CVEClient
+from src.services.utils.rate_limiter import AsyncRateLimiter
 
 from tests.conftest import make_cpe_name, make_vulnerability
 
@@ -415,3 +417,60 @@ async def test_no_duplicate_stix_objects_in_bundle():
         assert len(ids) == len(
             set(ids)
         ), f"Bundle {i} has duplicate STIX IDs: {[x for x in ids if ids.count(x) > 1]}"
+
+
+async def test_timeout_error_is_retried_not_silenced():
+    """TimeoutError from aiohttp must be retried by request(), not swallowed
+    as None by get_complete_collection() which would crash the TaskGroup.
+
+    We mock at the aiohttp session level so the real retry loop in request()
+    runs and catches the TimeoutError.
+    """
+
+    mock_helper = MagicMock()
+    mock_helper.connector_logger = MagicMock()
+
+    rate_limiter = AsyncRateLimiter()
+    client = CVEClient(
+        api_key="fake-key",
+        helper=mock_helper,
+        header="test/1.0",
+        rate_limiter=rate_limiter,
+    )
+
+    call_count = 0
+    success_payload = {"vulnerabilities": [], "totalResults": 0, "resultsPerPage": 0}
+
+    def make_response():
+        """Build an async context manager that fakes aiohttp response."""
+        nonlocal call_count
+        call_count += 1
+
+        if call_count < 3:
+            # Simulate timeout while reading response body
+            cm = MagicMock()
+            cm.__aenter__ = AsyncMock(side_effect=TimeoutError("simulated timeout"))
+            cm.__aexit__ = AsyncMock(return_value=False)
+            return cm
+
+        # Success on 3rd attempt
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.json = AsyncMock(return_value=success_payload)
+        cm = MagicMock()
+        cm.__aenter__ = AsyncMock(return_value=mock_resp)
+        cm.__aexit__ = AsyncMock(return_value=False)
+        return cm
+
+    mock_session = MagicMock()
+    mock_session.closed = False
+    mock_session.get = MagicMock(side_effect=lambda *a, **kw: make_response())
+
+    with patch.object(client, "_get_session", AsyncMock(return_value=mock_session)):
+        with patch("src.services.client.api.asyncio.sleep", AsyncMock()):
+            result = await client.get_complete_collection("https://fake.url")
+
+    # Should have retried and eventually succeeded — not returned None
+    assert result is not None, "TimeoutError should be retried, not silenced as None"
+    assert result == success_payload
+    assert call_count == 3
