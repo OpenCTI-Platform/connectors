@@ -97,3 +97,56 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+def test_deterministic_id(mock_opencti_connector_helper):
+    """
+    testing that two identical CPE provide the same STIX object,
+    while two different CPE do not provide the same STIX object
+
+    :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
+    """
+    settings = StubConnectorSettings()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+    _json_object = {
+        "cpe": {
+            "cpeName": "cpe:2.3:a:adobe:flash_player:18.0:*:*:*:*:internet_explorer_10:*:*",
+            "deprecated": False,
+            "titles": [
+                {
+                    "title": "Adobe Flash Player 18.0 for Internet Explorer 10",
+                    "lang": "en",
+                }
+            ],
+        }
+    }
+    _other_json_object = {
+        "cpe": {
+            "cpeName": "cpe:2.3:a:microsoft:internet_explorer:5.5:sp2:*:*:*:*:*:*",
+            "deprecated": False,
+            "titles": [
+                {
+                    "title": "Microsoft Internet Explorer 5.5 Service Pack 2",
+                    "lang": "en",
+                }
+            ],
+        }
+    }
+    json_objects = {
+        "resultsPerPage": 3,
+        "products": [
+            _json_object,
+            _json_object,
+            _other_json_object,
+        ],
+    }
+    connector = CPEConnector(config=settings, helper=helper)
+
+    stix_objects = connector._json_to_stix(json_objects)
+
+    assert len(stix_objects) == 3
+    assert stix_objects[0] == stix_objects[1]
+    assert stix_objects[0].id == stix_objects[1].id
+    assert stix_objects[0] != stix_objects[2]
+    assert stix_objects[0].id != stix_objects[2].id
