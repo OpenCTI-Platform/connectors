@@ -12,6 +12,7 @@ import stix2
 import yaml
 from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper, get_config_variable
+from stix2.canonicalization.Canonicalize import canonicalize
 
 
 class Chapsvision:
@@ -90,6 +91,20 @@ class Chapsvision:
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
+    def _generate_id_for_media_content(self, url: str) -> str:
+        """Generate deterministic STIX ID for a Media Content object
+
+        :param url: the URL of the Media Content
+        :type url: str
+        :return: STIX ID for the Media Content
+        :rtype: str
+        """
+        url = url.lower().strip()
+        data = {"url": url}
+        data = canonicalize(data, utf8=False)
+        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
+        return "media-content--" + id
+
     def generate_micro_blogging(self, doc):
         objects = []
         channel = None
@@ -114,7 +129,7 @@ class Chapsvision:
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
-                "id": "media-content--" + str(uuid.uuid4()),
+                "id": self._generate_id_for_media_content(doc["link"]),
                 "type": "media-content",
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
@@ -158,7 +173,7 @@ class Chapsvision:
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
-                "id": "media-content--" + str(uuid.uuid4()),
+                "id": self._generate_id_for_media_content(doc["link"]),
                 "type": "media-content",
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
@@ -202,7 +217,7 @@ class Chapsvision:
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
-                "id": "media-content--" + str(uuid.uuid4()),
+                "id": self._generate_id_for_media_content(doc["link"]),
                 "type": "media-content",
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
