@@ -22,12 +22,12 @@
     "CONNECTOR_SCOPE": {
       "default": [
         "identity",
-        "attack - pattern",
-        "course - of - action",
+        "attack-pattern",
+        "course-of-action",
         "relationship",
-        "x - mitre - collection",
-        "x - mitre - matrix",
-        "x - mitre - tactic"
+        "x-mitre-collection",
+        "x-mitre-matrix",
+        "x-mitre-tactic"
       ],
       "description": "The scope of the connector.",
       "items": {
