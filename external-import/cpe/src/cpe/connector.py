@@ -1,7 +1,6 @@
 import math
 import sys
 import time
-import uuid
 from datetime import datetime, timezone
 
 import langcodes
@@ -9,7 +8,6 @@ import requests
 import stix2
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
-from stix2.canonicalization.Canonicalize import canonicalize
 from urllib3.util import Retry
 
 from .settings import ConnectorSettings
@@ -112,22 +110,6 @@ class CPEConnector:
         """
         return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
-    def _get_software_id(self, cpename: str) -> str:
-        """
-        Generates a deterministic ID for a Software STIX2 object derived from a CPE
-
-        Args:
-            cpename (str): The cpename associated to the software in question
-
-        Returns:
-            str: A deterministic ID for the STIX object
-        """
-        cpename = cpename.lower().strip()
-        data = {"cpename": cpename}
-        data = canonicalize(data, utf8=False)
-        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
-        return f"software--{id}"
-
     def _get_api_url(self, start_index, start_date, end_date) -> str:
         """
         Returns the API URL to use for the connector
@@ -212,7 +194,6 @@ class CPEConnector:
                 software = stix2.Software(
                     type="software",
                     spec_version="2.1",
-                    id=self._get_software_id(cpename),
                     name=self._get_cpe_title(json_objects["products"][i]["cpe"]),
                     cpe=cpename,
                     languages=cpe_infos["language"],
