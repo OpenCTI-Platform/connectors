@@ -1,8 +1,0 @@
-from connector.connector import BitSightConnector
-from connector.settings import ConnectorSettings
-
-__all__ = [
-    "ConnectorSettings",
-    "BitSightConnector",
-]
-
