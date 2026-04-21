@@ -16,3 +16,11 @@ checkfirst:
   since: P365D
   force_reprocess: false
   tlp_level: clear
+  # Entity-type ingestion filters (default: true — all entity types are ingested).
+  # Set any of these to false to exclude that entity type and all its downstream
+  # relationships from per-article bundles, reducing OpenCTI stream pressure.
+  import_domain_name: true
+  import_infrastructure: true
+  import_channel: true
+  import_source_channel: true
+  import_media_content: true
