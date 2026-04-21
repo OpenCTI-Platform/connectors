@@ -128,9 +128,9 @@ def test_handle_event_delete(
                     "values": ["Opencti Stream Connector"],
                 },
             ],
+            "conditionConnective": "And",
+            "stixObjectType": "indicator",
         },
-        "conditionConnective": "And",
-        "stixObjectType": "indicator",
     }
     # Second call to delete the indicator
     request = mocked_send_request.call_args_list[1].kwargs["request"]
@@ -359,9 +359,9 @@ def test_process_batch_handles_delete_inline(
                     "values": ["Opencti Stream Connector"],
                 },
             ],
+            "conditionConnective": "And",
+            "stixObjectType": "indicator",
         },
-        "conditionConnective": "And",
-        "stixObjectType": "indicator",
     }
     # Second call: delete
     request = mocked_send_request.call_args_list[1].kwargs["request"]
