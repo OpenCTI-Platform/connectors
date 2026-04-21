@@ -114,6 +114,7 @@ class ZscalerConnector:
                 msg = f"Rate limit exceeded. Retrying in {retry_after} seconds..."
                 self.helper.connector_logger.warning(msg)
                 time.sleep(int(retry_after))
+                continue
 
             if response and response.status_code == 401:
                 msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
