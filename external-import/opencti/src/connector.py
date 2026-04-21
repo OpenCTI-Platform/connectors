@@ -117,7 +117,9 @@ class OpenCTI:
                     "%Y-%m-%d %H:%M:%S"
                 )
                 work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+                    self.helper.connect_id,
+                    friendly_name,
+                    is_multipart=True
                 )
 
                 for url in self.urls:
