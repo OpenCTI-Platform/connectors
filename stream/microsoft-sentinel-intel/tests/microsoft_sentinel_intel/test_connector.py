@@ -112,12 +112,25 @@ def test_handle_event_delete(
         request.url == "https://management.azure.com"
         "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
         "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/queryIndicators?api-version=2025-03-01"
+        "/query?api-version=2025-07-01-preview"
     )
     assert json.loads(request.body) == {
-        "keywords": event_data_indicator["id"],
-        "sources": ["Opencti Stream Connector"],
-        "patternTypes": ["ipv4-addr"],
+        "condition": {
+            "clauses": [
+                {
+                    "field": "id",
+                    "operator": "Equals",
+                    "values": [event_data_indicator["id"]],
+                },
+                {
+                    "field": "source",
+                    "operator": "Equals",
+                    "values": ["Opencti Stream Connector"],
+                },
+            ],
+        },
+        "conditionConnective": "And",
+        "stixObjectType": "indicator",
     }
     # Second call to delete the indicator
     request = mocked_send_request.call_args_list[1].kwargs["request"]
@@ -134,7 +147,7 @@ def test_handle_event_delete(
 def test_handle_event_delete_skips_when_not_found(
     mocker: MockerFixture, connector: Connector, event_data_indicator: dict
 ) -> None:
-    """When queryIndicators returns 0 results, deletion is silently skipped."""
+    """When the /query endpoint returns 0 results, deletion is silently skipped."""
     mocked_send_request = mocker.patch(
         "microsoft_sentinel_intel.client.PipelineClient.send_request"
     )
@@ -155,7 +168,7 @@ def test_handle_event_delete_skips_when_not_found(
 def test_handle_event_delete_missing_value_key(
     mocker: MockerFixture, connector: Connector, event_data_indicator: dict
 ) -> None:
-    """When queryIndicators response lacks 'value' key, raise ConnectorClientError."""
+    """When /query response lacks 'value' key, raise ConnectorClientError."""
     from microsoft_sentinel_intel.errors import ConnectorClientError
 
     mocked_send_request = mocker.patch(
@@ -333,9 +346,22 @@ def test_process_batch_handles_delete_inline(
     request = mocked_send_request.call_args_list[0].kwargs["request"]
     assert request.method == "POST"
     assert json.loads(request.body) == {
-        "keywords": "indicator--1",
-        "sources": ["Opencti Stream Connector"],
-        "patternTypes": ["ipv4-addr"],
+        "condition": {
+            "clauses": [
+                {
+                    "field": "id",
+                    "operator": "Equals",
+                    "values": ["indicator--1"],
+                },
+                {
+                    "field": "source",
+                    "operator": "Equals",
+                    "values": ["Opencti Stream Connector"],
+                },
+            ],
+        },
+        "conditionConnective": "And",
+        "stixObjectType": "indicator",
     }
     # Second call: delete
     request = mocked_send_request.call_args_list[1].kwargs["request"]

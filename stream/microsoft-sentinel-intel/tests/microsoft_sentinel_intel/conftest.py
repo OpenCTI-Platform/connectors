@@ -40,6 +40,7 @@ def fixture_microsoft_sentinel_intel_config_dict() -> dict[str, dict[str, str]]:
             "extra_labels": "label",
             "workspace_api_version": "2024-02-01-preview",
             "management_api_version": "2025-03-01",
+            "query_api_version": "2025-07-01-preview",
             "batch_mode": False,
             "batch_size": 100,
             "batch_timeout": 30,

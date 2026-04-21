@@ -69,13 +69,31 @@ class ConnectorClient:
             ),
         )
 
-    def query_indicators(self, content: dict[str, Any]) -> HttpResponse:
+    def query_stix_objects(self, stix_id: str, source_system: str) -> HttpResponse:
+        content = {
+            "condition": {
+                "clauses": [
+                    {
+                        "field": "id",
+                        "operator": "Equals",
+                        "values": [stix_id],
+                    },
+                    {
+                        "field": "source",
+                        "operator": "Equals",
+                        "values": [source_system],
+                    },
+                ],
+                "conditionConnective": "And",
+                "stixObjectType": "indicator",
+            },
+        }
         return self._send_request(
             client=self.management_client,
             request=self.management_client.post(
-                url=f"{self.management_endpoint}/queryIndicators",
+                url=f"{self.management_endpoint}/query",
                 params={
-                    "api-version": self.config.microsoft_sentinel_intel.management_api_version
+                    "api-version": self.config.microsoft_sentinel_intel.query_api_version
                 },
                 content=content,
                 headers={"Content-Type": "application/json"},
@@ -83,12 +101,11 @@ class ConnectorClient:
         )
 
     def delete_indicator_by_id(
-        self, indicator_id: str, source_system: str, pattern_type: str | None = None
+        self, indicator_id: str, source_system: str
     ) -> HttpResponse | None:
-        content: dict[str, Any] = {"keywords": indicator_id, "sources": [source_system]}
-        if pattern_type:
-            content["patternTypes"] = [pattern_type]
-        response = self.query_indicators(content=content)
+        response = self.query_stix_objects(
+            stix_id=indicator_id, source_system=source_system
+        )
 
         try:
             body = json.loads(response.body())
