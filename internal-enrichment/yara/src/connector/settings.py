@@ -35,7 +35,7 @@ class YaraConfig(BaseConfigModel):
 
     tlp_level: TLPLevel | None = Field(
         description="Default TLP marking to apply to created relationships when neither the artifact nor the indicator have markings.",
-        default=None,
+        default=TLPLevel.CLEAR,
     )
 
 

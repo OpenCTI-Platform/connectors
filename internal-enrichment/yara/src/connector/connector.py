@@ -65,6 +65,7 @@ class YaraConnector:
         standard_id
         pattern
         pattern_type
+        valid_from
         objectMarking {
             standard_id
         }
@@ -109,6 +110,7 @@ class YaraConnector:
         artifact_contents = self._get_artifact_contents(artifact)
 
         bundle_objects = []
+        matched_indicators = {}
         errors = []
         for artifact_content in artifact_contents:
             for indicator in yara_indicators:
@@ -141,11 +143,21 @@ class YaraConnector:
                             object_marking_refs=marking_refs
                         )
                     bundle_objects.append(relationship)
+                    # Include matched indicator in bundle so cleanup_inconsistent_bundle
+                    # does not remove the relationship referencing it
+                    if indicator["standard_id"] not in matched_indicators:
+                        matched_indicators[indicator["standard_id"]] = stix2.Indicator(
+                            id=indicator["standard_id"],
+                            name=indicator["name"],
+                            pattern=indicator["pattern"],
+                            pattern_type=indicator["pattern_type"],
+                            valid_from=indicator["valid_from"],
+                        )
                     self.helper.connector_logger.debug(
                         f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
                     )
 
-        return bundle_objects, errors
+        return bundle_objects + list(matched_indicators.values()), errors
 
     def _process_message(self, data: dict) -> str:
         entity_id = data["entity_id"]
@@ -169,16 +181,14 @@ class YaraConnector:
                             break
 
         # Check scope — forward original bundle if entity type is out of scope
-        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_type = entity_id.split("--")[0].lower()
-        if entity_type not in scopes:
+        entity_type = data.get("entity_type")
+        if entity_type not in self.config.connector.scope:
             self.helper.connector_logger.info(
                 "Entity type not in connector scope, forwarding original bundle",
                 {"entity_id": entity_id, "entity_type": entity_type},
             )
-            if stix_objects:
-                bundle = self.helper.stix2_create_bundle(stix_objects)
-                self.helper.send_stix2_bundle(bundle)
+            bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
             return "Entity type not in scope"
 
         self.helper.connector_logger.info(f"Enriching {entity_id}")
@@ -188,6 +198,8 @@ class YaraConnector:
         yara_indicators = self._get_yara_indicators()
         if not yara_indicators:
             self.helper.connector_logger.debug("No YARA Indicators to match")
+            bundle = self.helper.stix2_create_bundle(stix_objects)
+            self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
             return "No YARA Indicators to match"
 
         rule_count = len(yara_indicators)
@@ -198,11 +210,13 @@ class YaraConnector:
 
         if new_objects:
             all_objects = stix_objects + [self.author] + new_objects
-            bundle = self.helper.stix2_create_bundle(all_objects)
-            self.helper.send_stix2_bundle(bundle)
-        elif stix_objects:
-            bundle = self.helper.stix2_create_bundle(stix_objects)
-            self.helper.send_stix2_bundle(bundle)
+        else:
+            all_objects = stix_objects
+        self.helper.connector_logger.debug(
+            f"Sending {len(all_objects)} new relationships to OpenCTI"
+        )
+        bundle = self.helper.stix2_create_bundle(all_objects)
+        self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
 
         if errors:
             return f"Completed with {len(errors)} YARA error(s): {'; '.join(errors)}"

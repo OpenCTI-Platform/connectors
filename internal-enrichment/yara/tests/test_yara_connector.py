@@ -124,10 +124,13 @@ class TestScanArtifact:
                 "name": "test_rule",
                 "standard_id": "indicator--b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
                 "pattern": 'rule test_rule { strings: $a = "test data" condition: $a }',
+                "pattern_type": "yara",
+                "valid_from": "2025-01-01T00:00:00Z",
             }
         ]
         result, errors = connector._scan_artifact(artifact, indicators)
-        assert len(result) == 1
+        # result contains 1 relationship + 1 indicator
+        assert len(result) == 2
         assert result[0]["relationship_type"] == "related-to"
         assert result[0]["created_by_ref"] == connector.author["id"]
         assert errors == []
