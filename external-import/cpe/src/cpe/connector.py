@@ -2,7 +2,7 @@ import math
 import sys
 import time
 from datetime import datetime, timezone
-from uuid import uuid4
+from uuid import uuid4, uuid5, NAMESPACE_DNS
 
 import langcodes
 import requests
@@ -111,16 +111,19 @@ class CPEConnector:
         """
         return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
-    def _get_id(self, type: str) -> str:
+    def _get_id(self, type: str, name: str = "") -> str:
         """
-        Generates a unique ID for a STIX2 object
+        Generates a deterministic ID for a STIX2 object
 
         Args:
             type (str): The type of the object to generate an ID for
+            name (str): The name/key used for deterministic UUID5 generation
 
         Returns:
-            str: A unique ID for the STIX object
+            str: A deterministic ID for the STIX object
         """
+        if name:
+            return f"{type}--{str(uuid5(NAMESPACE_DNS, name))}"
         return f"{type}--{str(uuid4())}"
 
     def _get_api_url(self, start_index, start_date, end_date) -> str:
@@ -210,7 +213,7 @@ class CPEConnector:
                 software = stix2.Software(
                     type="software",
                     spec_version="2.1",
-                    id=self._get_id("software"),
+                    id=self._get_id("software", json_objects["products"][i]["cpe"]["cpeName"]),
                     name=self._get_cpe_title(json_objects["products"][i]["cpe"]),
                     cpe=json_objects["products"][i]["cpe"]["cpeName"],
                     languages=cpe_infos["language"],
