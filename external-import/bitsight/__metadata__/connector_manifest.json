@@ -1,0 +1,20 @@
+{
+  "title": "BitSight",
+  "slug": "bitsight",
+  "description": "Import alerts from BitSight (Cybersixgill) API into OpenCTI.",
+  "short_description": "BitSight external import connector for actionable alerts.",
+  "logo": null,
+  "use_cases": [],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/bitsight",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-bitsight",
+  "container_type": "EXTERNAL_IMPORT"
+}
+
