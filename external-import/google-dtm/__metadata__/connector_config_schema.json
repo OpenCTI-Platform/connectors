@@ -59,7 +59,6 @@
       "writeOnly": true
     },
     "GOOGLE_DTM_TLP": {
-      "default": "amber+strict",
       "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
       "enum": [
         "clear",
@@ -69,7 +68,8 @@
         "amber+strict",
         "red"
       ],
-      "type": "string"
+      "type": "string",
+      "default": "amber+strict"
     },
     "GOOGLE_DTM_IMPORT_START_DATE": {
       "default": "P10D",

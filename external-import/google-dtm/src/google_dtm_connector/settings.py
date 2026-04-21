@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, SecretStr, TypeAdapter, field_validator
 
 
@@ -42,15 +43,8 @@ class GoogleDTMConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="Google DTM API Key",
     )
-    tlp: Literal[
-        "clear",
-        "white",
-        "green",
-        "amber",
-        "amber+strict",
-        "red",
-    ] = Field(
-        default="amber+strict",
+    tlp: TLPLevel = Field(
+        default=TLPLevel.AMBER_STRICT,
         description="Default Traffic Light Protocol (TLP) marking for imported data.",
     )
     import_start_date: timedelta = Field(
