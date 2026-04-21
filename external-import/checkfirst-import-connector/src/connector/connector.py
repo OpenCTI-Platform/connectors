@@ -45,6 +45,11 @@ class CheckfirstImportConnector:
         self.converter = ConverterToStix(
             helper=helper,
             tlp_level=self.config.checkfirst.tlp_level.value,
+            import_domain_name=self.config.checkfirst.import_domain_name,
+            import_infrastructure=self.config.checkfirst.import_infrastructure,
+            import_channel=self.config.checkfirst.import_channel,
+            import_source_channel=self.config.checkfirst.import_source_channel,
+            import_media_content=self.config.checkfirst.import_media_content,
         )
 
     def _create_pravda_infrastructure_entities(self) -> list[BaseIdentifiedEntity]:

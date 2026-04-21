@@ -73,12 +73,23 @@ class ConverterToStix:
             "amber+strict",
             "red",
         ] = "clear",
+        import_domain_name: bool = True,
+        import_infrastructure: bool = True,
+        import_channel: bool = True,
+        import_source_channel: bool = True,
+        import_media_content: bool = True,
     ):
         self.helper = helper
 
         self.author = OrganizationAuthor(name="CheckFirst")
         self.tlp_marking = TLPMarking(level=tlp_level.lower())
         self.intrusion_set = self._create_intrusion_set()
+
+        self.import_domain_name = import_domain_name
+        self.import_infrastructure = import_infrastructure
+        self.import_channel = import_channel
+        self.import_source_channel = import_source_channel
+        self.import_media_content = import_media_content
 
         self.required_objects = [
             self.author,
@@ -314,131 +325,174 @@ class ConverterToStix:
         try:
             octi_objects = []
 
-            # --- Domain observable (extracted from article URL) ---
             article_domain = urlparse(article.url).netloc
-            domain_name = self.create_domain_name(value=article_domain)
+
+            # --- Domain observable (extracted from article URL) ---
+            domain_name = (
+                self.create_domain_name(value=article_domain)
+                if self.import_domain_name
+                else None
+            )
             # --- Infrastructure wrapping the publishing domain ---
-            infrastructure = self.create_infrastructure(
-                name=article_domain,
-                first_seen=article.published_date,
+            infrastructure = (
+                self.create_infrastructure(
+                    name=article_domain,
+                    first_seen=article.published_date,
+                )
+                if self.import_infrastructure
+                else None
             )
             # --- Channel as website (the publishing domain/subdomain) ---
-            channel = self.create_channel(
-                name=article_domain,
-                source_url=article.url,
+            channel = (
+                self.create_channel(
+                    name=article_domain,
+                    source_url=article.url,
+                )
+                if self.import_channel
+                else None
             )
             # --- Source as Channel (Telegram or website origin) ---
-            source_channel = self.create_channel(
-                name=article.source_title,
-                source_url=article.source_url,
+            source_channel = (
+                self.create_channel(
+                    name=article.source_title,
+                    source_url=article.source_url,
+                )
+                if self.import_source_channel
+                else None
             )
             # --- Content (article) ---
-            content = self.create_media_content(
-                title=article.title,
-                description=article.og_description,
-                url=article.url,
-                publication_date=article.published_date,
+            content = (
+                self.create_media_content(
+                    title=article.title,
+                    description=article.og_description,
+                    url=article.url,
+                    publication_date=article.published_date,
+                )
+                if self.import_media_content
+                else None
             )
+
+            # --- Entities ---
+            if domain_name:
+                octi_objects.append(domain_name)
+            if infrastructure:
+                octi_objects.append(infrastructure)
+            if channel:
+                octi_objects.append(channel)
+            if source_channel:
+                octi_objects.append(source_channel)
+            if content:
+                octi_objects.append(content)
 
             # --- Relationships ---
             # Campaign → uses → Infrastructure
-            campaign_uses_infra = self.create_relationship(
-                source=campaign,
-                relationship_type="uses",
-                target=infrastructure,
-            )
+            if infrastructure:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=campaign,
+                        relationship_type="uses",
+                        target=infrastructure,
+                    )
+                )
             # Campaign → uses → Channel as website
-            campaign_uses_channel = self.create_relationship(
-                source=campaign,
-                relationship_type="uses",
-                target=channel,
-                start_time=article.published_date,
-            )
+            if channel:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=campaign,
+                        relationship_type="uses",
+                        target=channel,
+                        start_time=article.published_date,
+                    )
+                )
             # Infrastructure → consists-of → DomainName
-            infra_consists_of_domain = self.create_relationship(
-                source=infrastructure,
-                relationship_type="consists-of",
-                target=domain_name,
-            )
+            if infrastructure and domain_name:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=infrastructure,
+                        relationship_type="consists-of",
+                        target=domain_name,
+                    )
+                )
             # Channel as website → related-to → Infrastructure
-            channel_related_to_infra = self.create_relationship(
-                source=channel,
-                relationship_type="related-to",
-                target=infrastructure,
-                start_time=article.published_date,
-            )
-            # DomainName → related-to → Channel as website
-            domain_related_to_channel = self.create_relationship(
-                source=domain_name,
-                relationship_type="related-to",
-                target=channel,
-                start_time=article.published_date,
-            )
-            # Channel as website → publishes → Content
-            publishes = self.create_relationship(
-                source=channel,
-                relationship_type="publishes",
-                target=content,
-                start_time=article.published_date,
-            )
-            # Channel as website → related-to → Source as Channel
-            channel_uses_source = self.create_relationship(
-                source=channel,
-                relationship_type="related-to",
-                target=source_channel,
-                start_time=article.published_date,
-            )
-            # Content → related-to → Source as Channel
-            content_related_to_source = self.create_relationship(
-                source=content,
-                relationship_type="related-to",
-                target=source_channel,
-                start_time=article.published_date,
-            )
-
-            octi_objects.extend(
-                [
-                    domain_name,
-                    infrastructure,
-                    channel,
-                    source_channel,
-                    content,
-                    campaign_uses_infra,
-                    campaign_uses_channel,
-                    infra_consists_of_domain,
-                    channel_related_to_infra,
-                    domain_related_to_channel,
-                    publishes,
-                    channel_uses_source,
-                    content_related_to_source,
-                ]
-            )
-
-            # If the article domain is a known news-pravda.com subdomain,
-            # link the Channel as website to its parent pravda-XX.com domain.
-            parent_domain_str = SUBDOMAIN_TO_DOMAIN.get(article_domain)
-            if parent_domain_str:
-                parent_domain_name = self.create_domain_name(value=parent_domain_str)
-                octi_objects.append(parent_domain_name)
+            if channel and infrastructure:
                 octi_objects.append(
                     self.create_relationship(
                         source=channel,
                         relationship_type="related-to",
-                        target=parent_domain_name,
+                        target=infrastructure,
+                        start_time=article.published_date,
+                    )
+                )
+            # DomainName → related-to → Channel as website
+            if domain_name and channel:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=domain_name,
+                        relationship_type="related-to",
+                        target=channel,
+                        start_time=article.published_date,
+                    )
+                )
+            # Channel as website → publishes → Content
+            if channel and content:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=channel,
+                        relationship_type="publishes",
+                        target=content,
+                        start_time=article.published_date,
+                    )
+                )
+            # Channel as website → related-to → Source as Channel
+            if channel and source_channel:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=channel,
+                        relationship_type="related-to",
+                        target=source_channel,
+                        start_time=article.published_date,
+                    )
+                )
+            # Content → related-to → Source as Channel
+            if content and source_channel:
+                octi_objects.append(
+                    self.create_relationship(
+                        source=content,
+                        relationship_type="related-to",
+                        target=source_channel,
                         start_time=article.published_date,
                     )
                 )
 
+            # If the article domain is a known news-pravda.com subdomain,
+            # link the Channel as website to its parent pravda-XX.com domain.
+            if channel:
+                parent_domain_str = SUBDOMAIN_TO_DOMAIN.get(article_domain)
+                if parent_domain_str:
+                    parent_domain_name = self.create_domain_name(
+                        value=parent_domain_str
+                    )
+                    octi_objects.append(parent_domain_name)
+                    octi_objects.append(
+                        self.create_relationship(
+                            source=channel,
+                            relationship_type="related-to",
+                            target=parent_domain_name,
+                            start_time=article.published_date,
+                        )
+                    )
+
             # Content → related-to → alternate URLs
-            for alt in parse_alternates(article.alternates_urls):
-                alt_url = self.create_url(value=alt)
-                alt_rel = self.create_relationship(
-                    source=content,
-                    relationship_type="related-to",
-                    target=alt_url,
-                    start_time=article.published_date,
-                )
-                octi_objects.extend([alt_url, alt_rel])
+            if content:
+                for alt in parse_alternates(article.alternates_urls):
+                    alt_url = self.create_url(value=alt)
+                    alt_rel = self.create_relationship(
+                        source=content,
+                        relationship_type="related-to",
+                        target=alt_url,
+                        start_time=article.published_date,
+                    )
+                    octi_objects.extend([alt_url, alt_rel])
 
             # To limit duplicates, do not return shared entities such as Author, IntrusionSet or Campaign
             return octi_objects

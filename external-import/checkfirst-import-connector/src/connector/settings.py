@@ -79,6 +79,43 @@ class CheckfirstImportConnectorConfig(BaseConfigModel):
         description="Skip any API row larger than this approximate number of bytes.",
         default=None,
     )
+    import_domain_name: bool = Field(
+        description=(
+            "If false, Domain-Name observables (extracted from article URLs) will not be created. "
+            "Disabling this also suppresses the Infrastructure→consists-of→Domain and Domain→related-to→Channel relationships."
+        ),
+        default=True,
+    )
+    import_infrastructure: bool = Field(
+        description=(
+            "If false, Infrastructure objects (linked to each article's publishing domain) will not be created. "
+            "Disabling this also suppresses Campaign→uses→Infrastructure, Infrastructure→consists-of→Domain, "
+            "and Channel→related-to→Infrastructure."
+        ),
+        default=True,
+    )
+    import_channel: bool = Field(
+        description=(
+            "If false, Channel objects (website or subdomain of the publishing domain) will not be created. "
+            "Disabling this also suppresses Campaign→uses→Channel, Channel→related-to→Infrastructure, "
+            "Domain→related-to→Channel, Channel→publishes→Content, and Channel→related-to→SourceChannel."
+        ),
+        default=True,
+    )
+    import_source_channel: bool = Field(
+        description=(
+            "If false, Source Channel objects (Telegram channel or origin website) will not be created. "
+            "Disabling this also suppresses Channel→related-to→SourceChannel and MediaContent→related-to→SourceChannel."
+        ),
+        default=True,
+    )
+    import_media_content: bool = Field(
+        description=(
+            "If false, Media-Content objects (article) will not be created. "
+            "Disabling this also suppresses Channel→publishes→Content and MediaContent→related-to→SourceChannel."
+        ),
+        default=True,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
