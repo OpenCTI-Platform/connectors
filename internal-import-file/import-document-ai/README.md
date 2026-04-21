@@ -75,17 +75,19 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false                                          | No        | Enable/disable automatic import of files matching the scope.                             |
 | Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                                          | No        | If enabled, bundles are sent for validation before import.                               |
 | Log Level                | `log_level`              | `CONNECTOR_LOG_LEVEL`              | info                                           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Web Service URL          | `web_service_url`        | `CONNECTOR_WEB_SERVICE_URL`        | https://importdoc.ariane.filigran.io           | No        | The URL of the Ariane extraction service running the AI model.                           |
-| License Key PEM          | `licence_key_pem`        | `CONNECTOR_LICENCE_KEY_PEM`        | /                                              | Yes       | The Enterprise Edition license certificate in PEM format (provided by Filigran).         |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the Import Document AI connector:
 
-| Parameter              | config.yml `import_document` | Docker environment variable             | Default | Mandatory | Description                                                                                |
-|------------------------|------------------------------|-----------------------------------------|---------|-----------|--------------------------------------------------------------------------------------------|
-| Create Indicator       | `create_indicator`           | `IMPORT_DOCUMENT_CREATE_INDICATOR`      | false   | No        | If `true`, creates an Indicator for each extracted observable.                             |
-| Include Relationships  | `include_relationships`      | `IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS` | true    | No        | If `false`, removes all ML-predicted relationships from the imported bundle.               |
+| Parameter              | config.yml `import_document_ai` | Docker environment variable                | Default                              | Mandatory | Description                                                                              |
+|------------------------|---------------------------------|--------------------------------------------|--------------------------------------|-----------|------------------------------------------------------------------------------------------|
+| API Base URL           | `api_base_url`                  | `IMPORT_DOCUMENT_AI_API_BASE_URL`          | https://importdoc.ariane.filigran.io | No        | The URL of the Ariane extraction service running the AI model.                           |
+| API Key PEM            | `api_key`                       | `IMPORT_DOCUMENT_AI_API_KEY`               | /                                    | Yes       | The Enterprise Edition license certificate in PEM format (provided by Filigran).         |
+| Create Indicator       | `create_indicator`              | `IMPORT_DOCUMENT_AI_CREATE_INDICATOR`      | false                                | No        | If `true`, creates an Indicator for each extracted observable.                           |
+| Include Relationships  | `include_relationships`         | `IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS` | true                                 | No        | If `false`, removes all ML-predicted relationships from the imported bundle.             |
+
+Legacy `connector.web_service_url`, `connector.licence_key_pem`, and `import_document.*` config keys are still accepted for backward compatibility, as are `CONNECTOR_WEB_SERVICE_URL`, `CONNECTOR_LICENCE_KEY_PEM`, `IMPORT_DOCUMENT_CREATE_INDICATOR`, and `IMPORT_DOCUMENT_INCLUDE_RELATIONSHIPS`. Deprecation warnings are emitted when those legacy names are used.
 
 ## Deployment
 
