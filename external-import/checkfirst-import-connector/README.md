@@ -125,3 +125,61 @@ See `.env.sample` for a ready-to-use local template.
 - The connector saves the last successfully processed API page in OpenCTI state; on restart it resumes from the next page.
 - The `since` filter is resolved to an absolute UTC datetime at connector startup; duration strings like `P365D` are supported for convenience.
 - API requests use a 300-second timeout per page. The Checkfirst infrastructure can be slow to respond on large result pages.
+
+
+### Limiting ingestion load (recommended for large backfills)
+
+When importing large historical datasets (for example `since=2023-01-01`), this connector can generate a very high relationship volume for the same campaign entities. This can increase pressure on OpenCTI workers and stream processing.
+
+You can limit this load in two complementary ways:
+
+1. Limit oversized API rows with `CHECKFIRST_MAX_ROW_BYTES`
+- Purpose: skip very large rows before conversion.
+- Effect: reduces unexpectedly heavy items in the pipeline.
+- Trade-off: skipped rows are not imported.
+
+Examples:
+
+```env
+# .env
+CHECKFIRST_MAX_ROW_BYTES=200000
+```
+
+```yaml
+# config.yml
+checkfirst:
+  max_row_bytes: 200000
+```
+
+2. Filter per-article entity types with `CHECKFIRST_IMPORT_*`
+- Purpose: reduce the number of created entities/relationships for each article.
+- Effect: lowers update volume on campaign-linked objects.
+- Trade-off: imported graph is less complete.
+
+Available filter variables:
+- `CHECKFIRST_IMPORT_DOMAIN_NAME`
+- `CHECKFIRST_IMPORT_INFRASTRUCTURE`
+- `CHECKFIRST_IMPORT_CHANNEL`
+- `CHECKFIRST_IMPORT_SOURCE_CHANNEL`
+- `CHECKFIRST_IMPORT_MEDIA_CONTENT`
+
+Examples:
+
+```env
+# .env
+CHECKFIRST_IMPORT_DOMAIN_NAME=false
+CHECKFIRST_IMPORT_INFRASTRUCTURE=false
+CHECKFIRST_IMPORT_CHANNEL=true
+CHECKFIRST_IMPORT_SOURCE_CHANNEL=true
+CHECKFIRST_IMPORT_MEDIA_CONTENT=true
+```
+
+```yaml
+# config.yml
+checkfirst:
+  import_domain_name: false
+  import_infrastructure: false
+  import_channel: true
+  import_source_channel: true
+  import_media_content: true
+```
