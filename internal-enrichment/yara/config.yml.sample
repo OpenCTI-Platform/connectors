@@ -3,10 +3,11 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'INTERNAL_ENRICHMENT'
-  id: 'ChangeMe'
+  id: '840210d2-cb25-4841-81c2-850b431918ee'
   name: 'YARA'
   scope: 'Artifact' # MIME type or SCO
   auto: true # Enable/disable auto-enrichment of observables
-  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
   log_level: 'info'
+
+yara:
+  tlp_level: 'clear'
