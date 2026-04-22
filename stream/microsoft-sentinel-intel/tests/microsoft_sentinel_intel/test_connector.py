@@ -112,12 +112,25 @@ def test_handle_event_delete(
         request.url == "https://management.azure.com"
         "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
         "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/queryIndicators?api-version=2025-03-01"
+        "/query?api-version=2025-07-01-preview"
     )
     assert json.loads(request.body) == {
-        "keywords": event_data_indicator["id"],
-        "sources": ["Opencti Stream Connector"],
-        "patternTypes": ["ipv4-addr"],
+        "condition": {
+            "clauses": [
+                {
+                    "field": "id",
+                    "operator": "Equals",
+                    "values": [event_data_indicator["id"]],
+                },
+                {
+                    "field": "source",
+                    "operator": "Equals",
+                    "values": ["Opencti Stream Connector"],
+                },
+            ],
+            "conditionConnective": "And",
+            "stixObjectType": "indicator",
+        },
     }
     # Second call to delete the indicator
     request = mocked_send_request.call_args_list[1].kwargs["request"]
@@ -149,6 +162,45 @@ def test_handle_event_delete_skips_when_not_found(
     )
     # Only the query call is made; no delete request follows
     assert mocked_send_request.call_count == 1
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_handle_event_delete_uses_stixindicators_resource_id(
+    mocker: MockerFixture, connector: Connector, event_data_indicator: dict
+) -> None:
+    """When /query returns stixindicators resources, delete by returned ARM id."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request"
+    )
+    mocked_send_request.side_effect = [
+        Mock(
+            status_code=200,
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatintelligence/main/stixindicators/EncodedSource---indicator--uuid",
+                            "name": "EncodedSource---indicator--uuid",
+                        }
+                    ]
+                }
+            ),
+        ),
+        Mock(status_code=200),
+    ]
+
+    connector._handle_event(
+        Event(event="delete", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    assert mocked_send_request.call_count == 2
+    request = mocked_send_request.call_args_list[1].kwargs["request"]
+    assert request.method == "DELETE"
+    assert (
+        request.url == "https://management.azure.com"
+        "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
+        "/providers/Microsoft.SecurityInsights/threatintelligence/main/stixindicators/EncodedSource---indicator--uuid?api-version=2025-07-01-preview"
+    )
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -333,9 +385,22 @@ def test_process_batch_handles_delete_inline(
     request = mocked_send_request.call_args_list[0].kwargs["request"]
     assert request.method == "POST"
     assert json.loads(request.body) == {
-        "keywords": "indicator--1",
-        "sources": ["Opencti Stream Connector"],
-        "patternTypes": ["ipv4-addr"],
+        "condition": {
+            "clauses": [
+                {
+                    "field": "id",
+                    "operator": "Equals",
+                    "values": ["indicator--1"],
+                },
+                {
+                    "field": "source",
+                    "operator": "Equals",
+                    "values": ["Opencti Stream Connector"],
+                },
+            ],
+            "conditionConnective": "And",
+            "stixObjectType": "indicator",
+        },
     }
     # Second call: delete
     request = mocked_send_request.call_args_list[1].kwargs["request"]
