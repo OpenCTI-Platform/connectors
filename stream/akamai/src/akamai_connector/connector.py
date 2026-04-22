@@ -23,37 +23,27 @@ class AkamaiConnector:
     with an Akamai Client List.
     """
 
-    def __init__(
-        self,
-        helper,
-        akamai_base_url: str,
-        client_token: str,
-        client_secret: str,
-        access_token: str,
-        client_list_id: str,
-    ):
-        """
-        Initialize Akamai API session with EdgeGrid authentication.
-        """
-
+    def __init__(self, config, helper):
         self.helper = helper
+        self.config = config
 
-        # base URL
-        self.base_url = akamai_base_url.rstrip("/")
+        # Convert HttpUrl (pydantic) to string before string operations
+        self.base_url = str(self.config.akamai.base_url).rstrip("/")
 
-        self.client_list_id = client_list_id.strip()
+        # Client list ID (single list)
+        self.client_list_id = self.config.akamai.client_list_id.strip()
 
-        # Create persistent HTTP session
+        # Create HTTP session
         self.session = requests.Session()
 
-        # Apply EdgeGrid authentication
+        # Apply EdgeGrid authentication using secrets from config
         self.session.auth = EdgeGridAuth(
-            client_token=client_token,
-            client_secret=client_secret,
-            access_token=access_token,
+            client_token=self.config.akamai.client_token.get_secret_value(),
+            client_secret=self.config.akamai.client_secret.get_secret_value(),
+            access_token=self.config.akamai.access_token.get_secret_value(),
         )
 
-        # Enable SSL verification
+        # Enable SSL verification (production-ready)
         self.session.verify = True
 
         # Default headers
@@ -96,7 +86,6 @@ class AkamaiConnector:
         Handle OpenCTI stream message.
         """
         try:
-
             payload = msg.data
             if isinstance(payload, str):
                 payload = json.loads(payload)
@@ -128,7 +117,9 @@ class AkamaiConnector:
                 self._remove_ip(ip)
 
         except Exception as e:
-            self.helper.connector_logger.error(f"Error processing message: {str(e)}")
+            self.helper.connector_logger.error(
+                f"Error processing message: {str(e)}"
+            )
 
     def _add_ip(self, ip):
         """

@@ -3,33 +3,25 @@ import time
 import traceback
 
 from akamai_connector.connector import AkamaiConnector
+from akamai_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-from settings import get_config
+
 
 if __name__ == "__main__":
     try:
-        # Initialize OpenCTI helper
-        # This automatically loads OpenCTI-related environment variables
+        # Load configuration using SDK
+        settings = ConnectorSettings()
 
-        helper = OpenCTIConnectorHelper({})
+        # Initialize OpenCTI helper with SDK config
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        # Load connector configuration
-        # Configuration is centralized in settings.py for maintainability
-        config = get_config(helper)
+        # Initialize connector with settings object
+        # Using SDK-based configuration instead of manual environment parsing
+        connector = AkamaiConnector(config=settings, helper=helper)
 
-        # Instantiate the Akamai connector with the loaded configuration
-        # Using **config allows flexible and clean parameter passing
-        connector = AkamaiConnector(helper=helper, **config)
-
-        # Start the connector
-        # This will listen to the OpenCTI live stream and process events
         connector.run()
 
     except Exception:
-
         traceback.print_exc()
-
-        # Small delay before exit to avoid crash loops in container environments
         time.sleep(10)
-
         sys.exit(1)
