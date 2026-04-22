@@ -13,4 +13,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| YARA_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `null` | Default TLP marking to apply to created relationships when neither the artifact nor the indicator have markings. |
+| YARA_TLP_LEVEL | `string` |  | `clear` `white` `green` `amber` `amber+strict` `red` | `"clear"` | Default TLP marking to apply to created relationships when neither the artifact nor the indicator have markings. |

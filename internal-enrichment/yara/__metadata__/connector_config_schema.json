@@ -62,7 +62,7 @@
         "red"
       ],
       "type": "string",
-      "default": null
+      "default": "clear"
     }
   },
   "required": [
