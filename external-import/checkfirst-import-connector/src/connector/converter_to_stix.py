@@ -466,6 +466,10 @@ class ConverterToStix:
 
             # If the article domain is a known news-pravda.com subdomain,
             # link the Channel as website to its parent pravda-XX.com domain.
+            # The parent DomainName is always created here regardless of import_domain_name,
+            # because it is structural context for the Channel relationship rather than
+            # an article-derived observable — omitting it would leave the Channel unlinked
+            # from the Pravda network topology.
             if channel:
                 parent_domain_str = SUBDOMAIN_TO_DOMAIN.get(article_domain)
                 if parent_domain_str:
