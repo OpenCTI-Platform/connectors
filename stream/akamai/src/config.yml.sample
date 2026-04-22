@@ -1,0 +1,25 @@
+# --- OpenCTI configuration ---
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'
+  name: 'Akamai Connector'
+  scope: 'indicator'
+  log_level: 'info'
+  live_stream_id: 'live'
+
+# --- Akamai configuration ---
+akamai:
+  base_url: 'https://your-host.akamaiapis.net'
+  client_token: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  access_token: 'ChangeMe'
+  client_list_id: 'ChangeMe'
+
+
+ssl_verify: true
+
+
