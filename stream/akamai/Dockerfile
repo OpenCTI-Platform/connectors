@@ -11,7 +11,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Set working directory inside container
-COPY src /opt/opencti-connector-akamai
 WORKDIR /opt/opencti-connector-akamai
 
 # Install system dependencies required for cryptography and EdgeGrid
