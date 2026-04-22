@@ -117,9 +117,7 @@ class AkamaiConnector:
                 self._remove_ip(ip)
 
         except Exception as e:
-            self.helper.connector_logger.error(
-                f"Error processing message: {str(e)}"
-            )
+            self.helper.connector_logger.error(f"Error processing message: {str(e)}")
 
     def _add_ip(self, ip):
         """
