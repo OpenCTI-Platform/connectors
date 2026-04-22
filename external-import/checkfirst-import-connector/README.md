@@ -155,6 +155,7 @@ checkfirst:
 - Purpose: reduce the number of created entities/relationships for each article.
 - Effect: lowers update volume on campaign-linked objects.
 - Trade-off: imported graph is less complete.
+- **Note:** these flags apply **only to per-article bundles**. On the first run (or when `CHECKFIRST_FORCE_REPROCESS=true`), the connector always sends the full Pravda network infrastructure bundle (domains, subdomains, IPv4, relationships) regardless of any `import_*` setting.
 
 Available filter variables:
 - `CHECKFIRST_IMPORT_DOMAIN_NAME`
