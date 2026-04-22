@@ -10,7 +10,7 @@ services:
       - CONNECTOR_NAME=TruKno
       - CONNECTOR_SCOPE=report,attack-pattern,malware
       - CONNECTOR_LOG_LEVEL=info
-      - TRUKNO_API_BASE_URL=https://api.trukno.com/V1
+      - TRUKNO_API_BASE_URL=https://api.trukno.com/v2
       - TRUKNO_API_KEY=ChangeMe
       - TRUKNO_INTERVAL_MINUTES=60
       - TRUKNO_INITIAL_LOOKBACK_DAYS=30

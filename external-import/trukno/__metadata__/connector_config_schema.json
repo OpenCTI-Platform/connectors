@@ -54,7 +54,7 @@
       "type": "string"
     },
     "TRUKNO_API_BASE_URL": {
-      "default": "https://api.trukno.com/V1",
+      "default": "https://api.trukno.com/v2",
       "description": "Base URL of the TruKno API.",
       "format": "uri",
       "type": "string"
