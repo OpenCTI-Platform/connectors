@@ -7,7 +7,9 @@ from trukno_connector.transform import transform_breach_to_bundle
 
 
 def test_first_run_uses_bootstrap_window():
-    state = ConnectorState.empty(initial_lookback_days=7, now_iso="2026-04-21T12:00:00Z")
+    state = ConnectorState.empty(
+        initial_lookback_days=7, now_iso="2026-04-21T12:00:00Z"
+    )
     assert state.last_seen_updated_at == "2026-04-14T12:00:00Z"
 
 
@@ -21,7 +23,9 @@ def test_next_checkpoint_advances_to_max_seen_timestamp():
 
 
 def test_transform_includes_linked_attack_patterns_and_malware():
-    payload = json.loads((FIXTURES / "breach_with_entities.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (FIXTURES / "breach_with_entities.json").read_text(encoding="utf-8")
+    )
 
     bundle = transform_breach_to_bundle(payload)
     report = next(obj for obj in bundle["objects"] if obj["type"] == "report")

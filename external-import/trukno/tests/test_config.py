@@ -1,5 +1,4 @@
 import pytest
-
 from trukno_connector.config import ConnectorConfig, load_config
 
 

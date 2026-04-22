@@ -1,7 +1,6 @@
 import json
 
 import pytest
-
 from conftest import FIXTURES
 from trukno_connector.client import TruKnoClient
 

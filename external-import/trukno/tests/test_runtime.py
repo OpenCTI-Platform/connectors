@@ -3,7 +3,6 @@ import json
 from io import StringIO
 
 import pytest
-
 from trukno_connector import runtime
 from trukno_connector.runtime import run_once
 from trukno_connector.state import ConnectorState
