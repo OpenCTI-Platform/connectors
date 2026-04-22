@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-akamai:
-    image: opencti/connector-akamai-client-list:latest
+    image: opencti/connector-akamai:latest
     restart: always
     environment:
 

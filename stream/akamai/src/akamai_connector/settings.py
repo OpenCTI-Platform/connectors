@@ -40,10 +40,10 @@ class AkamaiConfig(BaseConfigModel):
     Akamai configuration
     """
 
-    base_url: HttpUrl
-    client_token: SecretStr
-    client_secret: SecretStr
-    access_token: SecretStr
+    base_url: HttpUrl = Field(description="External API base URL.")
+    client_token: SecretStr = Field(description="EdgeGrid client token.")
+    client_secret: SecretStr = Field(description="EdgeGrid client secret.")
+    access_token: SecretStr = Field(description="EdgeGrid access token.")
 
     # NOTE:
     # This represents a single Akamai Client List ID (not a list of IPs).

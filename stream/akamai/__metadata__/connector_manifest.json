@@ -14,9 +14,9 @@
   "max_confidence_level": 80,
   "support_version": ">= 6.7.0",
   "subscription_link": "https://www.akamai.com/",
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/akamai-stream",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/akamai",
   "manager_supported": false,
-  "container_version": "latest",
+  "container_version": "rolling",
   "container_image": "opencti/connector-akamai-stream",
   "container_type": "STREAM"
 }

@@ -11,6 +11,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Set working directory inside container
+COPY src /opt/opencti-connector-akamai
 WORKDIR /opt/opencti-connector-akamai
 
 # Install system dependencies required for cryptography and EdgeGrid
@@ -19,7 +20,8 @@ RUN apk add --no-cache \
     build-base \
     libffi-dev \
     openssl-dev \
-    ca-certificates
+    ca-certificates \
+    git
 
 # Copy Python dependencies first (better Docker layer caching)
 COPY src/requirements.txt .
