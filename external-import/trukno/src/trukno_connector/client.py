@@ -1,5 +1,4 @@
 import requests
-
 from trukno_connector.models import BreachSummary
 
 
@@ -35,4 +34,3 @@ class TruKnoClient:
         )
         response.raise_for_status()
         return response.json()
-

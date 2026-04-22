@@ -2,7 +2,6 @@ import uuid
 
 from trukno_connector.opencti_compat import cleanup_bundle_for_opencti
 
-
 STIX_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 
 
@@ -62,4 +61,3 @@ def transform_breach_to_bundle(payload: dict) -> dict:
         "objects": objects,
     }
     return cleanup_bundle_for_opencti(bundle)
-

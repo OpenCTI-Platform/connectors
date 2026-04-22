@@ -5,4 +5,3 @@ from dataclasses import dataclass
 class BreachSummary:
     id: str
     updated_at: str
-

@@ -111,4 +111,3 @@ def load_config(config: dict | None) -> ConnectorConfig:
             "trukno.initial_lookback_days",
         ),
     )
-

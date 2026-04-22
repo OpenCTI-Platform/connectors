@@ -12,7 +12,9 @@ class ConnectorState:
         return cls(last_seen_updated_at=_format_utc(bootstrap))
 
 
-def next_checkpoint(current: ConnectorState, seen_timestamps: list[str]) -> ConnectorState:
+def next_checkpoint(
+    current: ConnectorState, seen_timestamps: list[str]
+) -> ConnectorState:
     latest = _parse_iso_datetime(current.last_seen_updated_at)
     for timestamp in seen_timestamps:
         candidate = _parse_iso_datetime(timestamp)
@@ -30,4 +32,3 @@ def _parse_iso_datetime(value: str) -> datetime:
 
 def _format_utc(value: datetime) -> str:
     return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-

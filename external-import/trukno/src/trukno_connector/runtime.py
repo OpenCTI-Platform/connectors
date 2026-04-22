@@ -6,12 +6,9 @@ from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper
-
 from trukno_connector.client import TruKnoClient
-from trukno_connector.config import load_config
-from trukno_connector.config import merge_config_with_env
-from trukno_connector.state import ConnectorState
-from trukno_connector.state import next_checkpoint
+from trukno_connector.config import load_config, merge_config_with_env
+from trukno_connector.state import ConnectorState, next_checkpoint
 from trukno_connector.transform import transform_breach_to_bundle
 
 
@@ -155,4 +152,3 @@ def main():
             _log(helper, "error", f"Connector cycle failed: {exc}")
             traceback.print_exc()
         time.sleep(config.interval_minutes * 60)
-

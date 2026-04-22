@@ -1,6 +1,5 @@
 import copy
 
-
 ALLOWED_RELATIONSHIP_TYPES = {"uses", "targets", "indicates", "related-to"}
 
 
@@ -17,4 +16,3 @@ def cleanup_bundle_for_opencti(bundle: dict) -> dict:
         cleaned_objects.append(obj)
     cleaned_bundle["objects"] = cleaned_objects
     return cleaned_bundle
-
