@@ -1,0 +1,106 @@
+# OpenCTI TruKno Connector
+
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | - | Initial port from standalone TruKno connector |
+
+The TruKno connector imports breach intelligence from the TruKno API into OpenCTI as STIX 2.1 bundles.
+
+## Scope
+
+This initial port currently imports only:
+
+- `report`
+- `attack-pattern`
+- `malware`
+
+It does not yet create threat actors, intrusion sets, indicators, vulnerabilities, tools, or relationships beyond report object references.
+
+## Installation
+
+### Requirements
+
+- OpenCTI Platform >= 6.x
+- Network access to the TruKno API
+- A valid TruKno API key
+
+## Configuration
+
+The connector can be configured with environment variables through `docker-compose.yml` or with `src/config.yml`.
+
+Required variables:
+
+- `OPENCTI_URL`
+- `OPENCTI_TOKEN`
+- `CONNECTOR_ID`
+- `CONNECTOR_NAME`
+- `CONNECTOR_SCOPE`
+- `TRUKNO_API_BASE_URL`
+- `TRUKNO_API_KEY`
+- `TRUKNO_INTERVAL_MINUTES`
+- `TRUKNO_INITIAL_LOOKBACK_DAYS`
+
+Recommended helper variables:
+
+- `CONNECTOR_TYPE=EXTERNAL_IMPORT`
+- `CONNECTOR_LOG_LEVEL=info`
+
+Additional metadata for Connector Manager and operator documentation is available in:
+
+- `__metadata__/CONNECTOR_CONFIG_DOC.md`
+- `__metadata__/connector_config_schema.json`
+
+## Deployment
+
+### Docker Deployment
+
+Build the Docker image:
+
+```bash
+docker build -t opencti/connector-trukno:latest .
+```
+
+Start the connector:
+
+```bash
+docker compose up -d
+```
+
+### Manual Deployment
+
+1. Create `src/config.yml` from `src/config.yml.sample`.
+2. Install dependencies from `src/requirements.txt`.
+3. Start the connector from the `src` directory:
+
+```bash
+pip3 install -r requirements.txt
+python3 main.py
+```
+
+## Behavior
+
+The connector polls the TruKno `/breaches` endpoint for items updated after the last stored checkpoint, fetches full breach details for each match, converts the result to a STIX bundle, and sends the bundle to OpenCTI.
+
+### Incremental State
+
+- State is stored in OpenCTI as `last_seen_updated_at`.
+- On a first run without state, the connector backfills from `now - TRUKNO_INITIAL_LOOKBACK_DAYS`.
+- Each successfully sent breach advances the checkpoint.
+
+### Entity Mapping
+
+| TruKno field | OpenCTI / STIX object | Notes |
+|--------------|------------------------|-------|
+| breach | `report` | One report per TruKno breach |
+| `relatedTTPs` | `attack-pattern` | Linked from the report via `object_refs` |
+| `relatedMalwares` | `malware` | Linked from the report via `object_refs` |
+
+## Usage
+
+The connector runs continuously on the configured polling interval.
+
+To force a new import cycle, reset the connector state from the OpenCTI connectors UI and let the next scheduled poll run.
+
+## Upstream Status
+
+This first upstream submission intentionally limits scope to reports, attack patterns, and malware so the connector can land with a narrow and reviewable ingestion path before broader entity coverage is added.
