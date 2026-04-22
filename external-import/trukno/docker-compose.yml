@@ -1,4 +1,3 @@
-version: "3"
 services:
   connector-trukno:
     build: .
@@ -16,4 +15,3 @@ services:
       - TRUKNO_INTERVAL_MINUTES=60
       - TRUKNO_INITIAL_LOOKBACK_DAYS=30
     restart: always
-
