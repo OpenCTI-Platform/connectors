@@ -1,5 +1,5 @@
 cyberintegrations==0.13.1
-pycti==7.260417.0
+pycti==7.260422.0
 python-dotenv==1.1.1
 stix2==3.0.1
 isodate==0.7.2
