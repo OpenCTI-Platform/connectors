@@ -60,45 +60,15 @@ For more information:
 - [Microsoft Connect Threat Intelligence](https://learn.microsoft.com/en-us/azure/sentinel/connect-threat-intelligence-upload-api)
 - [Microsoft Security Authorization](https://learn.microsoft.com/en-us/graph/security-authorization)
 
-## Configuration variables
+## Configuration
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Configuration parameters can be provided in either **`config.yml`** file, **`.env`** file or directly as **environment variables** (e.g. from **`docker-compose.yml`** for Docker deployments).
 
-### OpenCTI environment variables
+Priority: **YAML > .env > environment > defaults**.
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+### Configuration variables
 
-### Base connector environment variables
-
-| Parameter                      | config.yml                | Docker environment variable             | Default                          | Mandatory | Description                                                                    |
-|--------------------------------|---------------------------|-----------------------------------------|----------------------------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID                   | id                        | `CONNECTOR_ID`                          |                                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Name                 | name                      | `CONNECTOR_NAME`                        | Microsoft Sentinel Intel Master  | No        | Name of the connector.                                                         |
-| Connector Scope                | scope                     | `CONNECTOR_SCOPE`                       | sentinel                         | No        | The scope of the connector.                                                    |
-| Live Stream ID                 | live_stream_id            | `CONNECTOR_LIVE_STREAM_ID`              |                                  | Yes       | The Live Stream ID of the stream created in the OpenCTI interface.             |
-| Live Stream Listen Delete      | live_stream_listen_delete | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                             | No        | Listen to delete events.                                                       |
-| Live Stream No Dependencies    | live_stream_no_dependencies| `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES`| true                             | No        | Set to `true` unless synchronizing between OpenCTI platforms.                  |
-| Log Level                      | log_level                 | `CONNECTOR_LOG_LEVEL`                   | error                            | No        | Determines the verbosity of the logs.                                          |
-
-### Connector extra parameters environment variables
-
-| Parameter              | config.yml                                        | Docker environment variable                         | Default                    | Mandatory | Description                                                |
-|------------------------|---------------------------------------------------|-----------------------------------------------------|----------------------------|-----------|------------------------------------------------------------|
-| Tenant ID              | microsoft_sentinel_intel.tenant_id                | `MICROSOFT_SENTINEL_INTEL_TENANT_ID`                |                            | Yes       | Azure AD Tenant ID.                                        |
-| Client ID              | microsoft_sentinel_intel.client_id                | `MICROSOFT_SENTINEL_INTEL_CLIENT_ID`                |                            | Yes       | Azure AD Application Client ID.                            |
-| Client Secret          | microsoft_sentinel_intel.client_secret            | `MICROSOFT_SENTINEL_INTEL_CLIENT_SECRET`            |                            | Yes       | Azure AD Application Client Secret.                        |
-| Workspace ID           | microsoft_sentinel_intel.workspace_id             | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_ID`             |                            | Yes       | Azure Log Analytics Workspace ID.                          |
-| Workspace Name         | microsoft_sentinel_intel.workspace_name           | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_NAME`           |                            | Yes       | Log Analytics Workspace name (for deletion).               |
-| Subscription ID        | microsoft_sentinel_intel.subscription_id          | `MICROSOFT_SENTINEL_INTEL_SUBSCRIPTION_ID`          |                            | Yes       | Azure Subscription ID (for deletion).                      |
-| Resource Group         | microsoft_sentinel_intel.resource_group           | `MICROSOFT_SENTINEL_INTEL_RESOURCE_GROUP`           | default                    | No        | Resource group name for Log Analytics.                     |
-| Source System          | microsoft_sentinel_intel.source_system            | `MICROSOFT_SENTINEL_INTEL_SOURCE_SYSTEM`            | Opencti Stream Connector   | No        | Source system name displayed in Sentinel.                  |
-| Delete Extensions      | microsoft_sentinel_intel.delete_extensions        | `MICROSOFT_SENTINEL_INTEL_DELETE_EXTENSIONS`        | true                       | No        | Delete extensions from STIX bundles.                       |
-| Extra Labels           | microsoft_sentinel_intel.extra_labels             | `MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS`             | []                         | No        | Extra labels added to bundles (comma-separated).           |
-| Workspace API Version  | microsoft_sentinel_intel.workspace_api_version    | `MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION`    | 2024-02-01-preview         | No        | Log Analytics Workspace API version.                       |
-| Management API Version | microsoft_sentinel_intel.management_api_version   | `MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION`   | 2025-03-01                 | No        | Microsoft Management API version.                          |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
 ## Deployment
 
