@@ -328,61 +328,85 @@ class ConverterToStix:
             article_domain = urlparse(article.url).netloc
 
             # --- Domain observable (extracted from article URL) ---
-            domain_name = (
-                self.create_domain_name(value=article_domain)
-                if self.import_domain_name
-                else None
-            )
+            if self.import_domain_name:
+                domain_name = self.create_domain_name(value=article_domain)
+                octi_objects.append(domain_name)
+            else:
+                domain_name = None
+                self.helper.connector_logger.info(
+                    "DomainName creation skipped: domain name import is disabled",
+                    {
+                        "article_url": article.url,
+                        "import_domain_name": self.import_domain_name,
+                    },
+                )
+
             # --- Infrastructure wrapping the publishing domain ---
-            infrastructure = (
-                self.create_infrastructure(
+            if self.import_infrastructure:
+                infrastructure = self.create_infrastructure(
                     name=article_domain,
                     first_seen=article.published_date,
                 )
-                if self.import_infrastructure
-                else None
-            )
+                octi_objects.append(infrastructure)
+            else:
+                infrastructure = None
+                self.helper.connector_logger.info(
+                    "Infrastructure creation skipped: infrastructure import is disabled",
+                    {
+                        "article_url": article.url,
+                        "import_infrastructure": self.import_infrastructure,
+                    },
+                )
+
             # --- Channel as website (the publishing domain/subdomain) ---
-            channel = (
-                self.create_channel(
+            if self.import_channel:
+                channel = self.create_channel(
                     name=article_domain,
                     source_url=article.url,
                 )
-                if self.import_channel
-                else None
-            )
+                octi_objects.append(channel)
+            else:
+                channel = None
+                self.helper.connector_logger.info(
+                    "Channel creation skipped: channel import is disabled",
+                    {"article_url": article.url, "import_channel": self.import_channel},
+                )
+
             # --- Source as Channel (Telegram or website origin) ---
-            source_channel = (
-                self.create_channel(
+            if self.import_source_channel:
+                source_channel = self.create_channel(
                     name=article.source_title,
                     source_url=article.source_url,
                 )
-                if self.import_source_channel
-                else None
-            )
+                octi_objects.append(source_channel)
+            else:
+                source_channel = None
+                self.helper.connector_logger.info(
+                    "SourceChannel creation skipped: source channel import is disabled",
+                    {
+                        "article_url": article.url,
+                        "import_source_channel": self.import_source_channel,
+                    },
+                )
+
             # --- Content (article) ---
-            content = (
-                self.create_media_content(
+            if self.import_media_content:
+                content = self.create_media_content(
                     title=article.title,
                     description=article.og_description,
                     url=article.url,
                     publication_date=article.published_date,
                 )
-                if self.import_media_content
-                else None
-            )
-
-            # --- Entities ---
-            if domain_name:
-                octi_objects.append(domain_name)
-            if infrastructure:
-                octi_objects.append(infrastructure)
-            if channel:
-                octi_objects.append(channel)
-            if source_channel:
-                octi_objects.append(source_channel)
-            if content:
                 octi_objects.append(content)
+            else:
+                content = None
+                self.helper.connector_logger.info(
+                    "MediaContent creation skipped: media content import is disabled",
+                    {
+                        "article_url": article.url,
+                        "import_media_content": self.import_media_content,
+                    },
+                )
 
             # --- Relationships ---
             # Campaign → uses → Infrastructure
