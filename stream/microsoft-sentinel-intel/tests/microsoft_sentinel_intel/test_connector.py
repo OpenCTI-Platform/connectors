@@ -96,7 +96,16 @@ def test_handle_event_delete(
     mocked_send_request.side_effect = [
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main/SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -139,7 +148,7 @@ def test_handle_event_delete(
         request.url == "https://management.azure.com"
         "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
         "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/indicators/SentinelId?api-version=2025-03-01"
+        "/SentinelId?api-version=2025-07-01-preview"
     )
 
 
@@ -242,7 +251,18 @@ def test_handle_event_delete_multi_indicator_partial_failure(
         Mock(
             status_code=200,
             body=lambda: json.dumps(
-                {"value": [{"name": "SentinelId1"}, {"name": "SentinelId2"}]}
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId1",
+                            "name": "SentinelId1",
+                        },
+                        {
+                            "id": "https://management.azure.com/.../SentinelId2",
+                            "name": "SentinelId2",
+                        },
+                    ]
+                }
             ),
         ),
         # First delete fails
@@ -368,7 +388,16 @@ def test_process_batch_handles_delete_inline(
     mocked_send_request.side_effect = [
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -638,7 +667,16 @@ def test_process_batch_delete_wins_over_create(
     mocked_send_request.side_effect = [
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -697,7 +735,16 @@ def test_process_batch_mixed_creates_and_deletes(
         # Query call for delete
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         # Delete call
         Mock(status_code=200),
@@ -735,13 +782,31 @@ def test_process_batch_only_deletes(
         # Delete 1: query + delete
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId1"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId1",
+                            "name": "SentinelId1",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
         # Delete 2: query + delete
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId2"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId2",
+                            "name": "SentinelId2",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -819,13 +884,31 @@ def test_process_batch_delete_error_continues(
         # Delete 1: query succeeds, delete fails
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId1"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId1",
+                            "name": "SentinelId1",
+                        }
+                    ]
+                }
+            ),
         ),
         HttpResponseError(message="API error"),
         # Delete 2: query + delete succeed
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId2"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId2",
+                            "name": "SentinelId2",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]

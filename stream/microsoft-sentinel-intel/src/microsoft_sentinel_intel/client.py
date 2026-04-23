@@ -144,24 +144,8 @@ class ConnectorClient:
         errors: list[ConnectorClientError] = []
         for indicator in indicators:
             indicator_microsoft_id = indicator.get("id")
-            indicator_name = indicator.get("name")
 
-            # /query (preview) returns stixindicators resources. Delete them using
-            # their returned ARM resource id. Keep a fallback for legacy responses.
-            if (
-                isinstance(indicator_microsoft_id, str)
-                and "/stixindicators/" in indicator_microsoft_id.lower()
-            ):
-                delete_url = indicator_microsoft_id
-                delete_api_version = (
-                    self.config.microsoft_sentinel_intel.query_api_version
-                )
-            elif indicator_name:
-                delete_url = f"{self.management_endpoint}/indicators/{indicator_name}"
-                delete_api_version = (
-                    self.config.microsoft_sentinel_intel.management_api_version
-                )
-            else:
+            if not isinstance(indicator_microsoft_id, str):
                 error_message = (
                     "[API] Failed to retrieve indicator identifier for deletion"
                 )
@@ -170,7 +154,6 @@ class ConnectorClient:
                     metadata={
                         "indicator_stix_id": indicator_id,
                         "indicator_microsoft_id": indicator_microsoft_id,
-                        "indicator_name": indicator_name,
                     },
                 )
                 self.helper.connector_logger.error(
@@ -183,17 +166,19 @@ class ConnectorClient:
                 last_response = self._send_request(
                     client=self.management_client,
                     request=self.management_client.delete(
-                        url=delete_url,
-                        params={"api-version": delete_api_version},
+                        # The 'id' field actually contains the endpoint of the indicator resource
+                        url=indicator_microsoft_id,
+                        params={
+                            "api-version": self.config.microsoft_sentinel_intel.query_api_version
+                        },
                     ),
                 )
             except ConnectorClientError as err:
                 self.helper.connector_logger.error(
-                    message=f"[API] Failed to delete indicator",
+                    message="[API] Failed to delete indicator",
                     meta={
                         "indicator_stix_id": indicator_id,
                         "indicator_microsoft_id": indicator_microsoft_id,
-                        "indicator_name": indicator_name,
                     },
                 )
                 errors.append(err)
