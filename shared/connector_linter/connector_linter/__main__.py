@@ -47,11 +47,11 @@ def cli() -> None:
     help="Minimum severity to report.",
 )
 @click.option(
-    "--quiet",
-    "-q",
+    "--verbose",
+    "-v",
     is_flag=True,
     default=False,
-    help="Only show failures and warnings (hide passed checks).",
+    help="Show all checks including passed (default hides passed).",
 )
 @click.option(
     "--disable-noqa",
@@ -71,7 +71,7 @@ def check(
     select: tuple[str, ...],
     ignore: tuple[str, ...],
     severity: str | None,
-    quiet: bool,
+    verbose: bool,
     disable_noqa: bool,
     abspath: bool,
 ) -> None:
@@ -83,7 +83,7 @@ def check(
         python -m connector_linter check ./external-import/myconnector --format json
         python -m connector_linter check ./external-import/myconnector --select VC1xx
         python -m connector_linter check ./external-import/myconnector --ignore VC101
-        python -m connector_linter check ./external-import/myconnector -q
+        python -m connector_linter check ./external-import/myconnector -v
     """
     path = Path(connector_path)
 
@@ -104,7 +104,7 @@ def check(
 
     # Format output
     if output_format == "text":
-        format_text(results, path, sys.stdout, quiet=quiet, abspath=abspath)
+        format_text(results, path, sys.stdout, verbose=verbose, abspath=abspath)
     else:
         formatter = {"json": format_json, "github": format_github}[output_format]
         formatter(results, path, sys.stdout)
