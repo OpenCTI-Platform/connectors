@@ -56,8 +56,8 @@ connector-linter check ./connector --select VC5xx   # all deprecation checks
 # Ignore specific checks
 connector-linter check ./connector --ignore VC306 --ignore VC307
 
-# Only show failures (hide passed checks; warnings/info still shown)
-connector-linter check ./connector --quiet
+# Show all checks including passed (default hides passed)
+connector-linter check ./connector --verbose
 
 # Filter by severity level
 connector-linter check ./connector --severity warning  # show warnings and errors
