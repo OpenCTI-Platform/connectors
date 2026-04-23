@@ -5,7 +5,7 @@ import pkgutil
 from pathlib import Path
 
 from connector_linter import checks as checks_package
-from connector_linter.models import CheckResult, ConnectorContext
+from connector_linter.models import CheckResult, ConnectorContext, Severity
 from connector_linter.noqa import filter_noqa
 from connector_linter.registry import CheckRegistry
 
@@ -94,14 +94,14 @@ def run_checks(
                 CheckResult(
                     code=code,
                     name=descriptor.name,
-                    message=f"Check raised an exception: {e}",
-                    severity=descriptor.severity,
+                    message=f"Check raised {type(e).__name__}: {e}",
+                    severity=Severity.ERROR,
                     passed=False,
                 ),
             )
 
     # Apply noqa suppression unless disabled
     if not disable_noqa:
-        results = filter_noqa(results)
+        results = filter_noqa(results, connector_path)
 
     return results
