@@ -25,8 +25,8 @@ class CPEMatchClient(CVEClient):
         cpe_names: set[str] = set()
         params: dict = {"cveId": cve_id}
 
-        info_msg = f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
-        self.helper.connector_logger.info(info_msg)
+        debug_msg = f"[CPE MATCH API] Fetching CPE matches for {cve_id}"
+        self.helper.connector_logger.debug(debug_msg)
 
         try:
             data = await self.get_complete_collection(CPE_MATCH_BASE_URL, params)
@@ -43,6 +43,15 @@ class CPEMatchClient(CVEClient):
             # Handle pagination
             total_results = data.get("totalResults", 0)
             results_per_page = data.get("resultsPerPage", 0)
+
+            if not isinstance(results_per_page, int) or results_per_page <= 0:
+                if total_results:
+                    self.helper.connector_logger.warning(
+                        f"[CPE MATCH API] Unexpected resultsPerPage={results_per_page} "
+                        f"for {cve_id}; stopping pagination to avoid infinite loop."
+                    )
+                return list(cpe_names)
+
             start_index = results_per_page
 
             while start_index < total_results:
@@ -58,12 +67,18 @@ class CPEMatchClient(CVEClient):
                     break
                 self._extract_cpe_names(page_data, cpe_names)
                 results_per_page = page_data.get("resultsPerPage", 0)
+                if not isinstance(results_per_page, int) or results_per_page <= 0:
+                    self.helper.connector_logger.warning(
+                        f"[CPE MATCH API] Unexpected page resultsPerPage={results_per_page} "
+                        f"for {cve_id}; stopping pagination to avoid infinite loop."
+                    )
+                    break
                 start_index += results_per_page
 
-            info_msg = (
+            debug_msg = (
                 f"[CPE MATCH API] Found {len(cpe_names)} unique CPEs for {cve_id}"
             )
-            self.helper.connector_logger.info(info_msg)
+            self.helper.connector_logger.debug(debug_msg)
 
         except Exception as err:
             warn_msg = (
@@ -88,10 +103,12 @@ class CPEMatchClient(CVEClient):
             data: The JSON response from the CPE Match API.
             cpe_names: A set to collect unique CPE name strings into.
         """
+
+        def add_cpe_name(candidate: object) -> None:
+            if isinstance(candidate, str) and candidate.strip():
+                cpe_names.add(candidate)
+
         for match_string in data.get("matchStrings", []):
             match_criteria = match_string.get("matchString", {})
-            if "matches" not in match_criteria or len(match_criteria["matches"]) == 0:
-                cpe_names.add(match_criteria.get("criteria"))
-            else:
-                for match in match_criteria.get("matches", []):
-                    cpe_names.add(match.get("cpeName"))
+            for match in match_criteria.get("matches", []):
+                add_cpe_name(match.get("cpeName"))
