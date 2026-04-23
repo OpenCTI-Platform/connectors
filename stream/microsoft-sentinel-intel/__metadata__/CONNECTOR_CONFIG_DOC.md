@@ -27,6 +27,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MICROSOFT_SENTINEL_INTEL_EXTRA_LABELS | `array` |  | string | `[]` | Extra labels added to the bundle sent. String separated by comma |
 | MICROSOFT_SENTINEL_INTEL_WORKSPACE_API_VERSION | `string` |  | string | `"2024-02-01-preview"` | API version of the Microsoft log analytics workspace interface |
 | MICROSOFT_SENTINEL_INTEL_MANAGEMENT_API_VERSION | `string` |  | string | `"2025-03-01"` | API version of the Microsoft management interface |
+| MICROSOFT_SENTINEL_INTEL_QUERY_API_VERSION | `string` |  | string | `"2025-07-01-preview"` | API version of the Microsoft Sentinel threat-intel /query endpoint |
 | MICROSOFT_SENTINEL_INTEL_BATCH_MODE | `boolean` |  | boolean | `false` | Enable batch mode for bulk uploading STIX objects. When disabled (default), objects are sent individually in real-time. |
 | MICROSOFT_SENTINEL_INTEL_BATCH_SIZE | `integer` |  | `1 <= x <= 100` | `100` | Maximum number of unique STIX objects to accumulate before flushing a batch. Only used when batch_mode is enabled. Maxed at 100 because the Sentinel Upload Indicators API rejects requests containing more than 100 STIX objects. |
 | MICROSOFT_SENTINEL_INTEL_BATCH_TIMEOUT | `integer` |  | `1 <= x ` | `30` | Maximum time in seconds to wait before flushing a partial batch. Only used when batch_mode is enabled. |
