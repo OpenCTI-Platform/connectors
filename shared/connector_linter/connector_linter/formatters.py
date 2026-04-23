@@ -92,12 +92,15 @@ def _format_result_line(
     line_part = f":{result.line}" if result.line else ""
     location = f"{display}{line_part}"
 
-    # Derive status from passed first, then use severity for non-passing advisories.
-    # PASS = check passed (any severity), FAIL = failed error, WARN = failed advisory.
-    if result.passed:
-        status = _c("PASS", "green", stream)
-    elif result.severity in (Severity.WARNING, Severity.INFO):
+    # Derive status label from both passed and severity:
+    #   PASS  = passed + ERROR/INFO severity (normal pass)
+    #   WARN  = WARNING severity (advisory, regardless of passed)
+    #   FAIL  = failed + ERROR severity
+    #   INFO  = passed + INFO severity … not used yet, kept as PASS
+    if result.severity == Severity.WARNING:
         status = _c("WARN", "yellow", stream)
+    elif result.passed:
+        status = _c("PASS", "green", stream)
     else:
         status = _c("FAIL", "red", stream)
 
@@ -145,12 +148,17 @@ def format_text(
     results: list[CheckResult],
     connector_path: Path,
     stream: TextIO,
-    quiet: bool = False,
+    verbose: bool = False,
     abspath: bool = False,
 ) -> None:
-    """Format results as human-readable text with colors."""
+    """Format results as human-readable text with colors.
+
+    By default, only failures (FAIL), warnings (WARN), and the score summary
+    are displayed.  Use ``verbose=True`` to also show passing checks (PASS).
+    """
     failed = [r for r in results if not r.passed]
-    passed = [r for r in results if r.passed]
+    warnings = [r for r in results if r.passed and r.severity == Severity.WARNING]
+    passed_normal = [r for r in results if r.passed and r.severity != Severity.WARNING]
 
     for result in failed:
         stream.write(
@@ -160,18 +168,16 @@ def format_text(
             suggestion = _c(f"    ↳ {result.suggestion}", "dim", stream)
             stream.write(f"{suggestion}\n")
 
-    if not quiet:
-        for result in passed:
+    for result in warnings:
+        stream.write(
+            f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
+        )
+
+    if verbose:
+        for result in passed_normal:
             stream.write(
                 f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
             )
-    else:
-        # In quiet mode, still show passed warnings/info (they carry advisories)
-        for result in passed:
-            if result.severity in (Severity.WARNING, Severity.INFO):
-                stream.write(
-                    f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
-                )
 
     stream.write("\n")
     _write_score(results, stream)
