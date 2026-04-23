@@ -344,6 +344,9 @@ class ConverterToStix:
             )
 
             # --- Relationships ---
+            # No start_time/stop_time on relationships shared across articles.
+            # Using article.published_date would produce a unique STIX ID per article,
+            # flooding OpenCTI's Redis stream with thousands of create/upsert events.
             # Campaign → uses → Infrastructure
             campaign_uses_infra = self.create_relationship(
                 source=campaign,
@@ -351,9 +354,6 @@ class ConverterToStix:
                 target=infrastructure,
             )
             # Campaign → uses → Channel as website
-            # No start_time: this is a structural relationship shared across articles.
-            # Using article.published_date would produce a unique STIX ID per article,
-            # flooding OpenCTI's Redis stream with thousands of create/upsert events.
             campaign_uses_channel = self.create_relationship(
                 source=campaign,
                 relationship_type="uses",
