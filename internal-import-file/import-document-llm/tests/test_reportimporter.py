@@ -690,6 +690,64 @@ def test_build_predicted_relationships_valid_and_skipped(importer):
     assert skipped2[0][2] == "USES"
 
 
+def test_build_predicted_relationships_logs_only_allowed_candidates(importer):
+    class CapturingLogger:
+        def __init__(self):
+            self.debug_messages = []
+            self.info_messages = []
+
+        def info(self, msg: str):
+            self.info_messages.append(msg)
+
+        def warning(self, msg: str): ...
+        def error(self, msg: str): ...
+
+        def debug(self, msg: str):
+            self.debug_messages.append(msg)
+
+    dom_id = _stix_id("domain-name")
+    ta_id = _stix_id("intrusion-set")
+    by_id = {
+        dom_id: {"type": "domain-name", "id": dom_id, "value": "example.com"},
+        ta_id: {"type": "intrusion-set", "id": ta_id, "name": "APT"},
+    }
+    uuid_to_stix = {"t=entity;h=a": [ta_id], "t=observable;h=b": [dom_id]}
+    uuid_to_text = {"a": "APT", "b": "example.com"}
+    rels = [{"from_id": "t=entity;h=a", "to_id": "t=observable;h=b", "label": "USES"}]
+
+    logger = CapturingLogger()
+    importer.helper.connector_logger = logger
+
+    importer.allowed_relations = {("INTRUSION-SET", "DOMAIN-NAME"): {"USES"}}
+    built, skipped = importer._build_predicted_relationships(
+        rels, uuid_to_stix, uuid_to_text, by_id, author=None
+    )
+
+    assert len(built) == 1
+    assert skipped == []
+    assert any(
+        msg.startswith("Processing predicted relationship:")
+        for msg in logger.debug_messages
+    )
+
+    logger.debug_messages.clear()
+    importer.allowed_relations = {}
+    built2, skipped2 = importer._build_predicted_relationships(
+        rels, uuid_to_stix, uuid_to_text, by_id, author=None
+    )
+
+    assert built2 == []
+    assert len(skipped2) == 1
+    assert not any(
+        msg.startswith("Processing predicted relationship:")
+        for msg in logger.debug_messages
+    )
+    assert any(
+        msg.startswith("Skipped unauthorized relationship:")
+        for msg in logger.debug_messages
+    )
+
+
 def test_build_predicted_relationships_normalizes_relation_aliases(importer):
     dom_id = _stix_id("domain-name")
     ta_id = _stix_id("intrusion-set")
@@ -835,6 +893,8 @@ def test_link_to_container_creates_new_report_when_no_context(importer):
 
 def test_link_to_container_updates_existing_container(importer):
     ent_id = _stix_id("report")
+    marking_id = _stix_id("marking-definition")
+    author_id = _stix_id("identity")
     importer.helper.api.stix2 = DummyStix2Api(
         {
             "type": "bundle",
@@ -848,6 +908,8 @@ def test_link_to_container_updates_existing_container(importer):
         "type": "report",
         "entity_type": "Report",
         "standard_id": ent_id,
+        "objectMarking": [{"standard_id": marking_id}],
+        "createdBy": {"standard_id": author_id},
     }
     objects = [{"type": "domain-name", "id": _stix_id("domain-name")}]
 
@@ -864,6 +926,8 @@ def test_link_to_container_updates_existing_container(importer):
     assert any(
         ref.startswith("domain-name--") for ref in (report_obj.get("object_refs") or [])
     )
+    assert report_obj.get("created_by_ref") == author_id
+    assert report_obj.get("object_marking_refs") == [marking_id]
 
 
 def test_link_to_container_non_container_entity_creates_related_to(importer):
@@ -987,10 +1051,7 @@ def test_full_span_flow_sends_bundle(monkeypatch, importer):
     # Optional sanity checks (only apply if submission captured)
     if submitted:
         assert submitted.get("entity_id", ctx_id) == ctx_id
-        assert (
-            submitted.get("file_name", "").startswith("import-document-llm-")
-            or submitted.get("file_name") == "full.pdf"
-        )
+        assert submitted.get("file_name") == "full.pdf"
 
 
 # --------------------------------------------------------------------------------------

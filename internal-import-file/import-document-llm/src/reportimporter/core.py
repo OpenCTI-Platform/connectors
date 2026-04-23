@@ -1089,7 +1089,7 @@ class ReportImporter:
             self.helper.send_stix2_bundle(
                 bundle=bundle,
                 bypass_validation=bypass_validation,
-                file_name=f"import-document-llm-{Path(file_name).name}",
+                file_name=Path(file_name).name,
                 entity_id=context_entity["id"] if context_entity else None,
             )
         except Exception as e:
@@ -1255,6 +1255,55 @@ class ReportImporter:
             final.append(obj)
         return final
 
+    @staticmethod
+    def _context_object_markings(entity: Optional[dict]) -> list[str]:
+        """Extract STIX marking references from GraphQL- or STIX-shaped entity data.
+
+        Returns a list of marking reference identifiers as strings. The method first
+        uses ``object_marking_refs`` when present in a STIX-shaped entity; otherwise,
+        it falls back to extracting ``standard_id`` values from GraphQL-style
+        ``objectMarking`` entries.
+
+        If ``entity`` is ``None`` or not a dictionary, or if no valid marking
+        references are found in either location, an empty list is returned.
+        """
+        if not isinstance(entity, dict):
+            return []
+
+        markings = entity.get("object_marking_refs")
+        if isinstance(markings, list):
+            return [
+                marking
+                for marking in markings
+                if isinstance(marking, str) and len(marking) > 0
+            ]
+
+        return [
+            standard_id
+            for marking in entity.get("objectMarking", [])
+            if isinstance(marking, dict)
+            for standard_id in [marking.get("standard_id")]
+            if isinstance(standard_id, str) and len(standard_id) > 0
+        ]
+
+    @staticmethod
+    def _context_author(entity: Optional[dict]) -> Optional[str]:
+        """Extract STIX created_by_ref from either GraphQL or STIX-shaped entity data."""
+        if not isinstance(entity, dict):
+            return None
+
+        created_by_ref = entity.get("created_by_ref")
+        if isinstance(created_by_ref, str) and created_by_ref:
+            return created_by_ref
+
+        created_by = entity.get("createdBy")
+        if isinstance(created_by, dict):
+            standard_id = created_by.get("standard_id")
+            if isinstance(standard_id, str) and standard_id:
+                return standard_id
+
+        return None
+
     def _link_to_container(
         self,
         file_name: str,
@@ -1280,6 +1329,9 @@ class ReportImporter:
         if not objects:
             return []
 
+        context_markings = self._context_object_markings(entity)
+        context_author = self._context_author(entity)
+
         object_ids = [
             (o.get("standard_id") or o.get("id"))
             for o in objects
@@ -1303,6 +1355,12 @@ class ReportImporter:
                 report_types=["threat-report"],
                 object_refs=object_ids,
                 allow_custom=True,
+                **({"created_by_ref": context_author} if context_author else {}),
+                **(
+                    {"object_marking_refs": context_markings}
+                    if context_markings
+                    else {}
+                ),
                 custom_properties={
                     "x_opencti_files": [file_attachment] if file_attachment else []
                 },
@@ -1386,6 +1444,11 @@ class ReportImporter:
                 "object_refs": [],
             }
 
+        if context_author and not stix_entity.get("created_by_ref"):
+            stix_entity["created_by_ref"] = context_author
+        if context_markings and not stix_entity.get("object_marking_refs"):
+            stix_entity["object_marking_refs"] = context_markings
+
         refs_to_add = [oid for oid in object_ids if oid != standard_id]
 
         if stix_type in container_types:
@@ -1414,6 +1477,14 @@ class ReportImporter:
                         source_ref=oid,
                         target_ref=standard_id,
                         allow_custom=True,
+                        **(
+                            {"created_by_ref": context_author} if context_author else {}
+                        ),
+                        **(
+                            {"object_marking_refs": context_markings}
+                            if context_markings
+                            else {}
+                        ),
                     )
                     objects.append(rel)
             self.helper.connector_logger.debug(
@@ -1645,9 +1716,6 @@ class ReportImporter:
                     src_type = stix_lookup_type(src_obj)
                     tgt_type = stix_lookup_type(tgt_obj)
 
-                    self.helper.connector_logger.debug(
-                        f"Processing predicted relationship: {src_id} ({src_type}) -[{rel_type}]-> {tgt_id} ({tgt_type})"
-                    )
                     rel_src_id, rel_tgt_id = src_id, tgt_id
                     rel_src_type, rel_tgt_type = src_type, tgt_type
 
@@ -1672,6 +1740,9 @@ class ReportImporter:
                     if is_relation_allowed(
                         self.allowed_relations, rel_src_type, rel_tgt_type, rel_type
                     ):
+                        self.helper.connector_logger.debug(
+                            f"Processing predicted relationship: {rel_src_id} ({rel_src_type}) -[{rel_type}]-> {rel_tgt_id} ({rel_tgt_type})"
+                        )
                         try:
                             relationships.append(
                                 stix2.Relationship(
@@ -1817,7 +1888,7 @@ class ReportImporter:
             self.helper.send_stix2_bundle(
                 bundle=bundle,
                 bypass_validation=bypass_validation,
-                file_name=f"import-document-llm-{Path(file_name).name}",
+                file_name=Path(file_name).name,
                 entity_id=entity["id"] if entity else None,
             )
         except Exception as err:

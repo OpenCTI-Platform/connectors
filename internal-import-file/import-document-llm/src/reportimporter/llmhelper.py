@@ -1308,7 +1308,7 @@ class LLMHelper:
                 messages=messages,
                 temperature=0,
                 top_p=1,
-                max_tokens=available,
+                max_completion_tokens=available,
             )
 
         for attempt in range(MAX_RETRIES):
