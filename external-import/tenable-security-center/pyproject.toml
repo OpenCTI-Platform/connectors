@@ -36,7 +36,7 @@ dev = [
     "mypy>=1.13.0,<2",  # type validator
     "types-requests",  # stubs for requests lib
     "types-PyYAML",  # stubs for PyYAML lib
-    "python-dotenv~=1.1.0",
+    "python-dotenv~=1.2.2",
     "pip-audit~=2.10.0"
 ]
 all = [
