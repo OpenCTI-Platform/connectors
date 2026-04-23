@@ -92,10 +92,12 @@ def _format_result_line(
     line_part = f":{result.line}" if result.line else ""
     location = f"{display}{line_part}"
 
-    if result.severity in (Severity.WARNING, Severity.INFO):
-        status = _c("WARN", "yellow", stream)
-    elif result.passed:
+    # Derive status from passed first, then use severity for non-passing advisories.
+    # PASS = check passed (any severity), FAIL = failed error, WARN = failed advisory.
+    if result.passed:
         status = _c("PASS", "green", stream)
+    elif result.severity in (Severity.WARNING, Severity.INFO):
+        status = _c("WARN", "yellow", stream)
     else:
         status = _c("FAIL", "red", stream)
 
@@ -191,6 +193,10 @@ def format_json(
             "total": total,
             "passed": passed_count,
             "failed": total - passed_count,
+            "errors": len(
+                [r for r in results if not r.passed and r.severity == Severity.ERROR]
+            ),
+            "warnings": len([r for r in results if r.severity == Severity.WARNING]),
             "score_pct": round((passed_count / total) * 100, 1) if total else 0,
         },
         "results": [
