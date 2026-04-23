@@ -75,22 +75,35 @@ def is_suppressed(result: CheckResult, file_path: Path, line: int) -> bool:
     return directive is not None and result.code.upper() in directive
 
 
-def filter_noqa(results: list[CheckResult]) -> list[CheckResult]:
+def filter_noqa(
+    results: list[CheckResult],
+    connector_path: Path,
+) -> list[CheckResult]:
     """Filter results that are suppressed by noqa directives.
 
     Only results with both ``file_path`` and ``line`` set are eligible
     for suppression.  Results without location info pass through unchanged.
+
+    *connector_path* is the connector root directory.  When a result carries
+    a relative ``file_path`` (common — most checks report paths relative to
+    the connector root), it is resolved against *connector_path* so that
+    ``_read_file_lines`` opens the correct file on disk.
     """
     _read_file_lines.cache_clear()
+    resolved_root = connector_path.resolve()
     filtered: list[CheckResult] = []
 
     for result in results:
-        if (
-            result.file_path
-            and result.line
-            and is_suppressed(result, result.file_path, result.line)
-        ):
-            continue
+        if result.file_path and result.line:
+            # Resolve relative paths against the connector root so
+            # _read_file_lines always gets an absolute, unambiguous path.
+            abs_path = (
+                result.file_path
+                if result.file_path.is_absolute()
+                else resolved_root / result.file_path
+            )
+            if is_suppressed(result, abs_path, result.line):
+                continue
         filtered.append(result)
 
     return filtered
