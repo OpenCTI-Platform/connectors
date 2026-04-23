@@ -9,6 +9,8 @@ from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from src.microsoft_sentinel_intel import Connector
 
+BASE_API_URL = "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main"
+
 
 @pytest.fixture(name="connector")
 def fixture_connector(
@@ -100,7 +102,7 @@ def test_handle_event_delete(
                 {
                     "value": [
                         {
-                            "id": "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main/SentinelId",
+                            "id": f"{BASE_API_URL}/SentinelId",
                             "name": "SentinelId",
                         }
                     ]
@@ -117,12 +119,7 @@ def test_handle_event_delete(
     # First call to query the indicator
     request = mocked_send_request.call_args_list[0].kwargs["request"]
     assert request.method == "POST"
-    assert (
-        request.url == "https://management.azure.com"
-        "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
-        "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/query?api-version=2025-07-01-preview"
-    )
+    assert request.url == f"{BASE_API_URL}/query?api-version=2025-07-01-preview"
     assert json.loads(request.body) == {
         "condition": {
             "clauses": [
@@ -144,12 +141,7 @@ def test_handle_event_delete(
     # Second call to delete the indicator
     request = mocked_send_request.call_args_list[1].kwargs["request"]
     assert request.method == "DELETE"
-    assert (
-        request.url == "https://management.azure.com"
-        "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
-        "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/SentinelId?api-version=2025-07-01-preview"
-    )
+    assert request.url == f"{BASE_API_URL}/SentinelId?api-version=2025-07-01-preview"
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -188,8 +180,8 @@ def test_handle_event_delete_uses_stixindicators_resource_id(
                 {
                     "value": [
                         {
-                            "id": "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatintelligence/main/stixindicators/EncodedSource---indicator--uuid",
-                            "name": "EncodedSource---indicator--uuid",
+                            "id": f"{BASE_API_URL}/SentinelId1",
+                            "name": "EncodedSource---indicator--SentinelId1",
                         }
                     ]
                 }
@@ -205,11 +197,7 @@ def test_handle_event_delete_uses_stixindicators_resource_id(
     assert mocked_send_request.call_count == 2
     request = mocked_send_request.call_args_list[1].kwargs["request"]
     assert request.method == "DELETE"
-    assert (
-        request.url == "https://management.azure.com"
-        "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
-        "/providers/Microsoft.SecurityInsights/threatintelligence/main/stixindicators/EncodedSource---indicator--uuid?api-version=2025-07-01-preview"
-    )
+    assert request.url == f"{BASE_API_URL}/SentinelId1?api-version=2025-07-01-preview"
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -254,11 +242,11 @@ def test_handle_event_delete_multi_indicator_partial_failure(
                 {
                     "value": [
                         {
-                            "id": "https://management.azure.com/.../SentinelId1",
+                            "id": f"{BASE_API_URL}/SentinelId1",
                             "name": "SentinelId1",
                         },
                         {
-                            "id": "https://management.azure.com/.../SentinelId2",
+                            "id": f"{BASE_API_URL}/SentinelId2",
                             "name": "SentinelId2",
                         },
                     ]
