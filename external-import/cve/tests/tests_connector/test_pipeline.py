@@ -2,7 +2,7 @@
 
 Validates that:
 - Each CVE produces one self-contained bundle (Vulnerability + Software + Relationships).
-- Concurrency is bounded by the semaphore (cpe_max_concurrency).
+- Concurrency is bounded for both overall CVE workers and CPE resolution.
 - No data is lost or duplicated under concurrent load.
 - TaskGroup exceptions propagate correctly.
 - import_software=False sends CVE-only bundles (no CPE work).
@@ -33,7 +33,9 @@ def _make_converter(
     cpes_per_cve: int = 2,
     import_software: bool = True,
     cpe_max_concurrency: int = 4,
+    cve_max_concurrency: int = 8,
     cpe_delay: float = 0.0,
+    send_delay: float = 0.0,
 ):
     """Build a CVEConverter with mocked clients and helper.
 
@@ -49,6 +51,7 @@ def _make_converter(
         "bundle_send_times": [],
         "cpe_resolve_log": [],  # (cve_id, start_time, end_time)
         "concurrent_cpe_gauge": {"max": 0, "current": 0},
+        "concurrent_send_gauge": {"max": 0, "current": 0},
         "async_lock": asyncio.Lock(),
     }
 
@@ -96,11 +99,22 @@ def _make_converter(
 
     def fake_send_stix2_bundle(bundle_json, work_id=None):
         """Sync callback — runs in a thread via asyncio.to_thread()."""
+        with tlock:
+            tracker["concurrent_send_gauge"]["current"] += 1
+            tracker["concurrent_send_gauge"]["max"] = max(
+                tracker["concurrent_send_gauge"]["max"],
+                tracker["concurrent_send_gauge"]["current"],
+            )
+
+        if send_delay > 0:
+            time.sleep(send_delay)
+
         now = time.monotonic()
         data = json.loads(bundle_json)
         with tlock:
             tracker["bundles_sent"].append(data)
             tracker["bundle_send_times"].append(now)
+            tracker["concurrent_send_gauge"]["current"] -= 1
 
     mock_helper.send_stix2_bundle = fake_send_stix2_bundle
 
@@ -108,6 +122,7 @@ def _make_converter(
     mock_config = MagicMock()
     mock_config.cve.import_software = import_software
     mock_config.cve.cpe_max_concurrency = cpe_max_concurrency
+    mock_config.cve.cve_max_concurrency = cve_max_concurrency
     mock_config.cve.api_key.get_secret_value.return_value = "fake-api-key"
 
     # -- Build converter with mocked internals
@@ -118,6 +133,7 @@ def _make_converter(
     converter.helper = mock_helper
     converter.import_software = import_software
     converter.cpe_max_concurrency = cpe_max_concurrency
+    converter.cve_max_concurrency = cve_max_concurrency
     converter.work_id = None
     converter.author = CVEConverter._create_author()
 
@@ -249,6 +265,26 @@ async def test_concurrency_bounded_by_semaphore():
         f"Max concurrent CPE resolves was {observed_max}, "
         f"expected at most {max_concurrency}"
     )
+    assert observed_max > 1, f"Expected some parallelism (>1), got {observed_max}"
+
+
+async def test_cve_worker_concurrency_is_bounded():
+    """Overall CVE processing should be capped by cve_max_concurrency."""
+    max_workers = 2
+
+    converter, tracker = _make_converter(
+        num_pages=2,
+        vulns_per_page=10,
+        import_software=False,
+        cve_max_concurrency=max_workers,
+        send_delay=0.02,
+    )
+    await converter.ingest({})
+
+    observed_max = tracker["concurrent_send_gauge"]["max"]
+    assert (
+        observed_max <= max_workers
+    ), f"Max concurrent sends was {observed_max}, expected at most {max_workers}"
     assert observed_max > 1, f"Expected some parallelism (>1), got {observed_max}"
 
 
