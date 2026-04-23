@@ -1,11 +1,9 @@
 import asyncio
-import logging
+import json
 import random
 
 import aiohttp
 from src.services.utils.rate_limiter import AsyncRateLimiter
-
-logger = logging.getLogger(__name__)
 
 
 class CVEClient:
@@ -56,6 +54,35 @@ class CVEClient:
         base_wait = backoff_factor * (2**attempt)
         return base_wait + random.uniform(0.0, 1.0)
 
+    @staticmethod
+    async def _extract_error_message(response: aiohttp.ClientResponse) -> str | None:
+        """Extract a meaningful API error message from JSON or text body."""
+        try:
+            body = await response.json(content_type=None)
+            if isinstance(body, dict):
+                for key in ("message", "error", "detail", "reason"):
+                    value = body.get(key)
+                    if isinstance(value, str) and value.strip():
+                        return value.strip()
+            elif isinstance(body, str) and body.strip():
+                return body.strip()
+        except (
+            aiohttp.ContentTypeError,
+            json.JSONDecodeError,
+            TypeError,
+            ValueError,
+        ):
+            pass
+
+        try:
+            body_text = await response.text()
+            if body_text.strip():
+                return body_text.strip()
+        except UnicodeDecodeError:
+            return None
+
+        return None
+
     async def request(self, api_url: str, params: dict | None = None):
         """Make a rate-limited GET request with retry logic."""
         max_retries = 4
@@ -71,14 +98,25 @@ class CVEClient:
                     if response.status == 200:
                         return await response.json()
 
-                    if response.status == 404:
-                        error_data = dict(response.headers)
-                        if error_data.get("message") == "Invalid apiKey.":
+                    if response.status in {401, 403}:
+                        message = await self._extract_error_message(response)
+                        base_message = (
+                            "[API] Invalid API Key provided. "
+                            "Please check your configuration."
+                        )
+                        if message:
                             raise Exception(
-                                "[API] Invalid API Key provided. "
-                                "Please check your configuration."
+                                f"{base_message} NVD API response: {message}"
                             )
-                        raise Exception(f"[API] Error: {error_data.get('message')}")
+                        raise Exception(base_message)
+
+                    if response.status == 404:
+                        message = await self._extract_error_message(response)
+                        if message:
+                            raise Exception(f"[API] Error: {message}")
+                        raise Exception(
+                            f"[API] Request to {api_url} failed with status 404"
+                        )
 
                     if response.status in retryable_statuses and attempt < max_retries:
                         retry_after = response.headers.get("Retry-After")
@@ -95,6 +133,13 @@ class CVEClient:
                         await self._reset_session()
                         await asyncio.sleep(wait)
                         continue
+
+                    message = await self._extract_error_message(response)
+                    if message:
+                        raise Exception(
+                            f"[API] Request to {api_url} failed with status "
+                            f"{response.status}: {message}"
+                        )
 
                     raise Exception(
                         f"[API] Request to {api_url} failed with status "
