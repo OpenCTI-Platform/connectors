@@ -45,3 +45,7 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
         default=10,
         description="Maximum number of concurrent CPE resolution tasks when import_software is enabled.",
     )
+    cve_max_concurrency: PositiveInt = Field(
+        default=50,
+        description="Maximum number of concurrent CVE processing workers (bounds queued tasks and bundle sends).",
+    )
