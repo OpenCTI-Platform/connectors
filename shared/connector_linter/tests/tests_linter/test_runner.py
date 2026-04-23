@@ -80,7 +80,25 @@ class TestExceptionHandling:
         results = run_checks(minimal_connector, select=["VC999"])
         assert len(results) == 1
         assert results[0].passed is False
+        assert "RuntimeError" in results[0].message
         assert "kaboom" in results[0].message
+
+    def test_exception_always_error_severity(self, _clean_registry, minimal_connector):
+        """A crashing WARNING check is escalated to ERROR so CI won't silently pass."""
+
+        @CheckRegistry.register(
+            code="VC998",
+            name="test-warn-boom",
+            description="Warning check that crashes",
+            severity=Severity.WARNING,
+        )
+        def _boom(ctx: ConnectorContext) -> list[CheckFinding]:
+            raise ValueError("oops")
+
+        results = run_checks(minimal_connector, select=["VC998"])
+        assert len(results) == 1
+        assert results[0].severity == Severity.ERROR
+        assert results[0].passed is False
 
 
 class TestNoqaIntegration:

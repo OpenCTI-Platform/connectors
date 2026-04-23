@@ -111,19 +111,19 @@ class TestFilterNoqa:
         f = tmp_path / "test.py"
         f.write_text("x = 1  # noqa: VC101\n")
         results = [_result(code="VC101", file_path=f, line=1)]
-        filtered = filter_noqa(results)
+        filtered = filter_noqa(results, tmp_path)
         assert len(filtered) == 0
 
     def test_keeps_non_matching(self, tmp_path: Path):
         f = tmp_path / "test.py"
         f.write_text("x = 1  # noqa: VC999\n")
         results = [_result(code="VC101", file_path=f, line=1)]
-        filtered = filter_noqa(results)
+        filtered = filter_noqa(results, tmp_path)
         assert len(filtered) == 1
 
-    def test_no_location_passes_through(self):
+    def test_no_location_passes_through(self, tmp_path: Path):
         results = [_result(code="VC101", file_path=None, line=None)]
-        filtered = filter_noqa(results)
+        filtered = filter_noqa(results, tmp_path)
         assert len(filtered) == 1
 
     def test_mixed(self, tmp_path: Path):
@@ -134,5 +134,16 @@ class TestFilterNoqa:
             _result(code="VC101", file_path=f, line=2),  # kept
             _result(code="VC102", file_path=None, line=None),  # kept (no location)
         ]
-        filtered = filter_noqa(results)
+        filtered = filter_noqa(results, tmp_path)
         assert len(filtered) == 2
+
+    def test_relative_path_resolved(self, tmp_path: Path):
+        """Relative file_path is resolved against connector_path."""
+        sub = tmp_path / "src"
+        sub.mkdir()
+        f = sub / "main.py"
+        f.write_text("x = 1  # noqa: VC101\n")
+        # Check reports a relative path (common for checks)
+        results = [_result(code="VC101", file_path=Path("src/main.py"), line=1)]
+        filtered = filter_noqa(results, tmp_path)
+        assert len(filtered) == 0

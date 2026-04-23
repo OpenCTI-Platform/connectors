@@ -61,7 +61,7 @@ class TestFormatText:
         assert len(lines) == 0
 
     def test_quiet_shows_passed_warnings(self, tmp_path: Path):
-        """--quiet still shows passed WARNING checks."""
+        """--quiet still shows passed WARNING checks (they carry advisories)."""
         results = [
             _make_result(
                 passed=True, severity=Severity.WARNING, message="advisory note"
@@ -71,7 +71,7 @@ class TestFormatText:
         format_text(results, tmp_path, buf, quiet=True)
         output = buf.getvalue()
         assert "advisory note" in output
-        assert "WARN" in output
+        assert "PASS" in output
 
     def test_suggestion_displayed(self, tmp_path: Path):
         results = [
@@ -136,6 +136,8 @@ class TestFormatJson:
         assert data["summary"]["total"] == 3
         assert data["summary"]["passed"] == 2
         assert data["summary"]["failed"] == 1
+        assert data["summary"]["errors"] == 1  # VC902 failed with ERROR severity
+        assert data["summary"]["warnings"] == 0
 
     def test_result_fields(self, tmp_path: Path):
         results = [
