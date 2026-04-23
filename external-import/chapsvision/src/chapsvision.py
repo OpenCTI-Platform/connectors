@@ -3,7 +3,6 @@ import json
 import os
 import sys
 import time
-import uuid
 from datetime import datetime, timedelta
 
 import pytz
@@ -11,8 +10,11 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2.canonicalization.Canonicalize import canonicalize
+from pycti import (
+    CustomObservableMediaContent,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 
 
 class Chapsvision:
@@ -99,11 +101,7 @@ class Chapsvision:
         :return: STIX ID for the Media Content
         :rtype: str
         """
-        url = url.lower().strip()
-        data = {"url": url}
-        data = canonicalize(data, utf8=False)
-        id = str(uuid.uuid5(uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7"), data))
-        return "media-content--" + id
+        return CustomObservableMediaContent(url=url).id
 
     def generate_micro_blogging(self, doc):
         objects = []
