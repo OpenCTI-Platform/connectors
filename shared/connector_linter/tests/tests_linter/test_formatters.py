@@ -42,36 +42,36 @@ class TestFormatText:
         assert "FAIL" in output
         assert "broken" in output
 
-    def test_passed_shown_normally(self, tmp_path: Path):
+    def test_passed_shown_in_verbose(self, tmp_path: Path):
         results = [_make_result(passed=True, message="looks good")]
         buf = StringIO()
-        format_text(results, tmp_path, buf, quiet=False)
+        format_text(results, tmp_path, buf, verbose=True)
         output = buf.getvalue()
         assert "PASS" in output
         assert "looks good" in output
 
-    def test_quiet_hides_passed_errors(self, tmp_path: Path):
-        """--quiet suppresses passed checks with ERROR severity."""
+    def test_default_hides_passed(self, tmp_path: Path):
+        """Default mode suppresses passed checks with ERROR severity."""
         results = [_make_result(passed=True, severity=Severity.ERROR, message="ok")]
         buf = StringIO()
-        format_text(results, tmp_path, buf, quiet=True)
+        format_text(results, tmp_path, buf)
         output = buf.getvalue()
         # The "ok" message should NOT appear in a result line (score summary is fine)
         lines = [l for l in output.splitlines() if "VC901" in l]
         assert len(lines) == 0
 
-    def test_quiet_shows_passed_warnings(self, tmp_path: Path):
-        """--quiet still shows passed WARNING checks (they carry advisories)."""
+    def test_default_shows_warnings(self, tmp_path: Path):
+        """Default mode still shows WARNING checks (they carry advisories)."""
         results = [
             _make_result(
                 passed=True, severity=Severity.WARNING, message="advisory note"
             )
         ]
         buf = StringIO()
-        format_text(results, tmp_path, buf, quiet=True)
+        format_text(results, tmp_path, buf)
         output = buf.getvalue()
         assert "advisory note" in output
-        assert "PASS" in output
+        assert "WARN" in output
 
     def test_suggestion_displayed(self, tmp_path: Path):
         results = [
