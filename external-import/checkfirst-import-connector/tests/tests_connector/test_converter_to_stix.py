@@ -48,15 +48,6 @@ class TestConverterCache:
             domain_1 is domain_2
         ), "create_domain_name should return cached instance for same domain"
 
-    def test_same_domain_returns_same_infrastructure_object(self, converter):
-        """create_infrastructure() with same name should return the same cached object."""
-        infra_1 = converter.create_infrastructure(name="example.com")
-        infra_2 = converter.create_infrastructure(name="example.com")
-
-        assert (
-            infra_1 is infra_2
-        ), "create_infrastructure should return cached instance for same domain"
-
     def test_same_year_returns_same_campaign_object(self, converter):
         """get_campaign_for_year() with same year should return the same cached object."""
         campaign_1, _ = converter.get_campaign_for_year(2025)

@@ -176,7 +176,6 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    @lru_cache  # same infrastructure shared by many articles from the same domain
     def create_infrastructure(
         self, name: str, first_seen: datetime | str | None = None
     ) -> Infrastructure:
