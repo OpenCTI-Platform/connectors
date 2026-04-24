@@ -4,10 +4,11 @@ from connectors_sdk.models import (
     AutonomousSystem,
     City,
     Country,
-    DomainName,
     Indicator,
     IPV4Address,
     OrganizationAuthor,
+    Reference,
+    Region,
     Relationship,
     TLPMarking,
     Vulnerability,
@@ -72,12 +73,6 @@ class ConverterToStix:
         """
         return Country(name=name, author=self.author, markings=[self.tlp_clear])
 
-    def create_domain(self, name: str) -> DomainName:
-        """
-        Create a Domain object
-        """
-        return DomainName(value=name, author=self.author, markings=[self.tlp_amber])
-
     def create_indicator(
         self,
         name: str,
@@ -102,6 +97,18 @@ class ConverterToStix:
         Create an IPv4 object
         """
         return IPV4Address(value=ip, author=self.author, markings=[self.tlp_amber])
+
+    def create_reference(self, obs_id: str) -> Reference:
+        """
+        Create a simple Reference object
+        """
+        return Reference(id=obs_id)
+
+    def create_region(self, name: str) -> Country:
+        """
+        Create a Region object
+        """
+        return Region(name=name, author=self.author, markings=[self.tlp_clear])
 
     def create_relationship(
         self,

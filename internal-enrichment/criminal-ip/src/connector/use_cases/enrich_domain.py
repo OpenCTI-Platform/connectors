@@ -3,22 +3,29 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
+from connector.converter_to_stix import ConverterToStix
+from connector.use_cases.common import BaseUseCases
 from criminalip_client import CriminalIpClient
 
 
-class DomainEnricher:
+class DomainEnricher(BaseUseCases):
     def __init__(
         self,
         connector_logger: logging.Logger,
         client: CriminalIpClient,
-        converter_to_stix,
+        converter_to_stix: ConverterToStix,
     ):
+        BaseUseCases.__init__(self, converter_to_stix)
         self.connector_logger = connector_logger
         self.client = client
         self.converter_to_stix = converter_to_stix
 
-    def process_domain_scan(self, domain_value: str) -> list:
+    def process_domain_scan(self, observable: dict) -> list:
+        """
+        Retrieve scan id linked to domain to process to the enrichment
+        """
         scan_id = None
+        domain_value = observable["value"]
 
         reports_data = self.client.get_data(
             "/v1/domain/reports", {"query": domain_value, "offset": 0}
@@ -41,11 +48,21 @@ class DomainEnricher:
             scan_response = self.client.post_data(
                 "/v1/domain/scan", {"query": domain_value}
             )
+            # Prevent "We are still scanning for your previous request. Please wait."
+            if scan_response and scan_response["status"] == 400:
+                for _ in range(3):
+                    scan_response = self.client.post_data(
+                        "/v1/domain/scan", {"query": domain_value}
+                    )
+                    if scan_response["status"] == 200:
+                        break
+                    time.sleep(5)
+
             if scan_response and scan_response.get("data"):
                 scan_id = scan_response["data"].get("scan_id")
 
-                # Poll until scan completes (max 5 minutes)
-                max_attempts = 100
+                # Poll until scan completes
+                max_attempts = 10
                 for _ in range(max_attempts):
                     status_data = self.client.get_data(f"/v1/domain/status/{scan_id}")
                     if status_data and status_data.get("data"):
@@ -58,20 +75,29 @@ class DomainEnricher:
 
         domain_data = self.client.get_data(f"/v2/domain/report/{scan_id}")
         if domain_data and domain_data.get("data"):
-            return self.process_domain_enrichment(domain_value, domain_data["data"])
+            return self.process_domain_enrichment(observable, domain_data["data"])
 
         return []
 
     def process_domain_enrichment(
-        self, domain_name_value: str, domain_data: Dict[str, Any]
+        self, observable: dict, domain_data: Dict[str, Any]
     ) -> List[Any]:
         objects = []
+        domain_name = observable["value"]
+        obs_id = observable["id"]
 
-        author = self.converter_to_stix.create_author()
-        objects.append(author.to_stix2_object())
+        self.connector_logger.info(
+            "[ENRICH DOMAIN] Starting enrichment...",
+            {"observable_id": obs_id},
+        )
 
-        domain_stix = self.converter_to_stix.create_domain(name=domain_name_value)
-        objects.append(domain_stix.to_stix2_object())
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        objects.extend(self.generate_author_and_tlp_markings())
+
+        # Create dummy reference object with domain id for relationships
+        domain_stix = self.converter_to_stix.create_reference(obs_id=observable["id"])
+
+        # If phishing prob, create Indicator and relationship
 
         summary = domain_data.get("summary", {})
         phishing_prob = summary.get("url_phishing_prob", 0)
@@ -81,6 +107,12 @@ class DomainEnricher:
             or summary.get("phishing_record", 0) > 0
             or summary.get("suspicious_file", 0) > 0
         ):
+            self.connector_logger.info(
+                "[ENRICH DOMAIN] Process enrichment from phishing prob data...",
+                {"observable_id": obs_id},
+            )
+
+            # Create Indicator
             labels = ["malicious-domain"]
             description_parts = ["Criminal IP URL Scan Report Findings:"]
 
@@ -96,18 +128,17 @@ class DomainEnricher:
             description_parts.append("- Favicon domain does not match the page domain.")
             description_parts.append(f"- x_criminalip_phishing_prob: {phishing_prob}")
 
-            indicator_pattern = f"[domain-name:value = '{domain_name_value}']"
+            indicator_pattern = f"[domain-name:value = '{domain_name}']"
             indicator = self.converter_to_stix.create_indicator(
-                name=f"Malicious domain: {domain_name_value}",
+                name=f"Malicious domain: {domain_name}",
                 pattern_type="stix",
                 pattern=indicator_pattern,
-                # confidence=phishing_prob,
                 labels=list(set(labels)),
                 description="\n".join(description_parts),
             )
             objects.append(indicator.to_stix2_object())
 
-            # Indicator -> Observable (based-on)
+            # Relationship Indicator -> Observable (based-on)
             objects.append(
                 self.converter_to_stix.create_relationship(
                     relationship_type="based-on",
@@ -117,6 +148,10 @@ class DomainEnricher:
             )
 
         # Related IPs
+        self.connector_logger.info(
+            "[ENRICH DOMAIN] Process enrichment from connected IP data...",
+            {"observable_id": obs_id},
+        )
         related_ips = domain_data.get("connected_ip", [])
         for ip_info in related_ips:
             ip_value = ip_info.get("ip")
@@ -132,6 +167,12 @@ class DomainEnricher:
                 )
 
         # Countries
+
+        self.connector_logger.info(
+            "[ENRICH DOMAIN] Process enrichment from countries data...",
+            {"observable_id": obs_id},
+        )
+
         countries_data = summary.get("list_of_countries", [])
 
         # Prevent None values
@@ -146,7 +187,7 @@ class DomainEnricher:
                     source_obj=domain_stix,
                     target_obj=loc_stix,
                     description=(
-                        f"Domain {domain_name_value} associated with"
+                        f"Domain {domain_name} associated with"
                         f" servers in {country_code.upper()}."
                     ),
                 ).to_stix2_object()

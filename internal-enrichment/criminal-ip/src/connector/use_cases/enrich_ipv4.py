@@ -1,22 +1,28 @@
 import logging
-from typing import Any, List
 
+from connector.converter_to_stix import ConverterToStix
+from connector.use_cases.common import BaseUseCases
 from criminalip_client import CriminalIpClient
 
 
-class Ipv4Enricher:
+class Ipv4Enricher(BaseUseCases):
     def __init__(
         self,
         connector_logger: logging.Logger,
         client: CriminalIpClient,
-        converter_to_stix,
+        converter_to_stix: ConverterToStix,
     ):
+        BaseUseCases.__init__(self, converter_to_stix)
         self.connector_logger = connector_logger
         self.client = client
         self.converter_to_stix = converter_to_stix
 
-    def process_ipv4_enrichment(self, obs_value: str) -> List[Any]:
+    def process_ipv4_enrichment(self, observable: dict) -> list:
+        """
+        Collect intelligence from the source for an IPV4 type
+        """
         objects = []
+        obs_value = observable["value"]
         ip_data = self.client.get_data("/v1/asset/ip/report", {"ip": obs_value})
 
         if ip_data:
@@ -24,14 +30,26 @@ class Ipv4Enricher:
             if not ip_value:
                 return []
 
-            author = self.converter_to_stix.create_author()
-            objects.append(author.to_stix2_object())
+            obs_id = observable["id"]
 
-            # IPv4 observable
-            ipv4_stix = self.converter_to_stix.create_ipv4(ip=ip_value)
-            objects.append(ipv4_stix.to_stix2_object())
+            self.connector_logger.info(
+                "[ENRICH IPV4] Starting enrichment...",
+                {"observable_id": obs_id},
+            )
+
+            # Create and add author, TLP clear and TLP amber to octi_objects
+            objects.extend(self.generate_author_and_tlp_markings())
+
+            # Create dummy reference object with ipv4 id for relationships
+            ipv4_stix = self.converter_to_stix.create_reference(obs_id=obs_id)
 
             # Build labels from issues + categories + malicious info
+
+            self.connector_logger.info(
+                "[ENRICH IPV4] Process enrichment from malicious info data...",
+                {"observable_id": obs_id},
+            )
+
             labels = []
 
             issues = ip_data.get("issues", {})
@@ -57,13 +75,12 @@ class Ipv4Enricher:
                 if malicious_info_data.get("is_vpn"):
                     labels.append("VPN")
 
-            # Score -> confidence
+            # Create Indicator
             score_data = ip_data.get("score", {})
             inbound_score_str = score_data.get("inbound")
             outbound_score_str = score_data.get("outbound")
-
-            # Indicator
             indicator_pattern = f"[ipv4-addr:value = '{ip_value}']"
+
             indicator = self.converter_to_stix.create_indicator(
                 name=f"Criminal IP Reputation for {ip_value}",
                 pattern_type="stix",
@@ -76,7 +93,7 @@ class Ipv4Enricher:
             )
             objects.append(indicator.to_stix2_object())
 
-            # Indicator -> Observable (based-on)
+            # Relationship Indicator -> Observable (based-on)
             objects.append(
                 self.converter_to_stix.create_relationship(
                     relationship_type="based-on",
@@ -86,6 +103,12 @@ class Ipv4Enricher:
             )
 
             # Whois -> AS + Location
+
+            self.connector_logger.info(
+                "[ENRICH IPV4] Process enrichment from whois data...",
+                {"observable_id": obs_id},
+            )
+
             autonomous_system = None
             loc_stix = None
             whois_data = ip_data.get("whois", {}).get("data")
@@ -98,13 +121,21 @@ class Ipv4Enricher:
                     )
                     objects.append(autonomous_system.to_stix2_object())
 
-                country_code = whois_entry.get("org_country_code")
-                if country_code:
+                country = whois_entry.get("org_country_code")
+                region = whois_entry.get("region")
+                city = whois_entry.get("city")
+                if city:
                     loc_stix = self.converter_to_stix.create_city(
-                        name=whois_entry.get("city"),
+                        name=city,
                         latitude=whois_entry.get("latitude"),
                         longitude=whois_entry.get("longitude"),
                     )
+                    objects.append(loc_stix.to_stix2_object())
+                elif region:
+                    loc_stix = self.converter_to_stix.create_region(name=region)
+                    objects.append(loc_stix.to_stix2_object())
+                elif country:
+                    loc_stix = self.converter_to_stix.create_country(name=country)
                     objects.append(loc_stix.to_stix2_object())
 
             # Relationships
@@ -125,7 +156,13 @@ class Ipv4Enricher:
                     ).to_stix2_object()
                 )
 
-            # Vulnerabilities
+            # Create Vulnerabilities
+
+            self.connector_logger.info(
+                "[ENRICH IPV4] Process enrichment from vulnerability data...",
+                {"observable_id": obs_id},
+            )
+
             vulnerabilities = ip_data.get("vulnerability", {}).get("data", [])
             for vuln in vulnerabilities:
                 cve_id = vuln.get("cve_id")

@@ -40,15 +40,47 @@ class CriminalIpClient:
                 response = self.session.get(api_url, params=params, timeout=20)
                 log_msg = "[CLIENT API] HTTP GET Request to endpoint"
             if type_request == "POST":
-                response = self.session.post(api_url, params=params, timeout=20)
+                response = self.session.post(api_url, data=params, timeout=20)
                 log_msg = "[CLIENT API] HTTP POST Request to endpoint"
 
             self.helper.connector_logger.info(log_msg, {"url_path": api_url})
 
             response.raise_for_status()
+
+            # Manage custom error from API
+            response_json = response.json()
+            status_reponse = response_json.get("status")
+            match status_reponse:
+                case "400":
+                    self.helper.connector_logger.error(
+                        "[CLIENT API] Invalid URL.", response_json
+                    )
+                    raise
+                case "403":
+                    self.helper.connector_logger.error(
+                        "[CLIENT API] Free Membership users can view a total of 100 data queries.",
+                        response_json,
+                    )
+                    raise
+                case "412":
+                    self.helper.connector_logger.error(
+                        "[CLIENT API] Missing parameter.", response_json
+                    )
+                    raise
+                case "420":
+                    self.helper.connector_logger.error(
+                        "[CLIENT API] Invalid parameter.", response_json
+                    )
+                    raise
+                case "500":
+                    self.helper.connector_logger.error(
+                        "[CLIENT API] An error occured on the server.",
+                        response_json,
+                    )
+                    raise
             return response
 
-        except requests.exceptions.HTTPError as errh:
+        except requests.exceptions.HTTPError as err:
             if response.status_code == 401:
                 msg = "[CLIENT API] Permissions Error, Criminal IP returned a 401, please check your API key"
             elif response.status_code == 404:
@@ -57,16 +89,16 @@ class CriminalIpClient:
                 )
             else:
                 msg = "[CLIENT API] Http error"
-            self.helper.connector_logger.error(msg, {"error": errh})
+            self.helper.connector_logger.error(msg, {"error": err})
             raise
-        except requests.exceptions.ConnectionError as errc:
+        except requests.exceptions.ConnectionError as err:
             self.helper.connector_logger.error(
-                "[CLIENT API] Error connecting", {"error": errc}
+                "[CLIENT API] Error connecting", {"error": err}
             )
             raise
-        except requests.exceptions.Timeout as errt:
+        except requests.exceptions.Timeout as err:
             self.helper.connector_logger.error(
-                "[CLIENT API] Timeout error", {"error": errt}
+                "[CLIENT API] Timeout error", {"error": err}
             )
             raise
         except requests.exceptions.RequestException as err:
