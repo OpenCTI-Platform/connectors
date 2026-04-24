@@ -45,6 +45,10 @@ connector-linter check ./connector --format github
 ### Filtering checks
 
 ```bash
+# Check a single file (connector root is resolved automatically)
+connector-linter check ./connector/src/main.py
+connector-linter check ./connector/docker-compose.yml
+
 # Run only specific checks
 connector-linter check ./connector --select VC101 --select VC102
 
