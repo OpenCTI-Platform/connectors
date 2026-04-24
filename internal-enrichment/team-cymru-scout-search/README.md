@@ -157,7 +157,7 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 
 ---
 
-### Use Case: Playbook-Based Scout Query Enrichment
+## Use Case: Playbook-Based Scout Query Enrichment
 
 This connector is designed for playbook-based searches where Scout query patterns are used to enrich indicators with threat intelligence data. Below is a step-by-step guide to set up automated enrichment.
 
