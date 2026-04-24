@@ -219,6 +219,76 @@ def format_json(
     stream.write("\n")
 
 
+def format_markdown(
+    results: list[CheckResult],
+    connector_path: Path,
+    stream: TextIO,
+    verbose: bool = False,
+    abspath: bool = False,
+) -> None:
+    """Format results as a Markdown document.
+
+    Produces a self-contained Markdown report suitable for pasting into
+    Notion, GitHub issues, or any Markdown-capable viewer.
+    """
+    connector_name = connector_path.resolve().name
+    stream.write(f"# Connector Linter Report — `{connector_name}`\n\n")
+
+    total = len(results)
+    passed_count = len([r for r in results if r.passed])
+    failed_count = total - passed_count
+    errors = len([r for r in results if not r.passed and r.severity == Severity.ERROR])
+    warnings = len([r for r in results if r.severity == Severity.WARNING])
+    pct = (passed_count / total) * 100 if total else 0
+
+    stream.write(f"**Score: {passed_count}/{total} — {pct:.0f}%**\n\n")
+    summary_parts = [
+        f"{total} checks run",
+        f"{passed_count} passed",
+        f"{failed_count} failed",
+    ]
+    if errors:
+        summary_parts.append(f"{errors} error(s)")
+    if warnings:
+        summary_parts.append(f"{warnings} warning(s)")
+    stream.write(f"{', '.join(summary_parts)}\n\n")
+
+    failed = [r for r in results if not r.passed]
+    warn_results = [r for r in results if r.passed and r.severity == Severity.WARNING]
+    passed_normal = [r for r in results if r.passed and r.severity != Severity.WARNING]
+
+    def _md_path(r: CheckResult) -> str:
+        if abspath:
+            return _abs_path(connector_path, r.file_path)
+        return _display_path(connector_path, r.file_path)
+
+    def _md_line(r: CheckResult, icon: str) -> str:
+        path = _md_path(r)
+        line_part = f":{r.line}" if r.line else ""
+        line = f"- {icon} **{r.code}** `{path}{line_part}` — {r.message}"
+        if r.suggestion:
+            line += f"\n  - 💡 {r.suggestion}"
+        return line
+
+    if failed:
+        stream.write("## ❌ Failed\n\n")
+        for r in failed:
+            stream.write(f"{_md_line(r, '❌')}\n")
+        stream.write("\n")
+
+    if warn_results:
+        stream.write("## ⚠️ Warnings\n\n")
+        for r in warn_results:
+            stream.write(f"{_md_line(r, '⚠️')}\n")
+        stream.write("\n")
+
+    if verbose and passed_normal:
+        stream.write("## ✅ Passed\n\n")
+        for r in passed_normal:
+            stream.write(f"{_md_line(r, '✅')}\n")
+        stream.write("\n")
+
+
 def format_github(
     results: list[CheckResult],
     connector_path: Path,

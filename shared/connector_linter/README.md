@@ -35,11 +35,24 @@ uv run connector-linter check ../../external-import/mandiant
 # Colored terminal output (default — paths relative to CLI argument)
 connector-linter check ./connector --format text
 
+# Markdown output (for Notion / GitHub wikis / issue bodies)
+connector-linter check ./connector --format markdown
+
 # JSON output (for CI pipelines — always uses absolute paths)
 connector-linter check ./connector --format json
 
 # GitHub Actions annotations (paths relative to repo root)
 connector-linter check ./connector --format github
+```
+
+### Rules documentation
+
+```bash
+# Print rules reference as Markdown to stdout
+connector-linter docs
+
+# Write to a file (for Notion import)
+connector-linter docs -o rules.md
 ```
 
 ### Filtering checks
