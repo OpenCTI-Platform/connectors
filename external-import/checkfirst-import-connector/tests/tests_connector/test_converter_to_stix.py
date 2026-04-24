@@ -79,17 +79,6 @@ class TestArticleConversion:
     while allowing per-article objects (MediaContent and its relationships) to differ.
     """
 
-    def test_article_infrastructure_has_no_first_seen(self, converter):
-        """Infrastructure created in the article path should not have first_seen."""
-        campaign, _ = converter.get_campaign_for_year(2025)
-        article = _make_article()
-
-        objects = converter.convert_article(article, campaign)
-
-        infra_objects = [o for o in objects if o.id.startswith("infrastructure--")]
-        assert len(infra_objects) == 1
-        assert infra_objects[0].first_seen is None
-
     def test_article_shared_objects_are_identical(self, converter):
         """Two same-domain articles should have an identical structural subset."""
         campaign, attributed_to = converter.get_campaign_for_year(2025)

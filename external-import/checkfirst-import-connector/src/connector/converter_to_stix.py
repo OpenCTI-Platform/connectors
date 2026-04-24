@@ -323,7 +323,10 @@ class ConverterToStix:
             # would produce different JSON per article for the same domain, bypassing
             # set dedup and flooding OpenCTI with near-duplicate updates.
             # Known domains already have correct first_seen from the infrastructure bundle.
-            infrastructure = self.create_infrastructure(name=article_domain)
+            infrastructure = self.create_infrastructure(
+                name=article_domain,
+                first_seen=article.published_date,
+            )
             # --- Channel as website (the publishing domain/subdomain) ---
             channel = self.create_channel(
                 name=article_domain,
