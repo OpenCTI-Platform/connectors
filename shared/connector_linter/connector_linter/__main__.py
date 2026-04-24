@@ -1,11 +1,18 @@
 """CLI entry point for the connector linter."""
 
+import ast
+import inspect
 import sys
 from pathlib import Path
 
 import click
 from connector_linter import __version__
-from connector_linter.formatters import format_github, format_json, format_text
+from connector_linter.formatters import (
+    format_github,
+    format_json,
+    format_markdown,
+    format_text,
+)
 from connector_linter.models import Severity
 from connector_linter.registry import CheckRegistry
 from connector_linter.runner import _import_checks_modules, run_checks
@@ -43,7 +50,7 @@ def _resolve_connector_root(file_path: Path) -> Path | None:
 @click.option(
     "--format",
     "output_format",
-    type=click.Choice(["text", "json", "github"]),
+    type=click.Choice(["text", "json", "github", "markdown"]),
     default="text",
     help="Output format.",
 )
@@ -149,6 +156,8 @@ def check(
     # Format output
     if output_format == "text":
         format_text(results, path, sys.stdout, verbose=verbose, abspath=abspath)
+    elif output_format == "markdown":
+        format_markdown(results, path, sys.stdout, verbose=verbose, abspath=abspath)
     else:
         formatter = {"json": format_json, "github": format_github}[output_format]
         formatter(results, path, sys.stdout)
@@ -178,6 +187,138 @@ def list_checks() -> None:
             f"{click.style(desc.severity.symbol(), fg=sev_color):<14} "
             f"{desc.name:<30} {desc.description}",
         )
+
+
+def _extract_check_docstring(func: object) -> str | None:
+    """Extract the module-level docstring from the file defining *func*."""
+    source_file = inspect.getfile(func)  # type: ignore[arg-type]
+    with open(source_file) as f:
+        tree = ast.parse(f.read())
+    return ast.get_docstring(tree)
+
+
+def _extract_applicable_types(func: object) -> list[str] | None:
+    """Extract ``_APPLICABLE_TYPES`` set literal from the check's source file."""
+    source_file = inspect.getfile(func)  # type: ignore[arg-type]
+    with open(source_file) as f:
+        tree = ast.parse(f.read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "_APPLICABLE_TYPES":
+                    if isinstance(node.value, ast.Set):
+                        return sorted(
+                            elt.value
+                            for elt in node.value.elts
+                            if isinstance(elt, ast.Constant)
+                        )
+    return None
+
+
+# Mapping from internal type constants to human-readable labels
+_TYPE_LABELS = {
+    "EXTERNAL_IMPORT": "External Import",
+    "INTERNAL_ENRICHMENT": "Internal Enrichment",
+    "INTERNAL_EXPORT_FILE": "Internal Export File",
+    "INTERNAL_IMPORT_FILE": "Internal Import File",
+    "STREAM": "Stream",
+}
+
+
+@cli.command()
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Write output to a file instead of stdout.",
+)
+def docs(output: str | None) -> None:
+    """Generate Markdown documentation for all implemented rules.
+
+    Extracts code, title, severity, scope, and docstring from each check
+    to produce a Markdown document suitable for import into Notion or wikis.
+    """
+    _import_checks_modules()
+    checks = CheckRegistry.get_all()
+
+    if not checks:
+        click.echo("No checks registered yet.", err=True)
+        return
+
+    # Group checks by category prefix
+    categories: dict[str, list[str]] = {}
+    for code in sorted(checks.keys()):
+        prefix = code[:3]  # "VC1", "VC2", …
+        categories.setdefault(prefix, []).append(code)
+
+    category_titles = {
+        "VC1": "VC1xx — Configuration",
+        "VC2": "VC2xx — Metadata",
+        "VC3": "VC3xx — Code Quality",
+        "VC4": "VC4xx — Docker",
+        "VC5": "VC5xx — Deprecation",
+    }
+
+    lines: list[str] = []
+    lines.append("# Connector Linter — Rules Reference\n")
+    lines.append(f"Total rules: **{len(checks)}**\n")
+
+    # Summary table
+    lines.append("## Summary\n")
+    lines.append("| Code | Severity | Name | Scope |")
+    lines.append("|------|----------|------|-------|")
+    for code in sorted(checks.keys()):
+        desc = checks[code]
+        sev_icon = {"E": "🔴", "W": "🟡", "I": "🔵"}[desc.severity.symbol()]
+        applicable = _extract_applicable_types(desc.func)
+        if applicable:
+            scope = ", ".join(_TYPE_LABELS.get(t, t) for t in applicable)
+        else:
+            scope = "All"
+        lines.append(
+            f"| {code} | {sev_icon} {desc.severity.value.capitalize()} | {desc.name} | {scope} |"
+        )
+
+    lines.append("")
+
+    # Detailed sections per category
+    for prefix in sorted(categories.keys()):
+        title = category_titles.get(prefix, f"{prefix}xx")
+        lines.append(f"## {title}\n")
+
+        for code in categories[prefix]:
+            desc = checks[code]
+            sev_icon = {"E": "🔴", "W": "🟡", "I": "🔵"}[desc.severity.symbol()]
+            lines.append(f"### {code} — {desc.name}\n")
+            lines.append(
+                f"- **Severity:** {sev_icon} {desc.severity.value.capitalize()}"
+            )
+
+            applicable = _extract_applicable_types(desc.func)
+            if applicable:
+                scope = ", ".join(_TYPE_LABELS.get(t, t) for t in applicable)
+            else:
+                scope = "All connector types"
+            lines.append(f"- **Scope:** {scope}")
+            lines.append(f"- **Description:** {desc.description}\n")
+
+            docstring = _extract_check_docstring(desc.func)
+            if docstring:
+                # Strip the first line (title, usually "VCxxx — ...")
+                doc_lines = docstring.strip().split("\n")
+                body = "\n".join(doc_lines[1:]).strip()
+                if body:
+                    lines.append(f"{body}\n")
+
+    content = "\n".join(lines)
+
+    if output:
+        out_path = Path(output)
+        out_path.write_text(content)
+        click.echo(f"Documentation written to {out_path}", err=True)
+    else:
+        click.echo(content)
 
 
 if __name__ == "__main__":
