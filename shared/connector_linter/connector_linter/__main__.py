@@ -21,8 +21,25 @@ def cli() -> None:
     """
 
 
+_CONNECTOR_ROOT_MARKERS = {"src", "__metadata__", "Dockerfile", "docker-compose.yml"}
+
+
+def _resolve_connector_root(file_path: Path) -> Path | None:
+    """Walk up from *file_path* to find the connector root directory.
+
+    A connector root is identified by the presence of at least one marker:
+    ``src/``, ``__metadata__/``, ``Dockerfile``, or ``docker-compose.yml``.
+    """
+    candidate = file_path.resolve().parent
+    while candidate != candidate.parent:
+        if any((candidate / m).exists() for m in _CONNECTOR_ROOT_MARKERS):
+            return candidate
+        candidate = candidate.parent
+    return None
+
+
 @cli.command()
-@click.argument("connector_path", type=click.Path(exists=True, file_okay=False))
+@click.argument("connector_path", type=click.Path(exists=True))
 @click.option(
     "--format",
     "output_format",
@@ -77,15 +94,34 @@ def check(
 ) -> None:
     r"""Check a connector against Verified criteria.
 
+    CONNECTOR_PATH can be a connector directory or a specific file within one.
+    When a file is given, the connector root is resolved automatically and only
+    findings for that file are shown.
+
     \b
     Examples:
         python -m connector_linter check ./external-import/myconnector
+        python -m connector_linter check ./external-import/myconnector/src/main.py
         python -m connector_linter check ./external-import/myconnector --format json
         python -m connector_linter check ./external-import/myconnector --select VC1xx
         python -m connector_linter check ./external-import/myconnector --ignore VC101
         python -m connector_linter check ./external-import/myconnector -v
     """
     path = Path(connector_path)
+    target_file: Path | None = None
+
+    if path.is_file():
+        target_file = path.resolve()
+        connector_root = _resolve_connector_root(path)
+        if connector_root is None:
+            click.echo(
+                f"Error: Could not determine connector root for {path}. "
+                "Ensure the file is inside a connector directory (with src/, "
+                "__metadata__/, Dockerfile, or docker-compose.yml).",
+                err=True,
+            )
+            sys.exit(2)
+        path = connector_root
 
     results = run_checks(
         connector_path=path,
@@ -93,6 +129,14 @@ def check(
         ignore=list(ignore) if ignore else None,
         disable_noqa=disable_noqa,
     )
+
+    # When a specific file was targeted, keep only findings for that file
+    if target_file is not None:
+        results = [
+            r
+            for r in results
+            if r.file_path is not None and r.file_path.resolve() == target_file
+        ]
 
     # Filter by severity if requested
     if severity:
