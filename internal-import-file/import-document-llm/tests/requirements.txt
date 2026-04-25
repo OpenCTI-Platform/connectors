@@ -12,6 +12,6 @@ pycountry==24.6.1
 phonenumbers==9.0.15
 openai==2.2.0
 ollama==0.6.0
-pycti==6.7.15
+pycti>=7.260423.0
 python-docx==1.2.0
 markdownify==1.2.0

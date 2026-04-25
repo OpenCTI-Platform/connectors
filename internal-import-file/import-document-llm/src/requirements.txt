@@ -1,4 +1,4 @@
-pycti==6.8.4
+pycti>=7.260423.0
 antlr4-python3-runtime==4.9.3
 requests==2.32.5
 stix2==3.0.1
@@ -12,8 +12,8 @@ pdf2image==1.17.0
 markdownify==1.2.0
 pycountry==24.6.1
 tiktoken==0.12.0
-torch==2.11.0
-torchvision==0.26.0
+torch==2.10.0
+torchvision==0.25.0
 easyocr==1.7.2
 PyMuPDF==1.26.4
 pillow==11.3.0
