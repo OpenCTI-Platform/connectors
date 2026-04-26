@@ -60,11 +60,11 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         description="Whether to create a Threat Actor object",
     )
     create_leak_site_domains: bool = Field(
-        default=True,
+        default=False,
         description="Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
     )
     create_leak_post_refs: bool = Field(
-        default=True,
+        default=False,
         description="Whether to include the leak post URL as an external reference on victim reports",
     )
 

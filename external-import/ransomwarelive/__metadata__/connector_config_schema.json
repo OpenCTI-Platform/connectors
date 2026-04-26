@@ -75,12 +75,12 @@
       "type": "boolean"
     },
     "CONNECTOR_CREATE_LEAK_SITE_DOMAINS": {
-      "default": true,
+      "default": false,
       "description": "Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
       "type": "boolean"
     },
     "CONNECTOR_CREATE_LEAK_POST_REFS": {
-      "default": true,
+      "default": false,
       "description": "Whether to include the leak post URL as an external reference on victim reports",
       "type": "boolean"
     }

@@ -116,6 +116,10 @@ graph LR
 | Victim Country             | Location             | Target geography                                                   |
 | Leak Post URL              | External Reference   | Link to ransomware group's post (toggleable)                       |
 
+### Toggles involving links to leak sites
+
+`CONNECTOR_CREATE_LEAK_SITE_DOMAINS` and `CONNECTOR_CREATE_LEAK_POST_REFS` both default to `false`. When enabled, the connector will ingest `.onion` domain observables and direct URLs to ransomware group leak sites and victim posts. Before enabling either toggle, ensure that ingesting and storing links to leaked data is permitted under the laws and regulations applicable in your jurisdiction.
+
 ## Debugging
 
 Enable verbose logging:
