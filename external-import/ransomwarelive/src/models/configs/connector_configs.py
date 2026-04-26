@@ -2,8 +2,9 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from models.configs import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
+
+from models.configs import ConfigBaseSettings
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
@@ -58,6 +59,14 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     create_threat_actor: bool = Field(
         default=False,
         description="Whether to create a Threat Actor object",
+    )
+    create_leak_site_domains: bool = Field(
+        default=True,
+        description="Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
+    )
+    create_leak_post_refs: bool = Field(
+        default=True,
+        description="Whether to include the leak post URL as an external reference on victim reports",
     )
 
     @field_validator("type")

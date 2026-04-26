@@ -102,13 +102,19 @@ graph LR
 
 ### Entity Mapping
 
-| RansomwareLive Data  | OpenCTI Entity      | Description                                      |
-|----------------------|---------------------|--------------------------------------------------|
-| Ransomware Group     | Threat-Actor        | Ransomware threat actor                          |
-| Victim Name          | Identity            | Victim organization                              |
-| Attack Date          | Incident            | Ransomware incident                              |
-| Victim Sector        | Sector              | Target industry sector                           |
-| Victim Country       | Location            | Target geography                                 |
+| RansomwareLive Data        | OpenCTI Entity       | Description                                                        |
+|----------------------------|----------------------|--------------------------------------------------------------------|
+| Ransomware Group           | Intrusion Set        | Primary group representation                                       |
+| Ransomware Group           | Threat Actor         | Optional (enabled via `CONNECTOR_CREATE_THREAT_ACTOR`)             |
+| Group Aliases              | aliases              | Alternative names on Intrusion Set and Threat Actor                |
+| Group Profile URL          | External Reference   | Link to ransomware.live group profile page                         |
+| Group Leak Sites           | Domain Name          | Observable per site, linked to Intrusion Set (toggleable)          |
+| Group TTPs                 | Relationship (uses)  | Links Intrusion Set to ATT&CK Attack Patterns in OpenCTI           |
+| Victim Name                | Identity             | Victim organization                                                |
+| Attack Date                | Report               | Ransomware incident report                                         |
+| Victim Sector              | Sector               | Target industry sector                                             |
+| Victim Country             | Location             | Target geography                                                   |
+| Leak Post URL              | External Reference   | Link to ransomware group's post (toggleable)                       |
 
 ## Debugging
 

@@ -8,13 +8,13 @@ class RansomwareAPIError(Exception):
 class RansomwareAPIClient:
     def __init__(
         self,
-    ):
+    ) -> None:
         """
         Initialize the client with necessary configurations
         """
         self.api_base_url = "https://api.ransomware.live/v2/"
 
-    def _send_request(self, url: str):
+    def _send_request(self, url: str) -> list | dict | None:
         """
         Send a request to Ransomware API.
         :param url: request URL in string
@@ -22,7 +22,9 @@ class RansomwareAPIClient:
         """
         try:
             response = requests.get(
-                url, headers={"accept": "application/json", "User-Agent": "OpenCTI"}
+                url,
+                headers={"accept": "application/json", "User-Agent": "OpenCTI"},
+                timeout=30,
             )
             response.raise_for_status()
 

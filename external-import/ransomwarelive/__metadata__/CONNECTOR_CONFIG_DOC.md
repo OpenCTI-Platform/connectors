@@ -16,3 +16,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_PULL_HISTORY | `boolean` |  | boolean | `false` | Whether to pull historic data. It is not recommended to set it to true as there will a large influx of data |
 | CONNECTOR_HISTORY_START_YEAR | `integer` |  | `0 < x ` | `2023` | The year to start from |
 | CONNECTOR_CREATE_THREAT_ACTOR | `boolean` |  | boolean | `false` | Whether to create a Threat Actor object |
+| CONNECTOR_CREATE_LEAK_SITE_DOMAINS | `boolean` |  | boolean | `true` | Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet |
+| CONNECTOR_CREATE_LEAK_POST_REFS | `boolean` |  | boolean | `true` | Whether to include the leak post URL as an external reference on victim reports |
