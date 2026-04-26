@@ -4,11 +4,7 @@ import json
 from pathlib import Path
 
 import pytest
-from connector_linter.models import (
-    CheckFinding,
-    ConnectorContext,
-    Severity,
-)
+from connector_linter.models import CheckFinding, ConnectorContext, Severity
 from connector_linter.registry import CheckRegistry
 from connector_linter.runner import _import_checks_modules
 
@@ -28,10 +24,7 @@ def _clean_registry():
 
 @pytest.fixture()
 def dummy_checks(_clean_registry):
-    """Register three dummy checks: VC901 (ERROR), VC902 (WARNING), VC903 (ERROR).
-
-    Returns the codes for easy reference.
-    """
+    """Register three dummy checks: VC901 (ERROR pass), VC902 (WARNING), VC903 (ERROR fail)."""
 
     @CheckRegistry.register(
         code="VC901",
@@ -59,11 +52,7 @@ def dummy_checks(_clean_registry):
     )
     def _vc903(ctx: ConnectorContext) -> list[CheckFinding]:
         return [
-            CheckFinding(
-                message="broken",
-                severity=Severity.ERROR,
-                suggestion="fix it",
-            )
+            CheckFinding(message="broken", severity=Severity.ERROR, suggestion="fix it")
         ]
 
     return ["VC901", "VC902", "VC903"]
@@ -71,21 +60,9 @@ def dummy_checks(_clean_registry):
 
 @pytest.fixture()
 def minimal_connector(tmp_path: Path) -> Path:
-    """Create a minimal connector directory that ConnectorContext.load() can parse.
-
-    Layout::
-
-        <tmp>/external-import/test-connector/
-            __metadata__/connector_manifest.json
-            src/main.py
-            docker-compose.yml
-            Dockerfile
-            README.md
-    """
-    # Nest under external-import/ so connector_type detection works
+    """Create a minimal connector directory that ConnectorContext.load() can parse."""
     connector_dir = tmp_path / "external-import" / "test-connector"
 
-    # __metadata__
     meta_dir = connector_dir / "__metadata__"
     meta_dir.mkdir(parents=True)
     manifest = {
@@ -98,14 +75,12 @@ def minimal_connector(tmp_path: Path) -> Path:
         json.dumps(manifest), encoding="utf-8"
     )
 
-    # src/
     src_dir = connector_dir / "src"
     src_dir.mkdir()
     (src_dir / "main.py").write_text(
         'if __name__ == "__main__":\n    pass\n', encoding="utf-8"
     )
 
-    # Config files
     (connector_dir / "docker-compose.yml").write_text(
         "services:\n  connector:\n    image: opencti/connector-test-connector:latest\n"
         "    environment:\n      - OPENCTI_URL=http://localhost\n"

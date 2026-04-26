@@ -1,31 +1,35 @@
-"""Tests for the CheckRegistry: select/ignore filtering and prefix matching."""
+"""Tests for the CheckRegistry."""
 
 from connector_linter.registry import CheckRegistry
 
 
 class TestGetByPrefix:
-    """CheckRegistry.get_by_prefix() strips trailing 'x' chars and prefix-matches."""
-
     def test_exact_code(self, dummy_checks):
-        result = CheckRegistry.get_by_prefix("VC901")
-        assert list(result.keys()) == ["VC901"]
+        assert list(CheckRegistry.get_by_prefix("VC901").keys()) == ["VC901"]
 
     def test_category_prefix(self, dummy_checks):
-        result = CheckRegistry.get_by_prefix("VC9")
-        assert sorted(result.keys()) == ["VC901", "VC902", "VC903"]
+        assert sorted(CheckRegistry.get_by_prefix("VC9").keys()) == [
+            "VC901",
+            "VC902",
+            "VC903",
+        ]
 
     def test_xx_suffix_stripped(self, dummy_checks):
-        # "VC9xx" → prefix "VC9" → matches all VC9* codes
-        result = CheckRegistry.get_by_prefix("VC9xx")
-        assert sorted(result.keys()) == ["VC901", "VC902", "VC903"]
+        assert sorted(CheckRegistry.get_by_prefix("VC9xx").keys()) == [
+            "VC901",
+            "VC902",
+            "VC903",
+        ]
 
     def test_no_match(self, dummy_checks):
-        result = CheckRegistry.get_by_prefix("VC0")
-        assert result == {}
+        assert CheckRegistry.get_by_prefix("VC0") == {}
 
     def test_partial_prefix(self, dummy_checks):
-        result = CheckRegistry.get_by_prefix("VC90")
-        assert sorted(result.keys()) == ["VC901", "VC902", "VC903"]
+        assert sorted(CheckRegistry.get_by_prefix("VC90").keys()) == [
+            "VC901",
+            "VC902",
+            "VC903",
+        ]
 
 
 class TestGetAll:
