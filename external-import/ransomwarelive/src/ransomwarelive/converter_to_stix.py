@@ -9,7 +9,6 @@ from pycti import (
     StixCoreRelationship,
     ThreatActorGroup,
 )
-
 from ransomwarelive.utils import get_group_entry, threat_description_generator
 
 

@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import stix2
-
 from ransomwarelive.converter_to_stix import ConverterToStix
 from ransomwarelive.utils import get_group_entry
 

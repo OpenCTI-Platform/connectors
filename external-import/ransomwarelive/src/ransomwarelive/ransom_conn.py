@@ -3,9 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 import pycti
 import stix2
-from pycti import OpenCTIConnectorHelper
-
 from models.configs.config_loader import ConfigLoader
+from pycti import OpenCTIConnectorHelper
 from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
 from ransomwarelive.converter_to_stix import ConverterToStix
 from ransomwarelive.utils import (

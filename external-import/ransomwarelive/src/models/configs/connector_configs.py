@@ -2,9 +2,8 @@ from datetime import timedelta
 from typing import Annotated, Literal
 
 from connectors_sdk import ListFromString
-from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
-
 from models.configs import ConfigBaseSettings
+from pydantic import Field, HttpUrl, PlainSerializer, PositiveInt, field_validator
 
 LogLevelToLower = Annotated[
     Literal["debug", "info", "warn", "warning", "error"],
