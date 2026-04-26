@@ -4,9 +4,8 @@ import json
 from pathlib import Path
 from typing import TextIO
 
-from connector_linter.models import CheckResult, Severity
+from connector_linter.models import SEVERITY_COLOR, CheckResult, Severity
 
-# ANSI color codes
 _COLORS = {
     "green": "\033[32m",
     "red": "\033[31m",
@@ -19,15 +18,28 @@ _COLORS = {
 
 
 def _use_color(stream: TextIO) -> bool:
-    """Determine if we should use ANSI colors on this stream."""
     return hasattr(stream, "isatty") and stream.isatty()
 
 
 def _c(text: str, color: str, stream: TextIO) -> str:
-    """Colorize text if the stream supports it."""
     if not _use_color(stream):
         return text
     return f"{_COLORS.get(color, '')}{text}{_COLORS['reset']}"
+
+
+def _group_results(
+    results: list[CheckResult],
+) -> tuple[list[CheckResult], list[CheckResult], list[CheckResult]]:
+    """Return (failed, advisory, passed_normal).
+
+    - failed       — ``passed=False``, any severity
+    - advisory     — ``passed=True`` + ``WARNING`` (informational, connector still compliant)
+    - passed_normal — ``passed=True`` + non-WARNING
+    """
+    failed = [r for r in results if r.severity == Severity.ERROR]
+    advisory = [r for r in results if r.severity == Severity.WARNING]
+    passed_normal = [r for r in results if r.severity == Severity.INFO]
+    return failed, advisory, passed_normal
 
 
 def _repo_relative_path(connector_path: Path, file_path: Path | None) -> str:
@@ -104,7 +116,7 @@ def _format_result_line(
     else:
         status = _c("FAIL", "red", stream)
 
-    code = _c(result.code, "cyan", stream)
+    code = _c(result.code, SEVERITY_COLOR[result.severity], stream)
     return f"  {location}: {code} [{status}] {result.message}"
 
 
@@ -153,25 +165,27 @@ def format_text(
 ) -> None:
     """Format results as human-readable text with colors.
 
-    By default, only failures (FAIL), warnings (WARN), and the score summary
-    are displayed.  Use ``verbose=True`` to also show passing checks (PASS).
+    Grouping rules (default mode, i.e. ``verbose=False``):
+
+    - **failed**   (“FAIL” / “WARN”) — all results with ``passed=False``, any severity.
+      Suggestions are shown below each failing line.
+    - **advisory** (“WARN”)           — results with ``passed=True`` and
+      ``severity=WARNING``.  These carry notes but do not fail the connector.
+    - **passed**   (“PASS”)           — only shown when ``verbose=True``.
     """
-    failed = [r for r in results if r.severity == Severity.ERROR]
-    warnings = [r for r in results if r.severity == Severity.WARNING]
-    passed_normal = [r for r in results if r.severity == Severity.INFO]
+    failed, advisory, passed_normal = _group_results(results)
 
     def _write_result(result: CheckResult) -> None:
         stream.write(
             f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
         )
         if result.suggestion:
-            suggestion = _c(f"    ↳ {result.suggestion}", "dim", stream)
-            stream.write(f"{suggestion}\n")
+            stream.write(f"{_c(f'    \u21b3 {result.suggestion}', 'dim', stream)}\n")
 
     for result in failed:
         _write_result(result)
 
-    for result in warnings:
+    for result in advisory:
         _write_result(result)
 
     if verbose:
@@ -188,7 +202,6 @@ def format_json(
     stream: TextIO,
 ) -> None:
     """Format results as JSON."""
-    output_results = results
     total = len(results)
     passed_count = len([r for r in results if r.severity != Severity.ERROR])
 
@@ -212,7 +225,7 @@ def format_json(
                 "line": r.line,
                 "suggestion": r.suggestion,
             }
-            for r in output_results
+            for r in results
         ],
     }
     json.dump(output, stream, indent=2)
@@ -235,9 +248,9 @@ def format_markdown(
     stream.write(f"# Connector Linter Report — `{connector_name}`\n\n")
 
     total = len(results)
-    passed_count = len([r for r in results if r.passed])
+    passed_count = len([r for r in results if r.severity != Severity.ERROR])
     failed_count = total - passed_count
-    errors = len([r for r in results if not r.passed and r.severity == Severity.ERROR])
+    errors = len([r for r in results if r.severity == Severity.ERROR])
     warnings = len([r for r in results if r.severity == Severity.WARNING])
     pct = (passed_count / total) * 100 if total else 0
 
@@ -253,9 +266,7 @@ def format_markdown(
         summary_parts.append(f"{warnings} warning(s)")
     stream.write(f"{', '.join(summary_parts)}\n\n")
 
-    failed = [r for r in results if not r.passed]
-    warn_results = [r for r in results if r.passed and r.severity == Severity.WARNING]
-    passed_normal = [r for r in results if r.passed and r.severity != Severity.WARNING]
+    failed, advisory, passed_normal = _group_results(results)
 
     def _md_path(r: CheckResult) -> str:
         if abspath:
@@ -276,9 +287,9 @@ def format_markdown(
             stream.write(f"{_md_line(r, '❌')}\n")
         stream.write("\n")
 
-    if warn_results:
-        stream.write("## ⚠️ Warnings\n\n")
-        for r in warn_results:
+    if advisory:
+        stream.write("## ⚠️ Advisories\n\n")
+        for r in advisory:
             stream.write(f"{_md_line(r, '⚠️')}\n")
         stream.write("\n")
 

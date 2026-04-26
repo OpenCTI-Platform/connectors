@@ -67,29 +67,21 @@ def get_noqa_directives(file_path: Path) -> dict[int, set[str] | None]:
 def is_suppressed(result: CheckResult, file_path: Path, line: int) -> bool:
     """Check if a result is suppressed by a noqa directive on its line."""
     directives = get_noqa_directives(file_path)
-    directive = directives.get(line)
-
-    if directive is None and line in directives:
-        return True  # bare noqa — suppress everything
-
-    return directive is not None and result.code.upper() in directive
+    if line not in directives:
+        return False
+    codes = directives[line]
+    return codes is None or result.code.upper() in codes  # None = bare noqa
 
 
 def filter_noqa(
     results: list[CheckResult],
     connector_path: Path,
 ) -> list[CheckResult]:
-    """Filter results that are suppressed by noqa directives.
+    """Filter results suppressed by noqa directives.
 
-    Only results with both ``file_path`` and ``line`` set are eligible
-    for suppression.  Results without location info pass through unchanged.
-
-    *connector_path* is the connector root directory.  When a result carries
-    a relative ``file_path`` (common — most checks report paths relative to
-    the connector root), it is resolved against *connector_path* so that
-    ``_read_file_lines`` opens the correct file on disk.
+    Results without both ``file_path`` and ``line`` pass through unchanged.
+    Relative paths are resolved against *connector_path*.
     """
-    _read_file_lines.cache_clear()
     resolved_root = connector_path.resolve()
     filtered: list[CheckResult] = []
 
