@@ -69,9 +69,14 @@ class MicrosoftSentinelIntelConfig(BaseConfigModel):
         description="API version of the Microsoft log analytics workspace interface",
         default="2024-02-01-preview",
     )
+    # TODO: remove management_api_version config var (not used anymore)
     management_api_version: str = Field(
         description="API version of the Microsoft management interface",
         default="2025-03-01",
+    )
+    query_api_version: str = Field(
+        description="API version of the Microsoft Sentinel threat-intel /query endpoint",
+        default="2025-07-01-preview",
     )
     batch_mode: bool = Field(
         description="Enable batch mode for bulk uploading STIX objects. When disabled (default), objects are sent individually in real-time.",

@@ -7,14 +7,14 @@
   "use_cases": [
     "Malware Analysis"
   ],
-  "verified": false,
-  "last_verified_date": null,
+  "verified": true,
+  "last_verified_date": "2026-04-09",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">= 5.7.2",
   "subscription_link": "",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/yara",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-yara",
   "container_type": "INTERNAL_ENRICHMENT"

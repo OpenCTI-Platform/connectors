@@ -318,6 +318,11 @@ class ConverterToStix:
             article_domain = urlparse(article.url).netloc
             domain_name = self.create_domain_name(value=article_domain)
             # --- Infrastructure wrapping the publishing domain ---
+            # No first_seen: the connector deduplicates objects via a set (connector.py)
+            # using model_dump_json() as hash. Passing article.published_date as first_seen
+            # would produce different JSON per article for the same domain, bypassing
+            # set dedup and flooding OpenCTI with near-duplicate updates.
+            # Known domains already have correct first_seen from the infrastructure bundle.
             infrastructure = self.create_infrastructure(
                 name=article_domain,
                 first_seen=article.published_date,
@@ -341,6 +346,9 @@ class ConverterToStix:
             )
 
             # --- Relationships ---
+            # No start_time/stop_time on relationships shared across articles.
+            # Using article.published_date would produce a unique STIX ID per article,
+            # flooding OpenCTI's Redis stream with thousands of create/upsert events.
             # Campaign → uses → Infrastructure
             campaign_uses_infra = self.create_relationship(
                 source=campaign,
@@ -352,7 +360,6 @@ class ConverterToStix:
                 source=campaign,
                 relationship_type="uses",
                 target=channel,
-                start_time=article.published_date,
             )
             # Infrastructure → consists-of → DomainName
             infra_consists_of_domain = self.create_relationship(
@@ -365,35 +372,30 @@ class ConverterToStix:
                 source=channel,
                 relationship_type="related-to",
                 target=infrastructure,
-                start_time=article.published_date,
             )
             # DomainName → related-to → Channel as website
             domain_related_to_channel = self.create_relationship(
                 source=domain_name,
                 relationship_type="related-to",
                 target=channel,
-                start_time=article.published_date,
             )
             # Channel as website → publishes → Content
             publishes = self.create_relationship(
                 source=channel,
                 relationship_type="publishes",
                 target=content,
-                start_time=article.published_date,
             )
             # Channel as website → related-to → Source as Channel
             channel_uses_source = self.create_relationship(
                 source=channel,
                 relationship_type="related-to",
                 target=source_channel,
-                start_time=article.published_date,
             )
             # Content → related-to → Source as Channel
             content_related_to_source = self.create_relationship(
                 source=content,
                 relationship_type="related-to",
                 target=source_channel,
-                start_time=article.published_date,
             )
 
             octi_objects.extend(
@@ -425,7 +427,6 @@ class ConverterToStix:
                         source=channel,
                         relationship_type="related-to",
                         target=parent_domain_name,
-                        start_time=article.published_date,
                     )
                 )
 
@@ -436,7 +437,6 @@ class ConverterToStix:
                     source=content,
                     relationship_type="related-to",
                     target=alt_url,
-                    start_time=article.published_date,
                 )
                 octi_objects.extend([alt_url, alt_rel])
 

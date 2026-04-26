@@ -41,36 +41,15 @@ By integrating DTM alerts as Incidents in OpenCTI and attaching their associated
 - OpenCTI Platform >= 6.9.x
 - Google DTM API key
 
-## Configuration variables
+## Configuration
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Configuration parameters can be provided in either **`config.yml`** file, **`.env`** file or directly as **environment variables** (e.g. from **`docker-compose.yml`** for Docker deployments).
 
-### OpenCTI environment variables
+Priority: **YAML > .env > environment > defaults**.
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+### Configuration variables
 
-### Base connector environment variables
-
-| Parameter         | config.yml      | Docker environment variable   | Default        | Mandatory | Description                                                                    |
-|-------------------|-----------------|-------------------------------|----------------|-----------|--------------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |                | Yes       | A unique `UUIDv4` identifier for this connector instance.                      |
-| Connector Name    | name            | `CONNECTOR_NAME`              | Google DTM     | No        | Name of the connector.                                                         |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | google-dtm     | Yes       | Comma-separated observable types to import.                                    |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error          | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.     |
-| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT1H           | No        | Time interval between connector runs in ISO 8601 format. Each hour by default. |
-
-### Connector extra parameters environment variables
-
-| Parameter         | config.yml                   | Docker environment variable       | Default       | Mandatory | Description                                                                                                                                                                                                                                                           |
-|-------------------|------------------------------|-----------------------------------|---------------|-----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| API Key           | google_dtm.api_key           | GOOGLE_DTM_API_KEY                | /             | Yes       | Google DTM API Key                                                                                                                                                                                                                                                    |
-| TLP               | google_dtm.tlp               | GOOGLE_DTM_TLP                    | amber+strict  | No        | Default Traffic Light Protocol (TLP) marking for imported data. Available values are: clear, white, green, amber, amber+strict, red. Default: 'amber+strict'                                                                                                          |
-| Import Start Date | google_dtm.import_start_date | GOOGLE_DTM_IMPORT_START_DATE      | P10D          | No        | ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days). Default: 'P10D'                                                                                                                                             |
-| Alert Type        | google_dtm.alert_type        | GOOGLE_DTM_ALERT_SEVERITY         |               | No        | Comma-separated list of alert types to ingest. Leave blank to retrieve alerts of all types. Available values are: "Compromised Credentials, Domain Discovery, Email, Forum Post, Message, Paste, Shop Listing, Tweet, Web Content". Default: empty (all alert types)  |
-| Alert Severity    | google_dtm.alert_severity    | GOOGLE_DTM_ALERT_TYPE             |               | No        | Comma-separated list of alert severities to ingest. Leave blank to retrieve alerts of all severities. Available values are: "high, medium, low". Default: empty (all alert severities)                                                                                |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
 ## Deployment
 
@@ -98,7 +77,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_DURATION_PERIOD=PT1H
       - GOOGLE_DTM_API_KEY=ChangeMe
       - GOOGLE_DTM_TLP=red
-      - GOOGLE_DTM_IMPORT_START_DATE=PD10
+      - GOOGLE_DTM_IMPORT_START_DATE=P10D
       - GOOGLE_DTM_ALERT_SEVERITY=
       - GOOGLE_DTM_ALERT_TYPE=
     restart: always

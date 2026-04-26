@@ -9,6 +9,8 @@ from pycti import OpenCTIConnectorHelper
 from pytest_mock import MockerFixture
 from src.microsoft_sentinel_intel import Connector
 
+BASE_API_URL = "https://management.azure.com/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe/providers/Microsoft.SecurityInsights/threatIntelligence/main"
+
 
 @pytest.fixture(name="connector")
 def fixture_connector(
@@ -96,7 +98,16 @@ def test_handle_event_delete(
     mocked_send_request.side_effect = [
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": f"{BASE_API_URL}/SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -108,26 +119,29 @@ def test_handle_event_delete(
     # First call to query the indicator
     request = mocked_send_request.call_args_list[0].kwargs["request"]
     assert request.method == "POST"
-    assert (
-        request.url == "https://management.azure.com"
-        "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
-        "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/queryIndicators?api-version=2025-03-01"
-    )
+    assert request.url == f"{BASE_API_URL}/query?api-version=2025-07-01-preview"
     assert json.loads(request.body) == {
-        "keywords": event_data_indicator["id"],
-        "sources": ["Opencti Stream Connector"],
-        "patternTypes": ["ipv4-addr"],
+        "condition": {
+            "clauses": [
+                {
+                    "field": "id",
+                    "operator": "Equals",
+                    "values": [event_data_indicator["id"]],
+                },
+                {
+                    "field": "source",
+                    "operator": "Equals",
+                    "values": ["Opencti Stream Connector"],
+                },
+            ],
+            "conditionConnective": "And",
+            "stixObjectType": "indicator",
+        },
     }
     # Second call to delete the indicator
     request = mocked_send_request.call_args_list[1].kwargs["request"]
     assert request.method == "DELETE"
-    assert (
-        request.url == "https://management.azure.com"
-        "/subscriptions/ChangeMe/resourceGroups/default/providers/Microsoft.OperationalInsights/workspaces/ChangeMe"
-        "/providers/Microsoft.SecurityInsights/threatIntelligence/main"
-        "/indicators/SentinelId?api-version=2025-03-01"
-    )
+    assert request.url == f"{BASE_API_URL}/SentinelId?api-version=2025-07-01-preview"
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -149,6 +163,41 @@ def test_handle_event_delete_skips_when_not_found(
     )
     # Only the query call is made; no delete request follows
     assert mocked_send_request.call_count == 1
+
+
+@pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
+def test_handle_event_delete_uses_stixindicators_resource_id(
+    mocker: MockerFixture, connector: Connector, event_data_indicator: dict
+) -> None:
+    """When /query returns stixindicators resources, delete by returned ARM id."""
+    mocked_send_request = mocker.patch(
+        "microsoft_sentinel_intel.client.PipelineClient.send_request"
+    )
+    mocked_send_request.side_effect = [
+        Mock(
+            status_code=200,
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": f"{BASE_API_URL}/SentinelId1",
+                            "name": "EncodedSource---indicator--SentinelId1",
+                        }
+                    ]
+                }
+            ),
+        ),
+        Mock(status_code=200),
+    ]
+
+    connector._handle_event(
+        Event(event="delete", data=json.dumps({"data": event_data_indicator}))
+    )
+
+    assert mocked_send_request.call_count == 2
+    request = mocked_send_request.call_args_list[1].kwargs["request"]
+    assert request.method == "DELETE"
+    assert request.url == f"{BASE_API_URL}/SentinelId1?api-version=2025-07-01-preview"
 
 
 @pytest.mark.usefixtures("mock_microsoft_sentinel_intel_config")
@@ -190,7 +239,18 @@ def test_handle_event_delete_multi_indicator_partial_failure(
         Mock(
             status_code=200,
             body=lambda: json.dumps(
-                {"value": [{"name": "SentinelId1"}, {"name": "SentinelId2"}]}
+                {
+                    "value": [
+                        {
+                            "id": f"{BASE_API_URL}/SentinelId1",
+                            "name": "SentinelId1",
+                        },
+                        {
+                            "id": f"{BASE_API_URL}/SentinelId2",
+                            "name": "SentinelId2",
+                        },
+                    ]
+                }
             ),
         ),
         # First delete fails
@@ -316,7 +376,16 @@ def test_process_batch_handles_delete_inline(
     mocked_send_request.side_effect = [
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -333,9 +402,22 @@ def test_process_batch_handles_delete_inline(
     request = mocked_send_request.call_args_list[0].kwargs["request"]
     assert request.method == "POST"
     assert json.loads(request.body) == {
-        "keywords": "indicator--1",
-        "sources": ["Opencti Stream Connector"],
-        "patternTypes": ["ipv4-addr"],
+        "condition": {
+            "clauses": [
+                {
+                    "field": "id",
+                    "operator": "Equals",
+                    "values": ["indicator--1"],
+                },
+                {
+                    "field": "source",
+                    "operator": "Equals",
+                    "values": ["Opencti Stream Connector"],
+                },
+            ],
+            "conditionConnective": "And",
+            "stixObjectType": "indicator",
+        },
     }
     # Second call: delete
     request = mocked_send_request.call_args_list[1].kwargs["request"]
@@ -573,7 +655,16 @@ def test_process_batch_delete_wins_over_create(
     mocked_send_request.side_effect = [
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -632,7 +723,16 @@ def test_process_batch_mixed_creates_and_deletes(
         # Query call for delete
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId",
+                            "name": "SentinelId",
+                        }
+                    ]
+                }
+            ),
         ),
         # Delete call
         Mock(status_code=200),
@@ -670,13 +770,31 @@ def test_process_batch_only_deletes(
         # Delete 1: query + delete
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId1"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId1",
+                            "name": "SentinelId1",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
         # Delete 2: query + delete
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId2"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId2",
+                            "name": "SentinelId2",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]
@@ -754,13 +872,31 @@ def test_process_batch_delete_error_continues(
         # Delete 1: query succeeds, delete fails
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId1"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId1",
+                            "name": "SentinelId1",
+                        }
+                    ]
+                }
+            ),
         ),
         HttpResponseError(message="API error"),
         # Delete 2: query + delete succeed
         Mock(
             status_code=200,
-            body=lambda: json.dumps({"value": [{"name": "SentinelId2"}]}),
+            body=lambda: json.dumps(
+                {
+                    "value": [
+                        {
+                            "id": "https://management.azure.com/.../SentinelId2",
+                            "name": "SentinelId2",
+                        }
+                    ]
+                }
+            ),
         ),
         Mock(status_code=200),
     ]

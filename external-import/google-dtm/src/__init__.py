@@ -1,3 +1,3 @@
-from src.models import ConfigLoader
+from src.google_dtm_connector import ConnectorSettings
 
-__all__ = ["ConfigLoader"]
+__all__ = ["ConnectorSettings"]

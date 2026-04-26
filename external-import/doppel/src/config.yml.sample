@@ -13,8 +13,8 @@ connector:
 doppel:
   api_base_url: 'https://api.doppel.com/v1'
   api_key: 'ChangeMe'
-  user_api_key: 'ChangeMe'
-  organization_code: 'ChangeMe'
+  user_api_key: null
+  organization_code: null
   tlp_level: 'clear'  # available values are: clear, white, green, amber, amber+strict, red
   alerts_endpoint: '/alerts'
   historical_polling_days: 30
