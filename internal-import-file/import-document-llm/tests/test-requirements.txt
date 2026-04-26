@@ -15,3 +15,4 @@ ollama==0.6.0
 pycti>=7.260423.0
 python-docx==1.2.0
 markdownify==1.2.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
