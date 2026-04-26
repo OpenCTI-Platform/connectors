@@ -1,16 +1,17 @@
-"""Check registry for the connector linter.
+"""Check registry for the connector linter."""
 
-Provides a decorator-based registration system for checks.
-Each check is a callable that receives a ConnectorContext and returns CheckFinding(s).
-"""
-
+import inspect
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar
 
-from connector_linter.models import CheckFinding, ConnectorContext, Severity
+from connector_linter.models import (
+    CheckFinding,
+    ConnectorContext,
+    ConnectorType,
+    Severity,
+)
 
-# Type alias for check functions
 CheckFunction = Callable[[ConnectorContext], list[CheckFinding]]
 
 
@@ -23,10 +24,22 @@ class CheckDescriptor:
     description: str
     severity: Severity
     func: CheckFunction
+    applicable_types: frozenset[ConnectorType] | None = field(default=None)
+    module_doc: str | None = field(default=None)
 
 
 class CheckRegistry:
-    """Global registry of all available checks."""
+    """Global registry of check functions.
+
+    Usage::
+
+        @CheckRegistry.register(code="VC101", name="...", description="...", severity=Severity.ERROR)
+        def check_fn(ctx: ConnectorContext) -> list[CheckFinding]:
+            ...
+
+        CheckRegistry.get_all()
+        CheckRegistry.get_by_prefix("VC1xx")
+    """
 
     _checks: ClassVar[dict[str, CheckDescriptor]] = {}
 
@@ -37,26 +50,20 @@ class CheckRegistry:
         name: str,
         description: str,
         severity: Severity = Severity.ERROR,
+        applicable_types: set[ConnectorType] | frozenset[ConnectorType] | None = None,
     ) -> Callable[[CheckFunction], CheckFunction]:
-        """Decorator to register a check function.
-
-        Usage:
-            @CheckRegistry.register(
-                code="VC101",
-                name="has-metadata-dir",
-                description="Connector must have a __metadata__ directory",
-            )
-            def check_metadata_dir(ctx: ConnectorContext) -> list[CheckFinding]:
-                ...
-        """
-
         def decorator(func: CheckFunction) -> CheckFunction:
+            module = inspect.getmodule(func)
             cls._checks[code] = CheckDescriptor(
                 code=code,
                 name=name,
                 description=description,
                 severity=severity,
                 func=func,
+                applicable_types=(
+                    frozenset(applicable_types) if applicable_types else None
+                ),
+                module_doc=module.__doc__ if module else None,
             )
             return func
 
@@ -64,15 +71,11 @@ class CheckRegistry:
 
     @classmethod
     def get_all(cls) -> dict[str, CheckDescriptor]:
-        """Get all registered checks."""
         return dict(cls._checks)
 
     @classmethod
     def get_by_prefix(cls, prefix: str) -> dict[str, CheckDescriptor]:
-        """Get checks matching a prefix like 'VC1' or 'VC1xx'."""
-        clean_prefix = prefix.rstrip("x")
+        clean = prefix.rstrip("x")
         return {
-            code: desc
-            for code, desc in cls._checks.items()
-            if code.startswith(clean_prefix)
+            code: desc for code, desc in cls._checks.items() if code.startswith(clean)
         }

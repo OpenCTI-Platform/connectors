@@ -9,9 +9,19 @@ from connector_linter.models import CheckResult, ConnectorContext, Severity
 from connector_linter.noqa import filter_noqa
 from connector_linter.registry import CheckRegistry
 
+_CHECKS_DISCOVERED = False
+
 
 def _import_checks_modules() -> None:
-    """Auto-import all check modules from the checks/ package (recursively)."""
+    """Auto-import all check modules from the checks/ package (recursively).
+
+    Uses a module-level sentinel so the filesystem walk runs only once per
+    process, regardless of how many times run_checks() is called.
+    """
+    global _CHECKS_DISCOVERED
+    if _CHECKS_DISCOVERED:
+        return
+
     package_path = Path(checks_package.__file__).parent
 
     for _finder, module_name, _is_pkg in pkgutil.walk_packages(
@@ -21,6 +31,14 @@ def _import_checks_modules() -> None:
         if module_name.rsplit(".", 1)[-1].startswith("_"):
             continue  # skip private helpers like _helpers.py
         importlib.import_module(module_name)
+
+    _CHECKS_DISCOVERED = True
+
+
+def _resolve_file_path(file_path: Path | None, root: Path) -> Path | None:
+    if file_path is None:
+        return None
+    return file_path if file_path.is_absolute() else root / file_path
 
 
 def run_checks(
@@ -39,14 +57,12 @@ def run_checks(
 
     Returns:
         List of CheckResult objects.
-
     """
     _import_checks_modules()
 
     ctx = ConnectorContext.load(connector_path)
     all_checks = CheckRegistry.get_all()
 
-    # Filter checks based on select/ignore
     checks_to_run = all_checks
     if select:
         filtered = {}
@@ -70,10 +86,17 @@ def run_checks(
             if code not in ignore_codes
         }
 
-    # Execute checks (sorted by code for deterministic output)
     results: list[CheckResult] = []
     for code in sorted(checks_to_run.keys()):
         descriptor = checks_to_run[code]
+
+        if (
+            descriptor.applicable_types is not None
+            and ctx.connector_type is not None
+            and ctx.connector_type not in descriptor.applicable_types
+        ):
+            continue
+
         try:
             findings = descriptor.func(ctx)
             results.extend(
@@ -82,7 +105,7 @@ def run_checks(
                     name=descriptor.name,
                     message=finding.message,
                     severity=finding.severity,
-                    file_path=finding.file_path,
+                    file_path=_resolve_file_path(finding.file_path, ctx.path),
                     line=finding.line,
                     suggestion=finding.suggestion,
                 )
@@ -98,7 +121,6 @@ def run_checks(
                 ),
             )
 
-    # Apply noqa suppression unless disabled
     if not disable_noqa:
         results = filter_noqa(results, connector_path)
 
