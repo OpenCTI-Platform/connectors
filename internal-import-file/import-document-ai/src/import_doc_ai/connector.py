@@ -8,7 +8,6 @@ from .client_api import ImportDocumentAIClient
 from .config_loader import ConfigConnector
 from .util import (
     OpenCTIFileObject,
-    bulk_update_authors,
     bulk_update_object_markings,
     compute_bundle_stats,
     convert_location_to_octi_location,
@@ -154,7 +153,6 @@ class Connector:
 
             # Attach triggering entity author and marking_refs to imported objects
             ai_bundle = extend_bundle(ai_bundle, enrichment_objects_holder)
-            ai_bundle = bulk_update_authors(triggering_entity.author_id, ai_bundle)
             ai_bundle = bulk_update_object_markings(
                 triggering_entity.object_marking_refs, ai_bundle, extend=True
             )

@@ -645,42 +645,6 @@ def update_object_refs(
     return stix2.parse(object_dict, allow_custom=True)
 
 
-def bulk_update_authors(author_id: str, bundle: stix2.Bundle) -> stix2.Bundle:
-    """Attach an author (identity) to all STIX objects in a bundle.
-
-    Args:
-        author_id (str): The ID of the author identity to attach.
-        bundle (stix2.Bundle): The STIX bundle to process.
-
-    Returns:
-        (stix2.Bundle): The processed STIX bundle with authors attached to each object.
-
-    Examples:
-        >>> import stix2
-        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
-        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
-        >>> report = stix2.Report(
-        ...     name="Example Report",
-        ...     description="An example report.",
-        ...     object_refs=[malware["id"]],
-        ...     published="2024-10-01T12:00:00Z",
-        ... )
-        >>> bundle = stix2.Bundle(
-        ...     objects=[
-        ...         identity,
-        ...         malware,
-        ...         report,
-        ...     ],
-        ...     allow_custom=True,
-        ... )
-        >>> bundle_with_authors = bulk_attach_author(identity["id"], bundle)
-    """
-    updated_objects = [
-        update_author(author_id, obj) for obj in bundle.get("objects", [])
-    ]
-    return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
-
-
 def bulk_update_object_markings(
     marking_ids: list[str], bundle: stix2.Bundle, extend=True
 ) -> stix2.Bundle:
