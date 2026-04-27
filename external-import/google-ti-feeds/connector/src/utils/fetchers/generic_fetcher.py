@@ -13,8 +13,15 @@ from typing import Any
 from connector.src.utils.api_engine.api_client import ApiClient
 from connector.src.utils.api_engine.exceptions.api_network_error import ApiNetworkError
 from connector.src.utils.fetchers.generic_fetcher_config import GenericFetcherConfig
+from prometheus_client import Counter
 
 LOG_PREFIX = "[GenericFetcher]"
+
+_ENDPOINT_CALL_COUNTER = Counter(
+    "google_ti_feeds_api_endpoint_calls",
+    "Count of API calls made by GenericFetcher for each Google TI Feeds API endpoint",
+    ["endpoint"],
+)
 
 
 class GenericFetcher:
@@ -42,6 +49,8 @@ class GenericFetcher:
         self.api_client = api_client
         self.base_url = base_url
         self.logger = logger or logging.getLogger(__name__)
+
+        self._endpoint_counter: dict[str, Counter] = {}
 
         self.headers = {}
         if base_headers:
@@ -405,6 +414,14 @@ class GenericFetcher:
                     "query_params": query_params,
                 },
             )
+
+            if self.config.endpoint not in self._endpoint_counter:
+                # Initialize a Prometheus counter for this endpoint if it doesn't exist
+                self._endpoint_counter[self.config.endpoint] = (
+                    _ENDPOINT_CALL_COUNTER.labels(endpoint=self.config.endpoint)
+                )
+
+            self._endpoint_counter[self.config.endpoint].inc()
 
             response = await self.api_client.call_api(
                 url=endpoint,
