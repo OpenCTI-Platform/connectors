@@ -198,7 +198,7 @@ class Indicator(RFStixEntity):
         )
 
     def map_data(
-        self, rf_indicator, tlp, risklist_related_entities, ta_to_intrusion_set=None
+        self, rf_indicator, tlp, risklist_related_entities, ta_to_intrusion_set=False
     ):
         handled_related_entities_types = risklist_related_entities
         try:
@@ -230,9 +230,7 @@ class Indicator(RFStixEntity):
                                 name_ = rf_related_element["name"]
                                 cls = _resolve_entity_class(
                                     type_,
-                                    enabled=_ta_to_intrusion_set_enabled(
-                                        ta_to_intrusion_set, "risk_list"
-                                    ),
+                                    enabled=ta_to_intrusion_set,
                                 )
                                 related_element = cls(name_, type_, self.author, tlp)
                                 stix_objs = related_element.to_stix_objects()
@@ -837,7 +835,7 @@ class Vulnerability(RFStixEntity):
         self.labels = labels
 
     def map_data(
-        self, rf_vuln, tlp, risklist_related_entities, ta_to_intrusion_set=None
+        self, rf_vuln, tlp, risklist_related_entities, ta_to_intrusion_set=False
     ):
         handled_related_entities_types = risklist_related_entities
         try:
@@ -869,9 +867,7 @@ class Vulnerability(RFStixEntity):
                                 name_ = rf_related_element["name"]
                                 cls = _resolve_entity_class(
                                     type_,
-                                    enabled=_ta_to_intrusion_set_enabled(
-                                        ta_to_intrusion_set, "risk_list"
-                                    ),
+                                    enabled=ta_to_intrusion_set,
                                 )
                                 related_element = cls(name_, type_, self.author, tlp)
                                 stix_objs = related_element.to_stix_objects()
@@ -1035,10 +1031,6 @@ ENTITY_TYPE_MAPPER = {
 }
 
 
-def _ta_to_intrusion_set_enabled(ta_to_intrusion_set, submodule: str) -> bool:
-    return submodule in (ta_to_intrusion_set or ())
-
-
 def _resolve_entity_class(type_: str, enabled: bool = False):
     if enabled and type_ == "Threat Actor":
         return IntrusionSet
@@ -1146,7 +1138,7 @@ class StixNote:
         tas,
         rfapi,
         person_to_ta=False,
-        ta_to_intrusion_set=(),
+        ta_to_intrusion_set=False,
         risk_as_score=False,
         risk_threshold=None,
         analyst_notes_guess_relationships=False,
@@ -1217,12 +1209,7 @@ class StixNote:
             if self.person_to_ta and type_ == "Person":
                 stix_objs = ThreatActor(name, type_, self.author, tlp).to_stix_objects()
             elif entity["id"] in self.tas:
-                if (
-                    _ta_to_intrusion_set_enabled(
-                        self.ta_to_intrusion_set, "analyst_notes"
-                    )
-                    and type_ != "Person"
-                ):
+                if self.ta_to_intrusion_set and type_ != "Person":
                     stix_objs = IntrusionSet(
                         name, type_, self.author, tlp
                     ).to_stix_objects()
