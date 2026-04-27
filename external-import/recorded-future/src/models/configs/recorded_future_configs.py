@@ -68,6 +68,17 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
         description="Whether to map Threat Actor entities to Intrusion Set instead of Threat Actor.",
     )
 
+    @field_validator("ta_to_intrusion_set", mode="before")
+    @classmethod
+    def validate_ta_to_intrusion_set(cls, v: str | bool) -> bool:
+        """Convert ta_to_intrusion_set value to bool."""
+        if isinstance(v, bool):
+            return v
+        elif isinstance(v, str) and v.strip().lower() != "false":
+            return True
+        else:
+            return False
+
     risk_as_score: bool = Field(
         default=True,
         description="Whether to import risk scores as confidence scores in OpenCTI.",
