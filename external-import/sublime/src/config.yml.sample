@@ -26,13 +26,12 @@ sublime:
   # incident_type: "phishing"     # STIX incident type
 
   # incident_prefix: "Sublime Incident - "
-  # case_prefix: "Sublime - "
+  # case_prefix: "Case - "
 
   # auto_create_cases: false      # Automatically create cases for incidents
 
   # set_priority: true            # Enable priority mapping from attack score verdict
-  # set_severity: false           # Enable severity mapping from attack score verdict
-  # confidence_level: 80          # 0-100 confidence score
+  # set_severity: true           # Enable severity mapping from attack score verdict
 
   # first_run_duration: "PT8H"    # Duration for initial data fetch in ISO 8601 format
   # force_historical: false       # Force historical fetch by overriding existing state

@@ -101,14 +101,13 @@ docker compose logs -f connector-sublime
 | `CONNECTOR_DURATION_PERIOD` | `PT3M` | Polling interval (ISO 8601 duration format) |
 | `SUBLIME_INCIDENT_TYPE` | `phishing` | Label to apply to incident type |
 | `SUBLIME_INCIDENT_PREFIX` | `Sublime Incident - ` | Prefix for incident object names |
-| `SUBLIME_CASE_PREFIX` | `Sublime - ` | Prefix for case object names |
+| `SUBLIME_CASE_PREFIX` | `Case - ` | Prefix for case object names |
 | `SUBLIME_AUTO_CREATE_CASES` | `false` | Automatically create investigation cases |
 | `SUBLIME_VERDICTS` | `malicious` | Comma-separated attack score verdicts to process |
-| `SUBLIME_CONFIDENCE_LEVEL` | `80` | Confidence score for STIX objects (0-100) |
 | `SUBLIME_FIRST_RUN_DURATION` | `PT8H` | ISO 8601 duration for initial data fetch on first run |
 | `SUBLIME_FORCE_HISTORICAL` | `false` | Force historical fetch ignoring existing state for correcting improper states |
 | `SUBLIME_SET_PRIORITY` | `true` | Enable priority mapping from attack score |
-| `SUBLIME_SET_SEVERITY` | `false` | Enable severity mapping from attack score |
+| `SUBLIME_SET_SEVERITY` | `true` | Enable severity mapping from attack score |
 | `SUBLIME_BATCH_SIZE` | `100` | Number of messages per processing batch |
 
 ## API Token Configuration

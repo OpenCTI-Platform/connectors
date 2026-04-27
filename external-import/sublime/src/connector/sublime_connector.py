@@ -4,16 +4,14 @@ Simplified implementation following OpenCTI connector patterns
 """
 
 import json
-import os
-import sys
-import time
 from datetime import datetime, timedelta, timezone
 
 import isodate
 import pycti
 import requests
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 
 class SublimeConnector:
@@ -21,191 +19,22 @@ class SublimeConnector:
     Sublime external import connector for OpenCTI
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Sublime OpenCTI connector.
+        Initialize `SublimeConnector` with its configuration.
 
-        Configuration Sources (in priority order):
-        1. Environment variables
-        2. config.yml file (if exists)
-        3. Default values
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
         """
-        # Load configuration from config.yml if it exists
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "config.yml"
-        )
-        config_dict = {}
+        self.config = config
+        self.helper = helper
 
-        if os.path.isfile(config_file_path):
-            try:
-                with open(config_file_path, "r", encoding="utf-8") as config_file:
-                    config_dict = yaml.safe_load(config_file)
-            except Exception:
-                config_dict = {}
-
-        # Initialize configuration for OpenCTI connector pattern
-        config = {
-            "opencti": {
-                "url": pycti.get_config_variable(
-                    "OPENCTI_URL", ["opencti", "url"], config_dict, False
-                ),
-                "token": pycti.get_config_variable(
-                    "OPENCTI_TOKEN", ["opencti", "token"], config_dict, False
-                ),
-            },
-            "connector": {
-                "id": pycti.get_config_variable(
-                    "CONNECTOR_ID", ["connector", "id"], config_dict, False
-                ),
-                "type": "EXTERNAL_IMPORT",
-                "name": pycti.get_config_variable(
-                    "CONNECTOR_NAME", ["connector", "name"], config_dict, False
-                ),
-                "scope": pycti.get_config_variable(
-                    "CONNECTOR_SCOPE", ["connector", "scope"], config_dict, False
-                ),
-                "log_level": pycti.get_config_variable(
-                    "CONNECTOR_LOG_LEVEL",
-                    ["connector", "log_level"],
-                    config_dict,
-                    False,
-                    "info",
-                ),
-                "duration_period": pycti.get_config_variable(
-                    "CONNECTOR_DURATION_PERIOD",
-                    ["connector", "duration_period"],
-                    config_dict,
-                    False,
-                    "PT3M",
-                ),
-            },
-        }
-
-        # Validate required configuration
-        if not config["opencti"]["url"]:
-            raise ValueError("OPENCTI_URL environment variable is required")
-        if not config["opencti"]["token"]:
-            raise ValueError("OPENCTI_TOKEN environment variable is required")
-        if not config["connector"]["id"]:
-            raise ValueError("CONNECTOR_ID environment variable is required")
-        if not config["connector"]["name"]:
-            raise ValueError("CONNECTOR_NAME environment variable is required")
-        if not config["connector"]["scope"]:
-            raise ValueError("CONNECTOR_SCOPE environment variable is required")
-
-        # Initialize OpenCTI helper
-        self.helper = pycti.OpenCTIConnectorHelper(config)
-
-        # Get connector duration period for scheduling
-        self.duration_period = pycti.get_config_variable(
-            "CONNECTOR_DURATION_PERIOD",
-            ["connector", "duration_period"],
-            config,
-            False,
-            "PT3M",
-        )
-
-        # Get Sublime specific config from environment variables or config.yml
-        self.api_token = pycti.get_config_variable(
-            "SUBLIME_TOKEN", ["sublime", "token"], config_dict, False
-        )
-        self.api_base_url = pycti.get_config_variable(
-            "SUBLIME_URL",
-            ["sublime", "url"],
-            config_dict,
-            False,
-            "https://platform.sublime.security",
-        )
-
-        # Configurable naming and case creation. Making double sure we get data in them
-        self.incident_name_prefix = pycti.get_config_variable(
-            "SUBLIME_INCIDENT_PREFIX",
-            ["sublime", "incident_prefix"],
-            config_dict,
-            False,
-            "Sublime Incident - ",
-        )
-        self.case_name_prefix = pycti.get_config_variable(
-            "SUBLIME_CASE_PREFIX",
-            ["sublime", "case_prefix"],
-            config_dict,
-            False,
-            "Case - ",
-        )
-        self.auto_create_cases = pycti.get_config_variable(
-            "SUBLIME_AUTO_CREATE_CASES",
-            ["sublime", "auto_create_cases"],
-            config_dict,
-            False,
-            False,
-        )
-
-        verdicts_config = pycti.get_config_variable(
-            "SUBLIME_VERDICTS", ["sublime", "verdicts"], config_dict, False, "malicious"
-        )
         self.verdicts = [
-            v.strip().lower() for v in verdicts_config.split(",") if v.strip()
+            v.strip().lower()
+            for v in self.config.sublime.verdicts.split(",")
+            if v.strip()
         ]
-
-        self.confidence_level = int(
-            pycti.get_config_variable(
-                "SUBLIME_CONFIDENCE_LEVEL",
-                ["sublime", "confidence_level"],
-                config_dict,
-                True,
-                80,
-            )
-        )
-        self.incident_type = pycti.get_config_variable(
-            "SUBLIME_INCIDENT_TYPE",
-            ["sublime", "incident_type"],
-            config_dict,
-            False,
-            "phishing",
-        )
-
-        self.first_run_duration = pycti.get_config_variable(
-            "SUBLIME_FIRST_RUN_DURATION",
-            ["sublime", "first_run_duration"],
-            config_dict,
-            False,
-            "PT8H",
-        )
-        self.force_historical = pycti.get_config_variable(
-            "SUBLIME_FORCE_HISTORICAL",
-            ["sublime", "force_historical"],
-            config_dict,
-            False,
-            False,
-        )
-
-        self.set_priority = pycti.get_config_variable(
-            "SUBLIME_SET_PRIORITY",
-            ["sublime", "set_priority"],
-            config_dict,
-            False,
-            True,
-        )
-        self.set_severity = pycti.get_config_variable(
-            "SUBLIME_SET_SEVERITY",
-            ["sublime", "set_severity"],
-            config_dict,
-            False,
-            True,
-        )
-
-        self.batch_size = int(
-            pycti.get_config_variable(
-                "SUBLIME_BATCH_SIZE",
-                ["sublime", "batch_size"],
-                config_dict,
-                True,
-                100,
-            )
-        )
-
-        if not self.api_token:
-            raise ValueError("SUBLIME_TOKEN environment variable is required")
 
         # Value for if to update an existing bundle.
         # Currently set to False as placeholder for potential future feature
@@ -217,7 +46,9 @@ class SublimeConnector:
         self.session = requests.Session()
         self.session.headers.update(
             {
-                "Authorization": "Bearer {}".format(self.api_token),
+                "Authorization": "Bearer {}".format(
+                    self.config.sublime.token.get_secret_value()
+                ),
                 "Accept": "application/json",
                 "User-Agent": "OpenCTI-SublimeConnector/1.0",
             }
@@ -235,25 +66,6 @@ class SublimeConnector:
             allow_custom=True,
         )
 
-        self.helper.log_info("[*] Sublime connector initialized")
-        self.helper.log_info(
-            "[*] Configuration: verdicts={}, confidence={}, incident_type={}, duration_period={}, first_run_duration={}, force_historical={}, incident_prefix='{}', case_prefix='{}', auto_create_cases={}, set_priority={}, set_severity={}, batch_size={}, platform_url={}".format(
-                self.verdicts,
-                self.confidence_level,
-                self.incident_type,
-                self.duration_period,
-                self.first_run_duration,
-                self.force_historical,
-                self.incident_name_prefix,
-                self.case_name_prefix,
-                self.auto_create_cases,
-                self.set_priority,
-                self.set_severity,
-                self.batch_size,
-                self.api_base_url,
-            )
-        )
-
     def _get_last_timestamp(self):
         """
         Get the last processed timestamp from OpenCTI connector state.
@@ -269,30 +81,33 @@ class SublimeConnector:
 
         # If force_historical is enabled and this is the first run, ignore state
         # After first run, use state for incremental polling
-        use_state = not self.force_historical or self._first_run_completed
+        use_state = (
+            not self.config.sublime.force_historical or self._first_run_completed
+        )
 
         if use_state and current_state and "last_timestamp" in current_state:
             return current_state["last_timestamp"]
 
         # First run or forced historical: use configured duration for initial data fetch
         try:
-            duration_obj = isodate.parse_duration(self.first_run_duration)
-            default_time = datetime.now(timezone.utc) - duration_obj
+            default_time = (
+                datetime.now(timezone.utc) - self.config.sublime.first_run_duration
+            )
 
-            if self.force_historical:
+            if self.config.sublime.force_historical:
                 mode = "Forced historical"
             else:
                 mode = "First run"
 
             self.helper.log_info(
                 "[*] {}: fetching {} of historical data".format(
-                    mode, self.first_run_duration
+                    mode, self.config.sublime.first_run_duration
                 )
             )
         except (isodate.ISO8601Error, ValueError) as e:
             self.helper.log_warning(
                 '[!] Invalid first run duration format "{}": {}. Using default 8 hours.'.format(
-                    self.first_run_duration, e
+                    self.config.sublime.first_run_duration, e
                 )
             )
             # Fallback to 1 day
@@ -339,9 +154,9 @@ class SublimeConnector:
         Returns:
             str: Mapped level (low, medium, high, critical) or None if not configured
         """
-        if mapping_type == "priority" and not self.set_priority:
+        if mapping_type == "priority" and not self.config.sublime.set_priority:
             return None
-        if mapping_type == "severity" and not self.set_severity:
+        if mapping_type == "severity" and not self.config.sublime.set_severity:
             return None
 
         # Verdict to level mapping - OpenCTI expects different values for priority vs severity
@@ -389,7 +204,7 @@ class SublimeConnector:
             "flagged__eq": True,
         }
 
-        api_url = self.api_base_url.rstrip("/")
+        api_url = self.config.sublime.url.unicode_string().rstrip("/")
         if not api_url.endswith("/v1"):
             api_url = api_url + "/v1"
 
@@ -426,7 +241,7 @@ class SublimeConnector:
         Returns:
             dict: Message group data dictionary, or None if fetch fails
         """
-        api_url = self.api_base_url.rstrip("/")
+        api_url = self.config.sublime.url.unicode_string().rstrip("/")
         if not api_url.endswith("/v1"):
             api_url = api_url + "/v1"
 
@@ -489,13 +304,13 @@ class SublimeConnector:
 
             self.helper.log_info(
                 "[*] Found {} flagged group IDs. Processing in batches of {}".format(
-                    len(group_ids), self.batch_size
+                    len(group_ids), self.config.sublime.batch_size
                 )
             )
 
             total_fetched = 0
-            for i in range(0, len(group_ids), self.batch_size):
-                batch_ids = group_ids[i : i + self.batch_size]
+            for i in range(0, len(group_ids), self.config.sublime.batch_size):
+                batch_ids = group_ids[i : i + self.config.sublime.batch_size]
                 batch_messages = []
 
                 for group_id in batch_ids:
@@ -876,24 +691,24 @@ class SublimeConnector:
             created=created_timestamp,
             created_by_ref=self.sublime_identity.id,
             object_marking_refs=[stix2.TLP_AMBER],
-            confidence=self.confidence_level,
             external_references=[
                 {
                     "source_name": "Sublime",
                     "description": "View this message group in Sublime platform",
                     "url": "{}/messages/{}".format(
-                        self.api_base_url, str(group_id or "unknown")
+                        self.config.sublime.url.unicode_string(),
+                        str(group_id or "unknown"),
                     ),
                     "external_id": str(group_id or "unknown"),
                 }
             ],
             custom_properties={
                 "x_opencti_type": "Incident",
-                "x_opencti_incident_type": self.incident_type,
+                "x_opencti_incident_type": self.config.sublime.incident_type,
                 "x_sublime_security_canonical_id": group_id,
             },
             allow_custom=True,
-            incident_type=self.incident_type.capitalize(),
+            incident_type=self.config.sublime.incident_type.capitalize(),
             source="Sublime Security",
             severity=self._map_attack_score_to_level(attack_score_verdict, "severity"),
         )
@@ -967,7 +782,7 @@ class SublimeConnector:
 
             if email_count == 0:
                 incident_name = "{} {} Sent {} to {} {}. {}".format(
-                    self.incident_name_prefix,
+                    self.config.sublime.incident_prefix,
                     sender_email,
                     email_plural,
                     recipient_count,
@@ -979,7 +794,7 @@ class SublimeConnector:
                     "{}".format(email_count) if preview_count > 0 else str(email_count)
                 )
                 incident_name = "{} {} Sent {} {} to {} {}. {}".format(
-                    self.incident_name_prefix,
+                    self.config.sublime.incident_prefix,
                     sender_email,
                     count_display,
                     email_plural,
@@ -995,7 +810,7 @@ class SublimeConnector:
                 "[!] Failed to generate incident name: {}. Using fallback.".format(e)
             )
             # Fallback to simple incident naming
-            return "{} {}".format(self.incident_name_prefix, subject)
+            return "{} {}".format(self.config.sublime.incident_prefix, subject)
 
     def _create_opencti_case(self, incident, stix_objects, message_group):
         """
@@ -1064,7 +879,7 @@ class SublimeConnector:
 
             # Build case name
             case_name = "{} {} Sent {} {} to {} {}. {}".format(
-                self.case_name_prefix,
+                self.config.sublime.case_prefix,
                 sender_email,
                 email_count,
                 email_plural,
@@ -1278,7 +1093,6 @@ class SublimeConnector:
             source_ref=source.id,
             target_ref=target.id,
             created_by_ref=self.sublime_identity.id,
-            confidence=self.confidence_level,
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
@@ -1559,7 +1373,7 @@ class SublimeConnector:
                     )
 
                 # Create OpenCTI case if enabled
-                if self.auto_create_cases:
+                if self.config.sublime.auto_create_cases:
                     self._create_opencti_case(incident, stix_objects, message)
 
                 processed_count += 1
@@ -1714,15 +1528,5 @@ class SublimeConnector:
         """
         self.helper.schedule_iso(
             message_callback=self._process_messages,
-            duration_period=self.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
-
-
-if __name__ == "__main__":
-    try:
-        connector = SublimeConnector()
-        connector.run()
-    except Exception as e:
-        print("[ERROR] Sublime Security Connector failed: {}".format(e))
-        time.sleep(10)
-        sys.exit(1)

@@ -14,12 +14,11 @@ services:
       - SUBLIME_TOKEN=ChangeMe
       # - SUBLIME_INCIDENT_TYPE=phishing
       # - SUBLIME_INCIDENT_PREFIX=Sublime Incident - 
-      # - SUBLIME_CASE_PREFIX=Sublime - 
+      # - SUBLIME_CASE_PREFIX=Case - 
       # - SUBLIME_AUTO_CREATE_CASES=false
       # - SUBLIME_VERDICTS=malicious
       # - SUBLIME_SET_PRIORITY=true
-      # - SUBLIME_SET_SEVERITY=false
-      # - SUBLIME_CONFIDENCE_LEVEL=80
+      # - SUBLIME_SET_SEVERITY=true
       # - SUBLIME_FIRST_RUN_DURATION=PT8H
       # - SUBLIME_FORCE_HISTORICAL=false
       # - SUBLIME_BATCH_SIZE=100
