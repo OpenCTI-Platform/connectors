@@ -80,8 +80,8 @@ class ConnectorContext:
             "stream": "STREAM",
         }
         ctx.connector_type = type_mapping.get(parent_name)
-        # Fallback: try the directory name itself (for templates/)
-        if ctx.connector_type is None:
+        # Fallback only for template layout: templates/<connector-kind>
+        if ctx.connector_type is None and parent_name == "templates":
             ctx.connector_type = type_mapping.get(ctx.path.name)
 
         # Load manifest
@@ -93,6 +93,16 @@ class ConnectorContext:
         # Fallback: use container_type from manifest
         if ctx.connector_type is None and ctx.manifest.get("container_type"):
             ctx.connector_type = ctx.manifest["container_type"]
+
+        if ctx.connector_type is None:
+            raise ValueError(
+                "Unable to determine connector type for "
+                f"'{ctx.path}'. Expected a connector directory nested under one "
+                "of: external-import, internal-enrichment, internal-export-file, "
+                "internal-import-file, stream, or templates/<connector-kind>; "
+                "or provide '__metadata__/connector_manifest.json' with "
+                "'container_type'."
+            )
 
         # Load config schema
         schema_path = ctx.path / "__metadata__" / "connector_config_schema.json"
