@@ -26,14 +26,21 @@ class ConnectorStateManager(BaseModel):
     in OpenCTI (see https://docs.pydantic.dev/latest/concepts/serialization/#json-mode).
     """
 
+    # ConnectorStateManager model configuration
     model_config = ConfigDict(
+        # Allow extra fields that could be stored on OpenCTI but not declared in the model
+        # (e.g. if the connector's state has evolved since the last time it was loaded)
         extra="allow",
-        validate_assignment=True,  # ensure model is revalidate when setting properties
+        # Ensure that the model is revalidated when setting properties,
+        # to keep the state consistent and avoid saving invalid data on OpenCTI
+        validate_assignment=True,
     )
 
+    # Private attributes (not validated, not serialized, not stored on OpenCTI)
     _helper: OpenCTIConnectorHelper = PrivateAttr()
     _sync: bool = PrivateAttr(default=False)
 
+    # Declared fields (validated, serialized, stored on OpenCTI)
     last_run: datetime | None = Field(default=None)
 
     def __init__(self, helper: OpenCTIConnectorHelper, **kwargs: Any) -> None:
@@ -76,6 +83,13 @@ class ConnectorStateManager(BaseModel):
         This is convenient so `assert self.model_dump(mode="json")["last_run"] == self.last_run.isoformat()`
         is `True` across both codebase and tests (using the same serializer).
         Consistent with `DatetimeFromIsoString` in `connectors_sdk.settings.annotated_types` module too.
+
+        Arguments:
+            value: The value to serialize.
+            handler: The default JSON serializer to use for non-datetime values.
+
+        Returns:
+            The serialized value.
         """
         if isinstance(value, datetime):
             return value.isoformat()  # Override default JSON serializer
@@ -111,11 +125,12 @@ class ConnectorStateManager(BaseModel):
         declared_fields = set(type(self).model_fields)
 
         state_dict = self.model_dump(mode="json", include=declared_fields)
-        # Send both declared _and_ extra fields (to not delete any connector state's attributes on OpenCTI)
+        # Send both declared _and_ extra fields to not delete any connector state's attributes on OpenCTI
         if self.model_extra:
             state_dict.update(self.model_extra)
 
         self._helper.set_state(state_dict)
-        self._helper.force_ping()  # ensure the state is updated immediately on OpenCTI
+        # Ensure the state is updated immediately on OpenCTI (instead of waiting for the next ping)
+        self._helper.force_ping()
         # OpenCTI is now synchronized with the state manager instance
         self._sync = True
