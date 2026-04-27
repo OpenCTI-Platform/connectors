@@ -20,7 +20,7 @@ rf:
   insikt_only: True # optional
   pull_signatures: False # Pull Yara/Snort/Sigma rules into OpenCTI. optional
   person_to_ta: False # optional
-  ta_to_intrusion_set: '' # optional. Available values: risk_list, analyst_notes. Example: 'risk_list,analyst_notes'
+  ta_to_intrusion_set: false # optional. Set to true to map Threat Actor entities to Intrusion Set.
   risk_as_score: True # optional
   risk_threshold: 60 # optional
   analyst_notes_guess_relationships=False # optional
