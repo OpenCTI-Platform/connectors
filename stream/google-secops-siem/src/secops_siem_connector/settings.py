@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -72,6 +72,16 @@ class SecOpsSIEMConfig(BaseConfigModel):
     client_cert_url: str = Field(
         description="Client x509 certificate URL.",
     )
+
+    @field_validator("private_key", mode="before")
+    @classmethod
+    def normalize_private_key(cls, value: SecretStr) -> SecretStr:
+        raw_value = (
+            value.get_secret_value() if isinstance(value, SecretStr) else str(value)
+        )
+
+        normalized_value = raw_value.replace("\\r\\n", "\n").replace("\\n", "\n")
+        return SecretStr(normalized_value)
 
 
 class ConnectorSettings(BaseConnectorSettings):

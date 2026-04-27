@@ -79,6 +79,38 @@ def test_settings_should_accept_valid_input(settings_dict):
     assert isinstance(settings.secops_siem, BaseConfigModel) is True
 
 
+def test_settings_should_normalize_escaped_private_key_newlines():
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {
+                        "id": "connector-id",
+                        "scope": "google-secops-siem",
+                        "log_level": "error",
+                        "live_stream_id": "D5685291-70A3-47D2-AB3A-FEB0F7DA9257",
+                    },
+                    "secops_siem": {
+                        "project_id": "test-project-id",
+                        "project_instance": "test-instance",
+                        "private_key_id": "test-key-id",
+                        "private_key": "-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----\\n",
+                        "client_email": "test@project.iam.gserviceaccount.com",
+                        "client_id": "123456789",
+                        "client_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test",
+                    },
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    private_key = settings.secops_siem.private_key.get_secret_value()
+
+    assert "\\n" not in private_key
+    assert "\n" in private_key
+
+
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [
