@@ -10,7 +10,7 @@ from connector_linter.noqa import filter_noqa
 from connector_linter.registry import CheckRegistry
 
 
-def _discover_checks() -> None:
+def _import_checks_modules() -> None:
     """Auto-import all check modules from the checks/ package (recursively)."""
     package_path = Path(checks_package.__file__).parent
 
@@ -41,7 +41,7 @@ def run_checks(
         List of CheckResult objects.
 
     """
-    _discover_checks()
+    _import_checks_modules()
 
     ctx = ConnectorContext.load(connector_path)
     all_checks = CheckRegistry.get_all()
