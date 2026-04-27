@@ -73,7 +73,53 @@ def test_connector_state_manager_rejects_invalid_input(dummy_connector_state_man
         dummy_connector_state_manager.last_run = "not a datetime"
 
 
-def test_connector_state_manager_load(
+def test_connector_state_manager_load_warns_when_not_synchronized(
+    dummy_connector_state_manager, mock_opencti_connector_helper
+):
+    """Test that `ConnectorStateManager` instance does not load state from OpenCTI when not synchronized."""
+    # Given: a `ConnectorStateManager` instance that is not synchronized (default state after init)
+    mock_opencti_connector_helper.get_state.return_value = {
+        "last_run": "2024-01-01T00:00:00+00:00",
+        "test_field": "test",
+    }
+    original_last_run = dummy_connector_state_manager.last_run
+    original_test_field = dummy_connector_state_manager.test_field
+
+    # When: loading the state without `force=True`
+    # Then: a `UserWarning` should be raised and the state should NOT be loaded
+    with pytest.warns(UserWarning):
+        dummy_connector_state_manager.load()
+
+    mock_opencti_connector_helper.get_state.assert_not_called()
+    assert dummy_connector_state_manager.last_run == original_last_run
+    assert dummy_connector_state_manager.test_field == original_test_field
+
+
+def test_connector_state_manager_load_when_synchronized(
+    dummy_connector_state_manager, mock_opencti_connector_helper
+):
+    """Test that `ConnectorStateManager` instance loads state from OpenCTI when synchronized."""
+    # Given: a `ConnectorStateManager` instance that is synchronized with OpenCTI
+    mock_opencti_connector_helper.get_state.return_value = {
+        "last_run": "2024-01-01T00:00:00+00:00",
+        "test_field": "test",
+    }
+    dummy_connector_state_manager.last_run = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    dummy_connector_state_manager.test_field = "test"
+    dummy_connector_state_manager._sync = True
+
+    # When: loading the state
+    dummy_connector_state_manager.load()
+
+    # Then: the state should be loaded without warnings
+    mock_opencti_connector_helper.get_state.assert_called_once()
+    assert dummy_connector_state_manager.last_run == datetime(
+        2024, 1, 1, tzinfo=timezone.utc
+    )
+    assert dummy_connector_state_manager.test_field == "test"
+
+
+def test_connector_state_manager_load_with_force(
     dummy_connector_state_manager, mock_opencti_connector_helper
 ):
     """Test that `ConnectorStateManager` instance loads state from OpenCTI correctly."""
@@ -85,7 +131,7 @@ def test_connector_state_manager_load(
     }
 
     # When: loading the state into a `ConnectorStateManager` instance
-    dummy_connector_state_manager.load()
+    dummy_connector_state_manager.load(force=True)
 
     # Then: `OpenCTIConnectorHelper.get_state` method should be called and
     # the `dummy_connector_state_manager` fields should be updated with the loaded state
@@ -106,7 +152,7 @@ def test_connector_state_manager_load_ignores_helper_key(
 
     # When: loading the state into a `ConnectorStateManager` instance
     original_helper = dummy_connector_state_manager._helper
-    dummy_connector_state_manager.load()
+    dummy_connector_state_manager.load(force=True)
 
     # Then: `OpenCTIConnectorHelper.get_state` method should be called and
     # the `dummy_connector_state_manager` fields should be updated with the loaded state

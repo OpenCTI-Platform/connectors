@@ -10,6 +10,7 @@ Architecture:
 - OpenCTIConnectorHelper: Communicate with OpenCTI platform (read/write state)
 """
 
+import warnings
 from datetime import datetime
 from typing import Any
 
@@ -31,6 +32,7 @@ class ConnectorStateManager(BaseModel):
     )
 
     _helper: OpenCTIConnectorHelper = PrivateAttr()
+    _sync: bool = PrivateAttr(default=False)
 
     last_run: datetime | None = Field(default=None)
 
@@ -52,6 +54,21 @@ class ConnectorStateManager(BaseModel):
             )
 
         self._helper = helper
+        self._sync = False
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Track (re)assignments of declared fields and mark the state as not synchronized.
+
+        Arguments:
+            name: The name of the attribute being set.
+            value: The value being assigned to the attribute.
+        """
+        super().__setattr__(name, value)
+
+        if self._sync and name in type(self).model_fields:
+            # Use `BaseModel.__setattr__` directly so updating `_sync`
+            # cannot re-trigger this custom `__setattr__`.
+            super().__setattr__("_sync", False)
 
     @field_serializer("*", mode="wrap", when_used="json")
     def _serialize_datetimes(self, value: Any, handler: Any) -> Any:
@@ -64,15 +81,30 @@ class ConnectorStateManager(BaseModel):
             return value.isoformat()  # Override default JSON serializer
         return handler(value)
 
-    def load(self) -> None:
-        """Overwrite instance's fields with the connector's state stored on OpenCTI."""
-        state = self._helper.get_state() or {}
-        for key in state:
-            # Prevent potential conflicts with `_helper` private attribute (not likely but possible)
-            if key == "_helper":
-                continue
+    def load(self, force: bool = False) -> None:
+        """Overwrite instance's fields with the connector's state stored on OpenCTI.
 
-            setattr(self, key, state[key])
+        Arguments:
+            force: If `True`, load the state from OpenCTI even if there are unsaved changes in the state manager instance.
+        """
+        if self._sync or force:
+            state = self._helper.get_state() or {}
+            for key in state:
+                # Prevent potential conflicts with private attributes (not likely but possible)
+                if key in ("_helper", "_sync"):
+                    continue
+
+                setattr(self, key, state[key])
+
+            # The state manager instance is now synchronized with OpenCTI
+            self._sync = True
+        else:
+            warnings.warn(
+                "Loading connector's state from OpenCTI would overwrite unsaved changes in the state manager instance. "
+                "Save current changes by calling `save()` or use `force=True` to load the state anyway.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     def save(self) -> None:
         """Save instance's fields as connector's state on OpenCTI."""
@@ -85,3 +117,5 @@ class ConnectorStateManager(BaseModel):
 
         self._helper.set_state(state_dict)
         self._helper.force_ping()  # ensure the state is updated immediately on OpenCTI
+        # OpenCTI is now synchronized with the state manager instance
+        self._sync = True
