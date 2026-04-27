@@ -8,7 +8,7 @@ from connector_linter import __version__
 from connector_linter.formatters import format_github, format_json, format_text
 from connector_linter.models import Severity
 from connector_linter.registry import CheckRegistry
-from connector_linter.runner import _discover_checks, run_checks
+from connector_linter.runner import _import_checks_modules, run_checks
 
 
 @click.group()
@@ -117,7 +117,7 @@ def check(
 @cli.command(name="list")
 def list_checks() -> None:
     """List all available checks."""
-    _discover_checks()
+    _import_checks_modules()
     checks = CheckRegistry.get_all()
 
     if not checks:
