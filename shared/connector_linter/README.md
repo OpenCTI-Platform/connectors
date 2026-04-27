@@ -338,7 +338,6 @@ from connector_linter.checks.vc1xx_config._helpers import (
     extract_env_vars_from_docker_compose,
     extract_env_vars_from_env_sample,
     derive_connector_prefixes,   # dirname → ["ABUSE_SSL", "ABUSESSL"]
-    find_config_yml_sample,      # Returns path to config.yml.sample
     find_bad_changeme_values,    # Finds wrong-case ChangeMe
 )
 ```
