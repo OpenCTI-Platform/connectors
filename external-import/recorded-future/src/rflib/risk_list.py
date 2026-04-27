@@ -16,7 +16,7 @@ class RiskList(threading.Thread):
         risk_list_threshold,
         risklist_related_entities,
         riskrules_as_label,
-        ta_to_intrusion_set=None,
+        ta_to_intrusion_set=False,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
