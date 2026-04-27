@@ -38,7 +38,7 @@ class ConnectorStateManager(BaseModel):
 
     # Private attributes (not validated, not serialized, not stored on OpenCTI)
     _helper: OpenCTIConnectorHelper = PrivateAttr()
-    _sync: bool = PrivateAttr(default=False)
+    _can_be_loaded: bool = PrivateAttr(default=False)
 
     # Declared fields (validated, serialized, stored on OpenCTI)
     last_run: datetime | None = Field(default=None)
@@ -61,21 +61,7 @@ class ConnectorStateManager(BaseModel):
             )
 
         self._helper = helper
-        self._sync = False
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        """Track (re)assignments of declared fields and mark the state as not synchronized.
-
-        Arguments:
-            name: The name of the attribute being set.
-            value: The value being assigned to the attribute.
-        """
-        super().__setattr__(name, value)
-
-        if self._sync and name in type(self).model_fields:
-            # Use `BaseModel.__setattr__` directly so updating `_sync`
-            # cannot re-trigger this custom `__setattr__`.
-            super().__setattr__("_sync", False)
+        self._can_be_loaded = True
 
     @field_serializer("*", mode="wrap", when_used="json")
     def _serialize_datetimes(self, value: Any, handler: Any) -> Any:
@@ -97,40 +83,44 @@ class ConnectorStateManager(BaseModel):
 
     def load(self, force: bool = False) -> None:
         """Overwrite instance's fields with the connector's state stored on OpenCTI.
+        If the state manager instance already has potential unsaved changes,
+        a warning will be raised and the state will NOT be loaded, to prevent unintentional data loss.
 
         Arguments:
-            force: If `True`, load the state from OpenCTI even if there are unsaved changes in the state manager instance.
+            force: If `True`, load the state from OpenCTI even if there are potential
+            unsaved changes in the state manager instance.
         """
-        if self._sync or force:
-            state = self._helper.get_state() or {}
-            for key in state:
-                # Prevent potential conflicts with private attributes (not likely but possible)
-                if key in ("_helper", "_sync"):
-                    continue
-
-                setattr(self, key, state[key])
-
-            # The state manager instance is now synchronized with OpenCTI
-            self._sync = True
-        else:
+        if not self._can_be_loaded and not force:
             warnings.warn(
-                "Loading connector's state from OpenCTI would overwrite unsaved changes in the state manager instance. "
+                "Loading connector's state from OpenCTI would overwrite potential unsaved changes in the state manager instance. "
                 "Save current changes by calling `save()` or use `force=True` to load the state anyway.",
                 UserWarning,
                 stacklevel=2,
             )
+            return
+
+        opencti_state = self._helper.get_state() or {}
+        for key, value in opencti_state.items():
+            # Prevent potential conflicts with private attributes (not likely but possible)
+            if key == "_helper":
+                continue
+
+            setattr(self, key, value)
+
+        # Prevent loading the state again before `save` is called
+        # (to avoid overwriting potential unsaved changes)
+        self._can_be_loaded = False
 
     def save(self) -> None:
         """Save instance's fields as connector's state on OpenCTI."""
         declared_fields = set(type(self).model_fields)
 
-        state_dict = self.model_dump(mode="json", include=declared_fields)
+        state_dump = self.model_dump(mode="json", include=declared_fields)
         # Send both declared _and_ extra fields to not delete any connector state's attributes on OpenCTI
         if self.model_extra:
-            state_dict.update(self.model_extra)
+            state_dump.update(self.model_extra)
 
-        self._helper.set_state(state_dict)
+        self._helper.set_state(state_dump)
         # Ensure the state is updated immediately on OpenCTI (instead of waiting for the next ping)
         self._helper.force_ping()
-        # OpenCTI is now synchronized with the state manager instance
-        self._sync = True
+        self._can_be_loaded = True
