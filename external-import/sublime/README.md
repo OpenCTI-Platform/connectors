@@ -40,7 +40,7 @@ Required environment variables in `docker-compose.yml`:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
 
-      - CONNECTOR_ID=a2c156d3-3bbe-4170-b370-bf6faebb56e2
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=Sublime Security Incidents
       - CONNECTOR_SCOPE=sublime
       - CONNECTOR_LOG_LEVEL=info
