@@ -7,9 +7,9 @@ import json
 from datetime import datetime, timedelta, timezone
 
 import isodate
-import pycti
 import requests
 import stix2
+from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import lookup_MDM_value, map_attack_score_to_level, sanitize_email
 from pycti import OpenCTIConnectorHelper
@@ -51,17 +51,13 @@ class SublimeConnector:
             api_key=self.config.sublime.token,
         )
 
-        # Create Sublime Identity for STIX objects
-        self.sublime_identity = stix2.Identity(
-            id=pycti.Identity.generate_id(
-                name="Sublime", identity_class="organization"
-            ),
-            name="Sublime",
-            identity_class="organization",
-            description="Email Security Platform",
-            custom_properties={"x_opencti_type": "Organization"},
-            allow_custom=True,
+        self.converter_to_stix = ConverterToStix(
+            self.helper,
+            # tlp_level=self.config.template.tlp_level,
         )
+
+        # Create Sublime Identity for STIX objects
+        self.sublime_identity = self.converter_to_stix.author
 
     def _get_last_timestamp(self):
         """
@@ -346,9 +342,7 @@ class SublimeConnector:
         sender = None
         if sender_email:
             sender_email = sanitize_email(sender_email)
-            sender = stix2.EmailAddress(
-                value=sender_email,
-            )
+            sender = self.converter_to_stix.create_email_address(value=sender_email)
         recipients = self._extract_recipients(MDM)
         if sender:
             observables.append(sender)
@@ -393,7 +387,7 @@ class SublimeConnector:
         if recipients:
             email_data["to_refs"] = [recipient.id for recipient in recipients]
 
-        email = stix2.EmailMessage(**email_data)
+        email = self.converter_to_stix.create_email_message(email_data)
         return email, observables, []  # No additional emails in single email case
 
     def _create_preview_emails(self, previews):
@@ -417,17 +411,15 @@ class SublimeConnector:
 
             if preview.get("sender_email_address"):
                 sender_email = sanitize_email(preview["sender_email_address"])
-                sender = stix2.EmailAddress(
-                    value=sender_email,
-                )
+                sender = self.converter_to_stix.create_email_address(value=sender_email)
                 all_objects.append(sender)
 
             # Create recipient email addresses
             for recipient_addr in preview.get("recipients") or []:
                 if recipient_addr:
                     recipient_addr = sanitize_email(recipient_addr)
-                    recipient = stix2.EmailAddress(
-                        value=recipient_addr,
+                    recipient = self.converter_to_stix.create_email_address(
+                        value=recipient_addr
                     )
                     recipients.append(recipient)
                     all_objects.append(recipient)
@@ -436,8 +428,8 @@ class SublimeConnector:
             attachment_hashes = preview.get("attachment_sha256s") or []
             for hash_value in attachment_hashes:
                 if hash_value:
-                    file_obj = stix2.File(
-                        hashes={"SHA-256": hash_value},
+                    file_obj = self.converter_to_stix.create_file(
+                        hashes={"SHA-256": hash_value}
                     )
                     all_objects.append(file_obj)
 
@@ -548,33 +540,22 @@ class SublimeConnector:
         )
 
         # Create Event Incident with deterministic ID
-        incident = stix2.Incident(
-            id=pycti.Incident.generate_id(incident_name, created_timestamp),
+        incident = self.converter_to_stix.create_incident(
             name=incident_name,
+            created_timestamp=created_timestamp,
             description=incident_description,
-            created=created_timestamp,
-            created_by_ref=self.sublime_identity.id,
-            object_marking_refs=[stix2.TLP_AMBER],
-            external_references=[
-                {
-                    "source_name": "Sublime",
-                    "description": "View this message group in Sublime platform",
-                    "url": "{}/messages/{}".format(
-                        self.config.sublime.url.unicode_string(),
-                        str(group_id or "unknown"),
-                    ),
-                    "external_id": str(group_id or "unknown"),
-                }
-            ],
-            custom_properties={
-                "x_opencti_type": "Incident",
-                "x_opencti_incident_type": self.config.sublime.incident_type,
-                "x_sublime_security_canonical_id": group_id,
-            },
-            allow_custom=True,
-            incident_type=self.config.sublime.incident_type.capitalize(),
-            source="Sublime Security",
-            severity=map_attack_score_to_level(attack_score_verdict, "severity"),
+            group_id=group_id,
+            incident_type=self.config.sublime.incident_type,
+            url="{}/messages/{}".format(
+                self.config.sublime.url.unicode_string(),
+                str(group_id or "unknown"),
+            ),
+            severity=map_attack_score_to_level(
+                self.config.sublime.set_priority,
+                self.config.sublime.severity,
+                attack_score_verdict,
+                "severity",
+            ),
         )
 
         return incident
@@ -783,8 +764,18 @@ class SublimeConnector:
             # Add priority and severity if configured
             attack_score_verdict = message_group.get("attack_score_verdict")
 
-            priority = map_attack_score_to_level(attack_score_verdict, "priority")
-            severity = map_attack_score_to_level(attack_score_verdict, "severity")
+            priority = map_attack_score_to_level(
+                self.config.sublime.set_priority,
+                self.config.sublime.severity,
+                attack_score_verdict,
+                "priority",
+            )
+            severity = map_attack_score_to_level(
+                self.config.sublime.set_priority,
+                self.config.sublime.severity,
+                attack_score_verdict,
+                "severity",
+            )
 
             if priority:
                 case_data["priority"] = priority
@@ -880,18 +871,7 @@ class SublimeConnector:
         # self.helper.connector_logger.debug("Generated STIX pattern for {}: {}".format(observable._type, pattern))
 
         # Create indicator with proper metadata
-        indicator = stix2.Indicator(
-            id=pycti.Indicator.generate_id(pattern),
-            pattern=pattern,
-            pattern_type="stix",
-            labels=["malicious-activity"],
-            created_by_ref=self.sublime_identity.id,
-            object_marking_refs=[stix2.TLP_AMBER],
-            custom_properties={
-                "x_opencti_type": "Indicator",
-            },
-            allow_custom=True,
-        )
+        indicator = self.converter_to_stix.create_indicator(pattern=pattern)
 
         return indicator
 
@@ -914,11 +894,23 @@ class SublimeConnector:
         relationships = []
 
         if primary_email and hasattr(primary_email, "id"):
-            relationships.append(self._create_relationship(incident, primary_email))
+            relationships.append(
+                self.converter_to_stix.create_relationship(
+                    source_id=incident.id,
+                    target_id=primary_email.id,
+                    relationship_type="related-to",
+                )
+            )
 
         for observable in observables:
             if observable and hasattr(observable, "id"):
-                relationships.append(self._create_relationship(incident, observable))
+                relationships.append(
+                    self.converter_to_stix.create_relationship(
+                        source_id=incident.id,
+                        target_id=observable.id,
+                        relationship_type="related-to",
+                    )
+                )
 
         for obj in all_emails:
             if (
@@ -927,38 +919,25 @@ class SublimeConnector:
                 and obj._type == "email-message"
                 and hasattr(obj, "id")
             ):
-                relationships.append(self._create_relationship(incident, obj))
+                relationships.append(
+                    self.converter_to_stix.create_relationship(
+                        source_id=incident.id,
+                        target_id=obj.id,
+                        relationship_type="related-to",
+                    )
+                )
 
         for indicator in indicators:
             if indicator and hasattr(indicator, "id"):
-                relationships.append(self._create_relationship(incident, indicator))
+                relationships.append(
+                    self.converter_to_stix.create_relationship(
+                        source_id=incident.id,
+                        target_id=indicator.id,
+                        relationship_type="related-to",
+                    )
+                )
 
         return relationships
-
-    def _create_relationship(self, source, target, relationship_type="related-to"):
-        """
-        Create a single relationship between two STIX objects. Uses deterministic ID generation for consistent relationships.
-
-        Args:
-            source (stix2.SDO): Source STIX object
-            target (stix2.SDO): Target STIX object
-            relationship_type (str): Type of relationship (default: 'related-to')
-
-        Returns:
-            stix2.Relationship: STIX Relationship object
-        """
-        from pycti import StixCoreRelationship
-
-        return stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source.id, target.id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source.id,
-            target_ref=target.id,
-            created_by_ref=self.sublime_identity.id,
-            object_marking_refs=[stix2.TLP_AMBER],
-        )
 
     def _extract_recipients(self, MDM):
         """
@@ -976,7 +955,9 @@ class SublimeConnector:
             email = lookup_MDM_value(recipient, "email.email")
             if email:
                 email = sanitize_email(email)
-                recipients.append(stix2.EmailAddress(value=email))
+                recipients.append(
+                    self.converter_to_stix.create_email_address(value=email)
+                )
         return recipients
 
     def _extract_urls(self, MDM):
@@ -997,7 +978,7 @@ class SublimeConnector:
                 if "://" not in url:
                     scheme = lookup_MDM_value(link, "href_url.scheme") or "http"
                     url = "{}://{}".format(scheme, url)
-                urls.append(stix2.URL(value=url))
+                urls.append(self.converter_to_stix.create_url(url=url))
         return urls
 
     def _extract_domains(self, MDM):
@@ -1018,11 +999,7 @@ class SublimeConnector:
             domain = domain_info.get("domain")
             if domain and domain.lower() not in seen:
                 seen.add(domain.lower())
-                domains.append(
-                    stix2.DomainName(
-                        value=domain,
-                    )
-                )
+                domains.append(self.converter_to_stix.create_domain_name(value=domain))
 
         return domains
 
@@ -1042,8 +1019,7 @@ class SublimeConnector:
         for ip_info in header_ips:
             ip = ip_info.get("ip")
             if ip:
-                ip_class = stix2.IPv6Address if ":" in ip else stix2.IPv4Address
-                ips.append(ip_class(value=ip))
+                ips.append(self.converter_to_stix.create_ip_address(ip_value=ip))
         return ips
 
     def _extract_attachments(self, MDM):
@@ -1069,21 +1045,24 @@ class SublimeConnector:
                 continue
 
             hashes = {"SHA-256": sha256}
-
-            file_data = {
-                "name": filename,
-                "hashes": hashes,
-            }
-
-            if attachment.get("size"):
-                file_data["size"] = attachment.get("size")
+            file_size = attachment.get("size")
 
             # Only use MIME type if provided and not generic
-            mime_type = attachment.get("content_type")
-            if mime_type and mime_type != "application/octet-stream":
-                file_data["mime_type"] = mime_type
+            mime_type = (
+                attachment["content_type"]
+                if attachment.get("content_type")
+                and attachment["content_type"] != "application/octet-stream"
+                else None
+            )
 
-            files.append(stix2.File(**file_data))
+            files.append(
+                self.converter_to_stix.create_file(
+                    hashes=hashes,
+                    file_name=filename,
+                    file_size=file_size,
+                    mime_type=mime_type,
+                )
+            )
 
         return files
 

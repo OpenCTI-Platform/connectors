@@ -1,4 +1,4 @@
-def sanitize_email(self, email):
+def sanitize_email(email):
     """
     Sanitize email address by removing Unicode BOM and other problematic characters.
 
@@ -24,7 +24,9 @@ def sanitize_email(self, email):
     return sanitized
 
 
-def map_attack_score_to_level(self, attack_score_verdict, mapping_type):
+def map_attack_score_to_level(
+    set_priority, set_severity, attack_score_verdict, mapping_type
+):
     """
     Map Sublime attack score verdict to OpenCTI priority or severity level.
 
@@ -37,9 +39,9 @@ def map_attack_score_to_level(self, attack_score_verdict, mapping_type):
     Returns:
         str: Mapped level (low, medium, high, critical) or None if not configured
     """
-    if mapping_type == "priority" and not self.config.sublime.set_priority:
+    if mapping_type == "priority" and not set_priority:
         return None
-    if mapping_type == "severity" and not self.config.sublime.set_severity:
+    if mapping_type == "severity" and not set_severity:
         return None
 
     # Verdict to level mapping - OpenCTI expects different values for priority vs severity
@@ -69,7 +71,7 @@ def map_attack_score_to_level(self, attack_score_verdict, mapping_type):
     return verdict_mapping.get(verdict, default_value)
 
 
-def lookup_MDM_value(self, MDM, value):
+def lookup_MDM_value(MDM, value):
     """
     Lookup values in MDM based on their rule structure.
     This may seem overcomplicated compared to parsing JSON but it easier correlates to MQL rule structure.
