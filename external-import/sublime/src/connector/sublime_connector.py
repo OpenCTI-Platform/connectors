@@ -11,6 +11,7 @@ import pycti
 import requests
 import stix2
 from connector.settings import ConnectorSettings
+from connector.utils import lookup_MDM_value, map_attack_score_to_level, sanitize_email
 from pycti import OpenCTIConnectorHelper
 from sublime_client import SublimeClient
 
@@ -116,75 +117,6 @@ class SublimeConnector:
 
         # Format for Sublime API: 2025-12-31T05:00:00.000Z
         return default_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-
-    def _sanitize_email(self, email):
-        """
-        Sanitize email address by removing Unicode BOM and other problematic characters.
-
-        Args:
-            email (str): Raw email address
-
-        Returns:
-            str: Sanitized email address
-        """
-        if not email:
-            return email
-
-        # Remove Unicode BOM (Byte Order Mark) characters
-        sanitized = (
-            email.replace("\ufeff", "")
-            .replace("\ufffe", "")
-            .replace("\u00ef\u00bb\u00bf", "")
-        )
-
-        # Strip leading/trailing whitespace
-        sanitized = sanitized.strip()
-
-        return sanitized
-
-    def _map_attack_score_to_level(self, attack_score_verdict, mapping_type):
-        """
-        Map Sublime attack score verdict to OpenCTI priority or severity level.
-
-        Attack score verdicts: benign, unknown, graymail, suspicious, malicious, spam
-
-        Args:
-            attack_score_verdict (str): Sublime attack score verdict
-            mapping_type (str): Either 'priority' or 'severity'
-
-        Returns:
-            str: Mapped level (low, medium, high, critical) or None if not configured
-        """
-        if mapping_type == "priority" and not self.config.sublime.set_priority:
-            return None
-        if mapping_type == "severity" and not self.config.sublime.set_severity:
-            return None
-
-        # Verdict to level mapping - OpenCTI expects different values for priority vs severity
-        if mapping_type == "priority":
-            # Priority uses P1/P2/P3/P4 format (P1 = highest priority)
-            verdict_mapping = {
-                "malicious": "P1",  # Highest priority
-                "suspicious": "P2",  # High priority
-                "spam": "P3",  # Medium priority
-                "graymail": "P3",  # Medium priority
-                "unknown": "P4",  # Low priority
-                "benign": "P4",  # Low priority
-            }
-        else:
-            # Severity mapping
-            verdict_mapping = {
-                "malicious": "high",
-                "suspicious": "medium",
-                "spam": "low",
-                "graymail": "low",
-                "unknown": "low",
-                "benign": "low",
-            }
-
-        verdict = (attack_score_verdict or "unknown").lower()
-        default_value = "P4" if mapping_type == "priority" else "low"
-        return verdict_mapping.get(verdict, default_value)
 
     def _fetch_messages(self, since_timestamp):
         """
@@ -410,10 +342,10 @@ class SublimeConnector:
 
         observables = []
 
-        sender_email = self._lookup_MDM_value(MDM, "sender.email.email")
+        sender_email = lookup_MDM_value(MDM, "sender.email.email")
         sender = None
         if sender_email:
-            sender_email = self._sanitize_email(sender_email)
+            sender_email = sanitize_email(sender_email)
             sender = stix2.EmailAddress(
                 value=sender_email,
             )
@@ -428,15 +360,15 @@ class SublimeConnector:
         observables.extend(self._extract_attachments(MDM))
 
         # Build email message (STIX2: is_multipart requires body)
-        body_text = self._lookup_MDM_value(MDM, "body.plain.raw")
+        body_text = lookup_MDM_value(MDM, "body.plain.raw")
 
         # raw text makes things easier, but option is here for HTML
-        # html_content = self._lookup_MDM_value(MDM, 'body.html.raw')
+        # html_content = lookup_MDM_value(MDM, 'body.html.raw')
 
         # Edge case. Sometimes the raw body doesn't exist. In that case, use HTML
         # e.g. html.raw = <span style="display: none"></p></html>
         if not body_text:
-            html_text = self._lookup_MDM_value(MDM, "body.html.raw")
+            html_text = lookup_MDM_value(MDM, "body.html.raw")
             body_text = html_text
 
         # Use first subject if exists and not empty, otherwise default
@@ -484,7 +416,7 @@ class SublimeConnector:
             recipients = []
 
             if preview.get("sender_email_address"):
-                sender_email = self._sanitize_email(preview["sender_email_address"])
+                sender_email = sanitize_email(preview["sender_email_address"])
                 sender = stix2.EmailAddress(
                     value=sender_email,
                 )
@@ -493,7 +425,7 @@ class SublimeConnector:
             # Create recipient email addresses
             for recipient_addr in preview.get("recipients") or []:
                 if recipient_addr:
-                    recipient_addr = self._sanitize_email(recipient_addr)
+                    recipient_addr = sanitize_email(recipient_addr)
                     recipient = stix2.EmailAddress(
                         value=recipient_addr,
                     )
@@ -562,9 +494,9 @@ class SublimeConnector:
             MDM = message_group.get("MDM", {})
 
             if MDM:
-                to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
+                to_list = lookup_MDM_value(MDM, "recipients.to") or []
                 for recipient in to_list:
-                    email = self._lookup_MDM_value(recipient, "email.email")
+                    email = lookup_MDM_value(recipient, "email.email")
                     if email:
                         recipients.add(email)
 
@@ -642,7 +574,7 @@ class SublimeConnector:
             allow_custom=True,
             incident_type=self.config.sublime.incident_type.capitalize(),
             source="Sublime Security",
-            severity=self._map_attack_score_to_level(attack_score_verdict, "severity"),
+            severity=map_attack_score_to_level(attack_score_verdict, "severity"),
         )
 
         return incident
@@ -661,31 +593,29 @@ class SublimeConnector:
         try:
             sender_email = "Unknown Sender"
             MDM = message_group.get("MDM", {})
-            if MDM and self._lookup_MDM_value(MDM, "sender.email.email"):
-                sender_email = self._sanitize_email(
-                    self._lookup_MDM_value(MDM, "sender.email.email")
+            if MDM and lookup_MDM_value(MDM, "sender.email.email"):
+                sender_email = sanitize_email(
+                    lookup_MDM_value(MDM, "sender.email.email")
                 )
             elif message_group.get("previews"):
                 for preview in message_group.get("previews", []):
                     if not preview:
                         continue
                     if preview.get("sender_email_address"):
-                        sender_email = self._sanitize_email(
+                        sender_email = sanitize_email(
                             preview.get("sender_email_address")
                         )
                         break
 
             preview_count = len(message_group.get("previews", []))
-            has_primary = bool(
-                MDM and self._lookup_MDM_value(MDM, "sender.email.email")
-            )
+            has_primary = bool(MDM and lookup_MDM_value(MDM, "sender.email.email"))
             email_count = max(preview_count, 1) if has_primary else preview_count
 
             recipients = set()
             if MDM:
-                to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
+                to_list = lookup_MDM_value(MDM, "recipients.to") or []
                 for recipient in to_list:
-                    email = self._lookup_MDM_value(recipient, "email.email")
+                    email = lookup_MDM_value(recipient, "email.email")
                     if email:
                         recipients.add(email)
 
@@ -759,9 +689,9 @@ class SublimeConnector:
         try:
             MDM = message_group.get("MDM", {})
             sender_email = (
-                self._sanitize_email(self._lookup_MDM_value(MDM, "sender.email.email"))
-                if self._lookup_MDM_value(MDM, "sender.email.email")
-                else self._sanitize_email(
+                sanitize_email(lookup_MDM_value(MDM, "sender.email.email"))
+                if lookup_MDM_value(MDM, "sender.email.email")
+                else sanitize_email(
                     next(
                         (
                             p.get("sender_email_address")
@@ -774,16 +704,14 @@ class SublimeConnector:
             )
 
             preview_count = len(message_group.get("previews", []))
-            has_primary = bool(
-                MDM and self._lookup_MDM_value(MDM, "sender.email.email")
-            )
+            has_primary = bool(MDM and lookup_MDM_value(MDM, "sender.email.email"))
             email_count = max(preview_count, 1) if has_primary else preview_count
 
             recipients = set()
             if MDM:
-                to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
+                to_list = lookup_MDM_value(MDM, "recipients.to") or []
                 for recipient in to_list:
-                    email = self._lookup_MDM_value(recipient, "email.email")
+                    email = lookup_MDM_value(recipient, "email.email")
                     if email:
                         recipients.add(email)
 
@@ -855,8 +783,8 @@ class SublimeConnector:
             # Add priority and severity if configured
             attack_score_verdict = message_group.get("attack_score_verdict")
 
-            priority = self._map_attack_score_to_level(attack_score_verdict, "priority")
-            severity = self._map_attack_score_to_level(attack_score_verdict, "severity")
+            priority = map_attack_score_to_level(attack_score_verdict, "priority")
+            severity = map_attack_score_to_level(attack_score_verdict, "severity")
 
             if priority:
                 case_data["priority"] = priority
@@ -1032,27 +960,6 @@ class SublimeConnector:
             object_marking_refs=[stix2.TLP_AMBER],
         )
 
-    def _lookup_MDM_value(self, MDM, value):
-        """
-        Lookup values in MDM based on their rule structure.
-        This may seem overcomplicated compared to parsing JSON but it easier correlates to MQL rule structure.
-
-        Args:
-            MDM (dict): Message data to search
-            value (str): Dot-separated path (e.g., 'sender.email.email')
-
-        Returns:
-            Any: Value at the path, or None if path doesn't exist
-        """
-        keys = value.split(".")
-        value = MDM
-        for key in keys:
-            if isinstance(value, dict):
-                value = value.get(key)
-            else:
-                return None
-        return value
-
     def _extract_recipients(self, MDM):
         """
         Extract recipient email addresses from message data model.
@@ -1064,11 +971,11 @@ class SublimeConnector:
             list: List of stix2.EmailAddress objects for recipients
         """
         recipients = []
-        to_list = self._lookup_MDM_value(MDM, "recipients.to") or []
+        to_list = lookup_MDM_value(MDM, "recipients.to") or []
         for recipient in to_list:
-            email = self._lookup_MDM_value(recipient, "email.email")
+            email = lookup_MDM_value(recipient, "email.email")
             if email:
-                email = self._sanitize_email(email)
+                email = sanitize_email(email)
                 recipients.append(stix2.EmailAddress(value=email))
         return recipients
 
@@ -1083,12 +990,12 @@ class SublimeConnector:
             list: List of stix2.URL objects
         """
         urls = []
-        links = self._lookup_MDM_value(MDM, "body.links") or []
+        links = lookup_MDM_value(MDM, "body.links") or []
         for link in links:
-            url = self._lookup_MDM_value(link, "href_url.url")
+            url = lookup_MDM_value(link, "href_url.url")
             if url:
                 if "://" not in url:
-                    scheme = self._lookup_MDM_value(link, "href_url.scheme") or "http"
+                    scheme = lookup_MDM_value(link, "href_url.scheme") or "http"
                     url = "{}://{}".format(scheme, url)
                 urls.append(stix2.URL(value=url))
         return urls
@@ -1106,7 +1013,7 @@ class SublimeConnector:
         domains = []
         seen = set()
 
-        header_domains = self._lookup_MDM_value(MDM, "headers.domains") or []
+        header_domains = lookup_MDM_value(MDM, "headers.domains") or []
         for domain_info in header_domains:
             domain = domain_info.get("domain")
             if domain and domain.lower() not in seen:
@@ -1131,7 +1038,7 @@ class SublimeConnector:
             list: List of stix2.IPv4Address or stix2.IPv6Address objects
         """
         ips = []
-        header_ips = self._lookup_MDM_value(MDM, "headers.ips") or []
+        header_ips = lookup_MDM_value(MDM, "headers.ips") or []
         for ip_info in header_ips:
             ip = ip_info.get("ip")
             if ip:
@@ -1150,7 +1057,7 @@ class SublimeConnector:
             list: List of stix2.File objects
         """
         files = []
-        attachments = self._lookup_MDM_value(MDM, "attachments") or []
+        attachments = lookup_MDM_value(MDM, "attachments") or []
 
         for attachment in attachments:
             filename = attachment.get("file_name")
