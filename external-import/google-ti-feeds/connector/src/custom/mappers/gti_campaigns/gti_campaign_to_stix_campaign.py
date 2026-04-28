@@ -67,6 +67,7 @@ class GTICampaignToSTIXCampaign(BaseMapper):
         first_seen, last_seen = self._get_activity_timestamps(attributes)
         labels = self._extract_labels(attributes)
         external_references = self._build_external_references(attributes)
+        objective = self._extract_objective(attributes)
 
         campaign_model = OctiCampaignModel.create(
             name=name,
@@ -78,6 +79,7 @@ class GTICampaignToSTIXCampaign(BaseMapper):
             modified=modified,
             first_seen=first_seen,
             last_seen=last_seen,
+            objective=objective,
             labels=labels,
             external_references=[
                 ref.model_dump(exclude_none=True) for ref in external_references
@@ -152,6 +154,32 @@ class GTICampaignToSTIXCampaign(BaseMapper):
                         continue
 
         return first_seen, last_seen
+
+    @staticmethod
+    def _extract_objective(attributes: CampaignModel) -> str | None:
+        """Extract objective from campaign motivations.
+
+        Each motivation's value is joined with ", " to produce a single
+        free-text string that maps to the STIX 2.1 Campaign ``objective``
+        property.
+
+        Args:
+            attributes: The campaign attributes
+
+        Returns:
+            str | None: Comma-separated motivation values, or None when no
+                motivations are present.
+
+        """
+        if attributes.motivations is None:
+            return None
+
+        values = [
+            motivation.value
+            for motivation in attributes.motivations
+            if motivation is not None and motivation.value is not None
+        ]
+        return ", ".join(values) if values else None
 
     @staticmethod
     def _extract_labels(attributes: CampaignModel) -> list[str]:
