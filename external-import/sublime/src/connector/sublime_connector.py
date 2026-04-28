@@ -95,17 +95,22 @@ class SublimeConnector:
             else:
                 mode = "First run"
 
-            self.helper.log_info(
-                "[*] {}: fetching {} of historical data".format(
-                    mode, self.config.sublime.first_run_duration
-                )
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Fetch historical data.",
+                {
+                    "mode": mode,
+                    "first_run_duration": self.config.sublime.first_run_duration,
+                },
             )
         except (isodate.ISO8601Error, ValueError) as e:
-            self.helper.log_warning(
-                '[!] Invalid first run duration format "{}": {}. Using default 8 hours.'.format(
-                    self.config.sublime.first_run_duration, e
-                )
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Invalid first run duration format. Using default 8 hours.",
+                {
+                    "first_run_duration": self.config.sublime.first_run_duration,
+                    "error": e,
+                },
             )
+
             # Fallback to 1 day
             default_time = datetime.now(timezone.utc) - timedelta(hours=8)
 
@@ -210,13 +215,17 @@ class SublimeConnector:
         try:
             group_ids = self.client.get_group_ids(start_time, end_time)
             if not group_ids:
-                self.helper.log_debug("No flagged message groups found in time range")
+                self.helper.connector_logger.debug(
+                    "No flagged message groups found in time range"
+                )
                 return
 
-            self.helper.log_info(
-                "[*] Found {} flagged group IDs. Processing in batches of {}".format(
-                    len(group_ids), self.config.sublime.batch_size
-                )
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Flagged group IDs found. Processing in batches",
+                {
+                    "length_group_ids": len(group_ids),
+                    "batch_size": self.config.sublime.batch_size,
+                },
             )
 
             total_fetched = 0
@@ -235,22 +244,28 @@ class SublimeConnector:
                         if attack_score in self.verdicts:
                             batch_messages.append(message_group)
                         else:
-                            self.helper.log_debug(
-                                "Skipping group {} with verdict '{}' (not in {})".format(
-                                    group_id, attack_score, self.verdicts
-                                )
+                            self.helper.connector_logger.debug(
+                                "[Sublime Connector] Skipping group",
+                                {
+                                    "group_id": group_id,
+                                    "attack_score": attack_score,
+                                    "verdicts": self.verdicts,
+                                },
                             )
 
                 if batch_messages:
                     total_fetched += len(batch_messages)
-                    self.helper.log_info(
-                        "[*] Batch yielding {} messages (verdicts: {})".format(
-                            len(batch_messages), self.verdicts
-                        )
+                    self.helper.connector_logger.info(
+                        "[Sublime Connector] Batch yielding messages",
+                        {
+                            "length_batch_messages": len(batch_messages),
+                            "verdicts": self.verdicts,
+                        },
                     )
+
                     yield batch_messages
 
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "[*] Completed: {}/{} flagged groups matched verdicts {}".format(
                     total_fetched, len(group_ids), self.verdicts
                 )
@@ -278,17 +293,23 @@ class SublimeConnector:
         """
         # Check for basic message group structure
         if "id" not in message_group:
-            self.helper.log_warning("[!] Message group missing id field")
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Message group missing id field"
+            )
             return False
 
         # Check for subjects
         if not message_group.get("subjects"):
-            self.helper.log_warning("[!] Message group missing subjects")
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Message group missing subjects"
+            )
             return False
 
         # Check for MDM (where the detailed email data is)
         if "MDM" not in message_group:
-            self.helper.log_warning("[!] Message group missing MDM")
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Message group missing MDM"
+            )
             return False
 
         MDM = message_group["MDM"]
@@ -299,7 +320,9 @@ class SublimeConnector:
             or "email" not in MDM.get("sender", {})
             or "email" not in MDM.get("sender", {}).get("email", {})
         ):
-            self.helper.log_warning("[!] Message group MDM missing sender email")
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Message group MDM missing sender email"
+            )
             return False
 
         return True
@@ -355,13 +378,9 @@ class SublimeConnector:
             except Exception as e:
                 # Log the problematic observable value for debugging
                 obs_value = getattr(observable, "value", "Unknown")
-                self.helper.log_warning(
-                    "[!] Failed to create indicator for {}: {}".format(
-                        observable._type, e
-                    )
-                )
-                self.helper.log_warning(
-                    "[!] Problematic {} value: {}".format(observable._type, obs_value)
+                self.helper.connector_logger.warning(
+                    "[Sublime Connector] Failed to create indicator",
+                    {"obs_type": observable._type, "obs_value": obs_value, "error": e},
                 )
 
         objects.extend(indicators)
@@ -568,7 +587,9 @@ class SublimeConnector:
             return description
 
         except Exception as e:
-            self.helper.log_warning("[!] Failed to create description: {}".format(e))
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Failed to create description", {"error": e}
+            )
             return "Malicious email group detected by Sublime Security. Description unavailable."
 
     def _create_group_incident(self, message_group):
@@ -717,8 +738,9 @@ class SublimeConnector:
             return incident_name
 
         except Exception as e:
-            self.helper.log_warning(
-                "[!] Failed to generate incident name: {}. Using fallback.".format(e)
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Failed to generate incident name. Using fallback.",
+                {"error": e},
             )
             # Fallback to simple incident naming
             return "{} {}".format(self.config.sublime.incident_prefix, subject)
@@ -842,7 +864,10 @@ class SublimeConnector:
             if severity:
                 case_data["severity"] = severity
 
-            self.helper.log_info("[*] Creating new case for group: {}".format(group_id))
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Creating new case for group",
+                {"group_id": group_id},
+            )
             case = self.helper.api.case_incident.create(**case_data)
 
             # Add external references after case creation (for all cases to ensure proper linking)
@@ -857,7 +882,6 @@ class SublimeConnector:
                     for ext_ref in external_refs:
                         # Skip if external reference already exists on this case
                         if ext_ref["external_id"] in existing_ext_ids:
-                            self.helper.log_info("*" * 100)
                             continue
 
                         ext_ref_result = self.helper.api.external_reference.create(
@@ -877,24 +901,25 @@ class SublimeConnector:
                                 external_reference_id=ext_ref_result["id"],
                             )
                 except Exception as ext_ref_error:
-                    self.helper.log_error(
-                        "[!] Failed to add external references to case {}: {}".format(
-                            case.get("id", "unknown"), ext_ref_error
-                        )
+                    self.helper.connector_logger.error(
+                        "[Sublime Connector] Failed to add external references to case",
+                        {"case_id": case.get("id", "unknown"), "error": ext_ref_error},
                     )
 
             if case:
-                self.helper.log_info(
-                    "[*] Successfully processed case with ID: {}".format(
-                        case.get("id", "unknown")
-                    )
+                self.helper.connector_logger.info(
+                    "[Sublime Connector] Successfully processed case with ID",
+                    {"case_id": case.get("id", "unknown")},
                 )
             else:
-                self.helper.log_error("[!] Case creation returned None")
+                self.helper.connector_logger.error(
+                    "[Sublime Connector] Case creation returned None"
+                )
 
         except Exception as e:
-            self.helper.log_error(
-                "[!] Failed to create case for incident {}: {}".format(incident.id, e)
+            self.helper.connector_logger.error(
+                "[Sublime Connector] Failed to create case for incident",
+                {"incident_id": incident.id, "erro": e},
             )
 
     def _create_indicator_for_observable(self, observable):
@@ -924,7 +949,7 @@ class SublimeConnector:
             return None
 
         # Log pattern generation for troubleshooting if needed
-        # self.helper.log_debug("Generated STIX pattern for {}: {}".format(observable._type, pattern))
+        # self.helper.connector_logger.debug("Generated STIX pattern for {}: {}".format(observable._type, pattern))
 
         # Create indicator with proper metadata
         indicator = stix2.Indicator(
@@ -1183,27 +1208,26 @@ class SublimeConnector:
                 group_id = message.get("id", "unknown")
 
                 if not self._validate_message(message):
-                    self.helper.log_warning(
-                        "[!] Skipping group {} - failed basic validation".format(
-                            group_id
-                        )
+                    self.helper.connector_logger.warning(
+                        "[Sublime Connector] Skipping group - failed basic validation",
+                        {"group_id": group_id},
                     )
                     continue
 
                 # Check if this message group already exists in OpenCTI using temp cache
                 if group_id in self._existing_group_ids:
-                    self.helper.log_debug(
-                        "[DEBUG] Skipping existing group: {}".format(group_id)
+                    self.helper.connector_logger.debug(
+                        "[Sublime Connector] Skipping existing group",
+                        {"group_id": group_id},
                     )
                     continue
 
                 existing_incident = None
                 try:
                     all_incidents = self.helper.api.incident.list()
-                    self.helper.log_debug(
-                        "[DEBUG] Checking {} total incidents for external reference match".format(
-                            len(all_incidents) if all_incidents else 0
-                        )
+                    self.helper.connector_logger.debug(
+                        "[Sublime Connector] Checking incidents for external reference match",
+                        {"length_incident": len(all_incidents) if all_incidents else 0},
                     )
 
                     if all_incidents:
@@ -1214,34 +1238,41 @@ class SublimeConnector:
                             for ext_ref in incident_ext_refs:
                                 if ext_ref.get("external_id") == group_id:
                                     existing_incident = incident_obj
-                                    self.helper.log_info(
-                                        "[*] Found existing event incident by external_id: {} for group: {}".format(
-                                            incident_obj.get("id"), group_id
-                                        )
+                                    self.helper.connector_logger.info(
+                                        "[Sublime Connector] Found existing event incident by external_id",
+                                        {
+                                            "incident_id": incident_obj.get("id"),
+                                            "group_id": group_id,
+                                        },
                                     )
                                     break
                             if existing_incident:
                                 break
 
                         if existing_incident:
-                            self.helper.log_debug(
-                                "[DEBUG] Skipping group {} - event incident already exists: {}".format(
-                                    group_id, existing_incident.get("id")
-                                )
+                            self.helper.connector_logger.debug(
+                                "[Sublime Connector] Skipping group - event incident already exists",
+                                {
+                                    "group_id": group_id,
+                                    "incident_id": existing_incident.get("id"),
+                                },
                             )
                             continue
                         else:
-                            self.helper.log_debug(
-                                "[DEBUG] No existing event incident found for group: {} (checked {} incidents)".format(
-                                    group_id, len(all_incidents) if all_incidents else 0
-                                )
+                            self.helper.connector_logger.debug(
+                                "[Sublime Connector] No existing event incident found for group",
+                                {
+                                    "group_id": group_id,
+                                    "length_incident": (
+                                        len(all_incidents) if all_incidents else 0
+                                    ),
+                                },
                             )
 
                 except Exception as incident_check_error:
-                    self.helper.log_warning(
-                        "[!] Event incident existence check failed: {}".format(
-                            incident_check_error
-                        )
+                    self.helper.connector_logger.warning(
+                        "[Sublime Connector] Event incident existence check failed",
+                        {"error": incident_check_error},
                     )
 
                 # Create STIX objects
@@ -1260,27 +1291,25 @@ class SublimeConnector:
                 bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
 
                 # Send to OpenCTI
-                self.helper.log_debug(
-                    "[DEBUG] About to send STIX Bundle for incident: {}".format(
-                        incident.id
-                    )
+                self.helper.connector_logger.debug(
+                    "[Sublime Connector] About to send STIX Bundle for incident",
+                    {"incident_id": incident.id},
                 )
+
                 try:
                     self.helper.send_stix2_bundle(
                         bundle.serialize(),
                         work_id=work_id,
                         update=self.update_existing_data,
                     )
-                    self.helper.log_debug(
-                        "[DEBUG] Bundle sent successfully for incident: {}".format(
-                            incident.id
-                        )
+                    self.helper.connector_logger.debug(
+                        "[Sublime Connector] Bundle sent successfully for incident",
+                        {"incident_id": incident.id},
                     )
                 except Exception as bundle_error:
-                    self.helper.log_warning(
-                        "[!] Failed to send STIX bundle for incident {}: {}".format(
-                            incident.id, bundle_error
-                        )
+                    self.helper.connector_logger.warning(
+                        "[Sublime Connector] Failed to send STIX bundle for incident",
+                        {"incident_id": incident.id, "error": bundle_error},
                     )
 
                 # Create OpenCTI case if enabled
@@ -1300,8 +1329,9 @@ class SublimeConnector:
 
             except Exception as e:
                 canonical_id = message.get("id", "unknown")
-                self.helper.log_error(
-                    "[!] Failed to process message {}: {}".format(canonical_id, e)
+                self.helper.connector_logger.error(
+                    "[Sublime Connector] Failed to process message",
+                    {"canonical_id": canonical_id, "error": e},
                 )
 
         return processed_count, latest_timestamp
@@ -1345,16 +1375,15 @@ class SublimeConnector:
                     ):
                         existing_group_ids.add(ext_ref["external_id"])
 
-            self.helper.log_info(
-                "[*] Found {} existing Sublime group IDs in OpenCTI".format(
-                    len(existing_group_ids)
-                )
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Found existing Sublime group IDs in OpenCTI",
+                {"length_group_ids": len(existing_group_ids)},
             )
             return existing_group_ids
 
         except Exception as e:
-            self.helper.log_warning(
-                "[!] Error fetching existing group IDs: {}".format(e)
+            self.helper.connector_logger.warning(
+                "[Sublime Connector] Error fetching existing group IDs", {"error": e}
             )
             return set()
 
@@ -1367,7 +1396,10 @@ class SublimeConnector:
         """
         # Get last processed timestamp
         since_timestamp = self._get_last_timestamp()
-        self.helper.log_debug("Fetching messages since {}".format(since_timestamp))
+        self.helper.connector_logger.debug(
+            "[Sublime Connector] Fetching messages",
+            {"since_timestamp": since_timestamp},
+        )
 
         # Mark first run as completed after getting timestamp
         if not self._first_run_completed:
@@ -1385,8 +1417,9 @@ class SublimeConnector:
                 if not batch_messages:
                     continue
 
-                self.helper.log_info(
-                    "[*] Processing batch of {} messages".format(len(batch_messages))
+                self.helper.connector_logger.info(
+                    "[Sublime Connector] Processing batch of messages",
+                    {"length_batch_messages": len(batch_messages)},
                 )
 
                 batch_processed, batch_latest_timestamp = self._process_message_batch(
@@ -1405,7 +1438,7 @@ class SublimeConnector:
                     current_state = self.helper.get_state() or {}
                     current_state["last_timestamp"] = global_latest_timestamp
                     self.helper.set_state(current_state)
-                    self.helper.log_debug(
+                    self.helper.connector_logger.debug(
                         "Batch complete: {} processed this batch, {} total processed, state updated to {}".format(
                             batch_processed, total_processed, global_latest_timestamp
                         )
@@ -1420,7 +1453,13 @@ class SublimeConnector:
                 self.helper.set_state(current_state)
 
             completion_message = "Processed {} messages".format(total_processed)
-            self.helper.log_info("[*] {}".format(completion_message))
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Processed messages",
+                {
+                    "total_processed": total_processed,
+                    "completion_message": completion_message,
+                },
+            )
             self.helper.api.work.to_processed(work_id, completion_message)
 
             return total_processed
@@ -1429,7 +1468,10 @@ class SublimeConnector:
             error_message = "Batch processing failed after {} messages: {}".format(
                 total_processed, e
             )
-            self.helper.log_error("[!] {}".format(error_message))
+            self.helper.connector_logger.error(
+                "[Sublime Connector] Batch processing failed",
+                {"total_processed": total_processed, "error": e},
+            )
             self.helper.api.work.to_received(work_id, error_message)
             raise
 

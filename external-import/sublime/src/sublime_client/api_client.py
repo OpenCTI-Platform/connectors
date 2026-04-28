@@ -41,9 +41,9 @@ class SublimeClient:
             return response
 
         except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+                "[API] Error while fetching data",
+                {"url_path": {api_url}, "error": {str(err)}},
             )
             return None
 
@@ -71,20 +71,19 @@ class SublimeClient:
 
             full_url = "{}/messages/groups".format(api_url)
 
-            self.helper.log_debug(
-                "Fetch time range: {} to {}".format(start_time, end_time)
-            )
-            self.helper.log_debug(
-                "API request: {} with {} parameters".format(full_url, len(params))
+            self.helper.connector_logger.debug(
+                "[API] API request for groups", {"url": full_url, "params": params}
             )
 
             response = self._request_data(api_url=full_url, params=params)
 
             if not response.ok:
-                self.helper.log_error(
-                    "[!] API request failed - Status: {}, Response: {}".format(
-                        response.status_code, response.text
-                    )
+                self.helper.connector_logger.error(
+                    "[API] API request for groups failed",
+                    {
+                        "status_code": response.status_code,
+                        "response_text": response.text,
+                    },
                 )
                 raise Exception(
                     "API request failed: {} {}".format(
@@ -114,18 +113,20 @@ class SublimeClient:
 
             full_url = "{}/messages/groups/{}".format(api_url, group_id)
 
-            self.helper.log_debug("Fetching group: {}".format(group_id))
+            self.helper.connector_logger.debug(
+                "[API] Fetching group", {"group_id": group_id}
+            )
 
             response = self._request_data(api_url=full_url)
 
-            # Enable if you need in depth troubleshooting
-            # self.helper.log_debug("DEBUG: Response body: {}".format(response.text))
-
             if not response.ok:
-                self.helper.log_warning(
-                    "[!] Failed to fetch group {}: {} {}".format(
-                        group_id, response.status_code, response.text
-                    )
+                self.helper.connector_logger.warning(
+                    "[API] Failed to fetch group",
+                    {
+                        "group_id": group_id,
+                        "status_code": response.status_code,
+                        "response_text": response.text,
+                    },
                 )
                 return None
 
