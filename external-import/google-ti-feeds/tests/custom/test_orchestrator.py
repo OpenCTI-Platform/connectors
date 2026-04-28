@@ -128,23 +128,40 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
             "GTICampaignData": "campaigns",
         }
 
-        if "relationship" in self.api_req.url:
-            response_key = "relationships"
-        elif (
-            "/collections" in self.api_req.url
-            and hasattr(self.api_req, "model")
-            and self.api_req.model
-        ):
-            # Check if this is a main collection fetch or a specific collection entity fetch
-            url_parts = self.api_req.url.split("/")
-            if len(url_parts) > 4 and url_parts[4]:  # /collections/specific-id
-                # This is a specific collection entity fetch (subentity)
+        related_collection_keys = {
+            "malware_families",
+            "threat_actors",
+            "attack_techniques",
+            "vulnerabilities",
+            "campaigns",
+            "domains",
+            "files",
+            "urls",
+            "ip_addresses",
+        }
+
+        if "/collections/" in self.api_req.url:
+            url_parts = [part for part in self.api_req.url.split("/") if part]
+            endpoint_tail = url_parts[-1].split("?")[0] if url_parts else ""
+
+            if endpoint_tail in related_collection_keys:
+                response_key = endpoint_tail
+            elif (
+                hasattr(self.api_req, "model")
+                and self.api_req.model
+                and endpoint_tail != "collections"
+            ):
+                # This is a specific collection entity fetch (legacy subentity route)
                 model_name = self.api_req.model.__name__
                 response_key = model_mapping.get(model_name, "reports")
-            else:
+            elif hasattr(self.api_req, "model") and self.api_req.model:
                 # This is a main collection fetch
                 model_name = self.api_req.model.__name__
                 response_key = model_mapping.get(model_name, "main_reports")
+            else:
+                response_key = "reports"
+        elif "relationship" in self.api_req.url:
+            response_key = "relationships"
         else:
             # Other subentity fetches
             model_name = (
@@ -203,16 +220,6 @@ def expected_report_log_messages() -> list[str]:
         "Fetched 1 ip_addresses relationships from API - {'prefix': '[BaseFetcher]'}",
         "Found relationships - {'prefix': '[OrchestratorReport]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, threat_actors: 1, attack_techniques: 1, vulnerabilities: 1, campaigns: 1, domains: 1, files: 1, urls: 1, ip_addresses: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorReport]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 8}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'vulnerabilities'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'campaigns'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'domains'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'files'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'URLs'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'IP addresses'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1, vulnerabilities: 1, campaigns: 1, domains: 1, files: 1, urls: 1, ip_addresses: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 33, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 53, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 52, 'entity_type': 'vulnerabilities'}",
@@ -244,10 +251,6 @@ def expected_threat_actor_log_messages() -> list[str]:
         "Fetched 1 vulnerabilities relationships from API - {'prefix': '[BaseFetcher]'}",
         "Found relationships - {'prefix': '[OrchestratorThreatActor]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, vulnerabilities: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorThreatActor]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'vulnerabilities'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, vulnerabilities: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 53, 'entity_type': 'vulnerabilities'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
@@ -273,10 +276,6 @@ def expected_malware_family_log_messages() -> list[str]:
         "Fetched 1 vulnerabilities relationships from API - {'prefix': '[BaseFetcher]'}",
         "Found relationships - {'prefix': '[OrchestratorMalware]', 'current': 1, 'total': 1, 'relationships': 'threat_actors: 1, attack_techniques: 1, vulnerabilities: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorMalware]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'vulnerabilities'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'threat_actors: 1, vulnerabilities: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 53, 'entity_type': 'vulnerabilities'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
@@ -302,10 +301,6 @@ def expected_vulnerability_log_messages_no_software() -> list[str]:
         "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
         "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, threat_actors: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorVulnerability]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
@@ -331,10 +326,6 @@ def expected_vulnerability_log_messages() -> list[str]:
         "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
         "Found relationships - {'prefix': '[OrchestratorVulnerability]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, threat_actors: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorVulnerability]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 2}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, threat_actors: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 2, 'entity_type': 'attack techniques'}",
@@ -361,11 +352,6 @@ def expected_campaign_log_messages() -> list[str]:
         "Fetched 1 threat_actors relationships from API - {'prefix': '[BaseFetcher]'}",
         "Found relationships - {'prefix': '[OrchestratorCampaign]', 'current': 1, 'total': 1, 'relationships': 'malware_families: 1, attack_techniques: 1, vulnerabilities: 1, threat_actors: 1'}",
         "Using ID-only approach for attack techniques (quota optimization) - {'prefix': '[OrchestratorCampaign]', 'attack_technique_count': 1}",
-        "Fetching details for subentities - {'prefix': '[FetcherShared]', 'total_to_fetch': 3}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'malware families'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'vulnerabilities'}",
-        "Fetched entities - {'prefix': '[GenericFetcher]', 'count': 1, 'entity_type': 'threat actors'}",
-        "Fetched details - {'prefix': '[FetcherShared]', 'summary': 'malware_families: 1, vulnerabilities: 1, threat_actors: 1'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 34, 'entity_type': 'malware families'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 53, 'entity_type': 'vulnerabilities'}",
         "Converted entities to STIX format - {'prefix': '[GenericConverter]', 'count': 54, 'entity_type': 'threat actors'}",
@@ -653,7 +639,9 @@ def _load_debug_responses(debug_folder: Path) -> dict[str, Any]:
         files = sorted(debug_folder.glob(f"{response_type}_*.json"))
         assert (  # noqa: S101
             len(files) == 1
-        ), f"Expected exactly one {response_type}_*.json under {debug_folder}, got {len(files)}"
+        ), (
+            f"Expected exactly one {response_type}_*.json under {debug_folder}, got {len(files)}"
+        )
 
         data = json.loads(files[0].read_text(encoding="utf-8"))
         response_data[response_type] = data.get("response", data)
