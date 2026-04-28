@@ -115,6 +115,7 @@ def minimal_campaign_data() -> GTICampaignData:
             alt_names_details=None,
             first_seen_details=None,
             last_seen_details=None,
+            motivations=None,
             tags_details=None,
         )
     )
