@@ -12,6 +12,7 @@ import requests
 import stix2
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+from sublime_client import SublimeClient
 
 
 class SublimeConnector:
@@ -43,15 +44,10 @@ class SublimeConnector:
         # Track first run of this connector session (not persisted)
         self._first_run_completed = False
 
-        self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "Authorization": "Bearer {}".format(
-                    self.config.sublime.token.get_secret_value()
-                ),
-                "Accept": "application/json",
-                "User-Agent": "OpenCTI-SublimeConnector/1.0",
-            }
+        self.client = SublimeClient(
+            helper=self.helper,
+            base_url=self.config.sublime.url,
+            api_key=self.config.sublime.token,
         )
 
         # Create Sublime Identity for STIX objects
@@ -185,91 +181,6 @@ class SublimeConnector:
         default_value = "P4" if mapping_type == "priority" else "low"
         return verdict_mapping.get(verdict, default_value)
 
-    def _fetch_group_ids(self, start_time, end_time):
-        """
-        Fetch list of flagged group IDs within time range from Sublime API.
-
-        Args:
-            start_time (str): ISO 8601 timestamp for range start
-            end_time (str): ISO 8601 timestamp for range end
-
-        Returns:
-            list: List of group canonical IDs that are flagged
-        """
-        params = {
-            "created_at__gte": start_time,
-            "created_at__lt": end_time,
-            "fetch_all_ids": True,
-            "stats_limit": 100000,
-            "flagged__eq": True,
-        }
-
-        api_url = self.config.sublime.url.unicode_string().rstrip("/")
-        if not api_url.endswith("/v1"):
-            api_url = api_url + "/v1"
-
-        full_url = "{}/messages/groups".format(api_url)
-
-        self.helper.log_debug("Fetch time range: {} to {}".format(start_time, end_time))
-        self.helper.log_debug(
-            "API request: {} with {} parameters".format(full_url, len(params))
-        )
-
-        response = self.session.get(full_url, params=params, timeout=30)
-
-        if not response.ok:
-            self.helper.log_error(
-                "[!] API request failed - Status: {}, Response: {}".format(
-                    response.status_code, response.text
-                )
-            )
-            raise Exception(
-                "API request failed: {} {}".format(response.status_code, response.text)
-            )
-
-        data = response.json()
-        group_ids = data.get("all_group_canonical_ids") or []
-        return group_ids
-
-    def _fetch_single_group(self, group_id):
-        """
-        Fetch individual message group by ID from Sublime API.
-
-        Args:
-            group_id (str): Canonical ID of the message group to fetch
-
-        Returns:
-            dict: Message group data dictionary, or None if fetch fails
-        """
-        api_url = self.config.sublime.url.unicode_string().rstrip("/")
-        if not api_url.endswith("/v1"):
-            api_url = api_url + "/v1"
-
-        full_url = "{}/messages/groups/{}".format(api_url, group_id)
-
-        self.helper.log_debug("Fetching group: {}".format(group_id))
-
-        response = self.session.get(full_url, timeout=30)
-
-        # Enable if you need in depth troubleshooting
-        # self.helper.log_debug("DEBUG: Response body: {}".format(response.text))
-
-        if not response.ok:
-            self.helper.log_warning(
-                "[!] Failed to fetch group {}: {} {}".format(
-                    group_id, response.status_code, response.text
-                )
-            )
-            return None
-
-        data = response.json()
-
-        # Map API field name to code expectation (data_model -> MDM)
-        if "data_model" in data and "MDM" not in data:
-            data["MDM"] = data["data_model"]
-
-        return data
-
     def _fetch_messages(self, since_timestamp):
         """
         Fetch malicious message groups from Sublime API since provided time.
@@ -297,7 +208,7 @@ class SublimeConnector:
         end_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
         try:
-            group_ids = self._fetch_group_ids(start_time, end_time)
+            group_ids = self.client.get_group_ids(start_time, end_time)
             if not group_ids:
                 self.helper.log_debug("No flagged message groups found in time range")
                 return
@@ -314,7 +225,7 @@ class SublimeConnector:
                 batch_messages = []
 
                 for group_id in batch_ids:
-                    message_group = self._fetch_single_group(group_id)
+                    message_group = self.client.get_single_group(group_id)
                     if message_group:
                         attack_score_raw = message_group.get("attack_score_verdict")
                         if not attack_score_raw:
