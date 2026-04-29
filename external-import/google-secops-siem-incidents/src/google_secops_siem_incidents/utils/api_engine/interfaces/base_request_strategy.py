@@ -20,3 +20,8 @@ class BaseRequestStrategy(ABC):
             Parsed response from the HTTP layer.
         """
         ...
+
+    @abstractmethod
+    async def close(self) -> None:
+        """Close the underlying HTTP resources."""
+        ...

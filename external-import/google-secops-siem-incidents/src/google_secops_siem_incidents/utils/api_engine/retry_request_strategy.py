@@ -227,3 +227,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
             except (ApiTimeoutError, ApiRateLimitError, ApiError) as exc:
                 await self._handle_attempt_error(exc, attempts, request.url)
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client."""
+        await self._http.close()

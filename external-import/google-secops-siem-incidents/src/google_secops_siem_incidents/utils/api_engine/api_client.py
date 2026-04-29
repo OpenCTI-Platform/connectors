@@ -25,7 +25,7 @@ class ApiClient:
 
     async def close(self) -> None:
         """Close the underlying HTTP session."""
-        await self._strategy._http.close()
+        await self._strategy.close()
 
     async def call_api(
         self,
