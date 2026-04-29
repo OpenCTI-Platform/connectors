@@ -18,17 +18,51 @@ from google_secops_siem_incidents.state_manager import GoogleSecOpsSIEMState
 _LOG_PREFIX = "[CONNECTOR]"
 
 
+def _obj_type(o: Any) -> str:
+    """Extract STIX type from a stix2 object or dict."""
+    if isinstance(o, dict):
+        return o.get("type", "")
+    return getattr(o, "type", "")
+
+
+def _obj_id(o: Any) -> str:
+    """Extract STIX id from a stix2 object or dict."""
+    if isinstance(o, dict):
+        return o.get("id", "")
+    return getattr(o, "id", "")
+
+
+def _unique_count(stix_objects: list[Any]) -> int:
+    """Count unique STIX objects by ID."""
+    return len({_obj_id(o) for o in stix_objects if _obj_id(o)})
+
+
 def _type_summary(stix_objects: list[Any]) -> str:
-    """Return a compact STIX type count string, e.g. 'incident: 2, ipv4-addr: 4'.
+    """Return a compact STIX type count string with duplicate indication.
 
     Args:
-        stix_objects: List of STIX objects with a ``type`` attribute.
+        stix_objects: List of STIX objects (stix2 objects or dicts).
 
     Returns:
-        Sorted comma-separated string of type:count pairs.
+        Sorted comma-separated string, e.g. 'incident: 10 (~5 unique), ipv4-addr: 4'.
     """
-    counts = Counter(getattr(o, "type", type(o).__name__) for o in stix_objects)
-    return ", ".join(f"{t}: {n}" for t, n in sorted(counts.items()))
+    type_ids: dict[str, set[str]] = {}
+    type_counts: Counter[str] = Counter()
+    for o in stix_objects:
+        t = _obj_type(o)
+        type_counts[t] += 1
+        obj_id = _obj_id(o)
+        if obj_id:
+            type_ids.setdefault(t, set()).add(obj_id)
+
+    parts = []
+    for t, total in sorted(type_counts.items()):
+        unique = len(type_ids.get(t, set()))
+        if unique and unique < total:
+            parts.append(f"{t}: {total} (~{unique} unique)")
+        else:
+            parts.append(f"{t}: {total}")
+    return ", ".join(parts)
 
 
 class GoogleSecOpsConnector:
@@ -125,6 +159,7 @@ class GoogleSecOpsConnector:
             batch_num = 0
             total_alerts = 0
             total_stix_objects = 0
+            total_unique_ids: set[str] = set()
             work_id: str | None = None
             friendly_name = f"{self.helper.connect_name} alerts"
 
@@ -174,7 +209,7 @@ class GoogleSecOpsConnector:
 
                 _log_extra = {
                     "batch_num": batch_num,
-                    "stix_count": len(stix_objects),
+                    "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
                     "type_summary": _type_summary(stix_objects),
                 }
                 self.helper.connector_logger.info(
@@ -186,17 +221,18 @@ class GoogleSecOpsConnector:
                     stix_objects = [
                         o
                         for o in stix_objects
-                        if getattr(o, "type", "") != "relationship"
+                        if _obj_type(o) != "relationship"
                     ] + [
                         o
                         for o in stix_objects
-                        if getattr(o, "type", "") == "relationship"
+                        if _obj_type(o) == "relationship"
                     ]
                     if work_id is None:
                         work_id = self.helper.api.work.initiate_work(
                             self.helper.connect_id,
                             friendly_name,
                         )
+                    stix_objects.extend([self.converter_to_stix.author, self.converter_to_stix.tlp_marking])
                     stix_bundle = self.helper.stix2_create_bundle(stix_objects)
                     self.helper.send_stix2_bundle(
                         stix_bundle,
@@ -204,10 +240,13 @@ class GoogleSecOpsConnector:
                         cleanup_inconsistent_bundle=True,
                     )
                     total_stix_objects += len(stix_objects)
+                    total_unique_ids.update(
+                        _obj_id(o) for o in stix_objects if _obj_id(o)
+                    )
                     _log_extra = {
                         "batch_num": batch_num,
                         "work_id": work_id,
-                        "stix_count": len(stix_objects),
+                        "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
                         "type_summary": _type_summary(stix_objects),
                     }
                     self.helper.connector_logger.info(
@@ -265,7 +304,7 @@ class GoogleSecOpsConnector:
             _log_extra = {
                 "total_batches": batch_num,
                 "total_alerts": total_alerts,
-                "total_stix_objects": total_stix_objects,
+                "total_stix_objects": f"{total_stix_objects} (~{len(total_unique_ids)} unique)",
                 "start_time": start_time,
                 "end_time": end_time,
             }
