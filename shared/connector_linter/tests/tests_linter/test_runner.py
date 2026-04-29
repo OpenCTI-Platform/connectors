@@ -42,16 +42,10 @@ class TestSelectIgnore:
 class TestCheckExecution:
     """Checks are executed and produce correct results."""
 
-    def test_pass_fail_propagation(self, dummy_checks, minimal_connector):
-        results = run_checks(minimal_connector, select=["VC901", "VC903"])
-        by_code = {r.code: r for r in results}
-        assert by_code["VC901"].passed is True
-        assert by_code["VC903"].passed is False
-
     def test_severity_propagation(self, dummy_checks, minimal_connector):
         results = run_checks(minimal_connector, select=["VC901", "VC902"])
         by_code = {r.code: r for r in results}
-        assert by_code["VC901"].severity == Severity.ERROR
+        assert by_code["VC901"].severity == Severity.INFO
         assert by_code["VC902"].severity == Severity.WARNING
 
     def test_suggestion_propagation(self, dummy_checks, minimal_connector):
@@ -79,7 +73,7 @@ class TestExceptionHandling:
 
         results = run_checks(minimal_connector, select=["VC999"])
         assert len(results) == 1
-        assert results[0].passed is False
+        assert results[0].severity == Severity.ERROR
         assert "RuntimeError" in results[0].message
         assert "kaboom" in results[0].message
 
@@ -98,7 +92,6 @@ class TestExceptionHandling:
         results = run_checks(minimal_connector, select=["VC998"])
         assert len(results) == 1
         assert results[0].severity == Severity.ERROR
-        assert results[0].passed is False
 
 
 class TestNoqaIntegration:
@@ -118,7 +111,7 @@ class TestNoqaIntegration:
             return [
                 CheckFinding(
                     message="flagged",
-                    passed=False,
+                    severity=Severity.ERROR,
                     file_path=ctx.path / "src" / "target.py",
                     line=1,
                 )
@@ -141,7 +134,7 @@ class TestNoqaIntegration:
             return [
                 CheckFinding(
                     message="flagged",
-                    passed=False,
+                    severity=Severity.ERROR,
                     file_path=ctx.path / "src" / "target.py",
                     line=1,
                 )
@@ -149,7 +142,7 @@ class TestNoqaIntegration:
 
         results = run_checks(minimal_connector, select=["VC950"], disable_noqa=True)
         assert len(results) == 1
-        assert results[0].passed is False
+        assert results[0].severity == Severity.ERROR
 
     def test_bare_noqa_suppresses_all(self, _clean_registry, minimal_connector):
         src_file = minimal_connector / "src" / "target.py"
@@ -165,7 +158,7 @@ class TestNoqaIntegration:
             return [
                 CheckFinding(
                     message="flagged",
-                    passed=False,
+                    severity=Severity.ERROR,
                     file_path=ctx.path / "src" / "target.py",
                     line=1,
                 )
@@ -188,7 +181,7 @@ class TestNoqaIntegration:
             return [
                 CheckFinding(
                     message="flagged",
-                    passed=False,
+                    severity=Severity.ERROR,
                     file_path=ctx.path / "src" / "target.py",
                     line=1,
                 )
@@ -196,3 +189,4 @@ class TestNoqaIntegration:
 
         results = run_checks(minimal_connector, select=["VC952"], disable_noqa=False)
         assert len(results) == 1
+        assert results[0].severity == Severity.ERROR

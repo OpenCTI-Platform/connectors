@@ -110,7 +110,7 @@ def check(
         formatter(results, path, sys.stdout)
 
     # Exit code: 1 if any errors failed, 0 otherwise
-    has_errors = any(not r.passed and r.severity == Severity.ERROR for r in results)
+    has_errors = any(r.severity == Severity.ERROR for r in results)
     sys.exit(1 if has_errors else 0)
 
 
