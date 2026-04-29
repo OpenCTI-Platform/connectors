@@ -99,7 +99,7 @@ def _format_result_line(
     #   INFO  = passed + INFO severity … not used yet, kept as PASS
     if result.severity == Severity.WARNING:
         status = _c("WARN", "yellow", stream)
-    elif result.passed:
+    elif result.severity == Severity.INFO:
         status = _c("PASS", "green", stream)
     else:
         status = _c("FAIL", "red", stream)
@@ -114,10 +114,10 @@ def _write_score(results: list[CheckResult], stream: TextIO) -> None:
     if total == 0:
         return
 
-    passed = len([r for r in results if r.passed])
+    passed = len([r for r in results if r.severity != Severity.ERROR])
     failed = total - passed
     pct = (passed / total) * 100
-    errors = len([r for r in results if not r.passed and r.severity == Severity.ERROR])
+    errors = len([r for r in results if r.severity == Severity.ERROR])
     warnings = len([r for r in results if r.severity == Severity.WARNING])
 
     stream.write(f"  {'─' * 60}\n")
@@ -156,11 +156,11 @@ def format_text(
     By default, only failures (FAIL), warnings (WARN), and the score summary
     are displayed.  Use ``verbose=True`` to also show passing checks (PASS).
     """
-    failed = [r for r in results if not r.passed]
-    warnings = [r for r in results if r.passed and r.severity == Severity.WARNING]
-    passed_normal = [r for r in results if r.passed and r.severity != Severity.WARNING]
+    failed = [r for r in results if r.severity == Severity.ERROR]
+    warnings = [r for r in results if r.severity == Severity.WARNING]
+    passed_normal = [r for r in results if r.severity == Severity.INFO]
 
-    for result in failed:
+    def _write_result(result: CheckResult) -> None:
         stream.write(
             f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
         )
@@ -168,16 +168,15 @@ def format_text(
             suggestion = _c(f"    ↳ {result.suggestion}", "dim", stream)
             stream.write(f"{suggestion}\n")
 
+    for result in failed:
+        _write_result(result)
+
     for result in warnings:
-        stream.write(
-            f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
-        )
+        _write_result(result)
 
     if verbose:
         for result in passed_normal:
-            stream.write(
-                f"{_format_result_line(result, connector_path, stream, abspath=abspath)}\n",
-            )
+            _write_result(result)
 
     stream.write("\n")
     _write_score(results, stream)
@@ -191,7 +190,7 @@ def format_json(
     """Format results as JSON."""
     output_results = results
     total = len(results)
-    passed_count = len([r for r in results if r.passed])
+    passed_count = len([r for r in results if r.severity != Severity.ERROR])
 
     output = {
         "connector": str(connector_path.resolve()),
@@ -199,9 +198,7 @@ def format_json(
             "total": total,
             "passed": passed_count,
             "failed": total - passed_count,
-            "errors": len(
-                [r for r in results if not r.passed and r.severity == Severity.ERROR]
-            ),
+            "errors": len([r for r in results if r.severity == Severity.ERROR]),
             "warnings": len([r for r in results if r.severity == Severity.WARNING]),
             "score_pct": round((passed_count / total) * 100, 1) if total else 0,
         },
@@ -211,7 +208,6 @@ def format_json(
                 "name": r.name,
                 "message": r.message,
                 "severity": r.severity.value,
-                "passed": r.passed,
                 "file_path": _abs_path(connector_path, r.file_path),
                 "line": r.line,
                 "suggestion": r.suggestion,
@@ -230,7 +226,7 @@ def format_github(
 ) -> None:
     """Format results as GitHub Actions annotations."""
     for result in results:
-        if result.passed:
+        if result.severity == Severity.INFO:
             continue
         level = "error" if result.severity == Severity.ERROR else "warning"
         file_path = _repo_relative_path(connector_path, result.file_path)

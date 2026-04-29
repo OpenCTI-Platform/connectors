@@ -16,14 +16,12 @@ def _result(
     code: str = "VC101",
     file_path: Path | None = None,
     line: int | None = None,
-    passed: bool = False,
 ) -> CheckResult:
     return CheckResult(
         code=code,
         name="test",
         message="test",
         severity=Severity.ERROR,
-        passed=passed,
         file_path=file_path,
         line=line,
     )

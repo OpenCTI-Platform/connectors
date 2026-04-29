@@ -29,11 +29,10 @@ class CheckFinding:
     """
 
     message: str
-    passed: bool
+    severity: Severity  # override descriptor default (rare)
     file_path: Path | None = None
     line: int | None = None
     suggestion: str | None = None
-    severity: Severity | None = None  # override descriptor default (rare)
 
 
 @dataclass
@@ -44,7 +43,6 @@ class CheckResult:
     name: str
     message: str
     severity: Severity
-    passed: bool
     file_path: Path | None = None
     line: int | None = None
     suggestion: str | None = None
