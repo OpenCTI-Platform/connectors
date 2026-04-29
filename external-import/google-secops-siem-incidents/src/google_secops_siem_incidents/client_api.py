@@ -11,9 +11,6 @@ from google_secops_siem_incidents.models.rule_alert_response import RuleAlertRes
 from google_secops_siem_incidents.settings import GoogleSecOpsConfig
 from google_secops_siem_incidents.utils.api_engine import ApiClient
 from google_secops_siem_incidents.utils.api_engine.aio_http_client import AioHttpClient
-from google_secops_siem_incidents.utils.api_engine.api_request_model import (
-    ApiRequestModel,
-)
 from google_secops_siem_incidents.utils.api_engine.circuit_breaker import CircuitBreaker
 from google_secops_siem_incidents.utils.api_engine.interfaces.base_request_hook import (
     BaseRequestHook,
@@ -163,7 +160,7 @@ class GoogleSecOpsApiClient:
 
     async def close(self) -> None:
         """Close the underlying HTTP session."""
-        await self._api_client._strategy._http.close()
+        await self._api_client.close()
 
     async def fetch_rule_alerts(
         self,
@@ -185,7 +182,7 @@ class GoogleSecOpsApiClient:
         start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
 
         while True:
-            request = ApiRequestModel(
+            response: RuleAlertResponse = await self._api_client.call_api(
                 url=self._alerts_url(),
                 method="GET",
                 params={
@@ -194,9 +191,6 @@ class GoogleSecOpsApiClient:
                     "maxNumAlertsToReturn": max_alerts,
                 },
                 response_model=RuleAlertResponse,
-            )
-            response: RuleAlertResponse = await self._api_client._strategy.execute(
-                request
             )
             yield response
 
