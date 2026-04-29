@@ -14,13 +14,9 @@ from google_secops_siem_incidents.client_api import GoogleSecOpsApiClient
 from google_secops_siem_incidents.converter_to_stix import ConverterToStix
 from google_secops_siem_incidents.settings import ConnectorSettings
 from google_secops_siem_incidents.state_manager import GoogleSecOpsSIEMState
+from google_secops_siem_incidents.utils.timestamps import parse_ts as _parse_ts
 
 _LOG_PREFIX = "[CONNECTOR]"
-
-
-def _parse_ts(ts: str) -> datetime:
-    """Parse an ISO-8601 timestamp (with 'Z' or offset) to a timezone-aware datetime."""
-    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
 
 
 def _obj_type(o: Any) -> str:
@@ -294,18 +290,18 @@ class GoogleSecOpsConnector:
         Returns:
             The work_id (created on first call, reused after).
         """
-        stix_objects[:] = [
-            o for o in stix_objects if _obj_type(o) != "relationship"
-        ] + [o for o in stix_objects if _obj_type(o) == "relationship"]
+        ordered = [o for o in stix_objects if _obj_type(o) != "relationship"] + [
+            o for o in stix_objects if _obj_type(o) == "relationship"
+        ]
+        ordered.extend(
+            [self.converter_to_stix.author, self.converter_to_stix.tlp_marking]
+        )
         if work_id is None:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id,
                 friendly_name,
             )
-        stix_objects.extend(
-            [self.converter_to_stix.author, self.converter_to_stix.tlp_marking]
-        )
-        stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+        stix_bundle = self.helper.stix2_create_bundle(ordered)
         self.helper.send_stix2_bundle(
             stix_bundle,
             work_id=work_id,
@@ -316,8 +312,8 @@ class GoogleSecOpsConnector:
             {
                 "batch_num": batch_num,
                 "work_id": work_id,
-                "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
-                "type_summary": _type_summary(stix_objects),
+                "stix_count": f"{len(ordered)} (~{_unique_count(ordered)} unique)",
+                "type_summary": _type_summary(ordered),
             },
         )
         return work_id
@@ -331,7 +327,7 @@ class GoogleSecOpsConnector:
         batch_num: int,
     ) -> None:
         """Persist a pagination checkpoint when too_many_alerts is True."""
-        pivot = GoogleSecOpsApiClient._compute_pagination_pivot(response)
+        pivot = GoogleSecOpsApiClient.compute_pagination_pivot(response)
         if pivot is None or global_max_ts is None:
             return
         pivot_dt = _parse_ts(pivot)
