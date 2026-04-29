@@ -23,6 +23,10 @@ class ApiClient:
         self._strategy = strategy
         self._logger = logger or logging.getLogger(__name__)
 
+    async def close(self) -> None:
+        """Close the underlying HTTP session."""
+        await self._strategy._http.close()
+
     async def call_api(
         self,
         url: str,

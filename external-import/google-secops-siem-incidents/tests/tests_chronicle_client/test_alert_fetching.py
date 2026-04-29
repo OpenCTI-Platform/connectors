@@ -4,7 +4,7 @@ Tests that GoogleSecOpsApiClient.fetch_rule_alerts handles single-batch,
 multi-batch pagination, safety guards, empty responses, and error propagation.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -62,8 +62,7 @@ async def test_single_batch_when_all_alerts_fit():
     batch = _given_single_batch_response()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(return_value=batch)
+        mock_api.call_api = AsyncMock(return_value=batch)
         batches = await _collect_batches(
             client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z"
         )
@@ -107,8 +106,7 @@ async def test_pagination_slides_backward_on_too_many_alerts():
     responses = _given_two_batch_responses()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(side_effect=responses)
+        mock_api.call_api = AsyncMock(side_effect=responses)
         batches = await _collect_batches(
             client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z"
         )
@@ -151,14 +149,12 @@ async def test_start_time_is_never_mutated():
     responses = _given_two_batch_responses()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(side_effect=responses)
+        mock_api.call_api = AsyncMock(side_effect=responses)
         await _collect_batches(client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z")
 
-        for c in mock_api._strategy.execute.call_args_list:
-            args, _ = c
-            request = args[0]
-            assert request.params["timeRange.startTime"] == "2025-01-01T00:00:00Z"
+        for c in mock_api.call_api.call_args_list:
+            _, kwargs = c
+            assert kwargs["params"]["timeRange.startTime"] == "2025-01-01T00:00:00Z"
 
 
 # ---------------------------------------------------------------------------
@@ -185,8 +181,7 @@ async def test_pagination_stops_when_no_backward_progress():
     stuck = _given_stuck_response()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(return_value=stuck)
+        mock_api.call_api = AsyncMock(return_value=stuck)
         batches = await _collect_batches(
             client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z"
         )
@@ -224,12 +219,13 @@ async def test_second_request_endtime_is_tmin():
     responses = _given_two_batch_responses()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(side_effect=responses)
+        mock_api.call_api = AsyncMock(side_effect=responses)
         await _collect_batches(client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z")
 
-        second_request = mock_api._strategy.execute.call_args_list[1][0][0]
-        assert second_request.params["timeRange.endTime"] == "2025-01-01T06:00:00Z"
+        second_call_kwargs = mock_api.call_api.call_args_list[1][1]
+        assert (
+            second_call_kwargs["params"]["timeRange.endTime"] == "2025-01-01T06:00:00Z"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -247,8 +243,7 @@ async def test_too_many_alerts_but_zero_alerts_stops():
     empty = _given_empty_too_many_response()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(return_value=empty)
+        mock_api.call_api = AsyncMock(return_value=empty)
         batches = await _collect_batches(
             client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z"
         )
@@ -272,8 +267,7 @@ async def test_empty_response_produces_single_empty_batch():
     empty = _given_empty_response()
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(return_value=empty)
+        mock_api.call_api = AsyncMock(return_value=empty)
         batches = await _collect_batches(
             client, "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z"
         )
@@ -304,8 +298,7 @@ async def test_upstream_errors_propagate(exc_class, exc_args):
     exc = exc_class(*exc_args)
 
     with patch.object(client, "_api_client", create=True) as mock_api:
-        mock_api._strategy = MagicMock()
-        mock_api._strategy.execute = AsyncMock(side_effect=exc)
+        mock_api.call_api = AsyncMock(side_effect=exc)
         with pytest.raises(type(exc)):
             async for _ in client.fetch_rule_alerts(
                 "2025-01-01T00:00:00Z", "2025-01-01T12:00:00Z"
