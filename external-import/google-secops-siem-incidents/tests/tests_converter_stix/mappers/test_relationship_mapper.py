@@ -6,10 +6,11 @@ to its extracted observables.
 BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 """
 
-from unittest.mock import MagicMock
+from uuid import uuid4
 
 from connectors_sdk.models import Hostname, IPV4Address, Relationship, UserAccount
 from connectors_sdk.models.enums import RelationshipType
+from connectors_sdk.models.reference import Reference
 from tests_converter_stix.factories import make_author, make_tlp_marking
 
 # --- import under test (will cause ImportError → RED) ---
@@ -18,14 +19,13 @@ from google_secops_siem_incidents.mappers.relationship_mapper import (  # noqa: 
 )
 
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 def _make_mock_incident():
-    """Create a minimal incident-like object with an id attribute."""
-    mock = MagicMock()
-    mock.id = "incident--fake-uuid-1234"
-    return mock
+    """Create a minimal incident stub as a Reference (valid BaseIdentifiedEntity union member)."""
+    return Reference(id=f"incident--{uuid4()}")
 
 
 def _when_map_relationships(incident, observables):
