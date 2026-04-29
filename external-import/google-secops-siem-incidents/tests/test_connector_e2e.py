@@ -61,7 +61,7 @@ def expected_full_run_log_messages() -> list[str]:
             " 'type_summary': 'hostname: 2, identity: 1, incident: 2, ipv4-addr: 2, marking-definition: 1, relationship: 4'}"
         ),
         "[CONNECTOR] State updated - {'total_batches': 2, 'last_alert_timestamp':",
-        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '24 (~18 unique)',",
+        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '20 (~16 unique)',",
     ]
 
 
@@ -72,7 +72,7 @@ def expected_resume_run_log_messages() -> list[str]:
         "[CONNECTOR] Run started - {'start_time': '2024-03-01T12:00:00+00:00',",
         "[CONNECTOR] Batch fetched - {'batch_num': 1, 'rule_alerts': 1, 'alerts': 2}",
         "[CONNECTOR] Batch fetched - {'batch_num': 2, 'rule_alerts': 1, 'alerts': 2}",
-        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '24 (~18 unique)',",
+        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '20 (~16 unique)',",
     ]
 
 
