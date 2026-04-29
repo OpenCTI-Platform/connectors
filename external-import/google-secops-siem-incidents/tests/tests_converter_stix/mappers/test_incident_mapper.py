@@ -39,7 +39,8 @@ def _given_alert_with_fields_and_metadata(
     )
     rule_metadata = RuleMetadataFactory.build(
         properties=RulePropertiesFactory.build(
-            metadata={"severity": severity, "tags": tags},
+        name="rule_name",
+        metadata={"severity": severity, "tags": tags},
         ),
     )
     return alert, rule_metadata
@@ -72,7 +73,7 @@ class TestIncidentName:
         incident = _when_map_incident(alert, meta)
 
         # _then_
-        assert incident.name == "ip:185.100.87.136, hostname:srv01"
+        assert incident.name == "rule_name:rule_name - ip:185.100.87.136, hostname:srv01"
 
     def test_then_name_falls_back_to_rule_id_when_fields_empty(self):
         """Given empty fields[] → name falls back to rule_id."""
@@ -83,7 +84,7 @@ class TestIncidentName:
         incident = _when_map_incident(alert, meta)
 
         # _then_ — must use rule_id, not crash
-        assert meta.rule_id in incident.name
+        assert alert.id in incident.name
 
     def test_then_name_falls_back_to_unnamed_when_no_rule_id(self):
         """Given empty fields and minimal metadata → name includes 'unnamed' or rule_id."""
