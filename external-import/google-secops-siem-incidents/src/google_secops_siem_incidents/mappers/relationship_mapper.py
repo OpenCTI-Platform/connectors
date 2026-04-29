@@ -25,7 +25,7 @@ def map_relationships(
         List of Relationship objects, one per observable.
     """
     return [
-        Relationship.model_construct(
+        Relationship(
             type=RelationshipType.RELATED_TO,
             source=incident,
             target=observable,
