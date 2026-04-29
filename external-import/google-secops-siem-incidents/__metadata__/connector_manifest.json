@@ -1,0 +1,21 @@
+{
+  "title": "Google SecOps SIEM Incidents",
+  "name": "Google SecOps SIEM Incidents",
+  "connector_type": "EXTERNAL_IMPORT",
+  "slug": "google-secops-siem-incidents",
+  "description": "Imports SIEM incidents from Google SecOps into OpenCTI.",
+  "short_description": "Google SecOps SIEM incidents external import connector.",
+  "logo": null,
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": "2026-04-27",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": null,
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-google-secops-siem-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}
