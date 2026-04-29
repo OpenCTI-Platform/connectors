@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from connectors_sdk.models import Incident
+from connectors_sdk.models.enums import IncidentType
 
 from google_secops_siem_incidents.mappers._utils import find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
@@ -27,13 +28,17 @@ def map_incident(
     Returns:
         Populated Incident model instance.
     """
+    name_prefix = f"rule_name:{rule_metadata.properties.name} - "
+
     name_parts = [f"{f.name}:{f.string_val}" for f in alert.fields if f.string_val]
-    name = ", ".join(name_parts) if name_parts else (rule_metadata.rule_id or "unnamed")
+    name_content = ", ".join(name_parts) if name_parts else f"alert_id:{alert.id}"
+    name = f"{name_prefix}{name_content}"
 
     raw_severity = rule_metadata.properties.metadata.get("severity", "")
     severity = raw_severity.lower() or None
 
-    incident_type = alert.rule_type.lower().replace("_", "-")
+    incident_type = IncidentType(alert.rule_type.lower().replace("_", "-"))
+    incident_type._name_ = alert.rule_type.upper().replace("_", "-")
 
     ts = alert.detection_timestamp.replace("Z", "+00:00")
     first_seen = datetime.fromisoformat(ts)
