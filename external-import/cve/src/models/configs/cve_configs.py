@@ -51,8 +51,8 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
     )
     cpe_history_interval: timedelta | None = Field(
         default=timedelta(days=120),
-        description="When import_software is enabled, this interval determines how "
-        "far back in time to look for CPEs that were modified within that time frame. "
+        description="When import_software is enabled, The interval specifies how far "
+        "back in time to search for CPEs that were modified within that period. "
         "This helps limit the number of CPEs resolved and imported. "
         "Maximum interval is 120 days. "
         "⚠️ WARNING: Null value will disable the time filter and may result in "
@@ -61,6 +61,11 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
     cpe_max_concurrency: PositiveInt = Field(
         default=10,
         description="Maximum number of concurrent CPE resolution tasks when import_software is enabled.",
+    )
+
+    cve_max_concurrency: PositiveInt = Field(
+        default=50,
+        description="Maximum number of concurrent CVE processing workers (bounds queued tasks and bundle sends).",
     )
 
     @field_validator("cpe_history_interval")
@@ -72,8 +77,3 @@ class _ConfigLoaderCVE(ConfigBaseSettings):
         if value > max_interval:
             raise ValueError(f"cpe_history_interval cannot exceed {max_interval}.")
         return value
-
-    cve_max_concurrency: PositiveInt = Field(
-        default=50,
-        description="Maximum number of concurrent CVE processing workers (bounds queued tasks and bundle sends).",
-    )
