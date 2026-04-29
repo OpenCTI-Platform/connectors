@@ -303,7 +303,9 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
         log_records = capfd.readouterr()
         if connector._config.connector_config.log_level in ["info", "debug"]:
             assert "Connector registered with ID" in log_records.err  # noqa: S101
-            assert f'"id": "{connector._config.connector_config.id}"' in log_records.err  # noqa: S101
+            assert (
+                f'"id": "{connector._config.connector_config.id}"' in log_records.err
+            )  # noqa: S101
     finally:
         mock_env.stop()
 

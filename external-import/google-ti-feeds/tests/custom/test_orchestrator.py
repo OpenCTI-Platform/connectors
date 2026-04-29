@@ -639,9 +639,7 @@ def _load_debug_responses(debug_folder: Path) -> dict[str, Any]:
         files = sorted(debug_folder.glob(f"{response_type}_*.json"))
         assert (  # noqa: S101
             len(files) == 1
-        ), (
-            f"Expected exactly one {response_type}_*.json under {debug_folder}, got {len(files)}"
-        )
+        ), f"Expected exactly one {response_type}_*.json under {debug_folder}, got {len(files)}"
 
         data = json.loads(files[0].read_text(encoding="utf-8"))
         response_data[response_type] = data.get("response", data)
