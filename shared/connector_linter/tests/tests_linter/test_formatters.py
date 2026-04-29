@@ -4,6 +4,7 @@ import json
 from io import StringIO
 from pathlib import Path
 
+import pytest
 from connector_linter.formatters import format_github, format_json, format_text
 from connector_linter.models import CheckResult, Severity
 
@@ -12,8 +13,7 @@ def _make_result(
     code: str = "VC901",
     name: str = "test-check",
     message: str = "everything ok",
-    severity: Severity = Severity.ERROR,
-    passed: bool = True,
+    severity: Severity = Severity.INFO,
     file_path: Path | None = None,
     line: int | None = None,
     suggestion: str | None = None,
@@ -23,7 +23,6 @@ def _make_result(
         name=name,
         message=message,
         severity=severity,
-        passed=passed,
         file_path=file_path,
         line=line,
         suggestion=suggestion,
@@ -34,7 +33,7 @@ class TestFormatText:
     """format_text: human-readable output."""
 
     def test_failed_always_shown(self, tmp_path: Path):
-        results = [_make_result(passed=False, message="broken")]
+        results = [_make_result(severity=Severity.ERROR, message="broken")]
         buf = StringIO()
         format_text(results, tmp_path, buf)
         output = buf.getvalue()
@@ -43,7 +42,7 @@ class TestFormatText:
         assert "broken" in output
 
     def test_passed_shown_in_verbose(self, tmp_path: Path):
-        results = [_make_result(passed=True, message="looks good")]
+        results = [_make_result(message="looks good")]
         buf = StringIO()
         format_text(results, tmp_path, buf, verbose=True)
         output = buf.getvalue()
@@ -52,7 +51,7 @@ class TestFormatText:
 
     def test_default_hides_passed(self, tmp_path: Path):
         """Default mode suppresses passed checks with ERROR severity."""
-        results = [_make_result(passed=True, severity=Severity.ERROR, message="ok")]
+        results = [_make_result(severity=Severity.INFO, message="ok")]
         buf = StringIO()
         format_text(results, tmp_path, buf)
         output = buf.getvalue()
@@ -62,20 +61,17 @@ class TestFormatText:
 
     def test_default_shows_warnings(self, tmp_path: Path):
         """Default mode still shows WARNING checks (they carry advisories)."""
-        results = [
-            _make_result(
-                passed=True, severity=Severity.WARNING, message="advisory note"
-            )
-        ]
+        results = [_make_result(severity=Severity.WARNING, message="advisory note")]
         buf = StringIO()
         format_text(results, tmp_path, buf)
         output = buf.getvalue()
         assert "advisory note" in output
         assert "WARN" in output
 
-    def test_suggestion_displayed(self, tmp_path: Path):
+    @pytest.mark.parametrize("severity", [Severity.WARNING, Severity.ERROR])
+    def test_suggestion_displayed(self, tmp_path: Path, severity: Severity):
         results = [
-            _make_result(passed=False, message="bad", suggestion="do this instead")
+            _make_result(severity=severity, message="bad", suggestion="do this instead")
         ]
         buf = StringIO()
         format_text(results, tmp_path, buf)
@@ -85,8 +81,8 @@ class TestFormatText:
 
     def test_score_line(self, tmp_path: Path):
         results = [
-            _make_result(passed=True, message="ok1"),
-            _make_result(code="VC902", passed=False, message="nope"),
+            _make_result(message="ok1"),
+            _make_result(code="VC902", severity=Severity.ERROR, message="nope"),
         ]
         buf = StringIO()
         format_text(results, tmp_path, buf)
@@ -97,8 +93,8 @@ class TestFormatText:
     def test_abspath_mode(self, tmp_path: Path):
         results = [
             _make_result(
-                passed=False,
                 file_path=Path("src/main.py"),
+                severity=Severity.ERROR,
                 message="issue",
             )
         ]
@@ -114,8 +110,8 @@ class TestFormatJson:
 
     def test_valid_json(self, tmp_path: Path):
         results = [
-            _make_result(passed=True, message="ok"),
-            _make_result(code="VC902", passed=False, message="fail"),
+            _make_result(message="ok"),
+            _make_result(code="VC902", message="fail"),
         ]
         buf = StringIO()
         format_json(results, tmp_path, buf)
@@ -126,18 +122,17 @@ class TestFormatJson:
 
     def test_summary_counts(self, tmp_path: Path):
         results = [
-            _make_result(passed=True),
-            _make_result(code="VC902", passed=False),
-            _make_result(code="VC903", passed=True),
+            _make_result(severity=Severity.INFO),
+            _make_result(code="VC902", severity=Severity.WARNING),
+            _make_result(code="VC903", severity=Severity.ERROR),
         ]
         buf = StringIO()
         format_json(results, tmp_path, buf)
         data = json.loads(buf.getvalue())
         assert data["summary"]["total"] == 3
-        assert data["summary"]["passed"] == 2
         assert data["summary"]["failed"] == 1
-        assert data["summary"]["errors"] == 1  # VC902 failed with ERROR severity
-        assert data["summary"]["warnings"] == 0
+        assert data["summary"]["errors"] == 1  # VC903 failed with ERROR severity
+        assert data["summary"]["warnings"] == 1  # VC902 failed with WARNING severity
 
     def test_result_fields(self, tmp_path: Path):
         results = [
@@ -146,7 +141,6 @@ class TestFormatJson:
                 name="test-check",
                 message="found it",
                 severity=Severity.WARNING,
-                passed=False,
                 file_path=Path("src/main.py"),
                 line=42,
                 suggestion="try harder",
@@ -160,14 +154,11 @@ class TestFormatJson:
         assert r["name"] == "test-check"
         assert r["message"] == "found it"
         assert r["severity"] == "warning"
-        assert r["passed"] is False
         assert r["line"] == 42
         assert r["suggestion"] == "try harder"
 
     def test_file_path_absolute(self, tmp_path: Path):
-        results = [
-            _make_result(file_path=Path("src/main.py"), passed=True, message="ok")
-        ]
+        results = [_make_result(file_path=Path("src/main.py"), message="ok")]
         buf = StringIO()
         format_json(results, tmp_path, buf)
         data = json.loads(buf.getvalue())
@@ -176,8 +167,8 @@ class TestFormatJson:
 
     def test_score_pct(self, tmp_path: Path):
         results = [
-            _make_result(passed=True),
-            _make_result(code="VC902", passed=True),
+            _make_result(),
+            _make_result(code="VC902"),
         ]
         buf = StringIO()
         format_json(results, tmp_path, buf)
@@ -191,7 +182,6 @@ class TestFormatGithub:
     def test_error_annotation(self, tmp_path: Path):
         results = [
             _make_result(
-                passed=False,
                 severity=Severity.ERROR,
                 message="broken",
                 file_path=Path("src/main.py"),
@@ -208,7 +198,6 @@ class TestFormatGithub:
     def test_warning_annotation(self, tmp_path: Path):
         results = [
             _make_result(
-                passed=False,
                 severity=Severity.WARNING,
                 message="risky",
                 file_path=Path("src/main.py"),
@@ -220,7 +209,7 @@ class TestFormatGithub:
         assert output.startswith("::warning")
 
     def test_passed_checks_skipped(self, tmp_path: Path):
-        results = [_make_result(passed=True, message="all good")]
+        results = [_make_result(message="all good")]
         buf = StringIO()
         format_github(results, tmp_path, buf)
         assert buf.getvalue() == ""
@@ -228,8 +217,8 @@ class TestFormatGithub:
     def test_default_line_number(self, tmp_path: Path):
         results = [
             _make_result(
-                passed=False,
                 message="no line",
+                severity=Severity.ERROR,
                 file_path=Path("src/main.py"),
                 line=None,
             )

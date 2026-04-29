@@ -81,8 +81,7 @@ def run_checks(
                     code=descriptor.code,
                     name=descriptor.name,
                     message=finding.message,
-                    severity=finding.severity or descriptor.severity,
-                    passed=finding.passed,
+                    severity=finding.severity,
                     file_path=finding.file_path,
                     line=finding.line,
                     suggestion=finding.suggestion,
@@ -96,7 +95,6 @@ def run_checks(
                     name=descriptor.name,
                     message=f"Check raised {type(e).__name__}: {e}",
                     severity=Severity.ERROR,
-                    passed=False,
                 ),
             )
 

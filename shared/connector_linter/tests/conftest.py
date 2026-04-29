@@ -38,7 +38,7 @@ def dummy_checks(_clean_registry):
         severity=Severity.ERROR,
     )
     def _vc901(ctx: ConnectorContext) -> list[CheckFinding]:
-        return [CheckFinding(message="all good", passed=True)]
+        return [CheckFinding(message="all good", severity=Severity.INFO)]
 
     @CheckRegistry.register(
         code="VC902",
@@ -47,7 +47,7 @@ def dummy_checks(_clean_registry):
         severity=Severity.WARNING,
     )
     def _vc902(ctx: ConnectorContext) -> list[CheckFinding]:
-        return [CheckFinding(message="watch out", passed=True)]
+        return [CheckFinding(message="watch out", severity=Severity.WARNING)]
 
     @CheckRegistry.register(
         code="VC903",
@@ -59,7 +59,7 @@ def dummy_checks(_clean_registry):
         return [
             CheckFinding(
                 message="broken",
-                passed=False,
+                severity=Severity.ERROR,
                 suggestion="fix it",
             )
         ]

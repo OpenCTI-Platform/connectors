@@ -5,14 +5,19 @@ Rules:
 - exit 0 otherwise (all pass, or only warnings/info fail)
 """
 
-from connector_linter.models import CheckFinding, ConnectorContext, Severity
+from connector_linter.models import (
+    CheckFinding,
+    CheckResult,
+    ConnectorContext,
+    Severity,
+)
 from connector_linter.registry import CheckRegistry
 from connector_linter.runner import run_checks
 
 
-def _has_errors(results: list) -> bool:
+def _has_errors(results: list[CheckResult]) -> bool:
     """Replicate the exit-code logic from __main__.py."""
-    return any(not r.passed and r.severity == Severity.ERROR for r in results)
+    return any(r.severity == Severity.ERROR for r in results)
 
 
 class TestExitCode:
@@ -32,7 +37,7 @@ class TestExitCode:
             severity=Severity.WARNING,
         )
         def _warn(ctx: ConnectorContext) -> list[CheckFinding]:
-            return [CheckFinding(message="not great", passed=False)]
+            return [CheckFinding(message="not great", severity=Severity.WARNING)]
 
         results = run_checks(minimal_connector, select=["VC960"])
         assert not _has_errors(results)
