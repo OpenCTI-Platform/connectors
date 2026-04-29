@@ -18,6 +18,11 @@ from google_secops_siem_incidents.state_manager import GoogleSecOpsSIEMState
 _LOG_PREFIX = "[CONNECTOR]"
 
 
+def _parse_ts(ts: str) -> datetime:
+    """Parse an ISO-8601 timestamp (with 'Z' or offset) to a timezone-aware datetime."""
+    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
 def _obj_type(o: Any) -> str:
     """Extract STIX type from a stix2 object or dict."""
     if isinstance(o, dict):
@@ -123,38 +128,10 @@ class GoogleSecOpsConnector:
             state: Current connector state with timestamp and pagination fields.
         """
         try:
-            checkpoint = state.pagination_checkpoint
-
-            if checkpoint:
-                start_time = checkpoint["window_start"]
-                end_time = checkpoint["window_end"]
-                global_max_ts: str | None = checkpoint.get("run_max_ts")
-                first_run = False
-                resumed = True
-            else:
-                last_alert_ts = state.last_alert_timestamp
-                start_time = (
-                    last_alert_ts.isoformat() if last_alert_ts is not None else None
-                )
-                first_run = start_time is None
-                if first_run:
-                    lookback = self.config.google_secops_siem_incidents.first_start_time
-                    start_time = (datetime.now(tz=timezone.utc) - lookback).isoformat()
-                end_time = datetime.now(tz=timezone.utc).isoformat()
-                global_max_ts = None
-                resumed = False
-
-            _log_extra: dict[str, Any] = {
-                "start_time": start_time,
-                "end_time": end_time,
-                "first_run": first_run,
-            }
-            if resumed:
-                _log_extra["resumed"] = True
-            self.helper.connector_logger.info(
-                f"{_LOG_PREFIX} Run started",
-                _log_extra,
+            start_time, end_time, global_max_ts, first_run, resumed = (
+                self._resolve_time_window(state)
             )
+            self._log_run_started(start_time, end_time, first_run, resumed)
 
             batch_num = 0
             total_alerts = 0
@@ -171,163 +148,252 @@ class GoogleSecOpsConnector:
                 alert_count = sum(len(ra.alerts) for ra in response.rule_alerts)
                 total_alerts += alert_count
 
-                _log_extra = {
-                    "batch_num": batch_num,
-                    "rule_alerts": len(response.rule_alerts),
-                    "alerts": alert_count,
-                }
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} Batch fetched",
-                    _log_extra,
+                    {
+                        "batch_num": batch_num,
+                        "rule_alerts": len(response.rule_alerts),
+                        "alerts": alert_count,
+                    },
                 )
 
-                stix_objects: list[Any] = []
-                batch_max_ts: str | None = None
+                stix_objects, batch_max_ts = self._convert_batch(response)
+                global_max_ts = self._advance_max_ts(global_max_ts, batch_max_ts)
 
-                for rule_alert in response.rule_alerts:
-                    for alert in rule_alert.alerts:
-                        stix_objects.extend(
-                            self.converter_to_stix.convert_rule_alert(
-                                alert, rule_alert.rule_metadata
-                            )
-                        )
-                        ts = alert.detection_timestamp
-                        if batch_max_ts is None or (
-                            datetime.fromisoformat(ts.replace("Z", "+00:00"))
-                            > datetime.fromisoformat(
-                                batch_max_ts.replace("Z", "+00:00")
-                            )
-                        ):
-                            batch_max_ts = ts
-
-                if batch_max_ts is not None:
-                    if global_max_ts is None or (
-                        datetime.fromisoformat(batch_max_ts.replace("Z", "+00:00"))
-                        > datetime.fromisoformat(global_max_ts.replace("Z", "+00:00"))
-                    ):
-                        global_max_ts = batch_max_ts
-
-                _log_extra = {
-                    "batch_num": batch_num,
-                    "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
-                    "type_summary": _type_summary(stix_objects),
-                }
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} Batch converted to STIX",
-                    _log_extra,
+                    {
+                        "batch_num": batch_num,
+                        "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
+                        "type_summary": _type_summary(stix_objects),
+                    },
                 )
 
                 if stix_objects:
-                    stix_objects = [
-                        o
-                        for o in stix_objects
-                        if _obj_type(o) != "relationship"
-                    ] + [
-                        o
-                        for o in stix_objects
-                        if _obj_type(o) == "relationship"
-                    ]
-                    if work_id is None:
-                        work_id = self.helper.api.work.initiate_work(
-                            self.helper.connect_id,
-                            friendly_name,
-                        )
-                    stix_objects.extend([self.converter_to_stix.author, self.converter_to_stix.tlp_marking])
-                    stix_bundle = self.helper.stix2_create_bundle(stix_objects)
-                    self.helper.send_stix2_bundle(
-                        stix_bundle,
-                        work_id=work_id,
-                        cleanup_inconsistent_bundle=True,
+                    work_id = self._send_bundle(
+                        stix_objects, work_id, friendly_name, batch_num
                     )
                     total_stix_objects += len(stix_objects)
                     total_unique_ids.update(
                         _obj_id(o) for o in stix_objects if _obj_id(o)
                     )
-                    _log_extra = {
-                        "batch_num": batch_num,
-                        "work_id": work_id,
-                        "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
-                        "type_summary": _type_summary(stix_objects),
-                    }
-                    self.helper.connector_logger.info(
-                        f"{_LOG_PREFIX} Bundle sent",
-                        _log_extra,
-                    )
 
                 if response.too_many_alerts:
-                    pivot = GoogleSecOpsApiClient._compute_pagination_pivot(response)
-                    if pivot is not None and global_max_ts is not None:
-                        pivot_dt = datetime.fromisoformat(pivot.replace("Z", "+00:00"))
-                        max_dt = datetime.fromisoformat(
-                            global_max_ts.replace("Z", "+00:00")
-                        )
-                        checkpoint_data = {
-                            "window_start": start_time,
-                            "window_end": pivot_dt.isoformat(),
-                            "run_max_ts": max_dt.isoformat(),
-                        }
-                        state.pagination_checkpoint = checkpoint_data
-                        state.save()
-                        _log_extra = {
-                            "batch_num": batch_num,
-                            "window_end": pivot_dt.isoformat(),
-                            "run_max_ts": max_dt.isoformat(),
-                        }
-                        self.helper.connector_logger.info(
-                            f"{_LOG_PREFIX} State checkpoint",
-                            _log_extra,
-                        )
-
-            if work_id is not None:
-                self.helper.api.work.to_processed(
-                    work_id, f"{self.helper.connect_name} run completed"
-                )
-
-            if batch_num > 0:
-                state.pagination_checkpoint = None
-                if global_max_ts is not None:
-                    max_dt = datetime.fromisoformat(
-                        global_max_ts.replace("Z", "+00:00")
+                    self._save_pagination_checkpoint(
+                        response, state, start_time, global_max_ts, batch_num
                     )
-                    state.last_alert_timestamp = max_dt + timedelta(seconds=1)
-                state.save()
-                if global_max_ts is not None:
-                    _log_extra = {
+
+            self._finalize_run(
+                state,
+                work_id,
+                batch_num,
+                global_max_ts,
+                total_alerts,
+                total_stix_objects,
+                total_unique_ids,
+                start_time,
+                end_time,
+            )
+        except google.auth.exceptions.RefreshError as err:
+            self.helper.connector_logger.error(
+                f"{_LOG_PREFIX} Google authentication failed — "
+                "verify GOOGLE_SECOPS_SIEM_INCIDENTS_CREDENTIALS_JSON "
+                "contains a valid service account key with the correct scopes.",
+                {"reason": str(err), "traceback": traceback.format_exc()},
+            )
+        except Exception as err:
+            self.helper.connector_logger.error(
+                f"{_LOG_PREFIX} Unexpected error during async run",
+                {"reason": str(err), "traceback": traceback.format_exc()},
+            )
+        finally:
+            await self.client.close()
+
+    def _resolve_time_window(
+        self, state: GoogleSecOpsSIEMState
+    ) -> tuple[str, str, str | None, bool, bool]:
+        """Determine the query time window from state or config defaults.
+
+        Returns:
+            Tuple of (start_time, end_time, global_max_ts, first_run, resumed).
+        """
+        checkpoint = state.pagination_checkpoint
+        if checkpoint:
+            return (
+                checkpoint["window_start"],
+                checkpoint["window_end"],
+                checkpoint.get("run_max_ts"),
+                False,
+                True,
+            )
+
+        last_alert_ts = state.last_alert_timestamp
+        start_time = last_alert_ts.isoformat() if last_alert_ts is not None else None
+        first_run = start_time is None
+        if first_run:
+            lookback = self.config.google_secops_siem_incidents.first_start_time
+            start_time = (datetime.now(tz=timezone.utc) - lookback).isoformat()
+        end_time = datetime.now(tz=timezone.utc).isoformat()
+        return start_time, end_time, None, first_run, False
+
+    def _log_run_started(
+        self, start_time: str, end_time: str, first_run: bool, resumed: bool
+    ) -> None:
+        """Emit the 'Run started' structured log."""
+        _log_extra: dict[str, Any] = {
+            "start_time": start_time,
+            "end_time": end_time,
+            "first_run": first_run,
+        }
+        if resumed:
+            _log_extra["resumed"] = True
+        self.helper.connector_logger.info(f"{_LOG_PREFIX} Run started", _log_extra)
+
+    def _convert_batch(self, response: Any) -> tuple[list[Any], str | None]:
+        """Convert all alerts in a response batch to STIX objects.
+
+        Returns:
+            Tuple of (stix_objects, batch_max_detection_timestamp).
+        """
+        stix_objects: list[Any] = []
+        batch_max_ts: str | None = None
+
+        for rule_alert in response.rule_alerts:
+            for alert in rule_alert.alerts:
+                stix_objects.extend(
+                    self.converter_to_stix.convert_rule_alert(
+                        alert, rule_alert.rule_metadata
+                    )
+                )
+                ts = alert.detection_timestamp
+                if batch_max_ts is None or _parse_ts(ts) > _parse_ts(batch_max_ts):
+                    batch_max_ts = ts
+
+        return stix_objects, batch_max_ts
+
+    @staticmethod
+    def _advance_max_ts(
+        global_max_ts: str | None, batch_max_ts: str | None
+    ) -> str | None:
+        """Return the later of global_max_ts and batch_max_ts."""
+        if batch_max_ts is None:
+            return global_max_ts
+        if global_max_ts is None or _parse_ts(batch_max_ts) > _parse_ts(global_max_ts):
+            return batch_max_ts
+        return global_max_ts
+
+    def _send_bundle(
+        self,
+        stix_objects: list[Any],
+        work_id: str | None,
+        friendly_name: str,
+        batch_num: int,
+    ) -> str:
+        """Order objects, append author/marking, bundle, and send to OpenCTI.
+
+        Returns:
+            The work_id (created on first call, reused after).
+        """
+        stix_objects[:] = [
+            o for o in stix_objects if _obj_type(o) != "relationship"
+        ] + [o for o in stix_objects if _obj_type(o) == "relationship"]
+        if work_id is None:
+            work_id = self.helper.api.work.initiate_work(
+                self.helper.connect_id,
+                friendly_name,
+            )
+        stix_objects.extend(
+            [self.converter_to_stix.author, self.converter_to_stix.tlp_marking]
+        )
+        stix_bundle = self.helper.stix2_create_bundle(stix_objects)
+        self.helper.send_stix2_bundle(
+            stix_bundle,
+            work_id=work_id,
+            cleanup_inconsistent_bundle=True,
+        )
+        self.helper.connector_logger.info(
+            f"{_LOG_PREFIX} Bundle sent",
+            {
+                "batch_num": batch_num,
+                "work_id": work_id,
+                "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
+                "type_summary": _type_summary(stix_objects),
+            },
+        )
+        return work_id
+
+    def _save_pagination_checkpoint(
+        self,
+        response: Any,
+        state: GoogleSecOpsSIEMState,
+        start_time: str,
+        global_max_ts: str | None,
+        batch_num: int,
+    ) -> None:
+        """Persist a pagination checkpoint when too_many_alerts is True."""
+        pivot = GoogleSecOpsApiClient._compute_pagination_pivot(response)
+        if pivot is None or global_max_ts is None:
+            return
+        pivot_dt = _parse_ts(pivot)
+        max_dt = _parse_ts(global_max_ts)
+        state.pagination_checkpoint = {
+            "window_start": start_time,
+            "window_end": pivot_dt.isoformat(),
+            "run_max_ts": max_dt.isoformat(),
+        }
+        state.save()
+        self.helper.connector_logger.info(
+            f"{_LOG_PREFIX} State checkpoint",
+            {
+                "batch_num": batch_num,
+                "window_end": pivot_dt.isoformat(),
+                "run_max_ts": max_dt.isoformat(),
+            },
+        )
+
+    def _finalize_run(
+        self,
+        state: GoogleSecOpsSIEMState,
+        work_id: str | None,
+        batch_num: int,
+        global_max_ts: str | None,
+        total_alerts: int,
+        total_stix_objects: int,
+        total_unique_ids: set[str],
+        start_time: str,
+        end_time: str,
+    ) -> None:
+        """Mark work as processed, persist final state, and log run completion."""
+        if work_id is not None:
+            self.helper.api.work.to_processed(
+                work_id, f"{self.helper.connect_name} run completed"
+            )
+
+        if batch_num > 0:
+            state.pagination_checkpoint = None
+            if global_max_ts is not None:
+                max_dt = _parse_ts(global_max_ts)
+                state.last_alert_timestamp = max_dt + timedelta(seconds=1)
+            state.save()
+            if global_max_ts is not None:
+                self.helper.connector_logger.info(
+                    f"{_LOG_PREFIX} State updated",
+                    {
                         "total_batches": batch_num,
                         "last_alert_timestamp": state.last_alert_timestamp.isoformat(),
-                    }
-                    self.helper.connector_logger.info(
-                        f"{_LOG_PREFIX} State updated",
-                        _log_extra,
-                    )
+                    },
+                )
 
-            _log_extra = {
+        self.helper.connector_logger.info(
+            f"{_LOG_PREFIX} Run completed",
+            {
                 "total_batches": batch_num,
                 "total_alerts": total_alerts,
                 "total_stix_objects": f"{total_stix_objects} (~{len(total_unique_ids)} unique)",
                 "start_time": start_time,
                 "end_time": end_time,
-            }
-            self.helper.connector_logger.info(
-                f"{_LOG_PREFIX} Run completed",
-                _log_extra,
-            )
-        except google.auth.exceptions.RefreshError as err:
-            _log_extra = {"reason": str(err), "traceback": traceback.format_exc()}
-            self.helper.connector_logger.error(
-                f"{_LOG_PREFIX} Google authentication failed — "
-                "verify GOOGLE_SECOPS_SIEM_INCIDENTS_CREDENTIALS_JSON "
-                "contains a valid service account key with the correct scopes.",
-                _log_extra,
-            )
-        except Exception as err:
-            _log_extra = {"reason": str(err), "traceback": traceback.format_exc()}
-            self.helper.connector_logger.error(
-                f"{_LOG_PREFIX} Unexpected error during async run",
-                _log_extra,
-            )
-        finally:
-            await self.client.close()
+            },
+        )
 
     def process_message(self) -> None:
         """Execute one connector run: log state, drive the async pipeline, and persist last_run."""
