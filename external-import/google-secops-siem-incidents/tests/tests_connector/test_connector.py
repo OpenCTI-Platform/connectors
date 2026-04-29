@@ -141,9 +141,11 @@ def test_process_message_updates_state_even_when_collect_is_no_op():
     state_arg = helper.set_state.call_args[0][0]
     assert "last_run" in state_arg
 
-    # ===========================================================================
-    # process_message — error handling — Scenario 24
-    # ===========================================================================def test_process_message_calls_sys_exit_on_keyboard_interrupt():
+
+# ===========================================================================
+# process_message — error handling — Scenario 24
+# ===========================================================================
+def test_process_message_calls_sys_exit_on_keyboard_interrupt():
     """When _collect_intelligence raises KeyboardInterrupt, sys.exit(0) is called."""
     connector, helper, _ = _given_connector_with_stubs(get_state_return=None)
 

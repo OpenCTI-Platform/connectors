@@ -59,3 +59,14 @@ def patch_logger_for_tests(monkeypatch):
     monkeypatch.setattr(logging.Logger, "debug", _wrap(logging.Logger.debug))
     monkeypatch.setattr(logging.Logger, "warning", _wrap(logging.Logger.warning))
     monkeypatch.setattr(logging.Logger, "error", _wrap(logging.Logger.error))
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limiter_registry():
+    """Clear the RateLimiterRegistry after each test to prevent inter-test leakage."""
+    from google_secops_siem_incidents.utils.api_engine.rate_limiter import (
+        RateLimiterRegistry,
+    )
+
+    yield
+    RateLimiterRegistry.clear()
