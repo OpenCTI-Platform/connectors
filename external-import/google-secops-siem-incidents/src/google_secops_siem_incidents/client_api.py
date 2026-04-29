@@ -1,7 +1,6 @@
 """Google SecOps Chronicle API client with Google OAuth2 service-account auth."""
 
 from collections.abc import AsyncIterator
-from datetime import datetime
 from typing import Any
 
 from google.auth.transport.requests import Request
@@ -21,6 +20,7 @@ from google_secops_siem_incidents.utils.api_engine.interfaces.base_request_model
 from google_secops_siem_incidents.utils.api_engine.retry_request_strategy import (
     RetryRequestStrategy,
 )
+from google_secops_siem_incidents.utils.timestamps import parse_ts
 
 
 class GoogleAuthHook(BaseRequestHook):
@@ -142,7 +142,7 @@ class GoogleSecOpsApiClient:
         )
 
     @staticmethod
-    def _compute_pagination_pivot(response: RuleAlertResponse) -> str | None:
+    def compute_pagination_pivot(response: RuleAlertResponse) -> str | None:
         """Return the minimum detection_timestamp across all alerts, used as the next exclusive endTime.
 
         Args:
@@ -179,7 +179,7 @@ class GoogleSecOpsApiClient:
             Async iterator of RuleAlertResponse pages.
         """
         current_end = end_time
-        start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+        start_dt = parse_ts(start_time)
 
         while True:
             response: RuleAlertResponse = await self._api_client.call_api(
@@ -197,12 +197,12 @@ class GoogleSecOpsApiClient:
             if not response.too_many_alerts:
                 break
 
-            pivot = self._compute_pagination_pivot(response)
+            pivot = self.compute_pagination_pivot(response)
             if pivot is None:
                 break
 
-            pivot_dt = datetime.fromisoformat(pivot.replace("Z", "+00:00"))
-            current_end_dt = datetime.fromisoformat(current_end.replace("Z", "+00:00"))
+            pivot_dt = parse_ts(pivot)
+            current_end_dt = parse_ts(current_end)
 
             if pivot_dt <= start_dt or pivot_dt >= current_end_dt:
                 break
