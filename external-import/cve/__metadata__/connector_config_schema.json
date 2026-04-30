@@ -90,6 +90,12 @@
       "description": "\u26a0\ufe0f WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform. Each CVE may resolve to dozens of CPE matches, resulting in massive amounts of Software entities and relationships. Use with caution. If set to `True`, resolve CPEs associated with each CVE via the NVD CPE Match API and import them as Software objects with 'has' relationships to vulnerabilities.",
       "type": "boolean"
     },
+    "CVE_CPE_HISTORY_INTERVAL": {
+      "default": "P120D",
+      "description": "When import_software is enabled, The interval specifies how far back in time to search for CPEs that were modified within that period. This helps limit the number of CPEs resolved and imported. Maximum interval is 120 days. \u26a0\ufe0f WARNING: Null value will disable the time filter and may result in importing a very large number of CPEs. Use with caution.",
+      "format": "duration",
+      "type": "string"
+    },
     "CVE_CPE_MAX_CONCURRENCY": {
       "default": 10,
       "description": "Maximum number of concurrent CPE resolution tasks when import_software is enabled.",
