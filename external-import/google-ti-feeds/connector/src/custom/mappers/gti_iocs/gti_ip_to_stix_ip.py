@@ -22,7 +22,7 @@ from connector.src.stix.v21.models.scos.ipv6_address_model import IPv6AddressMod
 from connector.src.stix.v21.models.sdos.indicator_model import IndicatorModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )
