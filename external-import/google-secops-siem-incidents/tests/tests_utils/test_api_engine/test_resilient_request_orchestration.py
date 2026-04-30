@@ -9,7 +9,6 @@ All tests MUST fail with ImportError until the implementation exists.
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from google_secops_siem_incidents.utils.api_engine.aio_http_client import AioHttpClient
 from google_secops_siem_incidents.utils.api_engine.api_request_model import (
     ApiRequestModel,

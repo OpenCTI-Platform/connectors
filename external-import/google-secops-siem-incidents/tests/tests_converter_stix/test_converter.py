@@ -19,9 +19,6 @@ from tests_converter_stix.factories import (
     make_user_outcomes,
 )
 
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.converter_to_stix import ConverterToStix  # noqa: E402
-
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock
 
-from pycti import OpenCTIConnectorHelper
-
 from google_secops_siem_incidents.state_manager import GoogleSecOpsSIEMState
 
 # ===========================================================================

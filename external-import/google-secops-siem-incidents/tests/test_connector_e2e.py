@@ -18,9 +18,6 @@ from tests_converter_stix.factories import (
     make_ip_outcomes,
 )
 
-from google_secops_siem_incidents.connector import GoogleSecOpsConnector
-from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
-
 # =====================
 # Fixtures
 # =====================

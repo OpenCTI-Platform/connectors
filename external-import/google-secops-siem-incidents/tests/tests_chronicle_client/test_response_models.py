@@ -9,6 +9,7 @@ from typing import Any
 from google_secops_siem_incidents.models.rule_alert_response import (
     RuleAlertResponse,
 )
+
 from tests.tests_chronicle_client.factories import (
     AlertFactory,
     OutcomeFactory,
