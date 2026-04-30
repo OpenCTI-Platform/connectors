@@ -32,34 +32,32 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 class GoogleSecOpsConfig(BaseConfigModel):
     """Configuration specific to the Google SecOps Chronicle connector."""
 
-    chronicle_base_url: str = Field(
+    base_url: str = Field(
         "https://chronicle.googleapis.com",
         description="Chronicle API base URL (region prefix added at runtime).",
     )
-    chronicle_project_id: str = Field(description="GCP project ID.")
-    chronicle_project_region: str = Field(
+    project_id: str = Field(description="GCP project ID.")
+    project_region: str = Field(
         description="Chronicle region (e.g. 'us', 'eu', 'asia')."
     )
-    chronicle_project_instance: str = Field(description="Chronicle instance UUID.")
-    chronicle_private_key: str = Field(description="Service account private key (PEM).")
-    chronicle_private_key_id: str = Field(description="Service account private key ID.")
-    chronicle_client_email: str = Field(description="Service account client email.")
-    chronicle_client_id: str = Field(description="Service account client ID.")
-    chronicle_auth_uri: str = Field(
+    project_instance: str = Field(description="Chronicle instance UUID.")
+    private_key: str = Field(description="Service account private key (PEM).")
+    private_key_id: str = Field(description="Service account private key ID.")
+    client_email: str = Field(description="Service account client email.")
+    client_id: str = Field(description="Service account client ID.")
+    auth_uri: str = Field(
         "https://accounts.google.com/o/oauth2/auth",
         description="OAuth2 auth URI.",
     )
-    chronicle_token_uri: str = Field(
+    token_uri: str = Field(
         "https://oauth2.googleapis.com/token",
         description="OAuth2 token URI.",
     )
-    chronicle_auth_provider_cert: str = Field(
+    auth_provider_cert: str = Field(
         "https://www.googleapis.com/oauth2/v1/certs",
         description="OAuth2 auth provider cert URL.",
     )
-    chronicle_client_cert_url: str = Field(
-        description="Service account client cert URL."
-    )
+    client_cert_url: str = Field(description="Service account client cert URL.")
     tlp_level: Literal[
         "clear",
         "white",

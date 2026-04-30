@@ -7,15 +7,15 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
 from test_helpers import FULL_VALID_CONFIG, MINIMAL_VALID_CONFIG, make_stub_settings
 
 # Minimal valid google_secops block — reused across parametrized cases
-_CHRONICLE_SA = {
-    "chronicle_project_id": "test-project",
-    "chronicle_project_region": "us",
-    "chronicle_project_instance": "test-instance-uuid",
-    "chronicle_private_key": "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----\n",
-    "chronicle_private_key_id": "key-id-1",
-    "chronicle_client_email": "sa@test.iam.gserviceaccount.com",
-    "chronicle_client_id": "123456789",
-    "chronicle_client_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sa%40test.iam.gserviceaccount.com",
+_SERVICE_ACCOUNT = {
+    "project_id": "test-project",
+    "project_region": "us",
+    "project_instance": "test-instance-uuid",
+    "private_key": "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----\n",
+    "private_key_id": "key-id-1",
+    "client_email": "sa@test.iam.gserviceaccount.com",
+    "client_id": "123456789",
+    "client_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/sa%40test.iam.gserviceaccount.com",
 }
 
 
@@ -76,7 +76,8 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT1H",
                 },
-                "google_secops_siem_incidents": _CHRONICLE_SA | {"tlp_level": "clear"},
+                "google_secops_siem_incidents": _SERVICE_ACCOUNT
+                | {"tlp_level": "clear"},
             },
             "connector.id",
             id="missing_connector_id",
@@ -96,7 +97,8 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT1H",
                 },
-                "google_secops_siem_incidents": _CHRONICLE_SA | {"tlp_level": "clear"},
+                "google_secops_siem_incidents": _SERVICE_ACCOUNT
+                | {"tlp_level": "clear"},
             },
             "opencti.url",
             id="invalid_opencti_url",
@@ -111,7 +113,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT1H",
                 },
-                "google_secops_siem_incidents": _CHRONICLE_SA
+                "google_secops_siem_incidents": _SERVICE_ACCOUNT
                 | {"tlp_level": "not-a-valid-tlp"},
             },
             "google_secops_siem_incidents.tlp_level",
@@ -132,7 +134,7 @@ def test_connector_name_defaults_to_google_secops():
     config = {
         "opencti": {"url": "http://localhost:8080", "token": "test-token"},
         "connector": {"id": "connector-id", "scope": "google-secops"},
-        "google_secops_siem_incidents": _CHRONICLE_SA,
+        "google_secops_siem_incidents": _SERVICE_ACCOUNT,
     }
     settings = _given_settings_from(config)
     assert settings.connector.name == "Google SecOps"
@@ -143,7 +145,7 @@ def test_connector_duration_period_defaults_to_pt1h():
     config = {
         "opencti": {"url": "http://localhost:8080", "token": "test-token"},
         "connector": {"id": "connector-id", "scope": "google-secops"},
-        "google_secops_siem_incidents": _CHRONICLE_SA,
+        "google_secops_siem_incidents": _SERVICE_ACCOUNT,
     }
     settings = _given_settings_from(config)
     assert settings.connector.duration_period.total_seconds() == 3600.0
@@ -152,13 +154,13 @@ def test_connector_duration_period_defaults_to_pt1h():
 # ===========================================================================
 # Field access — Scenarios 10 & 11
 # ===========================================================================
-def test_google_secops_config_exposes_chronicle_fields():
-    """GoogleSecOpsConfig exposes chronicle_project_id and chronicle_client_email."""
+def test_google_secops_config_exposes_service_account_fields():
+    """GoogleSecOpsConfig exposes project_id and client_email."""
     settings = _given_settings_from(FULL_VALID_CONFIG)
 
-    assert settings.google_secops_siem_incidents.chronicle_project_id == "test-project"
+    assert settings.google_secops_siem_incidents.project_id == "test-project"
     assert (
-        settings.google_secops_siem_incidents.chronicle_client_email
+        settings.google_secops_siem_incidents.client_email
         == "sa@test.iam.gserviceaccount.com"
     )
 
@@ -168,7 +170,7 @@ def test_google_secops_tlp_level_defaults_to_amber():
     config = {
         "opencti": {"url": "http://localhost:8080", "token": "test-token"},
         "connector": {"id": "connector-id", "scope": "google-secops"},
-        "google_secops_siem_incidents": _CHRONICLE_SA,
+        "google_secops_siem_incidents": _SERVICE_ACCOUNT,
     }
     settings = _given_settings_from(config)
     assert settings.google_secops_siem_incidents.tlp_level == "amber"
