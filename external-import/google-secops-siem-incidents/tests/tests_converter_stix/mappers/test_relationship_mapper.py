@@ -11,12 +11,12 @@ from uuid import uuid4
 from connectors_sdk.models import Hostname, IPV4Address, Relationship, UserAccount
 from connectors_sdk.models.enums import RelationshipType
 from connectors_sdk.models.reference import Reference
+from tests_converter_stix.factories import make_author, make_tlp_marking
 
 # --- import under test (will cause ImportError → RED) ---
 from google_secops_siem_incidents.mappers.relationship_mapper import (  # noqa: E402
     map_relationships,
 )
-from tests_converter_stix.factories import make_author, make_tlp_marking
 
 
 # ---------------------------------------------------------------------------

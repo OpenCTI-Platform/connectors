@@ -6,8 +6,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from google_secops_siem_incidents.connector import GoogleSecOpsConnector
-from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
 from pycti import OpenCTIConnectorHelper
 from tests_converter_stix.factories import (
     AlertFactory,
@@ -19,6 +17,9 @@ from tests_converter_stix.factories import (
     make_hostname_outcomes,
     make_ip_outcomes,
 )
+
+from google_secops_siem_incidents.connector import GoogleSecOpsConnector
+from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
 
 # =====================
 # Fixtures

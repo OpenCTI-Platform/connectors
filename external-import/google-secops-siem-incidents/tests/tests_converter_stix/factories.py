@@ -6,6 +6,8 @@ helpers for building Outcome lists that represent observables.
 
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
+from polyfactory.factories.pydantic_factory import ModelFactory
+
 from google_secops_siem_incidents.models.rule_alert_response import (
     Alert,
     AlertField,
@@ -17,7 +19,6 @@ from google_secops_siem_incidents.models.rule_alert_response import (
     StringSeq,
     TimeWindow,
 )
-from polyfactory.factories.pydantic_factory import ModelFactory
 
 
 # ---------------------------------------------------------------------------

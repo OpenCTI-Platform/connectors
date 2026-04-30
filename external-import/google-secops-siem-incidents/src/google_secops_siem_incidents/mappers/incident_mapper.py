@@ -5,6 +5,7 @@ from typing import Any
 
 from connectors_sdk.models import Incident
 from connectors_sdk.models.enums import IncidentType
+
 from google_secops_siem_incidents.mappers._utils import find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
 

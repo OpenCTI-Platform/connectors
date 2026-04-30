@@ -6,15 +6,15 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 """
 
 from connectors_sdk.models import IPV4Address, IPV6Address
-
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.ip_mapper import (  # noqa: E402
-    map_ip_addresses,
-)
 from tests_converter_stix.factories import (
     make_author,
     make_ip_outcomes,
     make_tlp_marking,
+)
+
+# --- import under test (will cause ImportError → RED) ---
+from google_secops_siem_incidents.mappers.ip_mapper import (  # noqa: E402
+    map_ip_addresses,
 )
 
 
