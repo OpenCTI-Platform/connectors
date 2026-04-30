@@ -5,7 +5,6 @@ from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
-
 from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
 from google_secops_siem_incidents.settings import GoogleSecOpsConfig
 from google_secops_siem_incidents.utils.api_engine import ApiClient
