@@ -1,4 +1,4 @@
-pycti==7.260428.0
+pycti==7.260430.0
 requests~=2.33.0          # HTTP requests
 pydantic~= 2.11.3
 stix2~=3.0.1              # STIX 2.1 object creation

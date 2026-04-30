@@ -1,5 +1,5 @@
 stix2==3.0.1
 requests==2.33.0
 PyYAML==6.0.3
-pycti==7.260428.0
+pycti==7.260430.0
 
