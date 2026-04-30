@@ -7,14 +7,14 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 
 from connectors_sdk.models import File
 from connectors_sdk.models.enums import HashAlgorithm
+
+# --- import under test (will cause ImportError → RED) ---
+from google_secops_siem_incidents.mappers.file_mapper import map_files  # noqa: E402
 from tests_converter_stix.factories import (
     make_author,
     make_file_outcomes,
     make_tlp_marking,
 )
-
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.file_mapper import map_files  # noqa: E402
 
 # Valid 64-char hex SHA-256 placeholder hashes for tests.
 _SHA256_A = "abc123" + "0" * 58

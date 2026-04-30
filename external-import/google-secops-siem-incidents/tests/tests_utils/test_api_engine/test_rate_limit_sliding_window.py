@@ -9,7 +9,6 @@ All tests MUST fail with ImportError until the implementation exists.
 import time
 
 import pytest
-
 from google_secops_siem_incidents.utils.api_engine.rate_limiter import (
     RateLimiterRegistry,
     TokenBucketRateLimiter,

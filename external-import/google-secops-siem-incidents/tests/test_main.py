@@ -1,9 +1,8 @@
 """Smoke tests for top-level instantiation: ConnectorSettings → helper → connector."""
 
+from google_secops_siem_incidents import GoogleSecOpsConnector
 from pycti import OpenCTIConnectorHelper
 from test_helpers import make_stub_settings
-
-from google_secops_siem_incidents import GoogleSecOpsConnector
 
 
 # ---------------------------------------------------------------------------

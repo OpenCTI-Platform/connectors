@@ -5,7 +5,6 @@ instance paths, and composite alert endpoints.
 """
 
 import pytest
-
 from tests.tests_chronicle_client.factories import make_client, make_config
 
 

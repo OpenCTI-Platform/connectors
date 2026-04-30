@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-from polyfactory.factories.pydantic_factory import ModelFactory
-
 from google_secops_siem_incidents.client_api import GoogleSecOpsApiClient
 from google_secops_siem_incidents.models.rule_alert_response import (
     Alert,
@@ -17,6 +15,7 @@ from google_secops_siem_incidents.models.rule_alert_response import (
     TimeWindow,
 )
 from google_secops_siem_incidents.settings import GoogleSecOpsConfig
+from polyfactory.factories.pydantic_factory import ModelFactory
 
 
 # ---------------------------------------------------------------------------
