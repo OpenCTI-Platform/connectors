@@ -12,15 +12,15 @@ from google_secops_siem_incidents.settings import ConnectorSettings  # noqa: E40
 # ---------------------------------------------------------------------------
 # Shared Chronicle SA fields — reused across config dicts
 # ---------------------------------------------------------------------------
-_CHRONICLE_SA: dict[str, str] = {
-    "chronicle_project_id": "test-project",
-    "chronicle_project_region": "us",
-    "chronicle_project_instance": "test-instance-uuid",
-    "chronicle_private_key": "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----\n",
-    "chronicle_private_key_id": "key-id-1",
-    "chronicle_client_email": "sa@test.iam.gserviceaccount.com",
-    "chronicle_client_id": "123456789",
-    "chronicle_client_cert_url": (
+_SERVICE_ACCOUNT: dict[str, str] = {
+    "project_id": "test-project",
+    "project_region": "us",
+    "project_instance": "test-instance-uuid",
+    "private_key": "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----\n",
+    "private_key_id": "key-id-1",
+    "client_email": "sa@test.iam.gserviceaccount.com",
+    "client_id": "123456789",
+    "client_cert_url": (
         "https://www.googleapis.com/robot/v1/metadata/x509/sa%40test.iam.gserviceaccount.com"
     ),
 }
@@ -40,7 +40,7 @@ FULL_VALID_CONFIG: dict[str, Any] = {
         "log_level": "error",
         "duration_period": "PT1H",
     },
-    "google_secops_siem_incidents": _CHRONICLE_SA | {"tlp_level": "amber"},
+    "google_secops_siem_incidents": _SERVICE_ACCOUNT | {"tlp_level": "amber"},
 }
 
 # Minimal config — only mandatory fields, no optional overrides
@@ -53,7 +53,7 @@ MINIMAL_VALID_CONFIG: dict[str, Any] = {
         "id": "connector-id",
         "scope": "google-secops-siem-incidents",
     },
-    "google_secops_siem_incidents": _CHRONICLE_SA.copy(),
+    "google_secops_siem_incidents": _SERVICE_ACCOUNT.copy(),
 }
 
 

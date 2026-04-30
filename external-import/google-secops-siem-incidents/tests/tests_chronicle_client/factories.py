@@ -91,14 +91,14 @@ class RuleAlertResponseFactory(ModelFactory):
 def make_config(**overrides) -> GoogleSecOpsConfig:
     """Build a minimal valid GoogleSecOpsConfig, override specific fields per test."""
     defaults: dict = {
-        "chronicle_project_id": "test-project",
-        "chronicle_project_region": "us",
-        "chronicle_project_instance": "test-instance-uuid",
-        "chronicle_private_key": "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----\n",
-        "chronicle_private_key_id": "key-id-1",
-        "chronicle_client_email": "sa@test.iam.gserviceaccount.com",
-        "chronicle_client_id": "123456789",
-        "chronicle_client_cert_url": (
+        "project_id": "test-project",
+        "project_region": "us",
+        "project_instance": "test-instance-uuid",
+        "private_key": "-----BEGIN RSA PRIVATE KEY-----\nfake\n-----END RSA PRIVATE KEY-----\n",
+        "private_key_id": "key-id-1",
+        "client_email": "sa@test.iam.gserviceaccount.com",
+        "client_id": "123456789",
+        "client_cert_url": (
             "https://www.googleapis.com/robot/v1/metadata/x509/sa%40test.iam.gserviceaccount.com"
         ),
         "tlp_level": "amber",

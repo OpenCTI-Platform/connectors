@@ -17,7 +17,7 @@ def test_regionalized_base_url_prepends_region(region):
     """Region '<region>' produces https://<region>-chronicle.googleapis.com."""
 
     def _given_config_with_region(r):
-        return make_config(chronicle_project_region=r)
+        return make_config(project_region=r)
 
     def _when_regionalized_url_is_constructed(client):
         return client._regionalized_url()
@@ -39,9 +39,9 @@ def test_instance_path_reflects_project_identifiers():
 
     def _given_config_with_project_ids():
         return make_config(
-            chronicle_project_id="my-project-123",
-            chronicle_project_region="us",
-            chronicle_project_instance="instance-abc",
+            project_id="my-project-123",
+            project_region="us",
+            project_instance="instance-abc",
         )
 
     def _when_instance_path_is_constructed(client):
@@ -64,9 +64,9 @@ def test_alerts_url_combines_region_and_instance():
 
     def _given_eu_config():
         return make_config(
-            chronicle_project_id="proj-42",
-            chronicle_project_region="eu",
-            chronicle_project_instance="inst-7",
+            project_id="proj-42",
+            project_region="eu",
+            project_instance="inst-7",
         )
 
     def _when_alerts_url_is_constructed(client):
