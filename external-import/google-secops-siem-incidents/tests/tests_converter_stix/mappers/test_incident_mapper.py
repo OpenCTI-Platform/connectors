@@ -19,11 +19,6 @@ from tests_converter_stix.factories import (
     make_tlp_marking,
 )
 
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.incident_mapper import (  # noqa: E402
-    map_incident,
-)
-
 
 # ---------------------------------------------------------------------------
 # Helpers

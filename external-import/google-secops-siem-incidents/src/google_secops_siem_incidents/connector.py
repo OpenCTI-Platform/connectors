@@ -8,8 +8,6 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import google.auth.exceptions
-from pycti import OpenCTIConnectorHelper
-
 from google_secops_siem_incidents.client_api import GoogleSecOpsApiClient
 from google_secops_siem_incidents.converter_to_stix import ConverterToStix
 from google_secops_siem_incidents.settings import ConnectorSettings

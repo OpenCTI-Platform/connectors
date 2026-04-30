@@ -25,7 +25,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     scope: ListFromString = Field(
         ["Google SecOps SIEM Incidents"],
-        description="The scope of the connector, e.g. 'flashpoint'."
+        description="The scope of the connector, e.g. 'flashpoint'.",
     )
 
 

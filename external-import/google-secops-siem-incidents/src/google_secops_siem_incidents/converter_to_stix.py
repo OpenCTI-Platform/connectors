@@ -2,8 +2,6 @@
 
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
-from pycti import OpenCTIConnectorHelper
-
 from google_secops_siem_incidents.mappers.file_mapper import map_files
 from google_secops_siem_incidents.mappers.hostname_mapper import map_hostname
 from google_secops_siem_incidents.mappers.incident_mapper import map_incident

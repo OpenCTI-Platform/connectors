@@ -13,9 +13,6 @@ from tests_converter_stix.factories import (
     make_tlp_marking,
 )
 
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.file_mapper import map_files  # noqa: E402
-
 # Valid 64-char hex SHA-256 placeholder hashes for tests.
 _SHA256_A = "abc123" + "0" * 58
 _SHA256_B = "def456" + "0" * 58
