@@ -118,6 +118,11 @@ jobs:
           enable-cache: false
           python-version: "3.12"
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libmagic1 libcairo2-dev libpango1.0-dev
+
       - name: Run tests via run_test.sh
         env:
           CIRCLE_BRANCH: ${{ github.ref_name }}

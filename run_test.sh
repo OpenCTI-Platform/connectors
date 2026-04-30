@@ -34,7 +34,37 @@ for requirements_file in $test_requirements_files
 do
   project="$(dirname "$requirements_file")"
   project_has_changed=$(git diff "$base_commit" HEAD "$project/..")
-  project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$project/.." || true)
+  dependency_scope="$project/.."
+  if [ "$project" = "tests" ]; then
+    dependency_scope="$project"
+  fi
+  project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$dependency_scope" || true)
+
+  if [ -n "$project_has_sdk_dependency" ] ; then
+    echo 'Rewriting connectors-sdk dependencies to the local checkout for this test run'
+    python3 - "$dependency_scope" "$(pwd)/connectors-sdk" <<'PY'
+import pathlib
+import re
+import sys
+
+scope = pathlib.Path(sys.argv[1])
+local_sdk = sys.argv[2]
+replacement = f"connectors-sdk @ file://{local_sdk}"
+pattern = re.compile(
+    r"connectors-sdk\s*@\s*git\+https://github\.com/OpenCTI-Platform/connectors\.git@[^#\s\"']+#subdirectory=connectors-sdk"
+)
+
+for path in scope.rglob("*"):
+    if path.name not in {"requirements.txt", "pyproject.toml"}:
+        continue
+    original = path.read_text(encoding="utf-8")
+    updated = pattern.sub(replacement, original)
+    if updated != original:
+        path.write_text(updated, encoding="utf-8")
+PY
+  fi
+
+  project_pins_pycti=$(grep -RIlE 'pycti(==| @ )' "$dependency_scope" 2>/dev/null || true)
 
   if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-"master"}" ]; then
     echo "🔄 On ${RELEASE_REF:-"master"} branch, running all tests for: " "$project"
@@ -80,10 +110,14 @@ do
       uv pip install -q ./connectors-sdk
   fi
 
-  echo 'Installing latest version of pycti'
-  uv pip uninstall pycti
-  REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
-  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
+  if [ -n "$project_has_sdk_dependency" ] || [ -n "$project_pins_pycti" ] ; then
+    echo 'Keeping pycti version resolved by project requirements'
+  else
+    echo 'Installing latest version of pycti'
+    uv pip uninstall pycti
+    REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
+    uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
+  fi
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   uv pip check || exit 1  # exit if dependencies are broken
@@ -106,5 +140,3 @@ do
   deactivate
   rm -rf "$venv_name"
 done
-
-
