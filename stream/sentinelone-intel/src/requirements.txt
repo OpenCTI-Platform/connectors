@@ -1,4 +1,4 @@
 pycti==7.260309.0.4
 pyyaml==6.0.2
 pydantic~=2.11.3
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@lts/7.260309.0#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@7.260309.0-lts.4#subdirectory=connectors-sdk
