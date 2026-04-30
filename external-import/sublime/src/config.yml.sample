@@ -14,7 +14,7 @@ connector:
   id: "ChangeMe"                  # Required
   # name: "Sublime Security Incidents"
   # scope: "sublime"
-  # log_level: "info"
+  # log_level: "error"
   # duration_period: "PT3M"  # ISO 8601 duration (PT10M = 10 minutes)
 
 # Sublime Security Configuration

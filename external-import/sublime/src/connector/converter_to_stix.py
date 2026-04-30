@@ -1,7 +1,7 @@
 import ipaddress
 
 import stix2
-from pycti import (
+from pycti import (  # CustomObjectCaseIncident,
     Identity,
     Incident,
     Indicator,
@@ -54,6 +54,13 @@ class ConverterToStix:
             allow_custom=True,
         )
         return author
+
+    # def create_case_incident(self, case_data: dict):
+    #     """Create Custom Case Incident object"""
+    #     # case_data["id"] = CaseIncident.generate_id(name=name, created=created)
+    #     case_data["created_by_ref"] = self.author["id"]
+    #     case_data["object_marking_refs"] = [stix2.TLP_AMBER]
+    #     return CustomObjectCaseIncident(**case_data)
 
     def create_domain_name(self, value: str):
         """Create DomainName object"""

@@ -8,7 +8,7 @@ services:
       - CONNECTOR_ID=ChangeMe
       # - CONNECTOR_NAME=Sublime Security
       # - CONNECTOR_SCOPE=sublime
-      # - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_LOG_LEVEL=error
       # - CONNECTOR_DURATION_PERIOD=PT3M
       # - SUBLIME_URL=https://platform.sublime.security
       - SUBLIME_TOKEN=ChangeMe

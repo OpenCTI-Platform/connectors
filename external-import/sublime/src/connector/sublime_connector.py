@@ -4,6 +4,7 @@ Simplified implementation following OpenCTI connector patterns
 """
 
 import json
+import sys
 from datetime import datetime, timedelta, timezone
 
 import isodate
@@ -38,10 +39,6 @@ class SublimeConnector:
             if v.strip()
         ]
 
-        # Value for if to update an existing bundle.
-        # Currently set to False as placeholder for potential future feature
-        self.update_existing_data = False
-
         # Track first run of this connector session (not persisted)
         self._first_run_completed = False
 
@@ -59,7 +56,7 @@ class SublimeConnector:
         # Create Sublime Identity for STIX objects
         self.sublime_identity = self.converter_to_stix.author
 
-    def _get_last_timestamp(self):
+    def get_last_run(self, current_state: dict):
         """
         Get the last processed timestamp from OpenCTI connector state.
 
@@ -70,8 +67,6 @@ class SublimeConnector:
             str: ISO 8601 timestamp string of last processed message,
                  or calculated based on first_run_duration if no previous state exists or force_historical is enabled
         """
-        current_state = self.helper.get_state() or {}
-
         # If force_historical is enabled and this is the first run, ignore state
         # After first run, use state for incremental polling
         use_state = (
@@ -752,8 +747,6 @@ class SublimeConnector:
             case_description = self._create_description(message_group)
 
             case_data = {
-                # Removed as OpenCTI ignores and creates its own id regardless
-                # "id": deterministic_case_id,
                 "name": case_name,
                 "description": case_description,
                 "objects": object_ids,
@@ -1174,7 +1167,7 @@ class SublimeConnector:
                         flattened_objects.append(obj)
                 stix_objects = flattened_objects
 
-                bundle = stix2.Bundle(objects=stix_objects, allow_custom=True)
+                stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
 
                 # Send to OpenCTI
                 self.helper.connector_logger.debug(
@@ -1184,9 +1177,9 @@ class SublimeConnector:
 
                 try:
                     self.helper.send_stix2_bundle(
-                        bundle.serialize(),
+                        stix_objects_bundle.serialize(),
                         work_id=work_id,
-                        update=self.update_existing_data,
+                        cleanup_inconsistent_bundle=True,
                     )
                     self.helper.connector_logger.debug(
                         "[Sublime Connector] Bundle sent successfully for incident",
@@ -1280,8 +1273,11 @@ class SublimeConnector:
         Returns:
             int: Total number of messages processed
         """
+        work_id = None
+        current_state = self.helper.get_state() or {}
+
         # Get last processed timestamp
-        since_timestamp = self._get_last_timestamp()
+        since_timestamp = self.get_last_run(current_state)
         self.helper.connector_logger.debug(
             "[Sublime Connector] Fetching messages",
             {"since_timestamp": since_timestamp},
@@ -1291,10 +1287,6 @@ class SublimeConnector:
         if not self._first_run_completed:
             self._first_run_completed = True
 
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, "Sublime Import"
-        )
-
         try:
             total_processed = 0
             global_latest_timestamp = None
@@ -1302,6 +1294,11 @@ class SublimeConnector:
             for batch_messages in self._fetch_messages(since_timestamp):
                 if not batch_messages:
                     continue
+
+                if not work_id and batch_messages:
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, "Sublime Import"
+                    )
 
                 self.helper.connector_logger.info(
                     "[Sublime Connector] Processing batch of messages",
@@ -1321,7 +1318,6 @@ class SublimeConnector:
                     global_latest_timestamp = batch_latest_timestamp
 
                 if global_latest_timestamp:
-                    current_state = self.helper.get_state() or {}
                     current_state["last_timestamp"] = global_latest_timestamp
                     self.helper.set_state(current_state)
                     self.helper.connector_logger.debug(
@@ -1334,32 +1330,31 @@ class SublimeConnector:
                 current_time = datetime.now(timezone.utc).strftime(
                     "%Y-%m-%dT%H:%M:%S.000Z"
                 )
-                current_state = self.helper.get_state() or {}
                 current_state["last_timestamp"] = current_time
                 self.helper.set_state(current_state)
 
-            completion_message = "Processed {} messages".format(total_processed)
             self.helper.connector_logger.info(
                 "[Sublime Connector] Processed messages",
                 {
                     "total_processed": total_processed,
-                    "completion_message": completion_message,
                 },
             )
-            self.helper.api.work.to_processed(work_id, completion_message)
 
-            return total_processed
-
-        except Exception as e:
-            error_message = "Batch processing failed after {} messages: {}".format(
-                total_processed, e
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Connector stopped...",
+                {"connector_name": self.helper.connect_name},
             )
+            sys.exit(0)
+        except Exception as e:
             self.helper.connector_logger.error(
                 "[Sublime Connector] Batch processing failed",
                 {"total_processed": total_processed, "error": e},
             )
-            self.helper.api.work.to_received(work_id, error_message)
-            raise
+        finally:
+            if work_id:
+                message = f"{self.helper.connect_name} connector successfully run"
+                self.helper.api.work.to_processed(work_id, message)
 
     def run(self):
         """
