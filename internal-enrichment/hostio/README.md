@@ -45,7 +45,7 @@ This internal enrichment connector enriches IP addresses and domain names using 
 
 ### Requirements
 
-- OpenCTI Platform >= 7.260309.0-lts.3
+- OpenCTI Platform >= 7.260309.0-lts.4
 - Host.io/IPinfo API token
 - Network access to Host.io and IPinfo APIs
 
