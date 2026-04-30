@@ -2,7 +2,7 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| In Development | - | - |
+| Verified | - | - |
 
 ## Table of Contents
 

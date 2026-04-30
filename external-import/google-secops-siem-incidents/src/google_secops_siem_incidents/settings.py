@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field
 
@@ -21,6 +22,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=1),
+    )
+    scope: ListFromString = Field(
+        ["Google SecOps SIEM Incidents"],
+        description="The scope of the connector, e.g. 'flashpoint'."
     )
 
 
