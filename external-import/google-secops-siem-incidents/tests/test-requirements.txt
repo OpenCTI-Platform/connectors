@@ -1,2 +1,2 @@
 -r ../src/requirements.txt
-pytest
+./external-import/google-secops-siem-incidents/.[test]
