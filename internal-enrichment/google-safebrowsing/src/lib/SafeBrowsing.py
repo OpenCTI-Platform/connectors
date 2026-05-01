@@ -37,8 +37,12 @@ class SafeBrowsingConnector:
 
         """Checks a domain against the Google Safe Browsing API."""
 
-        API_KEY = os.environ.get("SAFE_BROWSING_API_KEY") or os.environ.get("GOOGLE_SAFE_BROWSING_API_KEY", "")
-        API_URL = os.environ.get("SAFE_BROWSING_API_URL", "https://safebrowsing.googleapis.com")
+        API_KEY = os.environ.get("SAFE_BROWSING_API_KEY") or os.environ.get(
+            "GOOGLE_SAFE_BROWSING_API_KEY", ""
+        )
+        API_URL = os.environ.get(
+            "SAFE_BROWSING_API_URL", "https://safebrowsing.googleapis.com"
+        )
         domain = observable["value"]
         stix_objects = []
         url = f"{API_URL.rstrip('/')}/v4/threatMatches:find?key={API_KEY}"
