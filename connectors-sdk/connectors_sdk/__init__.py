@@ -23,6 +23,7 @@ from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.state_manager.state_manager import ConnectorStateManager
 
 __all__ = [
     # Base Settings
@@ -43,4 +44,6 @@ __all__ = [
     # Deprecations
     "Deprecate",
     "DeprecatedField",
+    # Connector State
+    "ConnectorStateManager",
 ]

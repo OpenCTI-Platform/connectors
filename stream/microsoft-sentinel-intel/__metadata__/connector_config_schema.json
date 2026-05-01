@@ -119,6 +119,11 @@
       "description": "API version of the Microsoft management interface",
       "type": "string"
     },
+    "MICROSOFT_SENTINEL_INTEL_QUERY_API_VERSION": {
+      "default": "2025-07-01-preview",
+      "description": "API version of the Microsoft Sentinel threat-intel /query endpoint",
+      "type": "string"
+    },
     "MICROSOFT_SENTINEL_INTEL_BATCH_MODE": {
       "default": false,
       "description": "Enable batch mode for bulk uploading STIX objects. When disabled (default), objects are sent individually in real-time.",

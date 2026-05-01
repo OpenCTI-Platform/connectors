@@ -1,12 +1,13 @@
 import sys
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from pycti import OpenCTIConnectorHelper
-from src import ConfigLoader
+from src.google_dtm_connector.client_api import GoogleDTMAPIClient
+from src.google_dtm_connector.converter_to_stix import ConverterToStix
 
-from .client_api import GoogleDTMAPIClient
-from .converter_to_stix import ConverterToStix
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
+    from src.google_dtm_connector.settings import ConnectorSettings
 
 
 class GoogleDTMConnector:
@@ -45,12 +46,14 @@ class GoogleDTMConnector:
 
     """
 
-    def __init__(self):
+    def __init__(
+        self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
-        self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
+        self.config = config
+        self.helper = helper
 
         # Load configuration file and connection helper
         self.client = GoogleDTMAPIClient(
@@ -102,9 +105,13 @@ class GoogleDTMConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id = None
+        error_flag = False
+
         try:
             # Get the current state
             now = datetime.now(tz=timezone.utc)
+            now_utc_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -127,15 +134,6 @@ class GoogleDTMConnector:
                 f"Going to fetch alerts since: {last_alert_date}"
             )
 
-            # Friendly name will be displayed on OpenCTI platform
-            now_utc_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-            friendly_name = f"Google DTM Connector run @ {now_utc_str}"
-
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
@@ -147,6 +145,12 @@ class GoogleDTMConnector:
             )
 
             if len(stix_objects):
+                # Initiate a new work
+                friendly_name = f"Google DTM Connector run @ {now_utc_str}"
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
@@ -158,6 +162,14 @@ class GoogleDTMConnector:
                     "Sending STIX objects to OpenCTI...",
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
+
+                message = (
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + str(now_utc_str)
+                )
+
+                self.helper.api.work.to_processed(work_id, message)
+                self.helper.connector_logger.info(message)
 
             # Store the current timestamp as a last run of the connector
             self.helper.connector_logger.debug(
@@ -174,22 +186,23 @@ class GoogleDTMConnector:
 
             self.helper.set_state(current_state)
 
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(now_utc_str)
-            )
-
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
-
         except (KeyboardInterrupt, SystemExit):
+            error_flag = True
+            message = "Connector stopped by user or system."
             self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.helper.connect_name},
+                f"[CONNECTOR] {message}", {"connector_name": self.helper.connect_name}
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            error_flag = True
+            message = (
+                "An unexpected error occurred, see connector's logs for more details."
+            )
+            self.helper.connector_logger.error(f"[CONNECTOR] {message}", {"error": err})
+        finally:
+            # Ensure work is processed even if an exception occurred
+            if work_id and error_flag:
+                self.helper.api.work.to_processed(work_id, message, in_error=error_flag)
 
     def run(self) -> None:
         """
@@ -205,5 +218,5 @@ class GoogleDTMConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector.duration_period,
+            duration_period=self.config.connector.duration_period,  # type: ignore[arg-type]
         )

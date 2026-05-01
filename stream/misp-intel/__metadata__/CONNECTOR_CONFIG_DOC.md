@@ -29,6 +29,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_TAG_OPENCTI | `boolean` |  | boolean | `true` | Add OpenCTI-specific tags to MISP events. |
 | MISP_TAG_PREFIX | `string` |  | string | `"opencti:"` | Prefix for OpenCTI tags in MISP. |
 | MISP_HARD_DELETE | `boolean` |  | boolean | `true` | Perform hard deletion of MISP events (permanent deletion without blocklisting). If False, deleted events are added to the blocklist to prevent re-importation. If True, events are permanently deleted and can be re-imported later. |
+| MISP_DETECT_ROUND_TRIP | `boolean` |  | boolean | `false` | Enable round-trip detection. When True, the connector checks if a container has an external reference from MISP (source_name='misp' with a valid external_id). If so, it updates the existing MISP event instead of creating a duplicate. |
 | PROXY_HTTP | `string` |  | string | `null` | HTTP proxy URL (e.g., http://proxy:8080). |
 | PROXY_HTTPS | `string` |  | string | `null` | HTTPS proxy URL (e.g., http://proxy:8080). |
 | PROXY_NO_PROXY | `string` |  | string | `"localhost,127.0.0.1"` | Comma-separated list of hosts to bypass proxy. |

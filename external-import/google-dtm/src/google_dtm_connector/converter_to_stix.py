@@ -1,8 +1,6 @@
 import base64
-import ipaddress
 
 import stix2
-import validators
 from pycti import (
     Channel,
     CustomObjectChannel,
@@ -60,45 +58,6 @@ class ConverterToStix:
             "red": stix2.TLP_RED,
         }
         return mapping[level]
-
-    @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-        if is_valid_domain:
-            return True
-        else:
-            return False
 
     def create_channel(self, dtm_channel: dict) -> CustomObjectChannel:
         """

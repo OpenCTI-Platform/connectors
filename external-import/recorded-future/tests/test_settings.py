@@ -174,40 +174,25 @@ def test_none_or_empty_raises_value_error(field, value, error_message):
     assert error_message in str(err)
 
 
-# Scenario: Comma-separated string is parsed into a list of submodule names
-def test_ta_to_intrusion_set_accepts_comma_separated_string():
-    # Given a config with ta_to_intrusion_set set to "risk_list,analyst_notes"
-    kwargs = _minimal_kwargs()
-    kwargs["ta_to_intrusion_set"] = "risk_list,analyst_notes"
+def test_ta_to_intrusion_set_default_is_false():
+    config = _ConfigLoaderRecordedFuture(**_minimal_kwargs())
 
-    # When the configuration is loaded
-    config = _ConfigLoaderRecordedFuture(**kwargs)
-
-    # Then ta_to_intrusion_set is a list containing both submodule names
-    assert config.ta_to_intrusion_set == ["risk_list", "analyst_notes"]
+    assert config.ta_to_intrusion_set is False
 
 
-# Scenario: Legacy boolean True enables all submodules via backward compatibility
-def test_ta_to_intrusion_set_legacy_true_maps_to_all_submodules():
-    # Given a config with ta_to_intrusion_set set to boolean True (legacy format)
+def test_ta_to_intrusion_set_accepts_true():
     kwargs = _minimal_kwargs()
     kwargs["ta_to_intrusion_set"] = True
 
-    # When the configuration is loaded
     config = _ConfigLoaderRecordedFuture(**kwargs)
 
-    # Then ta_to_intrusion_set maps to all submodules
-    assert sorted(config.ta_to_intrusion_set) == ["analyst_notes", "risk_list"]
+    assert config.ta_to_intrusion_set is True
 
 
-# Scenario: Legacy boolean False disables all submodules via backward compatibility
-def test_ta_to_intrusion_set_legacy_false_maps_to_empty():
-    # Given a config with ta_to_intrusion_set set to boolean False (legacy format)
+def test_ta_to_intrusion_set_accepts_false():
     kwargs = _minimal_kwargs()
     kwargs["ta_to_intrusion_set"] = False
 
-    # When the configuration is loaded
     config = _ConfigLoaderRecordedFuture(**kwargs)
 
-    # Then ta_to_intrusion_set maps to an empty list
-    assert config.ta_to_intrusion_set == []
+    assert config.ta_to_intrusion_set is False
