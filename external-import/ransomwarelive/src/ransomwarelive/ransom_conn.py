@@ -410,9 +410,14 @@ class RansomwareAPIConnector:
         last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
 
         for item in response_json:
-            created = datetime.strptime(
-                item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
-            ).replace(tzinfo=timezone.utc)
+            # ransomware.live's API now returns the `discovered` field in
+            # ISO-8601 with timezone ("YYYY-MM-DDTHH:MM:SS.ffffff+00:00")
+            # instead of the older "YYYY-MM-DD HH:MM:SS.ffffff" naive format.
+            # fromisoformat handles both in Python 3.11+. If the value is
+            # naive (older API), treat as UTC to preserve the prior semantic.
+            created = datetime.fromisoformat(item.get("discovered"))
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
 
             # We only retrieve the data from the last 24h.
             # If no last_run, just put time_diff to 0.
