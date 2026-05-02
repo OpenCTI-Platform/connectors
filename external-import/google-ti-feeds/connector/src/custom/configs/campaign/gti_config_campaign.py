@@ -34,6 +34,11 @@ class GTICampaignConfig(GTIBaseConfig):
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
     )
 
+    campaign_extra_filters: dict[str, str] = Field(
+        default=None,
+        description="Optional dictionary of additional filters to add to query when fetching campaigns e.g., {'name': 'Operation Shadow'}.",
+    )
+
     @field_validator("campaign_origins", mode="after")
     @classmethod
     def validate_campaign_origins(cls, v: list[str]) -> list[str]:

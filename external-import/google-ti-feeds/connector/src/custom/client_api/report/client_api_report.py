@@ -32,6 +32,7 @@ class ClientAPIReport(BaseClientAPI):
         origins: list[str] | None = None,
         entity_name: str = "reports",
         cursor_key: str = "cursor",
+        extra_filters: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build filter configurations based on config settings.
 
@@ -43,6 +44,7 @@ class ClientAPIReport(BaseClientAPI):
             origins: Optional list of origins to filter by
             entity_name: Name of entities for logging
             cursor_key: Key to use for cursor in initial_state
+            extra_filters: Optional dict of additional filters to include in the query
 
         Returns:
             list of filter configurations with params and cursors
@@ -53,6 +55,8 @@ class ClientAPIReport(BaseClientAPI):
                 types = getattr(self.config, "report_types", ["All"])
             if origins is None:
                 origins = getattr(self.config, "report_origins", ["All"])
+            if extra_filters is None:
+                extra_filters = getattr(self.config, "report_extra_filters", None)
 
             return super()._build_filter_configurations(
                 collection_type=collection_type,
@@ -62,6 +66,7 @@ class ClientAPIReport(BaseClientAPI):
                 origins=origins,
                 entity_name=entity_name,
                 cursor_key=cursor_key,
+                extra_filters=extra_filters,
             )
 
         except Exception as e:

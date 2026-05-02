@@ -32,6 +32,7 @@ class ClientAPICampaign(BaseClientAPI):
         origins: list[str] | None = None,
         entity_name: str = "campaigns",
         cursor_key: str = "cursor",
+        extra_filters: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build campaign filter configurations based on config settings.
 
@@ -43,6 +44,7 @@ class ClientAPICampaign(BaseClientAPI):
             origins: Optional list of origins to filter by
             entity_name: Name of entities for logging
             cursor_key: Key to use for cursor in initial_state
+            extra_filters: Optional dict of additional filters to include in the query
 
         Returns:
             list of filter configurations with params and cursors
@@ -52,6 +54,9 @@ class ClientAPICampaign(BaseClientAPI):
             if origins is None:
                 origins = getattr(self.config, "campaign_origins", ["All"])
 
+            if extra_filters is None:
+                extra_filters = getattr(self.config, "campaign_extra_filters", None)
+
             return super()._build_filter_configurations(
                 collection_type=collection_type,
                 start_date=start_date,
@@ -60,6 +65,7 @@ class ClientAPICampaign(BaseClientAPI):
                 origins=origins,
                 entity_name=entity_name,
                 cursor_key=cursor_key,
+                extra_filters=extra_filters,
             )
 
         except Exception as e:
