@@ -163,6 +163,27 @@ class CrowdstrikeConfig(BaseConfigModel):
         default=False,
         description="Whether to automatically guess and create relationships in reports.",
     )
+    report_extract_iocs: ListFromString = Field(
+        default=[],
+        description=(
+            "Comma-separated list of IOC types to extract from report text content via regex. "
+            "Extracted IOCs are created as Observables (not Indicators) and linked to the report. "
+            "Supported types: ipv4, ipv6, domain, url, md5, sha1, sha256. "
+            "Leave empty to disable."
+        ),
+    )
+
+    @field_validator("report_extract_iocs", mode="after")
+    @classmethod
+    def validate_ioc_types(cls, v: list[str]) -> list[str]:
+        valid = {"ipv4", "ipv6", "domain", "url", "md5", "sha1", "sha256"}
+        for item in v:
+            if item not in valid:
+                raise ValueError(
+                    f"Invalid IOC type '{item}'. "
+                    f"Supported types: {', '.join(sorted(valid))}"
+                )
+        return v
 
     # Indicator configuration
     indicator_start_timestamp: int = Field(

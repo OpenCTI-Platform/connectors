@@ -29,6 +29,7 @@ crowdstrike:
   report_target_industries: ''
   report_guess_malware: false # Use report tags to guess malware
   report_guess_relations: false # Automatically guess and create relationships between entities in reports
+  report_extract_iocs: '' # Comma-separated list of IOC types to extract from report text as observables. Supported: ipv4,ipv6,domain,url,md5,sha1,sha256. Leave empty to disable.
   indicator_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1,password,username'
   default_x_opencti_score: 50

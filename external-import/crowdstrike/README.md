@@ -94,6 +94,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Report Target Industries    | crowdstrike.report_target_industries    | `CROWDSTRIKE_REPORT_TARGET_INDUSTRIES`       |                                                      | No        | Filter reports by target industry.                                               |
 | Report Guess Malware        | crowdstrike.report_guess_malware        | `CROWDSTRIKE_REPORT_GUESS_MALWARE`           | false                                                | No        | Use report tags to guess malware.                                                |
 | Report Guess Relations      | crowdstrike.report_guess_relations      | `CROWDSTRIKE_REPORT_GUESS_RELATIONS`         | false                                                | No        | Auto-create relationships between entities.                                      |
+| Report Extract IOCs         | crowdstrike.report_extract_iocs         | `CROWDSTRIKE_REPORT_EXTRACT_IOCS`            |                                                      | No        | Comma-separated list of IOC types to extract from report text as Observables. Supported: `ipv4`, `ipv6`, `domain`, `url`, `md5`, `sha1`, `sha256`. Empty to disable. |
 | Indicator Start Timestamp   | crowdstrike.indicator_start_timestamp   | `CROWDSTRIKE_INDICATOR_START_TIMESTAMP`      | (30 days ago)                                        | No        | Unix timestamp. Empty = 30 days ago. 0 = ALL indicators.                         |
 | Indicator Exclude Types     | crowdstrike.indicator_exclude_types     | `CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES`        | hash_ion,hash_md5,hash_sha1,password,username        | No        | Comma-separated indicator types to exclude.                                      |
 | Default Score               | crowdstrike.default_x_opencti_score     | `CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE`        | 50                                                   | No        | Default x_opencti_score for indicators.                                          |
@@ -194,6 +195,39 @@ When ATT&CK lookup is enabled, the connector:
 - Creates Attack Pattern relationships using deterministic STIX IDs that match the MITRE ATT&CK external import connector (source of truth)
 
 If ATT&CK labels are present but a technique cannot be resolved, the connector will skip Attack Pattern creation to avoid creating duplicate or non-canonical objects.
+
+### IOC Extraction from Report Text
+
+The connector can automatically extract IOCs from report text content and create STIX Observables linked to the report. This is useful for capturing indicators mentioned in report narratives that CrowdStrike does not always expose as structured indicators via their API.
+
+**Configuration:**
+
+```yaml
+crowdstrike:
+  report_extract_iocs: 'ipv4,ipv6,domain,url,md5,sha1,sha256'
+```
+
+Set `report_extract_iocs` to a comma-separated list of IOC types to extract. Leave empty to disable.
+
+**Supported IOC types:**
+
+| Type   | Observable Created | Example                            |
+|--------|--------------------|------------------------------------|
+| ipv4   | IPv4-Addr          | `45.33.32.156`                     |
+| ipv6   | IPv6-Addr          | `2607:f8b0:4004:800::200e`         |
+| domain | Domain-Name        | `evil-c2.example.com`              |
+| url    | URL                | `https://malware.example.org/path` |
+| md5    | File (MD5)         | `d41d8cd98f00b204e9800998ecf8427e` |
+| sha1   | File (SHA-1)       | `da39a3ee5e6b4b0d3255bfef95601890afd80709` |
+| sha256 | File (SHA-256)     | `e3b0c44298fc1c149afbf4c8...`      |
+
+**Behavior:**
+
+- Uses the [ioc-finder](https://pypi.org/project/ioc-finder/) library for extraction
+- Automatically handles defanged indicators (`hxxp`, `[.]`)
+- Filters out private/reserved IP addresses (only globally routable IPs are kept)
+- Deduplicates: a domain found inside an extracted URL is not created separately
+- Observables are created with `score=0` and label `extracted-from-report` to distinguish them from CrowdStrike's structured indicators
 
 ### Data Flow
 
