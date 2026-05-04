@@ -1,4 +1,4 @@
-"""Google SecOps Chronicle API client with Google OAuth2 service-account auth."""
+"""Google SecOps API client with Google OAuth2 service-account auth."""
 
 from collections.abc import AsyncIterator
 from typing import Any
@@ -56,7 +56,7 @@ class GoogleAuthHook(BaseRequestHook):
 
 
 class GoogleSecOpsApiClient:
-    """Chronicle API client for fetching rule alerts via Legacy Search endpoint."""
+    """API client for fetching rule alerts via Legacy Search endpoint."""
 
     _SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
     _API_VERSION = "v1alpha"
@@ -87,7 +87,7 @@ class GoogleSecOpsApiClient:
         """Map GoogleSecOpsConfig fields to the service-account info dict expected by google-auth.
 
         Args:
-            config: Connector configuration with Chronicle credentials.
+            config: Connector configuration with credentials.
 
         Returns:
             Dict suitable for ``Credentials.from_service_account_info``.
@@ -106,7 +106,7 @@ class GoogleSecOpsApiClient:
         }
 
     def _regionalized_url(self) -> str:
-        """Build the Chronicle API base URL with the region prefix.
+        """Build the API base URL with the region prefix.
 
         Returns:
             Regionalized base URL string.
@@ -117,7 +117,7 @@ class GoogleSecOpsApiClient:
         return f"https://{region}-{host}"
 
     def _instance_path(self) -> str:
-        """Build the Chronicle resource instance path.
+        """Build the resource instance path.
 
         Returns:
             Resource path string for the configured project/region/instance.
@@ -167,7 +167,7 @@ class GoogleSecOpsApiClient:
         end_time: str,
         max_alerts: int = 1000,
     ) -> AsyncIterator[RuleAlertResponse]:
-        """Fetch rule alerts from Chronicle using backward-sliding pagination.
+        """Fetch rule alerts from using backward-sliding pagination.
 
         Args:
             start_time: ISO-8601 start of the query window.

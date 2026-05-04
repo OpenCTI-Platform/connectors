@@ -84,7 +84,7 @@ class GoogleSecOpsConnector:
 
     @property
     def client(self) -> GoogleSecOpsApiClient:
-        """Lazy-initialize and return the Chronicle API client.
+        """Lazy-initialize and return the API client.
 
         Returns:
             Initialised GoogleSecOpsApiClient instance.
@@ -116,7 +116,7 @@ class GoogleSecOpsConnector:
         asyncio.run(self._async_process_message(state))
 
     async def _async_process_message(self, state: GoogleSecOpsSIEMState) -> None:
-        """Fetch Chronicle rule alerts, convert to STIX bundles, and persist state.
+        """Fetch rule alerts, convert to STIX bundles, and persist state.
 
         Args:
             state: Current connector state with timestamp and pagination fields.
