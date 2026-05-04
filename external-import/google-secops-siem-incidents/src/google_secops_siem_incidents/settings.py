@@ -30,17 +30,15 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
 
 class GoogleSecOpsConfig(BaseConfigModel):
-    """Configuration specific to the Google SecOps Chronicle connector."""
+    """Configuration specific to the Google SecOps connector."""
 
     base_url: str = Field(
         "https://chronicle.googleapis.com",
-        description="Chronicle API base URL (region prefix added at runtime).",
+        description="API base URL (region prefix added at runtime).",
     )
     project_id: str = Field(description="GCP project ID.")
-    project_region: str = Field(
-        description="Chronicle region (e.g. 'us', 'eu', 'asia')."
-    )
-    project_instance: str = Field(description="Chronicle instance UUID.")
+    project_region: str = Field(description="Region (e.g. 'us', 'eu', 'asia').")
+    project_instance: str = Field(description="Instance UUID.")
     private_key: str = Field(description="Service account private key (PEM).")
     private_key_id: str = Field(description="Service account private key ID.")
     client_email: str = Field(description="Service account client email.")

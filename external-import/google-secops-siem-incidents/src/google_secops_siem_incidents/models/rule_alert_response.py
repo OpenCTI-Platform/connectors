@@ -1,4 +1,4 @@
-"""Pydantic v2 models for Chronicle Legacy Search Rules Alerts response."""
+"""Pydantic v2 models for Legacy Search Rules Alerts response."""
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,7 +12,7 @@ class StringSeq(BaseModel):
 
 
 class Outcome(BaseModel):
-    """A named outcome produced by a Chronicle detection rule."""
+    """A named outcome produced by a detection rule."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -43,7 +43,7 @@ class TimeWindow(BaseModel):
 
 
 class Alert(BaseModel):
-    """A single detection alert raised by a Chronicle rule."""
+    """A single detection alert raised by a rule."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -60,7 +60,7 @@ class Alert(BaseModel):
 
 
 class RuleProperties(BaseModel):
-    """Static properties of a Chronicle detection rule."""
+    """Static properties of a detection rule."""
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -88,7 +88,7 @@ class RuleAlert(BaseModel):
 
 
 class RuleAlertResponse(BaseModel):
-    """Top-level response from the Chronicle Legacy Search Rules Alerts endpoint."""
+    """Top-level response from the Legacy Search Rules Alerts endpoint."""
 
     model_config = ConfigDict(populate_by_name=True)
 
