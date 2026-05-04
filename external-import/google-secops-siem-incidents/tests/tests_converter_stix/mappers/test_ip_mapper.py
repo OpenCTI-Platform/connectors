@@ -17,11 +17,6 @@ from tests_converter_stix.factories import (
 from google_secops_siem_incidents.mappers.ip_mapper import (  # noqa: E402
     map_ip_addresses,
 )
-from tests_converter_stix.factories import (
-    make_author,
-    make_ip_outcomes,
-    make_tlp_marking,
-)
 
 
 # ---------------------------------------------------------------------------

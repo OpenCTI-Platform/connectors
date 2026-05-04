@@ -64,7 +64,9 @@ class TestFindAllOutcomes:
     def test_then_does_not_return_outcomes_with_different_names(self):
         """Given mixed names → only matching ones returned, others excluded."""
         # _given_
-        outcomes = _given_outcomes_with_names("alpha", "beta", "alpha", "gamma", "alpha")
+        outcomes = _given_outcomes_with_names(
+            "alpha", "beta", "alpha", "gamma", "alpha"
+        )
 
         # _when_
         result = _when_find_all(outcomes, "alpha")
