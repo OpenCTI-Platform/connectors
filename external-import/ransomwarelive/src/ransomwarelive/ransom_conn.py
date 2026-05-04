@@ -29,7 +29,7 @@ class RansomwareAPIConnector:
         self.last_run_datetime_with_ingested_data = None
         self.converter_to_stix = ConverterToStix()
         self.author = self.converter_to_stix.author
-        self.api_client = RansomwareAPIClient()
+        self.api_client = RansomwareAPIClient(helper=self.helper)
 
     def location_fetcher(self, country: str):
         """
@@ -410,9 +410,10 @@ class RansomwareAPIConnector:
         last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
 
         for item in response_json:
-            created = datetime.strptime(
-                item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
-            ).replace(tzinfo=timezone.utc)
+            discovered_raw = item.get("discovered")
+            created = datetime.fromisoformat(discovered_raw)
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
 
             # We only retrieve the data from the last 24h.
             # If no last_run, just put time_diff to 0.
