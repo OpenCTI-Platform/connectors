@@ -1,9 +1,10 @@
-"""Map Chronicle alert outcomes to IPv4 or IPv6 address observables."""
+"""Map alert outcomes to IPv4 or IPv6 address observables."""
 
 from typing import Any
 
 from connectors_sdk.models import IPV4Address, IPV6Address
-from google_secops_siem_incidents.mappers._utils import find_outcome
+
+from google_secops_siem_incidents.mappers._utils import find_all_outcomes, find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Outcome
 
 
@@ -13,7 +14,7 @@ def map_ip_addresses(
     author: Any,
     tlp_marking: Any,
 ) -> list[IPV4Address | IPV6Address]:
-    """Extract IPv4 or IPv6 address observables from the principal_ip alert outcome.
+    """Extract IPv4 or IPv6 address observables from all principal_ip alert outcomes.
 
     Args:
         outcomes: List of alert outcomes to inspect.
@@ -23,23 +24,26 @@ def map_ip_addresses(
     Returns:
         List of IPv4 or IPv6 address observables (may be empty).
     """
-    ip_outcome = find_outcome(outcomes, "principal_ip")
-    if ip_outcome is None or ip_outcome.string_seq is None:
-        return []
-
-    ips = ip_outcome.string_seq.string_vals
-    if not ips:
+    ip_outcomes = find_all_outcomes(outcomes, "principal_ip")
+    if not ip_outcomes:
         return []
 
     ipv6_outcome = find_outcome(outcomes, "SourceIsIpv6")
     is_ipv6 = ipv6_outcome is not None and ipv6_outcome.string_val == "true"
 
     result = []
-    for ip in ips:
-        if not ip or not ip.strip():
+    for ip_outcome in ip_outcomes:
+        if ip_outcome.string_seq is None:
             continue
-        if is_ipv6:
-            result.append(IPV6Address(value=ip, author=author, markings=[tlp_marking]))
-        else:
-            result.append(IPV4Address(value=ip, author=author, markings=[tlp_marking]))
+        for ip in ip_outcome.string_seq.string_vals:
+            if not ip or not ip.strip():
+                continue
+            if is_ipv6:
+                result.append(
+                    IPV6Address(value=ip, author=author, markings=[tlp_marking])
+                )
+            else:
+                result.append(
+                    IPV4Address(value=ip, author=author, markings=[tlp_marking])
+                )
     return result

@@ -1,1 +1,1 @@
-"""Mapper modules for converting Chronicle alert data to connectors_sdk models."""
+"""Mapper modules for converting alert data to connectors_sdk models."""

@@ -6,6 +6,12 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 """
 
 from connectors_sdk.models import UserAccount
+from tests_converter_stix.factories import (
+    make_author,
+    make_multi_user_outcomes,
+    make_tlp_marking,
+    make_user_outcomes,
+)
 
 # --- import under test (will cause ImportError → RED) ---
 from google_secops_siem_incidents.mappers.user_account_mapper import (  # noqa: E402
@@ -150,3 +156,51 @@ class TestUserAccountFields:
         # _then_
         assert len(result) == 1
         assert result[0].user_id == "alice"
+
+
+class TestUserAccountMapperMultiOutcome:
+    def test_then_two_principal_outcomes_all_ids_collected_and_deduplicated(self):
+        """Given 2 principal_user_userid outcomes → all user IDs collected + deduplicated."""
+        # _given_
+        outcomes = make_multi_user_outcomes(
+            principal_batches=[["alice", "bob"], ["bob", "charlie"]],
+        )
+
+        # _when_
+        result = _when_map_users(outcomes)
+
+        # _then_
+        assert len(result) == 3
+        user_ids = {u.user_id for u in result}
+        assert user_ids == {"alice", "bob", "charlie"}
+
+    def test_then_two_target_outcomes_all_ids_collected_and_deduplicated(self):
+        """Given 2 target_user_userid outcomes → all user IDs collected + deduplicated."""
+        # _given_
+        outcomes = make_multi_user_outcomes(
+            target_batches=[["dave", "eve"], ["eve", "frank"]],
+        )
+
+        # _when_
+        result = _when_map_users(outcomes)
+
+        # _then_
+        assert len(result) == 3
+        user_ids = {u.user_id for u in result}
+        assert user_ids == {"dave", "eve", "frank"}
+
+    def test_then_mix_of_principal_and_target_batches_all_collected(self):
+        """Given mix of principal + target batches → all collected and deduplicated."""
+        # _given_
+        outcomes = make_multi_user_outcomes(
+            principal_batches=[["alice", "bob"], ["charlie"]],
+            target_batches=[["bob", "dave"], ["eve"]],
+        )
+
+        # _when_
+        result = _when_map_users(outcomes)
+
+        # _then_
+        assert len(result) == 5
+        user_ids = {u.user_id for u in result}
+        assert user_ids == {"alice", "bob", "charlie", "dave", "eve"}

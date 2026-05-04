@@ -12,7 +12,7 @@ from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleM
 
 
 class ConverterToStix:
-    """Convert Google SecOps Chronicle alerts into flat lists of STIX 2.1 objects."""
+    """Convert Google SecOps alerts into flat lists of STIX 2.1 objects."""
 
     def __init__(
         self,
@@ -30,10 +30,10 @@ class ConverterToStix:
         self.tlp_marking = TLPMarking(level=TLPLevel(tlp_level)).to_stix2_object()
 
     def convert_rule_alert(self, alert: Alert, rule_metadata: RuleMetadata) -> list:
-        """Convert a single Chronicle alert into a flat list of STIX objects.
+        """Convert a single alert into a flat list of STIX objects.
 
         Args:
-            alert: The Chronicle detection alert.
+            alert: The detection alert.
             rule_metadata: Metadata for the rule that triggered the alert.
 
         Returns:
@@ -43,7 +43,7 @@ class ConverterToStix:
             alert, rule_metadata, author=self.author, tlp_marking=self.tlp_marking
         )
 
-        hostname = map_hostname(
+        hostnames = map_hostname(
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
         ips = map_ip_addresses(
@@ -57,8 +57,7 @@ class ConverterToStix:
         )
 
         observables: list = []
-        if hostname:
-            observables.append(hostname)
+        observables.extend(hostnames)
         observables.extend(ips)
         observables.extend(users)
         observables.extend(files)

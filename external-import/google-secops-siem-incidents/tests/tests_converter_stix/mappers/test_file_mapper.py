@@ -10,6 +10,7 @@ from connectors_sdk.models.enums import HashAlgorithm
 from tests_converter_stix.factories import (
     make_author,
     make_file_outcomes,
+    make_multi_file_outcomes,
     make_tlp_marking,
 )
 
@@ -121,3 +122,52 @@ class TestFileMapper:
 
         # _then_
         assert result == []
+
+
+class TestFileMapperMultiOutcome:
+    def test_then_two_paths_produce_two_files(self):
+        """Given 2 principal_process_file_full_path outcomes → 2 File objects."""
+        # _given_
+        outcomes = make_multi_file_outcomes(
+            principal_paths=["/usr/bin/curl", "/usr/bin/wget"],
+        )
+
+        # _when_
+        result = _when_map_files(outcomes)
+
+        # _then_
+        assert len(result) == 2
+        names = {f.name for f in result}
+        assert names == {"curl", "wget"}
+
+    def test_then_two_paths_with_two_sha256_paired_by_index(self):
+        """Given 2 paths + 2 sha256 outcomes → files paired by index."""
+        # _given_
+        outcomes = make_multi_file_outcomes(
+            principal_paths=["/usr/bin/curl", "/usr/bin/wget"],
+            principal_sha256s=[_SHA256_A, _SHA256_B],
+        )
+
+        # _when_
+        result = _when_map_files(outcomes)
+
+        # _then_
+        assert len(result) == 2
+        curl_file = next(f for f in result if f.name == "curl")
+        wget_file = next(f for f in result if f.name == "wget")
+        assert curl_file.hashes == {HashAlgorithm.SHA256: _SHA256_A}
+        assert wget_file.hashes == {HashAlgorithm.SHA256: _SHA256_B}
+
+    def test_then_two_paths_with_no_sha256_have_none_hashes(self):
+        """Given 2 paths + 0 sha256 → both files with hashes=None."""
+        # _given_
+        outcomes = make_multi_file_outcomes(
+            principal_paths=["/usr/bin/curl", "/usr/bin/wget"],
+        )
+
+        # _when_
+        result = _when_map_files(outcomes)
+
+        # _then_
+        assert len(result) == 2
+        assert all(f.hashes is None for f in result)
