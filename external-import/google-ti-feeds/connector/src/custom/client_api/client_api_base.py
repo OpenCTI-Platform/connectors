@@ -131,7 +131,7 @@ class BaseClientAPI:
         base_filters = (
             f"collection_type:{collection_type} last_modification_date:{start_date}+"
         )
-        
+
         extra_filters = extra_filters or {}
 
         types = types or ["All"]
@@ -161,7 +161,6 @@ class BaseClientAPI:
                 else:
                     description = f"type={item_type}, origin={origin}"
 
-                
                 for filter in extra_filters:
                     current_filter += f" {filter}"
 
