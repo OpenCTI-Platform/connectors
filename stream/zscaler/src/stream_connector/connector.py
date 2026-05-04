@@ -47,9 +47,8 @@ class ZscalerConnector:
             self.opencti_url, self.opencti_token, ssl_verify=self.ssl_verify
         )
 
-        self.zscaler_token = None
-        self.zscaler_token_expiry = None
-        self.session_cookie = None  # To store the JSESSIONID
+        self.zscaler_base_url = "https://zsapi.zscalertwo.net/api/v1"
+        self.session = requests.Session()
 
         self.rate_limit = 400  # Limit to 400 requests per hour
         self.retry_delay = 65  # Retry delay in seconds
@@ -58,7 +57,7 @@ class ZscalerConnector:
         """Authenticate with Zscaler and obtain a session token."""
         self.helper.connector_logger.info("Authenticating with Zscaler...")
 
-        url = "https://zsapi.zscalertwo.net/api/v1/authenticatedSession"
+        url = f"{self.zscaler_base_url}/authenticatedSession"
         timestamp = str(int(time.time() * 1000))
         obfuscated_api_key = obfuscate_api_key(self.api_key, timestamp)
 
@@ -71,7 +70,7 @@ class ZscalerConnector:
         headers = {"Content-Type": "application/json"}
 
         response = self.handle_rate_limit(
-            requests.post, url, json=payload, headers=headers
+            self.session.post, url, json=payload, headers=headers
         )
 
         safe_payload = sanitize_payload(payload)
@@ -79,30 +78,18 @@ class ZscalerConnector:
             f"Payload sent (sanitized): {json.dumps(safe_payload, indent=4)}"
         )
 
-        if response:
+        if response and response.status_code == 200:
             self.helper.connector_logger.debug(
                 f"Raw response from Zscaler: {response.text}"
             )
-
-        if response and response.status_code == 200:
             # retrieve the JSESSIONID cookie
-            self.session_cookie = response.cookies.get("JSESSIONID")
-
-            # if not found → try an authToken in the JSON (depending on the Zscaler tenant)
-            if not self.session_cookie:
-                try:
-                    data = response.json()
-                    self.session_cookie = data.get("authToken")
-                except Exception:
-                    self.session_cookie = None
-
-            if self.session_cookie:
+            if self.session.cookies.get("JSESSIONID"):
                 self.helper.connector_logger.info(
-                    f"Authenticated successfully with Zscaler. Token: {self.session_cookie[:10]}..."
+                    "Authenticated successfully with Zscaler."
                 )
             else:
                 self.helper.connector_logger.error(
-                    "Authentication succeeded but no session token found in the response."
+                    "Authentication succeeded but no JSESSIONID cookie found in the response."
                 )
         else:
             status_code = response.status_code if response else "No response"
@@ -110,7 +97,6 @@ class ZscalerConnector:
             self.helper.connector_logger.error(
                 f"Failed to authenticate with Zscaler: {status_code} - {text}"
             )
-            self.session_cookie = None
 
     def handle_rate_limit(self, request_func, *args, **kwargs):
         """Handle rate limits for the Zscaler API by applying a delay if the limit is reached."""
@@ -122,11 +108,24 @@ class ZscalerConnector:
             response = request_func(*args, **kwargs)
             if response and response.status_code == 200:
                 return response
+
             if response and response.status_code == 429:
                 retry_after = response.headers.get("Retry-After", retry_delay)
                 msg = f"Rate limit exceeded. Retrying in {retry_after} seconds..."
                 self.helper.connector_logger.warning(msg)
                 time.sleep(int(retry_after))
+                continue
+
+            if response and response.status_code == 401:
+                msg = "Request failed with status 401 : SESSION_NOT_VALID. Re-authentication has started..."
+                self.helper.connector_logger.warning(msg)
+                self.authenticate_with_zscaler()
+                if not self.session.cookies.get("JSESSIONID"):
+                    self.helper.connector_logger.error(
+                        "Re-authentication failed, aborting retry."
+                    )
+                    return None
+                continue
             else:
                 msg = f"Request failed with status {response.status_code}: {response.text}"
                 self.helper.connector_logger.error(msg)
@@ -134,16 +133,6 @@ class ZscalerConnector:
 
         self.helper.connector_logger.error("Max retries reached. Request failed.")
         return None
-
-    def get_zscaler_session_cookie(self):
-        """Retrieve or renew the Zscaler session by getting the JSESSIONID cookie."""
-
-        if self.session_cookie is None:
-            self.helper.connector_logger.warning(
-                "Zscaler session expired or missing. Re-authenticating..."
-            )
-            self.authenticate_with_zscaler()
-        return self.session_cookie
 
     def extract_domain(self, pattern):
         """Extract domain from the STIX pattern if it follows the format [domain-name:value = 'example.com']"""
@@ -160,19 +149,11 @@ class ZscalerConnector:
 
     def get_domain_classification_in_zscaler(self, domain):
         """Retrieve the classification of a domain in Zscaler via the urlLookup API."""
-        session_cookie = self.get_zscaler_session_cookie()
 
-        headers = {
-            "Content-Type": "application/json",
-            "Cookie": f"JSESSIONID={session_cookie}",
-        }
-
-        lookup_url = "https://zsapi.zscalertwo.net/api/v1/urlLookup"
+        lookup_url = f"{self.zscaler_base_url}/urlLookup"
         payload = json.dumps([domain])
 
-        response = self.handle_rate_limit(
-            requests.post, lookup_url, headers=headers, data=payload
-        )
+        response = self.handle_rate_limit(self.session.post, lookup_url, data=payload)
 
         msg = f"=== Checking domain {domain} ==="
         self.helper.connector_logger.debug(msg)
@@ -188,15 +169,9 @@ class ZscalerConnector:
     def get_zscaler_blocked_domains(self):
         """Retrieve the list of blocked domains in the specified Zscaler blacklist."""
 
-        session_cookie = self.get_zscaler_session_cookie()
-        headers = {
-            "Content-Type": "application/json",
-            "Cookie": f"JSESSIONID={session_cookie}",
-        }
-
         # Dynamic URL for blacklisting
-        url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}"
-        response = self.handle_rate_limit(requests.get, url, headers=headers)
+        url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
+        response = self.handle_rate_limit(self.session.get, url)
 
         if response and response.status_code == 200:
             return response.json().get("urls", [])
@@ -208,13 +183,8 @@ class ZscalerConnector:
         return []
 
     def get_current_configured_name(self):
-        session_cookie = self.get_zscaler_session_cookie()
-        headers = {
-            "Content-Type": "application/json",
-            "Cookie": f"JSESSIONID={session_cookie}",
-        }
-        url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}"
-        response = self.handle_rate_limit(requests.get, url, headers=headers)
+        url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}"
+        response = self.handle_rate_limit(self.session.get, url)
         if response and response.status_code == 200:
             return response.json().get("configuredName")
         return None
@@ -243,18 +213,12 @@ class ZscalerConnector:
 
     def send_to_zscaler(self, domain, event_type):
         """Send creation or deletion events to Zscaler."""
-        session_cookie = self.get_zscaler_session_cookie()
-        headers = {
-            "Content-Type": "application/json",
-            "Cookie": f"JSESSIONID={session_cookie}",
-        }
-
         real_configured_name = self.get_current_configured_name()
 
         if event_type == "create":
-            base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=ADD_TO_LIST"
+            base_url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}?action=ADD_TO_LIST"
         elif event_type == "delete":
-            base_url = f"https://zsapi.zscalertwo.net/api/v1/urlCategories/{self.zscaler_blacklist_name}?action=REMOVE_FROM_LIST"
+            base_url = f"{self.zscaler_base_url}/urlCategories/{self.zscaler_blacklist_name}?action=REMOVE_FROM_LIST"
         else:
             msg = "Unsupported event type."
             self.helper.connector_logger.error(msg)
@@ -265,9 +229,7 @@ class ZscalerConnector:
             "urls": [domain],
         }
 
-        response = self.handle_rate_limit(
-            requests.put, base_url, headers=headers, json=payload
-        )
+        response = self.handle_rate_limit(self.session.put, base_url, json=payload)
 
         if response and response.status_code == 200:
             msg = f"Successfully sent {event_type} for {domain}."
@@ -286,18 +248,12 @@ class ZscalerConnector:
     def activate_zscaler_changes(self, max_retries=5, delay=30):
         """Activate configuration changes in Zscaler with retry/backoff handled by tenacity."""
 
-        session_cookie = self.get_zscaler_session_cookie()
-        headers = {
-            "Content-Type": "application/json",
-            "Cookie": f"JSESSIONID={session_cookie}",
-        }
-
-        status_url = "https://zsapi.zscalertwo.net/api/v1/status"
-        activate_url = "https://zsapi.zscalertwo.net/api/v1/status/activate"
+        status_url = f"{self.zscaler_base_url}/status"
+        activate_url = f"{self.zscaler_base_url}/status/activate"
 
         for attempt in range(1, max_retries + 1):
             # Check if already ACTIVE/PENDING/INPROGRESS
-            status_resp = requests.get(status_url, headers=headers)
+            status_resp = self.session.get(status_url)
             if status_resp and status_resp.status_code == 200:
                 status = status_resp.json().get("status")
                 if status in ("ACTIVE", "PENDING", "INPROGRESS"):
@@ -307,7 +263,7 @@ class ZscalerConnector:
                     return True
 
             # Try activation
-            resp = requests.post(activate_url, headers=headers)
+            resp = self.session.post(activate_url)
             if resp and resp.status_code == 200:
                 self.helper.connector_logger.info("Zscaler configuration activated.")
                 return True
