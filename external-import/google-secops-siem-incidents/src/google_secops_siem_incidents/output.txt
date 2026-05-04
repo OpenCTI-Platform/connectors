@@ -1,0 +1,503 @@
+Alert(
+    id='de_bcfb0a37-19f8-7eeb-fd31-2284f1cdd9a5',
+    fields=[
+        AlertField(name='ip', field_path='udm.target.ip', string_val='54.36.189.105')
+    ],
+    time_window=TimeWindow(
+        start_time='2026-05-03T16:17:00Z',
+        end_time='2026-05-03T16:22:00Z'
+    ),
+    rule_type='MULTI_EVENT',
+    detection_timestamp='2026-05-03T16:22:00Z',
+    commit_timestamp='2026-05-03T16:27:24.999141Z',
+    alerting_type='ALERTING',
+    outcomes=[
+        Outcome(name='risk_score', int64_val='65', string_val=None, string_seq=None, field_path=None),
+        Outcome(name='event_count', int64_val='3', string_val=None, string_seq=None, field_path=None),
+        Outcome(name='principal_ip', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['10.128.0.22']), field_path='udm.principal.ip'),
+        Outcome(name='principal_process_pid', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['4']), field_path='udm.principal.process.pid'),
+        Outcome(name='principal_process_command_line', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.principal.process.command_line'),
+        Outcome(name='principal_process_file_sha256', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.principal.process.file.sha256'),
+        Outcome(name='principal_process_file_full_path', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.principal.process.file.full_path'),
+        Outcome(name='principal_process_product_specfic_process_id', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.principal.process.product_specific_process_id'),
+        Outcome(name='principal_process_parent_process_product_specfic_process_id', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.principal.process.parent_process.product_specific_process_id'),
+        Outcome(name='target_process_pid', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.target.process.pid'),
+        Outcome(name='target_process_command_line', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.target.process.command_line'),
+        Outcome(name='target_process_file_sha256', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.target.process.file.sha256'),
+        Outcome(name='target_process_file_full_path', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.target.process.file.full_path'),
+        Outcome(name='target_process_product_specfic_process_id', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.target.process.product_specific_process_id'),
+        Outcome(name='target_process_parent_process_product_specfic_process_id', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.target.process.parent_process.product_specific_process_id'),
+        Outcome(name='principal_user_userid', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['']), field_path='udm.principal.user.userid'),
+        Outcome(name='target_user_userid', int64_val=None, string_val=None, string_seq=StringSeq(string_vals=['S-1-0-0']), field_path='udm.target.user.userid')
+    ],
+    result_events={
+        'network': {
+            'eventSamples': [
+                {
+                    'rawLogToken': '3bd442d9955ef569e61e672daaddd353,2158,1777825085000000,EDR,',
+                    'event': {
+                        'metadata': {
+                            'productLogId': '2225621',
+                            'eventTimestamp': '2026-05-03T16:18:05Z',
+                            'eventType': 'NETWORK_CONNECTION',
+                            'vendorName': 'Microsoft',
+                            'productName': 'Microsoft-Windows-Security-Auditing',
+                            'productEventType': '5156',
+                            'description': 'The Windows Filtering Platform has permitted a connection',
+                            'ingestedTimestamp': '2026-05-03T16:23:12.479785Z',
+                            'ingestionLabels': [
+                                {'key': 'replayedFrom', 'value': 'Demoverse'},
+                                {'key': 'sourceUsecase', 'value': 'MISP'}
+                            ],
+                            'productDeploymentId': '{54849625-5478-4994-A5BA-3E3B0328C30D}',
+                            'id': 'AAAAADvUQtmVXvVp5h5nLard01MAAAAABgAAAG4IAAA=',
+                            'logType': 'WINEVTLOG',
+                            'baseLabels': {
+                                'logTypes': ['WINEVTLOG'],
+                                'namespaces': ['LogStory'],
+                                'allowScopedAccess': True
+                            },
+                            'enrichmentLabels': {
+                                'logTypes': ['WINDOWS_AD'],
+                                'namespaces': ['LogStory'],
+                                'allowScopedAccess': True
+                            },
+                            'parserVersion': '37.0'
+                        },
+                        'additional': {
+                            'Channel': 'Security',
+                            'Keywords': '-9214364837600035000',
+                            'Message': 'The Windows Filtering Platform has permitted a connection.\r\n\r\nApplication Information:\r\n\tProcess ID:\t\t5552\r\n\tApplication Name:\t\\device\\harddiskvolume3\\windows\\system32\\windowspowershell\\v1.0\\powershell_ise.exe\r\n\r\nNetwork Information:\r\n\tDirection:\t\tOutbound\r\n\tSource Address:\t\t10.128.0.22\r\n\tSource Port:\t\t50242\r\n\tDestination Address:\t54.36.189.105\r\n\tDestination Port:\t\t80\r\n\tProtocol:\t\t6\r\n\r\nFilter Information:\r\n\tFilter Run-Time ID:\t66722\r\n\tLayer Name:\t\tConnect\r\n\tLayer Run-Time ID:\t48',
+                            'Opcode': 'Info',
+                            'SourceModuleName': 'in_default_channels',
+                            'Category': 'Filtering Platform Connection'
+                        },
+                        'principal': {
+                            'hostname': 'win-server.lunarstiiiness.com',
+                            'assetId': 'WIN-SERVER$',
+                            'process': {'pid': '4'},
+                            'ip': ['10.128.0.22'],
+                            'port': 50242,
+                            'application': '\\device\\harddiskvolume3\\windows\\system32\\windowspowershell\\v1.0\\powershell_ise.exe',
+                            'namespace': 'LogStory',
+                            'asset': {
+                                'productObjectId': '1a0cd305-8a87-4236-8a13-1d33975e8f80',
+                                'hostname': 'win-server.lunarstiiiness.com',
+                                'assetId': 'WIN-SERVER$',
+                                'ip': ['10.128.0.22'],
+                                'platformSoftware': {
+                                    'platform': 'WINDOWS',
+                                    'platformVersion': 'Windows Server 2016 Datacenter - 10.0 (14393)'
+                                },
+                                'location': {'countryOrRegion': '0'},
+                                'category': 'Computer',
+                                'attribute': {
+                                    'labels': [
+                                        {'key': 'Bad password count', 'value': '0'},
+                                        {'key': 'Service Principal Names', 'value': 'TERMSRV/win-server.lunarstiiiness.com, WSMAN/win-server.lunarstiiiness.com, RestrictedKrbHost/win-server.lunarstiiiness.com, HOST/win-server.lunarstiiiness.com, TERMSRV/WIN-SERVER, WSMAN/win-server, RestrictedKrbHost/WIN-SERVER, HOST/WIN-SERVER'},
+                                        {'key': 'Password Expired', 'value': 'false'},
+                                        {'key': 'Password Never Expires', 'value': 'false'},
+                                        {'key': 'Last Logon', 'value': '133434362615483070'},
+                                        {'key': 'Password Not Required', 'value': 'false'}
+                                    ],
+                                    'creationTime': '2025-12-19T22:33:24Z',
+                                    'lastUpdateTime': '2027-01-25T23:35:21Z'
+                                }
+                            }
+                        },
+                        'target': {
+                            'user': {'userid': 'S-1-0-0', 'windowsSid': 'S-1-0-0'},
+                            'ip': ['54.36.189.105'],
+                            'port': 80,
+                            'location': {
+                                'state': 'Grand Est',
+                                'countryOrRegion': 'France',
+                                'regionLatitude': 48.913116,
+                                'regionLongitude': 5.44255,
+                                'regionCoordinates': {'latitude': 48.9131152, 'longitude': 5.4425501}
+                            },
+                            'namespace': 'LogStory',
+                            'asset': {'ip': ['54.36.189.105']},
+                            'ipGeoArtifact': [
+                                {
+                                    'ip': '54.36.189.105',
+                                    'location': {
+                                        'state': 'Grand Est',
+                                        'countryOrRegion': 'France',
+                                        'regionLatitude': 48.913116,
+                                        'regionLongitude': 5.44255,
+                                        'regionCoordinates': {'latitude': 48.9131152, 'longitude': 5.4425501}
+                                    },
+                                    'network': {
+                                        'asn': '16276',
+                                        'carrierName': 'ovh sas',
+                                        'organizationName': 'ovh sas'
+                                    }
+                                }
+                            ]
+                        },
+                        'intermediary': [
+                            {'hostname': 'win-server.lunarstiiiness.com', 'namespace': 'LogStory'}
+                        ],
+                        'observer': {
+                            'application': 'im_msvistalog',
+                            'namespace': 'LogStory',
+                            'labels': [
+                                {'key': 'SourceModuleName', 'value': 'in_default_channels'}
+                            ]
+                        },
+                        'about': [
+                            {
+                                'namespace': 'LogStory',
+                                'labels': [
+                                    {'key': 'Category', 'value': 'Filtering Platform Connection'},
+                                    {'key': 'Channel', 'value': 'Security'},
+                                    {'key': 'Opcode', 'value': 'Info'}
+                                ]
+                            }
+                        ],
+                        'securityResult': [
+                            {
+                                'ruleName': 'EventID: 5156',
+                                'action': ['ALLOW'],
+                                'severity': 'INFORMATIONAL',
+                                'detectionFields': [
+                                    {'key': 'Filter Run-Time ID', 'value': '66722'},
+                                    {'key': 'Layer Name', 'value': '%%14611'},
+                                    {'key': 'Layer Run-Time ID', 'value': '48'}
+                                ]
+                            }
+                        ],
+                        'network': {'ipProtocol': 'TCP', 'direction': 'OUTBOUND'}
+                    }
+                },
+                {
+                    'rawLogToken': '3bd442d9955ef569e61e672daaddd353,2236,1777825210000000,EDR,',
+                    'event': {
+                        'metadata': {
+                            'productLogId': '2225703',
+                            'eventTimestamp': '2026-05-03T16:20:10Z',
+                            'eventType': 'NETWORK_CONNECTION',
+                            'vendorName': 'Microsoft',
+                            'productName': 'Microsoft-Windows-Security-Auditing',
+                            'productEventType': '5156',
+                            'description': 'The Windows Filtering Platform has permitted a connection',
+                            'ingestedTimestamp': '2026-05-03T16:23:12.479785Z',
+                            'ingestionLabels': [
+                                {'key': 'replayedFrom', 'value': 'Demoverse'},
+                                {'key': 'sourceUsecase', 'value': 'MISP'}
+                            ],
+                            'productDeploymentId': '{54849625-5478-4994-A5BA-3E3B0328C30D}',
+                            'id': 'AAAAADvUQtmVXvVp5h5nLard01MAAAAABgAAALwIAAA=',
+                            'logType': 'WINEVTLOG',
+                            'baseLabels': {
+                                'logTypes': ['WINEVTLOG'],
+                                'namespaces': ['LogStory'],
+                                'allowScopedAccess': True
+                            },
+                            'enrichmentLabels': {
+                                'logTypes': ['WINDOWS_AD'],
+                                'namespaces': ['LogStory'],
+                                'allowScopedAccess': True
+                            },
+                            'parserVersion': '37.0'
+                        },
+                        'additional': {
+                            'Category': 'Filtering Platform Connection',
+                            'Channel': 'Security',
+                            'Keywords': '-9214364837600035000',
+                            'Message': 'The Windows Filtering Platform has permitted a connection.\r\n\r\nApplication Information:\r\n\tProcess ID:\t\t3556\r\n\tApplication Name:\t\\device\\harddiskvolume3\\program files (x86)\\microsoft\\edge\\application\\msedge.exe\r\n\r\nNetwork Information:\r\n\tDirection:\t\tOutbound\r\n\tSource Address:\t\t10.128.0.22\r\n\tSource Port:\t\t50251\r\n\tDestination Address:\t54.36.189.105\r\n\tDestination Port:\t\t80\r\n\tProtocol:\t\t6\r\n\r\nFilter Information:\r\n\tFilter Run-Time ID:\t66722\r\n\tLayer Name:\t\tConnect\r\n\tLayer Run-Time ID:\t48',
+                            'Opcode': 'Info',
+                            'SourceModuleName': 'in_default_channels'
+                        },
+                        'principal': {
+                            'hostname': 'win-server.lunarstiiiness.com',
+                            'assetId': 'WIN-SERVER$',
+                            'process': {'pid': '4'},
+                            'ip': ['10.128.0.22'],
+                            'port': 50251,
+                            'application': '\\device\\harddiskvolume3\\program files (x86)\\microsoft\\edge\\application\\msedge.exe',
+                            'namespace': 'LogStory',
+                            'asset': {
+                                'productObjectId': '1a0cd305-8a87-4236-8a13-1d33975e8f80',
+                                'hostname': 'win-server.lunarstiiiness.com',
+                                'assetId': 'WIN-SERVER$',
+                                'ip': ['10.128.0.22'],
+                                'platformSoftware': {
+                                    'platform': 'WINDOWS',
+                                    'platformVersion': 'Windows Server 2016 Datacenter - 10.0 (14393)'
+                                },
+                                'location': {'countryOrRegion': '0'},
+                                'category': 'Computer',
+                                'attribute': {
+                                    'labels': [
+                                        {'key': 'Bad password count', 'value': '0'},
+                                        {'key': 'Service Principal Names', 'value': 'TERMSRV/win-server.lunarstiiiness.com, WSMAN/win-server.lunarstiiiness.com, RestrictedKrbHost/win-server.lunarstiiiness.com, HOST/win-server.lunarstiiiness.com, TERMSRV/WIN-SERVER, WSMAN/win-server, RestrictedKrbHost/WIN-SERVER, HOST/WIN-SERVER'},
+                                        {'key': 'Password Expired', 'value': 'false'},
+                                        {'key': 'Password Never Expires', 'value': 'false'},
+                                        {'key': 'Last Logon', 'value': '133434362615483070'},
+                                        {'key': 'Password Not Required', 'value': 'false'}
+                                    ],
+                                    'creationTime': '2025-12-19T22:33:24Z',
+                                    'lastUpdateTime': '2027-01-25T23:35:21Z'
+                                }
+                            }
+                        },
+                        'target': {
+                            'user': {'userid': 'S-1-0-0', 'windowsSid': 'S-1-0-0'},
+                            'ip': ['54.36.189.105'],
+                            'port': 80,
+                            'location': {
+                                'state': 'Grand Est',
+                                'countryOrRegion': 'France',
+                                'regionLatitude': 48.913116,
+                                'regionLongitude': 5.44255,
+                                'regionCoordinates': {'latitude': 48.9131152, 'longitude': 5.4425501}
+                            },
+                            'namespace': 'LogStory',
+                            'asset': {'ip': ['54.36.189.105']},
+                            'ipGeoArtifact': [
+                                {
+                                    'ip': '54.36.189.105',
+                                    'location': {
+                                        'state': 'Grand Est',
+                                        'countryOrRegion': 'France',
+                                        'regionLatitude': 48.913116,
+                                        'regionLongitude': 5.44255,
+                                        'regionCoordinates': {'latitude': 48.9131152, 'longitude': 5.4425501}
+                                    },
+                                    'network': {
+                                        'asn': '16276',
+                                        'carrierName': 'ovh sas',
+                                        'organizationName': 'ovh sas'
+                                    }
+                                }
+                            ]
+                        },
+                        'intermediary': [
+                            {'hostname': 'win-server.lunarstiiiness.com', 'namespace': 'LogStory'}
+                        ],
+                        'observer': {
+                            'application': 'im_msvistalog',
+                            'namespace': 'LogStory',
+                            'labels': [
+                                {'key': 'SourceModuleName', 'value': 'in_default_channels'}
+                            ]
+                        },
+                        'about': [
+                            {
+                                'namespace': 'LogStory',
+                                'labels': [
+                                    {'key': 'Category', 'value': 'Filtering Platform Connection'},
+                                    {'key': 'Channel', 'value': 'Security'},
+                                    {'key': 'Opcode', 'value': 'Info'}
+                                ]
+                            }
+                        ],
+                        'securityResult': [
+                            {
+                                'ruleName': 'EventID: 5156',
+                                'action': ['ALLOW'],
+                                'severity': 'INFORMATIONAL',
+                                'detectionFields': [
+                                    {'key': 'Filter Run-Time ID', 'value': '66722'},
+                                    {'key': 'Layer Name', 'value': '%%14611'},
+                                    {'key': 'Layer Run-Time ID', 'value': '48'}
+                                ]
+                            }
+                        ],
+                        'network': {'ipProtocol': 'TCP', 'direction': 'OUTBOUND'}
+                    }
+                },
+                {
+                    'rawLogToken': '3bd442d9955ef569e61e672daaddd353,2235,1777825210000000,EDR,',
+                    'event': {
+                        'metadata': {
+                            'productLogId': '2225698',
+                            'eventTimestamp': '2026-05-03T16:20:10Z',
+                            'eventType': 'NETWORK_CONNECTION',
+                            'vendorName': 'Microsoft',
+                            'productName': 'Microsoft-Windows-Security-Auditing',
+                            'productEventType': '5156',
+                            'description': 'The Windows Filtering Platform has permitted a connection',
+                            'ingestedTimestamp': '2026-05-03T16:23:12.479785Z',
+                            'ingestionLabels': [
+                                {'key': 'replayedFrom', 'value': 'Demoverse'},
+                                {'key': 'sourceUsecase', 'value': 'MISP'}
+                            ],
+                            'productDeploymentId': '{54849625-5478-4994-A5BA-3E3B0328C30D}',
+                            'id': 'AAAAADvUQtmVXvVp5h5nLard01MAAAAABgAAALsIAAA=',
+                            'logType': 'WINEVTLOG',
+                            'baseLabels': {
+                                'logTypes': ['WINEVTLOG'],
+                                'namespaces': ['LogStory'],
+                                'allowScopedAccess': True
+                            },
+                            'enrichmentLabels': {
+                                'logTypes': ['WINDOWS_AD'],
+                                'namespaces': ['LogStory'],
+                                'allowScopedAccess': True
+                            },
+                            'parserVersion': '37.0'
+                        },
+                        'additional': {
+                            'Channel': 'Security',
+                            'Keywords': '-9214364837600035000',
+                            'Message': 'The Windows Filtering Platform has permitted a connection.\r\n\r\nApplication Information:\r\n\tProcess ID:\t\t3556\r\n\tApplication Name:\t\\device\\harddiskvolume3\\program files (x86)\\microsoft\\edge\\application\\msedge.exe\r\n\r\nNetwork Information:\r\n\tDirection:\t\tOutbound\r\n\tSource Address:\t\t10.128.0.22\r\n\tSource Port:\t\t50250\r\n\tDestination Address:\t54.36.189.105\r\n\tDestination Port:\t\t80\r\n\tProtocol:\t\t6\r\n\r\nFilter Information:\r\n\tFilter Run-Time ID:\t66722\r\n\tLayer Name:\t\tConnect\r\n\tLayer Run-Time ID:\t48',
+                            'Opcode': 'Info',
+                            'SourceModuleName': 'in_default_channels',
+                            'Category': 'Filtering Platform Connection'
+                        },
+                        'principal': {
+                            'hostname': 'win-server.lunarstiiiness.com',
+                            'assetId': 'WIN-SERVER$',
+                            'process': {'pid': '4'},
+                            'ip': ['10.128.0.22'],
+                            'port': 50250,
+                            'application': '\\device\\harddiskvolume3\\program files (x86)\\microsoft\\edge\\application\\msedge.exe',
+                            'namespace': 'LogStory',
+                            'asset': {
+                                'productObjectId': '1a0cd305-8a87-4236-8a13-1d33975e8f80',
+                                'hostname': 'win-server.lunarstiiiness.com',
+                                'assetId': 'WIN-SERVER$',
+                                'ip': ['10.128.0.22'],
+                                'platformSoftware': {
+                                    'platform': 'WINDOWS',
+                                    'platformVersion': 'Windows Server 2016 Datacenter - 10.0 (14393)'
+                                },
+                                'location': {'countryOrRegion': '0'},
+                                'category': 'Computer',
+                                'attribute': {
+                                    'labels': [
+                                        {'key': 'Bad password count', 'value': '0'},
+                                        {'key': 'Service Principal Names', 'value': 'TERMSRV/win-server.lunarstiiiness.com, WSMAN/win-server.lunarstiiiness.com, RestrictedKrbHost/win-server.lunarstiiiness.com, HOST/win-server.lunarstiiiness.com, TERMSRV/WIN-SERVER, WSMAN/win-server, RestrictedKrbHost/WIN-SERVER, HOST/WIN-SERVER'},
+                                        {'key': 'Password Expired', 'value': 'false'},
+                                        {'key': 'Password Never Expires', 'value': 'false'},
+                                        {'key': 'Last Logon', 'value': '133434362615483070'},
+                                        {'key': 'Password Not Required', 'value': 'false'}
+                                    ],
+                                    'creationTime': '2025-12-19T22:33:24Z',
+                                    'lastUpdateTime': '2027-01-25T23:35:21Z'
+                                }
+                            }
+                        },
+                        'target': {
+                            'user': {'userid': 'S-1-0-0', 'windowsSid': 'S-1-0-0'},
+                            'ip': ['54.36.189.105'],
+                            'port': 80,
+                            'location': {
+                                'state': 'Grand Est',
+                                'countryOrRegion': 'France',
+                                'regionLatitude': 48.913116,
+                                'regionLongitude': 5.44255,
+                                'regionCoordinates': {'latitude': 48.9131152, 'longitude': 5.4425501}
+                            },
+                            'namespace': 'LogStory',
+                            'asset': {'ip': ['54.36.189.105']},
+                            'ipGeoArtifact': [
+                                {
+                                    'ip': '54.36.189.105',
+                                    'location': {
+                                        'state': 'Grand Est',
+                                        'countryOrRegion': 'France',
+                                        'regionLatitude': 48.913116,
+                                        'regionLongitude': 5.44255,
+                                        'regionCoordinates': {'latitude': 48.9131152, 'longitude': 5.4425501}
+                                    },
+                                    'network': {
+                                        'asn': '16276',
+                                        'carrierName': 'ovh sas',
+                                        'organizationName': 'ovh sas'
+                                    }
+                                }
+                            ]
+                        },
+                        'intermediary': [
+                            {'hostname': 'win-server.lunarstiiiness.com', 'namespace': 'LogStory'}
+                        ],
+                        'observer': {
+                            'application': 'im_msvistalog',
+                            'namespace': 'LogStory',
+                            'labels': [
+                                {'key': 'SourceModuleName', 'value': 'in_default_channels'}
+                            ]
+                        },
+                        'about': [
+                            {
+                                'namespace': 'LogStory',
+                                'labels': [
+                                    {'key': 'Category', 'value': 'Filtering Platform Connection'},
+                                    {'key': 'Channel', 'value': 'Security'},
+                                    {'key': 'Opcode', 'value': 'Info'}
+                                ]
+                            }
+                        ],
+                        'securityResult': [
+                            {
+                                'ruleName': 'EventID: 5156',
+                                'action': ['ALLOW'],
+                                'severity': 'INFORMATIONAL',
+                                'detectionFields': [
+                                    {'key': 'Filter Run-Time ID', 'value': '66722'},
+                                    {'key': 'Layer Name', 'value': '%%14611'},
+                                    {'key': 'Layer Run-Time ID', 'value': '48'}
+                                ]
+                            }
+                        ],
+                        'network': {'ipProtocol': 'TCP', 'direction': 'OUTBOUND'}
+                    }
+                }
+            ]
+        }
+    },
+    result_entity_events={
+        'ioc': {
+            'eventSamples': [
+                {
+                    'rawLogToken': 'b83ae81dd8d144a0c45f90ac59ec5907,172,1777563217000000,IOC,',
+                    'entity': {
+                        'metadata': {
+                            'productEntityId': 'b99ed022-07d8-451e-8979-477967cd581a',
+                            'collectedTimestamp': '2026-04-30T15:33:37Z',
+                            'vendorName': 'MISP',
+                            'productName': 'MISP',
+                            'entityType': 'IP_ADDRESS',
+                            'description': 'ip-dst',
+                            'interval': {
+                                'startTime': '2026-05-03T00:00:00Z',
+                                'endTime': '2026-05-04T00:00:00Z'
+                            },
+                            'threat': [
+                                {
+                                    'categoryDetails': ['Network activity'],
+                                    'description': 'misp-galaxy:mitre-attack-pattern="Spearphishing Attachment - T1566.001",misp-galaxy:threat-actor="TA428",misp-galaxy:malpedia="nccTrojan",misp-galaxy:malpedia="Cotx RAT",misp-galaxy:mitre-tool="NBTscan - S0590",misp-galaxy:mitre-attack-pattern="Remote Desktop Protocol - T1021.001",misp-galaxy:sector="Defense",misp-galaxy:sector="Government, Administration",tlp:white,dhs-ciip-sectors:DHS-critical-sectors="government-facilities" -  additional info: Targeted attack on industrial enterprises and public institutions',
+                                    'severityDetails': 'High',
+                                    'threatFeedName': 'ICS-CSIRT.io'
+                                }
+                            ],
+                            'sourceType': 'ENTITY_CONTEXT',
+                            'eventMetadata': {
+                                'id': 'AAAAALg66B3Y0USgxF+QrFnsWQcAAAAABwAAAKwAAAA=',
+                                'baseLabels': {
+                                    'logTypes': ['MISP_IOC'],
+                                    'namespaces': ['LogStory'],
+                                    'allowScopedAccess': True
+                                }
+                            }
+                        },
+                        'entity': {
+                            'ip': ['54.36.189.105'],
+                            'namespace': 'LogStory',
+                            'labels': [
+                                {'key': 'intelligence_source', 'value': 'TI-MISP'},
+                                {'key': 'misp_event_id', 'value': '1519'},
+                                {'key': 'publication_date', 'value': '2025-09-26'},
+                                {'key': 'time', 'value': '1758921234'}
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    }
+)

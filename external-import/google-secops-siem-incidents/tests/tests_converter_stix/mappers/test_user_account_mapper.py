@@ -17,11 +17,6 @@ from tests_converter_stix.factories import (
 from google_secops_siem_incidents.mappers.user_account_mapper import (  # noqa: E402
     map_user_accounts,
 )
-from tests_converter_stix.factories import (
-    make_author,
-    make_tlp_marking,
-    make_user_outcomes,
-)
 
 
 # ---------------------------------------------------------------------------
