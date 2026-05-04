@@ -122,7 +122,7 @@ class BaseClientAPI:
             origins: Optional list of origins to filter by
             entity_name: Name of entities for logging (reports, threat_actors, etc.)
             cursor_key: Key to use for cursor in initial_state
-            extra_filters: Optional dict of additional filters to include in the query
+            extra_filters: Optional list of additional filters to include in the query
 
         Returns:
             list of filter configurations with params and cursors
@@ -132,7 +132,7 @@ class BaseClientAPI:
             f"collection_type:{collection_type} last_modification_date:{start_date}+"
         )
 
-        extra_filters = extra_filters or {}
+        extra_filters = extra_filters or []
 
         types = types or ["All"]
         origins = origins or ["All"]

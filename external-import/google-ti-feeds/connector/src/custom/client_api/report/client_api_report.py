@@ -32,7 +32,7 @@ class ClientAPIReport(BaseClientAPI):
         origins: list[str] | None = None,
         entity_name: str = "reports",
         cursor_key: str = "cursor",
-        extra_filters: dict[str, str] | None = None,
+        extra_filters: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build filter configurations based on config settings.
 
@@ -44,7 +44,7 @@ class ClientAPIReport(BaseClientAPI):
             origins: Optional list of origins to filter by
             entity_name: Name of entities for logging
             cursor_key: Key to use for cursor in initial_state
-            extra_filters: Optional dict of additional filters to include in the query
+            extra_filters: Optional list of additional filters to include in the query
 
         Returns:
             list of filter configurations with params and cursors
