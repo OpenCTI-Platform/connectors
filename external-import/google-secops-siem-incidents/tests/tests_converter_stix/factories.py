@@ -179,6 +179,99 @@ def make_file_outcomes(
     return outcomes
 
 
+def make_multi_hostname_outcomes(hostnames: list[str]) -> list[Outcome]:
+    """Build multiple principal_hostname outcomes, one per hostname."""
+    return [
+        OutcomeFactory.build(name="principal_hostname", string_val=hostname)
+        for hostname in hostnames
+    ]
+
+
+def make_multi_ip_outcomes(
+    ip_batches: list[list[str]],
+    *,
+    is_ipv6: bool | None = None,
+) -> list[Outcome]:
+    """Build multiple principal_ip outcomes, one per batch of IPs (each with its own string_seq)."""
+    outcomes = [
+        OutcomeFactory.build(
+            name="principal_ip",
+            string_seq=StringSeqFactory.build(string_vals=batch),
+        )
+        for batch in ip_batches
+    ]
+    if is_ipv6 is not None:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="SourceIsIpv6",
+                string_val=str(is_ipv6).lower(),
+            ),
+        )
+    return outcomes
+
+
+def make_multi_user_outcomes(
+    principal_batches: list[list[str]] | None = None,
+    target_batches: list[list[str]] | None = None,
+) -> list[Outcome]:
+    """Build multiple principal_user_userid outcomes (one per batch) + multiple target_user_userid outcomes."""
+    outcomes: list[Outcome] = []
+    for batch in principal_batches or []:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="principal_user_userid",
+                string_seq=StringSeqFactory.build(string_vals=batch),
+            ),
+        )
+    for batch in target_batches or []:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="target_user_userid",
+                string_seq=StringSeqFactory.build(string_vals=batch),
+            ),
+        )
+    return outcomes
+
+
+def make_multi_file_outcomes(
+    principal_paths: list[str],
+    principal_sha256s: list[str | None] | None = None,
+    target_paths: list[str] | None = None,
+    target_sha256s: list[str | None] | None = None,
+) -> list[Outcome]:
+    """Build multiple principal_process_file_full_path outcomes (one per path), optionally paired with sha256 outcomes."""
+    outcomes: list[Outcome] = []
+    for path in principal_paths:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="principal_process_file_full_path",
+                string_val=path,
+            ),
+        )
+    for sha in principal_sha256s or []:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="principal_process_file_sha256",
+                string_val=sha,
+            ),
+        )
+    for path in target_paths or []:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="target_process_file_full_path",
+                string_val=path,
+            ),
+        )
+    for sha in target_sha256s or []:
+        outcomes.append(
+            OutcomeFactory.build(
+                name="target_process_file_sha256",
+                string_val=sha,
+            ),
+        )
+    return outcomes
+
+
 def make_risk_score_outcome(score: str) -> Outcome:
     """Build a single risk_score outcome."""
     return OutcomeFactory.build(name="risk_score", int64_val=score)

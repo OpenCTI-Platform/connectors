@@ -16,6 +16,7 @@ from tests_converter_stix.factories import (
     RulePropertiesFactory,
     make_hostname_outcomes,
     make_ip_outcomes,
+    make_multi_hostname_outcomes,
 )
 
 # =====================
@@ -39,26 +40,26 @@ def expected_full_run_log_messages() -> list[str]:
         "[CONNECTOR] Run started - {'start_time':",
         "[CONNECTOR] Batch fetched - {'batch_num': 1, 'rule_alerts': 1, 'alerts': 2}",
         (
-            "[CONNECTOR] Batch converted to STIX - {'batch_num': 1, 'stix_count': '10 (~10 unique)',"
-            " 'type_summary': 'hostname: 2, incident: 2, ipv4-addr: 2, relationship: 4'}"
+            "[CONNECTOR] Batch converted to STIX - {'batch_num': 1, 'stix_count': '14 (~14 unique)',"
+            " 'type_summary': 'hostname: 3, incident: 2, ipv4-addr: 3, relationship: 6'}"
         ),
         (
             "[CONNECTOR] Bundle sent - {'batch_num': 1, 'work_id': 'work-id-123',"
-            " 'stix_count': '12 (~12 unique)',"
-            " 'type_summary': 'hostname: 2, identity: 1, incident: 2, ipv4-addr: 2, marking-definition: 1, relationship: 4'}"
+            " 'stix_count': '16 (~16 unique)',"
+            " 'type_summary': 'hostname: 3, identity: 1, incident: 2, ipv4-addr: 3, marking-definition: 1, relationship: 6'}"
         ),
         "[CONNECTOR] Batch fetched - {'batch_num': 2, 'rule_alerts': 1, 'alerts': 2}",
         (
-            "[CONNECTOR] Batch converted to STIX - {'batch_num': 2, 'stix_count': '10 (~10 unique)',"
-            " 'type_summary': 'hostname: 2, incident: 2, ipv4-addr: 2, relationship: 4'}"
+            "[CONNECTOR] Batch converted to STIX - {'batch_num': 2, 'stix_count': '14 (~14 unique)',"
+            " 'type_summary': 'hostname: 3, incident: 2, ipv4-addr: 3, relationship: 6'}"
         ),
         (
             "[CONNECTOR] Bundle sent - {'batch_num': 2, 'work_id': 'work-id-123',"
-            " 'stix_count': '12 (~12 unique)',"
-            " 'type_summary': 'hostname: 2, identity: 1, incident: 2, ipv4-addr: 2, marking-definition: 1, relationship: 4'}"
+            " 'stix_count': '16 (~16 unique)',"
+            " 'type_summary': 'hostname: 3, identity: 1, incident: 2, ipv4-addr: 3, marking-definition: 1, relationship: 6'}"
         ),
         "[CONNECTOR] State updated - {'total_batches': 2, 'last_alert_timestamp':",
-        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '20 (~16 unique)',",
+        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '28 (~22 unique)',",
     ]
 
 
@@ -69,7 +70,7 @@ def expected_resume_run_log_messages() -> list[str]:
         "[CONNECTOR] Run started - {'start_time': '2024-03-01T12:00:00+00:00',",
         "[CONNECTOR] Batch fetched - {'batch_num': 1, 'rule_alerts': 1, 'alerts': 2}",
         "[CONNECTOR] Batch fetched - {'batch_num': 2, 'rule_alerts': 1, 'alerts': 2}",
-        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '20 (~16 unique)',",
+        "[CONNECTOR] Run completed - {'total_batches': 2, 'total_alerts': 4, 'total_stix_objects': '28 (~22 unique)',",
     ]
 
 
@@ -240,12 +241,13 @@ def _build_batch(detection_ts: str) -> RuleAlertResponse:
     """Build a RuleAlertResponse with 2 alerts sharing the same detection_timestamp."""
     alert1 = AlertFactory.build(
         fields=[AlertFieldFactory.build(name="ip", string_val="10.0.0.1")],
-        outcomes=make_hostname_outcomes("host1.local") + make_ip_outcomes(["10.0.0.1"]),
+        outcomes=make_multi_hostname_outcomes(["host1a.local", "host1b.local"])
+        + make_ip_outcomes(["10.0.0.1", "10.0.0.2"]),
         detection_timestamp=detection_ts,
     )
     alert2 = AlertFactory.build(
-        fields=[AlertFieldFactory.build(name="ip", string_val="10.0.0.2")],
-        outcomes=make_hostname_outcomes("host2.local") + make_ip_outcomes(["10.0.0.2"]),
+        fields=[AlertFieldFactory.build(name="ip", string_val="10.0.0.3")],
+        outcomes=make_hostname_outcomes("host2.local") + make_ip_outcomes(["10.0.0.3"]),
         detection_timestamp=detection_ts,
     )
     rule_alert = RuleAlertFactory.build(

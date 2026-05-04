@@ -1,10 +1,11 @@
-"""Map Chronicle alert outcomes to File observables."""
+"""Map alert outcomes to File observables."""
 
 from typing import Any
 
 from connectors_sdk.models import File
 from connectors_sdk.models.enums import HashAlgorithm
-from google_secops_siem_incidents.mappers._utils import find_outcome
+
+from google_secops_siem_incidents.mappers._utils import find_all_outcomes
 from google_secops_siem_incidents.models.rule_alert_response import Outcome
 
 
@@ -46,25 +47,27 @@ def map_files(
 
     result = []
     for path_name, sha256_name in pairs:
-        path_outcome = find_outcome(outcomes, path_name)
-        if path_outcome is None or not path_outcome.string_val:
-            continue
+        path_outcomes = find_all_outcomes(outcomes, path_name)
+        sha256_outcomes = find_all_outcomes(outcomes, sha256_name)
 
-        path = path_outcome.string_val
-        name = _basename(path)
+        for i, path_outcome in enumerate(path_outcomes):
+            if not path_outcome.string_val:
+                continue
 
-        sha256_outcome = find_outcome(outcomes, sha256_name)
-        hashes = None
-        if sha256_outcome and sha256_outcome.string_val:
-            hashes = {HashAlgorithm.SHA256: sha256_outcome.string_val}
+            path = path_outcome.string_val
+            name = _basename(path)
 
-        result.append(
-            File(
-                name=name,
-                hashes=hashes,
-                author=author,
-                markings=[tlp_marking],
+            hashes = None
+            if i < len(sha256_outcomes) and sha256_outcomes[i].string_val:
+                hashes = {HashAlgorithm.SHA256: sha256_outcomes[i].string_val}
+
+            result.append(
+                File(
+                    name=name,
+                    hashes=hashes,
+                    author=author,
+                    markings=[tlp_marking],
+                )
             )
-        )
 
     return result

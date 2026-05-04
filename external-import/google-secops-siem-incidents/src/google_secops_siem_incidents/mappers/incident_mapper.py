@@ -1,4 +1,4 @@
-"""Map a Chronicle Alert + RuleMetadata to a connectors_sdk Incident."""
+"""Map a Alert + RuleMetadata to a connectors_sdk Incident."""
 
 from datetime import datetime
 from typing import Any
@@ -16,10 +16,10 @@ def map_incident(
     author: Any,
     tlp_marking: Any,
 ) -> Incident:
-    """Map a Chronicle alert and rule metadata to a connectors_sdk Incident.
+    """Map a alert and rule metadata to a connectors_sdk Incident.
 
     Args:
-        alert: The Chronicle detection alert.
+        alert: The detection alert.
         rule_metadata: Rule metadata associated with the alert.
         author: STIX author identity object.
         tlp_marking: TLP marking definition object.
