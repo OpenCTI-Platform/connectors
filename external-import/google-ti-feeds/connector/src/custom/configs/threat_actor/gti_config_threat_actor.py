@@ -39,9 +39,9 @@ class GTIThreatActorConfig(GTIBaseConfig):
         description="Whether to enable importing threat actor aliases from GTI",
     )
 
-    threat_actor_extra_filters: dict[str, str] = Field(
+    threat_actor_extra_filters: list[str] = Field(
         default=None,
-        description=" Optional dictionary of additional filters to add to query when fetching threat actors e.g., {'name': 'APT28'}.",
+        description="Optional List of additional filters to add to query when fetching threat actors e.g. ['name:APT28'].",
     )
 
     @field_validator("threat_actor_origins", mode="after")
