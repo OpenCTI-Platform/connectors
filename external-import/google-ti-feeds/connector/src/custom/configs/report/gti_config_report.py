@@ -43,9 +43,10 @@ class GTIReportConfig(GTIBaseConfig):
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
     )
 
-    report_extra_filters: list[str] = Field(
-        default=None,
-        description="Optional List of additional filters to add to query when fetching reports e.g. ['name:phishing'].",
+    report_extra_filters: ListFromString = Field(
+        default=[],
+        description="Optional List of additional filters to add to query when fetching reports.",
+        examples=["name:phishing"],
     )
 
     @field_validator("report_types", mode="after")

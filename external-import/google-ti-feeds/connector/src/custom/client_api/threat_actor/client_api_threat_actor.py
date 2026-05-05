@@ -55,7 +55,7 @@ class ClientAPIThreatActor(BaseClientAPI):
                 origins = getattr(self.config, "threat_actor_origins", ["All"])
 
             if extra_filters is None:
-                extra_filters = getattr(self.config, "threat_actor_extra_filters", None)
+                extra_filters = getattr(self.config, "threat_actor_extra_filters", [])
 
             return super()._build_filter_configurations(
                 collection_type=collection_type,

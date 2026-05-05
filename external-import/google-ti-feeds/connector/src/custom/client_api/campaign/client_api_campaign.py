@@ -55,7 +55,7 @@ class ClientAPICampaign(BaseClientAPI):
                 origins = getattr(self.config, "campaign_origins", ["All"])
 
             if extra_filters is None:
-                extra_filters = getattr(self.config, "campaign_extra_filters", None)
+                extra_filters = getattr(self.config, "campaign_extra_filters", [])
 
             return super()._build_filter_configurations(
                 collection_type=collection_type,
