@@ -36,7 +36,7 @@ class GTICampaignConfig(GTIBaseConfig):
 
     campaign_extra_filters: ListFromString = Field(
         default=[],
-        description="Optional List of additional filters to add to query when fetching campaigns.",
+        description="Optional List of additional filters to add to query when fetching campaigns",
         examples=["name:Operation Shadow"],
     )
 
