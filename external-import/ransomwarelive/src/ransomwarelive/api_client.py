@@ -13,6 +13,7 @@ _RETRY_BACKOFF_FACTOR = 60  # seconds — matches the API's "1 per 1 minute" rat
 _RETRY_BACKOFF_JITTER = (
     30  # seconds of random jitter to spread retries across instances
 )
+_REQUEST_TIMEOUT_SECONDS = 30
 
 API_BASE_URL = "https://api.ransomware.live/v2/"
 
@@ -50,6 +51,7 @@ class RansomwareAPIClient:
             response = self._session.get(
                 url,
                 headers={"accept": "application/json", "User-Agent": "OpenCTI"},
+                timeout=_REQUEST_TIMEOUT_SECONDS,
             )
             response.raise_for_status()
 
@@ -101,5 +103,19 @@ class RansomwareAPIClient:
         """
         url = f"{API_BASE_URL}{path}"
         data = self._send_request(url)
+
+        if data is None:
+            return []
+
+        if not isinstance(data, list):
+            raise RansomwareAPIError(
+                "Unexpected Ransomware API response type for feed",
+                {"url": f"GET {url}", "response_type": type(data).__name__},
+            )
+        if not all(isinstance(item, dict) for item in data):
+            raise RansomwareAPIError(
+                "Unexpected Ransomware API feed item type",
+                {"url": f"GET {url}", "response_type": "list"},
+            )
 
         return data

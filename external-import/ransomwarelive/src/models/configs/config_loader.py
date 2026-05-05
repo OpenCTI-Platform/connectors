@@ -123,10 +123,14 @@ class ConfigLoader(ConfigBaseSettings):
             else:
                 raise ValueError(f"Invalid value for CONNECTOR_RUN_EVERY: {run_every}")
 
+        duration_period = connector_data.get("duration_period")
+        if duration_period is None:
+            return data
+
         timedelta_adapter = TypeAdapter(datetime.timedelta)
-        td = timedelta_adapter.validate_python(connector_data["duration_period"])
+        td = timedelta_adapter.validate_python(duration_period)
         if td < timedelta(minutes=1):
-            raise ValueError("CONNECTOR_DURATION_PERIOD must be greater than 1 minute")
+            raise ValueError("CONNECTOR_DURATION_PERIOD must at least 1 minute")
 
         return data
 

@@ -327,6 +327,11 @@ class RansomwareAPIConnector:
         """Collects historic intelligence from ransomware.live"""
         # fetching group information
         group_data = self.api_client.get_feed("groups")
+        if not group_data:
+            self.helper.connector_logger.info(
+                "No group data retrieved from ransomware.live API"
+            )
+            return
 
         # Checking if the historic year is less than 2020 as there is no data past 2020
         year = (
@@ -345,6 +350,11 @@ class RansomwareAPIConnector:
                 bundles = []
                 path = year_url + "/" + str(month)
                 response_json = self.api_client.get_feed(path)
+                if not response_json:
+                    self.helper.connector_logger.info(
+                        f"No data retrieved from ransomware.live API for {year}/{month}"
+                    )
+                    continue
 
                 for item in response_json:
                     try:
@@ -401,9 +411,19 @@ class RansomwareAPIConnector:
         """Collects intelligence from the last 24 on ransomware.live"""
         # fetching group information
         group_data = self.api_client.get_feed("groups")
+        if not group_data:
+            self.helper.connector_logger.info(
+                "No group data retrieved from ransomware.live API"
+            )
+            return
 
         # fetching recent requests
         response_json = self.api_client.get_feed("recentvictims")
+        if not response_json:
+            self.helper.connector_logger.info(
+                "No recent victim data retrieved from ransomware.live API"
+            )
+            return
 
         nb_stix_objects = 0
         bundles = []
@@ -411,7 +431,7 @@ class RansomwareAPIConnector:
 
         for item in response_json:
             discovered_raw = item.get("discovered")
-            created = datetime.fromisoformat(discovered_raw)
+            created = safe_datetime(discovered_raw)
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 
