@@ -104,6 +104,13 @@ class CrowdStrike:
             self.config.crowdstrike.indicator_high_score_labels
         )
         indicator_unwanted_labels = self.config.crowdstrike.indicator_unwanted_labels
+        indicator_max_age_by_type = {
+            "ip": self.config.crowdstrike.indicator_ip_max_age,
+            "domain": self.config.crowdstrike.indicator_domain_max_age,
+            "url": self.config.crowdstrike.indicator_url_max_age,
+            "hash": self.config.crowdstrike.indicator_hash_max_age,
+            "default": self.config.crowdstrike.indicator_default_max_age,
+        }
 
         no_file_trigger_import = self.config.crowdstrike.no_file_trigger_import
 
@@ -205,6 +212,7 @@ class CrowdStrike:
                 indicator_high_score=indicator_high_score,
                 indicator_high_score_labels=set(indicator_high_score_labels),
                 indicator_unwanted_labels=set(indicator_unwanted_labels),
+                indicator_max_age_by_type=indicator_max_age_by_type,
                 no_file_trigger_import=no_file_trigger_import,
                 scopes=set(scopes),
                 attack_lookup=self.attack_lookup,
