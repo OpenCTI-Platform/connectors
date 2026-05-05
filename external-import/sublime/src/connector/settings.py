@@ -6,6 +6,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from connectors_sdk.models.enums import TLPLevel
 from pydantic import Field, HttpUrl, SecretStr
 
 
@@ -29,6 +30,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=3),
+    )
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="0a3a00ad-b5f0-4dca-83b6-9012662dcf80",
     )
 
 
@@ -54,8 +59,8 @@ class SublimeConfig(BaseConfigModel):
     auto_create_cases: bool = Field(
         default=False, description="Automatically create investigation cases."
     )
-    verdicts: str = Field(
-        default="malicious",
+    verdicts: ListFromString = Field(
+        default=["malicious"],
         description="Comma-separated attack score verdicts to process.",
     )
     set_priority: bool = Field(
@@ -74,6 +79,10 @@ class SublimeConfig(BaseConfigModel):
     )
     batch_size: int = Field(
         default=100, description="Number of messages per processing batch."
+    )
+    tlp_level: TLPLevel = Field(
+        default=TLPLevel.AMBER,
+        description="TLP marking level applied to created STIX entities.",
     )
 
 

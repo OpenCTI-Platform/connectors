@@ -39,10 +39,9 @@ def map_attack_score_to_level(
     Returns:
         str: Mapped level (low, medium, high, critical) or None if not configured
     """
-    if mapping_type == "priority" and not set_priority:
-        return None
-    if mapping_type == "severity" and not set_severity:
-        return None
+    if not set_priority:
+        if mapping_type in {"priority", "severity"}:
+            return None
 
     # Verdict to level mapping - OpenCTI expects different values for priority vs severity
     if mapping_type == "priority":

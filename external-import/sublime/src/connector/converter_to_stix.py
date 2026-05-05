@@ -1,7 +1,10 @@
 import ipaddress
 
 import stix2
-from pycti import (  # CustomObjectCaseIncident,
+from connectors_sdk.models.enums import TLPLevel
+from pycti import (
+    CaseIncident,
+    CustomObjectCaseIncident,
     Identity,
     Incident,
     Indicator,
@@ -23,7 +26,7 @@ class ConverterToStix:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        # tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        tlp_level: TLPLevel,
     ):
         """
         Initialize the converter with necessary configuration.
@@ -32,12 +35,12 @@ class ConverterToStix:
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            tlp_level (str): The TLP level to add to the created STIX entities.
+            tlp_level (TLPLevel): The TLP level to add to the created STIX entities.
         """
         self.helper = helper
 
         self.author = self.create_author()
-        # self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+        self.tlp_marking = self._create_tlp_marking(level=tlp_level.value)
 
     @staticmethod
     def create_author() -> stix2.Identity:
@@ -55,18 +58,55 @@ class ConverterToStix:
         )
         return author
 
-    # def create_case_incident(self, case_data: dict):
-    #     """Create Custom Case Incident object"""
-    #     # case_data["id"] = CaseIncident.generate_id(name=name, created=created)
-    #     case_data["created_by_ref"] = self.author["id"]
-    #     case_data["object_marking_refs"] = [stix2.TLP_AMBER]
-    #     return CustomObjectCaseIncident(**case_data)
+    def create_case_incident(
+        self,
+        name: str,
+        created: str,
+        description: str = None,
+        object_refs: list = None,
+        external_references: list = None,
+        severity: str = None,
+        priority: str = None,
+    ):
+        """Create Custom Case Incident STIX object with deterministic ID.
+
+        Args:
+            name: Case incident name.
+            created: ISO 8601 timestamp used for deterministic ID generation.
+            description: Case description.
+            object_refs: List of STIX object IDs to include in the case.
+            external_references: List of external reference dicts.
+            severity: Severity level (e.g. "high", "medium", "low").
+            priority: Priority level (e.g. "P1", "P2", "P3", "P4").
+
+        Returns:
+            CustomObjectCaseIncident: STIX case-incident object.
+        """
+        case_data = {
+            "id": CaseIncident.generate_id(name=name, created=created),
+            "name": name,
+            "created": created,
+            "created_by_ref": self.author["id"],
+            "object_marking_refs": [self.tlp_marking.id],
+        }
+        if description:
+            case_data["description"] = description
+        if object_refs:
+            case_data["object_refs"] = object_refs
+        if external_references:
+            case_data["external_references"] = external_references
+        if severity:
+            case_data["severity"] = severity
+        if priority:
+            case_data["priority"] = priority
+
+        return CustomObjectCaseIncident(**case_data)
 
     def create_domain_name(self, value: str):
         """Create DomainName object"""
         return stix2.DomainName(
             value=value,
-            # object_marking_refs=[self.tlp_marking.id],
+            object_marking_refs=[self.tlp_marking.id],
             custom_properties={
                 "x_opencti_created_by_ref": self.author["id"],
             },
@@ -76,7 +116,7 @@ class ConverterToStix:
         """Create EmailAddress object"""
         return stix2.EmailAddress(
             value=value,
-            # object_marking_refs=self.tlp,
+            object_marking_refs=[self.tlp_marking.id],
             custom_properties={
                 "x_opencti_created_by_ref": self.author["id"],
             },
@@ -99,7 +139,7 @@ class ConverterToStix:
             name=file_name,
             size=file_size,
             mime_type=mime_type,
-            # object_marking_refs=[self.tlp_marking.id],
+            object_marking_refs=[self.tlp_marking.id],
             custom_properties={
                 "x_opencti_created_by_ref": self.author["id"],
             },
@@ -122,7 +162,7 @@ class ConverterToStix:
             description=description,
             created=created_timestamp,
             created_by_ref=self.author["id"],
-            object_marking_refs=[stix2.TLP_AMBER],
+            object_marking_refs=[self.tlp_marking.id],
             external_references=[
                 {
                     "source_name": "Sublime",
@@ -150,7 +190,7 @@ class ConverterToStix:
             pattern_type="stix",
             labels=["malicious-activity"],
             created_by_ref=self.author["id"],
-            object_marking_refs=[stix2.TLP_AMBER],
+            object_marking_refs=[self.tlp_marking.id],
             custom_properties={
                 "x_opencti_type": "Indicator",
             },
@@ -162,7 +202,7 @@ class ConverterToStix:
         if self._is_ipv4(ip_value):
             return stix2.IPv4Address(
                 value=ip_value,
-                # object_marking_refs=[stix2.TLP_WHITE],
+                object_marking_refs=[self.tlp_marking.id],
                 custom_properties={
                     "x_opencti_created_by_ref": f"{self.author.id}",
                 },
@@ -170,7 +210,7 @@ class ConverterToStix:
         elif self._is_ipv6(ip_value):
             return stix2.IPv6Address(
                 value=ip_value,
-                # object_marking_refs=[stix2.TLP_WHITE],
+                object_marking_refs=[self.tlp_marking.id],
                 custom_properties={
                     "x_opencti_created_by_ref": f"{self.author.id}",
                 },
@@ -199,14 +239,14 @@ class ConverterToStix:
             source_ref=source_id,
             target_ref=target_id,
             created_by_ref=self.author.id,
-            object_marking_refs=[stix2.TLP_AMBER],
+            object_marking_refs=[self.tlp_marking.id],
         )
 
     def create_url(self, url: str):
         """Create URL object"""
         return stix2.URL(
             value=url,
-            # object_marking_refs=[],
+            object_marking_refs=[self.tlp_marking.id],
             custom_properties={
                 "x_opencti_created_by_ref": self.author.id,
             },

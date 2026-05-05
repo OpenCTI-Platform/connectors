@@ -9,7 +9,6 @@ from datetime import datetime, timedelta, timezone
 
 import isodate
 import requests
-import stix2
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.utils import lookup_MDM_value, map_attack_score_to_level, sanitize_email
@@ -34,9 +33,7 @@ class SublimeConnector:
         self.helper = helper
 
         self.verdicts = [
-            v.strip().lower()
-            for v in self.config.sublime.verdicts.split(",")
-            if v.strip()
+            v.strip().lower() for v in self.config.sublime.verdicts if v.strip()
         ]
 
         # Track first run of this connector session (not persisted)
@@ -50,7 +47,7 @@ class SublimeConnector:
 
         self.converter_to_stix = ConverterToStix(
             self.helper,
-            # tlp_level=self.config.template.tlp_level,
+            tlp_level=self.config.sublime.tlp_level,
         )
 
         # Create Sublime Identity for STIX objects
@@ -277,9 +274,11 @@ class SublimeConnector:
         primary_email, observables, additional_emails = self._create_primary_email(
             message_group
         )
+        # Add observables (email-addr, urls, etc.) BEFORE email-message so
+        # that referenced objects are ingested first by OpenCTI.
+        objects.extend(observables)
         if primary_email:
             objects.append(primary_email)
-        objects.extend(observables)
         objects.extend(additional_emails)  # Add any additional EmailMessage objects
 
         # Create basic emails from previews of other emails in group
@@ -376,12 +375,6 @@ class SublimeConnector:
             or "Email content not provided due to Sublime Security access controls.",
         }
 
-        if sender:
-            email_data["from_ref"] = sender.id
-
-        if recipients:
-            email_data["to_refs"] = [recipient.id for recipient in recipients]
-
         email = self.converter_to_stix.create_email_message(email_data)
         return email, observables, []  # No additional emails in single email case
 
@@ -424,7 +417,10 @@ class SublimeConnector:
             for hash_value in attachment_hashes:
                 if hash_value:
                     file_obj = self.converter_to_stix.create_file(
-                        hashes={"SHA-256": hash_value}
+                        hashes={"SHA-256": hash_value},
+                        file_name=None,
+                        file_size=None,
+                        mime_type=None,
                     )
                     all_objects.append(file_obj)
 
@@ -541,13 +537,10 @@ class SublimeConnector:
             description=incident_description,
             group_id=group_id,
             incident_type=self.config.sublime.incident_type,
-            url="{}/messages/{}".format(
-                self.config.sublime.url.unicode_string(),
-                str(group_id or "unknown"),
-            ),
+            url=f"{self.config.sublime.url.unicode_string()}/messages/{group_id or 'unknown'}",
             severity=map_attack_score_to_level(
                 self.config.sublime.set_priority,
-                self.config.sublime.severity,
+                self.config.sublime.set_severity,
                 attack_score_verdict,
                 "severity",
             ),
@@ -649,16 +642,19 @@ class SublimeConnector:
                 {"error": e},
             )
             # Fallback to simple incident naming
-            return "{} {}".format(self.config.sublime.incident_prefix, subject)
+            return f"{self.config.sublime.incident_prefix} {subject}"
 
     def _create_opencti_case(self, incident, stix_objects, message_group):
         """
-        Create a Case using OpenCTI API for the incident.
+        Create a CaseIncident STIX object for the incident.
 
         Args:
             incident (stix2.Incident): The main incident object
             stix_objects (list): All STIX objects created for this message group
             message_group (dict): Original message group data from Sublime API
+
+        Returns:
+            CustomObjectCaseIncident or None: The case STIX object, or None on failure.
         """
         group_id = message_group.get("id", "unknown")
 
@@ -724,14 +720,14 @@ class SublimeConnector:
                 recipient_plural,
                 subject_abbreviated,
             )
-            object_ids = [incident.id] + [
+            object_refs = [incident.id] + [
                 obj.id
                 for obj in stix_objects
                 if hasattr(obj, "id")
                 and obj.id not in [self.sublime_identity.id, incident.id]
             ]
 
-            # Convert STIX external references to dictionary format for OpenCTI API
+            # Use incident's external references for the case
             external_refs = [
                 {
                     "source_name": ref.source_name,
@@ -742,97 +738,54 @@ class SublimeConnector:
                 for ref in incident.external_references
             ]
 
-            # Create case data without external references. They're added separately
-            group_id = message_group.get("id", "unknown")
             case_description = self._create_description(message_group)
 
-            case_data = {
-                "name": case_name,
-                "description": case_description,
-                "objects": object_ids,
-                "created_by": self.sublime_identity.id,
-                "object_marking_refs": [stix2.TLP_AMBER.id],
-            }
+            # Use incident's created timestamp for deterministic ID generation
+            created_timestamp = incident.created
 
             # Add priority and severity if configured
             attack_score_verdict = message_group.get("attack_score_verdict")
 
             priority = map_attack_score_to_level(
                 self.config.sublime.set_priority,
-                self.config.sublime.severity,
+                self.config.sublime.set_severity,
                 attack_score_verdict,
                 "priority",
             )
             severity = map_attack_score_to_level(
                 self.config.sublime.set_priority,
-                self.config.sublime.severity,
+                self.config.sublime.set_severity,
                 attack_score_verdict,
                 "severity",
             )
 
-            if priority:
-                case_data["priority"] = priority
-
-            if severity:
-                case_data["severity"] = severity
-
             self.helper.connector_logger.info(
-                "[Sublime Connector] Creating new case for group",
+                "[Sublime Connector] Creating case incident STIX object for group",
                 {"group_id": group_id},
             )
-            case = self.helper.api.case_incident.create(**case_data)
 
-            # Add external references after case creation (for all cases to ensure proper linking)
-            if case and isinstance(case, dict) and case.get("id") and external_refs:
-                try:
-                    # Get existing external references to avoid duplicates
-                    existing_ext_refs = case.get("externalReferences", [])
-                    existing_ext_ids = {
-                        ref.get("external_id") for ref in existing_ext_refs
-                    }
+            case = self.converter_to_stix.create_case_incident(
+                name=case_name,
+                created=created_timestamp,
+                description=case_description,
+                object_refs=object_refs,
+                external_references=external_refs,
+                severity=severity,
+                priority=priority,
+            )
 
-                    for ext_ref in external_refs:
-                        # Skip if external reference already exists on this case
-                        if ext_ref["external_id"] in existing_ext_ids:
-                            continue
-
-                        ext_ref_result = self.helper.api.external_reference.create(
-                            source_name=ext_ref["source_name"],
-                            description=ext_ref["description"],
-                            url=ext_ref["url"],
-                            external_id=ext_ref["external_id"],
-                        )
-
-                        if (
-                            ext_ref_result
-                            and isinstance(ext_ref_result, dict)
-                            and ext_ref_result.get("id")
-                        ):
-                            self.helper.api.stix_domain_object.add_external_reference(
-                                id=case["id"],
-                                external_reference_id=ext_ref_result["id"],
-                            )
-                except Exception as ext_ref_error:
-                    self.helper.connector_logger.error(
-                        "[Sublime Connector] Failed to add external references to case",
-                        {"case_id": case.get("id", "unknown"), "error": ext_ref_error},
-                    )
-
-            if case:
-                self.helper.connector_logger.info(
-                    "[Sublime Connector] Successfully processed case with ID",
-                    {"case_id": case.get("id", "unknown")},
-                )
-            else:
-                self.helper.connector_logger.error(
-                    "[Sublime Connector] Case creation returned None"
-                )
+            self.helper.connector_logger.info(
+                "[Sublime Connector] Successfully created case incident",
+                {"case_id": case.id},
+            )
+            return case
 
         except Exception as e:
             self.helper.connector_logger.error(
                 "[Sublime Connector] Failed to create case for incident",
-                {"incident_id": incident.id, "erro": e},
+                {"incident_id": incident.id, "error": e},
             )
+            return None
 
     def _create_indicator_for_observable(self, observable):
         """
@@ -1042,9 +995,9 @@ class SublimeConnector:
 
             # Only use MIME type if provided and not generic
             mime_type = (
-                attachment["content_type"]
-                if attachment.get("content_type")
-                and attachment["content_type"] != "application/octet-stream"
+                content_type
+                if (content_type := attachment.get("content_type"))
+                and content_type != "application/octet-stream"
                 else None
             )
 
@@ -1167,6 +1120,24 @@ class SublimeConnector:
                         flattened_objects.append(obj)
                 stix_objects = flattened_objects
 
+                # Deduplicate objects by ID to avoid "single ref" conflicts
+                seen_ids = set()
+                unique_objects = []
+                for obj in stix_objects:
+                    obj_id = getattr(obj, "id", None)
+                    if obj_id and obj_id in seen_ids:
+                        continue
+                    if obj_id:
+                        seen_ids.add(obj_id)
+                    unique_objects.append(obj)
+                stix_objects = unique_objects
+
+                # Create case incident STIX object if enabled
+                if self.config.sublime.auto_create_cases:
+                    case = self._create_opencti_case(incident, stix_objects, message)
+                    if case:
+                        stix_objects.append(case)
+
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
 
                 # Send to OpenCTI
@@ -1177,9 +1148,9 @@ class SublimeConnector:
 
                 try:
                     self.helper.send_stix2_bundle(
-                        stix_objects_bundle.serialize(),
+                        stix_objects_bundle,
                         work_id=work_id,
-                        cleanup_inconsistent_bundle=True,
+                        update=True,
                     )
                     self.helper.connector_logger.debug(
                         "[Sublime Connector] Bundle sent successfully for incident",
@@ -1190,10 +1161,6 @@ class SublimeConnector:
                         "[Sublime Connector] Failed to send STIX bundle for incident",
                         {"incident_id": incident.id, "error": bundle_error},
                     )
-
-                # Create OpenCTI case if enabled
-                if self.config.sublime.auto_create_cases:
-                    self._create_opencti_case(incident, stix_objects, message)
 
                 processed_count += 1
 

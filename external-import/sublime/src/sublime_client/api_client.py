@@ -1,10 +1,12 @@
 import requests
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
+from pydantic import HttpUrl, SecretStr
 
 
 class SublimeClient:
-    def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: str):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: SecretStr
+    ):
         """
         Initialize the client with necessary configuration.
         For log purpose, the connector's helper CAN be injected.
@@ -12,8 +14,8 @@ class SublimeClient:
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            base_url (str): The external API base URL.
-            api_key (str): The API key to authenticate the connector to the external API.
+            base_url (HttpUrl): The external API base URL.
+            api_key (SecretStr): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
         self.base_url = base_url
@@ -67,9 +69,9 @@ class SublimeClient:
 
             api_url = self.base_url.unicode_string().rstrip("/")
             if not api_url.endswith("/v1"):
-                api_url = api_url + "/v1"
+                api_url = f"{api_url}/v1"
 
-            full_url = "{}/messages/groups".format(api_url)
+            full_url = f"{api_url}/messages/groups"
 
             self.helper.connector_logger.debug(
                 "[API] API request for groups", {"url": full_url, "params": params}
@@ -86,9 +88,7 @@ class SublimeClient:
                     },
                 )
                 raise Exception(
-                    "API request failed: {} {}".format(
-                        response.status_code, response.text
-                    )
+                    f"API request failed: {response.status_code} {response.text}"
                 )
 
             data = response.json()
@@ -109,9 +109,9 @@ class SublimeClient:
         try:
             api_url = self.base_url.unicode_string().rstrip("/")
             if not api_url.endswith("/v1"):
-                api_url = api_url + "/v1"
+                api_url = f"{api_url}/v1"
 
-            full_url = "{}/messages/groups/{}".format(api_url, group_id)
+            full_url = f"{api_url}/messages/groups/{group_id}"
 
             self.helper.connector_logger.debug(
                 "[API] Fetching group", {"group_id": group_id}
