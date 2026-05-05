@@ -59,8 +59,11 @@ class TestMapAttackScoreToLevel:
     def test_set_priority_false_returns_none_for_priority(self):
         assert map_attack_score_to_level(False, True, "malicious", "priority") is None
 
-    def test_set_priority_false_returns_none_for_severity(self):
-        assert map_attack_score_to_level(False, True, "malicious", "severity") is None
+    def test_set_severity_false_returns_none_for_severity(self):
+        assert map_attack_score_to_level(True, False, "malicious", "severity") is None
+
+    def test_set_priority_false_still_returns_severity_when_enabled(self):
+        assert map_attack_score_to_level(False, True, "malicious", "severity") == "high"
 
     def test_case_insensitive(self):
         assert map_attack_score_to_level(True, True, "MALICIOUS", "severity") == "high"

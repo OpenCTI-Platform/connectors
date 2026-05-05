@@ -96,7 +96,10 @@ class SublimeClient:
             return group_ids
 
         except Exception as err:
-            self.helper.connector_logger.error(err)
+            self.helper.connector_logger.error(
+                "[API] Error fetching group IDs", {"error": str(err)}
+            )
+            raise
 
     def get_single_group(self, group_id: str) -> dict:
         """
