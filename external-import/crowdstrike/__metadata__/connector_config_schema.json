@@ -200,6 +200,36 @@
       },
       "type": "array"
     },
+    "CROWDSTRIKE_INDICATOR_IP_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P90D' for 90 days). Covers both IPv4 and IPv6.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_DOMAIN_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P365D' for 365 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_URL_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P60D' for 60 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_HASH_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P730D' for 730 days). Covers MD5, SHA1, and SHA256 hashes.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_DEFAULT_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P30D' for 30 days). Default threshold for any other indicator type.",
+      "format": "duration",
+      "type": "string"
+    },
     "CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE": {
       "default": 50,
       "description": "Default confidence score for entities without explicit score.",
