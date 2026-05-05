@@ -80,6 +80,10 @@ class DoppelConfig(BaseConfigModel):
         description="Optimizes request volume and memory usage per fetch", default=100
     )
 
+    enable_grouping_case: bool = Field(
+        description="Enables creation of grouping cases", default=False
+    )
+
 
 class ConnectorSettings(BaseConnectorSettings):
     """

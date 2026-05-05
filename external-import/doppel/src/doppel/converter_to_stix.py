@@ -27,6 +27,7 @@ from stix2 import (
     TLP_RED,
     TLP_WHITE,
     DomainName,
+    Grouping,
     Identity,
     Indicator,
     IPv4Address,
@@ -151,12 +152,36 @@ class ConverterToStix:
             "description": build_description(alert),
             "priority": priority,               
             "severity": alert.get('severity'),
-            "labels": build_labels(alert) + [f"priority:{priority}", "doppel", "takedown"],
+            "labels": build_labels(alert) + [f"priority:{priority}"],
             "object_refs": object_refs,
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.tlp_marking.id],
             "allow_custom": True,
         }
+
+    def create_grouping_case(self, alert: dict, object_refs: list) -> Grouping:
+        """
+        Create Grouping case object
+        """
+        priority = calculate_priority(alert.get("score", 0))
+        grouping_name = f"Case for Alert {alert['id']}"
+        case_labels = build_labels(alert)
+        case_labels.append(f"priority:{priority}")
+
+        return Grouping(
+            id=PyctiGrouping.generate_id(
+                name=grouping_name, context="suspicious-activity"
+            ),
+            name=grouping_name,
+            context="suspicious-activity",
+            object_refs=object_refs,
+            created_by_ref=self.author.id,
+            external_references=build_external_references(alert),
+            description=build_description(alert),
+            labels=case_labels,
+            object_marking_refs=[self.tlp_marking.id],
+            allow_custom=True,
+        )
 
     def create_relationship(
         self, source_id: str, target_id: str, relationship_type: str
@@ -257,26 +282,26 @@ class ConverterToStix:
                 domain_observable = None
                 phone_number_observable = None
                 ipv4_observable = None
-                grouping_case_refs = []
+                case_refs = []
                 observable_name = domain_name or phone_number
 
                 # Create domain object if exist, else create phone number instead
                 if domain_name:
                     domain_observable = self.create_domain(domain_name, alert)
                     stix_objects.append(domain_observable)
-                    grouping_case_refs.append(domain_observable)
+                    case_refs.append(domain_observable)
                 else:
                     phone_number_observable = self.create_phone_number(
                         phone_number, alert
                     )
                     stix_objects.append(phone_number_observable)
-                    grouping_case_refs.append(phone_number_observable)
+                    case_refs.append(phone_number_observable)
 
                 # Create ipv4 object if exists
                 if ipv4_address:
                     ipv4_observable = self.create_ipv4(ipv4_address, alert)
                     stix_objects.append(ipv4_observable)
-                    grouping_case_refs.append(ipv4_observable)
+                    case_refs.append(ipv4_observable)
 
                     # Create relationship between ipv4 and domain
                     if domain_observable:
@@ -288,14 +313,14 @@ class ConverterToStix:
                         stix_objects.append(relationship)
 
                 # Create grouping case
-                if grouping_case_refs:
+                if case_refs and self.enable_grouping_case:
                     grouping_case = self.create_grouping_case(
-                        alert, object_refs=grouping_case_refs
+                        alert, object_refs=case_refs
                     )
                     stix_objects.append(grouping_case)
 
                     # Create related-to relationship between case and observables
-                    for entity in grouping_case_refs:
+                    for entity in case_refs:
                         related_to = self.create_relationship(
                             source_id=grouping_case.id,
                             target_id=entity.id,
@@ -566,11 +591,15 @@ class ConverterToStix:
             else:
                 return
 
+            case_refs = []
+
             # Create Indicator
             indicator = self.create_indicator(
                 alert, pattern, name, created_at, modified_at
             )
             stix_objects.append(indicator)
+            case_refs.append(indicator)
+
             self.helper.connector_logger.debug(
                 "[Process taken down] New Indicator created",
                 {
@@ -587,6 +616,21 @@ class ConverterToStix:
                 relationship_type="based-on",
             )
             stix_objects.append(indicator_relationship)
+
+            # Create RFT case
+            case_rft = self.create_case_rft(
+                    alert, object_refs=case_refs]
+                )
+            stix_objects.append(case_rft)
+
+                # Create related-to relationship between case and observables
+            for entity in case_refs:
+                related_to = self.create_relationship(
+                    source_id=case_rft.id,
+                    target_id=entity.id,
+                    relationship_type="related-to",
+                )
+                stix_objects.append(related_to)
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Created based-on relationship for new indicator",
