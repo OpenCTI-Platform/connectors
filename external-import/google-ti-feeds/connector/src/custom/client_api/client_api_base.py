@@ -110,6 +110,7 @@ class BaseClientAPI:
         origins: list[str] | None = None,
         entity_name: str = "items",
         cursor_key: str = "cursor",
+        extra_filters: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Build filter configurations for a collection type.
 
@@ -121,6 +122,7 @@ class BaseClientAPI:
             origins: Optional list of origins to filter by
             entity_name: Name of entities for logging (reports, threat_actors, etc.)
             cursor_key: Key to use for cursor in initial_state
+            extra_filters: Optional list of additional filters to include in the query
 
         Returns:
             list of filter configurations with params and cursors
@@ -129,6 +131,8 @@ class BaseClientAPI:
         base_filters = (
             f"collection_type:{collection_type} last_modification_date:{start_date}+"
         )
+
+        extra_filters = extra_filters or []
 
         types = types or ["All"]
         origins = origins or ["All"]
@@ -156,6 +160,9 @@ class BaseClientAPI:
                     description = f"type={item_type}, all origins"
                 else:
                     description = f"type={item_type}, origin={origin}"
+
+                for filter in extra_filters:
+                    current_filter += f" {filter}"
 
                 config = {
                     "params": {
