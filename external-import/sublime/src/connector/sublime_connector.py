@@ -1151,6 +1151,7 @@ class SublimeConnector:
                         stix_objects_bundle,
                         work_id=work_id,
                         update=True,
+                        cleanup_inconsistent_bundle=True,
                     )
                     self.helper.connector_logger.debug(
                         "[Sublime Connector] Bundle sent successfully for incident",

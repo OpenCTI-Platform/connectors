@@ -5,7 +5,7 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_ID=d5003f91-27b0-4b4e-995d-a4b9a8a970a4
       # - CONNECTOR_NAME=Sublime Security
       # - CONNECTOR_SCOPE=sublime
       # - CONNECTOR_LOG_LEVEL=error
@@ -22,4 +22,5 @@ services:
       # - SUBLIME_FIRST_RUN_DURATION=PT8H
       # - SUBLIME_FORCE_HISTORICAL=false
       # - SUBLIME_BATCH_SIZE=100
+      # - SUBLIME_TLP_LEVEL=amber
     restart: always
