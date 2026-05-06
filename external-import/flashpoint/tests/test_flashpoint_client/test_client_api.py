@@ -50,6 +50,11 @@ def test_flashpoint_client_session(mock_flashpoint_client):
         mock_flashpoint_client.session.headers["Authorization"]
         == f"Bearer {TEST_API_KEY}"
     )
+    assert (
+        mock_flashpoint_client.session.headers["x-fp-integrationplatform"] == "OpenCTI"
+    )
+    assert "x-fp-integrationplatformversion" in mock_flashpoint_client.session.headers
+    assert "x-fp-integrationversion" in mock_flashpoint_client.session.headers
 
 
 def test_iter_indicators_pages_should_return_items_from_single_page_response(

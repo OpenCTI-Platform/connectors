@@ -55,9 +55,12 @@ class FlashpointConnector:
         self.helper.force_ping()  # force update on OpenCTI
 
     @staticmethod
-    def _deduplicate_stix_objects(stix_objects: list) -> list:
+    def _deduplicate_stix_objects(
+        stix_objects: list, seen_ids: set[str] | None = None
+    ) -> list:
+        if seen_ids is None:
+            seen_ids = set()
         deduplicated_stix_objects = []
-        seen_ids: set[str] = set()
 
         for stix_object in stix_objects:
             object_id = getattr(stix_object, "id", None)
@@ -178,6 +181,7 @@ class FlashpointConnector:
             work_id = None
             number_indicators = 0
             last_modified = start_date
+            seen_ids: set[str] = set()
             try:
                 for page_number, indicators_page in enumerate(
                     self.client.iter_indicators_pages(query_since), start=1
@@ -228,15 +232,18 @@ class FlashpointConnector:
                             )
 
                         converter = self.indicator_converter_to_stix
+                        for obj in page_main_indicators:
+                            obj_id = getattr(obj, "id", None)
+                            if isinstance(obj_id, str):
+                                seen_ids.add(obj_id)
                         all_octi_objects = [
                             converter.marking,
                             converter.author,
                             *page_main_indicators,
-                            *page_octi_objects,
+                            *self._deduplicate_stix_objects(
+                                page_octi_objects, seen_ids
+                            ),
                         ]
-                        all_octi_objects = self._deduplicate_stix_objects(
-                            all_octi_objects
-                        )
                         all_stix_objects = [
                             obj.to_stix2_object() for obj in all_octi_objects
                         ]
@@ -249,6 +256,7 @@ class FlashpointConnector:
                             },
                         )
                         bundle = self.helper.stix2_create_bundle(all_stix_objects)
+                        # Make sure to not use cleanup_inconsistent_bundle here as some objects might have been already sent in previous pages.
                         self._send_bundle(work_id=work_id, serialized_bundle=bundle)
 
                     # Update state after each successful page to allow safe resume

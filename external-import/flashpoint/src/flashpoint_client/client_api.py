@@ -1,4 +1,5 @@
 import base64
+import importlib.metadata
 from datetime import datetime, timedelta
 from typing import Generator
 
@@ -13,6 +14,11 @@ class FlashpointClientError(Exception):
     """
     Custom exception for Flashpoint client errors
     """
+
+
+def _get_pycti_version() -> str:
+    """Return the installed pycti version, which is aligned with the OpenCTI platform version."""
+    return importlib.metadata.version("pycti")
 
 
 class FlashpointClient:
@@ -31,10 +37,15 @@ class FlashpointClient:
             api_base_url.rstrip("/") if isinstance(api_base_url, str) else api_base_url
         )
 
+        opencti_version = _get_pycti_version()
+
         # Define headers in session and update when needed
         headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer " + api_key,
+            "x-fp-integrationplatform": "OpenCTI",
+            "x-fp-integrationplatformversion": opencti_version,
+            "x-fp-integrationversion": opencti_version,
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
