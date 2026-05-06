@@ -1,0 +1,32 @@
+version: '3'
+services:
+  connector-opencti-stream:
+    image: opencti/connector-opencti-stream:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=OpenCTI Stream
+      - CONNECTOR_SCOPE=opencti-stream
+      - CONNECTOR_LOG_LEVEL=info
+      # Live stream consumed by the connector
+      - CONNECTOR_LIVE_STREAM_ID=live # 'live', 'raw' or a stream collection UUID
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false # delete events are ignored, do not subscribe to them
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # forward only the event's own object
+      # Output mode (uncomment ONE of the blocks below)
+      # 1) Default queue mode (RabbitMQ) - workers ingest the bundles directly
+      - CONNECTOR_SEND_TO_QUEUE=true
+      # 2) Diode mode - write bundles to a directory consumed by the diode-import connector
+      # - CONNECTOR_SEND_TO_QUEUE=false
+      # - CONNECTOR_SEND_TO_DIRECTORY=true
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=/data/diode
+      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7
+      # 3) S3 mode - upload bundles to an S3 bucket consumed by the diode-import connector
+      # - CONNECTOR_SEND_TO_QUEUE=false
+      # - CONNECTOR_SEND_TO_S3=true
+      # - CONNECTOR_SEND_TO_S3_BUCKET=my-bucket # optional, uses OpenCTI bucket if empty
+      # - CONNECTOR_SEND_TO_S3_FOLDER=connectors
+      # - CONNECTOR_SEND_TO_S3_RETENTION=7
+    restart: always
