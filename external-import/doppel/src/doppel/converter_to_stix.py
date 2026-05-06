@@ -163,7 +163,7 @@ class ConverterToStix:
             "severity": alert.get('severity'),
             "labels": build_labels(alert) + [f"priority:{priority}"],
             "external_references": build_external_references(alert),
-            "custom_properties": build_custom_properties(alert, self.author_id),
+            "custom_properties": build_custom_properties(alert, self.author.id),
             "object_refs": object_refs,
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.tlp_marking.id],
@@ -699,13 +699,13 @@ class ConverterToStix:
                 stix_objects.append(case_rft)
 
                 # Create related-to relationship between case and observables
-                for entity in case_refs:
-                    related_to = self.create_relationship(
-                        source_id=case_rft.standard_id,
-                        target_id=entity.id,
-                        relationship_type="related-to",
-                    )
-                    stix_objects.append(related_to)
+                # for entity in case_refs:
+                #     related_to = self.create_relationship(
+                #         source_id=case_rft.properties.id,
+                #         target_id=entity.id,
+                #         relationship_type="related-to",
+                #     )
+                #     stix_objects.append(related_to)
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Created based-on relationship for new indicator",
