@@ -62,7 +62,14 @@ class OpenCTIStream:
 
     def run(self) -> None:
         try:
-            self.helper.listen_stream(self._process_message)
+            # Pass an explicit URL stripped of any trailing slash. `helper.opencti_url`
+            # is normalized by pydantic's `HttpUrl` to always end with "/", and pycti's
+            # `listen_stream` concatenates "/stream" directly, which would produce a
+            # double slash in the SSE URL. Stripping here avoids it.
+            self.helper.listen_stream(
+                self._process_message,
+                url=self.helper.opencti_url.rstrip("/"),
+            )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("OpenCTI Stream connector stopping...")
             sys.exit(0)
