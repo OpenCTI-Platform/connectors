@@ -14,7 +14,7 @@ services:
       # Live stream consumed by the connector
       - CONNECTOR_LIVE_STREAM_ID=live # 'live', 'raw' or a stream collection UUID
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false # delete events are ignored, do not subscribe to them
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # forward only the event's own object
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false # include dependent objects in each event
       # Output mode (uncomment ONE of the blocks below)
       # 1) Default queue mode (RabbitMQ) - workers ingest the bundles directly
       - CONNECTOR_SEND_TO_QUEUE=true

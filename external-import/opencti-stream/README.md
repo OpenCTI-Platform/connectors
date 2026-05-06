@@ -97,7 +97,7 @@ There are a number of configuration options, which are set either in `docker-com
 |---------------------------------|-----------------------------|-----------------------------------------|---------|-----------|-----------------------------------------------------------------------------------------------|
 | Live Stream ID                  | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              |         | Yes       | The OpenCTI live stream to subscribe to: `live`, `raw`, or a stream collection UUID.          |
 | Live Stream Listen Delete       | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | false   | No        | Whether to subscribe to delete events. Disabled by default (this connector forwards upserts). |
-| Live Stream No Dependencies     | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true    | No        | Whether to receive only the event's own object (no dependent objects).                        |
+| Live Stream No Dependencies     | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | false   | No        | Whether to receive only the event's own object (no dependent objects). Disabled by default so dependencies are included. |
 
 ### Output mode parameters
 
@@ -142,7 +142,7 @@ docker build -t opencti/connector-opencti-stream:latest .
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=live
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false
       - CONNECTOR_SEND_TO_QUEUE=true
     restart: always
 ```
@@ -160,7 +160,7 @@ docker build -t opencti/connector-opencti-stream:latest .
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=ChangeMeStreamUUID
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false
       - CONNECTOR_SEND_TO_QUEUE=false
       - CONNECTOR_SEND_TO_DIRECTORY=true
       - CONNECTOR_SEND_TO_DIRECTORY_PATH=/data/diode
@@ -183,7 +183,7 @@ docker build -t opencti/connector-opencti-stream:latest .
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_LIVE_STREAM_ID=ChangeMeStreamUUID
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=false
-      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=false
       - CONNECTOR_SEND_TO_QUEUE=false
       - CONNECTOR_SEND_TO_S3=true
       - CONNECTOR_SEND_TO_S3_FOLDER=connectors

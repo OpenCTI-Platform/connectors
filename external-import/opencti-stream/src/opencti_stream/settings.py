@@ -48,9 +48,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     live_stream_no_dependencies: bool = Field(
         description=(
             "Whether to receive only the event's own object from the stream "
-            "(without dependent objects). True by default to keep one event = one bundle."
+            "(without dependent objects). False by default so dependencies are included "
+            "and forwarded together with each event."
         ),
-        default=True,
+        default=False,
     )
 
 
