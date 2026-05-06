@@ -31,6 +31,11 @@ crowdstrike:
   report_guess_relations: false # Automatically guess and create relationships between entities in reports
   indicator_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1,password,username'
+  indicator_ip_max_age: 'P90D' # ISO8601 Duration format. Covers both IPv4 and IPv6.
+  indicator_domain_max_age: 'P365D' # ISO8601 Duration format.
+  indicator_url_max_age: 'P60D' # ISO8601 Duration format.
+  indicator_hash_max_age: 'P730D' # ISO8601 Duration format. Covers MD5, SHA1, and SHA256.
+  indicator_default_max_age: 'P30D' # ISO8601 Duration format. Default threshold for any other type.
   default_x_opencti_score: 50
   indicator_low_score: 40
   indicator_low_score_labels: 'MaliciousConfidence/Low'
