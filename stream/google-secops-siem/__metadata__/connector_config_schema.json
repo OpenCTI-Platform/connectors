@@ -94,20 +94,32 @@
     "SECOPS_SIEM_AUTH_URI": {
       "default": "https://accounts.google.com/o/oauth2/auth",
       "description": "OAuth2 authorization URI.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SECOPS_SIEM_TOKEN_URI": {
       "default": "https://oauth2.googleapis.com/token",
       "description": "OAuth2 token URI.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SECOPS_SIEM_AUTH_PROVIDER_CERT": {
       "default": "https://www.googleapis.com/oauth2/v1/certs",
       "description": "Auth provider x509 certificate URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     },
     "SECOPS_SIEM_CLIENT_CERT_URL": {
       "description": "Client x509 certificate URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
       "type": "string"
     }
   },
