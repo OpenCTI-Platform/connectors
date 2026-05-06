@@ -198,16 +198,25 @@ If ATT&CK labels are present but a technique cannot be resolved, the connector w
 
 ### IOC Extraction from Report Text
 
+> **⚠️ Warning — false positives**
+> IOCs are extracted from unstructured report text using pattern matching; there is no way to verify their maliciousness at extraction time.
+> For this reason, **this feature only creates Observables, not Indicators**.
+> Extracted Observables are intended to be reviewed by an analyst before being promoted to Indicators, or enriched via external sources (e.g. VirusTotal, AbuseIPDB) to trigger automatic promotion.
+
 The connector can automatically extract IOCs from report text content and create STIX Observables linked to the report. This is useful for capturing indicators mentioned in report narratives that CrowdStrike does not always expose as structured indicators via their API.
 
 **Configuration:**
 
 ```yaml
 crowdstrike:
-  report_extract_iocs: 'ipv4,ipv6,domain,url,md5,sha1,sha256'
+  report_extract_iocs: 'ipv4,ipv6,domain,md5,sha1,sha256'
 ```
 
 Set `report_extract_iocs` to a comma-separated list of IOC types to extract. Leave empty to disable.
+
+> **💡 Note — URL extraction**
+> Including `url` can lead to a high volume of false positives, as report contents frequently contain links to public articles and external references.
+> Consider using `ipv4,ipv6,domain,md5,sha1,sha256` instead.
 
 **Supported IOC types:**
 
@@ -227,6 +236,7 @@ Set `report_extract_iocs` to a comma-separated list of IOC types to extract. Lea
 - Automatically handles defanged indicators (`hxxp`, `[.]`)
 - Filters out private/reserved IP addresses (only globally routable IPs are kept)
 - Deduplicates: a domain found inside an extracted URL is not created separately
+- **Only Observables are created** — no Indicators are generated with this option
 - Observables are created with `score=0` and label `extracted-from-report` to distinguish them from CrowdStrike's structured indicators
 
 ### Data Flow
