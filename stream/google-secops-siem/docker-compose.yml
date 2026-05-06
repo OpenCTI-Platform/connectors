@@ -6,11 +6,11 @@ services:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
-      # Connector's definition parameters REQUIRED
-      # - CONNECTOR_ID=ChangeMe
-      # - "CONNECTOR_NAME=Google SecOps SIEM"
+      # Connector's definition parameters
+      # - CONNECTOR_ID=9257254e-b4ef-4592-ab11-6d37d4aa321f
+      # - CONNECTOR_NAME=Google SecOps SIEM
       # - CONNECTOR_LOG_LEVEL=error
-      # - CONNECTOR_LIVE_STREAM_ID=CHANGEME # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_ID=ChangeMe # ID of the live stream created in the OpenCTI UI
       # - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true
       # - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true
 

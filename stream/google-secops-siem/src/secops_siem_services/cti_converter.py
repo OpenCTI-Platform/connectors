@@ -1,24 +1,23 @@
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
 from secops_siem_services.utils import ENTITY_TYPE_MAPPER, HASH_TYPES_MAPPER
 
 if TYPE_CHECKING:
     from pycti import OpenCTIConnectorHelper
-    from secops_siem_connector.settings import SecOpsSIEMConfig
 
 PRODUCT_NAME = "OPENCTI"
 VENDOR_NAME = "FILIGRAN"
 
 
 class CTIConverter:
-    def __init__(self, helper: "OpenCTIConnectorHelper", config: "SecOpsSIEMConfig"):
+    def __init__(self, helper: "OpenCTIConnectorHelper"):
         """
         Init CTI Converter.
         Convert OpenCTI entities into Chronicle UDM entities.
-        :param config: Connector's config
+        :param helper: OpenCTI connector helper
         """
-        self.config = config
         self.helper = helper
 
     @staticmethod
@@ -42,9 +41,9 @@ class CTIConverter:
         if x_opencti_ioc_id is None:
             return None
 
-        ioc_opencti_url = (
-            f"{self.helper.opencti_url}"
-            f"/dashboard/observations/indicators/{x_opencti_ioc_id}"
+        ioc_opencti_url = urljoin(
+            self.helper.opencti_url,
+            f"/dashboard/observations/indicators/{x_opencti_ioc_id}",
         )
 
         return ioc_opencti_url

@@ -4,7 +4,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, HttpUrl, SecretStr, field_validator
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
@@ -57,19 +57,19 @@ class SecOpsSIEMConfig(BaseConfigModel):
     client_id: str = Field(
         description="Service account client ID.",
     )
-    auth_uri: str = Field(
+    auth_uri: HttpUrl = Field(
         description="OAuth2 authorization URI.",
-        default="https://accounts.google.com/o/oauth2/auth",
+        default=HttpUrl("https://accounts.google.com/o/oauth2/auth"),
     )
-    token_uri: str = Field(
+    token_uri: HttpUrl = Field(
         description="OAuth2 token URI.",
-        default="https://oauth2.googleapis.com/token",
+        default=HttpUrl("https://oauth2.googleapis.com/token"),
     )
-    auth_provider_cert: str = Field(
+    auth_provider_cert: HttpUrl = Field(
         description="Auth provider x509 certificate URL.",
-        default="https://www.googleapis.com/oauth2/v1/certs",
+        default=HttpUrl("https://www.googleapis.com/oauth2/v1/certs"),
     )
-    client_cert_url: str = Field(
+    client_cert_url: HttpUrl = Field(
         description="Client x509 certificate URL.",
     )
 

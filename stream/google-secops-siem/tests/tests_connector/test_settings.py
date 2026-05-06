@@ -195,6 +195,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
 
-    with pytest.raises(ConfigValidationError) as err:
+    with pytest.raises(
+        ConfigValidationError, match=r".*Error validating configuration.*"
+    ):
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)

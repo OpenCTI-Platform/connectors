@@ -16,7 +16,7 @@ class SecOpsSIEMConnector:
         """
         self.config = config
         self.helper = helper
-        self.converter = CTIConverter(helper, config.secops_siem)
+        self.converter = CTIConverter(helper)
         self.api_client = SecOpsEntitiesClient(helper, config.secops_siem)
 
     def check_stream_id(self) -> None:
@@ -33,8 +33,8 @@ class SecOpsSIEMConnector:
             self.check_stream_id()  # Ensures the stream ID is properly configured.
         """
         if (
-            not self.helper.connect_live_stream_id
-            or self.helper.connect_live_stream_id.lower() == "changeme"
+            not self.config.connector.live_stream_id
+            or self.config.connector.live_stream_id.lower() == "changeme"
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 

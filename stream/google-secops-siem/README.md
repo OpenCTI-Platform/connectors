@@ -1,9 +1,5 @@
 # OpenCTI Google SecOps SIEM Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Filigran Verified | -    | -       |
-
 The Google SecOps SIEM connector streams OpenCTI STIX indicators to Google SecOps SIEM as UDM entities for threat detection and correlation.
 
 ## Table of Contents
@@ -88,7 +84,7 @@ For `secops_siem.private_key` in `config.yml`, prefer YAML multiline format to p
 
 ```yaml
 secops_siem:
-  private_key: -|
+  private_key: |-
     -----BEGIN PRIVATE KEY-----
     ...
     -----END PRIVATE KEY-----
