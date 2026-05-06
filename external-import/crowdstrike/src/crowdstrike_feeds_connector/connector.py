@@ -84,6 +84,7 @@ class CrowdStrike:
         report_target_industries = self.config.crowdstrike.report_target_industries
         report_guess_malware = self.config.crowdstrike.report_guess_malware
         report_guess_relations = self.config.crowdstrike.report_guess_relations
+        report_extract_iocs = self.config.crowdstrike.report_extract_iocs
 
         vulnerability_start_timestamp = (
             self.config.crowdstrike.vulnerability_start_timestamp
@@ -188,6 +189,7 @@ class CrowdStrike:
                 indicator_config,
                 no_file_trigger_import,
                 scopes=set(scopes),
+                report_extract_iocs=report_extract_iocs,
             )
 
             importers.append(report_importer)
