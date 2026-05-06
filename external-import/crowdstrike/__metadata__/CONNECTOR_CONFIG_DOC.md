@@ -31,6 +31,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_REPORT_TARGET_INDUSTRIES | `array` |  | string |  | `[]` | Comma-separated list of target industries to filter reports. |
 | CROWDSTRIKE_REPORT_GUESS_MALWARE | `boolean` |  | boolean |  | `false` | Whether to use report tags to guess related malware. |
 | CROWDSTRIKE_REPORT_GUESS_RELATIONS | `boolean` |  | boolean |  | `false` | Whether to automatically guess and create relationships in reports. |
+| CROWDSTRIKE_REPORT_EXTRACT_IOCS | `array` |  | string |  | `[]` | Comma-separated list of IOC types to extract from report text content via regex. Extracted IOCs are created as Observables (not Indicators) and linked to the report. Supported types: ipv4, ipv6, domain, url, md5, sha1, sha256. Leave empty to disable. |
 | CROWDSTRIKE_INDICATOR_START_TIMESTAMP | `integer` |  | integer |  |  | Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators! |
 | CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES | `array` |  | string |  | `["hash_ion", "hash_md5", "hash_sha1", "password", "username"]` | Comma-separated list of indicator types to exclude from import. |
 | CROWDSTRIKE_INDICATOR_IP_MAX_AGE | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `null` | ISO8601 Duration format starting with 'P' for Period (e.g., 'P90D' for 90 days). Covers both IPv4 and IPv6. |
