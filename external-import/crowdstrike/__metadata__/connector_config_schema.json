@@ -182,6 +182,14 @@
       "description": "Whether to automatically guess and create relationships in reports.",
       "type": "boolean"
     },
+    "CROWDSTRIKE_REPORT_EXTRACT_IOCS": {
+      "default": [],
+      "description": "Comma-separated list of IOC types to extract from report text content via regex. Extracted IOCs are created as Observables (not Indicators) and linked to the report. Supported types: ipv4, ipv6, domain, url, md5, sha1, sha256. Leave empty to disable.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "CROWDSTRIKE_INDICATOR_START_TIMESTAMP": {
       "description": "Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
       "type": "integer"
