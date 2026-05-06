@@ -84,6 +84,10 @@ class DoppelConfig(BaseConfigModel):
         description="Enables creation of grouping cases", default=False
     )
 
+    enable_rft_case: bool = Field(
+        description="Enables creation of RFT cases for takedown alerts", default=False
+    )
+
 
 class ConnectorSettings(BaseConnectorSettings):
     """

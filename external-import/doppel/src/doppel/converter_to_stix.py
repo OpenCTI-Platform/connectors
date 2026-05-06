@@ -45,6 +45,8 @@ class ConverterToStix:
         self,
         helper: OpenCTIConnectorHelper,
         tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        enable_grouping_case: bool = False,
+        enable_rft_case: bool = False,
     ):
         """
         Initialize the converter with necessary configuration.
@@ -52,10 +54,14 @@ class ConverterToStix:
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             tlp_level (str): The TLP level to add to the created STIX entities.
+            enable_grouping_case (bool): Whether to create grouping cases. Defaults to False.
+            enable_rft_case (bool): Whether to create RFT cases for takedown alerts. Defaults to False.
         """
         self.helper = helper
         self.author = self.create_author()
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+        self.enable_grouping_case = enable_grouping_case
+        self.enable_rft_case = enable_rft_case
 
     def create_author(self) -> Identity:
         """
@@ -312,21 +318,39 @@ class ConverterToStix:
                         )
                         stix_objects.append(relationship)
 
-                # Create grouping case
+                # Create grouping case (idempotent - reuse if already exists for this alert)
                 if case_refs and self.enable_grouping_case:
-                    grouping_case = self.create_grouping_case(
-                        alert, object_refs=case_refs
+                    existing_grouping_case = self._find_grouping_case_by_alert_id(
+                        alert.get("id")
                     )
-                    stix_objects.append(grouping_case)
-
-                    # Create related-to relationship between case and observables
-                    for entity in case_refs:
-                        related_to = self.create_relationship(
-                            source_id=grouping_case.id,
-                            target_id=entity.id,
-                            relationship_type="related-to",
+                    
+                    if existing_grouping_case:
+                        self.helper.connector_logger.info(
+                            "[DoppelConverter] Reusing existing grouping case for alert",
+                            {"alert_id": alert.get("id")},
                         )
-                        stix_objects.append(related_to)
+                        grouping_case_id = existing_grouping_case["id"]
+                    else:
+                        grouping_case = self.create_grouping_case(
+                            alert, object_refs=case_refs
+                        )
+                        stix_objects.append(grouping_case)
+                        grouping_case_id = grouping_case.id
+
+                        self.helper.connector_logger.info(
+                            "[DoppelConverter] Created new grouping case for alert",
+                            {"alert_id": alert.get("id")},
+                        )
+
+                    # Create related-to relationships if not existing yet
+                    if not existing_grouping_case:
+                        for entity in case_refs:
+                            related_to = self.create_relationship(
+                                source_id=grouping_case_id,
+                                target_id=entity.id,
+                                relationship_type="related-to",
+                            )
+                            stix_objects.append(related_to)
 
                 # DETECT STATE TRANSITIONS
                 self._handle_state_transitions(
@@ -377,12 +401,12 @@ class ConverterToStix:
                 "[Handle state transition] Observable found in OCTI",
                 {
                     "current_observable_id": current_observable.id,
-                    "observable_octi": observable_octi,
+                    "observable_name": observable_name,
+                    "alert_queue_state": alert_queue_state,
                 },
             )
-            is_takedown_now = is_takedown_state(alert_queue_state)
-            is_reverted = is_reverted_state(alert_queue_state)
-            was_takedown = False
+            
+            # Extract previous queue_state from label for reference/logging only
             previous_queue_state = None
 
             # Retrieve previous queue_state from the observable
@@ -393,49 +417,41 @@ class ConverterToStix:
             ]
             if label_queue_state:
                 previous_queue_state = label_queue_state[0].replace("queue_state:", "")
-                was_takedown = is_takedown_state(previous_queue_state)
                 self.helper.api.stix_cyber_observable.remove_label(
                     id=observable_octi["id"], label_name=label_queue_state
                 )
 
-            # Transition: TO_TAKEDOWN
-            # If Doppel marks the alert as “taken down”
-            if is_takedown_now and not was_takedown:
+            # Use current alert_queue_state for decision logic (not label-based)
+            is_takedown_now = is_takedown_state(alert_queue_state)
+            is_reverted_now = is_reverted_state(alert_queue_state)
+
+            self.helper.connector_logger.debug(
+                "[Handle state transition] State analysis",
+                {
+                    "is_takedown_now": is_takedown_now,
+                    "is_reverted_now": is_reverted_now,
+                    "previous_queue_state": previous_queue_state,
+                },
+            )
+
+            # STATE DECISION: Based on current alert_queue_state
+            if is_takedown_now:
+                # Alert is in actioned/taken_down state
+                # Create or update indicator + RFT case
                 self.helper.connector_logger.debug(
-                    "[Handle state transition] Transition to process takedown",
-                    {
-                        "current_observable_id": current_observable.id,
-                        "is_takedown_now": is_takedown_now,
-                        "previous_queue_state": previous_queue_state,
-                    },
+                    "[Handle state transition] Alert in takedown state - processing takedown",
+                    {"alert_id": alert.get("id"), "queue_state": alert_queue_state},
                 )
                 self._process_takedown(
                     alert, current_observable.id, stix_objects, observable_name
                 )
 
-            # Transition: REVERSION
-            # If the alert moves from Actioned/Taken Down back to unresolved
-            elif was_takedown and not is_takedown_now:
+            elif is_reverted_now:
+                # Alert is in non-actioned state (monitoring, doppel_review, archived, needs_confirmation)
+                # Check if indicator exists, revoke it if present
                 self.helper.connector_logger.debug(
-                    "[Handle state transition] Transition to process reversion",
-                    {
-                        "current_observable_id": current_observable.id,
-                        "is_takedown_now": is_takedown_now,
-                        "previous_queue_state": previous_queue_state,
-                    },
-                )
-                self._process_reversion(
-                    alert, current_observable.id, stix_objects, observable_name
-                )
-
-            # Handle case where previous_state is null but we have an active indicator in reverted state
-            elif previous_queue_state is None and is_reverted and not is_takedown_now:
-                self.helper.connector_logger.debug(
-                    "[Handle state transition] Transition to process reversion",
-                    {
-                        "current_observable_id": current_observable.id,
-                        "previous_queue_state": previous_queue_state,
-                    },
+                    "[Handle state transition] Alert in monitoring state - checking for reversion",
+                    {"alert_id": alert.get("id"), "queue_state": alert_queue_state},
                 )
                 self._process_reversion(
                     alert, current_observable.id, stix_objects, observable_name
@@ -499,6 +515,60 @@ class ConverterToStix:
                     {"alert_id": alert_id, "count": len(filtered_indicators)},
                 )
                 return filtered_indicators
+
+        return []
+
+    def _find_grouping_case_by_alert_id(self, alert_id: str) -> dict | None:
+        """
+        Find grouping case by alert_id stored in x_opencti_workflow_id.
+        Used to ensure idempotency - reuse the same grouping case per alert.
+
+        :param alert_id: Doppel alert ID
+        :return: Grouping case object or None if not found
+        """
+        filters = {
+            "mode": "and",
+            "filters": [
+                {"key": "x_opencti_workflow_id", "values": [alert_id]},
+            ],
+            "filterGroups": [],
+        }
+
+        grouping_cases = self.helper.api.grouping.list(filters=filters)
+
+        if grouping_cases:
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Found existing grouping case for alert_id",
+                {"alert_id": alert_id, "count": len(grouping_cases)},
+            )
+            return grouping_cases[0]  # Return first match
+
+        return None
+
+    def _find_rft_cases_by_alert_id(self, alert_id: str) -> list:
+        """
+        Find RFT cases by alert_id stored in x_opencti_workflow_id.
+        Used for revocation during reversion workflow.
+
+        :param alert_id: Doppel alert ID
+        :return: List of RFT case objects or empty list
+        """
+        filters = {
+            "mode": "and",
+            "filters": [
+                {"key": "x_opencti_workflow_id", "values": [alert_id]},
+            ],
+            "filterGroups": [],
+        }
+
+        rft_cases = self.helper.api.case_rft.list(filters=filters)
+
+        if rft_cases:
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Found existing RFT cases for alert_id",
+                {"alert_id": alert_id, "count": len(rft_cases)},
+            )
+            return rft_cases
 
         return []
 
@@ -617,20 +687,19 @@ class ConverterToStix:
             )
             stix_objects.append(indicator_relationship)
 
-            # Create RFT case
-            case_rft = self.create_case_rft(
-                    alert, object_refs=case_refs]
-                )
-            stix_objects.append(case_rft)
+            # Create RFT case (if enabled)
+            if self.enable_rft_case:
+                case_rft = self.create_case_rft(alert, object_refs=case_refs)
+                stix_objects.append(case_rft)
 
                 # Create related-to relationship between case and observables
-            for entity in case_refs:
-                related_to = self.create_relationship(
-                    source_id=case_rft.id,
-                    target_id=entity.id,
-                    relationship_type="related-to",
-                )
-                stix_objects.append(related_to)
+                for entity in case_refs:
+                    related_to = self.create_relationship(
+                        source_id=case_rft.id,
+                        target_id=entity.id,
+                        relationship_type="related-to",
+                    )
+                    stix_objects.append(related_to)
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Created based-on relationship for new indicator",
@@ -732,8 +801,13 @@ class ConverterToStix:
                         },
                     )
 
-            # Add reversion note to observable
+            # Add reversion note to observable and cases
             note_refs = revoked_indicator_refs[:]
+            
+            # Add revoked RFT case refs if they exist
+            if 'revoked_rft_case_refs' in locals():
+                note_refs.extend(revoked_rft_case_refs)
+            
             note_refs.append(observable_id)
 
             if note_refs:
@@ -759,4 +833,62 @@ class ConverterToStix:
                     "alert_id": alert_id,
                     "revoked_indicators_count": revoked_indicators_count,
                 },
+            )
+
+        # Find and revoke RFT cases for this alert
+        existing_rft_cases = self._find_rft_cases_by_alert_id(alert_id)
+        rft_cases_to_revoke = [
+            case for case in existing_rft_cases if not case.get("revoked", False)
+        ]
+
+        if rft_cases_to_revoke:
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Found RFT cases to revoke",
+                {"alert_id": alert_id, "count": len(rft_cases_to_revoke)},
+            )
+
+            revoked_rft_case_refs = []
+            revoked_rft_cases_count = 0
+            for rft_case in rft_cases_to_revoke:
+                self.helper.connector_logger.info(
+                    "[DoppelConverter] Revoking RFT case",
+                    {"alert_id": alert_id, "case_id": rft_case["id"]},
+                )
+                revoked_rft_case_refs.append(rft_case["standard_id"])
+
+                # Use OpenCTI API to revoke the RFT case
+                try:
+                    self.helper.api.case_rft.update_field(
+                        id=rft_case["id"], input={"key": "revoked", "value": True}
+                    )
+
+                    self.helper.connector_logger.info(
+                        "[DoppelConverter] Successfully revoked RFT case via API",
+                        {"alert_id": alert_id, "case_id": rft_case["id"]},
+                    )
+                    revoked_rft_cases_count += 1
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        "[DoppelConverter] Error revoking RFT case via API",
+                        {
+                            "alert_id": alert_id,
+                            "case_id": rft_case["id"],
+                            "error": str(e),
+                        },
+                    )
+
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Revoked RFT cases",
+                {
+                    "alert_id": alert_id,
+                    "revoked_rft_cases_count": revoked_rft_cases_count,
+                },
+            )
+
+            # Add RFT case refs to note if they were revoked
+            # Find where note_refs is defined and append them
+        else:
+            self.helper.connector_logger.info(
+                "[DoppelConverter] No RFT cases found to revoke",
+                {"alert_id": alert_id},
             )
