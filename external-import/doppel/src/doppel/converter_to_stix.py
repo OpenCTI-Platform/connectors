@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Literal
 
 from doppel.stix_helpers import (
@@ -15,6 +15,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     CaseRft as PyctiCaseRft,
     Identity as PyctiIdentity,
+    Grouping as PyctiGrouping,
     Indicator as PyctiIndicator,
     MarkingDefinition as PyctiMarkingDefinition,
     Note as PyctiNote,
@@ -145,20 +146,24 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    def create_case_rft(self, alert: dict, object_refs: list) -> dict:
+    def create_case_rft(self, alert: dict, object_refs: list, observable_id: str) -> dict:
         """
         Create Request for Takedown case
         """
         priority = calculate_priority(alert.get("score", 0))
         case_name = f"Doppel Takedown - {alert.get('entity', 'Unknown')} ({alert.get('id')})"
+        now = datetime.now(timezone.utc).isoformat()
 
         return {
-            "id": PyctiCaseRft.generate_id(name=case_name),
+            "type": "case-rft",
+            "id": PyctiCaseRft.generate_id(name=case_name, created=now),
             "name": case_name,
             "description": build_description(alert),
             "priority": priority,               
             "severity": alert.get('severity'),
             "labels": build_labels(alert) + [f"priority:{priority}"],
+            "external_references": build_external_references(alert),
+            "custom_properties": build_custom_properties(alert, self.author_id),
             "object_refs": object_refs,
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.tlp_marking.id],
@@ -295,19 +300,19 @@ class ConverterToStix:
                 if domain_name:
                     domain_observable = self.create_domain(domain_name, alert)
                     stix_objects.append(domain_observable)
-                    case_refs.append(domain_observable)
+                    case_refs.append(domain_observable.id)
                 else:
                     phone_number_observable = self.create_phone_number(
                         phone_number, alert
                     )
                     stix_objects.append(phone_number_observable)
-                    case_refs.append(phone_number_observable)
+                    case_refs.append(phone_number_observable.id)
 
                 # Create ipv4 object if exists
                 if ipv4_address:
                     ipv4_observable = self.create_ipv4(ipv4_address, alert)
                     stix_objects.append(ipv4_observable)
-                    case_refs.append(ipv4_observable)
+                    case_refs.append(ipv4_observable.id)
 
                     # Create relationship between ipv4 and domain
                     if domain_observable:
@@ -668,7 +673,8 @@ class ConverterToStix:
                 alert, pattern, name, created_at, modified_at
             )
             stix_objects.append(indicator)
-            case_refs.append(indicator)
+            case_refs.append(indicator.id)
+            case_refs.append(observable_id)
 
             self.helper.connector_logger.debug(
                 "[Process taken down] New Indicator created",
@@ -689,13 +695,13 @@ class ConverterToStix:
 
             # Create RFT case (if enabled)
             if self.enable_rft_case:
-                case_rft = self.create_case_rft(alert, object_refs=case_refs)
+                case_rft = self.create_case_rft(alert, object_refs=case_refs, observable_id=observable_id)
                 stix_objects.append(case_rft)
 
                 # Create related-to relationship between case and observables
                 for entity in case_refs:
                     related_to = self.create_relationship(
-                        source_id=case_rft.id,
+                        source_id=case_rft.standard_id,
                         target_id=entity.id,
                         relationship_type="related-to",
                     )
