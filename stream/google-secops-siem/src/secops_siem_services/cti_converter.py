@@ -1,20 +1,23 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
-from .utils import ENTITY_TYPE_MAPPER, HASH_TYPES_MAPPER
+from secops_siem_services.utils import ENTITY_TYPE_MAPPER, HASH_TYPES_MAPPER
+
+if TYPE_CHECKING:
+    from pycti import OpenCTIConnectorHelper
 
 PRODUCT_NAME = "OPENCTI"
 VENDOR_NAME = "FILIGRAN"
 
 
 class CTIConverter:
-
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper"):
         """
         Init CTI Converter.
         Convert OpenCTI entities into Chronicle UDM entities.
-        :param config: Connector's config
+        :param helper: OpenCTI connector helper
         """
-        self.config = config
         self.helper = helper
 
     @staticmethod
@@ -38,10 +41,9 @@ class CTIConverter:
         if x_opencti_ioc_id is None:
             return None
 
-        ioc_opencti_url = (
-            self.helper.opencti_url
-            + "/dashboard/observations/indicators/"
-            + x_opencti_ioc_id
+        ioc_opencti_url = urljoin(
+            self.helper.opencti_url,
+            f"/dashboard/observations/indicators/{x_opencti_ioc_id}",
         )
 
         return ioc_opencti_url
@@ -92,11 +94,13 @@ class CTIConverter:
         :param entity_metadata:
         :return:
         """
-        x_opencti_observable_type = observable.get("type").lower()
+        x_opencti_observable_type = observable.get("type", "").lower()
 
         entity = {}
 
         observable_type = ENTITY_TYPE_MAPPER.get(x_opencti_observable_type)
+        if observable_type is None:
+            return entity
 
         chronicle_entity_field = observable_type["chronicle_entity_field"]
         chronicle_entity_type = observable_type["chronicle_entity_type"]
@@ -135,10 +139,8 @@ class CTIConverter:
         )
 
         if parsed_observables:
-
             # Iterate over the parsed observables
             for observable in parsed_observables:
-
                 entity_metadata = self.generate_entity_metadata(indicator)
                 entity_details = self.generate_entity_details(
                     observable, entity_metadata
