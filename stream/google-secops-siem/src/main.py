@@ -1,6 +1,7 @@
 import traceback
 
-from secops_siem_connector import SecOpsSIEMConnector
+from pycti import OpenCTIConnectorHelper
+from secops_siem_connector import ConnectorSettings, SecOpsSIEMConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +14,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = SecOpsSIEMConnector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = SecOpsSIEMConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
