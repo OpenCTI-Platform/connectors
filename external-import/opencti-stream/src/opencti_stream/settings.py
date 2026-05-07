@@ -4,15 +4,21 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     """Connector configuration extended with live stream settings.
 
-    The three `live_stream_*` fields map to the `CONNECTOR_LIVE_STREAM_*` environment
-    variables and the matching `["connector", "live_stream_*"]` paths consumed by
-    `OpenCTIConnectorHelper` to drive the SSE consumer used by this connector.
+    The `live_stream_*` fields map to `CONNECTOR_LIVE_STREAM_*` environment variables
+    and the matching `["connector", "live_stream_*"]` config paths.
+
+    `live_stream_opencti_url` / `live_stream_opencti_token` decouple the OpenCTI the
+    connector listens to (the source) from the OpenCTI the connector is registered
+    with (the target, used by `OPENCTI_URL` / `OPENCTI_TOKEN` and where bundles are
+    pushed in queue mode). When unset, the source defaults to the target so the
+    connector listens to the same OpenCTI it pushes to (typical diode-export setup
+    where the connector runs alongside the source instance).
     """
 
     name: str = Field(
@@ -26,6 +32,24 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
             "watchdog verifies it is alive and restarts it if it has died."
         ),
         default=timedelta(minutes=1),
+    )
+    live_stream_opencti_url: HttpUrl | None = Field(
+        description=(
+            "URL of the OpenCTI instance whose live stream to consume. "
+            "Defaults to `OPENCTI_URL` (the OpenCTI the connector is registered with) "
+            "when unset. Set this to point at a remote / source OpenCTI different "
+            "from the one this connector pushes bundles to."
+        ),
+        default=None,
+    )
+    live_stream_opencti_token: SecretStr | None = Field(
+        description=(
+            "API token for the OpenCTI instance whose live stream to consume. "
+            "Defaults to `OPENCTI_TOKEN` when unset. Required when "
+            "`live_stream_opencti_url` points to a remote instance with a different "
+            "auth context."
+        ),
+        default=None,
     )
     live_stream_id: str = Field(
         description=(

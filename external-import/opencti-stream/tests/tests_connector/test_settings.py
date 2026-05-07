@@ -42,6 +42,22 @@ from pydantic import ValidationError
             },
             id="minimal_valid_settings_dict",
         ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://target-opencti:8080",
+                    "token": "target-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "scope": "opencti-stream",
+                    "live_stream_id": "live",
+                    "live_stream_opencti_url": "http://source-opencti:8080",
+                    "live_stream_opencti_token": "source-token",
+                },
+            },
+            id="dual_instance_settings_dict",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):

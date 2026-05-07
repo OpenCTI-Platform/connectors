@@ -1,9 +1,10 @@
-"""Unit tests for `OpenCTIStream._on_event` (the SSE forwarding callback).
+"""Unit tests for `OpenCTIStream` (the SSE forwarding connector).
 
-The connector itself is a thin passthrough: each test exercises one branch of
-`_on_event` against a stub message and an `OpenCTIStream` instance whose helper
-attributes have been replaced by `MagicMock`s. This avoids any network or pycti
-machinery while still validating the actual code path users care about.
+The connector is a thin passthrough: each test exercises one branch of `_on_event`
+or one of the small URL/token resolution helpers against an `OpenCTIStream` instance
+whose helper / config attributes have been replaced by `MagicMock`s. This avoids any
+network or pycti machinery while still validating the actual code paths users care
+about.
 """
 
 import json
@@ -12,6 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from opencti_stream.connector import OpenCTIStream
+from pydantic import HttpUrl, SecretStr
 
 
 @pytest.fixture
@@ -19,6 +21,8 @@ def connector():
     """Build an `OpenCTIStream` with a fully mocked helper, bypassing __init__ side effects."""
     instance = OpenCTIStream.__new__(OpenCTIStream)
     instance.config = MagicMock()
+    instance.config.connector.live_stream_opencti_url = None
+    instance.config.connector.live_stream_opencti_token = None
     instance.helper = MagicMock()
     instance.helper.connector_logger = MagicMock()
     instance.helper.stix2_create_bundle.side_effect = (
@@ -154,3 +158,39 @@ def test_on_event_resets_applicant_when_origin_user_id_missing(connector):
     connector._on_event(_make_msg("create", payload))
 
     assert connector.helper.applicant_id is None
+
+
+# ---------------------------------------------------------------------------
+# URL / token resolution: source (live stream) vs target (helper) OpenCTI
+# ---------------------------------------------------------------------------
+
+
+def test_live_stream_url_falls_back_to_helper_when_not_configured(connector):
+    connector.config.connector.live_stream_opencti_url = None
+    connector.helper.opencti_url = "http://target-opencti:8080/"
+
+    assert connector._live_stream_url() == "http://target-opencti:8080"
+
+
+def test_live_stream_url_uses_configured_value_and_strips_trailing_slash(connector):
+    connector.config.connector.live_stream_opencti_url = HttpUrl(
+        "http://source-opencti:8080"
+    )
+    connector.helper.opencti_url = "http://target-opencti:8080/"
+
+    # Pydantic's HttpUrl normalizes to add a trailing slash; the resolver must strip it.
+    assert connector._live_stream_url() == "http://source-opencti:8080"
+
+
+def test_live_stream_token_falls_back_to_helper_when_not_configured(connector):
+    connector.config.connector.live_stream_opencti_token = None
+    connector.helper.opencti_token = "target-token"
+
+    assert connector._live_stream_token() == "target-token"
+
+
+def test_live_stream_token_uses_configured_value(connector):
+    connector.config.connector.live_stream_opencti_token = SecretStr("source-token")
+    connector.helper.opencti_token = "target-token"
+
+    assert connector._live_stream_token() == "source-token"

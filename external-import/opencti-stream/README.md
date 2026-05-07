@@ -93,11 +93,13 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Live stream parameters
 
-| Parameter                       | config.yml                  | Docker environment variable             | Default | Mandatory | Description                                                                                   |
-|---------------------------------|-----------------------------|-----------------------------------------|---------|-----------|-----------------------------------------------------------------------------------------------|
-| Live Stream ID                  | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              |         | Yes       | The OpenCTI live stream to subscribe to: `live`, `raw`, or a stream collection UUID.          |
-| Live Stream Listen Delete       | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | false   | No        | Whether to subscribe to delete events. Disabled by default (this connector forwards upserts). |
-| Live Stream No Dependencies     | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | false   | No        | Whether to receive only the event's own object (no dependent objects). Disabled by default so dependencies are included. |
+| Parameter                       | config.yml                  | Docker environment variable             | Default        | Mandatory | Description                                                                                   |
+|---------------------------------|-----------------------------|-----------------------------------------|----------------|-----------|-----------------------------------------------------------------------------------------------|
+| Live Stream OpenCTI URL         | live_stream_opencti_url     | `CONNECTOR_LIVE_STREAM_OPENCTI_URL`     | `OPENCTI_URL`  | No        | URL of the OpenCTI to subscribe to. Defaults to `OPENCTI_URL` (the OpenCTI the connector is registered with). Set to a different host to listen to a remote / source OpenCTI. |
+| Live Stream OpenCTI Token       | live_stream_opencti_token   | `CONNECTOR_LIVE_STREAM_OPENCTI_TOKEN`   | `OPENCTI_TOKEN`| No        | API token for `live_stream_opencti_url`. Defaults to `OPENCTI_TOKEN` when unset. Required when listening to a remote instance with different auth. |
+| Live Stream ID                  | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              |                | Yes       | The OpenCTI live stream to subscribe to: `live`, `raw`, or a stream collection UUID.          |
+| Live Stream Listen Delete       | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | false          | No        | Whether to subscribe to delete events. Disabled by default (this connector forwards upserts). |
+| Live Stream No Dependencies     | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | false          | No        | Whether to receive only the event's own object (no dependent objects). Disabled by default so dependencies are included. |
 
 ### Output mode parameters
 
@@ -214,12 +216,43 @@ docker compose up -d
 
 ## Behavior
 
-### Data flow
+### Source vs target OpenCTI
+
+The connector consumes events from a **source** OpenCTI and dispatches bundles to a
+**target** OpenCTI. These can be the same instance (typical diode-export setup) or
+two different instances (queue-mode replication). Two pairs of settings control this:
+
+| Pair                                                | Role                                           |
+|-----------------------------------------------------|------------------------------------------------|
+| `OPENCTI_URL` / `OPENCTI_TOKEN`                     | The **target** OpenCTI: the one this connector is registered with, and the queue bundles are pushed to in `send_to_queue` mode. |
+| `CONNECTOR_LIVE_STREAM_OPENCTI_URL` / `CONNECTOR_LIVE_STREAM_OPENCTI_TOKEN` | The **source** OpenCTI: the one the connector subscribes to via SSE. Defaults to the target when unset (i.e. listen on the same OpenCTI you push to). |
+
+### Data flow (queue mode — A → B replication)
+
+When `send_to_queue=true`, configure `CONNECTOR_LIVE_STREAM_OPENCTI_URL` to point
+at OpenCTI A (source) and register the connector on OpenCTI B (target):
+
+```mermaid
+graph LR
+    SourceOcti["Source OpenCTI A (CONNECTOR_LIVE_STREAM_OPENCTI_URL)"] -->|SSE stream events| OctiStream[opencti-stream]
+    OctiStream -->|"send_to_queue"| Queue["B's RabbitMQ queue"]
+    Queue -->|workers| TargetOcti["Target OpenCTI B (OPENCTI_URL)"]
+```
+
+If `CONNECTOR_LIVE_STREAM_OPENCTI_URL` is left unset in queue mode, the connector
+listens to the same instance it is registered with and pushes back into its own
+queue — useful for republishing with applicant impersonation, but creates a loop
+unless you filter the stream.
+
+### Data flow (diode mode — directory / S3)
+
+When `send_to_directory=true` or `send_to_s3=true`, the connector typically runs
+alongside the source OpenCTI (`OPENCTI_URL` = source) and writes bundles to a
+directory or S3 bucket consumed on the target side by `diode-import`:
 
 ```mermaid
 graph LR
     SourceOcti[Source OpenCTI] -->|SSE stream events| OctiStream[opencti-stream]
-    OctiStream -->|"send_to_queue (default)"| Queue[OpenCTI queue / workers]
     OctiStream -->|send_to_directory| Files[Bundle files]
     OctiStream -->|send_to_s3| S3[S3 bucket]
     Files -->|"diode crossing"| DiodeImport[diode-import]

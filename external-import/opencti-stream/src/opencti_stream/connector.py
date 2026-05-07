@@ -36,6 +36,28 @@ class OpenCTIStream:
         self.helper = helper
         self._stream_thread = None
 
+    def _live_stream_url(self) -> str:
+        """Resolve the OpenCTI URL to subscribe to.
+
+        Falls back to the connector's own `OPENCTI_URL` when `live_stream_opencti_url`
+        is unset. The trailing slash added by pydantic's `HttpUrl` normalization is
+        stripped because pycti's `listen_stream` concatenates `/stream` directly.
+        """
+        configured = self.config.connector.live_stream_opencti_url
+        url = str(configured) if configured is not None else self.helper.opencti_url
+        return url.rstrip("/")
+
+    def _live_stream_token(self) -> str:
+        """Resolve the OpenCTI token to authenticate the stream subscription.
+
+        Falls back to the connector's own `OPENCTI_TOKEN` when
+        `live_stream_opencti_token` is unset.
+        """
+        configured = self.config.connector.live_stream_opencti_token
+        if configured is not None:
+            return configured.get_secret_value()
+        return self.helper.opencti_token
+
     def _on_event(self, msg) -> None:
         """SSE callback: forward one stream event as a one-object STIX bundle."""
         if msg.event not in ("create", "update"):
@@ -102,13 +124,14 @@ class OpenCTIStream:
             self.helper.connect_id, friendly_name
         )
         try:
-            # Pass an explicit URL stripped of any trailing slash. `helper.opencti_url`
-            # is normalized by pydantic's `HttpUrl` to always end with "/", and pycti's
-            # `listen_stream` concatenates "/stream" directly, which would produce a
-            # double slash in the SSE URL. Stripping here keeps the URL clean.
+            # Listen on the configured OpenCTI (or the connector's own one as fallback).
+            # Decoupling source from target lets the connector listen to a remote
+            # OpenCTI while pushing bundles back into the OpenCTI it is registered with
+            # (typical queue-mode A→B replication setup).
             self._stream_thread = self.helper.listen_stream(
                 self._on_event,
-                url=self.helper.opencti_url.rstrip("/"),
+                url=self._live_stream_url(),
+                token=self._live_stream_token(),
             )
             self.helper.api.work.to_processed(work_id, "SSE consumer started")
             self.helper.connector_logger.info(
