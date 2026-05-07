@@ -12,6 +12,7 @@ from pycti import OpenCTIConnectorHelper
 from reportimporter.constants import (
     ENTITY_CLASS,
     MIME_CSV,
+    MIME_DOCX,
     MIME_HTML,
     MIME_MD,
     MIME_PDF,
@@ -53,6 +54,7 @@ class ReportParser(object):
             MIME_HTML: self._parse_html,
             MIME_CSV: self._parse_text,
             MIME_MD: self._parse_text,
+            MIME_DOCX: self._parse_docx,
         }
 
         self.library_lookup = library_mapping()
@@ -131,6 +133,26 @@ class ReportParser(object):
             parse_info.update(self.parse(text.decode("utf-16")))
         else:
             parse_info.update(self.parse(text.decode("utf-8")))
+        return parse_info
+
+    def _parse_docx(self, file_data: IO) -> Dict[str, Dict]:
+        parse_info = {}
+        try:
+            from docx import Document
+
+            doc = Document(file_data)
+            for paragraph in doc.paragraphs:
+                text = paragraph.text.strip()
+                if text:
+                    parse_info.update(self.parse(text))
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        text = cell.text.strip()
+                        if text:
+                            parse_info.update(self.parse(text))
+        except Exception as e:
+            logging.exception(f"Docx Parsing Error: {e}")
         return parse_info
 
     def _parse_html(self, file_data: IO) -> Dict[str, Dict]:
