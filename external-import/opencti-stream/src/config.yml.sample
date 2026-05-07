@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'OpenCTI Stream' # optional (default: 'OpenCTI Stream')
-  scope: 'opencti-stream' # optional (default: 'opencti-stream')
+  scope: 'opencti-stream' # required
   log_level: 'info' # optional (default: 'error')
   # Live stream consumed by the connector
   live_stream_id: 'live' # 'live', 'raw' or a stream collection UUID

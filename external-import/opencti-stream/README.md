@@ -88,7 +88,7 @@ There are a number of configuration options, which are set either in `docker-com
 |-----------------|------------|-----------------------------|------------------|-----------|--------------------------------------------------------------------------|
 | Connector ID    | id         | `CONNECTOR_ID`              |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
 | Connector Name  | name       | `CONNECTOR_NAME`            | OpenCTI Stream   | No        | Name of the connector.                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | opencti-stream   | No        | The scope of the connector.                                              |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                  | Yes       | The scope of the connector (e.g. `opencti-stream`).                      |
 | Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error            | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
 ### Live stream parameters
