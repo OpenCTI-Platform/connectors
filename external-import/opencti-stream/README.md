@@ -219,45 +219,49 @@ docker compose up -d
 ### Source vs target OpenCTI
 
 The connector consumes events from a **source** OpenCTI and dispatches bundles to a
-**target** OpenCTI. These can be the same instance (typical diode-export setup) or
-two different instances (queue-mode replication). Two pairs of settings control this:
+**target** OpenCTI. Two pairs of settings control this:
 
 | Pair                                                | Role                                           |
 |-----------------------------------------------------|------------------------------------------------|
-| `OPENCTI_URL` / `OPENCTI_TOKEN`                     | The **target** OpenCTI: the one this connector is registered with, and the queue bundles are pushed to in `send_to_queue` mode. |
-| `CONNECTOR_LIVE_STREAM_OPENCTI_URL` / `CONNECTOR_LIVE_STREAM_OPENCTI_TOKEN` | The **source** OpenCTI: the one the connector subscribes to via SSE. Defaults to the target when unset (i.e. listen on the same OpenCTI you push to). |
+| `OPENCTI_URL` / `OPENCTI_TOKEN`                     | The **target** OpenCTI: the one this connector is registered with, and where bundles land in `send_to_queue` mode. |
+| `CONNECTOR_LIVE_STREAM_OPENCTI_URL` / `CONNECTOR_LIVE_STREAM_OPENCTI_TOKEN` | The **source** OpenCTI: the one the connector subscribes to via SSE. **Defaults to the target when unset** — that is the typical diode-export setup, where the same instance is read from (stream) and written to (file/S3 for `diode-import`). |
+
+The pairs being equal vs different determines the deployment pattern:
+
+| Pairs configuration | Output mode | Deployment |
+|---|---|---|
+| **Equal (default)** | `send_to_directory` or `send_to_s3` | **Diode export (most common):** connector runs alongside source OpenCTI A, listens to A's stream, writes bundles to a directory / S3 bucket. `diode-import` on the target OpenCTI B picks them up. No loop because `send_to_queue=false`. |
+| **Different** | `send_to_queue` | **Queue replication (A → B):** connector is registered on target B (so its queue receives bundles), and `CONNECTOR_LIVE_STREAM_OPENCTI_URL` points at source A. |
+| **Equal** | `send_to_queue` | Republisher / fan-out only — listens to and pushes back into the same OpenCTI. Loops unless you filter the stream; rarely useful. |
+
+### Data flow (diode mode — directory / S3, the typical setup)
+
+The connector runs alongside the source OpenCTI A (so `OPENCTI_URL` and
+`CONNECTOR_LIVE_STREAM_OPENCTI_URL` resolve to the same instance — leave the latter
+unset to inherit from the former), and writes bundles consumed by `diode-import` on
+the target OpenCTI B:
+
+```mermaid
+graph LR
+    SourceOcti["OpenCTI A (OPENCTI_URL = LIVE_STREAM_OPENCTI_URL)"] -->|SSE stream events| OctiStream[opencti-stream]
+    OctiStream -->|send_to_directory| Files[Bundle files]
+    OctiStream -->|send_to_s3| S3[S3 bucket]
+    Files -->|diode crossing| DiodeImport[diode-import]
+    S3 -->|diode crossing| DiodeImport
+    DiodeImport -->|ingestion| TargetOcti["OpenCTI B"]
+```
 
 ### Data flow (queue mode — A → B replication)
 
-When `send_to_queue=true`, configure `CONNECTOR_LIVE_STREAM_OPENCTI_URL` to point
-at OpenCTI A (source) and register the connector on OpenCTI B (target):
+When `send_to_queue=true` and the two OpenCTI instances are network-connected,
+configure `CONNECTOR_LIVE_STREAM_OPENCTI_URL` to point at OpenCTI A (source) and
+register the connector on OpenCTI B (target):
 
 ```mermaid
 graph LR
     SourceOcti["Source OpenCTI A (CONNECTOR_LIVE_STREAM_OPENCTI_URL)"] -->|SSE stream events| OctiStream[opencti-stream]
-    OctiStream -->|"send_to_queue"| Queue["B's RabbitMQ queue"]
+    OctiStream -->|send_to_queue| Queue["B's RabbitMQ queue"]
     Queue -->|workers| TargetOcti["Target OpenCTI B (OPENCTI_URL)"]
-```
-
-If `CONNECTOR_LIVE_STREAM_OPENCTI_URL` is left unset in queue mode, the connector
-listens to the same instance it is registered with and pushes back into its own
-queue — useful for republishing with applicant impersonation, but creates a loop
-unless you filter the stream.
-
-### Data flow (diode mode — directory / S3)
-
-When `send_to_directory=true` or `send_to_s3=true`, the connector typically runs
-alongside the source OpenCTI (`OPENCTI_URL` = source) and writes bundles to a
-directory or S3 bucket consumed on the target side by `diode-import`:
-
-```mermaid
-graph LR
-    SourceOcti[Source OpenCTI] -->|SSE stream events| OctiStream[opencti-stream]
-    OctiStream -->|send_to_directory| Files[Bundle files]
-    OctiStream -->|send_to_s3| S3[S3 bucket]
-    Files -->|"diode crossing"| DiodeImport[diode-import]
-    S3 -->|"diode crossing"| DiodeImport
-    DiodeImport -->|ingestion| TargetOcti[Target OpenCTI]
 ```
 
 ### Event handling
