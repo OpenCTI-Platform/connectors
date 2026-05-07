@@ -22,9 +22,10 @@ class BaseHttpClient(ABC):
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
         json_payload: dict[str, Any] | None = None,
-        timeout: int | None = None,
-    ) -> dict[str, Any]:
-        """Perform an HTTP request and return the parsed JSON.
+        timeout: float | None = None,
+        as_bytes: bool = False,
+    ) -> dict[str, Any] | tuple[int, bytes]:
+        """Perform an HTTP request and return the parsed JSON or raw bytes.
 
         Args:
             method (str): The HTTP method to use.
@@ -33,10 +34,11 @@ class BaseHttpClient(ABC):
             params (dict[str, Any] | None, optional): The query parameters to include in the request. Defaults to None.
             data (dict[str, Any] | None, optional): The data to include in the request body. Defaults to None.
             json_payload (dict[str, Any] | None, optional): The JSON data to include in the request body. Defaults to None.
-            timeout (int | None, optional): The timeout in seconds for the request. Defaults to None.
+            timeout (float | None, optional): The timeout in seconds for the request. Defaults to None.
+            as_bytes (bool, optional): Whether to return raw bytes instead of parsed JSON. Defaults to False.
 
         Returns:
-            dict[str, Any]: The JSON response from the server.
+            dict[str, Any] | tuple[int, bytes]: The JSON response from the server or raw bytes.
 
         """
         raise NotImplementedError("Subclass must implement this method.")
