@@ -3,7 +3,6 @@ from datetime import timedelta
 from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
-    ListFromString,
 )
 from pydantic import Field
 
@@ -20,16 +19,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="OpenCTI Stream",
     )
-    scope: ListFromString = Field(
-        description="The scope of the connector.",
-        default=["opencti-stream"],
-    )
     duration_period: timedelta = Field(
         description=(
-            "Required by the base connector configuration but unused by this connector. "
-            "Events are streamed continuously via SSE; there is no scheduled run."
+            "Period between scheduled health checks of the SSE consumer thread. "
+            "The thread itself runs continuously; this only controls how often the "
+            "watchdog verifies it is alive and restarts it if it has died."
         ),
-        default=timedelta(hours=1),
+        default=timedelta(minutes=1),
     )
     live_stream_id: str = Field(
         description=(
