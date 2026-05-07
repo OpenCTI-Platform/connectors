@@ -9,6 +9,9 @@ from connector.src.custom.client_api.campaign.client_api_campaign import (
     ClientAPICampaign,
 )
 from connector.src.custom.client_api.client_api_shared import ClientAPIShared
+from connector.src.custom.client_api.indicator.client_api_indicator import (
+    ClientAPIIndicator,
+)
 from connector.src.custom.client_api.malware.client_api_malware import ClientAPIMalware
 from connector.src.custom.client_api.report.client_api_report import ClientAPIReport
 from connector.src.custom.client_api.threat_actor.client_api_threat_actor import (
@@ -58,6 +61,10 @@ class ClientAPI:
             )
         if self.config.import_campaigns:
             self.campaign_client = ClientAPICampaign(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
+        if self.config.import_indicators:
+            self.indicator_client = ClientAPIIndicator(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
             )
         self.shared_client = ClientAPIShared(
@@ -204,6 +211,21 @@ class ClientAPI:
         return await self.shared_client.fetch_subentities(
             entity_name, entity_id, subentity_types
         )
+
+    async def fetch_ioc_delta_package(
+        self, package_id: str, ioc_type: str
+    ) -> list[dict[str, Any]] | None:
+        """Fetch an IOC delta package for a given package_id and ioc_type.
+
+        Args:
+            package_id: The package ID (hourly timestamp format YYYYMMDDHH).
+            ioc_type: The IOC type (file, ip, url, domain).
+
+        Returns:
+            List of parsed IOC entries, or None if not available.
+
+        """
+        return await self.indicator_client.fetch_ioc_delta_package(package_id, ioc_type)
 
     def _create_fetcher_factory(self) -> GenericFetcherFactory:
         """Create and configure the fetcher factory with all configurations."""

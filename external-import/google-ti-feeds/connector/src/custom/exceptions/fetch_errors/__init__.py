@@ -13,6 +13,9 @@ from connector.src.custom.exceptions.fetch_errors.gti_domain_fetch_error import 
 from connector.src.custom.exceptions.fetch_errors.gti_file_fetch_error import (
     GTIFileFetchError,
 )
+from connector.src.custom.exceptions.fetch_errors.gti_indicator_fetch_error import (
+    GTIIndicatorFetchError,
+)
 from connector.src.custom.exceptions.fetch_errors.gti_ip_fetch_error import (
     GTIIPFetchError,
 )
@@ -56,4 +59,5 @@ __all__ = [
     "GTIFileFetchError",
     "GTIUrlFetchError",
     "GTIIPFetchError",
+    "GTIIndicatorFetchError",
 ]
