@@ -175,10 +175,10 @@ class ClientAPI:
         async for campaign_data in self.campaign_client.fetch_campaigns(initial_state):
             yield campaign_data
 
-    async def fetch_subentities_ids(
+    async def fetch_subentities(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
-    ) -> dict[str, list[str]]:
-        """Fetch subentities IDs from the API.
+    ) -> dict[str, list[Any]]:
+        """Fetch related subentities with full payloads from the API.
 
         Args:
             entity_name (str): The name of the entity.
@@ -186,26 +186,12 @@ class ClientAPI:
             subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
-            dict[str, list[str]]: The fetched subentities IDs.
+            dict[str, list[Any]]: The fetched related subentities.
 
         """
-        return await self.shared_client.fetch_subentities_ids(
+        return await self.shared_client.fetch_subentities(
             entity_name, entity_id, subentity_types
         )
-
-    async def fetch_subentity_details(
-        self, subentity_ids: dict[str, list[str]]
-    ) -> dict[str, list[Any]]:
-        """Fetch subentity details in parallel for multiple IDs.
-
-        Args:
-            subentity_ids: dictionary mapping entity types to lists of IDs
-
-        Returns:
-            dictionary mapping entity types to lists of fetched entities
-
-        """
-        return await self.shared_client.fetch_subentity_details(subentity_ids)
 
     def _create_fetcher_factory(self) -> GenericFetcherFactory:
         """Create and configure the fetcher factory with all configurations."""
