@@ -279,8 +279,8 @@ class ConverterToStix:
         stix_objects = [self.author, self.tlp_marking]
 
         for alert in alerts:
+            alert_id = alert.get("id", "unknown")
             try:
-                alert_id = alert.get("id", "unknown")
                 alert_queue_state = alert.get("queue_state")
 
                 # Extract required fields
@@ -290,6 +290,8 @@ class ConverterToStix:
                 ipv4_address = root_domain.get("ip_address")
                 phone_number = alert["entity"] if not domain_name else None
 
+                product_type = alert.get("product_type", "unknown")
+
                 domain_observable = None
                 phone_number_observable = None
                 ipv4_observable = None
@@ -297,16 +299,21 @@ class ConverterToStix:
                 observable_name = domain_name or phone_number
 
                 # Create domain object if exist, else create phone number instead
-                if domain_name:
-                    domain_observable = self.create_domain(domain_name, alert)
-                    stix_objects.append(domain_observable)
-                    case_refs.append(domain_observable)
-                else:
+                if product_type == "telco":
                     phone_number_observable = self.create_phone_number(
                         phone_number, alert
                     )
                     stix_objects.append(phone_number_observable)
                     case_refs.append(phone_number_observable)
+                elif product_type in ['social_media', 'mobile_apps', 'ecommerce', 'crypto', 'email', 'paid_ads', 'darkwebs']:
+                    domain_observable = self.create_domain(domain_name, alert)
+                    stix_objects.append(domain_observable)
+                    case_refs.append(domain_observable)
+                else:
+                    self.helper.connector_logger.warning(
+                        "[DoppelConverter] Unknown product type, skipping alert",
+                        {"alert_id": alert_id, "product_type": product_type},
+                    )
 
                 # Create ipv4 object if exists
                 if ipv4_address:
