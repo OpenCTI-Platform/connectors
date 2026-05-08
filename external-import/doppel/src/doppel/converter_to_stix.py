@@ -300,19 +300,19 @@ class ConverterToStix:
                 if domain_name:
                     domain_observable = self.create_domain(domain_name, alert)
                     stix_objects.append(domain_observable)
-                    case_refs.append(domain_observable.id)
+                    case_refs.append(domain_observable)
                 else:
                     phone_number_observable = self.create_phone_number(
                         phone_number, alert
                     )
                     stix_objects.append(phone_number_observable)
-                    case_refs.append(phone_number_observable.id)
+                    case_refs.append(phone_number_observable)
 
                 # Create ipv4 object if exists
                 if ipv4_address:
                     ipv4_observable = self.create_ipv4(ipv4_address, alert)
                     stix_objects.append(ipv4_observable)
-                    case_refs.append(ipv4_observable.id)
+                    case_refs.append(ipv4_observable)
 
                     # Create relationship between ipv4 and domain
                     if domain_observable:
@@ -323,39 +323,20 @@ class ConverterToStix:
                         )
                         stix_objects.append(relationship)
 
-                # Create grouping case (idempotent - reuse if already exists for this alert)
+                # Create grouping case
                 if case_refs and self.enable_grouping_case:
-                    existing_grouping_case = self._find_grouping_case_by_alert_id(
-                        alert.get("id")
+                    grouping_case = self.create_grouping_case(
+                        alert, object_refs=case_refs
                     )
-                    
-                    if existing_grouping_case:
-                        self.helper.connector_logger.info(
-                            "[DoppelConverter] Reusing existing grouping case for alert",
-                            {"alert_id": alert.get("id")},
-                        )
-                        grouping_case_id = existing_grouping_case["id"]
-                    else:
-                        grouping_case = self.create_grouping_case(
-                            alert, object_refs=case_refs
-                        )
-                        stix_objects.append(grouping_case)
-                        grouping_case_id = grouping_case.id
+                    stix_objects.append(grouping_case)
 
-                        self.helper.connector_logger.info(
-                            "[DoppelConverter] Created new grouping case for alert",
-                            {"alert_id": alert.get("id")},
+                    for entity in case_refs:
+                        related_to = self.create_relationship(
+                            source_id=grouping_case.id,
+                            target_id=entity.id,
+                            relationship_type="related-to",
                         )
-
-                    # Create related-to relationships if not existing yet
-                    if not existing_grouping_case:
-                        for entity in case_refs:
-                            related_to = self.create_relationship(
-                                source_id=grouping_case_id,
-                                target_id=entity.id,
-                                relationship_type="related-to",
-                            )
-                            stix_objects.append(related_to)
+                        stix_objects.append(related_to)
 
                 # DETECT STATE TRANSITIONS
                 self._handle_state_transitions(
@@ -523,33 +504,6 @@ class ConverterToStix:
 
         return []
 
-    def _find_grouping_case_by_alert_id(self, alert_id: str) -> dict | None:
-        """
-        Find grouping case by alert_id stored in x_opencti_workflow_id.
-        Used to ensure idempotency - reuse the same grouping case per alert.
-
-        :param alert_id: Doppel alert ID
-        :return: Grouping case object or None if not found
-        """
-        filters = {
-            "mode": "and",
-            "filters": [
-                {"key": "x_opencti_workflow_id", "values": [alert_id]},
-            ],
-            "filterGroups": [],
-        }
-
-        grouping_cases = self.helper.api.grouping.list(filters=filters)
-
-        if grouping_cases:
-            self.helper.connector_logger.info(
-                "[DoppelConverter] Found existing grouping case for alert_id",
-                {"alert_id": alert_id, "count": len(grouping_cases)},
-            )
-            return grouping_cases[0]  # Return first match
-
-        return None
-
     def _find_rft_cases_by_alert_id(self, alert_id: str) -> list:
         """
         Find RFT cases by alert_id stored in x_opencti_workflow_id.
@@ -698,15 +652,6 @@ class ConverterToStix:
                 case_rft = self.create_case_rft(alert, object_refs=case_refs, observable_id=observable_id)
                 stix_objects.append(case_rft)
 
-                # Create related-to relationship between case and observables
-                # for entity in case_refs:
-                #     related_to = self.create_relationship(
-                #         source_id=case_rft.properties.id,
-                #         target_id=entity.id,
-                #         relationship_type="related-to",
-                #     )
-                #     stix_objects.append(related_to)
-
             self.helper.connector_logger.info(
                 "[DoppelConverter] Created based-on relationship for new indicator",
                 {
@@ -732,8 +677,8 @@ class ConverterToStix:
         """
         Process reversion workflow:
         - Revoke Indicator
-        - Create Note
-        - Apply new label to indicator
+        - Revoke RFT Cases
+        - Create Note with all revoked refs
 
         :param alert: dict of alert data
         :param observable_id: Id of the observable
@@ -748,6 +693,16 @@ class ConverterToStix:
             "[DoppelConverter] Processing reversion workflow",
             {"alert_id": alert_id, "queue_state": queue_state},
         )
+
+        # Parse timestamps once for reuse
+        modified = (
+            parse_iso_datetime(alert.get("last_activity_timestamp"))
+            if alert.get("last_activity_timestamp")
+            else datetime.now()
+        )
+
+        # Collect all revoked refs to include in note
+        all_revoked_refs = []
 
         # Find existing indicators for this alert
         existing_indicators = self._find_indicators_by_alert_id(
@@ -764,21 +719,13 @@ class ConverterToStix:
                 {"alert_id": alert_id},
             )
         else:
-            # Parse timestamps
-            modified = (
-                parse_iso_datetime(alert.get("last_activity_timestamp"))
-                if alert.get("last_activity_timestamp")
-                else datetime.now()
-            )
-
-            revoked_indicator_refs = []
             revoked_indicators_count = 0
             for indicator in indicators_to_revoke:
                 self.helper.connector_logger.info(
                     "[DoppelConverter] Revoking indicator",
                     {"alert_id": alert_id, "indicator_id": indicator["id"]},
                 )
-                revoked_indicator_refs.append(indicator["standard_id"])
+                all_revoked_refs.append(indicator["standard_id"])
 
                 # Use OpenCTI API to revoke the indicator
                 try:
@@ -807,32 +754,6 @@ class ConverterToStix:
                         },
                     )
 
-            # Add reversion note to observable and cases
-            note_refs = revoked_indicator_refs[:]
-            
-            # Add revoked RFT case refs if they exist
-            if 'revoked_rft_case_refs' in locals():
-                note_refs.extend(revoked_rft_case_refs)
-            
-            note_refs.append(observable_id)
-
-            if note_refs:
-                reversion_note = Note(
-                    id=PyctiNote.generate_id(
-                        content=str(note_refs),
-                        created=modified,
-                    ),
-                    abstract="Moved from taken down back to unresolved",
-                    content=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
-                    created=modified,
-                    modified=modified,
-                    created_by_ref=self.author.id,
-                    object_refs=note_refs,
-                    object_marking_refs=[self.tlp_marking.id],
-                    allow_custom=True,
-                )
-                stix_objects.append(reversion_note)
-
             self.helper.connector_logger.info(
                 "[DoppelConverter] Revoked indicators",
                 {
@@ -853,14 +774,13 @@ class ConverterToStix:
                 {"alert_id": alert_id, "count": len(rft_cases_to_revoke)},
             )
 
-            revoked_rft_case_refs = []
             revoked_rft_cases_count = 0
             for rft_case in rft_cases_to_revoke:
                 self.helper.connector_logger.info(
                     "[DoppelConverter] Revoking RFT case",
                     {"alert_id": alert_id, "case_id": rft_case["id"]},
                 )
-                revoked_rft_case_refs.append(rft_case["standard_id"])
+                all_revoked_refs.append(rft_case["standard_id"])
 
                 # Use OpenCTI API to revoke the RFT case
                 try:
@@ -890,11 +810,20 @@ class ConverterToStix:
                     "revoked_rft_cases_count": revoked_rft_cases_count,
                 },
             )
-
-            # Add RFT case refs to note if they were revoked
-            # Find where note_refs is defined and append them
         else:
             self.helper.connector_logger.info(
                 "[DoppelConverter] No RFT cases found to revoke",
                 {"alert_id": alert_id},
             )
+
+        # Add reversion note to observable and all revoked cases
+        all_revoked_refs.append(observable_id)
+
+        if all_revoked_refs:
+            reversion_note = self.create_note(
+                note_content="Moved from taken down back to unresolved",
+                note_body=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
+                note_refs=all_revoked_refs,
+                note_timestamp=modified
+            )
+            stix_objects.append(reversion_note)
