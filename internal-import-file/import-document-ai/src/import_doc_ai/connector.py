@@ -2,6 +2,8 @@
 See : https://github.com/OpenCTI-Platform/connectors/blob/42e0ad002318224e88cac2b4796c0bc136a4aa75/templates/internal-import-file/src/internal_import_file_connector/connector.py
 """
 
+import json
+
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ImportDocumentAIClient
@@ -58,6 +60,17 @@ class Connector:
                 fetch_octi_allowed_stix_relations_triplets(self.helper)
             )
 
+    def _resolve_agent_slug(self, data: dict) -> str | None:
+        """Extract agent_slug from the message configuration field if present."""
+        config_str = data.get("configuration")
+        if config_str:
+            try:
+                config = json.loads(config_str)
+                return config.get("agent_slug")
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return None
+
     def process_message(self, data: dict) -> str:
         """
         Processing the import request
@@ -71,13 +84,33 @@ class Connector:
         if self.helper.get_only_contextual() and triggering_entity is None:
             return "Connector is only contextual and entity is not defined. Nothing was imported"
 
-        ## Call Ariane Web service
-        ai_bundle = self.import_doc_ia_client.get_bundle(
-            file_name=file.name,
-            file_mime=file.mime_type,
-            file_data=file.buffered_data,
-            allowed_relationship_triplets=self.allowed_relationships_triplets,
-        )
+        # Route based on agent_slug presence in the message
+        agent_slug = self._resolve_agent_slug(data)
+        if agent_slug:
+            # XTM One mode: call via OpenCTI chatbot proxy API
+            self.helper.connector_logger.info(
+                "Using XTM One agent for extraction", {"agent_slug": agent_slug}
+            )
+            ai_bundle = self.import_doc_ia_client.get_bundle_via_xtm_one(
+                file_name=file.name,
+                file_mime=file.mime_type,
+                file_data=file.buffered_data,
+                agent_slug=agent_slug,
+                allowed_relationship_triplets=self.allowed_relationships_triplets,
+            )
+        else:
+            # Legacy mode: direct call to Ariane web service
+            if not self.config.api_base_url:
+                raise ValueError(
+                    "No agent_slug provided and api_base_url is not configured. "
+                    "Either configure XTM One on the platform or set api_base_url for legacy mode."
+                )
+            ai_bundle = self.import_doc_ia_client.get_bundle(
+                file_name=file.name,
+                file_mime=file.mime_type,
+                file_data=file.buffered_data,
+                allowed_relationship_triplets=self.allowed_relationships_triplets,
+            )
         # Handle Attack pattern special case reunification if already present in OCTI platform
         for ai_attack_pattern in filter_bundle_entities_by_type(
             ai_bundle, {"attack-pattern"}

@@ -47,16 +47,16 @@ class ConfigConnector:
             ["IMPORT_DOCUMENT_AI_API_BASE_URL", "CONNECTOR_WEB_SERVICE_URL"],
             [["import_document_ai", "api_base_url"], ["connector", "web_service_url"]],
             self.load,
-            required=True,
+            required=False,
         )
 
         self.api_key = get_config_variable_legacy(
             ["IMPORT_DOCUMENT_AI_API_KEY", "CONNECTOR_LICENCE_KEY_PEM"],
             [["import_document_ai", "api_key"], ["connector", "licence_key_pem"]],
             self.load,
-            required=True,
+            required=False,
         )
-        self.licence_key_base64 = base64.b64encode(self.api_key.encode())
+        self.licence_key_base64 = base64.b64encode(self.api_key.encode()) if self.api_key else None
 
         # Read connector flags from config (create_indicator, web_service_url, etc.)
         self.create_indicator = get_config_variable_legacy(
