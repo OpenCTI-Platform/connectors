@@ -10,6 +10,7 @@ connector:
   scope: 'application/pdf,text/plain,text/html,text/markdown'
   auto: false # Enable/disable auto-import of file
   log_level: 'info'
+  xtm_one_intent: 'cti.extractor' # XTM One intent for agent-based extraction
 
 import_document_ai:
   include_relationships: true
