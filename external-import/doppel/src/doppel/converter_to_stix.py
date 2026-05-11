@@ -301,16 +301,16 @@ class ConverterToStix:
         stix_objects = [self.author, self.tlp_marking]
 
         for alert in alerts:
-            alert_id = alert.get("id", "unknown")
+            alert_id = alert.get("id")
             try:
-                entity_value = alert.get("entity", "unknown")
+                entity_value = alert.get("entity")
                 # Extract required fields
                 ipv4_address = (
                     alert.get("entity_content", {})
                     .get("root_domain", {})
                     .get("ip_address")
                 )
-                product_type = alert.get("product_type", "unknown")
+                product_type = alert.get("product")
                 case_refs = []
 
                 domain_observable = None
@@ -325,13 +325,14 @@ class ConverterToStix:
                     stix_objects.append(phone_number_observable)
                     case_refs.append(phone_number_observable)
                 elif product_type in [
+                    "domains",
                     "social_media",
                     "mobile_apps",
                     "ecommerce",
                     "crypto",
                     "email",
                     "paid_ads",
-                    "darkwebs",
+                    "darkweb",
                 ]:
                     domain_observable = self.create_domain(entity_value, alert)
                     stix_objects.append(domain_observable)
