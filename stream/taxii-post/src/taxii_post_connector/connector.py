@@ -133,15 +133,3 @@ class TaxiiPostConnector:
     def start(self):
         self.check_stream_id()
         self.helper.listen_stream(self._process_message)
-
-
-if __name__ == "__main__":
-    try:
-        settings = ConnectorSettings()
-        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
-        connector = TaxiiPostConnector(config=settings, helper=helper)
-        connector.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)

@@ -19,7 +19,7 @@ if __name__ == "__main__":
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
         connector = TaxiiPostConnector(config=settings, helper=helper)
-        connector.run()
+        connector.start()
     except Exception:
         traceback.print_exc()
         exit(1)
