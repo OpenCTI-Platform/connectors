@@ -1,4 +1,4 @@
-from typing import Optional, Literal
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -6,11 +6,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import (
-    Field,
-    HttpUrl,
-    SecretStr,
-)
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class StreamConnectorConfig(BaseStreamConnectorConfig):
