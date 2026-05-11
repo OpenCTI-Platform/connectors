@@ -45,7 +45,9 @@ class ConverterToStix:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        tlp_level: Literal[
+            "clear", "white", "green", "amber", "amber+strict", "red"
+        ],
         enable_grouping_case: bool = False,
         enable_rft_case: bool = False,
     ):
@@ -70,7 +72,9 @@ class ConverterToStix:
         :return: Identity Stix2 object
         """
         return Identity(
-            id=PyctiIdentity.generate_id(name="Doppel", identity_class="organization"),
+            id=PyctiIdentity.generate_id(
+                name="Doppel", identity_class="organization"
+            ),
             name="Doppel",
             identity_class="organization",
             description="Threat Intelligence Provider",
@@ -89,7 +93,9 @@ class ConverterToStix:
             "green": TLP_GREEN,
             "amber": TLP_AMBER,
             "amber+strict": Stix2MarkingDefinition(
-                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                id=PyctiMarkingDefinition.generate_id(
+                    "TLP", "TLP:AMBER+STRICT"
+                ),
                 definition_type="statement",
                 definition={"statement": "custom"},
                 custom_properties={
@@ -101,7 +107,9 @@ class ConverterToStix:
         }
         return mapping[level]
 
-    def create_phone_number(self, phone_number: str, alert: dict) -> PhoneNumber:
+    def create_phone_number(
+        self, phone_number: str, alert: dict
+    ) -> PhoneNumber:
         """
         Create PhoneNumber object
         """
@@ -124,7 +132,9 @@ class ConverterToStix:
             value=domain_name,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
-            external_references=external_references if external_references else None,
+            external_references=external_references
+            if external_references
+            else None,
             custom_properties=custom_properties,
             allow_custom=True,
         )
@@ -141,12 +151,16 @@ class ConverterToStix:
             value=ip_address,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
-            external_references=external_references if external_references else None,
+            external_references=external_references
+            if external_references
+            else None,
             custom_properties=custom_properties,
             allow_custom=True,
         )
 
-    def create_case_rft(self, alert: dict, object_refs: list, observable_id: str) -> dict:
+    def create_case_rft(
+        self, alert: dict, object_refs: list, observable_id: str
+    ) -> dict:
         """
         Create Request for Takedown case
         """
@@ -159,11 +173,13 @@ class ConverterToStix:
             "id": PyctiCaseRft.generate_id(name=case_name, created=now),
             "name": case_name,
             "description": build_description(alert),
-            "priority": priority,               
-            "severity": alert.get('severity'),
+            "priority": priority,
+            "severity": alert.get("severity"),
             "labels": build_labels(alert) + [f"priority:{priority}"],
             "external_references": build_external_references(alert),
-            "custom_properties": build_custom_properties(alert, self.author.id),
+            "custom_properties": build_custom_properties(
+                alert, self.author.id
+            ),
             "object_refs": object_refs,
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.tlp_marking.id],
@@ -215,7 +231,11 @@ class ConverterToStix:
         )
 
     def create_note(
-        self, note_content: str, note_body: str, note_refs: list, note_timestamp
+        self,
+        note_content: str,
+        note_body: str,
+        note_refs: list,
+        note_timestamp,
     ) -> Note:
         """
         Create Note object
@@ -261,7 +281,9 @@ class ConverterToStix:
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
-            external_references=external_references if external_references else None,
+            external_references=external_references
+            if external_references
+            else None,
             valid_from=created_at,
             custom_properties=custom_properties,
             allow_custom=True,
@@ -281,32 +303,37 @@ class ConverterToStix:
         for alert in alerts:
             alert_id = alert.get("id", "unknown")
             try:
-                alert_queue_state = alert.get("queue_state")
-
+                entity_value = alert.get("entity", "unknown")
                 # Extract required fields
-                entity_content = alert.get("entity_content", {})
-                root_domain = entity_content.get("root_domain", {})
-                domain_name = root_domain.get("domain")
-                ipv4_address = root_domain.get("ip_address")
-                phone_number = alert["entity"] if not domain_name else None
-
+                ipv4_address = (
+                    alert.get("entity_content", {})
+                    .get("root_domain", {})
+                    .get("ip_address")
+                )
                 product_type = alert.get("product_type", "unknown")
+                case_refs = []
 
                 domain_observable = None
                 phone_number_observable = None
                 ipv4_observable = None
-                case_refs = []
-                observable_name = domain_name or phone_number
 
                 # Create domain object if exist, else create phone number instead
                 if product_type == "telco":
                     phone_number_observable = self.create_phone_number(
-                        phone_number, alert
+                        entity_value, alert
                     )
                     stix_objects.append(phone_number_observable)
                     case_refs.append(phone_number_observable)
-                elif product_type in ['social_media', 'mobile_apps', 'ecommerce', 'crypto', 'email', 'paid_ads', 'darkwebs']:
-                    domain_observable = self.create_domain(domain_name, alert)
+                elif product_type in [
+                    "social_media",
+                    "mobile_apps",
+                    "ecommerce",
+                    "crypto",
+                    "email",
+                    "paid_ads",
+                    "darkwebs",
+                ]:
+                    domain_observable = self.create_domain(entity_value, alert)
                     stix_objects.append(domain_observable)
                     case_refs.append(domain_observable)
                 else:
@@ -314,6 +341,7 @@ class ConverterToStix:
                         "[DoppelConverter] Unknown product type, skipping alert",
                         {"alert_id": alert_id, "product_type": product_type},
                     )
+                    continue
 
                 # Create ipv4 object if exists
                 if ipv4_address:
@@ -347,11 +375,10 @@ class ConverterToStix:
 
                 # DETECT STATE TRANSITIONS
                 self._handle_state_transitions(
-                    alert_queue_state,
                     domain_observable or phone_number_observable,
                     alert,
                     stix_objects,
-                    observable_name,
+                    entity_value,
                 )
 
             except Exception as e:
@@ -366,7 +393,6 @@ class ConverterToStix:
 
     def _handle_state_transitions(
         self,
-        alert_queue_state: str,
         current_observable: DomainName | PhoneNumber,
         alert: dict,
         stix_objects: list,
@@ -389,6 +415,7 @@ class ConverterToStix:
             id=current_observable.id
         )
 
+        alert_queue_state = alert.get("queue_state")
         if observable_octi:
             self.helper.connector_logger.debug(
                 "[Handle state transition] Observable found in OCTI",
@@ -398,7 +425,7 @@ class ConverterToStix:
                     "alert_queue_state": alert_queue_state,
                 },
             )
-            
+
             # Extract previous queue_state from label for reference/logging only
             previous_queue_state = None
 
@@ -409,7 +436,9 @@ class ConverterToStix:
                 if label["value"].startswith("queue_state:")
             ]
             if label_queue_state:
-                previous_queue_state = label_queue_state[0].replace("queue_state:", "")
+                previous_queue_state = label_queue_state[0].replace(
+                    "queue_state:", ""
+                )
                 self.helper.api.stix_cyber_observable.remove_label(
                     id=observable_octi["id"], label_name=label_queue_state
                 )
@@ -433,7 +462,10 @@ class ConverterToStix:
                 # Create or update indicator + RFT case
                 self.helper.connector_logger.debug(
                     "[Handle state transition] Alert in takedown state - processing takedown",
-                    {"alert_id": alert.get("id"), "queue_state": alert_queue_state},
+                    {
+                        "alert_id": alert.get("id"),
+                        "queue_state": alert_queue_state,
+                    },
                 )
                 self._process_takedown(
                     alert, current_observable.id, stix_objects, observable_name
@@ -444,13 +476,18 @@ class ConverterToStix:
                 # Check if indicator exists, revoke it if present
                 self.helper.connector_logger.debug(
                     "[Handle state transition] Alert in monitoring state - checking for reversion",
-                    {"alert_id": alert.get("id"), "queue_state": alert_queue_state},
+                    {
+                        "alert_id": alert.get("id"),
+                        "queue_state": alert_queue_state,
+                    },
                 )
                 self._process_reversion(
                     alert, current_observable.id, stix_objects, observable_name
                 )
 
-    def _find_indicators_by_alert_id(self, alert_id: str, observable_name: str) -> list:
+    def _find_indicators_by_alert_id(
+        self, alert_id: str, observable_name: str
+    ) -> list:
         """
         Find indicators by alert_id stored in x_opencti_workflow_id or external_id
         :param alert_id: Doppel alert ID
@@ -539,7 +576,11 @@ class ConverterToStix:
         return []
 
     def _process_takedown(
-        self, alert: dict, observable_id: str, stix_objects: list, observable_name: str
+        self,
+        alert: dict,
+        observable_id: str,
+        stix_objects: list,
+        observable_name: str,
     ) -> None:
         """
         Process takedown workflow: Create Indicator (based-on Observable)
@@ -568,7 +609,9 @@ class ConverterToStix:
 
         # Parse timestamps once for indicator/note reuse
         created_at = (
-            parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
+            parse_iso_datetime(alert["created_at"])
+            if alert.get("created_at")
+            else None
         )
         modified_at = (
             parse_iso_datetime(alert.get("last_activity_timestamp"))
@@ -656,7 +699,9 @@ class ConverterToStix:
 
             # Create RFT case (if enabled)
             if self.enable_rft_case:
-                case_rft = self.create_case_rft(alert, object_refs=case_refs, observable_id=observable_id)
+                case_rft = self.create_case_rft(
+                    alert, object_refs=case_refs, observable_id=observable_id
+                )
                 stix_objects.append(case_rft)
 
             self.helper.connector_logger.info(
@@ -670,7 +715,9 @@ class ConverterToStix:
 
             # Add note referencing both indicator and observable
             note_refs = [indicator.id, observable_id]
-            note = self.create_note(note_content, note_body, note_refs, note_timestamp)
+            note = self.create_note(
+                note_content, note_body, note_refs, note_timestamp
+            )
             stix_objects.append(note)
 
             self.helper.connector_logger.info(
@@ -679,7 +726,11 @@ class ConverterToStix:
             )
 
     def _process_reversion(
-        self, alert: dict, observable_id: str, stix_objects: list, observable_name: str
+        self,
+        alert: dict,
+        observable_id: str,
+        stix_objects: list,
+        observable_name: str,
     ) -> None:
         """
         Process reversion workflow:
@@ -737,18 +788,24 @@ class ConverterToStix:
                 # Use OpenCTI API to revoke the indicator
                 try:
                     self.helper.api.indicator.update_field(
-                        id=indicator["id"], input={"key": "revoked", "value": True}
+                        id=indicator["id"],
+                        input={"key": "revoked", "value": True},
                     )
 
                     # Add revoked-false-positive label
-                    label = self.helper.api.label.create(value="revoked-false-positive")
+                    label = self.helper.api.label.create(
+                        value="revoked-false-positive"
+                    )
                     self.helper.api.indicator.add_label(
                         id=indicator["id"], label_id=label["id"]
                     )
 
                     self.helper.connector_logger.info(
                         "[DoppelConverter] Successfully revoked indicator via API",
-                        {"alert_id": alert_id, "indicator_id": indicator["id"]},
+                        {
+                            "alert_id": alert_id,
+                            "indicator_id": indicator["id"],
+                        },
                     )
                     revoked_indicators_count += 1
                 except Exception as e:
@@ -772,7 +829,9 @@ class ConverterToStix:
         # Find and revoke RFT cases for this alert
         existing_rft_cases = self._find_rft_cases_by_alert_id(alert_id)
         rft_cases_to_revoke = [
-            case for case in existing_rft_cases if not case.get("revoked", False)
+            case
+            for case in existing_rft_cases
+            if not case.get("revoked", False)
         ]
 
         if rft_cases_to_revoke:
@@ -792,7 +851,8 @@ class ConverterToStix:
                 # Use OpenCTI API to revoke the RFT case
                 try:
                     self.helper.api.case_rft.update_field(
-                        id=rft_case["id"], input={"key": "revoked", "value": True}
+                        id=rft_case["id"],
+                        input={"key": "revoked", "value": True},
                     )
 
                     self.helper.connector_logger.info(
@@ -831,6 +891,6 @@ class ConverterToStix:
                 note_content="Moved from taken down back to unresolved",
                 note_body=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
                 note_refs=all_revoked_refs,
-                note_timestamp=modified
+                note_timestamp=modified,
             )
             stix_objects.append(reversion_note)
