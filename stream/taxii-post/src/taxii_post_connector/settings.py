@@ -14,6 +14,7 @@ class StreamConnectorConfig(BaseStreamConnectorConfig):
     Override the `BaseStreamConnectorConfig` to add parameters and/or defaults
     to the configuration for connectors of type `STREAM`.
     """
+
     name: str = Field(
         description="The name of the connector.",
         default="TAXII POST",
