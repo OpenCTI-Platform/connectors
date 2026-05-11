@@ -8,7 +8,7 @@ from doppel.stix_helpers import (
     build_labels,
     calculate_priority,
     is_reverted_state,
-    is_takedown_state,
+    in_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
 from pycti import (
@@ -444,7 +444,7 @@ class ConverterToStix:
                 )
 
             # Use current alert_queue_state for decision logic (not label-based)
-            is_takedown_now = is_takedown_state(alert_queue_state)
+            is_takedown_now = in_takedown_state(alert_queue_state)
             is_reverted_now = is_reverted_state(alert_queue_state)
 
             self.helper.connector_logger.debug(

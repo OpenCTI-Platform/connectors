@@ -16,7 +16,7 @@ def calculate_priority(score) -> str:
         return "P4"
 
 
-def is_takedown_state(queue_state) -> bool:
+def in_takedown_state(queue_state) -> bool:
     """Check if alert is in takedown state"""
     return queue_state and queue_state.lower() in ["actioned", "taken_down"]
 
