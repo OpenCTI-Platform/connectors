@@ -2,6 +2,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 pycti==7.260422.0
 =======
 pycti==7.260401.0
@@ -14,6 +15,8 @@ pycti==7.260422.0
 =======
 pycti==7.260510.0
 >>>>>>> f99b2d9d1 (updated requirements)
+=======
+>>>>>>> 866d45d5e (updated requirements)
 pydantic >=2.8.2, <3
 connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
 >>>>>>> 16fb65b13 (updated requirements)
