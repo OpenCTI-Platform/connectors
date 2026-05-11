@@ -51,8 +51,9 @@ class TaxiiPostConnector:
         except:
             raise ValueError("Cannot process the message")
         self.helper.log_info("Processing the object " + data["id"])
+        base = str(self.config.url).rstrip("/")
         url = (
-            self.config.url
+            base
             + "/"
             + self.config.api_root
             + "/collections/"
