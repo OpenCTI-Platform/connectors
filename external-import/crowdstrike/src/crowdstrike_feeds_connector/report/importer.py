@@ -13,8 +13,18 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.ioc_extractor import extract_iocs
+from crowdstrike_feeds_services.utils.observables import (
+    ObservableProperties,
+    create_observable_domain_name,
+    create_observable_file_md5,
+    create_observable_file_sha1,
+    create_observable_file_sha256,
+    create_observable_ip_address,
+    create_observable_url,
+)
 from stix2 import Bundle, Identity, MarkingDefinition
-from stix2.v21 import _DomainObject
+from stix2.v21 import _DomainObject, _Observable
 
 from ..importer import BaseImporter
 from ..indicator.builder import IndicatorBundleBuilder
@@ -52,6 +62,7 @@ class ReportImporter(BaseImporter):
         indicator_config: dict,
         no_file_trigger_import: bool,
         scopes: set[str],
+        report_extract_iocs: list[str] | None = None,
     ) -> None:
         """Initialize CrowdStrike report importer."""
         super().__init__(config, helper, author, tlp_marking)
@@ -68,6 +79,7 @@ class ReportImporter(BaseImporter):
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
         self.scopes = scopes
+        self.report_extract_iocs = report_extract_iocs or []
         self.malware_guess_cache: dict[str, str] = {}
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
@@ -120,6 +132,10 @@ class ReportImporter(BaseImporter):
         fields = ["__full__"]
 
         fql_filter = f"last_modified_date:>{start_timestamp}"
+
+        # Also filter by created_date to avoid importing very old reports
+        # that were recently modified (e.g., tag updates by CrowdStrike).
+        fql_filter = f"{fql_filter}+created_date:>{self.default_latest_timestamp}"
 
         if self.include_types:
             fql_filter = f"{fql_filter}+type:{self.include_types}"
@@ -371,6 +387,9 @@ class ReportImporter(BaseImporter):
             )
         malwares_from_field = report.get("malware", [])
 
+        # Extract IOCs from report text content
+        extracted_observables = self._extract_iocs_from_report(report)
+
         bundle_builder = ReportBundleBuilder(
             report,
             author,
@@ -384,8 +403,67 @@ class ReportImporter(BaseImporter):
             self.report_guess_relations,
             malwares_from_field=malwares_from_field,
             scopes=self.scopes,
+            extracted_observables=extracted_observables,
         )
         return bundle_builder.build()
+
+    # Map IOC type -> observable factory function
+    _IOC_OBSERVABLE_FACTORIES = {
+        "ipv4": create_observable_ip_address,
+        "ipv6": create_observable_ip_address,
+        "domain": create_observable_domain_name,
+        "url": create_observable_url,
+        "md5": create_observable_file_md5,
+        "sha1": create_observable_file_sha1,
+        "sha256": create_observable_file_sha256,
+    }
+
+    def _extract_iocs_from_report(self, report) -> list[_Observable]:
+        """Extract IOCs from report text content and create STIX observables."""
+        if not self.report_extract_iocs:
+            return []
+
+        text = self._get_report_text_content(report)
+        if not text:
+            return []
+
+        iocs = extract_iocs(text, self.report_extract_iocs)
+        if not iocs:
+            return []
+
+        self._info(
+            "Extracted {0} IOCs from report {1}",
+            len(iocs),
+            report.get("name", "unknown"),
+        )
+
+        observables: list[_Observable] = []
+        for ioc in iocs:
+            factory = self._IOC_OBSERVABLE_FACTORIES.get(ioc.type)
+            if factory is None:
+                continue
+            try:
+                props = ObservableProperties(
+                    value=ioc.value,
+                    created_by=self.author,
+                    labels=["extracted-from-report"],
+                    score=0,
+                    object_markings=[self.tlp_marking],
+                )
+                observables.append(factory(props))
+            except Exception as err:
+                self._error(
+                    "Failed to create observable for {0} ({1}): {2}",
+                    ioc.type,
+                    ioc.value,
+                    err,
+                )
+        return observables
+
+    @staticmethod
+    def _get_report_text_content(report: dict) -> str:
+        """Extract plain text content from the report for IOC extraction."""
+        return report.get("description") or report.get("short_description") or ""
 
     # MVP2
     def _guess_malwares_from_tags(self, tags: List) -> dict[str, str]:
