@@ -545,9 +545,15 @@ class ConverterToStix:
             self._handle_indicators_existing(existing_indicators, alert, observables, stix_objects)
         else:
             indicators = self._handle_indicators_new(alert, observables, stix_objects)
+
+            # Add Note.
+            for indicator in indicators:
+                _ = self._handle_note_addition(self, indicator, alert, observables, stix_objects)
+
             return indicators
+        
     
-    def _handle_indicators_existing(self, existing_indicators, alert):
+    def _handle_indicators_existing(self, existing_indicators, alert, observables, stix_objects):
         """When an indicator for given alert data already exists.
         
         Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
@@ -557,30 +563,32 @@ class ConverterToStix:
 
         alert_id = alert.get("id")
         for indicator in existing_indicators: 
-            if indicator["revoked"]:
                 
-                in_taken_down_state = in_takedown_state(alert.get("queue_state"))
-                
-                # If taken_down/actioned = False
-                # If any other state = True
-                revoke_indicator = not in_taken_down_state
-                
-                self.helper.connector_logger.info(
-                    "[DoppelConverter] Updating indicator revoke status",
-                    {
-                        "alert_id": alert_id,
-                        "indicator_standard_id": indicator["standard_id"],
-                        "setting revoked to": revoke_indicator
-                    },
-                )
-                
-                self.helper.api.indicator.update_field(
-                    id=indicator["standard_id"],
-                    input={"key": "revoked", "value": revoke_indicator},
-                )
+            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
+            
+            # If taken_down/actioned = False
+            # If any other state = True
+            revoke_indicator = not in_taken_down_state
+            
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Updating indicator revoke status",
+                {
+                    "alert_id": alert_id,
+                    "indicator_standard_id": indicator["standard_id"],
+                    "setting revoked to": revoke_indicator
+                },
+            )
+            
+            self.helper.api.indicator.update_field(
+                id=indicator["standard_id"],
+                input={"key": "revoked", "value": revoke_indicator},
+            )
+            # Add Note.
+            _ = self._handle_note_update_for_indicator(self, indicator, alert, observables, stix_objects)
+
             # TODO: Update other details of indicator such as tags/labels etc
 
-    def _handle_indicators_new(self, alert, stix_objects):
+    def _handle_indicators_new(self, alert, observables, stix_objects):
         """When an indicator for given alert data does not exist.
 
         1. Check the status:
@@ -728,6 +736,8 @@ class ConverterToStix:
             _ = self._handle_rft_cases_existing(existing_rft_cases, alert, observables, stix_objects)
         else:
             rft_case = self._handle_rft_cases_new(alert, observables, stix_objects)
+            # Add Note.
+            _ = self._handle_note_addition(self, rft_case, alert, observables, stix_objects)
             return rft_case
         
     def _handle_rft_cases_existing(self, existing_rft_cases, alert, observables, stix_objects):
@@ -740,27 +750,30 @@ class ConverterToStix:
 
         alert_id = alert.get("id")
         for rft_case in existing_rft_cases: 
-            if rft_case["revoked"]:
-                
-                in_taken_down_state = in_takedown_state(alert.get("queue_state"))
-                
-                # If taken_down/actioned => Revoke = False
-                # If any other state => Revoke = True
-                revoke_rft_case = not in_taken_down_state
-                
-                self.helper.connector_logger.info(
-                    "[DoppelConverter] Updating RFT case revoke status",
-                    {
-                        "alert_id": alert_id,
-                        "case_standard_id": rft_case["standard_id"],
-                        "setting revoked to": revoke_rft_case
-                    },
-                )
-                
-                self.helper.api.case_rft.update_field(
-                    id=rft_case["standard_id"],
-                    input={"key": "revoked", "value": revoke_rft_case},
-                )
+            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
+            
+            # If taken_down/actioned => Revoke = False
+            # If any other state => Revoke = True
+            revoke_rft_case = not in_taken_down_state
+            
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Updating RFT case revoke status",
+                {
+                    "alert_id": alert_id,
+                    "case_standard_id": rft_case["standard_id"],
+                    "setting revoked to": revoke_rft_case
+                },
+            )
+            
+            self.helper.api.case_rft.update_field(
+                id=rft_case["standard_id"],
+                input={"key": "revoked", "value": revoke_rft_case},
+            )
+            
+            # Add Note.
+            _ = self._handle_note_addition(self, rft_case, alert, observables, stix_objects)
+
+            # TODO: Update other details of RFT case such as tags/labels etc
 
     def _handle_rft_cases_new(self, alert, observables, stix_objects):
         """When an RFT case for given alert data does not exist.
@@ -808,3 +821,33 @@ class ConverterToStix:
                 {"case_id": rft_case.id, "error": str(e)},
             )
             raise
+
+    def _handle_note_addition(self, obj, alert, observables, stix_objects):
+        """Handle update of note content when indicator already exists.
+
+        Whenever we have an indicator already present for given alert data and if we find that the indicator is revoked but alert is in actioned/taken down state - we will update the note content to reflect the current status of the alert.
+        """
+        ### Adding Note with details about update in Doppel queue state.
+        alert_id = alert.get("id")
+        queue_state = alert.get("queue_state")
+        observable_id = observables[0].id
+        note_content = f"Doppel alert queue state updated to {alert.get('queue_state')}. Setting revoked to {not in_takedown_state(queue_state)}."
+        
+        note_refs = [obj["standard_id"], observable_id]
+        
+        note_body = f"Alert {alert_id} has been {queue_state}"
+        created_at = (
+            parse_iso_datetime(alert["created_at"])
+            if alert.get("created_at")
+            else None
+        )
+        modified_at = (
+            parse_iso_datetime(alert.get("last_activity_timestamp"))
+            if alert.get("last_activity_timestamp")
+            else None
+        )
+        note_timestamp = modified_at or created_at or datetime.now()
+        note = self._create_note(
+            note_content, note_body, note_refs, note_timestamp,
+        )
+        stix_objects.append(note)
