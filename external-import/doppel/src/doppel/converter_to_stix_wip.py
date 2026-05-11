@@ -7,7 +7,6 @@ from doppel.stix_helpers import (
     build_external_references,
     build_labels,
     calculate_priority,
-    is_reverted_state,
     in_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
@@ -35,7 +34,7 @@ from stix2 import (
 )
 from stix2 import MarkingDefinition as Stix2MarkingDefinition
 from stix2 import Note, Relationship as Stix2Relationship
-
+from constants import DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO
 
 class ConverterToStix:
     """
@@ -442,17 +441,6 @@ class ConverterToStix:
         product_type = alert.get("product")
         observables = []
 
-        # In future if we get a new type - we'll be aware about supported types
-        doppel_alert_types_except_domain_telco = [
-            "social_media",
-            "mobile_apps",
-            "ecommerce",
-            "crypto",
-            "email",
-            'paid_ads',
-            'darkweb'
-        ]
-
         try:
             if product_type == "telco":
                 phone_number = alert.get("entity")
@@ -472,7 +460,7 @@ class ConverterToStix:
                     stix_objects.append(ipv4_observable)
                     observables.append(ipv4_observable)
             # We may consider to change this in future.
-            elif product_type in doppel_alert_types_except_domain_telco:
+            elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
                 domain = alert.get("entity")
                 domain_observable = self._create_observable('domain', domain, alert)
                 stix_objects.append(domain_observable)
@@ -613,16 +601,7 @@ class ConverterToStix:
         # else in_taken_down_state = actioned/taken_down
 
         product_type = alert.get("product")
-        doppel_alert_types_except_domains_telco = [
-            "social_media",
-            "mobile_apps",
-            "ecommerce",
-            "crypto",
-            "email",
-            'paid_ads',
-            'darkweb'
-        ]
-
+        
         alert_id = alert.get("id")
         entity_value = alert.get("entity", "")
 
@@ -668,7 +647,7 @@ class ConverterToStix:
                 )
                 stix_objects.append(ipv4_indicator)
                 indicators.append(ipv4_indicator)
-        elif product_type in doppel_alert_types_except_domains_telco:
+        elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
             pattern = f"[domain-name:value = '{entity_value}']"
             name = entity_value
             domain_indicator = self._create_indicator(
