@@ -133,6 +133,10 @@ class ReportImporter(BaseImporter):
 
         fql_filter = f"last_modified_date:>{start_timestamp}"
 
+        # Also filter by created_date to avoid importing very old reports
+        # that were recently modified (e.g., tag updates by CrowdStrike).
+        fql_filter = f"{fql_filter}+created_date:>{self.default_latest_timestamp}"
+
         if self.include_types:
             fql_filter = f"{fql_filter}+type:{self.include_types}"
 
