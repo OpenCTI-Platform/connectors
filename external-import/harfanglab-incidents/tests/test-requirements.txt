@@ -1,4 +1,4 @@
 pytest>=7.0.0
 pytest-mock>=3.10.0
-pycti==7.260430.0
+pycti==7.260512.0
 validators==0.35.0

@@ -1,5 +1,5 @@
 datasize==1.0.0
-pycti==7.260510.0
+pycti==7.260512.0
 pympler==1.1
 urllib3==2.7.0
 pymisp~=2.5.17
