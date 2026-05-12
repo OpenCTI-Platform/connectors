@@ -1,5 +1,6 @@
 """Report-specific orchestrator for fetching and processing report data."""
 
+import base64
 import logging
 import re
 from typing import Any
@@ -148,6 +149,11 @@ class OrchestratorReport(BaseOrchestrator):
 
                     all_entities = report_entities + (subentity_stix or [])
 
+                    if self.config.report_download_pdf:
+                        all_entities = await self._attach_report_pdf(
+                            report, all_entities
+                        )
+
                     entity_types: dict[str, int] = {}
                     for entity in all_entities:
                         entity_type = getattr(entity, "type", None)
@@ -193,6 +199,58 @@ class OrchestratorReport(BaseOrchestrator):
         self.batch_processor.config.work_name_template = re.sub(
             pattern, replacer, template
         )
+
+    async def _attach_report_pdf(
+        self, report: Any, all_entities: list[Any]
+    ) -> list[Any]:
+        """Download and attach a report PDF to the STIX report entity.
+
+        Args:
+            report: The GTI report data object.
+            all_entities: The list of STIX entities (including the report).
+
+        Returns:
+            The updated list of STIX entities with the PDF attached.
+
+        """
+        pdf_content = await self.client_api.download_report_pdf(report.id)
+        if not pdf_content:
+            return all_entities
+
+        self.logger.info(
+            "Attaching PDF to report",
+            {
+                "prefix": LOG_PREFIX,
+                "report_id": report.id,
+                "pdf_size": len(pdf_content),
+            },
+        )
+
+        report_name = (
+            report.attributes.name
+            if report.attributes and report.attributes.name
+            else report.id
+        )
+        safe_name = re.sub(r"[^\w\s\-.]", "_", report_name)[:100]
+
+        pdf_file = {
+            "name": f"{safe_name}.pdf",
+            "data": base64.b64encode(pdf_content).decode("utf-8"),
+            "mime_type": "application/pdf",
+            "no_trigger_import": True,
+        }
+
+        for entity in all_entities:
+            if getattr(entity, "type", None) == "report":
+                if hasattr(entity, "custom_properties"):
+                    if entity.custom_properties is None:
+                        entity.custom_properties = {}
+                    existing_files = entity.custom_properties.get("x_opencti_files", [])
+                    existing_files.append(pdf_file)
+                    entity.custom_properties["x_opencti_files"] = existing_files
+                break
+
+        return all_entities
 
     def _flush_batch_processor(self) -> None:
         """Flush any remaining items in the batch processor."""

@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
+from aiohttp import ClientSession, ClientTimeout
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
 
 
@@ -153,3 +154,70 @@ class ClientAPIReport(BaseClientAPI):
                 report_fetcher, endpoint_params, "reports"
             ):
                 yield report_data
+
+    async def download_report_pdf(self, report_id: str) -> bytes | None:
+        """Download a report PDF from the GTI API.
+
+        The GTI API returns a JSON response containing a URL to the actual PDF file.
+        This method first fetches that URL, then downloads the PDF binary content.
+
+        Args:
+            report_id: The ID of the report to download the PDF for.
+
+        Returns:
+            The PDF content as bytes, or None if the download failed.
+
+        """
+        url = f"{self.config.api_url.unicode_string()}/collections/{report_id}/download_report"
+        headers = {
+            "X-Apikey": self.config.api_key.get_secret_value(),
+            "accept": "application/json",
+        }
+
+        try:
+            response = await self.api_client.call_api(
+                url=url,
+                method="GET",
+                headers=headers,
+            )
+
+            pdf_url = response.get("data") if isinstance(response, dict) else None
+
+            if not pdf_url:
+                self.logger.warning(
+                    "No PDF URL found in download_report response",
+                    {"prefix": self.LOG_PREFIX, "report_id": report_id},
+                )
+                return None
+
+            self.logger.info(
+                "Downloading report PDF",
+                {"prefix": self.LOG_PREFIX, "report_id": report_id},
+            )
+
+            async with ClientSession(
+                timeout=ClientTimeout(total=120), trust_env=True
+            ) as session:
+                async with session.get(pdf_url) as pdf_response:
+                    if pdf_response.status >= 400:
+                        self.logger.warning(
+                            "Failed to download report PDF",
+                            {
+                                "prefix": self.LOG_PREFIX,
+                                "report_id": report_id,
+                                "status": pdf_response.status,
+                            },
+                        )
+                        return None
+                    return await pdf_response.read()
+
+        except Exception as e:
+            self.logger.warning(
+                "Error downloading report PDF",
+                {
+                    "prefix": self.LOG_PREFIX,
+                    "report_id": report_id,
+                    "error": str(e),
+                },
+            )
+            return None
