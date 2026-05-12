@@ -115,6 +115,8 @@ class ConverterToStix:
         priority = calculate_priority(alert.get("score", 0))
         case_name = f"Doppel Takedown - {alert.get('entity', 'Unknown')} ({alert.get('id')})"
         now = datetime.now(timezone.utc).isoformat()
+        labels = build_labels(alert)
+        labels.append(f"priority:{priority}")
 
         return {
             "type": "case-rft",
@@ -123,7 +125,7 @@ class ConverterToStix:
             "description": build_description(alert),
             "priority": priority,
             "severity": alert.get("severity"),
-            "labels": build_labels(alert) + [f"priority:{priority}"],
+            "labels": labels,
             "external_references": build_external_references(alert),
             "custom_properties": build_custom_properties(
                 alert, self.author.id
@@ -401,7 +403,7 @@ class ConverterToStix:
         stix_objects = [self.author, self.tlp_marking]
 
         for alert in alerts:
-            # Create observables
+            #######- --------- observables ------------#######
             observables = self._handle_observable_creation(alert, stix_objects)
             if not observables:
                 self.helper.connector_logger.warning(
@@ -413,19 +415,22 @@ class ConverterToStix:
             if len(observables) == 2:
                 _ = self._handle_domain_ip_relationship(observables, stix_objects)
 
-            # Create Grouping Case
+            _ = self._handle_update_observables_labels(alert, observables)
+
+            #######- --------- Grouping Case ------------#######
             grouping_case = self._handle_grouping_case_creation(alert, observables, stix_objects)
             # Grouping case related to observable relationships
             if grouping_case:
                 _ = self._handle_observable_grouping_case_relationship(grouping_case, observables, stix_objects)
+                _ = self._handle_labels(alert, 'GroupingCase', grouping_case)
             
-            # Create Indicators
+            #######- --------- Indicators ------------#######
             indicators = self._handle_indicators(alert, observables, stix_objects)
             # Indicator based-on Observable relationships
             if indicators:
                 _ = self._handle_indicator_observable_relationship(observables, indicators, stix_objects)
 
-            # Create RFT Case
+            #######- --------- RFT Cases ------------#######
             rft_case = self._handle_rft_case(alert, observables, stix_objects)
             # Build observable and RFT relationships
             if rft_case:
@@ -494,6 +499,11 @@ class ConverterToStix:
                 )
                 stix_objects.append(relationship)
     
+    def _handle_update_observables_labels(self, alert, observables):
+        """If observable already exist in the OpenCTI we should update with new data."""
+        for observable in observables:
+            self._handle_labels(alert, 'Observable', observable)
+        
     def _handle_grouping_case_creation(self, alert, observables, stix_objects):
         """
         Handle creation of grouping case and relationships with observables
@@ -539,8 +549,7 @@ class ConverterToStix:
                 _ = self._handle_note_addition(self, indicator, alert, observables, stix_objects)
 
             return indicators
-        
-    
+     
     def _handle_indicators_existing(self, existing_indicators, alert, observables, stix_objects):
         """When an indicator for given alert data already exists.
         
@@ -568,14 +577,15 @@ class ConverterToStix:
             )
             
             self.helper.api.indicator.update_field(
-                id=indicator["standard_id"],
+                id=indicator["id"],
                 input={"key": "revoked", "value": revoke_indicator},
             )
             # Add Note.
             _ = self._handle_note_update_for_indicator(self, indicator, alert, observables, stix_objects)
 
-            # TODO: Update other details of indicator such as tags/labels etc
-
+            # update labels.
+            _ = self._handle_labels(alert, 'Indicator', indicator)
+            
     def _handle_indicators_new(self, alert, observables, stix_objects):
         """When an indicator for given alert data does not exist.
 
@@ -745,14 +755,16 @@ class ConverterToStix:
             )
             
             self.helper.api.case_rft.update_field(
-                id=rft_case["standard_id"],
+                id=rft_case["id"],
                 input={"key": "revoked", "value": revoke_rft_case},
             )
+
             
             # Add Note.
-            _ = self._handle_note_addition(self, rft_case, alert, observables, stix_objects)
+            _ = self._handle_note_addition(rft_case, alert, observables, stix_objects)
 
-            # TODO: Update other details of RFT case such as tags/labels etc
+            # Update Labels.
+            _ = self._handle_labels(alert, 'RFTCase', rft_case)
 
     def _handle_rft_cases_new(self, alert, observables, stix_objects):
         """When an RFT case for given alert data does not exist.
@@ -802,6 +814,7 @@ class ConverterToStix:
             raise
 
     def _handle_note_addition(self, obj, alert, observables, stix_objects):
+
         """Handle update of note content when indicator already exists.
 
         Whenever we have an indicator already present for given alert data and if we find that the indicator is revoked but alert is in actioned/taken down state - we will update the note content to reflect the current status of the alert.
@@ -830,3 +843,81 @@ class ConverterToStix:
             note_content, note_body, note_refs, note_timestamp,
         )
         stix_objects.append(note)
+
+    def _handle_labels(self, alert, target_obj_type, target_object):
+        """Update data in OpenCTI object based on changes in Alert."""
+
+        new_labels = build_labels(alert)
+        
+        try:
+            if target_obj_type == "Observable":
+                for observable in target_object:
+                    labels_to_remove = self._get_labels_to_remove(observable)
+                    for label_name in labels_to_remove:
+                        self.helper.api.stix_cyber_observable.remove_label(
+                            id=observable["id"], label_name=label_name
+                        )
+                    if new_labels:
+                        self.helper.api.stix_cyber_observable.add_label(
+                            id=observable["id"], label_name=new_labels
+                        )
+            elif target_obj_type == "Indicator":
+                indicator_id = target_object.get("id")
+                if indicator_id:
+                    labels_to_remove = self._get_labels_to_remove(target_object)
+                    if not in_takedown_state():
+                        labels_to_remove.append('revoked-false-positive')
+                    else:
+                        new_labels.append('revoked-false-positive')
+
+                    for label_name in labels_to_remove:
+                        self.helper.api.indicator.remove_label(
+                            id=indicator_id, label_name=label_name
+                        )
+                    if new_labels:
+                        self.helper.api.indicator.add_label(
+                            id=indicator_id, label_name=new_labels
+                        )
+            elif target_obj_type == "GroupingCase":
+                grouping_case_id = target_object.get("id")
+                if grouping_case_id:
+                    labels_to_remove = self._get_labels_to_remove(target_object)
+                    
+                    for label_name in labels_to_remove:
+                        self.helper.api.stix_domain_object.remove_label(
+                            id=grouping_case_id, label_name=label_name
+                        )
+                    if new_labels:
+                        self.helper.api.stix_domain_object.add_label(
+                            id=grouping_case_id, label_name=new_labels
+                        )
+            elif target_obj_type == "RFTCase":
+                RFT_case_id = target_object.get("id")
+                if RFT_case_id:
+                    labels_to_remove = self._get_labels_to_remove(target_object)
+                    
+                    if not in_takedown_state():
+                            labels_to_remove.append('revoked-false-positive')
+                    else:
+                        new_labels.append('revoked-false-positive')
+
+                    for label_name in labels_to_remove:
+                        self.helper.api.stix_domain_object.remove_label(
+                            id=RFT_case_id, label_name=label_name
+                        )
+                    if new_labels:
+                        self.helper.api.stix_domain_object.add_label(
+                            id=RFT_case_id, label_name=new_labels
+                        )
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "[DoppelConverter] Failed to update tags",
+                {"alert_id": alert.get("id"), "error": str(e)},
+            )
+
+    def _get_labels_to_remove(self, obj):
+        """Return labels added by Doppel Alert."""
+        managed_prefixes = ("queue_state:", "entity_state:", "severity:", "platform:", "brand:")
+        current_labels = [label["value"] for label in obj.get("objectLabel", [])]
+        return [lbl for lbl in current_labels if lbl.startswith(managed_prefixes)]
+    
