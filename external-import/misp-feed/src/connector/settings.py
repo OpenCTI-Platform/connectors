@@ -91,6 +91,13 @@ class MispFeedConfig(BaseConfigModel):
         description="Whether to verify SSL certificates for the feed URL.",
         default=True,
     )
+    http_authorization_header: str | None = Field(
+        description=(
+            "Optional value of the HTTP `Authorization` header sent on every request "
+            "to the feed URL (e.g. `Basic <base64(user:password)>` or `Bearer <token>`)."
+        ),
+        default=None,
+    )
     bucket_name: str | None = Field(
         description="Bucket Name where the MISP's files are stored",
         default=None,  # required only if `source_type` is `s3`
