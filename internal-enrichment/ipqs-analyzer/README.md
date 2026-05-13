@@ -79,10 +79,10 @@ Key features:
 
 | Parameter                   | Docker envvar               | Mandatory | Description                                                       |
 | --------------------------- | --------------------------- | --------- | ----------------------------------------------------------------- |
-| `ipqs_analyzer_server`      | `IPQS_ANALYZER_SERVER`      | Yes       | IPQS server URL (e.g., `https://www.ipqualityscore.com/api/json`) |
-| `ipqs_analyzer_api_key`     | `IPQS_ANALYZER_API_KEY`     | Yes       | IPQS API key                                                      |
-| `ipqs_analyzer_default_tlp` | `IPQS_ANALYZER_DEFAULT_TLP` | No        | Default TLP marking for created objects (default: `TLP:CLEAR`)    |
-| `ipqs_analyzer_max_tlp`     | `IPQS_ANALYZER_MAX_TLP`     | No        | Maximum TLP level for analysis submission (default: `TLP:AMBER`)  |
+| `ipqs_analyzer_server`      | `IPQS_ANALYZER_SERVER`      | No        | IPQS server URL (default: `https://www.ipqualityscore.com/api/json`) |
+| `ipqs_analyzer_api_key`     | `IPQS_ANALYZER_API_KEY`     | Yes       | IPQS API key                                                         |
+| `ipqs_analyzer_default_tlp` | `IPQS_ANALYZER_DEFAULT_TLP` | No        | Default TLP marking applied when the observable has none (default: `TLP:CLEAR`) |
+| `ipqs_analyzer_max_tlp`     | `IPQS_ANALYZER_MAX_TLP`     | No        | Maximum TLP level for which the connector will submit observables (default: `TLP:AMBER`) |
 
 ---
 
@@ -98,15 +98,15 @@ Example `docker-compose.yml`:
 version: "3"
 services:
   connector-ipqs-analyzer:
-    image: opencti/connector-ipqs-analyzer:latest
+    image: opencti/connector-ipqs-analyzer:rolling
     environment:
-      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=ChangeMe
-      - CONNECTOR_ID=ipqs-analyzer
-      - CONNECTOR_NAME=IPQS Analyzer
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=IPQS Malware And Virus File Scanner
       - CONNECTOR_SCOPE=Artifact,Url
       - CONNECTOR_AUTO=false
-      - CONNECTOR_CONFIDENCE_LEVEL=80
+      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=info
       - IPQS_ANALYZER_SERVER=https://www.ipqualityscore.com/api/json
       - IPQS_ANALYZER_API_KEY=ChangeMe
@@ -157,7 +157,7 @@ Submit to Scan Endpoint
        ↓
 Get Request ID
        ↓
-Poll Postback Endpoint (up to 8 retries, 10s interval)
+Poll Postback Endpoint (up to 9 attempts, 10s interval)
        ↓
 Extract Threat Intelligence
        ↓
@@ -220,7 +220,7 @@ Common issues:
 | Issue                         | Solution                                                                                       |
 | ----------------------------- | ---------------------------------------------------------------------------------------------- |
 | **Insufficient Credits**      | Each scan costs 10 IPQS credits. Check your account balance and upgrade if needed.             |
-| **Timeout errors**            | Complex samples may take longer. The connector polls up to 8 times with 10s intervals.         |
+| **Timeout errors**            | Complex samples may take longer. The connector polls up to 9 times with 10s intervals.         |
 | **API key errors**            | Verify your IPQS API key is valid and has malware scanning permissions.                        |
 | **Cache lookup failures**     | Ensure file hashes are correctly computed. Network issues may prevent cache checks.            |
 | **OpenCTI connection errors** | Verify `OPENCTI_URL` and `OPENCTI_TOKEN` are correct. Check platform availability.             |
