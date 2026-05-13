@@ -262,8 +262,8 @@ class Asset(FrozenBaseModelWithWarnedExtra):
     """
 
     bios_uuid: Optional[str] = Field(None, description="The BIOS UUID of the asset.")
-    device_type: str = Field(
-        ..., description="The type of device (e.g., hypervisor, general-purpose)."
+    device_type: Optional[str] = Field(
+        None, description="The type of device (e.g., hypervisor, general-purpose)."
     )
     fqdn: Optional[str] = Field(
         None, description="The fully qualified domain name of the asset."

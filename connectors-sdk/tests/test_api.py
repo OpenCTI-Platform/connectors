@@ -19,9 +19,10 @@ def test_root_public_api_is_valid():
         "ConfigError",
         "ConfigValidationError",
         "DatetimeFromIsoString",
-        "ListFromString",
         "Deprecate",
         "DeprecatedField",
+        "ExternalImportConnectorState",
+        "ListFromString",
     }
     missing = imports - set(root_api.__all__)
     extra = set(root_api.__all__) - imports

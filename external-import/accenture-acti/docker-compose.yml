@@ -24,4 +24,5 @@ services:
       - ACCENTURE_ACTI_S3_BUCKET_SECRET_KEY=ChangeMe
       - ACCENTURE_ACTI_CLIENT_TLP_LEVEL=amber # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
       - ACCENTURE_ACTI_RELATIVE_IMPORT_START_DATE=P30D
+      - ACCENTURE_ACTI_THREAT_ACTOR_AS_INTRUSION_SET=true # Convert threat actors to intrusion sets - Default: true
     restart: always

@@ -92,6 +92,18 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         ),
     )
 
+    # Round-trip configuration
+    detect_round_trip: bool = Field(
+        default=False,
+        alias="MISP_DETECT_ROUND_TRIP",
+        description=(
+            "Enable round-trip detection. "
+            "When True, the connector checks if a container has an external reference "
+            "from MISP (source_name='misp' with a valid external_id). If so, it updates "
+            "the existing MISP event instead of creating a duplicate."
+        ),
+    )
+
     @field_validator("url")
     def clean_url(cls, value: str) -> str:
         """Remove trailing slashes from the URL."""

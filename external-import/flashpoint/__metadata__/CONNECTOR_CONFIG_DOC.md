@@ -16,7 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_SCOPE | `array` |  | string | `["flashpoint"]` | The scope of the connector, e.g. 'flashpoint'. |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
-| FLASHPOINT_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The date from which to start importing data. |
+| FLASHPOINT_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | The date from which to start importing data. |
 | FLASHPOINT_IMPORT_REPORTS | `boolean` |  | boolean | `true` | Whether to import reports from Flashpoint or not. |
 | FLASHPOINT_INDICATORS_IN_REPORTS | `boolean` |  | boolean | `false` | Whether to include indicators in the reports imported from MispFeed or not. |
 | FLASHPOINT_CREATE_REPORTS | `boolean` |  | boolean | `false` | Whether to create reports or groupings from MispFeed events or not. |

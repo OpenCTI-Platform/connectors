@@ -16,6 +16,7 @@ class ScoutSearchConnectorConfig:
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
         self.max_tlp = config.pure_signal_scout.max_tlp
         self.search_interval = config.pure_signal_scout.search_interval
+        self.pattern_type = config.pure_signal_scout.indicator_pattern_type
 
 
 class ScoutSearchConnectorConnector:
@@ -122,7 +123,10 @@ class ScoutSearchConnectorConnector:
                     "identity",
                     "x509-certificate",
                 ]:
-                    # Create a relationship between the text and this object
+                    # Skip self-referencing relationships
+                    if obj.get("id") == original_entity_id:
+                        continue
+                    # Create a relationship between the Indicator and this object
                     now = datetime.now(timezone.utc)
                     relationship_id = StixCoreRelationship.generate_id(
                         "related-to", original_entity_id, obj.get("id")
@@ -188,8 +192,8 @@ class ScoutSearchConnectorConnector:
         if source_type == "network-traffic" or target_type == "network-traffic":
             return False
 
-        # Skip redundant domain-to-domain relationships
-        if source_type == target_type == "domain-name" and source_ref == target_ref:
+        # Skip self-referencing relationships
+        if source_ref == target_ref:
             return False
 
         # Skip irrelevant relationship types
@@ -210,59 +214,65 @@ class ScoutSearchConnectorConnector:
 
     def send_bundle(self, stix_objects: list) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-        bundles_sent = self.helper.send_stix2_bundle(
-            stix_objects_bundle, cleanup_inconsistent_bundle=True
-        )
-        info_msg = f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
-        return info_msg
+        bundles_sent = self.helper.send_stix2_bundle(stix_objects_bundle)
+        return f"Sending {len(bundles_sent)} stix bundle(s) for worker import"
 
     def process_message(self, data: Dict) -> str:
         """Process enrichment message from OpenCTI"""
         try:
-            opencti_entity = data["enrichment_entity"]
+            opencti_entity = data.get("enrichment_entity")
             self.extract_and_check_markings(opencti_entity)
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Enrichment message received", data
             )
             entity_id = opencti_entity["standard_id"]
-            observable_type = opencti_entity["entity_type"]
-            observable_value = opencti_entity["value"]
+            entity_type = opencti_entity["entity_type"]
+            pattern = opencti_entity["pattern"]
+            pattern_type = opencti_entity["pattern_type"]
 
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Processing enrichment request",
                 {
                     "entity_id": entity_id,
-                    "observable_type": observable_type,
-                    "observable_value": observable_value,
+                    "entity_type": entity_type,
+                    "pattern": pattern,
+                    "pattern_type": pattern_type,
                 },
             )
 
-            # Check if observable type is in scope
-            if observable_type not in ["Text"]:
+            # Check if entity type is in scope
+            if entity_type != "Indicator":
                 self.helper.connector_logger.warning(
-                    "[ScoutSearchConnector] Observable type not in scope, returning original entity",
-                    {"observable_type": observable_type},
+                    "[ScoutSearchConnector] Entity type not in scope",
+                    {"entity_type": entity_type},
                 )
                 if not data.get("event_type"):
-                    # If it is not in scope AND entity bundle passed through playbook, we should return the original bundle unchanged
                     return self.send_bundle(data["stix_objects"])
-                return "Observable type not in connector scope"
+                return "Entity type not in connector scope"
 
-            intelligence_data = self.client.get_entity(
-                observable_type, observable_value
-            )
+            if pattern_type != self.client.config.pattern_type:
+                self.helper.connector_logger.warning(
+                    "[ScoutSearchConnector] Unsupported pattern type",
+                    {
+                        "configured_pattern_type": self.client.config.pattern_type,
+                        "received_pattern_type": pattern_type,
+                    },
+                )
+                return "Unsupported pattern type"
 
-            if not intelligence_data:
+            intelligence_data = self.client.get_entity(pattern)
+
+            if not intelligence_data or not intelligence_data.get("objects"):
                 self.helper.connector_logger.info(
                     "[ScoutSearchConnector] No intelligence data found",
-                    {"observable_value": observable_value},
+                    {"pattern": pattern},
                 )
                 return "No intelligence data found"
 
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Processing STIX bundle",
                 {
-                    "observable_value": observable_value,
+                    "pattern": pattern,
                     "bundle_objects": len(intelligence_data.get("objects", [])),
                 },
             )
@@ -275,7 +285,7 @@ class ScoutSearchConnectorConnector:
             if len(processed_data) < 2:  # Just the author identity
                 self.helper.connector_logger.info(
                     "[ScoutSearchConnector] No processed data found",
-                    {"observable_value": observable_value},
+                    {"pattern": pattern},
                 )
                 return "No Enrichment Data Found from API"
 
@@ -283,7 +293,7 @@ class ScoutSearchConnectorConnector:
 
             self.helper.connector_logger.info(
                 "[ScoutSearchConnector] Data ingestion started",
-                {"observable_value": observable_value},
+                {"pattern": pattern},
             )
             return "Data fetched successfully and ingestion process has started"
 

@@ -1,6 +1,7 @@
 import traceback
 
-from src.google_dtm_connector import GoogleDTMConnector
+from pycti import OpenCTIConnectorHelper
+from src.google_dtm_connector import ConnectorSettings, GoogleDTMConnector
 
 if __name__ == "__main__":
     """
@@ -13,7 +14,10 @@ if __name__ == "__main__":
     It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
-        connector = GoogleDTMConnector()
+        settings = ConnectorSettings()
+        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        connector = GoogleDTMConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

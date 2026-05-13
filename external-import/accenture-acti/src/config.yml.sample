@@ -30,3 +30,4 @@ accenture_acti:
   s3_bucket_secret_key: ''
   tlp_level: 'ChangeMe' # available values are: clear, white, green, amber, amber+strict, red - Default: 'amber+strict'
   relative_import_start_date: 'P30D'
+  threat_actor_as_intrusion_set: true # Convert threat actors to intrusion sets - Default: true
