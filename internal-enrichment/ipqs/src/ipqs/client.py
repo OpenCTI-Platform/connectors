@@ -1,132 +1,134 @@
-# -*- coding: utf-8 -*-
 """IPQS client module."""
+
+import re
+from typing import Any, Dict, Optional
 
 from pycti import OpenCTIConnectorHelper
 from requests import Response, session
 from requests.exceptions import ConnectTimeout, HTTPError, InvalidURL, ProxyError
 
+from .constants import (
+    EMAIL_ENRICH_FIELDS,
+    IP_ENRICH_FIELDS,
+    LEAK_PASSWORD,
+    LEAK_USERNAME_OR_EMAIL,
+    PHONE_ENRICH_FIELDS,
+    URL_ENRICH_FIELDS,
+)
+
+# Default per-request timeout (seconds) applied to every HTTP call so a
+# stuck Intel network does not block the worker indefinitely.
+_HTTP_TIMEOUT_SECONDS = 30
+
+# Lightweight email-shape detector used to pick the right ``leaked``
+# endpoint for a User-Account observable.
+_EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
+
 
 class IPQSClient:
-    """IPQS client."""
+    """Thin wrapper around the IPQS HTTP API."""
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper, base_url: str, api_key: str
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: str,
+        api_key: str,
     ) -> None:
-        """Initialize IPQS client."""
-        self.helper = helper
-        self.url = base_url
-        self.headers = {"IPQS-KEY": api_key}
-        self.session = session()
-        self.ip_enrich_fields = {
-            "zip_code": "Zip Code",
-            "ISP": "ISP",
-            "ASN": "ASN",
-            "organization": "Organization",
-            "is_crawler": "Is Crawler",
-            "timezone": "Timezone",
-            "mobile": "Mobile",
-            "host": "Host",
-            "proxy": "Proxy",
-            "vpn": "VPN",
-            "tor": "TOR",
-            "active_vpn": "Active VPN",
-            "active_tor": "Active TOR",
-            "recent_abuse": "Recent Abuse",
-            "bot_status": "Bot Status",
-            "connection_type": "Connection Type",
-            "abuse_velocity": "Abuse Velocity",
-            "country_code": "Country Code",
-            "region": "Region",
-            "city": "City",
-            "latitude": "Latitude",
-            "longitude": "Longitude",
-        }
-        self.url_enrich_fields = {
-            "unsafe": "Unsafe",
-            "server": "Server",
-            "domain_rank": "Domain Rank",
-            "dns_valid": "DNS Valid",
-            "parking": "Parking",
-            "spamming": "Spamming",
-            "malware": "Malware",
-            "phishing": "Phishing",
-            "suspicious": "Suspicious",
-            "adult": "Adult",
-            "category": "Category",
-            "domain_age": "Domain Age",
-            "domain": "IPQS: Domain",
-            "ip_address": "IPQS: IP Address",
-        }
-        self.email_enrich_fields = {
-            "valid": "Valid",
-            "disposable": "Disposable",
-            "smtp_score": "SMTP Score",
-            "overall_score": "Overall Score",
-            "first_name": "First Name",
-            "generic": "Generic",
-            "common": "Common",
-            "dns_valid": "DNS Valid",
-            "honeypot": "Honeypot",
-            "deliverability": "Deliverability",
-            "frequent_complainer": "Frequent Complainer",
-            "spam_trap_score": "Spam Trap Score",
-            "catch_all": "Catch All",
-            "timed_out": "Timed Out",
-            "suspect": "Suspect",
-            "recent_abuse": "Recent Abuse",
-            "suggested_domain": "Suggested Domain",
-            "leaked": "Leaked",
-            "sanitized_email": "Sanitized Email",
-            "domain_age": "Domain Age",
-            "first_seen": "First Seen",
-        }
-        self.phone_enrich_fields = {
-            "formatted": "Formatted",
-            "local_format": "Local Format",
-            "valid": "Valid",
-            "recent_abuse": "Recent Abuse",
-            "VOIP": "VOIP",
-            "prepaid": "Prepaid",
-            "risky": "Risky",
-            "active": "Active",
-            "carrier": "Carrier",
-            "line_type": "Line Type",
-            "city": "City",
-            "zip_code": "Zip Code",
-            "dialing_code": "Dialing Code",
-            "active_status": "Active Status",
-            "leaked": "Leaked",
-            "name": "Name",
-            "timezone": "Timezone",
-            "do_not_call": "Do Not Call",
-            "country": "Country",
-            "region": "Region",
-        }
+        """Initialise IPQS client.
 
-    def _query(self, url: str, params: dict = None) -> Response:
-        """General get method to fetch the response from ipqs."""
+        The API key is sent through the ``IPQS-KEY`` HTTP header for
+        every endpoint — including the ``/leaked/...`` family — so the
+        secret is never written to the URL (and therefore never ends up
+        in HTTP access logs).
+        """
+        self.helper = helper
+        self.url = base_url.rstrip("/")
+        self.session = session()
+        self.session.headers.update({"IPQS-KEY": api_key})
+
+        # Field maps consumed by the enrichment workers.
+        self.ip_enrich_fields = IP_ENRICH_FIELDS
+        self.url_enrich_fields = URL_ENRICH_FIELDS
+        self.email_enrich_fields = EMAIL_ENRICH_FIELDS
+        self.phone_enrich_fields = PHONE_ENRICH_FIELDS
+
+    # ------------------------------------------------------------------
+    # GET (legacy IP / URL / Email / Phone enrichment)
+    # ------------------------------------------------------------------
+    def _query(
+        self, url: str, params: Optional[Dict[str, Any]] = None
+    ) -> Optional[Response]:
+        """Issue a GET request and return the parsed JSON body."""
         try:
-            response = self.session.get(url, headers=self.headers, params=params).json()
-            if str(response["success"]) != "True":
-                msg = response["message"]
-                self.helper.log_error(f"Error: {msg}")
+            response = self.session.get(
+                url, params=params, timeout=_HTTP_TIMEOUT_SECONDS
+            )
+            data = response.json()
+            if str(data.get("success")) != "True":
+                self.helper.log_error(f"Error: {data.get('message')}")
                 return None
-            return response
+            return data
         except (ConnectTimeout, ProxyError, InvalidURL) as error:
-            msg = "Error connecting with the ipqs."
-            self.helper.log_error(f"{msg} Error: {error}")
+            self.helper.log_error(f"Error connecting to IPQS. Error: {error}")
             return None
 
-    def get_ipqs_info(self, enrich_type, enrich_value):
-        """
-        Returns the IPQS data.
-        """
+    def get_ipqs_info(self, enrich_type: str, enrich_value: str):
+        """Return the IPQS enrichment for the given observable value."""
         url = f"{self.url}/{enrich_type}"
         params = {enrich_type: enrich_value}
         try:
-            response = self._query(url, params)
+            return self._query(url, params)
         except HTTPError as error:
-            msg = f"Error when requesting data from ipqs. {error.response}: {error.response.reason}"
-            self.helper.log_error(msg)
+            self.helper.log_error(f"Error when requesting data from IPQS: {error}")
             raise
-        return response
+
+    # ------------------------------------------------------------------
+    # POST (leaked credentials / passwords)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def looks_like_email(value: str) -> bool:
+        """Return ``True`` when ``value`` looks like an email address."""
+        return bool(_EMAIL_RE.fullmatch((value or "").strip()))
+
+    def get_leaked_info(self, leak_endpoint: str, value: str):
+        """Return the IPQS Darkweb-Leak enrichment for ``value``.
+
+        ``leak_endpoint`` is one of
+        :data:`~.constants.LEAK_USERNAME_OR_EMAIL` (when the
+        User-Account observable carries an ``account_login``) or
+        :data:`~.constants.LEAK_PASSWORD` (when it carries a
+        ``credential``). The IPQS leak API expects different JSON keys
+        depending on the kind of data being looked up:
+
+        * ``email`` for an email-shaped account login;
+        * ``username`` for any other login;
+        * ``password`` for a credential.
+
+        The API key is sent through the ``IPQS-KEY`` header inherited
+        from the shared session — *never* as a path component, which
+        would risk leaking the secret into HTTP access logs.
+        """
+        if leak_endpoint == LEAK_USERNAME_OR_EMAIL:
+            query_kind = "email" if self.looks_like_email(value) else "username"
+        elif leak_endpoint == LEAK_PASSWORD:
+            query_kind = "password"
+        else:
+            raise ValueError(f"Unsupported leak endpoint: {leak_endpoint!r}")
+
+        url = f"{self.url}/leaked/{query_kind}"
+        try:
+            response = self.session.post(
+                url,
+                json={query_kind: value},
+                timeout=_HTTP_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except (ConnectTimeout, ProxyError, InvalidURL, HTTPError) as exc:
+            self.helper.log_error(f"Error connecting to IPQS leaked API: {exc}")
+            return None
+
+        if not data.get("success", False):
+            self.helper.log_error(f"IPQS leaked API error: {data.get('message')}")
+            return None
+        return data

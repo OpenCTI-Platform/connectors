@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """IPQS builder module."""
 
 import pycti
@@ -12,9 +11,27 @@ from stix2 import (
     Relationship,
 )
 
+from .constants import RiskColor, RiskCriticality
+
+# Mapping from risk criticality to the OpenCTI label hex colour. Several
+# criticality levels intentionally share the same colour so the operator
+# sees a consistent ``red / amber / grey`` palette in the UI.
+_CRITICALITY_COLOR = {
+    RiskCriticality.CLEAN: RiskColor.GREY.value,
+    RiskCriticality.LOW: RiskColor.GREY.value,
+    RiskCriticality.MEDIUM: RiskColor.YELLOW.value,
+    RiskCriticality.SUSPICIOUS: RiskColor.YELLOW.value,
+    RiskCriticality.HIGH: RiskColor.RED.value,
+    RiskCriticality.CRITICAL: RiskColor.RED.value,
+    RiskCriticality.INVALID: RiskColor.RED.value,
+    RiskCriticality.DISPOSABLE: RiskColor.RED.value,
+    RiskCriticality.MALWARE: RiskColor.RED.value,
+    RiskCriticality.PHISHING: RiskColor.RED.value,
+}
+
 
 class IPQSBuilder:
-    """IPQS builder."""
+    """Translate IPQS responses into STIX objects."""
 
     def __init__(
         self,
@@ -23,26 +40,12 @@ class IPQSBuilder:
         observable: dict,
         score: int,
     ) -> None:
-        """Initialize Virustotal builder."""
+        """Initialise builder."""
         self.helper = helper
         self.author = author
         self.bundle = [self.author]
         self.observable = observable
         self.score = score
-        self.rf_white = "#CCCCCC"
-        self.rf_grey = " #CDCDCD"
-        self.rf_yellow = "#FFCF00"
-        self.rf_red = "#D10028"
-        self.clean = "CLEAN"
-        self.low = "LOW RISK"
-        self.medium = "MODERATE RISK"
-        self.high = "HIGH RISK"
-        self.critical = "CRITICAL"
-        self.invalid = "INVALID"
-        self.suspicious = "SUSPICIOUS"
-        self.malware = "CRITICAL"
-        self.phishing = "CRITICAL"
-        self.disposable = "CRITICAL"
 
         # Update score of observable.
         self.helper.api.stix_cyber_observable.update_field(
@@ -50,9 +53,8 @@ class IPQSBuilder:
             input={"key": "x_opencti_score", "value": str(self.score)},
         )
 
-    def create_ip_resolves_to(self, ipv4: str):
-        """
-        Create the IPv4-Address and link it to the observable.
+    def create_ip_resolves_to(self, ipv4: str) -> None:
+        """Create the IPv4-Address and link it to the observable.
 
         Parameters
         ----------
@@ -82,14 +84,10 @@ class IPQSBuilder:
         )
         self.bundle += [ipv4_stix, relationship]
 
-    def create_asn_belongs_to(self, asn):
-        """Create AutonomousSystem and Relationship between the observable."""
+    def create_asn_belongs_to(self, asn) -> None:
+        """Create AutonomousSystem and a `belongs-to` relationship."""
         self.helper.log_debug(f"[IPQS] creating asn {asn}")
-        as_stix = AutonomousSystem(
-            number=asn,
-            name=asn,
-            rir=asn,
-        )
+        as_stix = AutonomousSystem(number=asn, name=asn, rir=asn)
         relationship = Relationship(
             id=StixCoreRelationship.generate_id(
                 "belongs-to",
@@ -111,20 +109,14 @@ class IPQSBuilder:
         pattern: str,
         indicator_value: str,
         description: str,
-    ):
+    ) -> None:
+        """Create an Indicator and the matching `based-on` relationship.
+
+        ``labels`` is the OpenCTI label dict returned by
+        :meth:`update_labels`; ``labels["value"]`` is wrapped in a list
+        so the STIX ``labels`` property is always an array.
         """
-        Create an Indicator.
-
-        Objects created are added in the bundle.
-
-        pattern : str
-            Stix pattern for the indicator.
-        """
-
-        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
-
         self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
-
         indicator = Indicator(
             id=pycti.Indicator.generate_id(pattern),
             created_by_ref=self.author,
@@ -133,11 +125,8 @@ class IPQSBuilder:
             confidence=self.helper.connect_confidence_level,
             pattern=pattern,
             pattern_type="stix",
-            # valid_until=self.helper.api.stix2.format_date(valid_until),
-            custom_properties={
-                "x_opencti_score": self.score,
-            },
-            labels=labels["value"],
+            custom_properties={"x_opencti_score": self.score},
+            labels=[labels["value"]],
         )
         relationship = Relationship(
             id=StixCoreRelationship.generate_id(
@@ -155,14 +144,7 @@ class IPQSBuilder:
         self.bundle += [indicator, relationship]
 
     def send_bundle(self) -> str:
-        """
-        Serialize and send the bundle to be inserted.
-
-        Returns
-        -------
-        str
-            String with the number of bundle sent.
-        """
+        """Serialize and send the bundle to be inserted."""
         if self.bundle is not None:
             self.helper.log_debug(f"[IPQS] sending bundle: {self.bundle}")
             serialized_bundle = Bundle(
@@ -172,110 +154,106 @@ class IPQSBuilder:
             return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
         return "Nothing to attach"
 
-    def criticality_color(self, criticality) -> str:
-        """method which maps the color to the criticality level"""
-        mapper = {
-            self.clean: self.rf_grey,
-            self.low: self.rf_grey,
-            self.medium: self.rf_yellow,
-            self.suspicious: self.rf_yellow,
-            self.high: self.rf_red,
-            self.critical: self.rf_red,
-            self.invalid: self.rf_red,
-            self.disposable: self.rf_red,
-            self.malware: self.rf_red,
-            self.phishing: self.rf_red,
-        }
-        return mapper.get(criticality, self.rf_white)
+    # ------------------------------------------------------------------
+    # Risk scoring helpers
+    # ------------------------------------------------------------------
+    @staticmethod
+    def criticality_color(criticality: RiskCriticality) -> str:
+        """Map a :class:`RiskCriticality` to its hex colour."""
+        return _CRITICALITY_COLOR.get(criticality, RiskColor.WHITE.value)
 
     def ip_address_risk_scoring(self):
-        """method to create calculate verdict for IP Address"""
-        risk_criticality = ""
-        if self.score == 100:
-            risk_criticality = self.critical
-        elif 85 <= self.score <= 99:
-            risk_criticality = self.high
-        elif 75 <= self.score <= 84:
-            risk_criticality = self.medium
-        elif 60 <= self.score <= 74:
-            risk_criticality = self.suspicious
-        elif self.score <= 59:
-            risk_criticality = self.clean
-
-        hex_color = self.criticality_color(risk_criticality)
-        tag_name = f'IPQS:VERDICT="{risk_criticality}"'
-        lables = self.update_labels(tag_name, hex_color)
-
-        return lables
+        """Compute the verdict label for an IPv4 observable."""
+        match self.score:
+            case 100:
+                risk_criticality = RiskCriticality.CRITICAL
+            case s if 85 <= s <= 99:
+                risk_criticality = RiskCriticality.HIGH
+            case s if 75 <= s <= 84:
+                risk_criticality = RiskCriticality.MEDIUM
+            case s if 60 <= s <= 74:
+                risk_criticality = RiskCriticality.SUSPICIOUS
+            case _:
+                risk_criticality = RiskCriticality.CLEAN
+        return self._verdict_label(risk_criticality)
 
     def email_address_risk_scoring(self, disposable, valid):
-        """method to create calculate verdict for Email Address"""
-        risk_criticality = ""
-        if disposable == "True":
-            risk_criticality = self.disposable
-        elif valid == "False":
-            risk_criticality = self.invalid
-        elif self.score == 100:
-            risk_criticality = self.high
-        elif 88 <= self.score <= 99:
-            risk_criticality = self.medium
-        elif 80 <= self.score <= 87:
-            risk_criticality = self.low
-        elif self.score <= 79:
-            risk_criticality = self.clean
-        hex_color = self.criticality_color(risk_criticality)
-        tag_name = f'IPQS:VERDICT="{risk_criticality}"'
-
-        return self.update_labels(tag_name, hex_color)
+        """Compute the verdict label for an Email observable."""
+        match (disposable, valid, self.score):
+            case ("True", _, _):
+                risk_criticality = RiskCriticality.DISPOSABLE
+            case (_, "False", _):
+                risk_criticality = RiskCriticality.INVALID
+            case (_, _, 100):
+                risk_criticality = RiskCriticality.HIGH
+            case (_, _, s) if 88 <= s <= 99:
+                risk_criticality = RiskCriticality.MEDIUM
+            case (_, _, s) if 80 <= s <= 87:
+                risk_criticality = RiskCriticality.LOW
+            case _:
+                risk_criticality = RiskCriticality.CLEAN
+        return self._verdict_label(risk_criticality)
 
     def url_risk_scoring(self, malware, phishing):
-        """method to create calculate verdict for URL/Domain"""
-        risk_criticality = ""
-        if malware == "True":
-            risk_criticality = self.malware
-        elif phishing == "True":
-            risk_criticality = self.phishing
-        elif self.score >= 90:
-            risk_criticality = self.high
-        elif 80 <= self.score <= 89:
-            risk_criticality = self.medium
-        elif 70 <= self.score <= 79:
-            risk_criticality = self.low
-        elif 55 <= self.score <= 69:
-            risk_criticality = self.suspicious
-        elif self.score <= 54:
-            risk_criticality = self.clean
-
-        hex_color = self.criticality_color(risk_criticality)
-        tag_name = f'IPQS:VERDICT="{risk_criticality}"'
-        return self.update_labels(tag_name, hex_color)
+        """Compute the verdict label for a URL or Domain observable."""
+        match (malware, phishing, self.score):
+            case ("True", _, _):
+                risk_criticality = RiskCriticality.MALWARE
+            case (_, "True", _):
+                risk_criticality = RiskCriticality.PHISHING
+            case (_, _, s) if s >= 90:
+                risk_criticality = RiskCriticality.HIGH
+            case (_, _, s) if 80 <= s <= 89:
+                risk_criticality = RiskCriticality.MEDIUM
+            case (_, _, s) if 70 <= s <= 79:
+                risk_criticality = RiskCriticality.LOW
+            case (_, _, s) if 55 <= s <= 69:
+                risk_criticality = RiskCriticality.SUSPICIOUS
+            case _:
+                risk_criticality = RiskCriticality.CLEAN
+        return self._verdict_label(risk_criticality)
 
     def phone_address_risk_scoring(self, valid, active):
-        """method to create calculate verdict for Phone Number"""
-        risk_criticality = ""
-        if valid == "False":
-            risk_criticality = self.medium
-        elif active == "False":
-            risk_criticality = self.medium
-        elif 90 <= self.score <= 100:
-            risk_criticality = self.high
-        elif 80 <= self.score <= 89:
-            risk_criticality = self.low
-        elif 50 <= self.score <= 79:
-            risk_criticality = self.suspicious
-        elif self.score <= 49:
-            risk_criticality = self.clean
-        hex_color = self.criticality_color(risk_criticality)
-        tag_name = f'IPQS:VERDICT="{risk_criticality}"'
+        """Compute the verdict label for a Phone observable."""
+        match (valid, active, self.score):
+            case ("False", _, _) | (_, "False", _):
+                risk_criticality = RiskCriticality.MEDIUM
+            case (_, _, s) if 90 <= s <= 100:
+                risk_criticality = RiskCriticality.HIGH
+            case (_, _, s) if 80 <= s <= 89:
+                risk_criticality = RiskCriticality.LOW
+            case (_, _, s) if 50 <= s <= 79:
+                risk_criticality = RiskCriticality.SUSPICIOUS
+            case _:
+                risk_criticality = RiskCriticality.CLEAN
+        return self._verdict_label(risk_criticality)
+
+    def leak_risk_scoring(self, exposed: bool, plain_text_password: bool = False):
+        """Compute the verdict label for a Darkweb-Leak User-Account.
+
+        The user account is considered ``CRITICAL`` whenever IPQS
+        reports that it has been exposed (``exposed=True``) or that a
+        plain-text password is known (``plain_text_password=True``).
+        Otherwise the verdict is ``CLEAN``.
+        """
+        risk_criticality = (
+            RiskCriticality.CRITICAL
+            if exposed or plain_text_password
+            else RiskCriticality.CLEAN
+        )
+        return self._verdict_label(risk_criticality)
+
+    def _verdict_label(self, criticality: RiskCriticality):
+        """Persist the ``IPQS:VERDICT`` label for ``criticality``."""
+        hex_color = self.criticality_color(criticality)
+        tag_name = f'IPQS:VERDICT="{criticality.value}"'
         return self.update_labels(tag_name, hex_color)
 
     def update_labels(self, tag, hex_color):
-        """Update the labels."""
+        """Create the label in OpenCTI and attach it to the observable."""
         self.helper.log_debug("[IPQS] updating labels.")
-
         tag_vt = self.helper.api.label.create(value=tag, color=hex_color)
         self.helper.api.stix_cyber_observable.add_label(
             id=self.observable["id"], label_id=tag_vt["id"]
         )
-
         return tag_vt
