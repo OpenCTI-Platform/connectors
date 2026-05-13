@@ -1,0 +1,21 @@
+{
+  "title": "Intel 471 Darknet",
+  "slug": "intel471-darknet",
+  "description": "OpenCTI external-import connector that watches Intel 471 darknet alerts (posts, private / instant messages, breach alerts, reports, spot reports and actors) and turns them into STIX 2.1 entities, observables and relationships.",
+  "short_description": "Import Intel 471 darknet alerts and reports into OpenCTI.",
+  "logo": null,
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.4.3",
+  "subscription_link": "https://intel471.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/intel471-darknet",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-intel471-darknet",
+  "container_type": "EXTERNAL_IMPORT"
+}
