@@ -33,9 +33,11 @@ class CriminalIPC2DailyFeedConnector:
             config,
             True,
         )
-        self.csv_url = get_config_variable(
-            "CRIMINALIP_CSV_URL", ["criminalipc2dailyfeed", "csv_url"], config
-        )
+        self.csv_url = str(
+            get_config_variable(
+                "CRIMINALIP_CSV_URL", ["criminalipc2dailyfeed", "csv_url"], config
+            )
+        ).rstrip("/")
         # Identity for Criminal IP
         self.identity = self.helper.api.identity.create(
             type="Organization",

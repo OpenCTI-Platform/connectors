@@ -9,7 +9,7 @@ class ConnectorAPI:
         self.helper = helper
         self.config = config
 
-        self.url = config.tanium_url
+        self.url = str(config.tanium_url).rstrip("/")
         self.token = config.tanium_token
         self.ssl_verify = config.tanium_ssl_verify
 

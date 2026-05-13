@@ -20,7 +20,7 @@ BASE_URL = "https://backstory.googleapis.com"
 
 class ChronicleReference:
     def __init__(self, list_name: str, credentials: dict, url: str) -> None:
-        self.url = url
+        self.url = str(url).rstrip("/")
         self.credentials = credentials
         self.list_name = list_name
 

@@ -30,7 +30,7 @@ class RSTIocLookupConnector:
                 config,
                 default="https://api.rstcloud.net/v1",
             )
-        )
+        ).rstrip("/")
         self.api_key = str(
             get_config_variable(
                 "RST_IOC_LOOKUP_API_KEY", ["rst-ioc-lookup", "api_key"], config

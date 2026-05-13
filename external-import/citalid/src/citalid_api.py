@@ -16,10 +16,9 @@ class Client:
     def __init__(self, customer_sub_domain_url, language="en"):
         self.client_id = "0RcQ2BmuJRRsZKvY1Xf1gdjiwYRZhQKBNOxY9KOI"
         self.customer_sub_domain_url = self._parse_url(customer_sub_domain_url)
-        self.connection_service_base_url = f"{customer_sub_domain_url}/auth"
-        self.api_base_url = (
-            f"{customer_sub_domain_url}/facade/risk-intelligence-center/api/v1"
-        )
+        _base = customer_sub_domain_url.rstrip("/")
+        self.connection_service_base_url = f"{_base}/auth"
+        self.api_base_url = f"{_base}/facade/risk-intelligence-center/api/v1"
         self.headers = {}
         self.set_language(language)
 

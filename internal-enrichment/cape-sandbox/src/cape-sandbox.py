@@ -42,12 +42,12 @@ class CapeSandboxConnector:
             description="CAPEv2 Sandbox.",
         )["standard_id"]
 
-        self.octi_api_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
-        )
-        self.cape_api_url = get_config_variable(
-            "CAPE_SANDBOX_URL", ["cape_sandbox", "url"], config
-        )
+        self.octi_api_url = str(
+            get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
+        ).rstrip("/")
+        self.cape_api_url = str(
+            get_config_variable("CAPE_SANDBOX_URL", ["cape_sandbox", "url"], config)
+        ).rstrip("/")
         self.token = get_config_variable(
             "CAPE_SANDBOX_TOKEN", ["cape_sandbox", "token"], config
         )

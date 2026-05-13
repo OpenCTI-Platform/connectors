@@ -31,9 +31,9 @@ class OpenCSAM:
         else:
             config = {}
         self.helper = OpenCTIConnectorHelper(config)
-        self.opencsam_api_url = get_config_variable(
-            "OPENCSAM_API_URL", ["opencsam", "api_url"], config
-        )
+        self.opencsam_api_url = str(
+            get_config_variable("OPENCSAM_API_URL", ["opencsam", "api_url"], config)
+        ).rstrip("/")
         self.opencsam_api_key = get_config_variable(
             "OPENCSAM_API_KEY", ["opencsam", "api_key"], config
         )

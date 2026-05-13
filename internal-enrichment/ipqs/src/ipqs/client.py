@@ -14,7 +14,7 @@ class IPQSClient:
     ) -> None:
         """Initialize IPQS client."""
         self.helper = helper
-        self.url = base_url
+        self.url = str(base_url).rstrip("/")
         self.headers = {"IPQS-KEY": api_key}
         self.session = session()
         self.ip_enrich_fields = {

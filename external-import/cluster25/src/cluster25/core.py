@@ -44,7 +44,9 @@ class Cluster25:
         self.helper = OpenCTIConnectorHelper(config)
 
         # Cluster25 connector configuration
-        self.base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
+        self.base_url = self._get_configuration(config, self._CONFIG_BASE_URL).rstrip(
+            "/"
+        )
         self.client_id = self._get_configuration(config, self._CONFIG_CLIENT_ID)
         self.client_secret = self._get_configuration(config, self._CONFIG_CLIENT_SECRET)
 

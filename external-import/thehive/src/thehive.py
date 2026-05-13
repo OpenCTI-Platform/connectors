@@ -48,9 +48,9 @@ class TheHive:
         )
         self.helper = OpenCTIConnectorHelper(config)
         # Extra config
-        self.thehive_url = get_config_variable(
-            "THEHIVE_URL", ["thehive", "url"], config
-        )
+        self.thehive_url = str(
+            get_config_variable("THEHIVE_URL", ["thehive", "url"], config)
+        ).rstrip("/")
         self.thehive_api_key = get_config_variable(
             "THEHIVE_API_KEY", ["thehive", "api_key"], config
         )

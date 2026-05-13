@@ -52,7 +52,7 @@ class DefenderApiHandler:
         self.tenant_id = tenant_id
         self.client_id = client_id
         self.client_secret = client_secret
-        self.base_url = str(base_url)
+        self.base_url = str(base_url).rstrip("/")
         self.resource_path = resource_path
         self.action = action
         self.expired_after = expired_after

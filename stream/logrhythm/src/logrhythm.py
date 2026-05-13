@@ -26,7 +26,7 @@ class LogrhythmList:
         logrhythm_list_name: str,
         logrhythm_ssl_verify: bool,
     ) -> None:
-        self.logrhythm_url = logrhythm_url
+        self.logrhythm_url = str(logrhythm_url).rstrip("/")
         self.logrhythm_token = logrhythm_token
         self.logrhythm_entity = logrhythm_entity
         self.logrhythm_list_name = logrhythm_list_name

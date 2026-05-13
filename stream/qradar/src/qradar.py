@@ -38,7 +38,9 @@ class QRadarConnector:
 
         # Configuration
         self.helper = OpenCTIConnectorHelper(config)
-        self.qradar_url = get_config_variable("QRADAR_URL", ["qradar", "url"], config)
+        self.qradar_url = str(
+            get_config_variable("QRADAR_URL", ["qradar", "url"], config)
+        ).rstrip("/")
         self.qradar_ssl_verify = get_config_variable(
             "QRADAR_SSL_VERIFY", ["qradar", "ssl_verify"], config, default=True
         )

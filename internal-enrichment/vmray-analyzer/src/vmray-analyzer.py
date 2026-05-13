@@ -37,9 +37,9 @@ class VmrayAnalyzerConnector:
             type="Organization", name="VMRay", description="VMRay"
         )["standard_id"]
 
-        self.octi_api_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
-        )
+        self.octi_api_url = str(
+            get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
+        ).rstrip("/")
 
         # Get Server and API Key from config, use to instantiate the VMRay Rest Client
         server = get_config_variable(

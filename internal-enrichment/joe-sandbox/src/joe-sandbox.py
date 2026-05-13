@@ -30,9 +30,9 @@ class JoeSandboxConnector:
             type="Organization", name="Joe Security", description="Joe Security"
         )["standard_id"]
 
-        self.octi_api_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
-        )
+        self.octi_api_url = str(
+            get_config_variable("OPENCTI_URL", ["opencti", "url"], config)
+        ).rstrip("/")
 
         # JoeSandbox class instatiation settings from config
         api_key = get_config_variable(
@@ -45,9 +45,11 @@ class JoeSandboxConnector:
         )
         # Cloud Pro: https://jbxcloud.joesecurity.org/analysis
         # Cloud Basic: https://joesandbox.com/analysis
-        self._analysis_url = get_config_variable(
-            "JOE_SANDBOX_ANALYSIS_URL", ["joe_sandbox", "analysis_url"], config
-        )
+        self._analysis_url = str(
+            get_config_variable(
+                "JOE_SANDBOX_ANALYSIS_URL", ["joe_sandbox", "analysis_url"], config
+            )
+        ).rstrip("/")
         accept_tac = get_config_variable(
             "JOE_SANDBOX_ACCEPT_TAC", ["joe_sandbox", "accept_tac"], config
         )

@@ -44,7 +44,7 @@ class KVStore:
         splunk_kv_store_name: str,
         splunk_ssl_verify: bool,
     ) -> None:
-        self.splunk_url = splunk_url
+        self.splunk_url = str(splunk_url).rstrip("/")
         self.splunk_token = splunk_token
         self.splunk_auth_type = splunk_auth_type
         self.splunk_app = splunk_app
