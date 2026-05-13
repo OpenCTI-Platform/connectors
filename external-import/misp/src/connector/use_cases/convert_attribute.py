@@ -181,6 +181,28 @@ class AttributeConverter:
                 custom_properties=custom_properties,
             )
 
+    def create_intrusion_set_from_attribute(
+        self,
+        attribute: ExtendedAttributeItem,
+        labels: list[str],
+        author: stix2.Identity,
+        markings: list[stix2.v21.MarkingDefinition],
+        external_references: list[stix2.ExternalReference],
+    ) -> stix2.IntrusionSet | None:
+        name = attribute.value
+        if not name:
+            return None
+        return stix2.IntrusionSet(
+            id=pycti.IntrusionSet.generate_id(name=name),
+            name=name,
+            labels=labels,
+            description=attribute.comment,
+            created_by_ref=author["id"],
+            object_marking_refs=markings,
+            external_references=external_references,
+            allow_custom=True,
+        )
+
     def create_observables(
         self,
         attribute: ExtendedAttributeItem,
@@ -535,6 +557,21 @@ class AttributeConverter:
                 tag, author=author, markings=attribute_markings
             )
             stix_objects.extend(tag_stix_objects)
+
+        is_threat_actor_attribution = (
+            attribute.type == "threat-actor" and attribute.category == "Attribution"
+        )
+
+        if is_threat_actor_attribution:
+            intrusion_set = self.create_intrusion_set_from_attribute(
+                attribute,
+                labels=attribute_labels,
+                author=author,
+                markings=attribute_markings,
+                external_references=external_references,
+            )
+            if intrusion_set:
+                stix_objects.append(intrusion_set)
 
         observables = []
         if self.config.convert_attribute_to_observable:
