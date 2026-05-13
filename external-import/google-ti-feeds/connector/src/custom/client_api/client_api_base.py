@@ -394,6 +394,7 @@ class BaseClientAPI:
                     "error": str(e),
                 },
             )
+            raise
         finally:
             self.logger.debug(
                 "Finished fetching",
