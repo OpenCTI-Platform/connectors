@@ -21,7 +21,7 @@ from connector_linter.registry import CheckRegistry
 # Accepted values for the "error" log level.
 # Both "error" and "err" are valid — some logging frameworks use the short form.
 # ---------------------------------------------------------------------------
-_ERROR_VALUES = {"error", "err"}
+_ERROR_VALUES = "error"
 
 
 @CheckRegistry.register(
@@ -54,7 +54,7 @@ def check_log_level_default(ctx: ConnectorContext) -> list[CheckFinding]:
 
     if field_defaults:
         fd = field_defaults[0]
-        if fd.default_value and fd.default_value in _ERROR_VALUES:
+        if fd.default_value and fd.default_value == _ERROR_VALUES:
             return [
                 CheckFinding(
                     message=f"Log level defaults to '{fd.default_value}'",

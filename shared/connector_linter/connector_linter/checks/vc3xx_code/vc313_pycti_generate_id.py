@@ -58,26 +58,7 @@ _STIX_SDO_TYPES = frozenset(
 _STIX_SRO_TYPES = frozenset({"Relationship", "Sighting"})
 
 # Combined set for checking
-_STIX_TYPES_NEEDING_ID = _STIX_SDO_TYPES | _STIX_SRO_TYPES
-
-# ---------------------------------------------------------------------------
-# Custom OpenCTI types — these are OpenCTI-specific extensions that also
-# need explicit id= for deterministic deduplication (not part of STIX 2.1
-# but follow the same pattern).
-# ---------------------------------------------------------------------------
-_CUSTOM_OCTI_TYPES = frozenset(
-    {
-        "CustomObjectCaseIncident",
-        "CustomObjectTask",
-        "CustomObjectChannel",
-        "CustomObservableCryptocurrencyWallet",
-        "CustomObservableHostname",
-        "CustomObservableMediaContent",
-        "CustomObservableUserAgent",
-    },
-)
-
-_ALL_TYPES_NEEDING_ID = _STIX_TYPES_NEEDING_ID | _CUSTOM_OCTI_TYPES
+_ALL_TYPES_NEEDING_ID = _STIX_SDO_TYPES | _STIX_SRO_TYPES
 
 
 def _get_stix2_imported_names(trees: dict[Path, ast.Module]) -> dict[Path, set[str]]:

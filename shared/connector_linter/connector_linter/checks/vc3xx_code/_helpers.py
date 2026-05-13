@@ -328,9 +328,7 @@ def find_field_defaults(
                     (
                         b.id
                         if isinstance(b, ast.Name)
-                        else b.attr
-                        if isinstance(b, ast.Attribute)
-                        else ""
+                        else b.attr if isinstance(b, ast.Attribute) else ""
                     )
                     for b in node.bases
                 ]

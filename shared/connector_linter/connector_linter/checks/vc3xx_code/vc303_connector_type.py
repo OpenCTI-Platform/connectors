@@ -158,6 +158,7 @@ def check_connector_type_hardcoded(ctx: ConnectorContext) -> list[CheckFinding]:
             CheckFinding(
                 message="Connector type hardcoded",
                 severity=Severity.WARNING,
+                suggestion="Consider using connectors-sdk base config classes to set the connector type via inheritance.",
                 file_path=file_path,
                 line=line,
             ),
@@ -170,6 +171,7 @@ def check_connector_type_hardcoded(ctx: ConnectorContext) -> list[CheckFinding]:
             CheckFinding(
                 message="Connector type hardcoded via Pydantic field",
                 severity=Severity.WARNING,
+                suggestion="Consider using connectors-sdk base config classes to set the connector type via inheritance.",
                 file_path=file_path,
                 line=line,
             ),

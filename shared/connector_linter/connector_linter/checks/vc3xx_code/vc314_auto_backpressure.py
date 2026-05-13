@@ -111,7 +111,7 @@ def check_auto_backpressure(ctx: ConnectorContext) -> list[CheckFinding]:
         results.append(
             CheckFinding(
                 message="Uses while True loop instead of scheduler",
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
                 file_path=file_path,
                 line=line_no,
                 suggestion=(

@@ -110,7 +110,7 @@ def check_markings_checked(ctx: ConnectorContext) -> list[CheckFinding]:
                     f"TLP extraction found in {file_path}:{line} "
                     "but check_max_tlp is not called"
                 ),
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
                 file_path=file_path,
                 line=line,
                 suggestion=(
