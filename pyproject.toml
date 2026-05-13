@@ -1,0 +1,13 @@
+# Repository-wide tooling configuration.
+#
+# Pinning ``src_paths`` here keeps ``isort`` output identical no matter
+# whether the command is invoked from the repository root, from a
+# connector subdirectory, or via the pre-commit hook. Without this file
+# ``isort`` resolves first-party imports relative to its current working
+# directory, so the same file ends up with a different ordering depending
+# on where the contributor (or CI) happens to run from
+# (see OpenCTI-Platform/connectors#4798).
+
+[tool.isort]
+profile = "black"
+src_paths = ["."]
