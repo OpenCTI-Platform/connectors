@@ -1,0 +1,22 @@
+{
+  "title": "CVEProject cvelistV5",
+  "slug": "cvelistv5",
+  "description": "Alternative CVE connector that fetches updates directly from the CVEProject/cvelistV5 GitHub repository instead of querying the NVD REST API. The connector keeps a local clone of the upstream repository, uses git history to detect modified records between runs, and converts each CVE v5.1 record into STIX 2.1 Vulnerability objects. Workarounds, solutions, configurations and exploits exposed by upstream are attached as STIX Note objects. When the affected products of a CVE expose CPEs or version ranges, Software and Identity (vendor) objects are also created so analysts can model the exposure of their fleet.",
+  "short_description": "Fetch CVE records straight from the CVEProject/cvelistV5 GitHub repository and import them as STIX 2.1 Vulnerability objects.",
+  "logo": null,
+  "use_cases": [
+    "Vulnerability Management",
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=6.6.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cvelistv5",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cvelistv5",
+  "container_type": "EXTERNAL_IMPORT"
+}
