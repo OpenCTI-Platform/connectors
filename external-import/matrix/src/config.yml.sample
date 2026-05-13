@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Matrix'
+  scope: 'matrix'
+  log_level: 'info'
+
+matrix:
+  server: 'https://matrix.example.org'
+  user_id: '@octi-bot:matrix.example.org'
+  password: 'ChangeMe'
+  device_name: 'octi_bot'
+  tlp: 'AMBER' # CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+  debug: false
+  # Optional: where to keep the matrix-nio store (sync token + device keys).
+  # Defaults to ``./store`` (relative to ``main.py``).
+  # store_path: '/opt/opencti-connector-matrix/store'

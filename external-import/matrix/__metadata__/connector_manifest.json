@@ -1,0 +1,21 @@
+{
+  "title": "Matrix",
+  "slug": "matrix",
+  "description": "OpenCTI external-import connector that listens on a Matrix homeserver and forwards messages, attachments, authors and thread relationships from every joined room into OpenCTI.",
+  "short_description": "Stream Matrix room events into OpenCTI as STIX media-content observables.",
+  "logo": null,
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.4.3",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/matrix",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-matrix",
+  "container_type": "EXTERNAL_IMPORT"
+}
