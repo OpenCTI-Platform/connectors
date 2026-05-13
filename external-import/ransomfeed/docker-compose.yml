@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-ransomfeed:
+    image: opencti/connector-ransomfeed:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=RansomFeed
+      - CONNECTOR_SCOPE=ransomfeed
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H # ISO 8601 duration period
+      - RANSOMFEED_API_URL=https://api.ransomfeed.it
+      - RANSOMFEED_TLP_LEVEL=white # white, green, amber, red
+      - RANSOMFEED_CREATE_INDICATORS=true # Create indicators from file hashes
+    restart: always
