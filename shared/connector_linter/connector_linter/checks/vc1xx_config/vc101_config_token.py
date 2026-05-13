@@ -47,7 +47,7 @@ def check_config_token(ctx: ConnectorContext) -> list[CheckFinding]:
             CheckFinding(
                 message="OPENCTI_TOKEN not found in configuration files",
                 severity=Severity.ERROR,
-                suggestion="Add OPENCTI_TOKEN=ChangeMe to docker-compose.yml.",
+                suggestion="Uncomment or add OPENCTI_TOKEN=ChangeMe to docker-compose.yml.",
             ),
         ]
 

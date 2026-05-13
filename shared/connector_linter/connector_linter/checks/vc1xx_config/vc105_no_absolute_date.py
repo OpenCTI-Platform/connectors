@@ -155,7 +155,7 @@ def _check_code_defaults(ctx: ConnectorContext) -> list[CheckFinding]:
 @CheckRegistry.register(
     code="VC105",
     name="no-absolute-import-date",
-    description="Import start dates must use ISO duration, not absolute dates",
+    description="Import start dates should use ISO duration, not absolute dates",
     severity=Severity.WARNING,
 )
 def check_no_absolute_import_date(ctx: ConnectorContext) -> list[CheckFinding]:
