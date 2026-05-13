@@ -218,6 +218,7 @@ class CrowdStrike:
                 no_file_trigger_import=no_file_trigger_import,
                 scopes=set(scopes),
                 attack_lookup=self.attack_lookup,
+                max_records_per_run=self.config.crowdstrike.indicator_max_records_per_run,
             )
 
             indicator_importer = IndicatorImporter(indicator_importer_config)

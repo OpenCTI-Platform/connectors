@@ -47,6 +47,7 @@ class IndicatorImporterConfig(NamedTuple):
     no_file_trigger_import: bool
     scopes: set[str]
     attack_lookup: Optional[AttackTechniqueLookup]
+    max_records_per_run: Optional[int] = None
 
 
 class IndicatorImporter(BaseImporter):
@@ -91,6 +92,11 @@ class IndicatorImporter(BaseImporter):
         self.scopes = config.scopes
         # Preloaded at connector startup; used to resolve MITRE technique IDs for ATT&CK labels.
         self.attack_lookup = config.attack_lookup
+        self.max_records_per_run = (
+            config.max_records_per_run
+            if config.max_records_per_run and config.max_records_per_run > 0
+            else None
+        )
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
@@ -138,7 +144,15 @@ class IndicatorImporter(BaseImporter):
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict] | None:
+    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict]:
+        """Fetch all indicators updated since ``fetch_timestamp``.
+
+        Walks every page exposed by the CrowdStrike API (``Next-Page`` HTTP
+        header) up to the configured ``max_records_per_run`` cap (when set).
+        Returns the full list of resources in a single batch so the downstream
+        ``_process_indicators`` step can compute the latest ``last_updated``
+        timestamp across the whole run.
+        """
         limit = 1000
         sort = "last_updated|asc"
         fql_filter = f"last_updated:>{fetch_timestamp}"
@@ -146,45 +160,100 @@ class IndicatorImporter(BaseImporter):
         if self.exclude_types:
             fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
 
-        return self._query_indicators(limit, sort, fql_filter)
+        return self._paginated_query_indicators(limit, sort, fql_filter)
 
-    def _query_indicators(self, limit: int, sort: str, fql_filter: str) -> List[dict]:
-        _limit = limit
-        _sort = sort
-        _fql_filter = fql_filter
+    def _paginated_query_indicators(
+        self, limit: int, sort: str, fql_filter: str
+    ) -> List[dict]:
+        """Walk every page of the indicator API and return the aggregated list.
 
-        response = self.indicators_api_cs.get_combined_indicator_entities(
-            limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
-        )
+        The continuation token is the ``next_page`` string returned by the
+        upstream API and forwarded as-is by :class:`IndicatorsAPI`. When
+        ``max_records_per_run`` is set, pagination stops as soon as that many
+        indicators have been collected; the cap is enforced at the resource
+        level so a single page is never partially yielded with a dangling
+        truncation.
+        """
+        resources: List[dict] = []
+        next_page_token: Optional[str] = None
+        meta_total: Optional[int] = None
 
-        # Add info to know how much data needs to be retrieved until now
-        meta = response["meta"]
-        _meta_total = None
-
-        if meta["pagination"] is not None:
-            pagination = meta["pagination"]
-
-            _meta_total = pagination["total"]
-
-            self.helper.connector_logger.info(
-                "Indicator total resources to query until now", {"total": _meta_total}
+        while True:
+            response = self.indicators_api_cs.get_combined_indicator_entities(
+                limit=limit,
+                sort=sort,
+                fql_filter=fql_filter,
+                deep_pagination=True,
+                next_page=next_page_token,
             )
 
-        resources = response["resources"]
-        resources_count = len(resources)
-        remaining_resources = None
-        if _meta_total is not None:
-            remaining_resources = _meta_total - resources_count
+            page_resources = response.get("resources") or []
+            if not page_resources:
+                break
 
-        self.helper.connector_logger.info(
-            "Indicators fetched to be processed (Crowdstrike max limit = 10000)",
-            {
-                "resources_count": resources_count,
-                "remaining_resources": remaining_resources,
-            },
-        )
+            # ``meta.pagination`` can legitimately be missing or null - guard
+            # against both so we don't AttributeError on the .get() below.
+            meta = response.get("meta") or {}
+            pagination = meta.get("pagination") or {}
+            page_total = pagination.get("total")
+            if page_total is not None:
+                meta_total = page_total
+
+            remaining_cap = self._remaining_cap(len(resources))
+            if remaining_cap is not None and remaining_cap <= 0:
+                self._log_run_cap_reached(len(resources))
+                break
+
+            if remaining_cap is not None and len(page_resources) > remaining_cap:
+                page_resources = page_resources[:remaining_cap]
+
+            resources.extend(page_resources)
+
+            self.helper.connector_logger.info(
+                "Fetched indicator batch",
+                {
+                    "batch_size": len(page_resources),
+                    "total_fetched": len(resources),
+                    "total_available": meta_total,
+                    "remaining": (
+                        max(0, meta_total - len(resources))
+                        if meta_total is not None
+                        else None
+                    ),
+                    "max_records_per_run": self.max_records_per_run,
+                },
+            )
+
+            if (
+                self.max_records_per_run is not None
+                and len(resources) >= self.max_records_per_run
+            ):
+                self._log_run_cap_reached(len(resources))
+                break
+
+            # ``next_page`` is a single continuation token (string) returned by
+            # ``IndicatorsAPI.get_combined_indicator_entities``. An empty / None
+            # value marks the end of the iteration.
+            next_page_token = response.get("next_page")
+            if not next_page_token:
+                break
 
         return resources
+
+    def _remaining_cap(self, already_fetched: int) -> Optional[int]:
+        """Return how many more records can still be fetched in this run."""
+        if self.max_records_per_run is None:
+            return None
+        return self.max_records_per_run - already_fetched
+
+    def _log_run_cap_reached(self, total_fetched: int) -> None:
+        self.helper.connector_logger.info(
+            "Reached per-run indicator cap, stopping pagination for this run",
+            {
+                "total_fetched": total_fetched,
+                "max_records_per_run": self.max_records_per_run,
+            },
+        )
 
     def _process_indicators(self, indicators: List[dict]) -> datetime | None:
         indicator_count = len(indicators)

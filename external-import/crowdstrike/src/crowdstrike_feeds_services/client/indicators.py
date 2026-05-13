@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from urllib.parse import parse_qs, urlparse
 
 from .base_api import BaseCrowdstrikeClient
@@ -14,46 +14,63 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         super().__init__(config, helper)
 
     def get_combined_indicator_entities(
-        self, limit: int, sort: str, fql_filter: str, deep_pagination: bool
+        self,
+        limit: int,
+        sort: str,
+        fql_filter: str,
+        deep_pagination: bool,
+        next_page: Optional[str] = None,
     ) -> dict:
+        """Get info about indicators that match provided FQL filters.
+
+        :param limit: Maximum number of records to return (max: 5000).
+        :param sort: The property to sort by (e.g. ``created_date|desc``).
+        :param fql_filter: FQL query expression used to filter the results.
+        :param deep_pagination: Whether to enable CrowdStrike's deep pagination.
+        :param next_page: Continuation token returned by a previous call as
+            ``response_body["next_page"]``. Pass ``None`` for the first page.
+        :return: Parsed response body, augmented with a ``next_page`` key whose
+            value is either the next-page token (string) or ``None`` when the
+            iteration is complete.
         """
-        Get info about indicators that match provided FQL filters.
-        :param limit: Maximum number of records to return (Max: 5000) in integer
-        :param sort: The property to sort by. (Ex: created_date|desc) in str
-        :param fql_filter: FQL query expression that should be used to limit the results in str
-        :param deep_pagination: Boolean
-        :return: Dict object containing API response
-        """
-        response = self.cs_intel.query_indicator_entities(
-            limit=limit, sort=sort, filter=fql_filter, deep_pagination=deep_pagination
-        )
+        kwargs = {
+            "limit": limit,
+            "sort": sort,
+            "filter": fql_filter,
+            "deep_pagination": deep_pagination,
+        }
+        if next_page:
+            kwargs["next_page"] = next_page
 
-        response_body = response["body"]
-        response_body["next_page_details"] = None
-
-        next_page_details = self.get_next_page(response)
-
-        if next_page_details is not None:
-            response_body["next_page_details"] = next_page_details
+        response = self.cs_intel.query_indicator_entities(**kwargs)
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting combined indicator entities...")
 
+        response_body = response["body"]
+        response_body["next_page"] = self.get_next_page(response)
+
         return response_body
 
     @staticmethod
-    def get_next_page(response: dict) -> dict | None:
-        """
-        Get the next page of indicators if the total number is higher than the limit chosen
-        :param response: dict of the response
-        :return: A dictionary if there is more indicators than limit set or None
-        """
-        next_page = response.get("headers").get("Next-Page")
+    def get_next_page(response: dict) -> Optional[str]:
+        """Extract the next-page continuation token from a response.
 
-        if next_page is not None:
-            enc_payload = urlparse(next_page).query
-            next_page_parsed = parse_qs(enc_payload)
-
-            return next_page_parsed
-        else:
+        CrowdStrike exposes pagination through a ``Next-Page`` HTTP header that
+        contains a URL whose query string carries the ``next_page`` parameter.
+        We extract that value and return it as-is so it can be passed back to
+        :meth:`get_combined_indicator_entities`. Returns ``None`` when there
+        is no next page.
+        """
+        headers = response.get("headers") or {}
+        next_page_url = headers.get("Next-Page")
+        if not next_page_url:
             return None
+
+        parsed_query = parse_qs(urlparse(next_page_url).query)
+        token_values = parsed_query.get("next_page") or []
+        if not token_values:
+            return None
+
+        token = token_values[0]
+        return token or None
