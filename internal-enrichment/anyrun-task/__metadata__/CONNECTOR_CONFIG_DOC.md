@@ -4,30 +4,28 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-| Property | Type | Required | Possible values | Deprecated | Default | Description |
-| -------- | ---- | -------- | --------------- | ---------- | ------- | ----------- |
-| OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | The base URL of the OpenCTI instance. |
-| OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
-| ANYRUN_TOKEN | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | ANY.RUN API token for authentication. |
-| CONNECTOR_NAME | `string` |  | string |  | `"ANY.RUN task"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string |  | `["Artifact", "Url"]` | The scope of the connector. |
-| CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
-| CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` |  | `"INTERNAL_ENRICHMENT"` |  |
-| CONNECTOR_AUTO | `boolean` |  | boolean |  | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| ANYRUN_MAX_TLP | `string` |  | `TLP:WHITE` `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` |  | `"TLP:AMBER"` | Maximum TLP level for the connector. |
-| ANYRUN_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"https://api.any.run/"` | Base URL for the ANY.RUN API. |
-| ANYRUN_TASK_TIMER | `integer` |  | integer |  | `60` | Sandbox execution time in seconds. |
-| ANYRUN_OS | `string` |  | string |  | `"windows"` | Operating system for sandbox environment. |
-| ANYRUN_OS_BITNESS | `string` |  | `32` `64` |  | `"64"` | Operating system bitness: `32` or `64`. |
-| ANYRUN_OS_VERSION | `string` |  | `7` `8.1` `10` `11` |  | `"10"` | Windows version: `7`, `8.1`, `10`, or `11`. |
-| ANYRUN_OS_LOCALE | `string` |  | string |  | `"en-US"` | Operating system language locale. |
-| ANYRUN_OS_BROWSER | `string` |  | `Google Chrome` `Mozilla Firefox` `Opera` `Internet Explorer` `Microsoft Edge` |  | `"Google Chrome"` | Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`. |
-| ANYRUN_PRIVACY | `string` |  | `public` `bylink` `owner` `team` |  | `"bylink"` | Task privacy: `public`, `bylink`, `owner`, `team`. |
-| ANYRUN_AUTOMATED_INTERACTIVITY | `boolean` |  | boolean |  | `false` | Enable ML-based automated interactivity during analysis. |
-| ANYRUN_IOC | `boolean` |  | boolean |  | `true` | Import IOCs (domains, URLs, IPs) extracted during analysis. |
-| ANYRUN_MITRE | `boolean` |  | boolean |  | `false` | Create relationships to MITRE ATT&CK techniques. |
-| ANYRUN_PROCESSES | `boolean` |  | boolean |  | `false` | Import malicious process observables. |
-| ANYRUN_BITNESS | `string` |  | string | ⛔️ | `null` | Use ANYRUN_OS_BITNESS instead. |
-| ANYRUN_VERSION | `string` |  | string | ⛔️ | `null` | Use ANYRUN_OS_VERSION instead. |
-| ANYRUN_LOCALE | `string` |  | string | ⛔️ | `null` | Use ANYRUN_OS_LOCALE instead. |
-| ANYRUN_BROWSER | `string` |  | string | ⛔️ | `null` | Use ANYRUN_OS_BROWSER instead. |
+| Property | Type      | Required | Possible values                                                                                           | Deprecated | Default         | Description                                                                                                                    |
+| -------- |-----------| ------ |-----------------------------------------------------------------------------------------------------------| ---------- |-----------------|--------------------------------------------------------------------------------------------------------------------------------|
+| OPENCTI_URL | `string`  | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats)      |  |                 | The base URL of the OpenCTI instance.                                                                                          |
+| OPENCTI_TOKEN | `string`  | ✅ | string                                                                                                    |  |                 | The API token to connect to OpenCTI.                                                                                           |
+| ANYRUN_API_KEY | `string`  | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |                 | ANY.RUN Sandbox API-KEY. See 'Generate API KEY' section in the README file.                                                    |
+| ANYRUN_OPT_TIMEOUT | `integer`  | | integer                                                                                                   |  |                 | Select analysis completion time. Size range: 10-660 seconds.                                                                   |
+| ANYRUN_OPT_NETWORK_CONNECT | `boolean` | | boolean                                                                                                   |  | `true`          | Enable network connection.                                                                                                     |
+| ANYRUN_OPT_NETWORK_FAKENET | `boolean` | | boolean                                                                                                   |  | `false`         | Enable FakeNet feature.                                                                                                        |
+| ANYRUN_TOR | `boolean` | | boolean                                                                                                   |  | `false`         | Enable TOR using.                                                                                                              |
+| ANYRUN_GEO | `string` | | string                                                                                                    |  | `fastest`       | TOR geolocation option. Example: US, AU.                                                                                       |
+| ANYRUN_MITM | `boolean` | | boolean                                                                                                   |  | `false`         | Enable HTTPS MITM Proxy using.                                                                                                 |
+| ANYRUN_RESIDENTIAL_PROXY | `boolean` | | boolean                                                                                                   |  | `false`         | Residential proxy using.                                                                                                       |
+| ANYRUN_RESIDENTIAL_PROXY_GEO | `string` | | string                                                                                                    |  | `fastest`       | Residential proxy geolocation option. Example: US, AU.                                                                         |
+| ANYRUN_PRIVACY_TYPE | `string` | | `public` `bylink` `owner` `team`                                                                          |  | `bylink`        | Privacy settings.                                                                                                              |
+| ANYRUN_OBJ_EXT_EXTENSION | `boolean` | | boolean                                                                                                   |  | `true`          | Automatically change file extension to valid.                                                                                  |
+| ANYRUN_ENV_LOCALE | `string` | | string                                                                                                    |  | `en-US`         | Operation system's language. Use locale identifier or country name (Ex: en-US or Brazil). Case-insensitive.                    |
+| ANYRUN_OS_TYPE | `string` | | `windows` `linux` `android`                                                                               |  | `windows`       | Operating system.                                                                                                              |
+| ANYRUN_ENV_VERSION | `string` | | `7` `10` `11`                                                                                             |  | `10`            | Windows environment version.                                                                                                   |
+| ANYRUN_ENV_BITNESS | `string` | | `32` `64`                                                                                                 |  | `64`            | Operating system bitness: 32 or 64 for Windows, 64 for Linux and Android.                                                      |
+| ANYRUN_ENV_TYPE | `string` | | `complete` `development`                                                                                  |  | `complete`      | Windows environment type. You can select development env for OS Windows 10 x64. For all other cases, complete env is required. |
+| ANYRUN_OBJ_EXT_STARTFOLDER | `string` | | `desktop` `home` `downloads` `appdata` `temp` `windows` `root`                                                  |  | `temp`          | Start object from.                                                                                                             |
+| ANYRUN_OBJ_EXT_CMD | `string` | | string                                                                                                    |  |                 | Optional command-line arguments for the analyzed object. Use an empty string '' to apply the default behavior.                 |
+| ANYRUN_OBJ_FORCE_ELEVATION | `boolean` | | boolean                                                                                                   |  | `true`          | Forces the file to execute with elevated privileges and an elevated token (for PE32, PE32+, PE64 files only).                  |
+| ANYRUN_OBJ_EXT_BROWSER | `string` | | `Google Chrome` `Mozilla Firefox` `Internet Explorer` `Microsoft Edge`                                                                                                   |  | `Google Chrome` | Browser name.                                                                                                              |
+| ANYRUN_RUN_AS_ROOT | `boolean` | | boolean                                                                                                   |  | `true`          | Run file with superuser privileges.                                                                                                              |
