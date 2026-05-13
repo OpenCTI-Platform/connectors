@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Mattermost'
+  scope: 'mattermost'
+  log_level: 'info'
+  run_every: '10m' # <int><d|h|m|s>
+  update_existing_data: false
+
+mattermost:
+  domain: 'mattermost.example.org' # Server hostname only, no scheme
+  port: 8065
+  protocol: 'https'
+  basepath: '/api/v4'
+  token: 'ChangeMe'
+  channel_ids: 'ChangeMe' # Comma-separated list of Mattermost channel ids
+  start_timestamp: 0 # Unix epoch in seconds for the first run
+  tlp: 'AMBER' # CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+  verify: true
+  timeout: 30
+  # request_timeout: 30 # Optional, integer seconds
+  keepalive: false
+  keepalive_delay: 5
+  debug: false
