@@ -604,8 +604,8 @@ def test_update_final_state_without_tracked_date(
     # When: Final state is updated
     _when_final_state_updated(basic_processor)
 
-    # Then: State should be updated with current time
-    _then_state_updated_with_current_time(mock_work_manager)
+    # Then: State should not be updated
+    _then_state_not_updated(mock_work_manager)
 
 
 def test_set_latest_date_manually(basic_processor: GenericBatchProcessor) -> None:
@@ -1108,6 +1108,11 @@ def _then_state_updated_with_current_time(mock_work_manager: MockWorkManager) ->
     call_args = mock_work_manager.update_state.call_args
     assert call_args[1]["state_key"] == "test_cursor"  # noqa: S101
     assert "T" in call_args[1]["date_str"]  # noqa: S101
+
+
+def _then_state_not_updated(mock_work_manager: MockWorkManager) -> None:
+    """Assert that state was not updated."""
+    mock_work_manager.update_state.assert_not_called()
 
 
 def _then_statistics_are_initial(stats: dict[str, Any]) -> None:

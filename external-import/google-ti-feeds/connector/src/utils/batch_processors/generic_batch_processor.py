@@ -224,24 +224,10 @@ class GenericBatchProcessor:
                     {"prefix": LOG_PREFIX, "error": str(state_err)},
                 )
         else:
-            current_time = self.config.get_current_timestamp()
             self._logger.info(
-                "State update: Setting to current time",
-                {
-                    "prefix": LOG_PREFIX,
-                    "state_key": self.config.state_key,
-                    "current_time": current_time,
-                },
+                "State update skipped: no successfully ingested entity date tracked",
+                {"prefix": LOG_PREFIX, "state_key": self.config.state_key},
             )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.config.state_key, date_str=current_time
-                )
-            except Exception as state_err:
-                self._logger.error(
-                    "Failed to update final state with current time",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
 
     def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics.
