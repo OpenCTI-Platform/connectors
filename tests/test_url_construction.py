@@ -1,0 +1,301 @@
+"""
+Test that connector URL variables are properly stripped to avoid double slashes.
+
+requests >= 2.34.0 no longer normalizes double slashes in URL paths.
+All connectors that build URLs from config variables must call .rstrip("/")
+on the base URL at assignment time.
+
+This test:
+1. Scans all connector source files for URL variable assignments from config
+2. Verifies that .rstrip("/") (or equivalent) is applied
+3. Checks that URL construction patterns won't produce double slashes
+"""
+
+import ast
+import re
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).parent.parent
+CONNECTOR_DIRS = [
+    REPO_ROOT / "external-import",
+    REPO_ROOT / "internal-enrichment",
+    REPO_ROOT / "internal-export-file",
+    REPO_ROOT / "internal-import-file",
+    REPO_ROOT / "stream",
+]
+
+# Broad pattern: any self attribute whose name ends with "url" (case-insensitive).
+# This catches self.base_url, self.api_url, self.endpoint_url, self.target_url, etc.
+URL_VAR_PATTERN = re.compile(r"(self\.\w*url)\s*=", re.IGNORECASE)
+
+# Pattern that indicates the URL is protected (rstrip, strip, endswith check, conditional trim)
+PROTECTED_PATTERNS = [
+    r'\.rstrip\s*\(\s*["\']/?["\']\s*\)',
+    r'\.strip\s*\(\s*["\']/?["\']\s*\)',
+    r'\[-1\]\s*==\s*["\']/',
+    r'\.endswith\s*\(\s*["\']/',
+    r"if.*\.endswith.*\"/\"",
+]
+
+
+def find_connector_python_files():
+    """Find all Python source files in connector src/ directories."""
+    files = []
+    for connector_dir in CONNECTOR_DIRS:
+        if not connector_dir.exists():
+            continue
+        for connector in sorted(connector_dir.iterdir()):
+            src_dir = connector / "src"
+            if not src_dir.exists():
+                continue
+            for py_file in src_dir.rglob("*.py"):
+                if "__pycache__" in str(py_file) or "venv" in str(py_file):
+                    continue
+                files.append(py_file)
+    return files
+
+
+def _get_non_docstring_lines(source: str) -> set[int]:
+    """Return the set of line numbers that are NOT inside docstrings (AST-based)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        # If the file can't be parsed, treat all lines as code (fall back to text scan)
+        return set(range(1, source.count("\n") + 2))
+
+    docstring_lines: set[int] = set()
+
+    for node in ast.walk(tree):
+        # Docstrings are Expr nodes containing a Constant(str) as first body stmt
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+            if isinstance(node.value.value, str):
+                for ln in range(node.value.lineno, node.value.end_lineno + 1):
+                    docstring_lines.add(ln)
+
+    all_lines = set(range(1, source.count("\n") + 2))
+    return all_lines - docstring_lines
+
+
+def get_url_assignments(file_path: Path) -> list[tuple[int, str, str]]:
+    """
+    Find lines where a URL variable is assigned from config/param (not hardcoded).
+
+    Uses AST to exclude docstrings, then regex to find assignments.
+    Returns list of (line_number, variable_name, full_line).
+    """
+    results = []
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return results
+
+    code_lines = _get_non_docstring_lines(content)
+    lines = content.splitlines()
+
+    for i, line in enumerate(lines, start=1):
+        # Skip lines inside docstrings
+        if i not in code_lines:
+            continue
+
+        stripped = line.strip()
+
+        # Skip comments
+        if stripped.startswith("#"):
+            continue
+
+        # Match self.*url = ... patterns (broad, catches any URL-like attribute)
+        match = URL_VAR_PATTERN.search(line)
+        if not match:
+            continue
+
+        var_name = match.group(1)
+
+        # Skip if it's a hardcoded string (no config variable involvement)
+        # Hardcoded = direct string literal like self.url = "https://..."
+        if re.search(r'=\s*["\']https?://', line):
+            continue
+
+        # Skip if it's a property or computed from another already-protected var
+        if "@property" in stripped:
+            continue
+
+        results.append((i, var_name, line))
+
+    return results
+
+
+def is_assignment_protected(file_path: Path, line_num: int, var_name: str) -> bool:
+    """
+    Check if a URL assignment has .rstrip("/") or equivalent protection.
+
+    Handles:
+    - Direct protection: self.url = x.rstrip("/")
+    - Intermediate variable: _base = x.rstrip("/"); self.url = f"{_base}/..."
+    """
+    try:
+        source = file_path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return True  # can't check, assume ok
+
+    lines = source.splitlines()
+
+    def _has_protection(text: str) -> bool:
+        return any(re.search(p, text) for p in PROTECTED_PATTERNS)
+
+    # Try AST-based extraction: find the assignment node at this line
+    try:
+        tree = ast.parse(source)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and node.lineno == line_num:
+                stmt_lines = lines[node.lineno - 1 : node.end_lineno]
+                assignment_text = "\n".join(stmt_lines)
+                if _has_protection(assignment_text):
+                    return True
+
+                # Check if the RHS uses a local variable that was rstrip'd
+                # in the preceding 3 lines (intermediate variable pattern)
+                start = max(0, node.lineno - 4)
+                context = "\n".join(lines[start : node.lineno - 1])
+                if _has_protection(context):
+                    return True
+
+                return False
+    except SyntaxError:
+        pass
+
+    # Fallback: text-based extraction for files that can't be parsed
+    start = line_num - 1
+    end = min(start + 10, len(lines))
+
+    assignment_text = ""
+    base_indent = len(lines[start]) - len(lines[start].lstrip())
+    for i in range(start, end):
+        assignment_text += lines[i] + "\n"
+        if i > start:
+            current_indent = (
+                len(lines[i]) - len(lines[i].lstrip()) if lines[i].strip() else 999
+            )
+            if current_indent <= base_indent and not lines[i].strip().startswith(")"):
+                break
+
+    if _has_protection(assignment_text):
+        return True
+
+    # Check preceding lines for intermediate variable pattern
+    context_start = max(0, start - 3)
+    context = "\n".join(lines[context_start:start])
+    return _has_protection(context)
+
+
+def is_usage_protected(file_path: Path, usage_line_num: int, var_name: str) -> bool:
+    """
+    Check if a URL usage is protected by a conditional check on the variable.
+
+    Handles patterns like:
+    - if self.URL[-1] == "/": URL = f"{self.URL}{EP}" else: URL = f"{self.URL}/{EP}"
+    - target = self.url if self.url.endswith("/") else self.url + "/"
+    """
+    try:
+        source = file_path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return False
+
+    lines = source.splitlines()
+    short_name = var_name.replace("self.", "")
+
+    # Check a window of 5 lines before and after the usage for conditional checks
+    start = max(0, usage_line_num - 6)
+    end = min(len(lines), usage_line_num + 3)
+    context = "\n".join(lines[start:end])
+
+    # Patterns that indicate runtime handling of trailing slash
+    runtime_patterns = [
+        rf"self\.{re.escape(short_name)}\s*\[\s*-1\s*\]\s*==\s*[\"']/",
+        rf"self\.{re.escape(short_name)}\.endswith\s*\(\s*[\"']/",
+        rf"self\.{re.escape(short_name)}\.rstrip\s*\(\s*[\"']/?[\"']\s*\)",
+    ]
+
+    return any(re.search(p, context) for p in runtime_patterns)
+
+
+def get_url_usages_with_slash(file_path: Path, var_name: str) -> list[tuple[int, str]]:
+    """
+    Find lines where the URL variable is used in URL construction with a leading slash,
+    excluding usages that are already protected by conditional checks.
+
+    Returns list of (line_number, line_content).
+    """
+    results = []
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return results
+
+    short_name = var_name.replace("self.", "")
+
+    for i, line in enumerate(content.splitlines(), start=1):
+        matched = False
+        # f-string pattern: f"{self.xxx_url}/..."
+        if re.search(rf'f".*\{{self\.{re.escape(short_name)}\}}/', line):
+            matched = True
+        # Concatenation pattern: self.xxx_url + "/..."
+        elif re.search(rf"self\.{re.escape(short_name)}\s*\+\s*\"/", line):
+            matched = True
+
+        if matched and not is_usage_protected(file_path, i, var_name):
+            results.append((i, line.strip()))
+
+    return results
+
+
+# Collect all unprotected URL assignments across the codebase
+def collect_unprotected_assignments():
+    """Scan all connectors and collect unprotected URL assignments that are used with /."""
+    violations = []
+    for py_file in find_connector_python_files():
+        assignments = get_url_assignments(py_file)
+        for line_num, var_name, line in assignments:
+            if is_assignment_protected(py_file, line_num, var_name):
+                continue
+            # Check if this variable is actually used in URL construction with /
+            usages = get_url_usages_with_slash(py_file, var_name)
+            if usages:
+                rel_path = py_file.relative_to(REPO_ROOT)
+                violations.append(
+                    (str(rel_path), line_num, var_name, line.strip(), usages)
+                )
+    return violations
+
+
+@pytest.fixture(scope="session")
+def url_violations():
+    """Lazily collect violations at test time, not at import/collection time."""
+    return collect_unprotected_assignments()
+
+
+def test_no_unprotected_url_assignments(url_violations):
+    """
+    Verify that all URL variables assigned from config have .rstrip("/") protection.
+
+    This prevents double slashes in URLs when requests >= 2.34.0 is used,
+    which no longer normalizes // in URL paths.
+    """
+    if not url_violations:
+        return
+
+    messages = []
+    for file_path, line_num, var_name, assignment, usages in url_violations:
+        usage_lines = ", ".join(f"L{ln}" for ln, _ in usages[:3])
+        messages.append(
+            f"  {file_path}:{line_num} - {var_name} assigned without .rstrip('/') "
+            f"(used at {usage_lines})"
+        )
+    violation_report = "\n".join(messages)
+    pytest.fail(
+        f"Found {len(url_violations)} URL variable(s) without .rstrip('/') protection:\n"
+        f"{violation_report}\n\n"
+        f"Fix: Add .rstrip('/') to the assignment, e.g.:\n"
+        f"  self.base_url = str(config.url).rstrip('/')"
+    )
