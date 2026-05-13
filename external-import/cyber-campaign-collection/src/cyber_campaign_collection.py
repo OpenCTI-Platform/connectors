@@ -50,6 +50,28 @@ class CyberMonitor:
         self.cyber_monitor_interval = get_config_variable(
             "CYBER_MONITOR_INTERVAL", ["cyber_monitor", "interval"], config, True
         )
+        self.cyber_monitor_report_type = get_config_variable(
+            "CYBER_MONITOR_REPORT_TYPE",
+            ["cyber_monitor", "report_type"],
+            config,
+            False,
+            None,
+        )
+        # ``x_opencti_report_status`` is the legacy integer workflow position. The
+        # configuration accepts either the integer directly (e.g. ``2``) or one of
+        # the well-known status names below which are translated to the matching
+        # default workflow position. Unknown / unset values are ignored so the
+        # field is not emitted on the STIX Report.
+        report_status_raw = get_config_variable(
+            "CYBER_MONITOR_REPORT_STATUS",
+            ["cyber_monitor", "report_status"],
+            config,
+            False,
+            None,
+        )
+        self.cyber_monitor_report_status = self._normalize_report_status(
+            report_status_raw
+        )
         self.update_existing_data = get_config_variable(
             "CONNECTOR_UPDATE_EXISTING_DATA",
             ["connector", "update_existing_data"],
@@ -61,6 +83,28 @@ class CyberMonitor:
             name="DUMMY",
             description="Dummy organization which can be used in various unknown contexts.",
         )
+
+    # Default OpenCTI report-workflow positions, kept here so the connector
+    # does not have to depend on the API to resolve status names.
+    _REPORT_STATUS_MAP = {
+        "new": 0,
+        "in progress": 1,
+        "analyzed": 2,
+        "closed": 3,
+    }
+
+    @classmethod
+    def _normalize_report_status(cls, raw):
+        """Return an int report-status or ``None`` when no value is configured."""
+        if raw is None or raw == "":
+            return None
+        if isinstance(raw, int):
+            return raw
+        try:
+            return int(str(raw).strip())
+        except (TypeError, ValueError):
+            pass
+        return cls._REPORT_STATUS_MAP.get(str(raw).strip().lower())
 
     def get_interval(self):
         return int(self.cyber_monitor_interval) * 60 * 60 * 24
@@ -166,6 +210,16 @@ class CyberMonitor:
                                     "no_trigger_import": True,
                                 }
                             )
+                    custom_properties = {"x_opencti_files": files}
+                    if self.cyber_monitor_report_status is not None:
+                        custom_properties["x_opencti_report_status"] = (
+                            self.cyber_monitor_report_status
+                        )
+                    optional_fields = {}
+                    if self.cyber_monitor_report_type:
+                        optional_fields["report_types"] = [
+                            self.cyber_monitor_report_type
+                        ]
                     report = stix2.Report(
                         id=Report.generate_id(report_name, report_date),
                         name=report_name,
@@ -173,7 +227,8 @@ class CyberMonitor:
                         external_references=[external_reference],
                         object_refs=[self.dummy_organization["id"]],
                         allow_custom=True,
-                        custom_properties={"x_opencti_files": files},
+                        custom_properties=custom_properties,
+                        **optional_fields,
                     )
                     self.send_bundle(
                         work_id,
