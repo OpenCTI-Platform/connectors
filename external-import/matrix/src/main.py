@@ -11,6 +11,7 @@ attachments encoded as ``x_opencti_files``), and message authors become
 
 import asyncio
 import base64
+import logging
 import os
 import sys
 import time
@@ -74,6 +75,12 @@ _TLP_MAP: Dict[str, str] = {
 # of wall-clock time, before opening + closing a single Work.
 _FLUSH_BATCH_SIZE = 25
 _FLUSH_INTERVAL_SECONDS = 30.0
+
+# A flush that fails ``_MAX_FLUSH_FAILURES`` times in a row is assumed
+# to be triggered by a poison object in the buffer; the buffer is then
+# dropped (with a loud log line) so a single malformed event cannot
+# pollute the OpenCTI work queue indefinitely.
+_MAX_FLUSH_FAILURES = 3
 
 # Event types the connector subscribes to.
 _TEXT_EVENTS = (RoomMessageText, RoomMessageNotice)
@@ -205,6 +212,12 @@ class MatrixConnector:
             ),
             default=False,
         )
+        if self.matrix_debug:
+            # Promote matrix-nio's loggers (HTTP, WebSocket, crypto, ...)
+            # to DEBUG so operators get the verbose protocol traces
+            # advertised by ``MATRIX_DEBUG`` in the README.
+            for logger_name in ("nio", "nio.client", "nio.crypto", "nio.http"):
+                logging.getLogger(logger_name).setLevel(logging.DEBUG)
         self.matrix_store_path: str = get_config_variable(
             "MATRIX_STORE_PATH",
             ["matrix", "store_path"],
@@ -232,6 +245,17 @@ class MatrixConnector:
         # ``_maybe_flush_bundle`` tracks the last flush so we can
         # batch many events into a single OpenCTI Work.
         self._last_flush_ts: float = time.monotonic()
+        # Serialises concurrent flush attempts (the size-triggered
+        # flush from ``_on_event`` vs. the time-triggered flush from
+        # the periodic background task) so two concurrent
+        # ``initiate_work`` / ``send_stix2_bundle`` calls do not race
+        # on the same buffer.
+        self._flush_lock: asyncio.Lock = asyncio.Lock()
+        # Consecutive flush failure counter — see ``_MAX_FLUSH_FAILURES``.
+        self._consecutive_failures: int = 0
+        # Background task that drains the buffer when the room is
+        # quiet (no incoming event triggers ``_maybe_flush_bundle``).
+        self._periodic_flush_task: Optional[asyncio.Task] = None
 
     @staticmethod
     def _require_string(config: Dict[str, Any], env_name: str, path: List[str]) -> str:
@@ -243,7 +267,7 @@ class MatrixConnector:
     # ------------------------------------------------------------------
     # Bundle helpers
     # ------------------------------------------------------------------
-    def _maybe_flush_bundle(self) -> None:
+    async def _maybe_flush_bundle(self) -> None:
         """Flush the buffer when it is large enough *or* old enough.
 
         Matrix events arrive asynchronously and can be very frequent
@@ -257,21 +281,63 @@ class MatrixConnector:
             return
         elapsed = time.monotonic() - self._last_flush_ts
         if len(self.bundle) >= _FLUSH_BATCH_SIZE or elapsed >= _FLUSH_INTERVAL_SECONDS:
-            self._flush_bundle()
+            await self._flush_bundle()
 
-    def _flush_bundle(self) -> None:
-        """Send the buffered STIX objects to OpenCTI and reset the buffer.
+    async def _flush_bundle(self) -> None:
+        """Send the buffered STIX objects to OpenCTI via a thread executor.
 
-        Bundle serialisation / send is wrapped in ``try / except`` so
-        the OpenCTI Work is always closed â€“ either with
-        ``to_processed(..., in_error=True)`` on failure (and the
-        buffer is preserved so the next flush retries) or with the
-        normal success message and a new ``last_run`` state on
-        success.
+        ``OpenCTIConnectorHelper.api`` and ``send_stix2_bundle`` are
+        synchronous HTTP calls; running them directly from the async
+        ``_on_event`` callback would stall the asyncio loop driving
+        ``sync_forever``. The actual HTTP work therefore runs in a
+        thread executor via :func:`asyncio.to_thread`.
+
+        ``_flush_lock`` serialises concurrent flush attempts (size
+        trigger vs. periodic-task trigger) so two callers do not race
+        on the same buffer. The OpenCTI Work is always closed: with
+        ``to_processed(..., in_error=True)`` on failure or with the
+        success message + ``last_run`` state update on success. After
+        ``_MAX_FLUSH_FAILURES`` consecutive failures the buffer is
+        dropped (with a loud log line) so a single poison object
+        cannot keep producing in-error Work records indefinitely.
         """
-        if not self.bundle:
-            return
+        async with self._flush_lock:
+            if not self.bundle:
+                return
+            pending = self.bundle
+            self.bundle = []
+            try:
+                await asyncio.to_thread(self._send_pending_objects, pending)
+                self._consecutive_failures = 0
+            except Exception as exc:  # noqa: BLE001
+                self._consecutive_failures += 1
+                if self._consecutive_failures >= _MAX_FLUSH_FAILURES:
+                    self.helper.log_error(
+                        f"Dropping {len(pending)} buffered STIX objects "
+                        f"after {self._consecutive_failures} consecutive "
+                        f"flush failures (last error: {exc})."
+                    )
+                    self._consecutive_failures = 0
+                else:
+                    # Put the failed batch back at the front of the
+                    # buffer so the next flush cycle retries it. Newer
+                    # events that arrived during the failed send remain
+                    # at the end of the buffer.
+                    self.bundle = pending + self.bundle
+                    self.helper.log_warning(
+                        f"Flush failed (attempt {self._consecutive_failures}/"
+                        f"{_MAX_FLUSH_FAILURES}); will retry on the next "
+                        f"flush cycle: {exc}"
+                    )
+            self._last_flush_ts = time.monotonic()
 
+    def _send_pending_objects(self, pending: List[Any]) -> None:
+        """Synchronous OpenCTI HTTP work called via :func:`asyncio.to_thread`.
+
+        Raising propagates the failure to the caller, which adjusts the
+        consecutive-failure counter and decides whether to retry or to
+        drop the batch.
+        """
         now = datetime.now(tz=timezone.utc)
         friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
             "%Y-%m-%d %H:%M:%S"
@@ -279,10 +345,9 @@ class MatrixConnector:
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
-        objects_count = len(self.bundle)
-
+        objects_count = len(pending)
         try:
-            bundle = stix2.Bundle(objects=self.bundle, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=pending, allow_custom=True).serialize()
             self.helper.log_info(f"Sending {objects_count} STIX objects to OpenCTI...")
             self.helper.send_stix2_bundle(
                 bundle,
@@ -303,10 +368,7 @@ class MatrixConnector:
                 self.helper.log_error(
                     f"Could not mark work {work_id} as failed: {report_exc}"
                 )
-            # Keep the buffer so the next ``_maybe_flush_bundle`` can
-            # retry; reset the flush clock so we do not spin.
-            self._last_flush_ts = time.monotonic()
-            return
+            raise
 
         timestamp = int(time.time())
         message = (
@@ -318,8 +380,24 @@ class MatrixConnector:
         current_state["last_run"] = timestamp
         self.helper.set_state(current_state)
         self.helper.api.work.to_processed(work_id, message)
-        self.bundle = []
-        self._last_flush_ts = time.monotonic()
+
+    async def _periodic_flush(self) -> None:
+        """Background task that drains the buffer on a timer.
+
+        ``_maybe_flush_bundle`` is also called from ``_on_event`` so
+        active rooms see a size-triggered flush as soon as the buffer
+        fills up. The periodic task covers the opposite case: a quiet
+        room where events arrive in lulls, and where the buffered tail
+        would otherwise wait until the next event before being sent.
+        """
+        while True:
+            try:
+                await asyncio.sleep(_FLUSH_INTERVAL_SECONDS)
+                await self._maybe_flush_bundle()
+            except asyncio.CancelledError:
+                break
+            except Exception:  # noqa: BLE001
+                self.helper.log_error(traceback.format_exc())
 
     # ------------------------------------------------------------------
     # Matrix client + event handling
@@ -338,13 +416,24 @@ class MatrixConnector:
         return body
 
     def _ensure_channel(self, room_id: str, room_name: str) -> str:
-        """Return the STIX id of the channel matching ``room_id``."""
-        existing = self.helper.api.channel.list(filters=_list_filter("name", room_id))
+        """Return the STIX id of the channel matching ``room_id``.
+
+        Looks up the channel by its deterministic ``standard_id``
+        (computed from ``room_id``) rather than by ``name``: a
+        free-text ``name`` filter is not unique and could return an
+        unrelated Channel that happens to share the Matrix room id as
+        a display name (or a different Matrix-style channel created
+        outside this connector).
+        """
+        channel_id = PyctiChannel.generate_id(room_id)
+        existing = self.helper.api.channel.list(
+            filters=_list_filter("standard_id", channel_id)
+        )
         if existing:
             return existing[0]["standard_id"]
 
         channel = CustomObjectChannel(
-            id=PyctiChannel.generate_id(room_id),
+            id=channel_id,
             name=room_id,
             description=room_name,
             object_marking_refs=[self.matrix_marking_id],
@@ -356,13 +445,22 @@ class MatrixConnector:
         return channel["id"]
 
     def _ensure_author(self, sender: str) -> str:
-        """Return the STIX id of the author identity, creating it if needed."""
-        identities = self.helper.api.identity.list(filters=_list_filter("name", sender))
+        """Return the STIX id of the author identity, creating it if needed.
+
+        Same rationale as :meth:`_ensure_channel`: the lookup uses the
+        deterministic ``standard_id`` derived from the Matrix user id
+        rather than the free-text ``name`` so a multi-tenant OpenCTI
+        deployment cannot collide on someone else's display name.
+        """
+        author_id = PyctiIdentity.generate_id(sender, "individual")
+        identities = self.helper.api.identity.list(
+            filters=_list_filter("standard_id", author_id)
+        )
         if identities:
             return identities[0]["standard_id"]
 
         author = stix2.Identity(
-            id=PyctiIdentity.generate_id(sender, "individual"),
+            id=author_id,
             name=sender,
             identity_class="individual",
             description="Matrix author",
@@ -532,9 +630,13 @@ class MatrixConnector:
                 return
 
             if media_content is None:
-                # Nothing to publish (decryption failure / empty event); drop
-                # any partial bundle entries for this event before returning.
-                self.bundle = []
+                # Nothing to publish for this event (unsupported subtype,
+                # decryption failure, empty download, ...). The channel
+                # / author SDOs we may have just appended above are still
+                # valid descriptions of the room / sender and will be
+                # flushed normally with the next batch; do NOT wipe the
+                # whole buffer, which would silently drop events
+                # previously buffered from other rooms / handlers.
                 return
 
             self.bundle.append(media_content)
@@ -545,7 +647,7 @@ class MatrixConnector:
                 self.bundle.append(
                     self._build_relationship(media_content["id"], thread_root)
                 )
-            self._maybe_flush_bundle()
+            await self._maybe_flush_bundle()
         except asyncio.CancelledError:
             # Let cancellation propagate so the sync loop can shut down.
             raise
@@ -571,15 +673,26 @@ class MatrixConnector:
             self.helper.log_info("Uploading device keys...")
             await self.client.keys_upload()
         self.client.add_event_callback(self._on_event, _ALL_EVENT_CLASSES)
+        # Background task that drains the buffer on a timer so quiet
+        # rooms don't keep events pending until the next message.
+        self._periodic_flush_task = asyncio.create_task(self._periodic_flush())
         self.helper.log_info("Starting sync_forever...")
         try:
             await self.client.sync_forever(full_state=True)
         finally:
-            # Drain any buffered events before shutting the client
-            # so a SIGTERM / Ctrl-C does not lose the tail of the
-            # batch.
+            # Stop the background flush task first so it does not
+            # race with the final shutdown drain below.
+            if self._periodic_flush_task is not None:
+                self._periodic_flush_task.cancel()
+                try:
+                    await self._periodic_flush_task
+                except asyncio.CancelledError:
+                    pass
+                self._periodic_flush_task = None
+            # Drain any buffered events before shutting the client so
+            # a SIGTERM / Ctrl-C does not lose the tail of the batch.
             try:
-                self._flush_bundle()
+                await self._flush_bundle()
             except Exception as exc:  # noqa: BLE001
                 self.helper.log_error(f"Final flush failed during shutdown: {exc}")
             await self.client.close()
