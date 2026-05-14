@@ -51,11 +51,14 @@ supported.
 
 - OpenCTI Platform >= 6.4.3
 - A glibc-based Linux distribution able to run LibreOffice. The connector
-  ships with a `debian:bookworm-slim` Dockerfile because the official
-  `python:3.12-alpine` image cannot install LibreOffice / `python3-uno`,
-  and Debian's `python3-uno` package only loads against the matching
-  system Python (Python 3.11 on Bookworm) — not a second interpreter
-  installed under `/usr/local`.
+  ships with a `debian:bookworm-slim` Dockerfile because the
+  `python:3.12-alpine` image used by the other internal-export
+  connectors (`export-file-csv`, `export-file-stix`, `export-file-txt`,
+  `export-file-yara`, `export-report-pdf`) cannot install LibreOffice /
+  `python3-uno` (LibreOffice is not packaged for `musl`), and Debian's
+  `python3-uno` package only loads against the matching system Python
+  (Python 3.11 on Bookworm) — not a second interpreter installed under
+  `/usr/local`.
 
 ## Configuration variables
 
@@ -118,28 +121,36 @@ docker compose up -d
    on Debian/Ubuntu):
 
    ```bash
-   sudo apt-get install -y libreoffice libreoffice-script-provider-python python3-uno
+   sudo apt-get install -y libreoffice libreoffice-script-provider-python python3-uno python3-venv
    ```
 
 2. Create `src/config.yml` from `src/config.yml.sample` and fill in the
    `opencti.url` / `opencti.token` / `connector.id` values.
 
-3. Install the Python dependencies:
+3. Create a virtual environment that can see the apt-installed UNO bridge
+   and install the Python dependencies into it. `--system-site-packages`
+   is required so the venv inherits the `uno` / `unohelper` / `pyuno`
+   modules shipped by `python3-uno`; without it the venv runs under a
+   second interpreter that cannot import `pyuno` (ABI mismatch). The
+   flag also keeps PEP 668 happy on Debian Bookworm / recent Ubuntu
+   releases where `pip3 install` directly into the system Python is
+   blocked:
 
    ```bash
-   pip3 install -r src/requirements.txt
+   python3 -m venv --system-site-packages /opt/opencti-connector-export-file-ods/venv
+   /opt/opencti-connector-export-file-ods/venv/bin/pip install --no-cache-dir -r src/requirements.txt
    ```
 
 4. Start the headless LibreOffice listener used by `unogenerator`:
 
    ```bash
-   unogenerator_start
+   /opt/opencti-connector-export-file-ods/venv/bin/unogenerator_start
    ```
 
-5. Start the connector:
+5. Start the connector with the same interpreter:
 
    ```bash
-   python3 src/main.py
+   /opt/opencti-connector-export-file-ods/venv/bin/python3 src/main.py
    ```
 
 ## Usage

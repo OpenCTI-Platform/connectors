@@ -1,0 +1,5 @@
+# ``sanitize_cell`` lives in ``src/lib/sanitization.py`` and is intentionally
+# dependency-free (no ``unogenerator`` / no ``pycti``) so its tests can run on
+# a CI runner that does not have LibreOffice installed. We therefore do *not*
+# pull in ``src/requirements.txt`` here.
+pytest

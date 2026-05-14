@@ -12,9 +12,11 @@ import tempfile
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from lib.internal_export import InternalExportConnector
 from unogenerator import ODS_Standard
 from unogenerator.commons import ColorsNamed
+
+from lib.internal_export import InternalExportConnector
+from lib.sanitization import sanitize_cell
 
 _UNSUPPORTED_ENTITY_TYPES = {
     "stix-sighting-relationship",
@@ -29,36 +31,6 @@ _HASH_ALGORITHMS: Tuple[str, ...] = ("MD5", "SHA-1", "SHA-256", "SHA-512", "SSDE
 _HASH_HEADERS: Tuple[str, ...] = tuple(
     f"{_HASH_HEADER_PREFIX}{algo}" for algo in _HASH_ALGORITHMS
 )
-
-# Leading control characters are stripped to mitigate spreadsheet injection
-# that abuses tab / carriage-return separators.
-_SANITIZE_LEADING_CONTROL_CHARS = ("\t", "\r", "\n")
-
-# Leading ``=``/``+``/``-``/``@`` are escaped with ``[<char>]`` so spreadsheet
-# applications do not interpret the cell as a formula.
-_SANITIZE_FORMULA_TRIGGERS = ("=", "+", "-", "@")
-
-
-def sanitize_cell(value: Any) -> str:
-    """Return ``value`` rendered as a spreadsheet-safe string.
-
-    ``None`` and non-string inputs (numbers, booleans, ...) are coerced
-    safely. The returned value is protected against two classes of issue:
-
-    * formula injection — leading ``=``/``+``/``-``/``@`` are wrapped in
-      square brackets so spreadsheet apps stop interpreting the cell as a
-      formula;
-    * control-character injection — leading tab, carriage-return or newline
-      characters are stripped.
-    """
-    if value is None:
-        return ""
-    text = value if isinstance(value, str) else str(value)
-    while text and text[0] in _SANITIZE_LEADING_CONTROL_CHARS:
-        text = text[1:]
-    if text and text[0] in _SANITIZE_FORMULA_TRIGGERS:
-        text = "[" + text[0] + "]" + text[1:]
-    return text
 
 
 class ExportFileODSConnector(InternalExportConnector):
@@ -109,9 +81,21 @@ class ExportFileODSConnector(InternalExportConnector):
         candidate_neighbor_ids: set[str] = set()
         for entity_id in [eid for eid in seen_ids if eid]:
             for direction, ref_key in (("fromId", "to"), ("toId", "from")):
+                # ``main_filter`` is intentionally **not** forwarded here.
+                # For a ``selection`` export it is the selected object ids
+                # filter, which would filter the *relationship* rows by
+                # those ids (which they do not carry) and effectively
+                # turn a ``full`` export into a ``simple`` one. For a
+                # ``query`` export it is the user-defined entity filter
+                # which generally does not apply to relationship rows.
+                # We only need the endpoint direction
+                # (``fromId`` / ``toId``) to discover the neighbour ids;
+                # the marking / access restrictions are enforced when
+                # we fetch the actual neighbour objects below, by
+                # AND-ing ``access_filter`` into the unified entity
+                # endpoint lookup.
                 rels = self.helper.api_impersonate.stix_core_relationship.list(
                     **{direction: entity_id},
-                    filters=self.main_filter,
                     getAll=True,
                 )
                 self.helper.log_debug(

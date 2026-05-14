@@ -10,8 +10,13 @@ ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE \
 # built against the *system* Python (Python 3.11 on Debian Bookworm); the
 # runtime Python therefore has to be the same system interpreter, which is
 # why this connector uses ``debian:bookworm-slim`` instead of the
-# ``python:3.x-slim`` images used by the other export connectors (those ship
-# a second Python under ``/usr/local`` that cannot import ``pyuno``).
+# ``python:3.12-alpine`` image used by the other internal-export connectors
+# (``export-file-csv``, ``export-file-stix``, ``export-file-txt``,
+# ``export-file-yara``, ``export-report-pdf``). Alpine is not an option
+# because LibreOffice / ``python3-uno`` are not packaged for ``musl``;
+# the official ``python:3.x-slim`` images are not an option either because
+# their ``/usr/local`` Python cannot import the system ``pyuno`` C
+# extension (ABI mismatch).
 # hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
