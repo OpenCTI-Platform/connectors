@@ -12,11 +12,10 @@ import tempfile
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from unogenerator import ODS_Standard
-from unogenerator.commons import ColorsNamed
-
 from lib.internal_export import InternalExportConnector
 from lib.sanitization import sanitize_cell
+from unogenerator import ODS_Standard
+from unogenerator.commons import ColorsNamed
 
 _UNSUPPORTED_ENTITY_TYPES = {
     "stix-sighting-relationship",
