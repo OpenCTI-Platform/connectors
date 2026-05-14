@@ -59,6 +59,10 @@ class YaraConnector:
 
         data = {"pagination": {"hasNextPage": True, "endCursor": None}}
         all_entities = []
+        # ``objectLabel`` is requested so the label-propagation path in
+        # ``_scan_artifact`` does not need a second per-indicator API
+        # round-trip; it stays empty / harmless when label propagation is
+        # disabled.
         customAttributes = """
         id
         name
@@ -68,6 +72,11 @@ class YaraConnector:
         valid_from
         objectMarking {
             standard_id
+        }
+        objectLabel {
+            id
+            value
+            color
         }
         """
         while data["pagination"]["hasNextPage"]:
@@ -124,40 +133,170 @@ class YaraConnector:
                     continue
 
                 results = rule.match(data=artifact_content, timeout=60)
-                if results:
-                    marking_refs = self._collect_marking_refs(artifact, indicator)
-                    relationship = Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "related-to",
-                            artifact["standard_id"],
-                            indicator["standard_id"],
-                        ),
-                        relationship_type="related-to",
-                        created_by_ref=self.author["id"],
-                        source_ref=artifact["standard_id"],
-                        target_ref=indicator["standard_id"],
-                        description="YARA rule matched for this Artifact",
+                if not results:
+                    continue
+
+                marking_refs = self._collect_marking_refs(artifact, indicator)
+                relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        artifact["standard_id"],
+                        indicator["standard_id"],
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.author["id"],
+                    source_ref=artifact["standard_id"],
+                    target_ref=indicator["standard_id"],
+                    description="YARA rule matched for this Artifact",
+                )
+                if marking_refs:
+                    relationship = relationship.new_version(
+                        object_marking_refs=marking_refs
                     )
-                    if marking_refs:
-                        relationship = relationship.new_version(
-                            object_marking_refs=marking_refs
+                bundle_objects.append(relationship)
+                # Include matched indicator in bundle so cleanup_inconsistent_bundle
+                # does not remove the relationship referencing it
+                if indicator["standard_id"] not in matched_indicators:
+                    matched_indicators[indicator["standard_id"]] = stix2.Indicator(
+                        id=indicator["standard_id"],
+                        name=indicator["name"],
+                        pattern=indicator["pattern"],
+                        pattern_type=indicator["pattern_type"],
+                        valid_from=indicator["valid_from"],
+                    )
+                self.helper.connector_logger.debug(
+                    f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
+                )
+
+                # Optional: propagate every label carried by the matching
+                # YARA indicator onto the enriched artifact. Labels are read
+                # straight off the indicator (``objectLabel`` is requested in
+                # ``_get_yara_indicators``'s ``customAttributes``) so no extra
+                # API round-trip is needed per indicator.
+                if self.config.yara.propagate_labels:
+                    self._propagate_labels(artifact, indicator)
+
+                # Optional: follow every ``indicates`` relationship from the
+                # matching YARA indicator to Malware entities and emit a
+                # ``related-to`` STIX relationship from the artifact to each
+                # of those malware entities, so the artifact's knowledge
+                # graph directly shows the malware family the YARA rule was
+                # authored against.
+                if self.config.yara.propagate_malware_relationship:
+                    bundle_objects.extend(
+                        self._build_malware_relationships(
+                            artifact, indicator, marking_refs
                         )
-                    bundle_objects.append(relationship)
-                    # Include matched indicator in bundle so cleanup_inconsistent_bundle
-                    # does not remove the relationship referencing it
-                    if indicator["standard_id"] not in matched_indicators:
-                        matched_indicators[indicator["standard_id"]] = stix2.Indicator(
-                            id=indicator["standard_id"],
-                            name=indicator["name"],
-                            pattern=indicator["pattern"],
-                            pattern_type=indicator["pattern_type"],
-                            valid_from=indicator["valid_from"],
-                        )
-                    self.helper.connector_logger.debug(
-                        f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
                     )
 
         return bundle_objects + list(matched_indicators.values()), errors
+
+    def _propagate_labels(self, artifact: dict, indicator: dict) -> None:
+        """Copy every label of ``indicator`` onto ``artifact``.
+
+        Labels are read from the in-memory ``indicator["objectLabel"]``
+        list (loaded by :meth:`_get_yara_indicators` via the GraphQL
+        ``customAttributes``). Each label is added through the
+        ``stix_cyber_observable.add_label`` mutation — using the
+        side-channel API here is intentional because the artifact
+        already exists in OpenCTI and we only want to mutate its label
+        set, not re-emit a full STIX object that would also have to
+        carry every other property.
+
+        Per-label failures are logged at ``error`` level and do not
+        abort the rest of the scan.
+        """
+        labels = indicator.get("objectLabel") or []
+        for label in labels:
+            label_id = label.get("id") if isinstance(label, dict) else None
+            if not label_id:
+                continue
+            try:
+                self.helper.api.stix_cyber_observable.add_label(
+                    id=artifact["id"], label_id=label_id
+                )
+            except Exception as exc:  # noqa: BLE001 - we only want to log
+                self.helper.connector_logger.error(
+                    "Error propagating label from YARA Indicator to Artifact",
+                    {
+                        "label": label.get("value", label_id),
+                        "indicator": indicator.get("name"),
+                        "artifact": artifact.get(
+                            "observable_value", artifact.get("id")
+                        ),
+                        "error": str(exc),
+                    },
+                )
+
+    def _build_malware_relationships(
+        self, artifact: dict, indicator: dict, marking_refs
+    ) -> list[Relationship]:
+        """Return STIX ``related-to`` relationships from ``artifact`` to every
+        Malware entity that ``indicator`` ``indicates``.
+
+        Only ``indicates`` relationships are considered (matches the
+        documented behaviour): a stray ``related-to`` / ``part-of``
+        leaving the indicator must not pull in malware the YARA rule
+        does not actually indicate.
+
+        ``marking_refs`` reuses the marking set computed for the
+        Artifact -> Indicator relationship, so the propagated
+        Artifact -> Malware relationships carry the same TLP markings.
+        """
+        try:
+            relationships = self.helper.api.stix_core_relationship.list(
+                fromId=indicator["id"],
+                relationship_type="indicates",
+                toTypes=["Malware"],
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.helper.connector_logger.error(
+                "Error listing 'indicates' relationships from YARA Indicator",
+                {"indicator": indicator.get("name"), "error": str(exc)},
+            )
+            return []
+
+        out: list[Relationship] = []
+        for rel in relationships or []:
+            target = (rel.get("to") or {}) if isinstance(rel, dict) else {}
+            malware_standard_id = target.get("standard_id")
+            if not malware_standard_id:
+                continue
+            try:
+                malware_relationship = Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to",
+                        artifact["standard_id"],
+                        malware_standard_id,
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.author["id"],
+                    source_ref=artifact["standard_id"],
+                    target_ref=malware_standard_id,
+                    description=(
+                        "Artifact matched a YARA Indicator that indicates "
+                        "this Malware"
+                    ),
+                )
+                if marking_refs:
+                    malware_relationship = malware_relationship.new_version(
+                        object_marking_refs=marking_refs
+                    )
+                out.append(malware_relationship)
+                self.helper.connector_logger.debug(
+                    "Propagated Artifact -> Malware relationship",
+                    {
+                        "artifact": artifact["standard_id"],
+                        "malware": malware_standard_id,
+                        "indicator": indicator.get("name"),
+                    },
+                )
+            except Exception as exc:  # noqa: BLE001
+                self.helper.connector_logger.error(
+                    "Error building Artifact -> Malware relationship",
+                    {"indicator": indicator.get("name"), "error": str(exc)},
+                )
+        return out
 
     def _process_message(self, data: dict) -> str:
         entity_id = data["entity_id"]

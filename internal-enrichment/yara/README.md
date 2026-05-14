@@ -12,6 +12,7 @@
 - [Configuration](#configuration)
   - [OpenCTI Configuration](#opencti-configuration)
   - [Base Connector Configuration](#base-connector-configuration)
+  - [YARA-specific Configuration](#yara-specific-configuration)
 - [Deployment](#deployment)
   - [Docker Deployment](#docker-deployment)
   - [Manual Deployment](#manual-deployment)
@@ -29,7 +30,7 @@
 
 [YARA](https://virustotal.github.io/yara/) is a tool for identifying and classifying malware samples. This connector enriches Artifact observables by scanning their contents against all YARA Indicators in OpenCTI.
 
-When a YARA rule matches an artifact, the connector creates a relationship between the Artifact and the matching YARA Indicator.
+When a YARA rule matches an artifact, the connector creates a relationship between the Artifact and the matching YARA Indicator. Optionally, it can also propagate the indicator's `indicates` Malware relationships and OpenCTI labels onto the enriched Artifact, so the artifact's knowledge graph directly shows the malware family the YARA rule was authored against.
 
 ---
 
@@ -61,6 +62,14 @@ When a YARA rule matches an artifact, the connector creates a relationship betwe
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
 
+### YARA-specific Configuration
+
+| Parameter | Docker envvar | Mandatory | Default | Description |
+|-----------|---------------|-----------|---------|-------------|
+| `yara_tlp_level` | `YARA_TLP_LEVEL` | No | `clear` | Default TLP marking applied to created relationships when neither the artifact nor the indicator carry markings. One of `clear`, `white`, `green`, `amber`, `amber+strict`, `red`. |
+| `yara_propagate_malware_relationship` | `YARA_PROPAGATE_MALWARE_RELATIONSHIP` | No | `false` | When `true`, for every YARA Indicator that matches the enriched Artifact, the connector follows the indicator's `indicates` STIX relationships to Malware entities and emits an additional `related-to` STIX relationship from the Artifact to each of those Malware entities. The same TLP markings as the Artifact -> Indicator relationship are reused. |
+| `yara_propagate_labels` | `YARA_PROPAGATE_LABELS` | No | `false` | When `true`, every OpenCTI label carried by a YARA Indicator that matches the enriched Artifact is added to the Artifact (via the `stix_cyber_observable.add_label` mutation). |
+
 ---
 
 ## Deployment
@@ -84,6 +93,9 @@ services:
       - CONNECTOR_SCOPE=Artifact
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
+      #- YARA_TLP_LEVEL=clear
+      #- YARA_PROPAGATE_MALWARE_RELATIONSHIP=false
+      #- YARA_PROPAGATE_LABELS=false
     restart: always
 ```
 
@@ -103,6 +115,7 @@ The connector enriches Artifact observables by:
 2. Compiling all YARA Indicators in the platform
 3. Scanning the artifact against all rules
 4. Creating relationships for matching rules
+5. Optionally propagating malware relationships and labels from the matching YARA Indicators (see [YARA-specific Configuration](#yara-specific-configuration))
 
 Trigger enrichment:
 - Manually via the OpenCTI UI on Artifact entities
@@ -125,26 +138,31 @@ flowchart LR
     F --> G{Match Found?}
     G -->|Yes| H[Create Relationship]
     G -->|No| I[No Action]
-    H --> J[OpenCTI]
+    H --> J{Propagate Malware?}
+    H --> K{Propagate Labels?}
+    J -->|Yes| L[Add Artifact related-to Malware]
+    K -->|Yes| M[Add YARA labels to Artifact]
+    H --> N[OpenCTI]
+    L --> N
+    M --> N
 ```
 
 ### Processing Details
 
 1. **Artifact Download**: The connector downloads the file content from OpenCTI
-2. **YARA Loading**: All YARA Indicators in the platform are retrieved
+2. **YARA Loading**: All YARA Indicators in the platform are retrieved (including their labels via `objectLabel`)
 3. **Rule Compilation**: YARA rules are compiled for scanning
 4. **Scanning**: The artifact is scanned against all compiled rules
-5. **Relationship Creation**: For each match, a relationship is created between the Artifact and the YARA Indicator
+5. **Relationship Creation**: For each match, a `related-to` STIX relationship is created from the Artifact to the matching YARA Indicator
+6. **Optional Malware Propagation** (`YARA_PROPAGATE_MALWARE_RELATIONSHIP=true`): for each match, the connector follows the YARA Indicator's `indicates` relationships to Malware entities and emits a `related-to` relationship from the Artifact to each of those Malware entities
+7. **Optional Label Propagation** (`YARA_PROPAGATE_LABELS=true`): for each match, the connector copies every label carried by the YARA Indicator onto the Artifact
 
 ### Generated STIX Objects
 
 | Object Type | Description |
 |-------------|-------------|
-| Relationship | Links Artifact to matching YARA Indicators |
-
-The relationship type used is typically `indicates` or `based-on`, connecting:
-- **Source**: Artifact Observable
-- **Target**: YARA Indicator
+| Relationship | `related-to` from Artifact to matching YARA Indicator |
+| Relationship | `related-to` from Artifact to each Malware the matched YARA Indicator `indicates` (only when `YARA_PROPAGATE_MALWARE_RELATIONSHIP=true`) |
 
 ---
 
@@ -154,11 +172,14 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 - File download progress
 - YARA rule compilation
 - Scan results and matches
+- Propagated Artifact -> Malware relationships (when enabled)
 
 Common issues:
 - **No YARA rules**: Ensure YARA Indicators exist in OpenCTI
 - **File access errors**: Verify artifact has attached file
 - **Rule compilation errors**: Check YARA rule syntax
+- **Labels do not appear on the Artifact**: Make sure `YARA_PROPAGATE_LABELS=true` is set and that the matching YARA Indicator actually carries labels
+- **Malware not linked**: The propagation only follows `indicates` relationships; check that the YARA Indicator has an `indicates` relationship to the Malware entity in OpenCTI
 
 ---
 
