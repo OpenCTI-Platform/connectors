@@ -1,0 +1,31 @@
+version: '3'
+services:
+  connector-assemblyline:
+    image: opencti/connector-assemblyline:rolling
+    environment:
+      - OPENCTI_URL=http://localhost:8080
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=AssemblyLine
+      - CONNECTOR_SCOPE=Artifact,StixFile
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_CONFIDENCE_LEVEL=80 # 0 (Unknown) - 100 (Fully trusted)
+      - CONNECTOR_LOG_LEVEL=info
+      # AssemblyLine configuration
+      - ASSEMBLYLINE_URL=https://assemblyline.example.com
+      - ASSEMBLYLINE_USER=ChangeMe
+      - ASSEMBLYLINE_APIKEY=ChangeMe
+      - ASSEMBLYLINE_VERIFY_SSL=true
+      - ASSEMBLYLINE_SUBMISSION_PROFILE=static_with_dynamic # static, dynamic, static_with_dynamic
+      - ASSEMBLYLINE_CLASSIFICATION=TLP:C
+      - ASSEMBLYLINE_TIMEOUT=600 # Maximum wait time for analysis (seconds)
+      - ASSEMBLYLINE_FORCE_RESUBMIT=false
+      - ASSEMBLYLINE_MAX_FILE_SIZE_MB=1
+      - ASSEMBLYLINE_INCLUDE_SUSPICIOUS=false
+      - ASSEMBLYLINE_CREATE_ATTACK_PATTERNS=true
+      - ASSEMBLYLINE_CREATE_MALWARE_ANALYSIS=true
+      - ASSEMBLYLINE_CREATE_OBSERVABLES=true
+      - ASSEMBLYLINE_SEQUENTIAL_MODE=true # Wait for AssemblyLine to be idle before submitting
+      - ASSEMBLYLINE_POLL_INTERVAL=30 # Seconds between checks when AssemblyLine is busy
+    restart: always
