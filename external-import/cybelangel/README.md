@@ -86,10 +86,14 @@ docker compose up -d
 
 ### Manual
 
-Create `config.yml` from `config.yml.sample`, install dependencies and
-start the connector:
+The connector loads its configuration from `src/config.yml` (same directory
+as `cybelangel.py`). Create that file from the provided sample, install
+dependencies and start the connector:
 
 ```shell
+cp src/config.yml.sample src/config.yml
+# edit src/config.yml and fill in opencti.token, cybelangel.client_id,
+# cybelangel.client_secret, ...
 pip3 install -r src/requirements.txt
 python3 src/cybelangel.py
 ```

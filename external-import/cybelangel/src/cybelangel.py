@@ -961,6 +961,8 @@ if __name__ == "__main__":
         cybelAngelConnector = CybelAngel()
         cybelAngelConnector.run()
     except Exception as e:
+        # Non-zero exit so container supervisors / CI / restart policies
+        # do not mistake a crash for a successful run.
         print(f"Error running CybelAngel connector: {e}")
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)
