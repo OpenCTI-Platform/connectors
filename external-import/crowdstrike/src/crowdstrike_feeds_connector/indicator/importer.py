@@ -87,7 +87,6 @@ class IndicatorImporter(BaseImporter):
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
         self.indicator_max_age_by_type = config.indicator_max_age_by_type
-        self.next_page: Optional[str] = None
         self.no_file_trigger_import = config.no_file_trigger_import
         self.scopes = config.scopes
         # Preloaded at connector startup; used to resolve MITRE technique IDs for ATT&CK labels.
@@ -171,8 +170,9 @@ class IndicatorImporter(BaseImporter):
         upstream API and forwarded as-is by :class:`IndicatorsAPI`. When
         ``max_records_per_run`` is set, pagination stops as soon as that many
         indicators have been collected; the cap is enforced at the resource
-        level so a single page is never partially yielded with a dangling
-        truncation.
+        level by slicing the *last* page to exactly the remaining quota, so
+        the aggregated batch contains at most ``max_records_per_run`` records
+        and we never yield a record beyond the cap.
         """
         resources: List[dict] = []
         next_page_token: Optional[str] = None
