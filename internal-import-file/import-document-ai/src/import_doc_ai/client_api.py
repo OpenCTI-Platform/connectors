@@ -1,6 +1,6 @@
+import json
 from io import BytesIO
 
-import json
 import requests
 import stix2
 import stix2.exceptions  # Exceptions are not exposed in public api root
