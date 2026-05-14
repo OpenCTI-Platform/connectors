@@ -66,7 +66,7 @@ class CybelAngel:
                 "CONNECTOR_LOG_LEVEL",
                 ["connector", "log_level"],
                 config,
-                default="error",
+                default="info",
             )
             self.cybelangel_client_id = get_config_variable(
                 "CYBELANGEL_CLIENT_ID", ["cybelangel", "client_id"], config
@@ -85,6 +85,19 @@ class CybelAngel:
                 ["cybelangel", "auth_url"],
                 config,
                 default="https://auth.cybelangel.com/oauth/token",
+            )
+            # OAuth2 ``audience`` claim sent during client-credentials
+            # exchange. Defaults to the configured CybelAngel API URL so
+            # the audience stays consistent with the API host when a
+            # custom ``CYBELANGEL_API_URL`` is used (the CybelAngel
+            # authorization server validates audience against the API
+            # host). Operators can still override it explicitly when the
+            # audience deviates from the API base URL.
+            self.cybelangel_audience = get_config_variable(
+                "CYBELANGEL_AUDIENCE",
+                ["cybelangel", "audience"],
+                config,
+                default=self.cybelangel_api_url.rstrip("/") + "/",
             )
             self.cybelangel_marking = get_config_variable(
                 "CYBELANGEL_MARKING",
@@ -183,7 +196,7 @@ class CybelAngel:
         auth_data = {
             "client_id": self.cybelangel_client_id,
             "client_secret": self.cybelangel_client_secret,
-            "audience": "https://platform.cybelangel.com/",
+            "audience": self.cybelangel_audience,
             "grant_type": "client_credentials",
         }
 
@@ -215,13 +228,21 @@ class CybelAngel:
                     return None
             except requests.exceptions.RequestException as e:
                 self.helper.connector_logger.error(
-                    f"Error during authentication attempt {attempt}: {e}"
-                )
-                self.helper.connector_logger.info(
-                    f"Retrying in {delay} seconds... (Attempt {attempt}/{max_retries})"
+                    f"Error during authentication attempt {attempt}/{max_retries}: {e}"
                 )
                 if attempt < max_retries:
+                    # Only announce the delay when another attempt will
+                    # actually follow - logging "Retrying in N seconds"
+                    # on the terminal attempt is misleading and makes
+                    # troubleshooting harder.
+                    self.helper.connector_logger.info(
+                        f"Retrying in {delay} seconds... (Attempt {attempt + 1}/{max_retries})"
+                    )
                     time.sleep(delay)
+                else:
+                    self.helper.connector_logger.error(
+                        f"Authentication failed after {max_retries} attempts, giving up."
+                    )
 
     def create_cybelangel_org(self):
         """
@@ -958,8 +979,8 @@ class CybelAngel:
 
 if __name__ == "__main__":
     try:
-        cybelAngelConnector = CybelAngel()
-        cybelAngelConnector.run()
+        connector = CybelAngel()
+        connector.run()
     except Exception as e:
         # Non-zero exit so container supervisors / CI / restart policies
         # do not mistake a crash for a successful run.
