@@ -1,19 +1,23 @@
 """Base class for the Mattermost external-import connector.
 
-The class is intentionally kept self-contained so the connector can run both
-inside Docker (configuration via environment variables) and as a plain
-Python process (configuration via ``src/config.yml``). It is *not* a copy of
-the shared base used by older connectors — the previous version had three
-notable bugs flagged in review:
+The class is intentionally kept self-contained so the connector can run
+both inside Docker (configuration via environment variables) and as a
+plain Python process (configuration via ``src/config.yml``).
 
-* ``update_existing_data`` was eventually stored as the string ``"false"``,
-  i.e. a truthy value, when the configured value was invalid;
-* the scheduler always slept for 60s, which broke short
-  ``CONNECTOR_RUN_EVERY`` values (e.g. ``30s``);
-* timestamps were computed with the deprecated naive
-  :func:`datetime.utcfromtimestamp`.
+Notable behaviours:
 
-All three issues are addressed below.
+* ``CONNECTOR_UPDATE_EXISTING_DATA`` is coerced into a real :class:`bool`
+  through :meth:`_coerce_bool` so an invalid value cannot turn into a
+  truthy string fall-back.
+* ``CONNECTOR_RUN_EVERY`` rejects empty / unknown / zero values at
+  startup; the inner ``time.sleep`` is capped at ``min(60s, interval)``
+  with a one-second floor so short intervals stay responsive and long
+  intervals remain interrupt-friendly.
+* Timestamps are timezone-aware UTC ``datetime`` objects.
+* ``_run_cycle`` only advances ``last_run`` (and marks the work as
+  successful) when collection and bundle send both complete without
+  raising; otherwise the work is marked in-error and the cursor is
+  left untouched so the next run retries from the same window.
 """
 
 import os
@@ -120,7 +124,12 @@ class ExternalImportConnector:
     # Interval handling
     # ------------------------------------------------------------------
     def _get_interval(self) -> int:
-        """Return the configured interval in **seconds**."""
+        """Return the configured interval in **seconds**.
+
+        Rejects ``0s`` / ``0m`` / ... at startup so a misconfigured
+        ``CONNECTOR_RUN_EVERY`` cannot put the connector into a
+        zero-delay collection loop that hammers Mattermost and OpenCTI.
+        """
         unit = self.interval[-1]
         if unit not in _INTERVAL_UNITS:
             msg = (
@@ -138,10 +147,11 @@ class ExternalImportConnector:
             )
             self.helper.log_error(msg)
             raise ValueError(msg) from exc
-        if magnitude < 0:
+        if magnitude <= 0:
             msg = (
                 f"CONNECTOR_RUN_EVERY value '{self.interval}' must be a "
-                "non-negative integer."
+                "strictly positive integer (zero intervals would put the "
+                "connector into a back-to-back collection loop)."
             )
             self.helper.log_error(msg)
             raise ValueError(msg)

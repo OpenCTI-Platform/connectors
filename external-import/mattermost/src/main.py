@@ -435,17 +435,20 @@ class MattermostConnector(ExternalImportConnector):
         # Media content + relationship ------------------------------------
         # ``CustomObservableMediaContent`` (from pycti) auto-generates a
         # deterministic id from the ``url`` value, so passing it explicitly
-        # is not necessary. ``created_by_ref`` and ``x_opencti_files`` are
+        # is not necessary. The post body is carried in ``content`` (its
+        # semantic home on a ``media-content`` SCO); ``x_opencti_description``
+        # mirrors it so the observable shows a user-facing description in
+        # the OpenCTI UI. ``created_by_ref`` and ``x_opencti_files`` are
         # OpenCTI extensions and are emitted through ``custom_properties``.
         media_content = CustomObservableMediaContent(
             url=post_url,
             content=content,
-            description=content,
             publication_date=publication_date,
             media_category="mattermost",
             object_marking_refs=[self.mattermost_marking_id],
             allow_custom=True,
             custom_properties={
+                "x_opencti_description": content,
                 "created_by_ref": author_id,
                 "x_opencti_files": attachments,
             },
