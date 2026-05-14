@@ -22,6 +22,19 @@ from .constants import (
 )
 
 
+def _stix_quote(value: str) -> str:
+    """Escape ``value`` for inclusion in a single-quoted STIX pattern literal.
+
+    STIX patterns use single quotes to delimit string literals, with
+    backslash as the escape character. Passwords / account logins
+    routinely contain ``'`` or ``\\``, so any value that is dropped
+    into a ``'<value>'`` literal must escape both characters or the
+    resulting pattern is invalid and ``stix2.Indicator`` rejects it
+    at creation time.
+    """
+    return (value or "").replace("\\", "\\\\").replace("'", "\\'")
+
+
 class IPQSConnector:
     """IPQS connector entry point."""
 
@@ -91,6 +104,8 @@ class IPQSConnector:
     def _process_ip(self, observable):
         """Enriches the IP."""
         response = self.client.get_ipqs_info(IP_ENRICH, observable["observable_value"])
+        if response is None:
+            return "IPQS IP enrichment failed or returned no usable response."
         builder = IPQSBuilder(
             self.helper, self.author, observable, response.get("fraud_score")
         )
@@ -101,7 +116,7 @@ class IPQSConnector:
         labels = builder.ip_address_risk_scoring()
         builder.create_indicator_based_on(
             labels,
-            f"""[ipv4-addr:value = '{observable["observable_value"]}']""",
+            f"[ipv4-addr:value = '{_stix_quote(observable['observable_value'])}']",
             observable["observable_value"],
             description,
         )
@@ -112,6 +127,8 @@ class IPQSConnector:
         response = self.client.get_ipqs_info(
             EMAIL_ENRICH, observable["observable_value"]
         )
+        if response is None:
+            return "IPQS Email enrichment failed or returned no usable response."
         builder = IPQSBuilder(
             self.helper, self.author, observable, response.get("fraud_score")
         )
@@ -121,7 +138,7 @@ class IPQSConnector:
         )
         builder.create_indicator_based_on(
             labels,
-            f"""[email-addr:value = '{observable["observable_value"]}']""",
+            f"[email-addr:value = '{_stix_quote(observable['observable_value'])}']",
             observable["observable_value"],
             description,
         )
@@ -130,6 +147,8 @@ class IPQSConnector:
     def _process_url(self, observable):
         """Enriches a URL or Domain observable."""
         response = self.client.get_ipqs_info(URL_ENRICH, observable["observable_value"])
+        if response is None:
+            return "IPQS URL/Domain enrichment failed or returned no usable response."
         builder = IPQSBuilder(
             self.helper, self.author, observable, response.get("risk_score")
         )
@@ -149,7 +168,7 @@ class IPQSConnector:
             labels,
             (
                 f"[{observable['entity_type'].lower()}:value = "
-                f"'{observable['observable_value']}']"
+                f"'{_stix_quote(observable['observable_value'])}']"
             ),
             observable["observable_value"],
             description,
@@ -175,7 +194,7 @@ class IPQSConnector:
         )
         builder.create_indicator_based_on(
             labels,
-            f"""[phone-number:value = '{observable["observable_value"]}']""",
+            f"[phone-number:value = '{_stix_quote(observable['observable_value'])}']",
             observable["observable_value"],
             description,
         )
@@ -196,11 +215,16 @@ class IPQSConnector:
 
         if credential:
             value = credential
-            pattern = f"[user-account:credential = '{value}']"
+            # Passwords / account logins routinely contain `'` and `\`,
+            # which would produce an invalid STIX pattern when dropped
+            # straight into a single-quoted literal. ``_stix_quote``
+            # escapes both characters with the standard STIX backslash
+            # rules.
+            pattern = f"[user-account:credential = '{_stix_quote(value)}']"
             response = self.client.get_leaked_info(LEAK_PASSWORD, value)
         elif account_login:
             value = account_login
-            pattern = f"[user-account:account_login = '{value}']"
+            pattern = f"[user-account:account_login = '{_stix_quote(value)}']"
             response = self.client.get_leaked_info(LEAK_USERNAME_OR_EMAIL, value)
         else:
             return (

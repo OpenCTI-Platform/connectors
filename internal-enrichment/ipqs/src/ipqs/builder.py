@@ -24,9 +24,6 @@ _CRITICALITY_COLOR = {
     RiskCriticality.HIGH: RiskColor.RED.value,
     RiskCriticality.CRITICAL: RiskColor.RED.value,
     RiskCriticality.INVALID: RiskColor.RED.value,
-    RiskCriticality.DISPOSABLE: RiskColor.RED.value,
-    RiskCriticality.MALWARE: RiskColor.RED.value,
-    RiskCriticality.PHISHING: RiskColor.RED.value,
 }
 
 
@@ -178,10 +175,17 @@ class IPQSBuilder:
         return self._verdict_label(risk_criticality)
 
     def email_address_risk_scoring(self, disposable, valid):
-        """Compute the verdict label for an Email observable."""
+        """Compute the verdict label for an Email observable.
+
+        Disposable mailbox providers and IPQS-flagged invalid addresses
+        both surface a high-severity OpenCTI label
+        (``IPQS:VERDICT="CRITICAL"`` / ``"INVALID"``) so the analyst
+        immediately sees the verdict in the UI.
+        """
         match (disposable, valid, self.score):
             case ("True", _, _):
-                risk_criticality = RiskCriticality.DISPOSABLE
+                # Disposable -> CRITICAL (same label as the IPQS UI).
+                risk_criticality = RiskCriticality.CRITICAL
             case (_, "False", _):
                 risk_criticality = RiskCriticality.INVALID
             case (_, _, 100):
@@ -195,12 +199,16 @@ class IPQSBuilder:
         return self._verdict_label(risk_criticality)
 
     def url_risk_scoring(self, malware, phishing):
-        """Compute the verdict label for a URL or Domain observable."""
+        """Compute the verdict label for a URL or Domain observable.
+
+        Both ``malware`` and ``phishing`` IPQS flags collapse to
+        ``IPQS:VERDICT="CRITICAL"`` in OpenCTI — the same label the
+        IPQS portal uses for these high-severity verdicts.
+        """
         match (malware, phishing, self.score):
-            case ("True", _, _):
-                risk_criticality = RiskCriticality.MALWARE
-            case (_, "True", _):
-                risk_criticality = RiskCriticality.PHISHING
+            case ("True", _, _) | (_, "True", _):
+                # Malware / phishing -> CRITICAL.
+                risk_criticality = RiskCriticality.CRITICAL
             case (_, _, s) if s >= 90:
                 risk_criticality = RiskCriticality.HIGH
             case (_, _, s) if 80 <= s <= 89:

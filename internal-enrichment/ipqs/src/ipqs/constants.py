@@ -119,10 +119,12 @@ PHONE_ENRICH_FIELDS = {
 class RiskCriticality(Enum):
     """Symbolic risk levels rendered into ``IPQS:VERDICT`` labels.
 
-    ``MALWARE``/``PHISHING``/``DISPOSABLE`` deliberately share the
-    ``CRITICAL`` value so they keep the same OpenCTI label as the
-    underlying high-severity verdict while remaining distinguishable in
-    Python code.
+    Malware / phishing / disposable verdicts map to :attr:`CRITICAL`
+    directly at the call site (the IPQS UI exposes them under the same
+    ``IPQS:VERDICT="CRITICAL"`` label). Adding distinct enum members
+    with the same value would only create aliases (Python enums
+    collapse members with the same value), so they live as call-site
+    constants in :mod:`.builder` instead.
     """
 
     CLEAN = "CLEAN"
@@ -132,9 +134,6 @@ class RiskCriticality(Enum):
     CRITICAL = "CRITICAL"
     INVALID = "INVALID"
     SUSPICIOUS = "SUSPICIOUS"
-    MALWARE = "CRITICAL"
-    PHISHING = "CRITICAL"
-    DISPOSABLE = "CRITICAL"
 
 
 class RiskColor(Enum):

@@ -4,8 +4,14 @@ import re
 from typing import Any, Dict, Optional
 
 from pycti import OpenCTIConnectorHelper
-from requests import Response, session
-from requests.exceptions import ConnectTimeout, HTTPError, InvalidURL, ProxyError
+from requests import session
+from requests.exceptions import (
+    ConnectTimeout,
+    HTTPError,
+    InvalidURL,
+    JSONDecodeError,
+    ProxyError,
+)
 
 from .constants import (
     EMAIL_ENRICH_FIELDS,
@@ -57,30 +63,52 @@ class IPQSClient:
     # ------------------------------------------------------------------
     def _query(
         self, url: str, params: Optional[Dict[str, Any]] = None
-    ) -> Optional[Response]:
-        """Issue a GET request and return the parsed JSON body."""
+    ) -> Optional[Dict[str, Any]]:
+        """Issue a GET request and return the parsed JSON body.
+
+        Returns ``None`` for every condition that prevents a usable
+        response (network error, non-2xx HTTP status, non-JSON body,
+        IPQS ``success == False`` payload). Callers must treat the
+        return value as optional rather than calling ``.get(...)`` on it
+        directly.
+        """
         try:
             response = self.session.get(
                 url, params=params, timeout=_HTTP_TIMEOUT_SECONDS
             )
+            response.raise_for_status()
             data = response.json()
-            if str(data.get("success")) != "True":
-                self.helper.log_error(f"Error: {data.get('message')}")
-                return None
-            return data
         except (ConnectTimeout, ProxyError, InvalidURL) as error:
             self.helper.log_error(f"Error connecting to IPQS. Error: {error}")
             return None
+        except HTTPError as error:
+            self.helper.log_error(f"IPQS HTTP error for {url}: {error}")
+            return None
+        except (JSONDecodeError, ValueError) as error:
+            # Non-JSON / truncated body — keep the connector alive.
+            self.helper.log_error(
+                f"IPQS returned a non-JSON response for {url}: {error}"
+            )
+            return None
 
-    def get_ipqs_info(self, enrich_type: str, enrich_value: str):
-        """Return the IPQS enrichment for the given observable value."""
+        if str(data.get("success")) != "True":
+            self.helper.log_error(f"Error: {data.get('message')}")
+            return None
+        return data
+
+    def get_ipqs_info(
+        self, enrich_type: str, enrich_value: str
+    ) -> Optional[Dict[str, Any]]:
+        """Return the IPQS enrichment for the given observable value.
+
+        Always returns either the parsed JSON dict on success or
+        ``None`` on any failure (network, HTTP status, JSON decode,
+        ``success == False``); the underlying error has already been
+        logged by :meth:`_query`.
+        """
         url = f"{self.url}/{enrich_type}"
         params = {enrich_type: enrich_value}
-        try:
-            return self._query(url, params)
-        except HTTPError as error:
-            self.helper.log_error(f"Error when requesting data from IPQS: {error}")
-            raise
+        return self._query(url, params)
 
     # ------------------------------------------------------------------
     # POST (leaked credentials / passwords)
@@ -126,6 +154,11 @@ class IPQSClient:
             data = response.json()
         except (ConnectTimeout, ProxyError, InvalidURL, HTTPError) as exc:
             self.helper.log_error(f"Error connecting to IPQS leaked API: {exc}")
+            return None
+        except (JSONDecodeError, ValueError) as exc:
+            self.helper.log_error(
+                f"IPQS leaked API returned a non-JSON response for {url}: {exc}"
+            )
             return None
 
         if not data.get("success", False):
