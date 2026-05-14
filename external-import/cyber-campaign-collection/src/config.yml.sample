@@ -14,5 +14,8 @@ cyber_monitor:
   github_token: '' # If not provided, rate limit will be very low
   from_year: '2018'
   interval: 4 # In days, must be strictly greater than 1
-  # report_type: 'threat-report' # Optional: STIX report_types value attached to imported reports
+  # report_type: 'threat-report' # Optional: STIX report_types value attached to imported reports.
+  #                                Accepts a single string, a comma-separated
+  #                                string ('threat-report,campaign') or a YAML
+  #                                list (['threat-report', 'campaign']).
   # report_status: 'New' # Optional: workflow status name ('New', 'In Progress', 'Analyzed', 'Closed') or integer position

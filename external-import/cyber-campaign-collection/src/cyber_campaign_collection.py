@@ -57,12 +57,19 @@ class CyberMonitor:
             False,
             None,
         )
-        # Normalize the optional ``report_type``: treat ``None`` / empty /
-        # whitespace-only strings as "not configured" so we never emit
-        # ``report_types=['   ']`` on the STIX ``Report``.
-        if isinstance(report_type_raw, str):
-            report_type_raw = report_type_raw.strip() or None
-        self.cyber_monitor_report_type = report_type_raw
+        # Normalize the optional ``report_type`` to a flat ``list[str]`` (or
+        # ``None``). The config accepts three shapes:
+        #
+        # * a bare string (``report_type: 'threat-report'``);
+        # * a comma-separated string (``report_type: 'threat-report,campaign'``);
+        # * a native YAML list (``report_type: ['threat-report', 'campaign']``).
+        #
+        # ``None`` / empty / whitespace-only inputs become ``None`` so we
+        # never emit ``report_types=['   ']`` on the STIX ``Report``. The
+        # final list is unconditionally wrapped at the call-site below, so
+        # storing the list shape here avoids the nested ``[['a','b']]``
+        # bug a list input would otherwise cause.
+        self.cyber_monitor_report_type = self._normalize_report_type(report_type_raw)
         # ``x_opencti_report_status`` is the legacy integer workflow position. The
         # configuration accepts either the integer directly (e.g. ``2``) or one of
         # the well-known status names below which are translated to the matching
@@ -98,6 +105,36 @@ class CyberMonitor:
         "analyzed": 2,
         "closed": 3,
     }
+
+    @staticmethod
+    def _normalize_report_type(raw):
+        """Return a flat ``list[str]`` of report types or ``None``.
+
+        Accepts three input shapes:
+
+        * a bare string (``"threat-report"``);
+        * a comma-separated string (``"threat-report, campaign"``);
+        * a native YAML / JSON list (``["threat-report", "campaign"]``).
+
+        ``None`` / empty / whitespace-only / fully-stripped-empty inputs
+        become ``None``. Non-string items in a list are coerced via
+        ``str(item)``, then stripped. The result is always either
+        ``None`` or a non-empty ``list[str]``, which is then passed
+        directly to ``stix2.Report(report_types=...)`` — wrapping the
+        value in another list (the previous behaviour) would have
+        produced an invalid ``[["threat-report", "campaign"]]`` STIX
+        Report when the config was a list.
+        """
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            candidates = [piece.strip() for piece in raw.split(",")]
+        elif isinstance(raw, (list, tuple)):
+            candidates = [str(piece).strip() for piece in raw if piece is not None]
+        else:
+            candidates = [str(raw).strip()]
+        cleaned = [piece for piece in candidates if piece]
+        return cleaned or None
 
     @classmethod
     def _normalize_report_status(cls, raw):
@@ -233,9 +270,11 @@ class CyberMonitor:
                         )
                     optional_fields = {}
                     if self.cyber_monitor_report_type:
-                        optional_fields["report_types"] = [
-                            self.cyber_monitor_report_type
-                        ]
+                        # ``cyber_monitor_report_type`` is already a flat
+                        # ``list[str]`` thanks to ``_normalize_report_type``
+                        # — pass it through as-is so STIX receives a clean
+                        # ``report_types=["threat-report", ...]``.
+                        optional_fields["report_types"] = self.cyber_monitor_report_type
                     report = stix2.Report(
                         id=Report.generate_id(report_name, report_date),
                         name=report_name,

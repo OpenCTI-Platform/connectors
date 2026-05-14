@@ -13,6 +13,6 @@ services:
       - CYBER_MONITOR_GITHUB_TOKEN= # If not provided, rate limit will be very low
       - CYBER_MONITOR_FROM_YEAR=2018
       - CYBER_MONITOR_INTERVAL=4 # In days, must be strictly greater than 1
-      # - CYBER_MONITOR_REPORT_TYPE=threat-report # Optional: STIX report_types value attached to imported reports
+      # - CYBER_MONITOR_REPORT_TYPE=threat-report # Optional: STIX report_types value(s). Single string OR comma-separated (threat-report,campaign).
       # - CYBER_MONITOR_REPORT_STATUS=New # Optional: workflow status name (New, In Progress, Analyzed, Closed) or integer position
     restart: always
