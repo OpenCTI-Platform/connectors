@@ -47,6 +47,7 @@ class ConfigLoader:
             "CONNECTOR_DURATION_PERIOD",
             ["connector", "duration_period"],
             self.load,
+            default="PT1H",
         )
 
         # RansomFeed specific configurations
@@ -54,6 +55,7 @@ class ConfigLoader:
             "RANSOMFEED_API_URL",
             ["ransomfeed", "api_url"],
             self.load,
+            required=True,
         )
 
         self.tlp_level = get_config_variable(

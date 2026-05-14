@@ -11,6 +11,6 @@ services:
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H # ISO 8601 duration period
       - RANSOMFEED_API_URL=https://api.ransomfeed.it
-      - RANSOMFEED_TLP_LEVEL=white # white, green, amber, red
+      - RANSOMFEED_TLP_LEVEL=clear # clear, white, green, amber, amber+strict, red
       - RANSOMFEED_CREATE_INDICATORS=true # Create indicators from file hashes
     restart: always

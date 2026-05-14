@@ -11,6 +11,7 @@ from pycti import (
     Indicator,
     IntrusionSet,
     Location,
+    MarkingDefinition,
     Report,
     StixCoreRelationship,
 )
@@ -40,19 +41,36 @@ class ConverterToStix:
         Create TLP marking based on level
 
         Args:
-            level: TLP level (white, clear, green, amber, red)
+            level: TLP level (clear, white, green, amber, amber+strict, red)
 
         Returns:
             STIX TLP marking object
+
+        Raises:
+            ValueError: If the TLP level is not one of the supported values.
         """
         mapping = {
             "white": stix2.TLP_WHITE,
             "clear": stix2.TLP_WHITE,
             "green": stix2.TLP_GREEN,
             "amber": stix2.TLP_AMBER,
+            "amber+strict": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:AMBER+STRICT",
+                },
+            ),
             "red": stix2.TLP_RED,
         }
-        return mapping.get(level, stix2.TLP_WHITE)
+        if level not in mapping:
+            raise ValueError(
+                f"Invalid TLP level '{level}'. Supported values: "
+                f"{', '.join(mapping.keys())}."
+            )
+        return mapping[level]
 
     def create_author(self) -> dict:
         """

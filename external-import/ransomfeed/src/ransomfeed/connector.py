@@ -63,24 +63,32 @@ class RansomFeedConnector:
                 )
                 return []
 
-            # Parse date
-            try:
-                if date_str:
-                    # Try different date formats
-                    for fmt in ["%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]:
-                        try:
-                            claim_date = datetime.strptime(date_str, fmt).replace(
-                                tzinfo=timezone.utc
-                            )
-                            break
-                        except ValueError:
-                            continue
-                    else:
-                        claim_date = datetime.now(timezone.utc)
-                else:
-                    claim_date = datetime.now(timezone.utc)
-            except Exception:
-                claim_date = datetime.now(timezone.utc)
+            # Parse date - the timestamp is used as input for deterministic
+            # ``Report.generate_id`` / relationship ID generators, so we need
+            # a stable value. If the date is missing or unparseable, skip the
+            # claim instead of falling back to ``datetime.now()`` (which would
+            # produce a different ID on every run and create duplicates).
+            claim_date = None
+            if date_str:
+                for fmt in (
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d",
+                ):
+                    try:
+                        claim_date = datetime.strptime(date_str, fmt).replace(
+                            tzinfo=timezone.utc
+                        )
+                        break
+                    except ValueError:
+                        continue
+
+            if claim_date is None:
+                self.helper.connector_logger.warning(
+                    "Skipping claim with missing or unparseable date",
+                    {"claim_id": claim_id, "date": date_str},
+                )
+                return []
 
             # Create victim organization
             victim = self.converter.create_identity(

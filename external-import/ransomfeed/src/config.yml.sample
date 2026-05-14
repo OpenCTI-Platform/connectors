@@ -1,9 +1,9 @@
 opencti:
   url: 'http://opencti:8080'
-  token: 'CHANGE_ME'
+  token: 'ChangeMe'
 
 connector:
-  id: 'ransomfeed-connector'
+  id: 'ChangeMe' # Must be a unique UUIDv4
   type: 'EXTERNAL_IMPORT'
   name: 'RansomFeed'
   scope: 'ransomfeed'
@@ -13,5 +13,5 @@ connector:
 
 ransomfeed:
   api_url: 'https://api.ransomfeed.it' # Base URL of your RansomFeed API
-  tlp_level: 'white' # TLP level: white, clear, green, amber, red
+  tlp_level: 'clear' # TLP level: clear, white, green, amber, amber+strict, red
   create_indicators: true # Create indicators from file hashes

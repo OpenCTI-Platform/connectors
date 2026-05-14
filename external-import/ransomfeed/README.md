@@ -4,10 +4,16 @@
 This connector for OpenCTI automatically imports ransomware claim data from the RansomFeed API. Each claim is transformed into STIX 2.1 objects and sent to OpenCTI via RabbitMQ for processing by workers, enriching global ransomware threat intelligence. 
 
 ## Installation
+
+From the connector's `src/` directory:
+
 ```shell
+cd external-import/ransomfeed/src
 pip install -r requirements.txt
 python main.py
 ```
+
+See [Manual Deployment](#manual-deployment) below for a complete walkthrough.
 
 ### Requirements
 
@@ -45,7 +51,7 @@ Below are the parameters you'll need to set for OpenCTI:
 | Parameter               | config.yml           | Docker environment variable        | Mandatory | Description                                                |
 |-------------------------|----------------------|------------------------------------|-----------|-----------------------------------------------------------|
 | API URL                 | api_url              | `RANSOMFEED_API_URL`               | Yes       | Base URL of the RansomFeed API.                           |
-| TLP Level               | tlp_level            | `RANSOMFEED_TLP_LEVEL`             | No        | TLP marking level (default: `white`).                      |
+| TLP Level               | tlp_level            | `RANSOMFEED_TLP_LEVEL`             | No        | TLP marking level: `clear`, `white`, `green`, `amber`, `amber+strict`, `red` (default: `white`). |
 | Create Indicators       | create_indicators    | `RANSOMFEED_CREATE_INDICATORS`     | No        | Create indicators from file hashes (default: `true`).     |
 
 
