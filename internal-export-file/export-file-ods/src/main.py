@@ -101,19 +101,27 @@ class ExportFileODSConnector(InternalExportConnector):
         """Return ``[(entity, level), ...]`` with neighbours when ``full``.
 
         Level 1 entities are the selected entries. Level 2 entities are first
-        neighbours reached through STIX core relationships.
+        neighbours reached through STIX core relationships. The result is
+        de-duplicated by entity id (level 1 always wins) so the same
+        neighbour reached from several selected entities or from both
+        directions does not produce duplicate rows in the spreadsheet.
         """
         export_list: List[Tuple[Dict[str, Any], int]] = []
+        seen_ids: set[str] = set()
         for entity in entities_list:
             if not self._check_markings(entity, self.content_markings):
                 continue
+            entity_id = entity.get("id")
+            if entity_id and entity_id in seen_ids:
+                continue
+            if entity_id:
+                seen_ids.add(entity_id)
             export_list.append((entity, 1))
             self.helper.log_debug(f"Export Type: {self.export_type}")
 
             if self.export_type != "full":
                 continue
 
-            entity_id = entity["id"]
             self.helper.log_debug(f"Entity ID: {entity_id}")
             for direction, ref_key in (("fromId", "to"), ("toId", "from")):
                 rels = self.helper.api_impersonate.stix_core_relationship.list(
@@ -123,11 +131,15 @@ class ExportFileODSConnector(InternalExportConnector):
                 )
                 self.helper.log_debug(f"Relationships {direction}: {rels!r}")
                 for relationship in rels:
-                    neighbor = self._read_neighbor(relationship[ref_key]["id"])
+                    neighbor_id = relationship[ref_key]["id"]
+                    if neighbor_id in seen_ids:
+                        continue
+                    neighbor = self._read_neighbor(neighbor_id)
                     if neighbor is None:
                         continue
                     if not self._check_markings(neighbor, self.content_markings):
                         continue
+                    seen_ids.add(neighbor_id)
                     export_list.append((neighbor, 2))
         return export_list
 
@@ -177,12 +189,16 @@ class ExportFileODSConnector(InternalExportConnector):
         return ""
 
     def _build_headers(self, entities_list: List[Dict[str, Any]]) -> List[str]:
-        """Return the alphabetically-sorted header list for the spreadsheet."""
+        """Return the alphabetically-sorted header list for the spreadsheet.
+
+        The raw ``hashes`` column is replaced by the per-algorithm
+        ``hashes.<ALGO>`` columns (``_HASH_HEADERS``). Keeping the raw
+        ``hashes`` header would render as an empty cell because ``_row_for``
+        only understands the ``hashes.<ALGO>`` form for hash lookups.
+        """
         headers: List[str] = sorted(set().union(*(e.keys() for e in entities_list)))
         if "hashes" in headers:
-            # ``hashes`` itself stays in the list so its raw structure is
-            # exported (for entities where the dot-prefixed columns are not
-            # populated), and the per-algorithm columns are appended.
+            headers.remove("hashes")
             headers = headers + [h for h in _HASH_HEADERS if h not in headers]
         return headers
 
@@ -220,13 +236,19 @@ class ExportFileODSConnector(InternalExportConnector):
     def _list_selection_entities(
         self, main_filter: Optional[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Fetch every entity matching the ``selection`` request."""
-        kwargs = {"filters": main_filter, "getAll": True}
+        """Fetch every entity matching the ``selection`` request.
+
+        Uses the unified ``opencti_stix_object_or_stix_relationship.list``
+        endpoint (with ``getAll=True``) like every other internal-export
+        connector (``export-file-stix``, ``export-file-csv``,
+        ``export-file-yara``, ``export-report-pdf``). It covers all STIX
+        object / relationship types in a single call, so we no longer need
+        to keep the four hand-written lookups in sync with the platform.
+        """
         return (
-            self.helper.api_impersonate.stix_domain_object.list(**kwargs)
-            + self.helper.api_impersonate.stix_cyber_observable.list(**kwargs)
-            + self.helper.api_impersonate.stix_core_relationship.list(**kwargs)
-            + self.helper.api_impersonate.stix_sighting_relationship.list(**kwargs)
+            self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
+                filters=main_filter, getAll=True
+            )
         )
 
     @staticmethod
