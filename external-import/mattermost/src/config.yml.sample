@@ -19,7 +19,7 @@ mattermost:
   token: 'ChangeMe'
   channel_ids: 'ChangeMe' # Comma-separated list of Mattermost channel ids
   start_timestamp: 0 # Unix epoch in seconds for the first run
-  tlp: 'AMBER' # CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+  tlp: 'AMBER' # CLEAR (alias WHITE), GREEN, AMBER, AMBER_STRICT (alias AMBER+STRICT), RED
   verify: true
   timeout: 30
   # request_timeout: 30 # Optional, integer seconds

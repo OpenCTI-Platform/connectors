@@ -198,7 +198,15 @@ class ExternalImportConnector:
             time.sleep(self._sleep_seconds(interval_seconds))
 
     def _run_cycle(self, *, last_run: Optional[int], timestamp: int) -> None:
-        """Execute one collection cycle and persist the new ``last_run``."""
+        """Execute one collection cycle and persist the new ``last_run``.
+
+        ``last_run`` is only advanced and the work is only marked as
+        successfully processed when the entire cycle (collection +
+        bundle send) completes without raising. On failure, the work
+        is marked in-error and the cursor is left untouched so the
+        next run retries from the same window instead of silently
+        dropping data.
+        """
         self.helper.log_info(f"{self.helper.connect_name} will run!")
         now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
@@ -227,7 +235,19 @@ class ExternalImportConnector:
                     work_id=work_id,
                 )
         except Exception as exc:  # noqa: BLE001 - we keep looping on errors
-            self.helper.log_error(str(exc))
+            self.helper.log_error(
+                f"{self.helper.connect_name} run failed: {exc}. "
+                "last_run will NOT be advanced."
+            )
+            try:
+                self.helper.api.work.to_processed(
+                    work_id, f"Run failed: {exc}", in_error=True
+                )
+            except Exception as report_exc:  # noqa: BLE001
+                self.helper.log_error(
+                    f"Could not mark work {work_id} as failed: {report_exc}"
+                )
+            return
 
         message = (
             f"{self.helper.connect_name} connector successfully run, "

@@ -205,9 +205,10 @@ class MattermostConnector(ExternalImportConnector):
         try:
             return _TLP_MAP[normalised]
         except KeyError as exc:
-            valid = ", ".join(
-                sorted({"CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"})
-            )
+            # Derive the valid-value list from ``_TLP_MAP`` so the
+            # error message stays in sync with the code if aliases
+            # are added later (e.g. ``WHITE``, ``AMBER+STRICT``).
+            valid = ", ".join(sorted(_TLP_MAP))
             raise ValueError(
                 f"Unsupported MATTERMOST_TLP value '{name}'. "
                 f"Expected one of {valid}."
@@ -228,6 +229,40 @@ class MattermostConnector(ExternalImportConnector):
             ],
             "filterGroups": [],
         }
+
+    # ------------------------------------------------------------------
+    # Per-run caches & deterministic ids
+    # ------------------------------------------------------------------
+    def _reset_run_caches(self) -> None:
+        """Drop the per-run caches before starting a new collection cycle."""
+        # ``user_id -> email`` so we hit Mattermost's ``users.get_user``
+        # at most once per author per run, even on busy channels.
+        self._user_email_cache: Dict[str, str] = {}
+        # ``post_url -> set(filename)`` so we hit OpenCTI's
+        # ``stix_cyber_observable.list`` / ``.read`` at most once
+        # per post-URL per run, regardless of how many attachments
+        # the post carries.
+        self._existing_files_cache: Dict[str, set] = {}
+
+    def _author_email(self, user_id: str) -> str:
+        """Return the email of ``user_id``, caching the answer for this run."""
+        cached = self._user_email_cache.get(user_id)
+        if cached is not None:
+            return cached
+        email = self.driver.users.get_user(user_id)["email"]
+        self._user_email_cache[user_id] = email
+        return email
+
+    @staticmethod
+    def _media_content_id(post_url: str) -> str:
+        """Return the deterministic STIX id of the media-content for ``post_url``.
+
+        ``CustomObservableMediaContent`` auto-generates the id from
+        ``url`` so a stub instance is enough to compute it without
+        hitting the platform.
+        """
+        stub = CustomObservableMediaContent(url=post_url, allow_custom=True)
+        return stub["id"]
 
     # ------------------------------------------------------------------
     # Collection
@@ -281,19 +316,28 @@ class MattermostConnector(ExternalImportConnector):
                 bundle=bundle,
             )
 
-        # Thread (sub-post) relationships
+        # Thread (sub-post) relationships. The target media-content id
+        # is deterministic on ``url`` (pycti's
+        # ``CustomObservableMediaContent`` auto-generates the id from
+        # the URL), so we can link a reply to its root even when the
+        # root was ingested in a previous run and is not part of the
+        # current batch.
         for post_id in included_posts:
             root_mattermost_id = posts["posts"][post_id].get("root_id")
             if not root_mattermost_id:
                 continue
             root_link = link.get(root_mattermost_id)
-            if not root_link:
+            if root_link:
+                target = root_link[0]
+            else:
+                root_post_url = base_url + team_name + "/pl/" + root_mattermost_id
+                target = self._media_content_id(root_post_url)
                 self.helper.log_debug(
-                    f"Root of subpost {post_id} not found in this batch."
+                    f"Root of subpost {post_id} not in this batch; "
+                    f"linking to deterministic media-content id {target} "
+                    f"derived from {root_post_url}."
                 )
-                continue
             source = link[post_id][0]
-            target = root_link[0]
             bundle.append(
                 stix2.Relationship(
                     id=PyctiSCR.generate_id("related-to", source, target, None, None),
@@ -347,7 +391,9 @@ class MattermostConnector(ExternalImportConnector):
         )
 
         # Author -----------------------------------------------------------
-        email = self.driver.users.get_user(post["user_id"])["email"]
+        # Cached for the duration of the run to avoid one
+        # ``users.get_user`` call per post on busy channels.
+        email = self._author_email(post["user_id"])
         identities = self.helper.api.identity.list(
             filters=self._list_filter("name", email)
         )
@@ -423,24 +469,44 @@ class MattermostConnector(ExternalImportConnector):
         return [media_content["id"], post_url]
 
     def _file_exists(self, url: str, filename: str) -> bool:
+        """Return whether ``filename`` is already attached to the observable for ``url``.
+
+        The set of existing filenames is cached per ``url`` for the
+        duration of the run, so a post with N attachments triggers a
+        single ``stix_cyber_observable.list`` / ``.read`` round-trip
+        instead of N.
+        """
+        cached = self._existing_files_cache.get(url)
+        if cached is None:
+            cached = self._load_existing_filenames(url)
+            self._existing_files_cache[url] = cached
+        return filename in cached
+
+    def _load_existing_filenames(self, url: str) -> set:
         observables = self.helper.api.stix_cyber_observable.list(
             filters=self._list_filter("url", url)
         )
         if len(observables) != 1:
-            return False
+            return set()
         observable = self.helper.api.stix_cyber_observable.read(
             id=observables[0]["id"], withFiles=True
         )
-        for existing in observable.get("importFiles") or []:
-            if existing.get("name") == filename:
-                return True
-        return False
+        return {
+            f.get("name")
+            for f in (observable.get("importFiles") or [])
+            if f.get("name")
+        }
 
     def _collect_intelligence(self, since: Optional[datetime] = None) -> List[Any]:
         """Return the STIX objects produced for this scheduling cycle."""
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting collection..."
         )
+        # Drop any cached author email / attachment-existence lookups
+        # from the previous cycle so a long-running connector cannot
+        # leak memory and so updates on the Mattermost / OpenCTI side
+        # eventually become visible.
+        self._reset_run_caches()
         if since is not None:
             start_time = int(since.timestamp())
         else:

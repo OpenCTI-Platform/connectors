@@ -1,4 +1,5 @@
 config.yml
+src/config.yml
 __pycache__
 logs
 *.gql

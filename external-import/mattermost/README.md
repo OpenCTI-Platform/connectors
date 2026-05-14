@@ -89,7 +89,7 @@ template.
 | Access token      | mattermost.token         | `MATTERMOST_TOKEN`             |             | Yes       | Personal-access-token of a Mattermost account allowed to read the configured channels.                                                            |
 | Channel ids       | mattermost.channel_ids   | `MATTERMOST_CHANNEL_IDS`       |             | Yes       | Comma-separated list of channel ids to import (e.g. `5i5rip6zaf8qprwfi86iu9xsjy,ztu3g3f4upgjxezhsuqe5imzpr`).                                     |
 | Start timestamp   | mattermost.start_timestamp | `MATTERMOST_START_TIMESTAMP` | `0`         | No        | Unix epoch (seconds) of the earliest message to import on the first run. Subsequent runs only fetch messages newer than the last successful run. |
-| TLP marking       | mattermost.tlp           | `MATTERMOST_TLP`               | `AMBER`     | No        | Marking applied to created entities. One of `CLEAR`, `GREEN`, `AMBER`, `AMBER_STRICT`, `RED`.                                                     |
+| TLP marking       | mattermost.tlp           | `MATTERMOST_TLP`               | `AMBER`     | No        | Marking applied to created entities. One of `CLEAR`, `WHITE` (alias of `CLEAR`), `GREEN`, `AMBER`, `AMBER_STRICT` (also accepted as `AMBER+STRICT`), `RED`.                                                     |
 | Verify TLS        | mattermost.verify        | `MATTERMOST_VERIFY`            | `true`      | No        | Whether the Mattermost server TLS certificate must be verified.                                                                                   |
 | Timeout           | mattermost.timeout       | `MATTERMOST_TIMEOUT`           | `30`        | No        | Web-socket keepalive timeout in seconds.                                                                                                          |
 | Request timeout   | mattermost.request_timeout | `MATTERMOST_REQUEST_TIMEOUT` |             | No        | Optional per-request HTTP timeout in seconds.                                                                                                     |
@@ -207,7 +207,7 @@ prints every request including authentication headers.
 |-------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------|
 | `MATTERMOST_DOMAIN is required …`                           | The hostname is mandatory. Provide a value without scheme or port (the scheme goes in `MATTERMOST_PROTOCOL`).     |
 | `MATTERMOST_CHANNEL_IDS must contain at least one channel id.` | Make sure the variable is set to a non-empty, comma-separated list of channel ids.                                |
-| `Unsupported MATTERMOST_TLP value '<value>'.`               | Use one of `CLEAR`, `GREEN`, `AMBER`, `AMBER_STRICT`, `RED`.                                                       |
+| `Unsupported MATTERMOST_TLP value '<value>'.`               | Use one of `CLEAR`, `WHITE`, `GREEN`, `AMBER`, `AMBER_STRICT`, `AMBER+STRICT`, `RED`.                                                       |
 | `CONNECTOR_RUN_EVERY is required …`                         | Provide a value such as `7d`, `12h`, `10m`, `30s`.                                                                |
 
 ## Additional information
