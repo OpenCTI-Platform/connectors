@@ -313,9 +313,12 @@ def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | Non
         if " " not in value and "." in value and not any(c in value for c in "/:@"):
             value = value.rstrip(".").lower()
 
-    # Collapse trailing whitespace
-    # This happens in edge cases and is needed for Defender
-    # Copilot incorrectly flags this as an opportunity for improvement
+    # Strip *trailing* whitespace (including non-breaking spaces and any
+    # other Unicode whitespace classes the ``urllib`` quote / unquote
+    # round-trip can leave behind). Defender rejects indicator values
+    # whose ``indicatorValue`` ends with whitespace with a 400 response,
+    # so trimming here keeps the value canonical before the trailing
+    # punctuation pass below.
     value = _TRAILING_WHITESPACE_RE.sub("", value)
 
     # Strip trailing punctuation Defender doesn't like

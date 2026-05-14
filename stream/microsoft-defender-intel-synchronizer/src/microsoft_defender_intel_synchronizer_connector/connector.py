@@ -12,7 +12,6 @@ from .api_handler import DefenderApiHandler
 from .config_variables import ConfigConnector
 from .rbac_scope import (
     RbacConfigError,
-    fetch_rbac_name_id_map,
     resolve_rbac_scope_or_abort,
 )
 from .types import RBACScope, ScopeKey
@@ -594,12 +593,16 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 if all_rbac_groups:
                     name_to_id: dict[str, int] = {}
                     try:
-                        # Use the live session from API handler for auth/headers
-                        name_to_id, _ = fetch_rbac_name_id_map(
-                            self.api.session.get,
-                            self.config.base_url,
-                            self.api.session.headers,
-                        )
+                        # Go through the API handler so the request
+                        # reuses the centralised token-refresh logic
+                        # in ``_send_request``. Calling
+                        # ``self.api.session.get`` directly used to
+                        # bypass that check, which let a stale Bearer
+                        # header reach Defender after a long OpenCTI
+                        # fetch / processing pass and fail with 401
+                        # before the next ``_send_request`` could
+                        # renew it.
+                        name_to_id, _ = self.api.fetch_rbac_groups()
 
                         # Cache for per-collection mapping later in this run
                         self._rbac_map = name_to_id

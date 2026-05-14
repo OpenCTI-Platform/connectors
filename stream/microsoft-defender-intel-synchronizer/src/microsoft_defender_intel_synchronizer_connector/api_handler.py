@@ -463,9 +463,11 @@ class DefenderApiHandler:
         if rbac_group_names:
             name_to_id: dict[str, int] = {}
             try:
-                name_to_id, _ = fetch_rbac_name_id_map(
-                    self.session.get, self.base_url, self.session.headers
-                )
+                # ``fetch_rbac_groups`` routes the lookup through
+                # ``_send_request`` so the OAuth token is refreshed
+                # automatically when it has expired (the previous
+                # ``self.session.get`` shortcut bypassed that check).
+                name_to_id, _ = self.fetch_rbac_groups()
                 self.helper.connector_logger.info(
                     "[Preflight] RBAC group read from API: OK"
                 )
@@ -503,6 +505,24 @@ class DefenderApiHandler:
             "[Preflight] Defender API preflight checks passed successfully"
         )
         return True
+
+    def fetch_rbac_groups(self) -> tuple[dict[str, int], dict[int, str]]:
+        """Fetch the Defender RBAC name <-> id mapping through
+        :meth:`_send_request`.
+
+        Going through ``_send_request`` (rather than calling
+        ``self.session.get`` directly) means every RBAC lookup gets the
+        same token expiry / refresh check as every other Defender API
+        call. Calling ``session.get`` directly used to bypass the
+        refresh, so after a long OpenCTI fetch / processing pass the
+        Bearer header sitting on ``session.headers`` could be stale
+        and the RBAC call would fail with a 401 before any subsequent
+        ``_send_request`` call had a chance to renew it.
+        """
+        return fetch_rbac_name_id_map(
+            lambda url, **kwargs: self._send_request("get", url, **kwargs),
+            self.base_url,
+        )
 
     def get_indicators(self) -> list[dict[str, Any]]:
         """

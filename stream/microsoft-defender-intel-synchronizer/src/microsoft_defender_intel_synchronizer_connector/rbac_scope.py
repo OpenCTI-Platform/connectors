@@ -2,7 +2,7 @@
 RBAC scope resolution utilities.
 """
 
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from .types import RBACScope
 
@@ -24,11 +24,30 @@ class RbacConfigError(RuntimeError):
         return self.message
 
 
+# ``json_get`` matches the public shape of ``api_handler._send_request``:
+# given a URL and any ``params=...`` kwarg, return the parsed JSON body
+# (a ``dict``). Going through the API handler — rather than calling
+# ``session.get`` directly — gives us the centralised token-refresh /
+# expiry check, so the RBAC group lookup keeps working even after a
+# long OpenCTI fetch / processing pass that outlasts the original
+# access token.
+JsonGet = Callable[..., Any]
+
+
 def fetch_rbac_name_id_map(
-    http_get, base_url: str, headers: dict
+    json_get: JsonGet, base_url: str
 ) -> tuple[dict[str, int], dict[int, str]]:
     """
     Fetch mapping of RBAC device group names to IDs from the API.
+
+    ``json_get`` must accept ``(url, **kwargs)`` and return the parsed
+    JSON body. The intended caller is
+    :meth:`api_handler.DefenderApiHandler.fetch_rbac_groups`, which
+    delegates to ``_send_request("get", …)``: that path performs the
+    same token expiry / refresh check as every other Defender API
+    call, instead of relying on a possibly-stale Bearer header sitting
+    on ``session.headers``.
+
     Returns two dicts: name->id and id->name.
     """
     url = f"{base_url.rstrip('/')}/api/exposureScore/ByMachineGroups"
@@ -37,9 +56,7 @@ def fetch_rbac_name_id_map(
 
     top, skip = 1000, 0
     while True:
-        r = http_get(url, headers=headers, params={"$top": top, "$skip": skip})
-        r.raise_for_status()
-        data = r.json() or {}
+        data = json_get(url, params={"$top": top, "$skip": skip}) or {}
         items = data.get("value", []) or []
 
         for g in items:
