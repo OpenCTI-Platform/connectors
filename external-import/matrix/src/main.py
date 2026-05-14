@@ -67,6 +67,14 @@ _TLP_MAP: Dict[str, str] = {
     "RED": stix2.TLP_RED.id,
 }
 
+# Batching knobs for ``_maybe_flush_bundle`` — we deliberately do NOT
+# initiate one OpenCTI Work per Matrix event (which can be very noisy
+# on active rooms). Instead the connector buffers up to
+# ``_FLUSH_BATCH_SIZE`` STIX objects, or up to ``_FLUSH_INTERVAL_SECONDS``
+# of wall-clock time, before opening + closing a single Work.
+_FLUSH_BATCH_SIZE = 25
+_FLUSH_INTERVAL_SECONDS = 30.0
+
 # Event types the connector subscribes to.
 _TEXT_EVENTS = (RoomMessageText, RoomMessageNotice)
 _ENCRYPTED_FILE_EVENTS = (
@@ -136,7 +144,13 @@ def _resolve_tlp(name: str) -> str:
 
 
 def _list_filter(field: str, value: str) -> Dict[str, Any]:
-    """Build a filter compatible with the modern OpenCTI API."""
+    """Build a filter compatible with the modern OpenCTI API.
+
+    The modern OpenCTI filter contract keeps ``mode`` at the top level
+    only (and on ``filterGroups``). Individual filter items carry
+    just ``key`` / ``values`` / ``operator``; an inner ``mode`` is
+    rejected by the API.
+    """
     return {
         "mode": "and",
         "filters": [
@@ -144,7 +158,6 @@ def _list_filter(field: str, value: str) -> Dict[str, Any]:
                 "key": field,
                 "values": [value],
                 "operator": "eq",
-                "mode": "and",
             }
         ],
         "filterGroups": [],
@@ -216,6 +229,9 @@ class MatrixConnector:
         )
         self.bundle: List[Any] = []
         self.client: Optional[AsyncClient] = None
+        # ``_maybe_flush_bundle`` tracks the last flush so we can
+        # batch many events into a single OpenCTI Work.
+        self._last_flush_ts: float = time.monotonic()
 
     @staticmethod
     def _require_string(config: Dict[str, Any], env_name: str, path: List[str]) -> str:
@@ -227,8 +243,32 @@ class MatrixConnector:
     # ------------------------------------------------------------------
     # Bundle helpers
     # ------------------------------------------------------------------
+    def _maybe_flush_bundle(self) -> None:
+        """Flush the buffer when it is large enough *or* old enough.
+
+        Matrix events arrive asynchronously and can be very frequent
+        on active rooms. Flushing once per event would create one
+        OpenCTI Work record per Matrix message, which becomes very
+        noisy and puts unnecessary load on the platform. Instead we
+        buffer up to ``_FLUSH_BATCH_SIZE`` objects or wait at most
+        ``_FLUSH_INTERVAL_SECONDS`` seconds between flushes.
+        """
+        if not self.bundle:
+            return
+        elapsed = time.monotonic() - self._last_flush_ts
+        if len(self.bundle) >= _FLUSH_BATCH_SIZE or elapsed >= _FLUSH_INTERVAL_SECONDS:
+            self._flush_bundle()
+
     def _flush_bundle(self) -> None:
-        """Send the buffered STIX objects to OpenCTI and reset the buffer."""
+        """Send the buffered STIX objects to OpenCTI and reset the buffer.
+
+        Bundle serialisation / send is wrapped in ``try / except`` so
+        the OpenCTI Work is always closed â€“ either with
+        ``to_processed(..., in_error=True)`` on failure (and the
+        buffer is preserved so the next flush retries) or with the
+        normal success message and a new ``last_run`` state on
+        success.
+        """
         if not self.bundle:
             return
 
@@ -239,14 +279,34 @@ class MatrixConnector:
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
+        objects_count = len(self.bundle)
 
-        bundle = stix2.Bundle(objects=self.bundle, allow_custom=True).serialize()
-        self.helper.log_info(f"Sending {len(self.bundle)} STIX objects to OpenCTI...")
-        self.helper.send_stix2_bundle(
-            bundle,
-            update=True,
-            work_id=work_id,
-        )
+        try:
+            bundle = stix2.Bundle(objects=self.bundle, allow_custom=True).serialize()
+            self.helper.log_info(f"Sending {objects_count} STIX objects to OpenCTI...")
+            self.helper.send_stix2_bundle(
+                bundle,
+                update=True,
+                work_id=work_id,
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.helper.log_error(
+                f"Bundle send failed ({objects_count} objects): {exc}"
+            )
+            try:
+                self.helper.api.work.to_processed(
+                    work_id,
+                    f"Bundle send failed: {exc}",
+                    in_error=True,
+                )
+            except Exception as report_exc:  # noqa: BLE001
+                self.helper.log_error(
+                    f"Could not mark work {work_id} as failed: {report_exc}"
+                )
+            # Keep the buffer so the next ``_maybe_flush_bundle`` can
+            # retry; reset the flush clock so we do not spin.
+            self._last_flush_ts = time.monotonic()
+            return
 
         timestamp = int(time.time())
         message = (
@@ -259,6 +319,7 @@ class MatrixConnector:
         self.helper.set_state(current_state)
         self.helper.api.work.to_processed(work_id, message)
         self.bundle = []
+        self._last_flush_ts = time.monotonic()
 
     # ------------------------------------------------------------------
     # Matrix client + event handling
@@ -335,13 +396,20 @@ class MatrixConnector:
         description: str,
         attachments: Optional[List[Dict[str, Any]]] = None,
     ) -> Any:
-        custom: Dict[str, Any] = {"created_by_ref": author_id}
+        # OpenCTI extension fields on SCOs follow the canonical
+        # ``x_opencti_*`` prefix (see zvelo / vulncheck / ...).
+        # Setting ``created_by_ref`` directly on an SCO is ignored
+        # by the ingestion path; the description likewise needs to
+        # go through ``x_opencti_description``.
+        custom: Dict[str, Any] = {
+            "x_opencti_created_by_ref": author_id,
+            "x_opencti_description": description,
+        }
         if attachments:
             custom["x_opencti_files"] = attachments
         return CustomObservableMediaContent(
             url=url,
             content=content,
-            description=description,
             publication_date=publication_date,
             media_category="matrix",
             object_marking_refs=[self.matrix_marking_id],
@@ -477,7 +545,7 @@ class MatrixConnector:
                 self.bundle.append(
                     self._build_relationship(media_content["id"], thread_root)
                 )
-            self._flush_bundle()
+            self._maybe_flush_bundle()
         except asyncio.CancelledError:
             # Let cancellation propagate so the sync loop can shut down.
             raise
@@ -507,6 +575,13 @@ class MatrixConnector:
         try:
             await self.client.sync_forever(full_state=True)
         finally:
+            # Drain any buffered events before shutting the client
+            # so a SIGTERM / Ctrl-C does not lose the tail of the
+            # batch.
+            try:
+                self._flush_bundle()
+            except Exception as exc:  # noqa: BLE001
+                self.helper.log_error(f"Final flush failed during shutdown: {exc}")
             await self.client.close()
 
 
