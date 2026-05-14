@@ -125,7 +125,22 @@ class CybelAngel:
         """
         TLP_MAPPING = {
             "TLP:WHITE": stix2.TLP_WHITE,
-            "TLP:CLEAR": stix2.TLP_WHITE,
+            # ``TLP:CLEAR`` is OpenCTI's canonical replacement for the
+            # legacy ``TLP:WHITE`` and is not exported as a constant by
+            # the ``stix2`` library. We therefore build it as a custom
+            # ``MarkingDefinition`` (mirroring the ``TLP:AMBER+STRICT``
+            # entry below) so the marking id / label match what OpenCTI
+            # ingests and the configured value is preserved as-is —
+            # aliasing it to ``stix2.TLP_WHITE`` would silently tag
+            # ingested data with the TLP:WHITE marking id.
+            "TLP:CLEAR": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                allow_custom=True,
+                x_opencti_definition_type="TLP",
+                x_opencti_definition="TLP:CLEAR",
+            ),
             "TLP:GREEN": stix2.TLP_GREEN,
             "TLP:AMBER": stix2.TLP_AMBER,
             "TLP:AMBER+STRICT": stix2.MarkingDefinition(
@@ -389,13 +404,22 @@ class CybelAngel:
     ):
         """Page through ``claimed-attacks`` and process every record.
 
-        Returns ``True`` when the iteration completes (even with zero
-        results) and ``False`` when the connector gives up on transient
-        errors so the caller can avoid advancing ``last_run``.
+        Returns ``True`` when the iteration completes without
+        unrecoverable errors *and* every per-attack bundle was sent
+        successfully. Returns ``False`` when the connector gives up on
+        transient errors **or** when any ``_process_attack`` failed —
+        the caller uses the return value to keep ``last_run``
+        un-advanced so the next run retries instead of silently
+        dropping data.
         """
         skip = 0
         limit = 50
         attempt = 0
+        # Track per-attack bundle-send failures. We keep iterating even
+        # after a failure (each attack is independent and re-runs are
+        # idempotent thanks to deterministic STIX ids), but return
+        # ``False`` at the end so the caller does not advance ``last_run``.
+        all_succeeded = True
 
         while True:
             url = (
@@ -464,7 +488,7 @@ class CybelAngel:
                 self.helper.connector_logger.info(
                     "No more attacks found, stopping processing."
                 )
-                return True
+                return all_succeeded
 
             self.helper.connector_logger.info(
                 f"Processing {len(attacks)} attacks - skip {skip} with limit {limit}"
@@ -479,8 +503,9 @@ class CybelAngel:
                     self.helper.connector_logger.info(
                         "Reached claims older than last_run, stopping pagination."
                     )
-                    return True
-                self._process_attack(attack, since_date, author_org, work_id)
+                    return all_succeeded
+                if not self._process_attack(attack, since_date, author_org, work_id):
+                    all_succeeded = False
 
             skip += limit
 
@@ -506,7 +531,16 @@ class CybelAngel:
     # ----------------------
     # Parse & Ingest Data
     # ----------------------
-    def _process_attack(self, attack, since_date, author_org, work_id):
+    def _process_attack(self, attack, since_date, author_org, work_id) -> bool:
+        """Process a single attack and forward the resulting STIX bundle.
+
+        Returns ``True`` when the attack was handled successfully (or
+        deliberately skipped because of an unparseable timestamp / a
+        cursor cut-off) and ``False`` when bundle serialisation or
+        ``send_stix2_bundle`` failed — callers use this signal to keep
+        ``last_run`` un-advanced so the run is retried instead of
+        silently dropping data.
+        """
         claimed_at_raw = attack.get("claimed_at")
         claimed_at = None
         if claimed_at_raw:
@@ -529,7 +563,7 @@ class CybelAngel:
                 "Skipping attack with missing or unparseable claimed_at",
                 {"attack_id": attack.get("id"), "claimed_at": claimed_at_raw},
             )
-            return
+            return True
 
         # Stop early if attack is before last_run
         if since_date and claimed_at < since_date:
@@ -537,7 +571,7 @@ class CybelAngel:
                 f"Stopping processing as claimed_at {claimed_at.strftime('%Y-%m-%dT%H:%M:%SZ')} is before "
                 f"last_run value {since_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
             )
-            return
+            return True
 
         stix_objects = [author_org, self.cybelangel_marking]
         author_org_id = author_org["id"] if author_org else None
@@ -779,7 +813,7 @@ class CybelAngel:
                     )
                 )
 
-            # intrusion sets -> victim / locations / sectors
+            # intrusion sets -> victim (per-victim, varies with ``identity.id``)
             for iset in intrusion_sets:
                 if identity:
                     stix_objects.append(
@@ -792,6 +826,17 @@ class CybelAngel:
                             author_org_id,
                         )
                     )
+
+        # --- intrusion sets -> locations / sectors are per-attack rather than
+        # per-victim. ``StixCoreRelationship.generate_id`` is deterministic
+        # on ``(rel_type, source, target)``, so emitting them inside the
+        # per-victim loop above used to produce N copies of the same
+        # Relationship (one per victim) with identical ids/content — which
+        # inflates bundles and can fail STIX validation. They are now
+        # emitted once per attack here. (The "no victims" branch above
+        # already emitted them once per attack.)
+        if victim_domain_pairs:
+            for iset in intrusion_sets:
                 for location in locations:
                     stix_objects.append(
                         self._create_relationship(
@@ -815,7 +860,9 @@ class CybelAngel:
                         )
                     )
 
-        # Send bundle to OpenCTI
+        # Send bundle to OpenCTI. Any failure here is propagated to the
+        # caller so the pagination loop can keep ``last_run`` un-advanced
+        # — otherwise a single failed bundle would silently drop data.
         if stix_objects:
             try:
                 bundle = stix2.Bundle(
@@ -828,7 +875,12 @@ class CybelAngel:
                     f"Successfully processed {len(stix_objects)} STIX objects from CybelAngel."
                 )
             except Exception as e:
-                self.helper.connector_logger.error(f"Error creating STIX bundle: {e}")
+                self.helper.connector_logger.error(
+                    "Error sending STIX bundle to OpenCTI; last_run will NOT "
+                    f"be advanced. attack_id={attack.get('id')!r} error={e}"
+                )
+                return False
+        return True
 
     def process_data(self):
         """Main data processing method.
