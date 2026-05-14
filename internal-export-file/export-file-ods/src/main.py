@@ -16,46 +16,40 @@ from lib.internal_export import InternalExportConnector
 from unogenerator import ODS_Standard
 from unogenerator.commons import ColorsNamed
 
-# Entity types that are not supported by the ODS export.
 _UNSUPPORTED_ENTITY_TYPES = {
     "stix-sighting-relationship",
     "stix-core-relationship",
     "Opinion",
 }
 
-# Hash column convention: header is rendered with dot notation (``hashes.MD5``)
-# while the row generator looks for a known prefix to pick the proper hash.
-# Both lists must stay in sync — the prefix is stored explicitly to avoid the
-# old "hashes." vs "hashes_" inconsistency that produced missing columns.
+# Headers use dot notation (``hashes.MD5``); the row generator strips the
+# ``hashes.`` prefix to look up the matching algorithm in ``entity["hashes"]``.
 _HASH_HEADER_PREFIX = "hashes."
 _HASH_ALGORITHMS: Tuple[str, ...] = ("MD5", "SHA-1", "SHA-256", "SHA-512", "SSDEEP")
 _HASH_HEADERS: Tuple[str, ...] = tuple(
     f"{_HASH_HEADER_PREFIX}{algo}" for algo in _HASH_ALGORITHMS
 )
 
-# Control characters that should never appear at the start of a spreadsheet
-# cell. They are stripped to mitigate CSV / spreadsheet injection that abuses
-# tab / carriage-return separators.
+# Leading control characters are stripped to mitigate spreadsheet injection
+# that abuses tab / carriage-return separators.
 _SANITIZE_LEADING_CONTROL_CHARS = ("\t", "\r", "\n")
 
-# Characters that, when used as the first character of a cell, are interpreted
-# as a formula by LibreOffice and most other spreadsheet apps. Prefixing them
-# with ``[<char>]`` neutralises the formula without losing the original value.
+# Leading ``=``/``+``/``-``/``@`` are escaped with ``[<char>]`` so spreadsheet
+# applications do not interpret the cell as a formula.
 _SANITIZE_FORMULA_TRIGGERS = ("=", "+", "-", "@")
 
 
 def sanitize_cell(value: Any) -> str:
     """Return ``value`` rendered as a spreadsheet-safe string.
 
-    The function defensively handles ``None`` and non-string inputs (numbers,
-    booleans, ...) and prevents two classes of issue:
+    ``None`` and non-string inputs (numbers, booleans, ...) are coerced
+    safely. The returned value is protected against two classes of issue:
 
     * formula injection — leading ``=``/``+``/``-``/``@`` are wrapped in
       square brackets so spreadsheet apps stop interpreting the cell as a
       formula;
     * control-character injection — leading tab, carriage-return or newline
-      characters are stripped (the previous implementation tried to match the
-      literal strings ``"0x09"``/``"0x0D"`` which never occurred in practice).
+      characters are stripped.
     """
     if value is None:
         return ""
@@ -75,80 +69,113 @@ class ExportFileODSConnector(InternalExportConnector):
         self.export_type: str = "simple"
         self.main_filter: Optional[Dict[str, Any]] = None
         self.access_filter: Optional[Dict[str, Any]] = None
-        self.content_markings: List[str] = []
         self.file_name: str = ""
-
-    @staticmethod
-    def _check_markings(entity: Dict[str, Any], forbidden: List[str]) -> bool:
-        """Return ``True`` when ``entity`` has no forbidden object marking."""
-        for marking in entity.get("objectMarking") or []:
-            if marking.get("id") in forbidden:
-                return False
-        return True
-
-    @staticmethod
-    def _get_content_markings(data: Dict[str, Any]) -> List[str]:
-        """Extract the list of forbidden object-marking ids from the request."""
-        main_filter = data.get("main_filter") or {}
-        for f in main_filter.get("filters") or []:
-            if f.get("key") == "objectMarking":
-                return list(f.get("values") or [])
-        return []
 
     def _get_export_list(
         self, entities_list: List[Dict[str, Any]]
     ) -> List[Tuple[Dict[str, Any], int]]:
         """Return ``[(entity, level), ...]`` with neighbours when ``full``.
 
-        Level 1 entities are the selected entries. Level 2 entities are first
-        neighbours reached through STIX core relationships. The result is
-        de-duplicated by entity id (level 1 always wins) so the same
-        neighbour reached from several selected entities or from both
-        directions does not produce duplicate rows in the spreadsheet.
+        Level 1 entities are the selected entries already filtered by the
+        platform through ``api_impersonate`` and the request's
+        ``access_filter``. Level 2 entities are first neighbours reached
+        through STIX core relationships. Neighbour candidates are fetched
+        in a single batch via the unified
+        ``opencti_stix_object_or_stix_relationship.list`` endpoint with the
+        request's ``access_filter`` applied, so an exported neighbour can
+        never bypass the marking / access restrictions configured for the
+        export.
+
+        The result is de-duplicated by entity id (level 1 always wins) so
+        the same neighbour reached from several selected entities or from
+        both directions does not produce duplicate rows in the spreadsheet.
         """
         export_list: List[Tuple[Dict[str, Any], int]] = []
         seen_ids: set[str] = set()
+        self.helper.log_debug(f"Export Type: {self.export_type}")
+
         for entity in entities_list:
-            if not self._check_markings(entity, self.content_markings):
-                continue
             entity_id = entity.get("id")
             if entity_id and entity_id in seen_ids:
                 continue
             if entity_id:
                 seen_ids.add(entity_id)
+            self.helper.log_debug(f"Selected entity (level 1): {entity_id}")
             export_list.append((entity, 1))
-            self.helper.log_debug(f"Export Type: {self.export_type}")
 
-            if self.export_type != "full":
-                continue
+        if self.export_type != "full":
+            return export_list
 
-            self.helper.log_debug(f"Entity ID: {entity_id}")
+        candidate_neighbor_ids: set[str] = set()
+        for entity_id in [eid for eid in seen_ids if eid]:
             for direction, ref_key in (("fromId", "to"), ("toId", "from")):
                 rels = self.helper.api_impersonate.stix_core_relationship.list(
                     **{direction: entity_id},
                     filters=self.main_filter,
                     getAll=True,
                 )
-                self.helper.log_debug(f"Relationships {direction}: {rels!r}")
+                self.helper.log_debug(
+                    f"Relationships {direction}={entity_id}: {len(rels)} found"
+                )
                 for relationship in rels:
                     neighbor_id = relationship[ref_key]["id"]
                     if neighbor_id in seen_ids:
                         continue
-                    neighbor = self._read_neighbor(neighbor_id)
-                    if neighbor is None:
-                        continue
-                    if not self._check_markings(neighbor, self.content_markings):
-                        continue
-                    seen_ids.add(neighbor_id)
-                    export_list.append((neighbor, 2))
+                    candidate_neighbor_ids.add(neighbor_id)
+
+        if not candidate_neighbor_ids:
+            return export_list
+
+        neighbor_filter = self._build_neighbor_filter(
+            sorted(candidate_neighbor_ids), self.access_filter
+        )
+        neighbors = (
+            self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
+                filters=neighbor_filter, getAll=True
+            )
+        )
+        for neighbor in neighbors:
+            neighbor_id = neighbor.get("id")
+            if not neighbor_id or neighbor_id in seen_ids:
+                continue
+            seen_ids.add(neighbor_id)
+            self.helper.log_debug(f"Related entity (level 2): {neighbor_id}")
+            export_list.append((neighbor, 2))
         return export_list
 
-    def _read_neighbor(self, neighbor_id: str) -> Optional[Dict[str, Any]]:
-        """Return the SDO or SCO matching ``neighbor_id`` if any."""
-        neighbor = self.helper.api_impersonate.stix_domain_object.read(id=neighbor_id)
-        if neighbor is not None:
-            return neighbor
-        return self.helper.api_impersonate.stix_cyber_observable.read(id=neighbor_id)
+    @staticmethod
+    def _build_neighbor_filter(
+        neighbor_ids: List[str],
+        access_filter: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Build a filter selecting ``neighbor_ids`` and applying ``access_filter``.
+
+        The neighbour ids are passed as a positive ``ids`` filter; the
+        request's ``access_filter`` (when present and non-empty) is ANDed
+        with it so the unified entity endpoint enforces the same marking
+        restrictions the platform applied to the selected entities.
+        """
+        ids_filter_group: Dict[str, Any] = {
+            "mode": "and",
+            "filterGroups": [],
+            "filters": [
+                {
+                    "key": "ids",
+                    "values": neighbor_ids,
+                    "operator": "eq",
+                    "mode": "or",
+                }
+            ],
+        }
+        access_filter_content = (access_filter or {}).get("filters") or []
+        access_filter_groups = (access_filter or {}).get("filterGroups") or []
+        if access_filter and (access_filter_content or access_filter_groups):
+            return {
+                "mode": "and",
+                "filterGroups": [ids_filter_group, access_filter],
+                "filters": [],
+            }
+        return ids_filter_group
 
     @staticmethod
     def _row_for(entity: Dict[str, Any], header: str) -> str:
@@ -192,9 +219,8 @@ class ExportFileODSConnector(InternalExportConnector):
         """Return the alphabetically-sorted header list for the spreadsheet.
 
         The raw ``hashes`` column is replaced by the per-algorithm
-        ``hashes.<ALGO>`` columns (``_HASH_HEADERS``). Keeping the raw
-        ``hashes`` header would render as an empty cell because ``_row_for``
-        only understands the ``hashes.<ALGO>`` form for hash lookups.
+        ``hashes.<ALGO>`` columns (``_HASH_HEADERS``) since ``_row_for``
+        only knows how to render values from the ``hashes.<ALGO>`` form.
         """
         headers: List[str] = sorted(set().union(*(e.keys() for e in entities_list)))
         if "hashes" in headers:
@@ -207,13 +233,11 @@ class ExportFileODSConnector(InternalExportConnector):
         entities_list = [entry[0] for entry in export_list]
         headers = self._build_headers(entities_list)
 
-        # Render to a temporary file we own, then read it back. Using
-        # ``tempfile`` keeps the cleanup deterministic even if reading the
-        # file raises.
         tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
         os.makedirs(tmp_dir, exist_ok=True)
         fd, tmp_path = tempfile.mkstemp(suffix=".ods", dir=tmp_dir)
         os.close(fd)
+        self.helper.log_debug(f"Rendering ODS spreadsheet at: {tmp_path}")
 
         try:
             with ODS_Standard() as sheet:
@@ -236,14 +260,12 @@ class ExportFileODSConnector(InternalExportConnector):
     def _list_selection_entities(
         self, main_filter: Optional[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Fetch every entity matching the ``selection`` request.
+        """Fetch every entity matching a ``selection`` export request.
 
         Uses the unified ``opencti_stix_object_or_stix_relationship.list``
-        endpoint (with ``getAll=True``) like every other internal-export
-        connector (``export-file-stix``, ``export-file-csv``,
-        ``export-file-yara``, ``export-report-pdf``). It covers all STIX
-        object / relationship types in a single call, so we no longer need
-        to keep the four hand-written lookups in sync with the platform.
+        endpoint with ``getAll=True`` so the spreadsheet is not truncated
+        to a single page and covers every STIX object / relationship type
+        in a single call.
         """
         return (
             self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
@@ -258,27 +280,30 @@ class ExportFileODSConnector(InternalExportConnector):
     ) -> Optional[Dict[str, Any]]:
         """Combine the user filter and the access (marking) filter.
 
-        ``access_filter`` may be missing or ``None`` for backwards
-        compatibility, in which case the user filter is returned as-is.
+        Either side may be missing or empty: when ``access_filter`` has no
+        ``filters`` and no ``filterGroups`` it is treated as absent and the
+        user filter is returned as-is (and vice versa).
         """
-        access_filter_content = (access_filter or {}).get("filters") or []
-        if access_filter_content and list_params_filters is not None:
+        access_has_content = bool(
+            (access_filter or {}).get("filters")
+            or (access_filter or {}).get("filterGroups")
+        )
+        if access_has_content and list_params_filters is not None:
             return {
                 "mode": "and",
                 "filterGroups": [list_params_filters, access_filter],
                 "filters": [],
             }
-        if not access_filter_content:
+        if not access_has_content:
             return list_params_filters
         return access_filter
 
     def _sanitize_file_name(self, raw_file_name: str) -> str:
         """Return a safe ``<name>.ods`` filename from the request payload.
 
-        ``str.rstrip`` trims any trailing characters from the ``".unknown"``
-        set, which can mangle the filename (e.g. ``"file.unk"`` would become
-        ``"file."``). We instead remove the exact suffix and strip any
-        directory components to defend against path-traversal attempts.
+        Strips directory components (``os.path.basename``) to defend against
+        path traversal and removes the literal ``.unknown`` suffix (not via
+        ``str.rstrip`` which would mangle filenames such as ``file.unk``).
         """
         base = os.path.basename(raw_file_name or "")
         if base.endswith(".unknown"):
@@ -314,7 +339,7 @@ class ExportFileODSConnector(InternalExportConnector):
 
     def _process_message(self, data: Dict[str, Any]) -> str:
         """Process an export request."""
-        self.helper.log_debug(f"Data: {data}")
+        self.helper.log_debug(f"Export request payload: {data}")
         self.file_name = self._sanitize_file_name(data.get("file_name", ""))
         file_markings = data.get("file_markings") or []
         entity_id = data.get("entity_id")
@@ -323,7 +348,6 @@ class ExportFileODSConnector(InternalExportConnector):
         self.export_type = data.get("export_type", "simple")
         self.main_filter = data.get("main_filter")
         self.access_filter = data.get("access_filter")
-        self.content_markings = self._get_content_markings(data)
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the export..."
         )

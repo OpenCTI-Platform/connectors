@@ -1,11 +1,17 @@
-FROM python:3.12-slim
-ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE \
-    DEBIAN_FRONTEND=noninteractive
+FROM debian:bookworm-slim
 
-# LibreOffice (and its Python UNO bridge) is required by ``unogenerator`` to
-# render the ODS document. It is only available on glibc-based distributions,
-# which is why this connector uses ``python:3.12-slim`` instead of the
-# ``python:3.12-alpine`` image used by the other export connectors.
+ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE \
+    DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+# LibreOffice and its Python UNO bridge are required by ``unogenerator`` to
+# render the ODS document. ``python3-uno`` ships a compiled ``pyuno`` extension
+# built against the *system* Python (Python 3.11 on Debian Bookworm); the
+# runtime Python therefore has to be the same system interpreter, which is
+# why this connector uses ``debian:bookworm-slim`` instead of the
+# ``python:3.x-slim`` images used by the other export connectors (those ship
+# a second Python under ``/usr/local`` that cannot import ``pyuno``).
 # hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -18,29 +24,24 @@ RUN apt-get update && \
         libreoffice-script-provider-python \
         libx11-xcb1 \
         libxinerama1 \
-        python3-uno && \
+        python3 \
+        python3-pip \
+        python3-uno \
+        python3-venv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# ``python3-uno`` installs the UNO bridge under the system Python's
-# ``dist-packages`` directory. The container's runtime Python lives in
-# ``/usr/local`` and does not see those packages by default, so we expose the
-# two required modules with symlinks. The Python version is discovered at
-# build-time to avoid hard-coding it.
-RUN PY_MAJOR_MINOR="$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')" && \
-    install -d "/usr/local/lib/python${PY_MAJOR_MINOR}/site-packages" && \
-    ln -sf /usr/lib/python3/dist-packages/uno.py \
-           "/usr/local/lib/python${PY_MAJOR_MINOR}/site-packages/uno.py" && \
-    ln -sf /usr/lib/python3/dist-packages/unohelper.py \
-           "/usr/local/lib/python${PY_MAJOR_MINOR}/site-packages/unohelper.py"
+# ``--system-site-packages`` lets the virtual environment see the apt-installed
+# ``python3-uno`` (``uno`` / ``unohelper`` / ``pyuno``) modules while still
+# being writable by ``pip``, which keeps PEP 668 happy.
+RUN python3 -m venv --system-site-packages /opt/venv
+ENV PATH="/opt/venv/bin:${PATH}"
 
-# Copy the worker
 COPY src /opt/opencti-connector-export-file-ods
 WORKDIR /opt/opencti-connector-export-file-ods
-RUN pip3 install --no-cache-dir -r requirements.txt && \
+RUN pip install --no-cache-dir -r requirements.txt && \
     mkdir -p /opt/opencti-connector-export-file-ods/tmp
 
-# Expose and entrypoint
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]

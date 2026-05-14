@@ -51,8 +51,11 @@ supported.
 
 - OpenCTI Platform >= 6.4.3
 - A glibc-based Linux distribution able to run LibreOffice. The connector
-  ships with a `python:3.12-slim` Dockerfile because the official
-  `python:3.12-alpine` image cannot install LibreOffice / `python3-uno`.
+  ships with a `debian:bookworm-slim` Dockerfile because the official
+  `python:3.12-alpine` image cannot install LibreOffice / `python3-uno`,
+  and Debian's `python3-uno` package only loads against the matching
+  system Python (Python 3.11 on Bookworm) — not a second interpreter
+  installed under `/usr/local`.
 
 ## Configuration variables
 
@@ -211,9 +214,14 @@ applied to every cell:
 
 ### Object marking enforcement
 
-`x_opencti_object_marking` filters provided by the platform are honoured: any
-entity (or first-degree neighbour) carrying a forbidden marking definition is
-silently skipped.
+The connector relies on the OpenCTI platform to enforce marking restrictions:
+
+- Selected and matching entities are fetched through `api_impersonate`, so
+  the user's own permissions and markings are applied.
+- For the `full` export type, first-degree neighbours are fetched in a
+  single call to `opencti_stix_object_or_stix_relationship.list` with the
+  request's `access_filter` ANDed in, so a neighbour cannot bypass the
+  marking restrictions that apply to the selected entities.
 
 ## Debugging
 
@@ -223,12 +231,18 @@ Enable verbose logging:
 CONNECTOR_LOG_LEVEL=debug
 ```
 
-Log output includes:
+At `debug` level the connector logs:
 
 - The raw export request payload.
-- Each retrieved entity / relationship.
-- The path of the generated ODS file.
-- Upload confirmation.
+- The export type (`simple` / `full`).
+- Each level-1 selected entity id and, for `full` exports, the STIX core
+  relationships read in either direction plus each level-2 neighbour id.
+- The path of the temporary ODS file rendered before upload.
+
+At `info` level the connector additionally logs the upload start
+(`Uploading file as '<name>'`) and completion (`Export done: <type> to
+<name>`). Failed cleanup of the temporary ODS file is logged at `warn`
+level (`Could not remove temporary file: <path>`).
 
 ### Common Issues
 
