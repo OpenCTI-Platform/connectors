@@ -30,16 +30,22 @@ class RansomFeedAPIClient:
 
     def get_recent_claims(self, since: str = None):
         """
-        Fetch recent ransomware claims from the API
+        Fetch recent ransomware claims from the API.
 
         Args:
-            since: Optional date string to fetch claims since a specific date
+            since: Optional ``"%Y-%m-%d %H:%M:%S"`` UTC date string
+                forwarded to the API as the ``since`` query parameter.
+                The public ``api.ransomfeed.it`` endpoint does **not**
+                currently document this parameter and may silently
+                ignore it — the connector filters the response
+                client-side in ``RansomFeedConnector._process_claim``
+                so this argument is best-effort.
 
         Returns:
-            List of claim dictionaries
+            List of claim dictionaries.
 
         Raises:
-            RansomFeedAPIError: If the API request fails
+            RansomFeedAPIError: If the API request fails.
         """
         try:
             url = self.api_url

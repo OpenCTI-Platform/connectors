@@ -35,15 +35,22 @@ class RansomFeedConnector:
         self.converter = ConverterToStix(helper, config)
         self.work_id = None
 
-    def _process_claim(self, claim: dict) -> list:
+    def _process_claim(
+        self,
+        claim: dict,
+        since: "datetime | None" = None,
+    ) -> list:
         """
         Process a single ransomware claim and convert it to STIX objects
 
         Args:
             claim: Dictionary containing claim data from RansomFeed API
-
-        Returns:
-            List of STIX objects
+            since: When set, claims with ``claimed_at < since`` are skipped
+                with a debug log. Used to incrementally process the feed
+                even when the upstream API does not honour the ``since``
+                query parameter (which is the typical case for RansomFeed —
+                the public endpoint always returns the last ~24h of
+                claims).
         """
         stix_objects = []
 
@@ -87,6 +94,21 @@ class RansomFeedConnector:
                 self.helper.connector_logger.warning(
                     "Skipping claim with missing or unparseable date",
                     {"claim_id": claim_id, "date": date_str},
+                )
+                return []
+
+            # Defense-in-depth client-side filtering. The RansomFeed API
+            # currently returns every recent claim (its ``since`` query
+            # parameter, if any, is undocumented and appears to be a
+            # no-op), so skip claims older than the cursor here.
+            if since is not None and claim_date < since:
+                self.helper.connector_logger.debug(
+                    "Skipping claim older than last_run",
+                    {
+                        "claim_id": claim_id,
+                        "claim_date": claim_date.isoformat(),
+                        "last_run": since.isoformat(),
+                    },
                 )
                 return []
 
@@ -237,33 +259,70 @@ class RansomFeedConnector:
 
         return stix_objects
 
+    @staticmethod
+    def _parse_last_run(last_run):
+        """Return ``last_run`` parsed as a timezone-aware UTC datetime.
+
+        Accepts the canonical ``"%Y-%m-%dT%H:%M:%SZ"`` format produced
+        by :meth:`process_message` and any other ISO-8601 string
+        ``datetime.fromisoformat`` understands (older state values may
+        carry microseconds / an explicit offset). Returns ``None`` on
+        empty / invalid input so the caller can treat the first run as
+        "no cursor".
+        """
+        if not last_run:
+            return None
+        try:
+            parsed = datetime.strptime(last_run, "%Y-%m-%dT%H:%M:%SZ")
+        except ValueError:
+            try:
+                parsed = datetime.fromisoformat(last_run.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
     def _collect_intelligence(self, last_run: str = None) -> list:
         """
         Collect intelligence from RansomFeed API
 
         Args:
-            last_run: Optional last run timestamp
+            last_run: Optional last run timestamp ("YYYY-MM-DDTHH:MM:SSZ")
+                stored by :meth:`process_message`. Used to filter the API
+                response client-side and as a best-effort ``since`` query
+                parameter for the API.
 
         Returns:
             List of STIX objects
         """
         stix_objects = []
 
+        # Parse ``last_run`` back into a timezone-aware datetime so the
+        # client-side filter in ``_process_claim`` and the API
+        # ``since`` parameter use a consistent representation.
+        since_dt = self._parse_last_run(last_run)
+        api_since = (
+            since_dt.strftime("%Y-%m-%d %H:%M:%S") if since_dt is not None else None
+        )
+
         try:
-            # Fetch claims from API
-            claims = self.api_client.get_recent_claims(since=last_run)
+            # Fetch claims from API. The query parameter is best-effort;
+            # ``_process_claim`` filters the response client-side too.
+            claims = self.api_client.get_recent_claims(since=api_since)
 
             if not claims:
                 self.helper.connector_logger.info("No new claims to process")
                 return []
 
             self.helper.connector_logger.info(
-                "Processing claims from RansomFeed", {"num_claims": len(claims)}
+                "Processing claims from RansomFeed",
+                {"num_claims": len(claims), "since": api_since},
             )
 
             # Process each claim
             for claim in claims:
-                claim_objects = self._process_claim(claim)
+                claim_objects = self._process_claim(claim, since=since_dt)
                 stix_objects.extend(claim_objects)
 
             # Add author and TLP marking definition to objects so the
@@ -343,9 +402,11 @@ class RansomFeedConnector:
             else:
                 self.helper.connector_logger.info("No data to send to OpenCTI")
 
-            # Update state
+            # Update state. Use a stable, parseable representation
+            # (no microseconds, no offset) so the value is unambiguous
+            # across runs and matches what ``_parse_last_run`` expects.
             current_state = self.helper.get_state()
-            current_state_datetime = now.isoformat()
+            current_state_datetime = now.strftime("%Y-%m-%dT%H:%M:%SZ")
 
             if current_state:
                 current_state["last_run"] = current_state_datetime
@@ -369,7 +430,16 @@ class RansomFeedConnector:
                 "[CONNECTOR] Error in connector", {"error": str(e)}
             )
             if self.work_id:
-                self.helper.api.work.to_processed(self.work_id, f"Error: {str(e)}")
+                # ``in_error=True`` so the work is marked as failed in
+                # the OpenCTI UI instead of being silently reported as
+                # successful (matches the pattern used by
+                # ``external-import/cvelistv5`` and
+                # ``external-import/opencti-stream``).
+                self.helper.api.work.to_processed(
+                    self.work_id,
+                    f"Error: {str(e)}",
+                    in_error=True,
+                )
         finally:
             self.work_id = None
 
