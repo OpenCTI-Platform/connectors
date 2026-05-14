@@ -30,15 +30,9 @@ class CrowdStrikeReconConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `CrowdStrikeReconConnector`.
     """
 
-    api_base_url: str = Field(
-        description="API base URL."
-    )
-    client_id: str = Field(
-        description="CrowdStrike Falcon Client ID."
-    )
-    client_secret: str = Field(
-        description="CrowdStrike Falcon Client Secret."
-    )
+    api_base_url: str = Field(description="API base URL.")
+    client_id: str = Field(description="CrowdStrike Falcon Client ID.")
+    client_secret: str = Field(description="CrowdStrike Falcon Client Secret.")
     tlp_level: Literal[
         "clear",
         "white",
@@ -76,4 +70,6 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    crowdstrike_recon: CrowdStrikeReconConfig = Field(default_factory=CrowdStrikeReconConfig)
+    crowdstrike_recon: CrowdStrikeReconConfig = Field(
+        default_factory=CrowdStrikeReconConfig
+    )

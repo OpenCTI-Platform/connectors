@@ -49,7 +49,7 @@ class ConverterToStix:
         author = stix2.Identity(
             id=Identity.generate_id(name="CrowdStrike", identity_class="organization"),
             name="CrowdStrike",
-            identity_class="organization"
+            identity_class="organization",
         )
         return author
 
@@ -109,7 +109,9 @@ class ConverterToStix:
             size = file.get("size")
             size_display = f"{size:,} bytes" if size is not None else "--"
             complete = file.get("complete_data_set")
-            complete_display = "Yes" if complete else ("No" if complete is False else "--")
+            complete_display = (
+                "Yes" if complete else ("No" if complete is False else "--")
+            )
             download_urls = file.get("download_urls") or []
 
             lines.append(f"**File {index}**\n")
@@ -294,13 +296,16 @@ class ConverterToStix:
             inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_exposed_data_content(notification_detail)
             for item in notification_detail.get("breach_details", {}).get("items", []):
-                if item.get("malware_family") and item.get("malware_family") != "unknown":
+                if (
+                    item.get("malware_family")
+                    and item.get("malware_family") != "unknown"
+                ):
                     malware = stix2.Malware(
                         id=pycti.Malware.generate_id(item.get("malware_family")),
                         name=item.get("malware_family"),
                         is_family=True,
                         created_by_ref=self.author.id,
-                        object_marking_refs=[self.tlp_marking.id]
+                        object_marking_refs=[self.tlp_marking.id],
                     )
                     inc_sco_sdo_refs.append(malware.id)
                     stix_objects.append(malware)
@@ -311,18 +316,18 @@ class ConverterToStix:
                         object_marking_refs=[self.tlp_marking.id],
                         custom_properties={
                             "x_opencti_created_by_ref": self.author.id,
-                        }
+                        },
                     )
                     inc_sco_sdo_refs.append(email_address.id)
                     stix_objects.append(email_address)
                 if item.get("login_id"):
                     user_account = stix2.UserAccount(
-                        account_login=item.get("email"),
+                        account_login=item.get("login_id"),
                         allow_custom=True,
                         object_marking_refs=[self.tlp_marking.id],
                         custom_properties={
                             "x_opencti_created_by_ref": self.author.id,
-                        }
+                        },
                     )
                     inc_sco_sdo_refs.append(user_account.id)
                     stix_objects.append(user_account)
@@ -334,7 +339,7 @@ class ConverterToStix:
                         object_marking_refs=[self.tlp_marking.id],
                         custom_properties={
                             "x_opencti_created_by_ref": self.author.id,
-                        }
+                        },
                     )
                     inc_sco_sdo_refs.append(url.id)
                     stix_objects.append(url)
@@ -346,7 +351,7 @@ class ConverterToStix:
                         object_marking_refs=[self.tlp_marking.id],
                         custom_properties={
                             "x_opencti_created_by_ref": self.author.id,
-                        }
+                        },
                     )
                     inc_sco_sdo_refs.append(domain_name.id)
                     stix_objects.append(domain_name)
@@ -371,12 +376,15 @@ class ConverterToStix:
         else:
             self.helper.connector_logger.error(
                 "Unsupported notification type, skipping alert",
-                {"item_type": notification.get("item_type"), "notification_id": notification.get("id")},
+                {
+                    "item_type": notification.get("item_type"),
+                    "notification_id": notification.get("id"),
+                },
             )
             return []
 
         # Create the incident
-        incident_name = notification.get("rule_name") +" : "+title
+        incident_name = notification.get("rule_name") + " : " + title
         alert_detail_bytes = alert_detail.encode("utf-8")
         base64_bytes = base64.b64encode(alert_detail_bytes)
         attachment_files.append(
@@ -400,9 +408,9 @@ class ConverterToStix:
             allow_custom=True,
             custom_properties={
                 "severity": notification.get("rule_priority"),
-                "incident_type":incident_type,
+                "incident_type": incident_type,
                 "x_opencti_files": attachment_files,
-            }
+            },
         )
         stix_objects.append(stix_incident)
 
