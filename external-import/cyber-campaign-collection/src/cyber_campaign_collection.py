@@ -66,9 +66,10 @@ class CyberMonitor:
         #
         # ``None`` / empty / whitespace-only inputs become ``None`` so we
         # never emit ``report_types=['   ']`` on the STIX ``Report``. The
-        # final list is unconditionally wrapped at the call-site below, so
-        # storing the list shape here avoids the nested ``[['a','b']]``
-        # bug a list input would otherwise cause.
+        # normalised value is passed straight through to
+        # ``stix2.Report(report_types=...)`` at the call-site (no further
+        # wrapping), so storing it as a flat list here matches what STIX
+        # expects to receive.
         self.cyber_monitor_report_type = self._normalize_report_type(report_type_raw)
         # ``x_opencti_report_status`` is the legacy integer workflow position. The
         # configuration accepts either the integer directly (e.g. ``2``) or one of
