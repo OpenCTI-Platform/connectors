@@ -1,12 +1,12 @@
 import base64
 import hashlib
 import json
-import os
 import pprint
 import sys
 import time
 import traceback
 from datetime import datetime, timezone
+from typing import Optional
 
 import lib.intel2stix
 import requests
@@ -22,6 +22,7 @@ from pycti import Incident as PyctiIncident
 from pycti import Report as PyctiReport
 from pycti import StixCoreRelationship as PyctiSCR
 from pycti import ThreatActorIndividual as PyctiTAI
+from pycti import get_config_variable
 from stix2 import Identity, Incident, Relationship, Report
 
 # Default timeout (seconds) applied to every Intel471 HTTP call so that a
@@ -77,20 +78,53 @@ class Intel471AlertsConnector(ExternalImportConnector):
         """
         super().__init__()
 
-        self.intel471_api_url = os.environ.get(
-            "INTEL471_API_URL", "https://api.intel471.com/v1"
+        # Connector-specific settings are loaded through
+        # ``get_config_variable`` so they honour both ``src/config.yml``
+        # (nested ``intel471.*`` keys) and the documented environment
+        # variables (``INTEL471_*``). The base class already loaded the
+        # config in ``__init__``; we reuse the same on-disk file rather
+        # than reaching into the helper's internals.
+        config = self._load_config()
+
+        self.intel471_api_url = get_config_variable(
+            "INTEL471_API_URL",
+            ["intel471", "api_url"],
+            config,
+            default="https://api.intel471.com/v1",
         )
-        self.intel471_api_username = os.environ.get("INTEL471_API_USERNAME")
-        self.intel471_api_key = os.environ.get("INTEL471_API_KEY")
-        self.intel471_initial_history_alerts = os.environ.get(
-            "INTEL471_DARKNET_INITIAL_HISTORY_ALERTS", "0"
+        self.intel471_api_username = get_config_variable(
+            "INTEL471_API_USERNAME",
+            ["intel471", "api_username"],
+            config,
+        )
+        self.intel471_api_key = get_config_variable(
+            "INTEL471_API_KEY",
+            ["intel471", "api_key"],
+            config,
+        )
+        self.intel471_initial_history_alerts = str(
+            get_config_variable(
+                "INTEL471_DARKNET_INITIAL_HISTORY_ALERTS",
+                ["intel471", "initial_history_alerts"],
+                config,
+                default="0",
+            )
+            or "0"
         )
         # ``object_marking_refs`` expects a *list* of marking-definition
         # references, so we store the resolved id as a one-element list.
         # Every callsite ends up writing ``object_marking_refs=self.intel471_darknet_tlp``
         # which therefore produces a valid STIX value.
         self.intel471_darknet_tlp = [
-            self._get_tlp(os.environ.get("INTEL471_DARKNET_TLP", "AMBER"))
+            self._get_tlp(
+                get_config_variable(
+                    "INTEL471_DARKNET_TLP",
+                    ["intel471", "tlp"],
+                    config,
+                    default="AMBER",
+                )
+                or "AMBER"
+            )
         ]
         self.intel471_watchers = {}
 
@@ -251,17 +285,11 @@ class Intel471AlertsConnector(ExternalImportConnector):
         )
         if "lastUpdated" in privateMessage:
             lu = privateMessage["lastUpdated"] / 1000
-            x_lastupdate = get_date(
-                datetime.utcfromtimestamp(lu).strftime(
-                    stix2.utils._TIMESTAMP_FORMAT_FRAC
-                )
-            )
+            x_lastupdate = get_date(_stix_timestamp(lu))
         else:
             x_lastupdate = ""
         d = privateMessage["date"] / 1000
-        x_date = datetime.utcfromtimestamp(d).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_date = _stix_timestamp(d)
 
         # are there some images?
         octi_filelist = []
@@ -492,17 +520,11 @@ class Intel471AlertsConnector(ExternalImportConnector):
             x_thread = ""
         if "lastUpdated" in post:
             lu = post["lastUpdated"] / 1000
-            x_lastupdate = get_date(
-                datetime.utcfromtimestamp(lu).strftime(
-                    stix2.utils._TIMESTAMP_FORMAT_FRAC
-                )
-            )
+            x_lastupdate = get_date(_stix_timestamp(lu))
         else:
             x_lastupdate = ""
         d = post["date"] / 1000
-        x_date = datetime.utcfromtimestamp(d).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_date = _stix_timestamp(d)
 
         # are there some images?
         octi_filelist = []
@@ -671,13 +693,9 @@ class Intel471AlertsConnector(ExternalImportConnector):
             if "first" in instantMessage["activity"]
             else 0
         )
-        x_date = datetime.utcfromtimestamp(d).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_date = _stix_timestamp(d)
         lu = instantMessage["last_updated"] / 1000
-        x_lastupdate = get_date(
-            datetime.utcfromtimestamp(lu).strftime(stix2.utils._TIMESTAMP_FORMAT_FRAC)
-        )
+        x_lastupdate = get_date(_stix_timestamp(lu))
 
         # add message textfile
         octi_filelist = [
@@ -835,18 +853,14 @@ class Intel471AlertsConnector(ExternalImportConnector):
         x_url = report["portalReportUrl"] if "portalReportUrl" in report else ""
         x_doc_family = report["documentFamily"] if "documentFamily" in report else ""
         doi = report["dateOfInformation"] / 1000
-        x_doi = get_date(
-            datetime.utcfromtimestamp(doi).strftime(stix2.utils._TIMESTAMP_FORMAT_FRAC)
-        )
+        x_doi = get_date(_stix_timestamp(doi))
         if "released" in report:
             dr = report["released"] / 1000
         elif "created" in report:
             dr = report["created"] / 1000
         else:
             dr = 0
-        x_date = datetime.utcfromtimestamp(dr).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_date = _stix_timestamp(dr)
         x_rep_description = ""
         if x_subject:
             x_rep_description += f"### Subject\n\n{x_subject}\n\n"
@@ -860,7 +874,13 @@ class Intel471AlertsConnector(ExternalImportConnector):
             x_rep_description += f"### Date of information\n\n{x_doi}\n\n"
 
         x_obj_refs = []
-        x_ext_refs = [{"source_name": "Intel471 Inc.", "url": x_url}]
+        # STIX external-reference URLs must be valid URLs, so we only
+        # emit the Intel 471 portal reference when ``portalReportUrl``
+        # was actually provided. Other report fields (sources, entities,
+        # ...) still attach their own external references below.
+        x_ext_refs = []
+        if x_url:
+            x_ext_refs.append({"source_name": "Intel471 Inc.", "url": x_url})
         x_actors = []
         x_labels = []
 
@@ -1038,17 +1058,11 @@ class Intel471AlertsConnector(ExternalImportConnector):
             spotReport["data"]["spot_report"]["spot_report_data"]["date_of_information"]
             / 1000
         )
-        x_doi = get_date(
-            datetime.utcfromtimestamp(doi).strftime(stix2.utils._TIMESTAMP_FORMAT_FRAC)
-        )
+        x_doi = get_date(_stix_timestamp(doi))
         r = spotReport["data"]["spot_report"]["spot_report_data"]["released_at"] / 1000
-        x_released = datetime.utcfromtimestamp(r).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_released = _stix_timestamp(r)
         lu = spotReport["last_updated"] / 1000
-        x_lastupdate = get_date(
-            datetime.utcfromtimestamp(lu).strftime(stix2.utils._TIMESTAMP_FORMAT_FRAC)
-        )
+        x_lastupdate = get_date(_stix_timestamp(lu))
 
         x_rep_description = (
             f"### Title\n\n{x_title}\n\n"
@@ -1135,22 +1149,16 @@ class Intel471AlertsConnector(ExternalImportConnector):
         objects = []
         x_title = breachAlert["data"]["breach_alert"]["title"]
         doi = breachAlert["data"]["breach_alert"]["date_of_information"] / 1000
-        x_doi = get_date(
-            datetime.utcfromtimestamp(doi).strftime(stix2.utils._TIMESTAMP_FORMAT_FRAC)
-        )
+        x_doi = get_date(_stix_timestamp(doi))
         r = breachAlert["data"]["breach_alert"]["released_at"] / 1000
-        x_released = datetime.utcfromtimestamp(r).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_released = _stix_timestamp(r)
         x_confidence = breachAlert["data"]["breach_alert"]["confidence"]
         x_confidence_int = lib.intel2stix.getBreachConfidence(x_confidence["level"])
         self.helper.log_debug(
             f"Breach Confidence: {x_confidence['level']} aka {x_confidence_int}"
         )
         lu = breachAlert["last_updated"] / 1000
-        x_lastupdate = get_date(
-            datetime.utcfromtimestamp(lu).strftime(stix2.utils._TIMESTAMP_FORMAT_FRAC)
-        )
+        x_lastupdate = get_date(_stix_timestamp(lu))
 
         x_rep_description = (
             f"### Title\n\n{x_title}\n\n"
@@ -1319,11 +1327,18 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 objects.append(r)
                 x_obj_refs.append(r)
 
-        # add summary
+        # add summary. Breach summaries can carry victim details and
+        # other sensitive Intel 471 content, so we log only its length /
+        # presence here and keep the full content inside the STIX
+        # attachment.
         octi_filelist = []
         if "summary" in breachAlert["data"]["breach_alert"]:
             summary = breachAlert["data"]["breach_alert"]["summary"]
-            self.helper.log_debug(f"Summary: {summary}")
+            self.helper.log_debug(
+                f"Breach summary attached ({len(summary)} bytes)"
+                if summary
+                else "Breach summary present but empty"
+            )
             octi_filelist.append(
                 {
                     "name": "summary.html",
@@ -1395,29 +1410,17 @@ class Intel471AlertsConnector(ExternalImportConnector):
             x_forums = x_forums[0:-2]
         if "lastUpdated" in actor:
             lu = actor["lastUpdated"] / 1000
-            x_lastupdate = get_date(
-                datetime.utcfromtimestamp(lu).strftime(
-                    stix2.utils._TIMESTAMP_FORMAT_FRAC
-                )
-            )
+            x_lastupdate = get_date(_stix_timestamp(lu))
         else:
             x_lastupdate = ""
         if "activeFrom" in actor:
             af = actor["activeFrom"] / 1000
-            x_active_from = get_date(
-                datetime.utcfromtimestamp(af).strftime(
-                    stix2.utils._TIMESTAMP_FORMAT_FRAC
-                )
-            )
+            x_active_from = get_date(_stix_timestamp(af))
         else:
             x_active_from = ""
         if "activeUntil" in actor:
             au = actor["activeUntil"] / 1000
-            x_active_until = get_date(
-                datetime.utcfromtimestamp(au).strftime(
-                    stix2.utils._TIMESTAMP_FORMAT_FRAC
-                )
-            )
+            x_active_until = get_date(_stix_timestamp(au))
         else:
             x_active_until = ""
         x_actor_description = (
@@ -1568,9 +1571,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 "mime_type": "txt",
             }
         ]
-        x_foundtime = datetime.utcfromtimestamp(alert["foundTime"] / 1000).strftime(
-            stix2.utils._TIMESTAMP_FORMAT_FRAC
-        )
+        x_foundtime = _stix_timestamp(alert["foundTime"] / 1000)
         x_watcher_description = ""
         if "watcherUid" in alert:
             # Watcher collection may have failed at startup, or the API may
@@ -1745,45 +1746,37 @@ class Intel471AlertsConnector(ExternalImportConnector):
 
         return bundle
 
-    def _collect_intelligence(self, start) -> []:
-        """
-        Collects alerts from Intel471
-        Returns:
-            stix_objects: A list of STIX2 objects.
+    def _collect_intelligence(self, since: Optional[datetime] = None) -> list:
+        """Collect Intel 471 alerts and return them as STIX 2 objects.
+
+        ``since`` is the timezone-aware UTC :class:`datetime.datetime`
+        returned by the base ``ExternalImportConnector`` scheduler (or
+        ``None`` on the very first run). It is converted into the
+        epoch-seconds value expected by ``_collect_alerts``; when no
+        previous ``last_run`` is recorded we fall back to the
+        ``INTEL471_DARKNET_INITIAL_HISTORY_ALERTS`` configuration value.
         """
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
         stix_objects = []
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
-        self.helper.log_debug("Starting Intel471 alerts collection...")
-        self.helper.log_debug(
-            "Start = "
-            + str(start)
-            + " / intel471_initial_history_alerts = "
-            + str(self.intel471_initial_history_alerts)
-        )
-
-        if start == 0:
+        if since is None:
             start_time = int(self.intel471_initial_history_alerts)
         else:
-            start_time = start
+            start_time = int(since.timestamp())
+
+        self.helper.log_debug(
+            f"Start = {start_time} (since={since!r}) / "
+            f"intel471_initial_history_alerts = {self.intel471_initial_history_alerts}"
+        )
 
         stix_objects.extend(self._collect_alerts(start_time))
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
-
         self.helper.log_info(
-            f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
+            f"{len(stix_objects)} STIX2 objects have been compiled by "
+            f"{self.helper.connect_name} connector. "
         )
-
-        # for obj in stix_objects:
-        #    self.helper.log_debug(f"Stix Object= {obj}")
 
         return stix_objects
 

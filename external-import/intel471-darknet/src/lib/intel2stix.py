@@ -16,41 +16,43 @@ from pycti.entities.opencti_threat_actor_individual import (
 from pycti.entities.opencti_vulnerability import Vulnerability as PyctiVulnerability
 from stix2 import CustomObservable
 from stix2.canonicalization.Canonicalize import canonicalize
+from stix2.properties import (
+    ListProperty,
+    ReferenceProperty,
+    StringProperty,
+)
+
+# STIX 2.1 expects ``object_marking_refs`` to be a list of marking-definition
+# references. The previous definition used ``StringProperty``, which would
+# have made callers (which pass a list of marking ids) emit invalid STIX
+# and could prevent OpenCTI ingestion.
+_OBJECT_MARKING_REFS_PROPERTY = ListProperty(
+    ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
+)
 
 
 @CustomObservable(
     "cryptographic-key",
     [
-        ("id", stix2.properties.StringProperty(required=True)),
-        ("value", stix2.properties.StringProperty(required=True)),
-        ("description", stix2.properties.StringProperty()),
-        ("created_by_ref", stix2.properties.ReferenceProperty(valid_types="identity")),
-        ("object_marking_refs", stix2.properties.StringProperty()),
+        ("id", StringProperty(required=True)),
+        ("value", StringProperty(required=True)),
+        ("description", StringProperty()),
+        ("created_by_ref", ReferenceProperty(valid_types="identity")),
+        ("object_marking_refs", _OBJECT_MARKING_REFS_PROPERTY),
     ],
 )
 class CryptoKey:
     pass
 
 
-"""
-@CustomObservable('cryptocurrency-wallet',[
-    ('value', stix2.properties.StringProperty(required=True)),
-    ('description', stix2.properties.StringProperty()),
-    ('object_marking_refs', stix2.properties.StringProperty()),
-])
-class CryptoWallet():
-    pass
-"""
-
-
 @CustomObservable(
     "phone-number",
     [
-        ("id", stix2.properties.StringProperty(required=True)),
-        ("value", stix2.properties.StringProperty(required=True)),
-        ("description", stix2.properties.StringProperty()),
-        ("created_by_ref", stix2.properties.ReferenceProperty(valid_types="identity")),
-        ("object_marking_refs", stix2.properties.StringProperty()),
+        ("id", StringProperty(required=True)),
+        ("value", StringProperty(required=True)),
+        ("description", StringProperty()),
+        ("created_by_ref", ReferenceProperty(valid_types="identity")),
+        ("object_marking_refs", _OBJECT_MARKING_REFS_PROPERTY),
     ],
 )
 class PhoneNumber:
@@ -599,9 +601,10 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 custom_properties={"created_by_ref": creator},
                 object_marking_refs=markings,
             )
+            pattern = f"[file:hashes.'MD5' = '{h}']"
             indicator = stix2.Indicator(
-                id=PyctiIndicator.generate_id(f"[file:hashes.md5:value='{h}']"),
-                pattern=f"[file:hashes.md5:value='{h}']",
+                id=PyctiIndicator.generate_id(pattern),
+                pattern=pattern,
                 pattern_type="stix",
                 created_by_ref=creator,
                 object_marking_refs=markings,
@@ -626,9 +629,10 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 custom_properties={"created_by_ref": creator},
                 object_marking_refs=markings,
             )
+            pattern = f"[file:hashes.'SHA-1' = '{h}']"
             indicator = stix2.Indicator(
-                id=PyctiIndicator.generate_id(f"[file:hashes.sha1:value='{h}']"),
-                pattern=f"[file:hashes.sha1:value='{h}']",
+                id=PyctiIndicator.generate_id(pattern),
+                pattern=pattern,
                 pattern_type="stix",
                 created_by_ref=creator,
                 object_marking_refs=markings,
@@ -653,9 +657,10 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 custom_properties={"created_by_ref": creator},
                 object_marking_refs=markings,
             )
+            pattern = f"[file:hashes.'SHA-256' = '{h}']"
             indicator = stix2.Indicator(
-                id=PyctiIndicator.generate_id(f"[file:hashes.sha256:value='{h}']"),
-                pattern=f"[file:hashes.sha256:value='{h}']",
+                id=PyctiIndicator.generate_id(pattern),
+                pattern=pattern,
                 pattern_type="stix",
                 created_by_ref=creator,
                 object_marking_refs=markings,

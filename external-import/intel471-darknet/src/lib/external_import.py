@@ -1,21 +1,21 @@
 """Base class for the Intel 471 darknet external-import connector.
 
-The class is intentionally kept self-contained so the connector can run both
-inside Docker (configuration via environment variables) and as a plain
-Python process (configuration via ``src/config.yml``). The implementation
-fixes three issues flagged in review against the initial copy of this
-helper:
+The class is intentionally kept self-contained so the connector can run
+both inside Docker (configuration via environment variables) and as a
+plain Python process (configuration via ``src/config.yml``).
 
-* ``CONNECTOR_UPDATE_EXISTING_DATA`` is now coerced into a real
-  :class:`bool` (no more silent fall-back to the truthy string ``"false"``
-  or the ``.lower`` call on a bool);
-* ``CONNECTOR_RUN_EVERY`` raises a clear ``ValueError`` with a helpful
-  message when missing or malformed, instead of leaking
-  ``AttributeError: 'NoneType' object has no attribute 'lower'`` past the
-  ``TypeError`` handler;
-* timestamps are computed with timezone-aware :func:`datetime.now` /
-  :func:`datetime.fromtimestamp` so the connector compiles cleanly on
-  Python 3.12+.
+Notable behaviours:
+
+* ``CONNECTOR_UPDATE_EXISTING_DATA`` is coerced into a real :class:`bool`
+  so an invalid value cannot turn into a truthy string fall-back.
+* ``CONNECTOR_RUN_EVERY`` raises a clear ``ValueError`` for missing /
+  malformed values.
+* Timestamps are computed with timezone-aware :func:`datetime.now` /
+  :func:`datetime.fromtimestamp`.
+* ``_run_cycle`` only advances ``last_run`` (and marks the work as
+  successful) when collection and bundle send both complete without
+  raising; otherwise the work is marked in-error and the cursor is
+  left untouched so the next run retries from the same window.
 """
 
 import os
@@ -180,6 +180,15 @@ class ExternalImportConnector:
             time.sleep(self._sleep_seconds(interval_seconds))
 
     def _run_cycle(self, *, last_run, timestamp: int) -> None:
+        """Execute one collection cycle and persist the new ``last_run``.
+
+        ``last_run`` is only advanced and the work is only marked as
+        successfully processed when the entire cycle (collection +
+        bundle send) completes without raising. On failure, the work
+        is marked in-error and the cursor is left untouched so the
+        next run retries from the same window instead of silently
+        skipping the failed window.
+        """
         self.helper.log_info(f"{self.helper.connect_name} will run!")
         now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
         friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
@@ -208,7 +217,19 @@ class ExternalImportConnector:
                     work_id=work_id,
                 )
         except Exception as exc:  # noqa: BLE001 - keep looping on errors
-            self.helper.log_error(str(exc))
+            self.helper.log_error(
+                f"{self.helper.connect_name} run failed: {exc}. "
+                "last_run will NOT be advanced."
+            )
+            try:
+                self.helper.api.work.to_processed(
+                    work_id, f"Run failed: {exc}", in_error=True
+                )
+            except Exception as report_exc:  # noqa: BLE001
+                self.helper.log_error(
+                    f"Could not mark work {work_id} as failed: {report_exc}"
+                )
+            return
 
         message = (
             f"{self.helper.connect_name} connector successfully run, "
