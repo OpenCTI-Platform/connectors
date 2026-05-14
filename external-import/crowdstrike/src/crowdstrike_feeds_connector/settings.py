@@ -264,6 +264,17 @@ class CrowdstrikeConfig(BaseConfigModel):
             "Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'."
         ),
     )
+    indicator_max_records_per_run: int = Field(
+        default=20000,
+        description=(
+            "Maximum number of indicators ingested in a single run of the "
+            "connector. CrowdStrike can return up to ~1.5M IoCs for the last "
+            "30 days, which would overwhelm the OpenCTI ingestion pipeline; "
+            "pagination stops when this cap is reached. Set to 0 (or a "
+            "negative number) to disable the cap and fetch every available "
+            "indicator."
+        ),
+    )
 
     # Trigger import configuration
     no_file_trigger_import: bool = Field(

@@ -300,6 +300,11 @@
       },
       "type": "array"
     },
+    "CROWDSTRIKE_INDICATOR_MAX_RECORDS_PER_RUN": {
+      "default": 20000,
+      "description": "Maximum number of indicators ingested in a single run of the connector. CrowdStrike can return up to ~1.5M IoCs for the last 30 days, which would overwhelm the OpenCTI ingestion pipeline; pagination stops when this cap is reached. Set to 0 (or a negative number) to disable the cap and fetch every available indicator.",
+      "type": "integer"
+    },
     "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT": {
       "default": true,
       "description": "Whether to trigger import without file dependencies.",
