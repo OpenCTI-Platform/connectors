@@ -19,6 +19,7 @@ from .constants import (
     PHONE_ENRICH,
     SOURCE_NAME,
     URL_ENRICH,
+    to_bool,
 )
 
 
@@ -235,8 +236,15 @@ class IPQSConnector:
         if not response:
             return "No leak data found or API error."
 
-        exposed = bool(response.get("exposed", False))
-        plain_text_password = bool(response.get("plain_text_password", False))
+        # ``exposed`` and ``plain_text_password`` are encoded by IPQS as
+        # native JSON booleans on some payloads and as the strings
+        # ``"True"`` / ``"False"`` on others (matching the legacy GET
+        # endpoints used by ``_query``). The shared ``to_bool`` helper
+        # normalises both so a ``"False"`` payload (non-empty string,
+        # therefore truthy under ``bool(...)``) does not silently force
+        # the verdict to ``CRITICAL``.
+        exposed = to_bool(response.get("exposed"))
+        plain_text_password = to_bool(response.get("plain_text_password"))
 
         # Verdict policy: any exposure -> CRITICAL, otherwise CLEAN.
         score = 100 if exposed or plain_text_password else 0
@@ -302,7 +310,7 @@ class IPQSConnector:
         if observable is None:
             raise ValueError(
                 "Observable not found (or the connector does "
-                "not has access to this observable, "
+                "not have access to this observable, "
                 "check the group of the connector user)",
             )
         self.helper.log_debug(f"[IPQS] starting enrichment of observable: {observable}")

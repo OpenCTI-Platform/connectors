@@ -6,9 +6,41 @@ strings and makes adding new endpoints a one-file change.
 """
 
 from enum import Enum
+from typing import Any
 
 # Connector ----------------------------------------------------------------
 SOURCE_NAME = "IPQS"
+
+
+def to_bool(value: Any) -> bool:
+    """Normalise an IPQS boolean field to a real :class:`bool`.
+
+    IPQS endpoints are inconsistent about how they encode boolean
+    fields: some return native JSON booleans, others return the
+    *string* ``"True"`` / ``"False"`` (notably the legacy IP / URL /
+    Email / Phone endpoints, see :mod:`builder` where ``valid`` and
+    ``disposable`` are matched as strings). A naive ``bool(value)``
+    would treat ``"False"`` as truthy because it is a non-empty
+    string, silently flipping a clean lookup to ``CRITICAL``. This
+    helper is the single source of truth for IPQS boolean normalisation
+    and is used everywhere a boolean-shaped field is read off an IPQS
+    response.
+
+    Returns:
+        * the value itself when it is already a :class:`bool`;
+        * :data:`True` for the integer / float ``1`` and for any string
+          whose lower-case representation is one of
+          ``true`` / ``1`` / ``yes`` / ``on``;
+        * :data:`False` for every other input (including ``None``).
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value == 1
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes", "on")
+    return False
+
 
 # IPQualityScore endpoint slugs.
 IP_ENRICH = "ip"

@@ -20,6 +20,7 @@ from .constants import (
     LEAK_USERNAME_OR_EMAIL,
     PHONE_ENRICH_FIELDS,
     URL_ENRICH_FIELDS,
+    to_bool,
 )
 
 # Default per-request timeout (seconds) applied to every HTTP call so a
@@ -91,7 +92,7 @@ class IPQSClient:
             )
             return None
 
-        if str(data.get("success")) != "True":
+        if not to_bool(data.get("success")):
             self.helper.log_error(f"Error: {data.get('message')}")
             return None
         return data
@@ -161,7 +162,15 @@ class IPQSClient:
             )
             return None
 
-        if not data.get("success", False):
+        # IPQS encodes ``success`` either as a native JSON boolean or as
+        # the strings ``"True"`` / ``"False"`` depending on the endpoint
+        # (the legacy GET endpoints handled by ``_query`` use the string
+        # form). ``to_bool`` normalises both shapes so a ``success ==
+        # "False"`` payload from the leaked API is treated as a failure
+        # — a naive ``data.get("success", False)`` would treat the
+        # non-empty string ``"False"`` as truthy and let a failed lookup
+        # produce indicators / labels.
+        if not to_bool(data.get("success")):
             self.helper.log_error(f"IPQS leaked API error: {data.get('message')}")
             return None
         return data

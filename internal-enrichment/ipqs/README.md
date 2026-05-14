@@ -192,16 +192,15 @@ The connector renders an `IPQS:VERDICT="…"` label on each enriched
 observable. The mapping is endpoint-specific (see `builder.py` for the
 exact match statements) but follows the same colour palette:
 
-| Verdict label   | Hex colour | Meaning                                                                            |
-|-----------------|------------|------------------------------------------------------------------------------------|
-| CLEAN           | `#CDCDCD`  | No evidence of risk.                                                               |
-| LOW RISK        | `#CDCDCD`  | Marginal score, observable is probably benign.                                     |
-| MODERATE RISK   | `#FFCF00`  | Mid-range fraud score; investigate.                                                |
-| SUSPICIOUS      | `#FFCF00`  | Mid-range fraud score with one or more risky attributes.                           |
-| HIGH RISK       | `#D10028`  | High fraud score.                                                                  |
-| CRITICAL        | `#D10028`  | Score == 100, or `exposed`/`plain_text_password` for User-Account.                 |
-| INVALID         | `#D10028`  | The observable is invalid according to IPQS (e.g. malformed email).                |
-| DISPOSABLE      | `#D10028`  | The email is on a disposable-provider list.                                        |
+| Verdict label   | Hex colour | Meaning                                                                                                                       |
+|-----------------|------------|-------------------------------------------------------------------------------------------------------------------------------|
+| CLEAN           | `#CDCDCD`  | No evidence of risk.                                                                                                          |
+| LOW RISK        | `#CDCDCD`  | Marginal score, observable is probably benign.                                                                                |
+| MODERATE RISK   | `#FFCF00`  | Mid-range fraud score; investigate.                                                                                           |
+| SUSPICIOUS      | `#FFCF00`  | Mid-range fraud score with one or more risky attributes.                                                                      |
+| HIGH RISK       | `#D10028`  | High fraud score.                                                                                                             |
+| CRITICAL        | `#D10028`  | Score == 100, IPQS-flagged disposable email, or `exposed`/`plain_text_password` for User-Account.                             |
+| INVALID         | `#D10028`  | The observable is invalid according to IPQS (e.g. malformed email).                                                           |
 
 ### Generated STIX Objects
 
