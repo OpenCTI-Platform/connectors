@@ -50,13 +50,19 @@ class CyberMonitor:
         self.cyber_monitor_interval = get_config_variable(
             "CYBER_MONITOR_INTERVAL", ["cyber_monitor", "interval"], config, True
         )
-        self.cyber_monitor_report_type = get_config_variable(
+        report_type_raw = get_config_variable(
             "CYBER_MONITOR_REPORT_TYPE",
             ["cyber_monitor", "report_type"],
             config,
             False,
             None,
         )
+        # Normalize the optional ``report_type``: treat ``None`` / empty /
+        # whitespace-only strings as "not configured" so we never emit
+        # ``report_types=['   ']`` on the STIX ``Report``.
+        if isinstance(report_type_raw, str):
+            report_type_raw = report_type_raw.strip() or None
+        self.cyber_monitor_report_type = report_type_raw
         # ``x_opencti_report_status`` is the legacy integer workflow position. The
         # configuration accepts either the integer directly (e.g. ``2``) or one of
         # the well-known status names below which are translated to the matching
@@ -95,16 +101,26 @@ class CyberMonitor:
 
     @classmethod
     def _normalize_report_status(cls, raw):
-        """Return an int report-status or ``None`` when no value is configured."""
-        if raw is None or raw == "":
+        """Return an int report-status or ``None`` when no value is configured.
+
+        Booleans are rejected explicitly (``isinstance(True, int)`` is ``True``
+        in Python, so a misconfigured ``report_status: true`` would otherwise
+        leak ``True`` into ``x_opencti_report_status``).
+        """
+        if raw is None:
+            return None
+        if isinstance(raw, bool):
             return None
         if isinstance(raw, int):
             return raw
+        candidate = str(raw).strip()
+        if not candidate:
+            return None
         try:
-            return int(str(raw).strip())
+            return int(candidate)
         except (TypeError, ValueError):
             pass
-        return cls._REPORT_STATUS_MAP.get(str(raw).strip().lower())
+        return cls._REPORT_STATUS_MAP.get(candidate.lower())
 
     def get_interval(self):
         return int(self.cyber_monitor_interval) * 60 * 60 * 24
