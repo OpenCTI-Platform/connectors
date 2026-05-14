@@ -3,13 +3,14 @@ from typing import Literal
 
 import pycti
 import stix2
+from dateutil.parser import parse
 from pycti import (
     Identity,
+    Incident,
     MarkingDefinition,
     OpenCTIConnectorHelper,
-    StixCoreRelationship, Incident,
+    StixCoreRelationship,
 )
-from dateutil.parser import parse
 
 
 class ConverterToStix:

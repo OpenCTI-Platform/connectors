@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
-from pycti import OpenCTIConnectorHelper
 from crowdstrike_client import CrowdstrikeReconClient
+from pycti import OpenCTIConnectorHelper
 
 
 class CrowdstrikeReconConnector:
