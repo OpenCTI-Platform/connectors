@@ -16,18 +16,20 @@ class CrowdstrikeReconClient:
         filter_priority: str = "",
     ):
         """
-        Initialize the client with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `api_key`) if necessary.
+        Initialize the CrowdStrike Recon API client.
 
         Args:
-            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            base_url (str): Crowdstrike Falcon API base URL.
-            client_id (str): Crowdstrike Falcon API client ID.
-            client_secret (str): Crowdstrike Falcon API client Secret.
-            filter_topic (str): Comma-separated topic name(s) to filter notifications. Empty means no filtering.
-            filter_type (str): Comma-separated type(s) to filter notifications. Empty means no filtering.
-            filter_priority (str): Comma-separated priority(ies) to filter notifications. Empty means no filtering.
+            helper (OpenCTIConnectorHelper): Connector helper used for logging.
+            base_url (HttpUrl): CrowdStrike Falcon API base URL.
+            client_id (str): CrowdStrike Falcon API client ID.
+            client_secret (str): CrowdStrike Falcon API client secret.
+            filter_topic (str): Comma-separated topic name(s) used to filter
+                notifications. An empty string disables topic filtering.
+            filter_type (str): Comma-separated type(s) used to filter
+                notifications. An empty string disables type filtering.
+            filter_priority (str): Comma-separated priority value(s) used to
+                filter notifications. An empty string disables priority
+                filtering.
         """
         self.helper = helper
         self.base_url = base_url
