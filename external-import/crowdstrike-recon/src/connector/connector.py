@@ -24,9 +24,9 @@ class CrowdstrikeReconConnector:
         helper (OpenCTIConnectorHelper):
             Handle the connection and the requests between the connector, OpenCTI and the workers.
             _All connectors MUST use the connector helper with connector's configuration._
-        client (TemplateClient):
+        client (CrowdstrikeReconClient):
             Provide methods to request the external API.
-        converter_to_stix (ConnectorConverter):
+        converter_to_stix (ConverterToStix):
             Provide methods for converting various types of input data into STIX 2.1 objects.
 
     ---
