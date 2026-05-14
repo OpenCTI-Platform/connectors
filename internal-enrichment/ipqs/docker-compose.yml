@@ -7,7 +7,9 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=IPQS Fraud and Risk Scoring
-      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number
+      # Adding ``Artifact`` to the scope activates the malware-file-scanner
+      # branch contributed by PR #5970 / issue #6199.
+      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number,Artifact
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
@@ -17,4 +19,7 @@ services:
       - IPQS_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN relationships
       # Domain specific config settings
       - IPQS_DOMAIN_ADD_RELATIONSHIPS=true # Whether or not to add IP resolution relationships
+      # TLP handling for the Artifact / malware-file-scanner branch.
+      - IPQS_DEFAULT_TLP=TLP:CLEAR # Used when the observable carries no explicit marking
+      - IPQS_MAX_TLP=TLP:AMBER # Observables with a higher TLP are skipped
     restart: always

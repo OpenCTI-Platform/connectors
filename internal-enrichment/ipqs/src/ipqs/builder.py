@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """IPQS builder module."""
 
+from typing import List, Optional
+
 import pycti
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import (
@@ -16,19 +18,32 @@ from stix2 import (
 class IPQSBuilder:
     """IPQS builder."""
 
+    # Verdict labels used by the fraud-and-risk-scoring branches.
+    _LABEL_COLOR_MALICIOUS = "#D10028"
+    _LABEL_COLOR_CLEAN = "#CDCDCD"
+
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
         author: Identity,
         observable: dict,
         score: int,
+        default_object_marking_refs: Optional[List[str]] = None,
     ) -> None:
-        """Initialize Virustotal builder."""
+        """Initialize IPQS builder.
+
+        ``default_object_marking_refs`` is used as a fallback when the
+        enriched observable does not carry any explicit marking, so STIX
+        objects produced by the Artifact branch (which doesn't go through
+        the fraud-scoring branches' implicit-marking-by-observable code
+        path) are never unintentionally unmarked.
+        """
         self.helper = helper
         self.author = author
         self.bundle = [self.author]
         self.observable = observable
         self.score = score
+        self.default_object_marking_refs = list(default_object_marking_refs or [])
         self.rf_white = "#CCCCCC"
         self.rf_grey = " #CDCDCD"
         self.rf_yellow = "#FFCF00"
@@ -44,11 +59,42 @@ class IPQSBuilder:
         self.phishing = "CRITICAL"
         self.disposable = "CRITICAL"
 
-        # Update score of observable.
-        self.helper.api.stix_cyber_observable.update_field(
-            id=self.observable["id"],
-            input={"key": "x_opencti_score", "value": str(self.score)},
-        )
+        # Update score of observable. Failure must not abort the
+        # enrichment — the indicator + relationship are still valuable
+        # even when the observable score cannot be persisted.
+        try:
+            self.helper.api.stix_cyber_observable.update_field(
+                id=self.observable["id"],
+                input={"key": "x_opencti_score", "value": str(self.score)},
+            )
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            self.helper.log_error(
+                f"[IPQS] Unable to update x_opencti_score on observable "
+                f"{self.observable.get('id')}: {error}"
+            )
+
+    def _get_object_marking_refs(self) -> List[str]:
+        """Extract object marking references from the observable.
+
+        OpenCTI exposes markings through the GraphQL ``objectMarking``
+        list (objects with a ``standard_id``) but some representations
+        may already provide plain marking ids. Both shapes are
+        supported. When the observable carries no markings, the
+        connector's default marking is used as a fallback.
+        """
+        object_marking_refs: List[str] = []
+        raw_markings = self.observable.get("objectMarking")
+        if raw_markings is None:
+            raw_markings = self.observable.get("object_marking_refs")
+        if isinstance(raw_markings, list):
+            for marking in raw_markings:
+                if isinstance(marking, dict) and "standard_id" in marking:
+                    object_marking_refs.append(marking["standard_id"])
+                elif isinstance(marking, str):
+                    object_marking_refs.append(marking)
+        if not object_marking_refs:
+            object_marking_refs = list(self.default_object_marking_refs)
+        return object_marking_refs
 
     def create_ip_resolves_to(self, ipv4: str):
         """
@@ -111,19 +157,41 @@ class IPQSBuilder:
         pattern: str,
         indicator_value: str,
         description: str,
+        detection: Optional[bool] = None,
     ):
+        """Create an Indicator and a ``based-on`` relationship to the observable.
+
+        ``labels`` accepts either the legacy ``{"value": [...]}`` shape
+        produced by the fraud-scoring helpers or a plain list of strings
+        (used by the Artifact / malware-scan branch).
+
+        When ``detection`` is provided, the indicator carries the
+        ``x_opencti_detection`` and ``x_opencti_main_observable_type``
+        custom properties so OpenCTI's detection rules can pick the
+        Artifact result up.
         """
-        Create an Indicator.
-
-        Objects created are added in the bundle.
-
-        pattern : str
-            Stix pattern for the indicator.
-        """
-
-        # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
 
         self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
+
+        # Backwards-compatible labels handling: the fraud-scoring
+        # helpers return ``self.helper.api.label.create(...)`` dicts that
+        # have a ``value`` key; the malware-scan helper returns a plain
+        # ``List[str]``.
+        if isinstance(labels, dict) and "value" in labels:
+            indicator_labels = labels["value"]
+        elif isinstance(labels, list):
+            indicator_labels = labels
+        else:
+            indicator_labels = []
+
+        custom_properties = {"x_opencti_score": self.score}
+        if detection is not None:
+            custom_properties["x_opencti_detection"] = bool(detection)
+            custom_properties["x_opencti_main_observable_type"] = self.observable.get(
+                "entity_type"
+            )
+
+        object_marking_refs = self._get_object_marking_refs()
 
         indicator = Indicator(
             id=pycti.Indicator.generate_id(pattern),
@@ -134,10 +202,9 @@ class IPQSBuilder:
             pattern=pattern,
             pattern_type="stix",
             # valid_until=self.helper.api.stix2.format_date(valid_until),
-            custom_properties={
-                "x_opencti_score": self.score,
-            },
-            labels=labels["value"],
+            custom_properties=custom_properties,
+            labels=indicator_labels,
+            object_marking_refs=object_marking_refs,
         )
         relationship = Relationship(
             id=StixCoreRelationship.generate_id(
@@ -151,8 +218,60 @@ class IPQSBuilder:
             target_ref=self.observable["standard_id"],
             confidence=self.helper.connect_confidence_level,
             allow_custom=True,
+            object_marking_refs=object_marking_refs,
         )
         self.bundle += [indicator, relationship]
+
+    # ------------------------------------------------------------------
+    # Artifact / malware-file-scanner branch
+    # ------------------------------------------------------------------
+    def add_reference(self, ipqs_resp: dict, observable: dict) -> None:
+        """Attach an IPQS external reference to the enriched observable.
+
+        Skips silently when the IPQS response does not include a
+        ``request_id`` (e.g., cached responses) since OpenCTI requires
+        an ``external_id`` on external references.
+        """
+        request_id = ipqs_resp.get("request_id")
+        if not request_id:
+            self.helper.log_debug(
+                "[IPQS] no request_id in response, skipping external reference."
+            )
+            return
+        try:
+            external_reference = self.helper.api.external_reference.create(
+                source_name="IPQS File Analyzer",
+                external_id=str(request_id),
+                description="IPQS file scan analysis",
+            )
+            self.helper.api.stix_cyber_observable.add_external_reference(
+                id=observable["id"],
+                external_reference_id=external_reference["id"],
+            )
+        except Exception as error:  # pylint: disable=broad-exception-caught
+            self.helper.log_error(
+                f"[IPQS] Unable to attach IPQS external reference to observable "
+                f"{observable.get('id')}: {error}"
+            )
+
+    def malware_file_detection(self, detected: bool) -> List[str]:
+        """Return the labels matching the IPQS malware-scan verdict.
+
+        Also attaches the label to the observable as a side effect so the
+        observable's UI labels stay in sync with the indicator's labels.
+        """
+        if not isinstance(detected, bool):
+            detected = str(detected).strip().lower() == "true"
+
+        if detected:
+            risk_criticality = "Malicious"
+            hex_color = self._LABEL_COLOR_MALICIOUS
+        else:
+            risk_criticality = "Clean"
+            hex_color = self._LABEL_COLOR_CLEAN
+
+        self.update_labels(risk_criticality, hex_color)
+        return [risk_criticality]
 
     def send_bundle(self) -> str:
         """
