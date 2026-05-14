@@ -86,7 +86,9 @@ class CrowdstrikeReconConnector:
             notification_detail = self.client.get_notification_detail(
                 notification_id=notification_id
             )
-            most_recent_incident_date = notification_detail.get("notification", {}).get("created_date")
+            most_recent_incident_date = notification_detail.get("notification", {}).get(
+                "created_date"
+            )
 
             # convert notification into an OpenCTI Incident
             stix_entities = self.converter_to_stix.create_incident(
@@ -150,7 +152,9 @@ class CrowdstrikeReconConnector:
             )
 
             # Performing the collection of intelligence
-            stix_objects, most_recent_alert_date = self._collect_intelligence(last_alert_date)
+            stix_objects, most_recent_alert_date = self._collect_intelligence(
+                last_alert_date
+            )
 
             if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)

@@ -40,9 +40,7 @@ class CrowdstrikeReconClient:
         self.filter_priority = filter_priority
 
         self.cs = CrowdstrikeRecon(
-            client_id=client_id,
-            client_secret=client_secret,
-            base_url=base_url
+            client_id=client_id, client_secret=client_secret, base_url=base_url
         )
 
     def _build_fql_filter(self, from_date) -> str:
@@ -56,9 +54,21 @@ class CrowdstrikeReconClient:
         """
         fql_parts = []
 
-        topic_values = [v.strip() for v in self.filter_topic.split(",") if v.strip()] if self.filter_topic else []
-        type_values = [v.strip() for v in self.filter_type.split(",") if v.strip()] if self.filter_type else []
-        priority_values = [v.strip() for v in self.filter_priority.split(",") if v.strip()] if self.filter_priority else []
+        topic_values = (
+            [v.strip() for v in self.filter_topic.split(",") if v.strip()]
+            if self.filter_topic
+            else []
+        )
+        type_values = (
+            [v.strip() for v in self.filter_type.split(",") if v.strip()]
+            if self.filter_type
+            else []
+        )
+        priority_values = (
+            [v.strip() for v in self.filter_priority.split(",") if v.strip()]
+            if self.filter_priority
+            else []
+        )
 
         if topic_values:
             values = ",".join(f"'{v}'" for v in topic_values)
@@ -114,14 +124,18 @@ class CrowdstrikeReconClient:
 
             notification_ids.extend(resources)
 
-            total = result.get("body", {}).get("meta", {}).get("pagination", {}).get("total", 0)
+            total = (
+                result.get("body", {})
+                .get("meta", {})
+                .get("pagination", {})
+                .get("total", 0)
+            )
             if len(notification_ids) >= total:
                 break
 
             offset += limit
 
         return notification_ids
-
 
     def get_notification_detail(self, notification_id) -> dict:
         """
