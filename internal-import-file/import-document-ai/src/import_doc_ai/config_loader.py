@@ -56,7 +56,9 @@ class ConfigConnector:
             self.load,
             required=False,
         )
-        self.licence_key_base64 = base64.b64encode(self.api_key.encode()) if self.api_key else None
+        self.licence_key_base64 = (
+            base64.b64encode(self.api_key.encode()) if self.api_key else None
+        )
 
         # Read connector flags from config (create_indicator, web_service_url, etc.)
         self.create_indicator = get_config_variable_legacy(
