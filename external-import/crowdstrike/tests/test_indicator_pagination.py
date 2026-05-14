@@ -10,41 +10,74 @@ These tests cover the pagination contract between
 * Pagination is robust to ``meta.pagination`` being missing or ``None``.
 """
 
-import os
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-# The crowdstrike connector loads its env-based configuration at import time
-# (``BaseCrowdstrikeClient.__init__`` builds the pydantic-settings config),
-# so provide stub environment variables before the test imports below.
-os.environ.setdefault("OPENCTI_URL", "http://localhost:8080")
-os.environ.setdefault("OPENCTI_TOKEN", "token")
-os.environ.setdefault("CONNECTOR_ID", "ChangeMe")
-os.environ.setdefault("CONNECTOR_TYPE", "EXTERNAL_IMPORT")
-os.environ.setdefault("CONNECTOR_NAME", "CrowdStrike")
-os.environ.setdefault("CONNECTOR_SCOPE", "crowdstrike")
-os.environ.setdefault("CONNECTOR_LOG_LEVEL", "info")
-os.environ.setdefault("CONNECTOR_DURATION_PERIOD", "PT30M")
-os.environ.setdefault("CROWDSTRIKE_CLIENT_ID", "ChangeMe")
-os.environ.setdefault("CROWDSTRIKE_CLIENT_SECRET", "ChangeMe")
+# CrowdStrike's pydantic settings are constructed when
+# ``crowdstrike_feeds_*`` modules are imported, so the env vars MUST be
+# in place before any of them is loaded. The previous module-level
+# ``os.environ.setdefault`` was problematic for two reasons:
+#
+#   * ``setdefault`` does NOT override potentially-invalid values
+#     inherited from the test runner environment;
+#   * the changes were never reverted, so they leaked into the other
+#     CrowdStrike test modules (most of which use ``mock_env_vars(...)``
+#     from ``conftest.py`` to patch and restore env).
+#
+# We now drive the env through a function-scoped ``autouse`` fixture
+# (``monkeypatch.setenv`` always overrides and pytest restores the
+# original env at teardown), and the connector modules are imported
+# lazily inside ``_build_importer`` / the three
+# ``test_get_next_page_*`` cases so the env fixture has applied by the
+# time pydantic-settings runs.
+_REQUIRED_ENV: dict[str, str] = {
+    "OPENCTI_URL": "http://localhost:8080",
+    "OPENCTI_TOKEN": "token",
+    "CONNECTOR_ID": "ChangeMe",
+    "CONNECTOR_TYPE": "EXTERNAL_IMPORT",
+    "CONNECTOR_NAME": "CrowdStrike",
+    "CONNECTOR_SCOPE": "crowdstrike",
+    "CONNECTOR_LOG_LEVEL": "info",
+    "CONNECTOR_DURATION_PERIOD": "PT30M",
+    "CROWDSTRIKE_CLIENT_ID": "ChangeMe",
+    "CROWDSTRIKE_CLIENT_SECRET": "ChangeMe",
+}
 
-from crowdstrike_feeds_connector.indicator.importer import (  # noqa: E402
-    IndicatorImporter,
-    IndicatorImporterConfig,
-)
-from crowdstrike_feeds_services.client.indicators import IndicatorsAPI  # noqa: E402
+
+@pytest.fixture(autouse=True)
+def _crowdstrike_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin (and restore) the env vars CrowdStrike's settings expect.
+
+    ``monkeypatch.setenv`` overrides any existing runner-provided
+    value (whereas ``os.environ.setdefault`` left potentially-invalid
+    values in place) and pytest restores the original env when the
+    fixture tears down — so these settings cannot leak into the other
+    CrowdStrike test modules.
+    """
+    for key, value in _REQUIRED_ENV.items():
+        monkeypatch.setenv(key, value)
 
 
 def _build_importer(*, max_records_per_run=None):
     """Build an ``IndicatorImporter`` whose API client is a ``MagicMock``.
 
-    The :class:`IndicatorsAPI` / :class:`RelatedActorImporter` / :class:`ReportFetcher`
-    classes are patched out because their constructors instantiate the
-    CrowdStrike settings / falconpy client / pycti API, which would require
-    real credentials at construction time.
+    The :class:`IndicatorsAPI` / :class:`RelatedActorImporter` /
+    :class:`ReportFetcher` classes are patched out because their
+    constructors instantiate the CrowdStrike settings / falconpy
+    client / pycti API, which would require real credentials at
+    construction time. The connector modules are imported lazily so
+    the ``_crowdstrike_env`` autouse fixture has applied (and
+    overrides any invalid runner-provided value) before the
+    pydantic settings are constructed at module import time.
     """
+    from crowdstrike_feeds_connector.indicator.importer import (
+        IndicatorImporter,
+        IndicatorImporterConfig,
+    )
+    from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+
     helper = MagicMock()
     helper.connector_logger = MagicMock()
     helper.connect_id = "connector-id"
@@ -201,6 +234,8 @@ def test_pagination_cap_can_be_disabled(disabled_value):
 
 
 def test_get_next_page_extracts_token_from_url():
+    from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+
     response = {
         "headers": {
             "Next-Page": "/intel/combined/indicators/v1?limit=1000&next_page=abc123"
@@ -210,9 +245,13 @@ def test_get_next_page_extracts_token_from_url():
 
 
 def test_get_next_page_returns_none_when_header_missing():
+    from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+
     assert IndicatorsAPI.get_next_page({"headers": {}}) is None
 
 
 def test_get_next_page_returns_none_when_token_missing():
+    from crowdstrike_feeds_services.client.indicators import IndicatorsAPI
+
     response = {"headers": {"Next-Page": "/intel/combined/indicators/v1?limit=1000"}}
     assert IndicatorsAPI.get_next_page(response) is None
