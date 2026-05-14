@@ -414,7 +414,7 @@ class ConverterToStix:
                 relationship_type="related-to",
                 source_ref=stix_incident.id,
                 target_ref=inc_sco_sdo_ref,
-                created_by_ref=self.author,
+                created_by_ref=self.author.id,
                 object_marking_refs=[self.tlp_marking.id],
             )
             stix_objects.append(relation_with_incident)
