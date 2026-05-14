@@ -217,7 +217,7 @@ class CybelAngel:
         """
         try:
             identity = stix2.Identity(
-                id=Identity.generate_id("CybelAngel", "Organization"),
+                id=Identity.generate_id("CybelAngel", "organization"),
                 spec_version="2.1",
                 name="CybelAngel",
                 description="Cybelangel is a cybersecurity company that specializes in detecting and mitigating cyber "
@@ -321,7 +321,12 @@ class CybelAngel:
     def _build_fetch_parameters(self, last_run):
         """
         Compute since_date/end_date and build the CybelAngel API parameters.
-        Returns (since_date, end_date, parameters) or (None, None, "sort_by=-claimed_at") if full history.
+
+        Returns ``(since_date, end_date, parameters)``. When the configured
+        ``CYBELANGEL_FETCH_PERIOD`` is ``"all"`` and there is no usable
+        ``last_run`` cursor, ``since_date`` / ``end_date`` are ``None`` and
+        ``parameters`` only carries the sort (``sort_by=claimed_at&sort_order=desc``)
+        so the CybelAngel API returns the full history.
         """
 
         base_sort = "sort_by=claimed_at&sort_order=desc"
@@ -330,16 +335,15 @@ class CybelAngel:
             try:
                 since_date = datetime.fromisoformat(last_run).astimezone(timezone.utc)
             except ValueError:
-                fetch_period = getattr(self, "cybelangel_fetch_period", "7")
-                since_date = datetime.now(timezone.utc) - timedelta(
-                    days=int(fetch_period)
-                )
-                since_date = since_date.replace(
-                    hour=0, minute=0, second=0, microsecond=0
-                )
+                # ``last_run`` is corrupted or in an unexpected format.
+                # Fall back to ``CYBELANGEL_FETCH_PERIOD`` exactly like the
+                # "no ``last_run``" branch below, including the ``all``
+                # case which means "no date filter".
                 self.helper.connector_logger.warning(
-                    f"Invalid last_run format. Using last {fetch_period} days."
+                    "Invalid last_run format, falling back to CYBELANGEL_FETCH_PERIOD",
+                    {"last_run": last_run},
                 )
+                return self._fetch_parameters_from_period(base_sort)
             end_date = datetime.now(timezone.utc)
             parameters = (
                 f"{base_sort}"
@@ -348,13 +352,28 @@ class CybelAngel:
             )
             return since_date, end_date, parameters
 
-        # No last_run -> we use CYBELANGEL_FETCH_PERIOD
+        # No last_run -> we use CYBELANGEL_FETCH_PERIOD.
+        return self._fetch_parameters_from_period(base_sort)
+
+    def _fetch_parameters_from_period(self, base_sort):
+        """Return ``(since_date, end_date, parameters)`` derived from ``CYBELANGEL_FETCH_PERIOD``.
+
+        ``CYBELANGEL_FETCH_PERIOD`` is either a number of days (``int`` / ``str``)
+        or ``"all"`` to mean "no date filter".
+        """
         fetch_period = getattr(self, "cybelangel_fetch_period", "all")
-        if fetch_period == "all":
-            # No date filter
+        if not fetch_period or str(fetch_period).lower() == "all":
             return None, None, base_sort
 
-        days = int(fetch_period)
+        try:
+            days = int(fetch_period)
+        except (TypeError, ValueError):
+            self.helper.connector_logger.warning(
+                "Invalid CYBELANGEL_FETCH_PERIOD value, falling back to full history",
+                {"fetch_period": fetch_period},
+            )
+            return None, None, base_sort
+
         since_date = datetime.now(timezone.utc) - timedelta(days=days)
         since_date = since_date.replace(hour=0, minute=0, second=0, microsecond=0)
         end_date = datetime.now(timezone.utc)
@@ -488,19 +507,32 @@ class CybelAngel:
     # Parse & Ingest Data
     # ----------------------
     def _process_attack(self, attack, since_date, author_org, work_id):
-        claimed_at = attack.get("claimed_at")
-        if claimed_at:
-            try:
-                claimed_at = datetime.strptime(
-                    claimed_at, "%Y-%m-%dT%H:%M:%S.%fZ"
-                ).replace(tzinfo=timezone.utc)
-            except ValueError:
-                claimed_at = datetime.strptime(
-                    claimed_at, "%Y-%m-%dT%H:%M:%SZ"
-                ).replace(tzinfo=timezone.utc)
+        claimed_at_raw = attack.get("claimed_at")
+        claimed_at = None
+        if claimed_at_raw:
+            for fmt in ("%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"):
+                try:
+                    claimed_at = datetime.strptime(claimed_at_raw, fmt).replace(
+                        tzinfo=timezone.utc
+                    )
+                    break
+                except ValueError:
+                    continue
+
+        # ``claimed_at`` is used as the deterministic timestamp for several
+        # required STIX fields (``Campaign.created``, ``first_seen``,
+        # ``last_seen``, relationship ``created``, ...). A missing or
+        # unparseable value would make the bundle invalid and crash the run,
+        # so we skip the record with a warning instead.
+        if claimed_at is None:
+            self.helper.connector_logger.warning(
+                "Skipping attack with missing or unparseable claimed_at",
+                {"attack_id": attack.get("id"), "claimed_at": claimed_at_raw},
+            )
+            return
 
         # Stop early if attack is before last_run
-        if since_date and claimed_at and claimed_at < since_date:
+        if since_date and claimed_at < since_date:
             self.helper.connector_logger.info(
                 f"Stopping processing as claimed_at {claimed_at.strftime('%Y-%m-%dT%H:%M:%SZ')} is before "
                 f"last_run value {since_date.strftime('%Y-%m-%dT%H:%M:%SZ')}"
@@ -532,12 +564,7 @@ class CybelAngel:
             if (threat_actors and threat_actors[0])
             else "Unknown actor"
         )
-        campaign_date = ""
-        if claimed_at:
-            claimed_date = datetime.strptime(
-                claimed_at.strftime("%Y-%m-%d"), "%Y-%m-%d"
-            ).date()
-            campaign_date = f" ({claimed_date})"
+        campaign_date = f" ({claimed_at.date()})"
 
         # --- Locations (countries) shared across campaigns for this attack
         locations = []
@@ -682,7 +709,7 @@ class CybelAngel:
 
             # Create victim identity
             identity = self._create_identity(
-                v, "Organization", marking_id, author_org_id, victim_domain
+                v, "organization", marking_id, author_org_id, victim_domain
             )
             if identity:
                 stix_objects.append(identity)
