@@ -6,9 +6,6 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'IPQS Fraud and Risk Scoring'
-  # ``Artifact`` activates the malware-file-scanner branch (see PR
-  # #5970 and issue #6199 — the standalone ``ipqs-analyzer`` connector
-  # is now part of this connector).
   scope: 'IPv4-Addr,Email-Addr,Phone-Number,Domain-Name,Url,Artifact'
   auto: true # Enable/disable auto-enrichment of observables
   confidence_level: 15 # From 0 (Unknown) to 100 (Fully trusted)
@@ -24,7 +21,10 @@ ipqs:
   # Domain specific config settings
   domain_add_relationships: true # Whether or not to add IPv4, Domain relationships
 
-  # TLP handling for the Artifact / malware-file-scanner branch.
-  # The default branches (IP / Email / URL / Phone) are unaffected.
+  # TLP handling. ``max_tlp`` is enforced before the entity-type dispatch
+  # and therefore applies to **every** enrichment branch (IP / Email /
+  # URL / Phone / Artifact). ``default_tlp`` is the marking attached to
+  # the STIX objects emitted by the Artifact branch when the observable
+  # carries no explicit marking.
   default_tlp: 'TLP:CLEAR' # Used when the observable carries no explicit marking.
-  max_tlp: 'TLP:AMBER' # Observables with a higher TLP are skipped.
+  max_tlp: 'TLP:AMBER' # Observables with a higher TLP are skipped, on every branch.

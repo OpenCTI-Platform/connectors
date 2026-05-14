@@ -83,8 +83,8 @@ Key features:
 | `base_url` | `IPQS_BASE_URL` | No | `https://ipqualityscore.com/api/json` | IPQS API base URL |
 | `ip_add_relationships` | `IPQS_IP_ADD_RELATIONSHIPS` | No | `false` | Add ASN relationships for IPs |
 | `domain_add_relationships` | `IPQS_DOMAIN_ADD_RELATIONSHIPS` | No | `false` | Add IP resolution relationships for domains |
-| `default_tlp` | `IPQS_DEFAULT_TLP` | No | `TLP:CLEAR` | TLP marking applied to STIX objects produced by the malware-file-scanner branch when the observable carries none |
-| `max_tlp` | `IPQS_MAX_TLP` | No | `TLP:AMBER` | Maximum TLP for which the connector will submit data to IPQS; observables with a higher marking are skipped |
+| `default_tlp` | `IPQS_DEFAULT_TLP` | No | `TLP:CLEAR` | TLP marking applied to STIX objects emitted by the malware-file-scanner branch when the observable carries none. Supports `TLP:CLEAR` / `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`. |
+| `max_tlp` | `IPQS_MAX_TLP` | No | `TLP:AMBER` | Maximum TLP for which the connector will submit data to IPQS; observables with a higher marking are skipped. Enforced **on every enrichment branch** (IP / Email / URL / Phone / Artifact), not just on the Artifact branch. |
 
 ---
 

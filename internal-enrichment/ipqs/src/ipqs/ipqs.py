@@ -20,14 +20,27 @@ from .client import IPQSClient
 _DEFAULT_FILE_SCORE = 50
 _MALICIOUS_FILE_SCORE = 100
 
+# Default IPQS base URL used when ``IPQS_BASE_URL`` is not configured. Documented
+# in ``README.md`` and ``config.yml.sample`` — keep all three in sync.
+_DEFAULT_IPQS_BASE_URL = "https://ipqualityscore.com/api/json"
+
+# AMBER+STRICT is an OpenCTI-specific marking and is not exported as a
+# ``stix2`` constant. The canonical OpenCTI id is hard-coded here so
+# ``IPQS_DEFAULT_TLP=TLP:AMBER+STRICT`` is not silently downgraded to plain
+# ``TLP:AMBER`` when applied to the connector-emitted STIX objects.
+_TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
+
 # TLP-aliases the connector accepts in ``IPQS_DEFAULT_TLP`` / ``IPQS_MAX_TLP``.
-_TLP_MAP = {
-    "TLP:CLEAR": stix2.TLP_WHITE,
-    "TLP:WHITE": stix2.TLP_WHITE,
-    "TLP:GREEN": stix2.TLP_GREEN,
-    "TLP:AMBER": stix2.TLP_AMBER,
-    "TLP:AMBER+STRICT": stix2.TLP_AMBER,
-    "TLP:RED": stix2.TLP_RED,
+# Values are marking-definition **ids** so AMBER+STRICT, which does not have
+# a ``stix2`` constant, can be expressed without instantiating a fake STIX
+# object whose ``definition_type`` would not match the real marking.
+_TLP_MAP: Dict[str, str] = {
+    "TLP:CLEAR": stix2.TLP_WHITE.id,
+    "TLP:WHITE": stix2.TLP_WHITE.id,
+    "TLP:GREEN": stix2.TLP_GREEN.id,
+    "TLP:AMBER": stix2.TLP_AMBER.id,
+    "TLP:AMBER+STRICT": _TLP_AMBER_STRICT_ID,
+    "TLP:RED": stix2.TLP_RED.id,
 }
 
 
@@ -81,7 +94,10 @@ class IPQSConnector:
         )
 
         self.base_url = get_config_variable(
-            "IPQS_BASE_URL", ["ipqs", "base_url"], config
+            "IPQS_BASE_URL",
+            ["ipqs", "base_url"],
+            config,
+            default=_DEFAULT_IPQS_BASE_URL,
         )
 
         # Used by the Artifact branch to download the file content from
@@ -128,7 +144,9 @@ class IPQSConnector:
                 default="TLP:CLEAR",
             )
         )
-        self.default_tlp = _TLP_MAP.get(self.default_tlp_string, stix2.TLP_WHITE)
+        self.default_tlp_id: str = _TLP_MAP.get(
+            self.default_tlp_string, stix2.TLP_WHITE.id
+        )
 
         self.max_tlp = _normalize_tlp(
             get_config_variable(
@@ -198,10 +216,15 @@ class IPQSConnector:
         return items
 
     def _default_marking_refs(self) -> List[str]:
-        """Return the configured default marking reference as a list."""
-        if self.default_tlp is None:
+        """Return the configured default marking reference as a list.
+
+        Returns the OpenCTI-canonical marking-definition id (including the
+        proper ``TLP:AMBER+STRICT`` id, which is *not* the same as
+        ``stix2.TLP_AMBER`` and would otherwise downgrade the marking).
+        """
+        if not self.default_tlp_id:
             return []
-        return [self.default_tlp["id"]]
+        return [self.default_tlp_id]
 
     def _send_failure_note(
         self,
@@ -213,6 +236,11 @@ class IPQSConnector:
         Used by the Artifact branch so the operator can see in OpenCTI
         why an enrichment did not produce an indicator (invalid input,
         no credits, upstream service issues, ...).
+
+        The Note's deterministic id is salted with the observable
+        ``standard_id`` so two unrelated observables that hit the same
+        upstream message (e.g. ``"No response received from IPQS API."``)
+        produce two distinct notes instead of merging into a single one.
         """
         message = response.get("message", "")
         labels = ["enrichment-failed"]
@@ -221,7 +249,7 @@ class IPQSConnector:
         if "Could not download" in message:
             labels.append("ipqs-no-downloadable-file")
 
-        content = f"IPQS enrichment failed: {message}"
+        content = f"IPQS enrichment failed for {observable['standard_id']}: {message}"
         note_id = PyctiNote.generate_id(created=None, content=content)
         note = stix2.Note(
             id=note_id,
@@ -438,6 +466,30 @@ class IPQSConnector:
 
         if not response.get("success"):
             self._send_failure_note(response, observable)
+            return None
+
+        # ``get_malware_scan_info`` may return the last response with
+        # ``status == "pending"`` when the polling budget is exhausted before
+        # IPQS produces a final verdict. Treating that as a clean / detected
+        # verdict would label the observable from incomplete data and even
+        # mark it ``Clean`` when a real scan is still running, so surface
+        # this as an enrichment failure instead.
+        scan_status = (response.get("status") or "").strip().lower()
+        if scan_status == "pending":
+            self.helper.log_warning(
+                f"IPQS malware scan for file {file_name} is still pending "
+                "after the polling budget; surfacing as enrichment failure."
+            )
+            self._send_failure_note(
+                {
+                    "success": False,
+                    "message": (
+                        "IPQS malware scan is still pending after the "
+                        "polling budget; retry the enrichment later."
+                    ),
+                },
+                observable,
+            )
             return None
 
         engine_summary = self._build_result_summary(response)
