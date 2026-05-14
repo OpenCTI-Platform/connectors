@@ -1,4 +1,3 @@
-version: '3'
 services:
   connector-mattermost:
     image: opencti/connector-mattermost:latest
@@ -21,7 +20,9 @@ services:
       - MATTERMOST_CHANNEL_IDS=ChangeMe
       # Unix epoch (seconds) of the earliest message to import on the first run
       - MATTERMOST_START_TIMESTAMP=0
-      # TLP marking applied to created entities: CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+      # TLP marking applied to created entities. Supported values:
+      # CLEAR, WHITE (alias of CLEAR), GREEN, AMBER, AMBER_STRICT
+      # (also accepted as AMBER+STRICT), RED.
       - MATTERMOST_TLP=AMBER
       # HTTP / WebSocket client behaviour
       - MATTERMOST_VERIFY=true
