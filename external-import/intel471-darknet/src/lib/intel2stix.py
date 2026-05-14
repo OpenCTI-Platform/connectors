@@ -99,6 +99,24 @@ def sanitizeName(name) -> str:
     return result
 
 
+def _escape_stix_pattern_value(value: str) -> str:
+    """Escape ``value`` for inclusion inside a single-quoted STIX pattern.
+
+    STIX 2.1 patterns use single-quoted string literals; per the spec the
+    backslash itself and the single quote both have to be escaped (``\\\\``
+    and ``\\'``) so the resulting pattern is well-formed and is interpreted
+    as a literal value rather than a syntactic terminator.
+
+    Intel 471 URL payloads can legitimately contain single quotes (and
+    sometimes backslashes) and used to be embedded verbatim, which made
+    ``stix2.Indicator`` reject the pattern or, worse, silently change its
+    meaning. Callers building patterns of the form
+    ``[url:value='<value>']`` must therefore pre-process the value with
+    this helper.
+    """
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
 def getMotivation(codelist) -> str:
     result = ""
     for item in codelist:
@@ -574,9 +592,15 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 custom_properties={"created_by_ref": creator},
                 object_marking_refs=markings,
             )
+            # Intel 471 URLs can legitimately contain single quotes and
+            # backslashes; both must be escaped before being embedded in
+            # a single-quoted STIX pattern, otherwise ``stix2.Indicator``
+            # either rejects the pattern outright or silently changes
+            # its meaning.
+            url_pattern = f"[url:value='{_escape_stix_pattern_value(url)}']"
             indicator = stix2.Indicator(
-                id=PyctiIndicator.generate_id(f"[url:value='{url}']"),
-                pattern=f"[url:value='{url}']",
+                id=PyctiIndicator.generate_id(url_pattern),
+                pattern=url_pattern,
                 pattern_type="stix",
                 created_by_ref=creator,
                 object_marking_refs=markings,

@@ -7,6 +7,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import urlparse
 
 import lib.intel2stix
 import requests
@@ -28,6 +29,18 @@ from stix2 import Identity, Incident, Relationship, Report
 # Default timeout (seconds) applied to every Intel471 HTTP call so that a
 # stuck network does not block the connector loop indefinitely.
 _HTTP_TIMEOUT_SECONDS = 30
+
+
+class Intel471RequestError(Exception):
+    """Raised when a request to the Intel 471 API fails irrecoverably.
+
+    Used by :meth:`Intel471AlertsConnector._intel471_get_json_or_raise`
+    so the alert-collection loop can distinguish "the API returned an
+    empty page" (legitimate end-of-stream) from "the API call failed".
+    Without this distinction a transient outage on the first page made
+    the run cycle silently advance ``last_run`` past data we never
+    actually fetched.
+    """
 
 
 def _b64(payload) -> str:
@@ -102,10 +115,14 @@ class Intel471AlertsConnector(ExternalImportConnector):
             ["intel471", "api_key"],
             config,
         )
+        # Connector-specific settings live under the ``intel471_darknet``
+        # yaml key in ``config.yml`` (and under ``INTEL471_DARKNET_*`` env
+        # variables); this matches the README configuration table and the
+        # ``src/config.yml.sample`` layout.
         self.intel471_initial_history_alerts = str(
             get_config_variable(
                 "INTEL471_DARKNET_INITIAL_HISTORY_ALERTS",
-                ["intel471", "initial_history_alerts"],
+                ["intel471_darknet", "initial_history_alerts"],
                 config,
                 default="0",
             )
@@ -119,7 +136,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             self._get_tlp(
                 get_config_variable(
                     "INTEL471_DARKNET_TLP",
-                    ["intel471", "tlp"],
+                    ["intel471_darknet", "tlp"],
                     config,
                     default="AMBER",
                 )
@@ -154,7 +171,21 @@ class Intel471AlertsConnector(ExternalImportConnector):
         else:
             self.helper.log_debug("No watcher groups returned by the API.")
 
-        # get author id
+        # get author identity. We always build a STIX ``Identity`` for the
+        # Intel 471 organization and emit it as part of every bundle (see
+        # ``_collect_intelligence``) so the ``created_by_ref`` we set on
+        # every subsequent object resolves in OpenCTI even on the very
+        # first run. If the identity already exists in the platform the
+        # STIX-id stays the same (it is deterministic via
+        # ``PyctiIdentity.generate_id``) and OpenCTI simply reconciles
+        # the two — no duplicate is created.
+        self.intel471_author = stix2.Identity(
+            id=PyctiIdentity.generate_id("Intel471 Inc.", "organization"),
+            name="Intel471 Inc.",
+            identity_class="organization",
+            object_marking_refs=self.intel471_darknet_tlp,
+        )
+        self.intel471_id = self.intel471_author["id"]
         identity_list = self.helper.api.identity.list(
             filters={
                 "mode": "and",
@@ -167,18 +198,16 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 "filterGroups": [],
             },
         )
-        if len(identity_list) == 0:
-            x_author = stix2.Identity(
-                id=PyctiIdentity.generate_id("Intel471 Inc.", "organization"),
-                name="Intel471 Inc.",
-                identity_class="organization",
+        if identity_list:
+            self.helper.log_debug(
+                f"Intel 471 author identity already exists in OpenCTI: "
+                f"{identity_list[0].get('standard_id')}"
             )
-            self.intel471_id = x_author["id"]
-            self.helper.log_debug(f"x_author_id = {self.intel471_id}")
         else:
-            x_author = identity_list[0]
-            self.intel471_id = x_author["standard_id"]
-            self.helper.log_debug(f"x_author_standard_id = {self.intel471_id}")
+            self.helper.log_debug(
+                f"Intel 471 author identity will be created via the next "
+                f"bundle (x_author_id = {self.intel471_id})"
+            )
 
     _TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
     _TLP_MAP = {
@@ -217,10 +246,56 @@ class Intel471AlertsConnector(ExternalImportConnector):
     # ------------------------------------------------------------------
     # HTTP helpers
     # ------------------------------------------------------------------
+    def _is_intel471_host(self, url: str) -> bool:
+        """Return ``True`` when ``url`` targets the configured Intel 471 host.
+
+        ``imageOriginal`` / attachment URLs carried by an Intel 471 alert
+        payload may point at a third-party CDN or at any other arbitrary
+        host. Sending the Intel 471 Basic Auth credentials there would
+        leak the API username / key, so authentication must only be
+        attached for URLs that match the configured API host (the
+        portal sometimes serves attachments from the same host root as
+        the API, just under a different path).
+        """
+        try:
+            target_host = urlparse(url).hostname or ""
+            allowed_host = urlparse(self.intel471_api_url).hostname or ""
+        except (TypeError, ValueError):
+            return False
+        if not target_host or not allowed_host:
+            return False
+        target_host = target_host.lower()
+        allowed_host = allowed_host.lower()
+        # Same host or a sub-domain of the configured API host.
+        return target_host == allowed_host or target_host.endswith(f".{allowed_host}")
+
     def _intel471_request(self, url, **kwargs):
-        """Wrap :func:`requests.get` with timeout / authentication / errors."""
+        """Wrap :func:`requests.get` with timeout / authentication / errors.
+
+        Basic Auth credentials are only attached when ``url`` matches the
+        configured Intel 471 host (or a sub-domain of it). For arbitrary
+        external attachment URLs the request is anonymous so the
+        credentials cannot leak in an ``Authorization`` header sent to a
+        third-party CDN.
+
+        Returns the :class:`requests.Response` on success or ``None`` on
+        any failure (timeout, connection error, non-2xx response, …).
+        Callers that need to distinguish failure from "no body" should
+        use :meth:`_intel471_get_json_or_raise` / a successful response
+        whose ``ok`` attribute is :data:`True`.
+        """
         kwargs.setdefault("timeout", _HTTP_TIMEOUT_SECONDS)
-        kwargs.setdefault("auth", (self.intel471_api_username, self.intel471_api_key))
+        if "auth" not in kwargs:
+            if self._is_intel471_host(url):
+                kwargs["auth"] = (
+                    self.intel471_api_username,
+                    self.intel471_api_key,
+                )
+            else:
+                # Explicitly disable authentication for foreign hosts so
+                # credentials never make it into the ``Authorization``
+                # header for a third-party request.
+                kwargs["auth"] = None
         try:
             response = requests.get(url, **kwargs)
             response.raise_for_status()
@@ -246,6 +321,28 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 f"Intel 471 returned non-JSON content for {url}: {exc}"
             )
             return None
+
+    def _intel471_get_json_or_raise(self, url, **kwargs):
+        """GET ``url`` and return parsed JSON; raise :class:`Intel471RequestError` on failure.
+
+        Used by the alert-collection loop so a transient HTTP / JSON
+        failure on the first page does not silently look like "no more
+        alerts" and let the run cycle advance ``last_run`` past data we
+        never actually fetched.
+        """
+        response = self._intel471_request(url, **kwargs)
+        if response is None:
+            raise Intel471RequestError(
+                f"Intel 471 request failed for {url}; see warnings above."
+            )
+        if not response.content:
+            return {}
+        try:
+            return response.json()
+        except json.JSONDecodeError as exc:
+            raise Intel471RequestError(
+                f"Intel 471 returned non-JSON content for {url}: {exc}"
+            ) from exc
 
     def _intel471_get_bytes(self, url, **kwargs):
         """GET ``url`` and return the raw bytes body (or ``None`` on error)."""
@@ -1437,12 +1534,13 @@ class Intel471AlertsConnector(ExternalImportConnector):
             f"**Last update**: {x_lastupdate}\n\n"
         )
 
-        # add report references
-        if "reports" in actor["links"]:
-            for r in actor["links"]["reports"]:
-                x_ext_refs.append(
-                    {"source_name": r["subject"], "url": r["portalReportUrl"]}
-                )
+        # add report references — reuse the ``links`` local that was
+        # normalised at the top of this method (``actor.get("links") or {}``)
+        # so an actor payload with no ``links`` key does not crash here.
+        for r in links.get("reports") or []:
+            x_ext_refs.append(
+                {"source_name": r["subject"], "url": r["portalReportUrl"]}
+            )
 
         # create threat actor
         x_actor = stix2.ThreatActor(
@@ -1484,35 +1582,38 @@ class Intel471AlertsConnector(ExternalImportConnector):
         x_source_ids = []
         x_ext_refs = []
 
+        # Entity payloads that only carry ``type`` / ``value`` (which
+        # ``getTypeValueContent`` is happy to process) have no ``links``
+        # field. Normalising here lets the rest of the method use a
+        # plain ``.get(...)`` chain without raising ``KeyError`` before
+        # we even reach ``getTypeValueContent``.
+        links = entity.get("links") or {}
+
         # add actors
-        if "actors" in entity["links"]:
-            for a in entity["links"]["actors"]:
-                try:
-                    url = f"{self.intel471_api_url}/actors/{a['uid']}"
-                    self.helper.log_debug(f"Actor URL: {url} / Entity")
-                    actor = self._intel471_get_json(url)
-                    if actor:
-                        # The actor payload contains free-form descriptions
-                        # and forum content; log only its presence and the
-                        # actor uid here.
-                        self.helper.log_debug(
-                            f"Actor retrieved: uid={actor.get('uid')}"
-                        )
-                        actor_objects = self._getActorContent(actor)
-                        objects.extend(actor_objects)
-                        x_source_ids.append(actor_objects[0]["id"])
-                except Exception as e:
-                    self.helper.log_debug(f"Error retrieving actor data: {e}")
+        for a in links.get("actors") or []:
+            try:
+                url = f"{self.intel471_api_url}/actors/{a['uid']}"
+                self.helper.log_debug(f"Actor URL: {url} / Entity")
+                actor = self._intel471_get_json(url)
+                if actor:
+                    # The actor payload contains free-form descriptions
+                    # and forum content; log only its presence and the
+                    # actor uid here.
+                    self.helper.log_debug(f"Actor retrieved: uid={actor.get('uid')}")
+                    actor_objects = self._getActorContent(actor)
+                    objects.extend(actor_objects)
+                    x_source_ids.append(actor_objects[0]["id"])
+            except Exception as e:
+                self.helper.log_debug(f"Error retrieving actor data: {e}")
 
         # TODO: re-enable the activeFrom / activeTill / lastUpdated
         # description once the Intel 471 payload shape stabilises.
 
         # add report references
-        if "reports" in entity["links"]:
-            for r in entity["links"]["reports"]:
-                x_ext_refs.append(
-                    {"source_name": r["subject"], "url": r["portalReportUrl"]}
-                )
+        for r in links.get("reports") or []:
+            x_ext_refs.append(
+                {"source_name": r["subject"], "url": r["portalReportUrl"]}
+            )
 
         # get entity
         x_entity = lib.intel2stix.getTypeValueContent(
@@ -1687,8 +1788,16 @@ class Intel471AlertsConnector(ExternalImportConnector):
         return objects
 
     def _collect_alerts(self, start_time) -> []:
-        """
-        Collects alerts from Intel471 and returs a bundle of STIX objects.
+        """Collect alerts from Intel 471 and return a list of STIX objects.
+
+        Uses :meth:`_intel471_get_json_or_raise` so HTTP / JSON failures
+        on the first (or any) page propagate as
+        :class:`Intel471RequestError`. The caller catches that in
+        :class:`lib.external_import.ExternalImportConnector._run_cycle`,
+        which then marks the work in-error and leaves ``last_run``
+        untouched so the next run retries from the same window — a
+        transient outage no longer silently advances the cursor past
+        data we never fetched.
         """
         self.helper.log_debug(f"Collection started from date: {start_time}")
 
@@ -1710,36 +1819,36 @@ class Intel471AlertsConnector(ExternalImportConnector):
                     url = f"{self.intel471_api_url}/alerts?count=100&sort=earliest&from={fromParam}"
                 self.helper.log_debug("URL: " + url)
 
-                alerts = self._intel471_get_json(url)
-                if alerts:
-                    if "alerts" in alerts:
-                        alert_list = alerts["alerts"]
-                        if len(alert_list):
-                            self.helper.log_debug(
-                                "Nombre alertes: " + str(len(alert_list))
-                            )
-                            for a in alert_list:
-                                count += 1
-                                objs = None
-                                try:
-                                    objs = self._get_stix_objects(a)
-                                except Exception as e:
-                                    self.helper.log_error(
-                                        f"Error retrieving alert: {e}"
-                                    )
-                                    self.helper.log_error(traceback.format_exc())
-                                if objs:
-                                    bundle.extend(objs)
-                            offset = alert_list[-1]["uid"]
-                            nb += len(alert_list)
-                            if nb >= 1100:
-                                fromParam = int(alert_list[-1]["foundTime"]) + 1
-                                break
-                        else:
-                            break
-                    else:
-                        break
-                else:
+                alerts = self._intel471_get_json_or_raise(url)
+                if not alerts or "alerts" not in alerts:
+                    # Empty but successful response: the API has no more
+                    # alerts for this window.
+                    break
+                alert_list = alerts["alerts"]
+                if not alert_list:
+                    break
+
+                self.helper.log_debug("Nombre alertes: " + str(len(alert_list)))
+                for a in alert_list:
+                    count += 1
+                    objs = None
+                    try:
+                        objs = self._get_stix_objects(a)
+                    except Exception as e:  # noqa: BLE001
+                        # Per-alert transformation failures should not
+                        # abort the whole run, but we deliberately
+                        # **do not** silence the outer HTTP error
+                        # branch — that is handled by the
+                        # ``_intel471_get_json_or_raise`` call above.
+                        self.helper.log_error(f"Error retrieving alert: {e}")
+                        self.helper.log_error(traceback.format_exc())
+                    if objs:
+                        bundle.extend(objs)
+
+                offset = alert_list[-1]["uid"]
+                nb += len(alert_list)
+                if nb >= 1100:
+                    fromParam = int(alert_list[-1]["foundTime"]) + 1
                     break
             if nb < 1100:
                 break
@@ -1773,6 +1882,15 @@ class Intel471AlertsConnector(ExternalImportConnector):
 
         stix_objects.extend(self._collect_alerts(start_time))
 
+        # Always emit the Intel 471 author identity alongside the rest of
+        # the bundle so the ``created_by_ref`` on every produced object
+        # resolves in OpenCTI even when this is the very first run and
+        # the identity has never been ingested before. The id is
+        # deterministic, so subsequent runs just reconcile against the
+        # existing identity without creating a duplicate.
+        if stix_objects:
+            stix_objects.insert(0, self.intel471_author)
+
         self.helper.log_info(
             f"{len(stix_objects)} STIX2 objects have been compiled by "
             f"{self.helper.connect_name} connector. "
@@ -1785,8 +1903,20 @@ if __name__ == "__main__":
     try:
         connector = Intel471AlertsConnector()
         connector.run()
+    except (KeyboardInterrupt, SystemExit):
+        # Graceful shutdown: propagate the original status so an
+        # orchestrator does not interpret a deliberate ``SIGINT`` /
+        # ``SIGTERM`` as a crash. ``sys.exit(0)`` keeps the historical
+        # behaviour for ``Ctrl+C``.
+        sys.exit(0)
     except Exception as e:
+        # Startup / fatal-loop failures: print the traceback and exit
+        # non-zero so container supervisors / CI / restart policies
+        # report the run as failed instead of mistaking a crash for a
+        # clean exit. The short ``time.sleep(10)`` is kept on purpose
+        # to spread restart attempts when several connectors crash
+        # together (e.g. during a temporary OpenCTI outage).
         print(e)
         print(traceback.format_exc())
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)
