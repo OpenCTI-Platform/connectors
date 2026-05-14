@@ -1,6 +1,6 @@
+from falconpy import Recon as CrowdstrikeRecon
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
-from falconpy import Recon as CrowdstrikeRecon
 
 
 class CrowdstrikeReconClient:
