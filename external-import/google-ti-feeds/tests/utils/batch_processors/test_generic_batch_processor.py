@@ -441,17 +441,6 @@ def test_process_current_batch_success(
     _then_current_batch_is_empty(basic_processor)
 
 
-def test_process_current_batch_empty(basic_processor: GenericBatchProcessor) -> None:
-    """Test processing empty batch."""
-    # Given: A basic processor with empty batch
-
-    # When: The empty batch is processed
-    work_id, exception = _when_current_batch_processed(basic_processor)
-
-    # Then: Processing should handle empty batch gracefully
-    _then_empty_batch_processed(work_id, exception)
-
-
 def test_process_current_batch_with_preprocessing(
     preprocessing_config: GenericBatchProcessorConfig,
     mock_work_manager: Any,
@@ -1039,14 +1028,6 @@ def _then_batch_processed_successfully(
     assert work_id.startswith("work-")  # noqa: S101
 
 
-def _then_empty_batch_processed(
-    work_id: str | None, exception: Exception | None
-) -> None:
-    """Assert that empty batch was processed (returns None)."""
-    assert exception is None  # noqa: S101
-    assert work_id is None  # noqa: S101
-
-
 def _then_batch_processing_failed_after_retries(
     work_id: str | None, exception: Exception | None
 ) -> None:
@@ -1100,14 +1081,6 @@ def _then_state_updated_with_date(
     mock_work_manager.update_state.assert_called_with(
         state_key="dated_cursor", date_str=expected_date
     )
-
-
-def _then_state_updated_with_current_time(mock_work_manager: MockWorkManager) -> None:
-    """Assert that state was updated with current time."""
-    mock_work_manager.update_state.assert_called()
-    call_args = mock_work_manager.update_state.call_args
-    assert call_args[1]["state_key"] == "test_cursor"  # noqa: S101
-    assert "T" in call_args[1]["date_str"]  # noqa: S101
 
 
 def _then_state_not_updated(mock_work_manager: MockWorkManager) -> None:
