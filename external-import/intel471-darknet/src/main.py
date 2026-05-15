@@ -187,16 +187,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         )
         self.intel471_id = self.intel471_author["id"]
         identity_list = self.helper.api.identity.list(
-            filters={
-                "mode": "and",
-                "filters": {
-                    "key": "name",
-                    "values": "Intel 471 Inc.",
-                    "operator": "eq",
-                    "mode": "and",
-                },
-                "filterGroups": [],
-            },
+            filters=self._name_filter("Intel 471 Inc."),
         )
         if identity_list:
             self.helper.log_debug(
@@ -242,6 +233,35 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 f"Unsupported INTEL471_DARKNET_TLP value '{tlp_string}'. "
                 f"Expected one of {valid}."
             ) from exc
+
+    # ------------------------------------------------------------------
+    # OpenCTI list-filter helper
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _name_filter(value: str) -> dict:
+        """Build an OpenCTI ``filters`` payload that looks up ``name == value``.
+
+        The modern OpenCTI filter contract expects ``filters`` to be a
+        **list** of filter objects (not a single dict), each with
+        ``key`` / ``values`` (a list) / ``operator``; the inner ``mode``
+        field used by the previous version of this connector is rejected
+        by the API. ``mode`` lives at the top level only (and on
+        ``filterGroups``). This helper centralises the canonical shape
+        so every identity / channel lookup in the connector uses the
+        same payload — see for example ``external-import/cuckoo`` or
+        the ``matrix`` connector for the same pattern.
+        """
+        return {
+            "mode": "and",
+            "filters": [
+                {
+                    "key": "name",
+                    "values": [value],
+                    "operator": "eq",
+                }
+            ],
+            "filterGroups": [],
+        }
 
     # ------------------------------------------------------------------
     # HTTP helpers
@@ -434,16 +454,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         x_receiver_id = ""
         if x_actor:
             identity_list = self.helper.api.identity.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_actor,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_actor),
             )
             if len(identity_list) == 0:
                 x_sender = Identity(
@@ -463,16 +474,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 x_sender_id = x_sender["standard_id"]
         if x_recipient:
             identity_list = self.helper.api.identity.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_recipient,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_recipient),
             )
             if len(identity_list) == 0:
                 x_receiver = Identity(
@@ -495,16 +497,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         channel_id = ""
         if x_thread:
             channel_list = self.helper.api.channel.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_thread,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_thread),
             )
             if len(channel_list) == 0:
                 x_channel = Channel(
@@ -664,16 +657,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         x_author_id = ""
         if x_actor:
             identity_list = self.helper.api.identity.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_actor,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_actor),
             )
             if len(identity_list) == 0:
                 x_author = Identity(
@@ -696,16 +680,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         channel_id = ""
         if x_thread:
             channel_list = self.helper.api.channel.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_thread,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_thread),
             )
             if len(channel_list) == 0:
                 x_channel = Channel(
@@ -814,16 +789,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         x_author_id = ""
         if x_actor:
             identity_list = self.helper.api.identity.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_actor,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_actor),
             )
             if len(identity_list) == 0:
                 x_author = Identity(
@@ -846,16 +812,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
         channel_id = ""
         if x_channel_name:
             channel_list = self.helper.api.channel.list(
-                filters={
-                    "mode": "and",
-                    "filters": {
-                        "key": "name",
-                        "values": x_channel_name,
-                        "operator": "eq",
-                        "mode": "and",
-                    },
-                    "filterGroups": [],
-                },
+                filters=self._name_filter(x_channel_name),
             )
             if len(channel_list) == 0:
                 x_channel = Channel(
@@ -1716,7 +1673,17 @@ class Intel471AlertsConnector(ExternalImportConnector):
             if not x_source:
                 x_source = "Report"
             url = f"{self.intel471_api_url}/reports/{alert['report']['uid']}"
-            full_report = self._intel471_get_json(url)
+            # Use the raising variant so a transient HTTP / JSON failure
+            # on this per-alert lookup propagates out of the collection
+            # loop. ``ExternalImportConnector._run_cycle`` then catches
+            # the ``Intel471RequestError``, marks the work in-error and
+            # leaves ``last_run`` untouched, so the same window is
+            # retried on the next cycle. Treating ``None`` as "skip"
+            # would have permanently dropped the report alert because
+            # ``_run_cycle`` advances ``last_run`` on a successful
+            # collection — including one where the only report
+            # lookup transparently failed.
+            full_report = self._intel471_get_json_or_raise(url)
             if full_report:
                 mapping_content = self._getReportContent(full_report)
                 target_ids.append(mapping_content[0]["id"])
