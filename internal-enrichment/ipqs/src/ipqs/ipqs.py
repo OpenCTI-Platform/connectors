@@ -2,7 +2,7 @@
 
 from os import path
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pycti
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -42,11 +42,11 @@ class IPQSConnector:
     def __init__(self) -> None:
         """Instantiate the connector helper from config."""
         config_file_path = Path(__file__).parent / "config.yml"
-        config = (
-            load(open(config_file_path, encoding="utf-8"), Loader=FullLoader)
-            if path.isfile(config_file_path)
-            else {}
-        )
+        if path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as fh:
+                config = load(fh, Loader=FullLoader) or {}
+        else:
+            config = {}
         self.helper = OpenCTIConnectorHelper(config)
 
         self.api_key = get_config_variable(
@@ -182,10 +182,14 @@ class IPQSConnector:
             PHONE_ENRICH, observable["observable_value"]
         )
         if response is None:
-            return (
-                "Invalid/nonexistent phone number or country specified is not "
-                "possible."
-            )
+            # ``_query`` already logged the underlying cause (network
+            # error, non-2xx HTTP status, non-JSON body or
+            # ``success != True`` payload); surface a generic
+            # enrichment-failed message that matches what the IP /
+            # Email / URL handlers return so operators are not
+            # misled into thinking the phone number itself is the
+            # problem.
+            return "IPQS Phone enrichment failed or returned no usable response."
         builder = IPQSBuilder(
             self.helper, self.author, observable, response.get("fraud_score")
         )
@@ -214,6 +218,12 @@ class IPQSConnector:
         credential = observable.get("credential") or ""
         account_login = observable.get("account_login") or ""
 
+        # ``public_name`` becomes the ``Indicator.name`` written to
+        # OpenCTI for sensitive lookups so the password / login itself
+        # never lands in the UI search index. The deterministic STIX
+        # pattern still contains the value (it is required by STIX),
+        # but it is hidden from the connector logs by ``builder``.
+        public_name: Optional[str] = None
         if credential:
             value = credential
             # Passwords / account logins routinely contain `'` and `\`,
@@ -223,10 +233,17 @@ class IPQSConnector:
             # rules.
             pattern = f"[user-account:credential = '{_stix_quote(value)}']"
             response = self.client.get_leaked_info(LEAK_PASSWORD, value)
+            public_name = (
+                f"Leaked credential for {observable.get('standard_id', 'user-account')}"
+            )
         elif account_login:
             value = account_login
             pattern = f"[user-account:account_login = '{_stix_quote(value)}']"
             response = self.client.get_leaked_info(LEAK_USERNAME_OR_EMAIL, value)
+            # ``account_login`` itself is the public identifier of the
+            # account (typically an email or username); we keep it
+            # visible as the indicator name and use the standard
+            # (non-sensitive) code path below.
         else:
             return (
                 "User-Account observable is missing both ``account_login`` "
@@ -259,6 +276,8 @@ class IPQSConnector:
             pattern=pattern,
             indicator_value=value,
             description=description,
+            sensitive=bool(credential),
+            public_name=public_name,
         )
         return builder.send_bundle()
 
@@ -305,6 +324,29 @@ class IPQSConnector:
     # ------------------------------------------------------------------
     # Dispatcher / listener
     # ------------------------------------------------------------------
+    # Observable fields that are never safe to write to the connector logs
+    # (Darkweb-Leak User-Account observables can carry plaintext
+    # passwords / account logins, both of which would otherwise leak into
+    # any centralised log aggregator).
+    _SENSITIVE_OBSERVABLE_FIELDS = ("credential", "account_login")
+
+    @classmethod
+    def _redact_observable(cls, observable: Dict[str, Any]) -> Dict[str, Any]:
+        """Return a log-safe copy of ``observable``.
+
+        Drops every value listed in :data:`_SENSITIVE_OBSERVABLE_FIELDS`
+        (``credential`` / ``account_login``) and replaces it with a
+        ``***REDACTED***`` marker so operators can still see that the
+        field was present without leaking its value into the logs.
+        """
+        if not isinstance(observable, dict):
+            return observable
+        redacted = dict(observable)
+        for field in cls._SENSITIVE_OBSERVABLE_FIELDS:
+            if field in redacted and redacted[field] not in (None, ""):
+                redacted[field] = "***REDACTED***"
+        return redacted
+
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
         if observable is None:
@@ -313,7 +355,12 @@ class IPQSConnector:
                 "not have access to this observable, "
                 "check the group of the connector user)",
             )
-        self.helper.log_debug(f"[IPQS] starting enrichment of observable: {observable}")
+        # Never log ``credential`` / ``account_login`` — they are
+        # plaintext secrets on Darkweb-Leak User-Account observables.
+        self.helper.log_debug(
+            "[IPQS] starting enrichment of observable: "
+            f"{self._redact_observable(observable)}"
+        )
 
         match observable["entity_type"]:
             case "IPv4-Addr":

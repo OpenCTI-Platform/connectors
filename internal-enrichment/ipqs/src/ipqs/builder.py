@@ -1,5 +1,7 @@
 """IPQS builder module."""
 
+from typing import Dict, Optional
+
 import pycti
 from pycti import OpenCTIConnectorHelper, StixCoreRelationship
 from stix2 import (
@@ -106,18 +108,39 @@ class IPQSBuilder:
         pattern: str,
         indicator_value: str,
         description: str,
+        *,
+        sensitive: bool = False,
+        public_name: Optional[str] = None,
     ) -> None:
         """Create an Indicator and the matching `based-on` relationship.
 
         ``labels`` is the OpenCTI label dict returned by
         :meth:`update_labels`; ``labels["value"]`` is wrapped in a list
         so the STIX ``labels`` property is always an array.
+
+        When ``sensitive`` is :data:`True` the indicator carries a
+        non-sensitive ``name`` (``public_name`` if provided, otherwise
+        ``"User account credential exposure"``) and the debug log
+        only echoes the indicator id — never the raw STIX pattern,
+        which on Darkweb-Leak credential lookups embeds the plaintext
+        password. The pattern itself is still stored on the
+        :class:`Indicator` (it is required by STIX), but it is never
+        echoed to the connector logs.
         """
-        self.helper.log_debug(f"[IPQS] creating indicator with pattern {pattern}")
+        if sensitive:
+            indicator_name = public_name or "User account credential exposure"
+            log_pattern = "***REDACTED-PATTERN***"
+        else:
+            indicator_name = indicator_value
+            log_pattern = pattern
+        indicator_id = pycti.Indicator.generate_id(pattern)
+        self.helper.log_debug(
+            f"[IPQS] creating indicator {indicator_id} with pattern {log_pattern}"
+        )
         indicator = Indicator(
-            id=pycti.Indicator.generate_id(pattern),
+            id=indicator_id,
             created_by_ref=self.author,
-            name=indicator_value,
+            name=indicator_name,
             description=description,
             confidence=self.helper.connect_confidence_level,
             pattern=pattern,
@@ -141,9 +164,29 @@ class IPQSBuilder:
         self.bundle += [indicator, relationship]
 
     def send_bundle(self) -> str:
-        """Serialize and send the bundle to be inserted."""
+        """Serialize and send the bundle to be inserted.
+
+        The debug log only emits a per-type summary of the bundle
+        contents, never the full STIX objects. Indicators built for
+        Darkweb-Leak User-Account observables embed the plaintext
+        credential in their ``pattern``; logging the entire bundle
+        would otherwise leak that secret into any centralised log
+        aggregator.
+        """
         if self.bundle is not None:
-            self.helper.log_debug(f"[IPQS] sending bundle: {self.bundle}")
+            type_counts: Dict[str, int] = {}
+            for stix_object in self.bundle:
+                stix_type = (
+                    getattr(stix_object, "type", None) or stix_object.__class__.__name__
+                )
+                type_counts[stix_type] = type_counts.get(stix_type, 0) + 1
+            summary = ", ".join(
+                f"{count} {stix_type}"
+                for stix_type, count in sorted(type_counts.items())
+            )
+            self.helper.log_debug(
+                f"[IPQS] sending bundle ({len(self.bundle)} objects: {summary})"
+            )
             serialized_bundle = Bundle(
                 objects=self.bundle, allow_custom=True
             ).serialize()
