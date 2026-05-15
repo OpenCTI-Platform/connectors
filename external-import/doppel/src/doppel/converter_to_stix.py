@@ -165,7 +165,7 @@ class ConverterToStix:
         Create Request for Takedown case
         """
         priority = calculate_priority(alert.get("score", 0))
-        case_name = f"Doppel Takedown - {alert.get('entity', 'Unknown')} ({alert.get('id')})"
+        case_name = f"Doppel Takedown - {alert.get('entity')} ({alert.get('id')})"
         now = datetime.now(timezone.utc).isoformat()
 
         return {
@@ -436,12 +436,24 @@ class ConverterToStix:
                 for label in observable_octi["objectLabel"]
                 if label["value"].startswith("queue_state:")
             ]
-            if label_queue_state:
+            label_entity_state = [
+                label["value"]
+                for label in observable_octi["objectLabel"]
+                if label["value"].startswith("entity_state:")
+            ]
+            if label_queue_state and label_entity_state:
                 previous_queue_state = label_queue_state[0].replace(
                     "queue_state:", ""
                 )
+                label_entity_state = label_entity_state[0].replace(
+                    "entity_state:", ""
+                )
                 self.helper.api.stix_cyber_observable.remove_label(
                     id=observable_octi["id"], label_name=label_queue_state
+                )
+                print(f"REMOVING ENTITY STATE LABEL - {label_entity_state}")
+                self.helper.api.stix_cyber_observable.remove_label(
+                    id=observable_octi["id"], label_name=label_entity_state
                 )
 
             # Use current alert_queue_state for decision logic (not label-based)
@@ -495,6 +507,9 @@ class ConverterToStix:
         :param observable_name: Name of the observable
         :return: List of indicator objects or empty
         """
+        if observable_name.startswith("http"):
+            obv_stripped = observable_name.split("://")
+            observable_name = obv_stripped[1]
         # First, try searching by custom property (may not work if not indexed)
         filters = {
             "mode": "and",
@@ -549,7 +564,7 @@ class ConverterToStix:
 
         return []
 
-    def _find_rft_cases_by_alert_id(self, alert_id: str) -> list:
+    def _find_rft_cases_by_alert_id(self, entity: str, alert_id: str) -> list:
         """
         Find RFT cases by alert_id stored in x_opencti_workflow_id.
         Used for revocation during reversion workflow.
@@ -557,6 +572,9 @@ class ConverterToStix:
         :param alert_id: Doppel alert ID
         :return: List of RFT case objects or empty list
         """
+        if entity.startswith("http"):
+            obv_stripped = entity.split("://")
+            entity = obv_stripped[1]
         filters = {
             "mode": "and",
             "filters": [
@@ -573,6 +591,38 @@ class ConverterToStix:
                 {"alert_id": alert_id, "count": len(rft_cases)},
             )
             return rft_cases
+        else:
+            self.helper.connector_logger.info(
+                "[DoppelConverter] No RFT found by workflow_id, trying entity search",
+                {"alert_id": alert_id, "search_value": entity},
+            )
+
+            # Search by entity value
+            filters = {
+                "mode": "and",
+                "filters": [
+                    {"key": "name", "values": [entity]},
+                ],
+                "filterGroups": [],
+            }
+
+            rft_result = self.helper.api.case_rft.list(filters=filters)
+
+            # Filter results to only include rft cases
+            filtered_rft = []
+            if rft_result:
+                for rft in rft_result:
+                    ext_refs = rft.get("externalReferences", [])
+                    for ext_ref in ext_refs:
+                        if ext_ref.get("external_id") == alert_id:
+                            filtered_rft.append(rft)
+
+            if filtered_rft:
+                self.helper.connector_logger.info(
+                    "[DoppelConverter] Found rft cases for alert_id",
+                    {"alert_id": alert_id, "count": len(filtered_rft)},
+                )
+                return filtered_rft
 
         return []
 
@@ -704,6 +754,13 @@ class ConverterToStix:
                     alert, object_refs=case_refs, observable_id=observable_id
                 )
                 stix_objects.append(case_rft)
+                
+                rft_relationship = self.create_relationship(
+                    source_id=case_rft["id"],
+                    target_id=indicator.id,
+                    relationship_type="related-to",
+                )
+                stix_objects.append(rft_relationship)
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Created based-on relationship for new indicator",
@@ -746,6 +803,7 @@ class ConverterToStix:
         :return: None
         """
         alert_id = alert["id"]
+        entity = alert["entity"]
         queue_state = alert["queue_state"]
 
         self.helper.connector_logger.info(
@@ -828,7 +886,7 @@ class ConverterToStix:
             )
 
         # Find and revoke RFT cases for this alert
-        existing_rft_cases = self._find_rft_cases_by_alert_id(alert_id)
+        existing_rft_cases = self._find_rft_cases_by_alert_id(entity, alert_id)
         rft_cases_to_revoke = [
             case
             for case in existing_rft_cases
