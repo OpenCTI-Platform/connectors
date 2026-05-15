@@ -161,8 +161,8 @@ class BaseClientAPI:
                 else:
                     description = f"type={item_type}, origin={origin}"
 
-                for filter in extra_filters:
-                    current_filter += f" {filter}"
+                for extra_filter in extra_filters:
+                    current_filter += f" {extra_filter}"
 
                 config = {
                     "params": {
