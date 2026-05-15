@@ -84,6 +84,30 @@ connector-linter check ./connector --severity error     # errors only
 connector-linter check ./connector --abspath
 ```
 
+### Project-level configuration (`pyproject.toml`)
+
+Configure the linter at project level via `[tool.connector-linter]` in `pyproject.toml`. The file is auto-discovered by walking up from the connector directory (like Ruff).
+
+```toml
+[tool.connector-linter]
+# Only run these checks/prefixes (same as --select)
+select = ["VC1xx", "VC3xx"]
+
+# Skip these checks (same as --ignore, merged with CLI --ignore)
+ignore = ["VC306", "VC307"]
+
+# Skip specific checks for files matching a glob pattern
+[tool.connector-linter.per-file-ignores]
+"tests/*.py" = ["VC309", "VC313"]
+"src/main.py" = ["VC308"]
+```
+
+**Precedence rules** (inspired by Ruff):
+- CLI `--select` overrides `select` from pyproject.toml
+- CLI `--ignore` is merged with `ignore` from pyproject.toml (union of both)
+- `per-file-ignores` applies after check execution and before inline `# noqa`
+- Use `--config path/to/pyproject.toml` to specify an explicit config file
+
 ### Inline suppression (`# noqa`)
 
 Suppress specific checks on individual lines using `# noqa` comments — same syntax as flake8:

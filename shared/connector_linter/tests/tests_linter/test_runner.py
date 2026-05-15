@@ -186,3 +186,101 @@ class TestNoqaIntegration:
         results = run_checks(minimal_connector, select=["VC952"], disable_noqa=False)
         assert len(results) == 1
         assert results[0].severity == Severity.ERROR
+
+
+class TestPyprojectConfig:
+    """pyproject.toml [tool.connector-linter] integration."""
+
+    def test_ignore_from_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nignore = ["VC903"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector, select=["VC9xx"])
+        codes = {r.code for r in results}
+        assert "VC903" not in codes
+        assert "VC901" in codes
+
+    def test_select_from_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nselect = ["VC901"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector)
+        codes = {r.code for r in results}
+        assert codes == {"VC901"}
+
+    def test_cli_select_overrides_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nselect = ["VC901"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector, select=["VC902"])
+        codes = {r.code for r in results}
+        assert codes == {"VC902"}
+
+    def test_cli_ignore_merges_with_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nignore = ["VC901"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector, select=["VC9xx"], ignore=["VC902"])
+        codes = {r.code for r in results}
+        assert "VC901" not in codes
+        assert "VC902" not in codes
+        assert "VC903" in codes
+
+    def test_per_file_ignores(self, _clean_registry, minimal_connector):
+        (minimal_connector / "src" / "target.py").write_text(
+            "x = 1\n", encoding="utf-8"
+        )
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter.per-file-ignores]\n"src/target.py" = ["VC960"]\n',
+            encoding="utf-8",
+        )
+
+        @CheckRegistry.register(
+            code="VC960",
+            name="test-pfi",
+            description="Check for per-file-ignores test",
+            severity=Severity.ERROR,
+        )
+        def _check(ctx: ConnectorContext) -> list[CheckFinding]:
+            return [
+                CheckFinding(
+                    message="flagged",
+                    severity=Severity.ERROR,
+                    file_path=ctx.path / "src" / "target.py",
+                    line=1,
+                )
+            ]
+
+        results = run_checks(minimal_connector, select=["VC960"])
+        assert len(results) == 0
+
+    def test_per_file_ignores_no_match(self, _clean_registry, minimal_connector):
+        (minimal_connector / "src" / "other.py").write_text("x = 1\n", encoding="utf-8")
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter.per-file-ignores]\n"src/target.py" = ["VC961"]\n',
+            encoding="utf-8",
+        )
+
+        @CheckRegistry.register(
+            code="VC961",
+            name="test-pfi-no-match",
+            description="Per-file-ignores miss test",
+            severity=Severity.ERROR,
+        )
+        def _check(ctx: ConnectorContext) -> list[CheckFinding]:
+            return [
+                CheckFinding(
+                    message="flagged",
+                    severity=Severity.ERROR,
+                    file_path=ctx.path / "src" / "other.py",
+                    line=1,
+                )
+            ]
+
+        results = run_checks(minimal_connector, select=["VC961"])
+        assert len(results) == 1
+
+    def test_no_pyproject_runs_all(self, dummy_checks, minimal_connector):
+        results = run_checks(minimal_connector, select=["VC9xx"])
+        codes = {r.code for r in results}
+        assert codes == {"VC901", "VC902", "VC903"}

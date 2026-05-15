@@ -88,6 +88,13 @@ def _resolve_connector_root(file_path: Path) -> Path | None:
     default=False,
     help="Show absolute file paths in text output (JSON always uses absolute paths).",
 )
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Path to pyproject.toml (auto-detected if not specified).",
+)
 def check(
     connector_path: str,
     output_format: str,
@@ -97,6 +104,7 @@ def check(
     verbose: bool,
     disable_noqa: bool,
     abspath: bool,
+    config_path: str | None,
 ) -> None:
     r"""Check a connector against Verified criteria.
 
@@ -134,6 +142,7 @@ def check(
         select=list(select) if select else None,
         ignore=list(ignore) if ignore else None,
         disable_noqa=disable_noqa,
+        config_path=Path(config_path) if config_path else None,
     )
 
     # When a specific file was targeted, keep only findings for that file
