@@ -58,7 +58,10 @@ supported.
   `python3-uno` (LibreOffice is not packaged for `musl`), and Debian's
   `python3-uno` package only loads against the matching system Python
   (Python 3.11 on Bookworm) — not a second interpreter installed under
-  `/usr/local`.
+  `/usr/local`. ``pycti`` and ``unogenerator`` are installed directly
+  into that system Python so the connector and the apt-installed
+  ``uno`` / ``unohelper`` / ``pyuno`` bridge share the same
+  interpreter.
 
 ## Configuration variables
 
@@ -117,40 +120,42 @@ docker compose up -d
 
 ### Manual Deployment
 
-1. Install LibreOffice and the Python UNO bridge on the host (for example
-   on Debian/Ubuntu):
+1. Install LibreOffice, the Python UNO bridge and `pip` on the host
+   (for example on Debian/Ubuntu):
 
    ```bash
-   sudo apt-get install -y libreoffice libreoffice-script-provider-python python3-uno python3-venv
+   sudo apt-get install -y \
+       libreoffice libreoffice-script-provider-python \
+       python3 python3-pip python3-uno
    ```
 
 2. Create `src/config.yml` from `src/config.yml.sample` and fill in the
    `opencti.url` / `opencti.token` / `connector.id` values.
 
-3. Create a virtual environment that can see the apt-installed UNO bridge
-   and install the Python dependencies into it. `--system-site-packages`
-   is required so the venv inherits the `uno` / `unohelper` / `pyuno`
-   modules shipped by `python3-uno`; without it the venv runs under a
-   second interpreter that cannot import `pyuno` (ABI mismatch). The
-   flag also keeps PEP 668 happy on Debian Bookworm / recent Ubuntu
-   releases where `pip3 install` directly into the system Python is
-   blocked:
+3. Install the Python dependencies into the same system Python that
+   `python3-uno` was built for. On Debian Bookworm / recent Ubuntu
+   releases pip refuses to write to the system interpreter by default
+   (PEP 668), so the install must be opted in to with
+   `--break-system-packages`. This is intentional for this connector
+   because `pycti`, `unogenerator` and the apt-installed `uno` /
+   `unohelper` / `pyuno` bridge must share a single interpreter — a
+   separate virtual environment cannot import the compiled `pyuno`
+   extension (ABI mismatch):
 
    ```bash
-   python3 -m venv --system-site-packages /opt/opencti-connector-export-file-ods/venv
-   /opt/opencti-connector-export-file-ods/venv/bin/pip install --no-cache-dir -r src/requirements.txt
+   sudo pip3 install --break-system-packages --no-cache-dir -r src/requirements.txt
    ```
 
 4. Start the headless LibreOffice listener used by `unogenerator`:
 
    ```bash
-   /opt/opencti-connector-export-file-ods/venv/bin/unogenerator_start
+   unogenerator_start
    ```
 
 5. Start the connector with the same interpreter:
 
    ```bash
-   /opt/opencti-connector-export-file-ods/venv/bin/python3 src/main.py
+   python3 src/main.py
    ```
 
 ## Usage
@@ -246,8 +251,10 @@ At `debug` level the connector logs:
 
 - The raw export request payload.
 - The export type (`simple` / `full`).
-- Each level-1 selected entity id and, for `full` exports, the STIX core
-  relationships read in either direction plus each level-2 neighbour id.
+- Each level-1 selected entity id and, for `full` exports, the count of
+  STIX core relationships discovered around each selected entity
+  (`Relationships fromOrToId=<id>: <n> found`) plus each level-2
+  neighbour id.
 - The path of the temporary ODS file rendered before upload.
 
 At `info` level the connector additionally logs the upload start

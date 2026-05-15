@@ -2,3 +2,6 @@ config.yml
 __pycache__
 logs
 *.gql
+tmp/
+src/tmp/
+*.ods

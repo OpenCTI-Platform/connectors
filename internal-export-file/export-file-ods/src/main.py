@@ -10,9 +10,10 @@ import os
 import sys
 import tempfile
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from lib.internal_export import InternalExportConnector
+from lib.rendering import render_dict_item, render_dict_list
 from lib.sanitization import sanitize_cell
 from unogenerator import ODS_Standard
 from unogenerator.commons import ColorsNamed
@@ -50,12 +51,15 @@ class ExportFileODSConnector(InternalExportConnector):
         Level 1 entities are the selected entries already filtered by the
         platform through ``api_impersonate`` and the request's
         ``access_filter``. Level 2 entities are first neighbours reached
-        through STIX core relationships. Neighbour candidates are fetched
-        in a single batch via the unified
-        ``opencti_stix_object_or_stix_relationship.list`` endpoint with the
-        request's ``access_filter`` applied, so an exported neighbour can
-        never bypass the marking / access restrictions configured for the
-        export.
+        through STIX core relationships. Relationship discovery uses a
+        single ``stix_core_relationship.list`` call per selected entity
+        (``fromOrToId``) instead of one per direction, halving the API
+        load on the platform. Neighbour candidates are then fetched in a
+        single batch via the unified
+        ``opencti_stix_object_or_stix_relationship.list`` endpoint with
+        the request's ``access_filter`` applied, so an exported
+        neighbour can never bypass the marking / access restrictions
+        configured for the export.
 
         The result is de-duplicated by entity id (level 1 always wins) so
         the same neighbour reached from several selected entities or from
@@ -77,35 +81,7 @@ class ExportFileODSConnector(InternalExportConnector):
         if self.export_type != "full":
             return export_list
 
-        candidate_neighbor_ids: set[str] = set()
-        for entity_id in [eid for eid in seen_ids if eid]:
-            for direction, ref_key in (("fromId", "to"), ("toId", "from")):
-                # ``main_filter`` is intentionally **not** forwarded here.
-                # For a ``selection`` export it is the selected object ids
-                # filter, which would filter the *relationship* rows by
-                # those ids (which they do not carry) and effectively
-                # turn a ``full`` export into a ``simple`` one. For a
-                # ``query`` export it is the user-defined entity filter
-                # which generally does not apply to relationship rows.
-                # We only need the endpoint direction
-                # (``fromId`` / ``toId``) to discover the neighbour ids;
-                # the marking / access restrictions are enforced when
-                # we fetch the actual neighbour objects below, by
-                # AND-ing ``access_filter`` into the unified entity
-                # endpoint lookup.
-                rels = self.helper.api_impersonate.stix_core_relationship.list(
-                    **{direction: entity_id},
-                    getAll=True,
-                )
-                self.helper.log_debug(
-                    f"Relationships {direction}={entity_id}: {len(rels)} found"
-                )
-                for relationship in rels:
-                    neighbor_id = relationship[ref_key]["id"]
-                    if neighbor_id in seen_ids:
-                        continue
-                    candidate_neighbor_ids.add(neighbor_id)
-
+        candidate_neighbor_ids = self._collect_neighbor_candidate_ids(seen_ids)
         if not candidate_neighbor_ids:
             return export_list
 
@@ -125,6 +101,40 @@ class ExportFileODSConnector(InternalExportConnector):
             self.helper.log_debug(f"Related entity (level 2): {neighbor_id}")
             export_list.append((neighbor, 2))
         return export_list
+
+    def _collect_neighbor_candidate_ids(self, seen_ids: Iterable[str]) -> set[str]:
+        """Return the unique neighbour ids reachable from ``seen_ids``.
+
+        Uses ``fromOrToId`` so a single paginated relationship list call
+        returns the relationships in both directions for a given entity
+        (rather than the previous ``fromId`` + ``toId`` pair, which
+        doubled the API load on ``full`` exports). ``main_filter`` is
+        intentionally **not** forwarded: for a ``selection`` export it is
+        the selected-object-ids filter (which has no meaning on
+        relationship rows and would silently turn every ``full`` export
+        into a ``simple`` one); for a ``query`` export it is the
+        user-defined entity filter (which generally does not apply to
+        relationship rows either). Marking / access restrictions are
+        enforced afterwards when the neighbour objects are fetched
+        through ``opencti_stix_object_or_stix_relationship.list`` with
+        ``access_filter`` ANDed in.
+        """
+        candidate_neighbor_ids: set[str] = set()
+        for entity_id in [eid for eid in seen_ids if eid]:
+            rels = self.helper.api_impersonate.stix_core_relationship.list(
+                fromOrToId=entity_id, getAll=True
+            )
+            self.helper.log_debug(
+                f"Relationships fromOrToId={entity_id}: {len(rels)} found"
+            )
+            for relationship in rels:
+                from_id = (relationship.get("from") or {}).get("id")
+                to_id = (relationship.get("to") or {}).get("id")
+                neighbor_id = to_id if from_id == entity_id else from_id
+                if not neighbor_id or neighbor_id in seen_ids:
+                    continue
+                candidate_neighbor_ids.add(neighbor_id)
+        return candidate_neighbor_ids
 
     @staticmethod
     def _build_neighbor_filter(
@@ -183,19 +193,10 @@ class ExportFileODSConnector(InternalExportConnector):
             if isinstance(value[0], str):
                 return sanitize_cell(",".join(value))
             if isinstance(value[0], dict):
-                parts: List[str] = []
-                for item in value:
-                    for key in ("name", "definition", "value", "observable_value"):
-                        if key in item:
-                            parts.append(sanitize_cell(item[key]))
-                            break
-                return sanitize_cell(",".join(parts))
+                return render_dict_list(value)
             return ""
         if isinstance(value, dict):
-            for key in ("name", "value", "observable_value"):
-                if key in value:
-                    return sanitize_cell(value[key])
-            return ""
+            return render_dict_item(value)
         return ""
 
     def _build_headers(self, entities_list: List[Dict[str, Any]]) -> List[str]:

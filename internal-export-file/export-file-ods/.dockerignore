@@ -3,3 +3,4 @@ src/__pycache__
 src/logs
 src/*.gql
 src/tmp
+*.ods
