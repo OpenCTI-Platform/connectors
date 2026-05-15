@@ -13,7 +13,10 @@ services:
       - MATRIX_USER_ID=@octi-bot:matrix.example.org
       - MATRIX_PASSWORD=ChangeMe
       - MATRIX_DEVICE_NAME=octi_bot
-      # TLP marking applied to created entities: CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+      # TLP marking applied to created entities. Supported values:
+      # CLEAR, WHITE (alias of CLEAR), GREEN, AMBER, AMBER_STRICT
+      # (also accepted as AMBER+STRICT / AMBER STRICT / AMBER-STRICT), RED.
+      # Case-insensitive.
       - MATRIX_TLP=AMBER
       - MATRIX_DEBUG=false
     restart: always

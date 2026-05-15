@@ -93,7 +93,7 @@ template.
 | User id          | matrix.user_id      | `MATRIX_USER_ID`            |                            | Yes       | Matrix user id of the bot account, e.g. `@octi-bot:matrix.example.org`.                                      |
 | Password         | matrix.password     | `MATRIX_PASSWORD`           |                            | Yes       | Password of the bot account. Never echoed back to the logs.                                                  |
 | Device name      | matrix.device_name  | `MATRIX_DEVICE_NAME`        | `octi_bot`                 | No        | Device label registered against the Matrix server when logging in.                                           |
-| TLP marking      | matrix.tlp          | `MATRIX_TLP`                | `AMBER`                    | No        | Marking applied to created entities. One of `CLEAR`, `GREEN`, `AMBER`, `AMBER_STRICT`, `RED`.                |
+| TLP marking      | matrix.tlp          | `MATRIX_TLP`                | `AMBER`                    | No        | Marking applied to created entities. One of `CLEAR`, `WHITE` (alias of `CLEAR`), `GREEN`, `AMBER`, `AMBER_STRICT` (also accepted as `AMBER+STRICT`, `AMBER STRICT`, `AMBER-STRICT`), `RED`. Case-insensitive.                |
 | Store path       | matrix.store_path   | `MATRIX_STORE_PATH`         | `<src>/store`              | No        | Directory used by `matrix-nio` to persist its SQLite store (sync token, device keys).                        |
 | Debug            | matrix.debug        | `MATRIX_DEBUG`              | `false`                    | No        | Enable very verbose logging from the HTTP/WebSocket layer. **Do not enable in production.**                  |
 
@@ -227,19 +227,36 @@ HTTP / WebSocket logging. **Do not enable `MATRIX_DEBUG` in production**
 |------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------|
 | `MATRIX_SERVER is required …`                        | Provide a non-empty Matrix homeserver URL (`https://…`).                                                              |
 | `MATRIX_USER_ID is required …` / `MATRIX_PASSWORD …` | The bot needs both a fully-qualified Matrix id (`@bot:server`) and a password.                                        |
-| `Unsupported MATRIX_TLP value …`                     | Use one of `CLEAR`, `GREEN`, `AMBER`, `AMBER_STRICT`, `RED`.                                                          |
+| `Unsupported MATRIX_TLP value …`                     | Use one of `CLEAR`, `WHITE`, `GREEN`, `AMBER`, `AMBER_STRICT` (or `AMBER+STRICT`), `RED` (case-insensitive).         |
 | `Could not decrypt attachment for event …`           | The encrypted attachment is malformed or the bot lacks the room key (re-invite the bot or wait for keys to sync).     |
 
 ## Additional information
 
-- **Channel deduplication**: the connector looks up channels by `name`
-  (the Matrix `room_id`) before creating a new one, so re-importing the
-  same room does not duplicate the SDO.
-- **Author deduplication**: identities are looked up by their Matrix
-  user id before being created.
+- **Channel deduplication**: each Matrix `room_id` is mapped to a
+  Channel SDO whose `standard_id` is the deterministic
+  `pycti.Channel.generate_id(room_id)` UUIDv5. The platform dedups
+  on this id, so re-importing the same room (or running the connector
+  multiple times) cannot create a duplicate Channel SDO. The Channel
+  is also emitted into a bundle at most once per connector lifetime
+  (an in-memory cache tracks the ids already sent), so a busy room
+  does not republish the same Channel SDO with every event.
+- **Author deduplication**: each Matrix sender is mapped to an
+  Identity SDO whose `standard_id` is the deterministic
+  `pycti.Identity.generate_id(sender, "individual")` UUIDv5. Same
+  in-memory cache as for channels — emit-once-per-lifetime, dedup by
+  `standard_id` on the platform side.
+- **No per-event OpenCTI HTTP calls**: `_on_event` never makes a
+  synchronous OpenCTI list / read call, so the asyncio loop driving
+  `sync_forever` is not stalled on platform latency. Every flush of
+  the buffered STIX objects runs in a thread executor.
 - **Attachment encoding**: attachment payloads are base64-encoded as
   UTF-8 strings (not raw `bytes`) so STIX bundles serialise to valid
   JSON.
+- **Edits**: an edit (`m.replace`) becomes its **own**
+  `media-content` observable keyed by the edit's own Matrix event id,
+  plus a `related-to` relationship back to the original post. This
+  preserves the original message body in OpenCTI instead of
+  overwriting it.
 - **Timestamps**: all timestamps emitted by the connector are
   timezone-aware UTC values. The private
   `stix2.utils._TIMESTAMP_FORMAT_FRAC` constant is no longer referenced.

@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 import stix2
 import yaml
+from lib.helpers import media_content_id, resolve_tlp
 from nio import (
     AsyncClient,
     AsyncClientConfig,
@@ -52,21 +53,6 @@ from pycti import StixCoreRelationship as PyctiSCR
 from pycti import (
     get_config_variable,
 )
-
-# ``stix2`` exposes constants for TLP_WHITE / GREEN / AMBER / RED. AMBER+STRICT
-# is an OpenCTI-specific marking and is not exported as a constant, so we keep
-# its canonical id here.
-_TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
-
-_TLP_MAP: Dict[str, str] = {
-    "CLEAR": stix2.TLP_WHITE.id,
-    "WHITE": stix2.TLP_WHITE.id,
-    "GREEN": stix2.TLP_GREEN.id,
-    "AMBER": stix2.TLP_AMBER.id,
-    "AMBER_STRICT": _TLP_AMBER_STRICT_ID,
-    "AMBER+STRICT": _TLP_AMBER_STRICT_ID,
-    "RED": stix2.TLP_RED.id,
-}
 
 # Batching knobs for ``_maybe_flush_bundle`` — we deliberately do NOT
 # initiate one OpenCTI Work per Matrix event (which can be very noisy
@@ -138,39 +124,6 @@ def _coerce_bool(value: Any, *, default: bool) -> bool:
     return default
 
 
-def _resolve_tlp(name: str) -> str:
-    """Return the marking-definition id for ``name`` (case-insensitive)."""
-    normalised = (name or "").strip().upper().replace(" ", "_")
-    try:
-        return _TLP_MAP[normalised]
-    except KeyError as exc:
-        valid = ", ".join(sorted({"CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"}))
-        raise ValueError(
-            f"Unsupported MATRIX_TLP value '{name}'. Expected one of {valid}."
-        ) from exc
-
-
-def _list_filter(field: str, value: str) -> Dict[str, Any]:
-    """Build a filter compatible with the modern OpenCTI API.
-
-    The modern OpenCTI filter contract keeps ``mode`` at the top level
-    only (and on ``filterGroups``). Individual filter items carry
-    just ``key`` / ``values`` / ``operator``; an inner ``mode`` is
-    rejected by the API.
-    """
-    return {
-        "mode": "and",
-        "filters": [
-            {
-                "key": field,
-                "values": [value],
-                "operator": "eq",
-            }
-        ],
-        "filterGroups": [],
-    }
-
-
 class MatrixConnector:
     """OpenCTI external-import connector that streams Matrix events."""
 
@@ -187,22 +140,16 @@ class MatrixConnector:
         self.matrix_password: str = self._require_string(
             config, "MATRIX_PASSWORD", ["matrix", "password"]
         )
-        self.matrix_device_name: str = (
-            get_config_variable(
-                "MATRIX_DEVICE_NAME",
-                ["matrix", "device_name"],
-                config,
-                default="octi_bot",
-            )
-            or "octi_bot"
+        self.matrix_device_name: str = get_config_variable(
+            "MATRIX_DEVICE_NAME",
+            ["matrix", "device_name"],
+            config,
+            default="octi_bot",
         )
-        tlp_name = (
-            get_config_variable(
-                "MATRIX_TLP", ["matrix", "tlp"], config, default="AMBER"
-            )
-            or "AMBER"
+        tlp_name = get_config_variable(
+            "MATRIX_TLP", ["matrix", "tlp"], config, default="AMBER"
         )
-        self.matrix_marking_id = _resolve_tlp(tlp_name)
+        self.matrix_marking_id = resolve_tlp(tlp_name)
         self.matrix_debug: bool = _coerce_bool(
             get_config_variable(
                 "MATRIX_DEBUG",
@@ -256,6 +203,16 @@ class MatrixConnector:
         # Background task that drains the buffer when the room is
         # quiet (no incoming event triggers ``_maybe_flush_bundle``).
         self._periodic_flush_task: Optional[asyncio.Task] = None
+        # In-memory caches of the deterministic Channel / Identity
+        # standard ids we have already emitted in this connector
+        # lifetime, so ``_on_event`` no longer issues a synchronous
+        # OpenCTI HTTP ``list()`` call per Matrix event (which would
+        # stall the asyncio loop driving ``sync_forever``). The
+        # platform dedups SCOs / SDOs by ``standard_id`` on
+        # ingestion, so re-emitting an already-known Channel / Identity
+        # in a different bundle is harmless — we just avoid doing it.
+        self._known_channel_ids: set[str] = set()
+        self._known_author_ids: set[str] = set()
 
     @staticmethod
     def _require_string(config: Dict[str, Any], env_name: str, path: List[str]) -> str:
@@ -296,10 +253,10 @@ class MatrixConnector:
         trigger vs. periodic-task trigger) so two callers do not race
         on the same buffer. The OpenCTI Work is always closed: with
         ``to_processed(..., in_error=True)`` on failure or with the
-        success message + ``last_run`` state update on success. After
-        ``_MAX_FLUSH_FAILURES`` consecutive failures the buffer is
-        dropped (with a loud log line) so a single poison object
-        cannot keep producing in-error Work records indefinitely.
+        success message on success. After ``_MAX_FLUSH_FAILURES``
+        consecutive failures the buffer is dropped (with a loud log
+        line) so a single poison object cannot keep producing
+        in-error Work records indefinitely.
         """
         async with self._flush_lock:
             if not self.bundle:
@@ -337,6 +294,13 @@ class MatrixConnector:
         Raising propagates the failure to the caller, which adjusts the
         consecutive-failure counter and decides whether to retry or to
         drop the batch.
+
+        The connector does **not** persist any cursor state: the Matrix
+        sync token is owned by ``matrix-nio``'s SQLite store (see
+        ``MATRIX_STORE_PATH``), so writing a ``last_run`` timestamp on
+        every batch would only add a helper round-trip per flush
+        without giving us anything to resume from. The Work record
+        itself records the time of every successful send.
         """
         now = datetime.now(tz=timezone.utc)
         friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
@@ -370,15 +334,11 @@ class MatrixConnector:
                 )
             raise
 
-        timestamp = int(time.time())
         message = (
-            f"{self.helper.connect_name} connector successfully run, "
-            f"storing last_run as {timestamp}"
+            f"{self.helper.connect_name} connector successfully sent "
+            f"{objects_count} STIX objects."
         )
         self.helper.log_info(message)
-        current_state = self.helper.get_state() or {}
-        current_state["last_run"] = timestamp
-        self.helper.set_state(current_state)
         self.helper.api.work.to_processed(work_id, message)
 
     async def _periodic_flush(self) -> None:
@@ -416,22 +376,21 @@ class MatrixConnector:
         return body
 
     def _ensure_channel(self, room_id: str, room_name: str) -> str:
-        """Return the STIX id of the channel matching ``room_id``.
+        """Return the deterministic STIX id of the channel for ``room_id``.
 
-        Looks up the channel by its deterministic ``standard_id``
-        (computed from ``room_id``) rather than by ``name``: a
-        free-text ``name`` filter is not unique and could return an
-        unrelated Channel that happens to share the Matrix room id as
-        a display name (or a different Matrix-style channel created
-        outside this connector).
+        The Channel SDO is emitted into the buffer **once per connector
+        lifetime** (tracked via :attr:`_known_channel_ids`); subsequent
+        events in the same room only carry the deterministic
+        ``standard_id`` reference. There is no OpenCTI HTTP round-trip
+        per event, so the asyncio loop driving ``sync_forever`` is not
+        stalled on platform latency. The platform dedups SCOs / SDOs
+        by ``standard_id`` on ingestion, so if the Channel was created
+        by a previous connector run (or by another tooling) the same
+        deterministic id resolves to the existing SDO.
         """
         channel_id = PyctiChannel.generate_id(room_id)
-        existing = self.helper.api.channel.list(
-            filters=_list_filter("standard_id", channel_id)
-        )
-        if existing:
-            return existing[0]["standard_id"]
-
+        if channel_id in self._known_channel_ids:
+            return channel_id
         channel = CustomObjectChannel(
             id=channel_id,
             name=room_id,
@@ -441,24 +400,21 @@ class MatrixConnector:
             allow_custom=True,
         )
         self.bundle.append(channel)
-        self.helper.log_debug(f"Channel object created: {channel['id']}")
-        return channel["id"]
+        self._known_channel_ids.add(channel_id)
+        self.helper.log_debug(f"Channel object queued: {channel_id}")
+        return channel_id
 
     def _ensure_author(self, sender: str) -> str:
-        """Return the STIX id of the author identity, creating it if needed.
+        """Return the deterministic STIX id of the author identity for ``sender``.
 
-        Same rationale as :meth:`_ensure_channel`: the lookup uses the
-        deterministic ``standard_id`` derived from the Matrix user id
-        rather than the free-text ``name`` so a multi-tenant OpenCTI
-        deployment cannot collide on someone else's display name.
+        Same rationale as :meth:`_ensure_channel`: the Identity SDO is
+        emitted into the buffer once per connector lifetime, the
+        deterministic ``standard_id`` is used for relationships, and
+        the platform handles cross-run deduplication on ingestion.
         """
         author_id = PyctiIdentity.generate_id(sender, "individual")
-        identities = self.helper.api.identity.list(
-            filters=_list_filter("standard_id", author_id)
-        )
-        if identities:
-            return identities[0]["standard_id"]
-
+        if author_id in self._known_author_ids:
+            return author_id
         author = stix2.Identity(
             id=author_id,
             name=sender,
@@ -467,22 +423,28 @@ class MatrixConnector:
             object_marking_refs=[self.matrix_marking_id],
         )
         self.bundle.append(author)
-        return author["id"]
+        self._known_author_ids.add(author_id)
+        return author_id
 
     def _resolve_thread_root(self, content: Dict[str, Any]) -> Optional[str]:
-        """Return the OpenCTI STIX id of the root post for a threaded reply."""
+        """Return the deterministic STIX id of the root post for a threaded reply.
+
+        Computes the id locally from the Matrix root event id rather
+        than calling OpenCTI's ``stix_cyber_observable.list``: a URL
+        lookup is non-unique once an edit (``m.replace``) reuses the
+        original event id as the URL of a separate observable, and
+        the previous code would silently drop the relationship as soon
+        as ``len(existing) != 1``. Computing the id from the same
+        ``url -> id`` recipe used everywhere else gives us a stable
+        target even when the root post was ingested in a previous run.
+        """
         relates = content.get("m.relates_to") or {}
         if relates.get("rel_type") != "m.thread":
             return None
         root_event_id = relates.get("event_id")
         if not root_event_id:
             return None
-        existing = self.helper.api.stix_cyber_observable.list(
-            filters=_list_filter("url", root_event_id)
-        )
-        if len(existing) == 1:
-            return existing[0]["standard_id"]
-        return None
+        return media_content_id(root_event_id)
 
     def _build_media_content(
         self,
@@ -583,19 +545,29 @@ class MatrixConnector:
 
             media_content: Optional[Any] = None
 
+            edit_target_event_id: Optional[str] = None
             if isinstance(event, _TEXT_EVENTS):
                 relates = content_data.get("m.relates_to") or {}
-                if (
+                is_edit = (
                     "m.new_content" in content_data
                     and relates.get("rel_type") == "m.replace"
-                ):
-                    url = relates.get("event_id", event.event_id)
+                )
+                if is_edit:
+                    # An edit (``m.replace``) becomes its **own**
+                    # ``media-content`` observable keyed by its own
+                    # event id, plus a ``related-to`` relationship to
+                    # the original post. This preserves the original
+                    # message body in OpenCTI (the previous behaviour
+                    # reused the original event id as the edit's URL,
+                    # which silently overwrote the original observable
+                    # with the new content because OpenCTI dedups SCOs
+                    # by their URL-derived ``standard_id``).
+                    edit_target_event_id = relates.get("event_id")
                     description = (event.body or "") + "\n\n[updated]"
                 else:
-                    url = event.event_id
                     description = event.body or ""
                 media_content = self._build_media_content(
-                    url=url,
+                    url=event.event_id,
                     publication_date=publication_date,
                     author_id=author_id,
                     content=event.body or "",
@@ -646,6 +618,16 @@ class MatrixConnector:
             if thread_root:
                 self.bundle.append(
                     self._build_relationship(media_content["id"], thread_root)
+                )
+            if edit_target_event_id:
+                # Link the new edit observable back to the original post
+                # so operators can navigate from one to the other in
+                # OpenCTI without losing the original message body.
+                self.bundle.append(
+                    self._build_relationship(
+                        media_content["id"],
+                        media_content_id(edit_target_event_id),
+                    )
                 )
             await self._maybe_flush_bundle()
         except asyncio.CancelledError:

@@ -14,7 +14,8 @@ matrix:
   user_id: '@octi-bot:matrix.example.org'
   password: 'ChangeMe'
   device_name: 'octi_bot'
-  tlp: 'AMBER' # CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+  # CLEAR (alias WHITE), GREEN, AMBER, AMBER_STRICT (alias AMBER+STRICT, also accepted as AMBER STRICT / AMBER-STRICT), RED. Case-insensitive.
+  tlp: 'AMBER'
   debug: false
   # Optional: where to keep the matrix-nio store (sync token + device keys).
   # Defaults to ``./store`` (relative to ``main.py``).
