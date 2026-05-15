@@ -5,6 +5,7 @@ import pkgutil
 from pathlib import Path
 
 from connector_linter import checks as checks_package
+from connector_linter.config import get_per_file_ignores, load_config
 from connector_linter.models import CheckResult, ConnectorContext, Severity
 from connector_linter.noqa import filter_noqa
 from connector_linter.registry import CheckRegistry
@@ -46,36 +47,48 @@ def run_checks(
     select: list[str] | None = None,
     ignore: list[str] | None = None,
     disable_noqa: bool = False,
+    config_path: Path | None = None,
 ) -> list[CheckResult]:
     """Run all registered checks against a connector.
 
     Args:
         connector_path: Path to the connector directory.
         select: If provided, only run checks matching these codes/prefixes.
+            Overrides ``select`` from pyproject.toml.
         ignore: If provided, skip checks matching these codes/prefixes.
+            Merged with ``ignore`` from pyproject.toml (CLI wins on conflicts).
         disable_noqa: If True, ignore all ``# noqa`` inline suppressions.
+        config_path: Explicit path to a ``pyproject.toml`` file. If ``None``,
+            searches upward from *connector_path*.
 
     Returns:
         List of CheckResult objects.
     """
     _import_checks_modules()
 
+    # Load project-level config from pyproject.toml
+    config = load_config(connector_path, config_path=config_path)
+
+    # Merge: CLI flags take precedence over pyproject.toml
+    effective_select = select if select else (config.select or None)
+    effective_ignore = list(set((ignore or []) + config.ignore))
+
     ctx = ConnectorContext.load(connector_path)
     all_checks = CheckRegistry.get_all()
 
     checks_to_run = all_checks
-    if select:
+    if effective_select:
         filtered = {}
-        for pattern in select:
+        for pattern in effective_select:
             if pattern in all_checks:
                 filtered[pattern] = all_checks[pattern]
             else:
                 filtered.update(CheckRegistry.get_by_prefix(pattern))
         checks_to_run = filtered
 
-    if ignore:
+    if effective_ignore:
         ignore_codes = set()
-        for pattern in ignore:
+        for pattern in effective_ignore:
             if pattern in checks_to_run:
                 ignore_codes.add(pattern)
             else:
@@ -120,6 +133,17 @@ def run_checks(
                     severity=Severity.ERROR,
                 ),
             )
+
+    # Apply per-file-ignores from pyproject.toml
+    if config.per_file_ignores:
+        pfi_filtered: list[CheckResult] = []
+        for result in results:
+            if result.file_path is not None:
+                pfi_codes = get_per_file_ignores(config, result.file_path, ctx.path)
+                if result.code in pfi_codes:
+                    continue
+            pfi_filtered.append(result)
+        results = pfi_filtered
 
     if not disable_noqa:
         results = filter_noqa(results, connector_path)

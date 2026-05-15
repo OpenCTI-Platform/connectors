@@ -1,9 +1,4 @@
-"""Tests for exit-code semantics.
-
-Rules:
-- exit 1 if any ERROR-severity check FAILED
-- exit 0 otherwise (all pass, or only warnings/info fail)
-"""
+"""Tests for exit-code semantics."""
 
 from connector_linter.models import (
     CheckFinding,
@@ -22,12 +17,10 @@ def _has_errors(results: list[CheckResult]) -> bool:
 
 class TestExitCode:
     def test_all_pass_exit_0(self, dummy_checks, minimal_connector):
-        results = run_checks(minimal_connector, select=["VC901", "VC902"])
-        assert not _has_errors(results)
+        assert not _has_errors(run_checks(minimal_connector, select=["VC901", "VC902"]))
 
     def test_error_fail_exit_1(self, dummy_checks, minimal_connector):
-        results = run_checks(minimal_connector, select=["VC903"])
-        assert _has_errors(results)
+        assert _has_errors(run_checks(minimal_connector, select=["VC903"]))
 
     def test_warning_only_exit_0(self, _clean_registry, minimal_connector):
         @CheckRegistry.register(
@@ -39,15 +32,12 @@ class TestExitCode:
         def _warn(ctx: ConnectorContext) -> list[CheckFinding]:
             return [CheckFinding(message="not great", severity=Severity.WARNING)]
 
-        results = run_checks(minimal_connector, select=["VC960"])
-        assert not _has_errors(results)
+        assert not _has_errors(run_checks(minimal_connector, select=["VC960"]))
 
     def test_mixed_with_error_exit_1(self, dummy_checks, minimal_connector):
-        results = run_checks(minimal_connector, select=["VC901", "VC902", "VC903"])
-        # VC903 fails with ERROR severity → exit 1
-        assert _has_errors(results)
+        assert _has_errors(
+            run_checks(minimal_connector, select=["VC901", "VC902", "VC903"])
+        )
 
     def test_empty_results_exit_0(self, _clean_registry, minimal_connector):
-        # No checks selected → no results → exit 0
-        results = run_checks(minimal_connector, select=["VC000"])
-        assert not _has_errors(results)
+        assert not _has_errors(run_checks(minimal_connector, select=["VC000"]))

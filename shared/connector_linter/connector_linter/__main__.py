@@ -1,19 +1,18 @@
 """CLI entry point for the connector linter."""
 
-import ast
-import inspect
 import sys
 from pathlib import Path
 
 import click
 from connector_linter import __version__
+from connector_linter._doc_generator import generate_rules_markdown
 from connector_linter.formatters import (
     format_github,
     format_json,
     format_markdown,
     format_text,
 )
-from connector_linter.models import Severity
+from connector_linter.models import SEVERITY_COLOR, Severity
 from connector_linter.registry import CheckRegistry
 from connector_linter.runner import _import_checks_modules, run_checks
 
@@ -89,6 +88,13 @@ def _resolve_connector_root(file_path: Path) -> Path | None:
     default=False,
     help="Show absolute file paths in text output (JSON always uses absolute paths).",
 )
+@click.option(
+    "--config",
+    "config_path",
+    type=click.Path(exists=True, dir_okay=False),
+    default=None,
+    help="Path to pyproject.toml (auto-detected if not specified).",
+)
 def check(
     connector_path: str,
     output_format: str,
@@ -98,6 +104,7 @@ def check(
     verbose: bool,
     disable_noqa: bool,
     abspath: bool,
+    config_path: str | None,
 ) -> None:
     r"""Check a connector against Verified criteria.
 
@@ -135,6 +142,7 @@ def check(
         select=list(select) if select else None,
         ignore=list(ignore) if ignore else None,
         disable_noqa=disable_noqa,
+        config_path=Path(config_path) if config_path else None,
     )
 
     # When a specific file was targeted, keep only findings for that file
@@ -147,11 +155,8 @@ def check(
 
     # Filter by severity if requested
     if severity:
-        severity_order = {Severity.INFO: 0, Severity.WARNING: 1, Severity.ERROR: 2}
         min_sev = Severity(severity)
-        results = [
-            r for r in results if severity_order[r.severity] >= severity_order[min_sev]
-        ]
+        results = [r for r in results if r.severity.rank() >= min_sev.rank()]
 
     # Format output
     if output_format == "text":
@@ -177,52 +182,21 @@ def list_checks() -> None:
         click.echo("No checks registered yet.")
         return
 
-    click.echo(f"{'Code':<8} {'Sev':<5} {'Name':<30} Description")
-    click.echo(f"{'─' * 8} {'─' * 5} {'─' * 30} {'─' * 40}")
+    click.echo(f"{'Code':<8} {'Sev':<5} {'Name':<30} {'Scope':<28} Description")
+    click.echo(f"{'─' * 8} {'─' * 5} {'─' * 30} {'─' * 28} {'─' * 40}")
     for code in sorted(checks.keys()):
         desc = checks[code]
-        sev_color = {"E": "red", "W": "yellow", "I": "cyan"}[desc.severity.symbol()]
+        sev_color = SEVERITY_COLOR[desc.severity]
+        if desc.applicable_types:
+            scope = ",".join(sorted(t.label for t in desc.applicable_types))
+        else:
+            scope = "All"
         click.echo(
             f"{code:<8} "
             f"{click.style(desc.severity.symbol(), fg=sev_color):<14} "
-            f"{desc.name:<30} {desc.description}",
+            f"{desc.name:<30} "
+            f"{scope:<28} {desc.description}",
         )
-
-
-def _extract_check_docstring(func: object) -> str | None:
-    """Extract the module-level docstring from the file defining *func*."""
-    source_file = inspect.getfile(func)  # type: ignore[arg-type]
-    with open(source_file) as f:
-        tree = ast.parse(f.read())
-    return ast.get_docstring(tree)
-
-
-def _extract_applicable_types(func: object) -> list[str] | None:
-    """Extract ``_APPLICABLE_TYPES`` set literal from the check's source file."""
-    source_file = inspect.getfile(func)  # type: ignore[arg-type]
-    with open(source_file) as f:
-        tree = ast.parse(f.read())
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id == "_APPLICABLE_TYPES":
-                    if isinstance(node.value, ast.Set):
-                        return sorted(
-                            elt.value
-                            for elt in node.value.elts
-                            if isinstance(elt, ast.Constant)
-                        )
-    return None
-
-
-# Mapping from internal type constants to human-readable labels
-_TYPE_LABELS = {
-    "EXTERNAL_IMPORT": "External Import",
-    "INTERNAL_ENRICHMENT": "Internal Enrichment",
-    "INTERNAL_EXPORT_FILE": "Internal Export File",
-    "INTERNAL_IMPORT_FILE": "Internal Import File",
-    "STREAM": "Stream",
-}
 
 
 @cli.command()
@@ -246,72 +220,7 @@ def docs(output: str | None) -> None:
         click.echo("No checks registered yet.", err=True)
         return
 
-    # Group checks by category prefix
-    categories: dict[str, list[str]] = {}
-    for code in sorted(checks.keys()):
-        prefix = code[:3]  # "VC1", "VC2", …
-        categories.setdefault(prefix, []).append(code)
-
-    category_titles = {
-        "VC1": "VC1xx — Configuration",
-        "VC2": "VC2xx — Metadata",
-        "VC3": "VC3xx — Code Quality",
-        "VC4": "VC4xx — Docker",
-        "VC5": "VC5xx — Deprecation",
-    }
-
-    lines: list[str] = []
-    lines.append("# Connector Linter — Rules Reference\n")
-    lines.append(f"Total rules: **{len(checks)}**\n")
-
-    # Summary table
-    lines.append("## Summary\n")
-    lines.append("| Code | Severity | Name | Scope |")
-    lines.append("|------|----------|------|-------|")
-    for code in sorted(checks.keys()):
-        desc = checks[code]
-        sev_icon = {"E": "🔴", "W": "🟡", "I": "🔵"}[desc.severity.symbol()]
-        applicable = _extract_applicable_types(desc.func)
-        if applicable:
-            scope = ", ".join(_TYPE_LABELS.get(t, t) for t in applicable)
-        else:
-            scope = "All"
-        lines.append(
-            f"| {code} | {sev_icon} {desc.severity.value.capitalize()} | {desc.name} | {scope} |"
-        )
-
-    lines.append("")
-
-    # Detailed sections per category
-    for prefix in sorted(categories.keys()):
-        title = category_titles.get(prefix, f"{prefix}xx")
-        lines.append(f"## {title}\n")
-
-        for code in categories[prefix]:
-            desc = checks[code]
-            sev_icon = {"E": "🔴", "W": "🟡", "I": "🔵"}[desc.severity.symbol()]
-            lines.append(f"### {code} — {desc.name}\n")
-            lines.append(
-                f"- **Severity:** {sev_icon} {desc.severity.value.capitalize()}"
-            )
-
-            applicable = _extract_applicable_types(desc.func)
-            if applicable:
-                scope = ", ".join(_TYPE_LABELS.get(t, t) for t in applicable)
-            else:
-                scope = "All connector types"
-            lines.append(f"- **Scope:** {scope}")
-            lines.append(f"- **Description:** {desc.description}\n")
-
-            docstring = _extract_check_docstring(desc.func)
-            if docstring:
-                # Strip the first line (title, usually "VCxxx — ...")
-                doc_lines = docstring.strip().split("\n")
-                body = "\n".join(doc_lines[1:]).strip()
-                if body:
-                    lines.append(f"{body}\n")
-
-    content = "\n".join(lines)
+    content = generate_rules_markdown(checks)
 
     if output:
         out_path = Path(output)

@@ -26,17 +26,13 @@ class TestSelectIgnore:
 
     def test_ignore_prefix(self, dummy_checks, minimal_connector):
         results = run_checks(minimal_connector, select=["VC9xx"], ignore=["VC90"])
-        codes = {r.code for r in results}
-        assert codes == set()
+        assert {r.code for r in results} == set()
 
     def test_select_and_ignore_combined(self, dummy_checks, minimal_connector):
         results = run_checks(
-            minimal_connector,
-            select=["VC901", "VC902", "VC903"],
-            ignore=["VC902"],
+            minimal_connector, select=["VC901", "VC902", "VC903"], ignore=["VC902"]
         )
-        codes = {r.code for r in results}
-        assert codes == {"VC901", "VC903"}
+        assert {r.code for r in results} == {"VC901", "VC903"}
 
 
 class TestCheckExecution:
@@ -78,8 +74,6 @@ class TestExceptionHandling:
         assert "kaboom" in results[0].message
 
     def test_exception_always_error_severity(self, _clean_registry, minimal_connector):
-        """A crashing WARNING check is escalated to ERROR so CI won't silently pass."""
-
         @CheckRegistry.register(
             code="VC998",
             name="test-warn-boom",
@@ -95,11 +89,10 @@ class TestExceptionHandling:
 
 
 class TestNoqaIntegration:
-    """Noqa directives suppress results when enabled."""
-
     def test_noqa_suppresses_result(self, _clean_registry, minimal_connector):
-        src_file = minimal_connector / "src" / "target.py"
-        src_file.write_text("x = 1  # noqa: VC950\n", encoding="utf-8")
+        (minimal_connector / "src" / "target.py").write_text(
+            "x = 1  # noqa: VC950\n", encoding="utf-8"
+        )
 
         @CheckRegistry.register(
             code="VC950",
@@ -121,8 +114,9 @@ class TestNoqaIntegration:
         assert len(results) == 0
 
     def test_disable_noqa_keeps_result(self, _clean_registry, minimal_connector):
-        src_file = minimal_connector / "src" / "target.py"
-        src_file.write_text("x = 1  # noqa: VC950\n", encoding="utf-8")
+        (minimal_connector / "src" / "target.py").write_text(
+            "x = 1  # noqa: VC950\n", encoding="utf-8"
+        )
 
         @CheckRegistry.register(
             code="VC950",
@@ -145,8 +139,9 @@ class TestNoqaIntegration:
         assert results[0].severity == Severity.ERROR
 
     def test_bare_noqa_suppresses_all(self, _clean_registry, minimal_connector):
-        src_file = minimal_connector / "src" / "target.py"
-        src_file.write_text("x = 1  # noqa\n", encoding="utf-8")
+        (minimal_connector / "src" / "target.py").write_text(
+            "x = 1  # noqa\n", encoding="utf-8"
+        )
 
         @CheckRegistry.register(
             code="VC951",
@@ -168,8 +163,9 @@ class TestNoqaIntegration:
         assert len(results) == 0
 
     def test_noqa_wrong_code_no_suppress(self, _clean_registry, minimal_connector):
-        src_file = minimal_connector / "src" / "target.py"
-        src_file.write_text("x = 1  # noqa: VC999\n", encoding="utf-8")
+        (minimal_connector / "src" / "target.py").write_text(
+            "x = 1  # noqa: VC999\n", encoding="utf-8"
+        )
 
         @CheckRegistry.register(
             code="VC952",
@@ -190,3 +186,101 @@ class TestNoqaIntegration:
         results = run_checks(minimal_connector, select=["VC952"], disable_noqa=False)
         assert len(results) == 1
         assert results[0].severity == Severity.ERROR
+
+
+class TestPyprojectConfig:
+    """pyproject.toml [tool.connector-linter] integration."""
+
+    def test_ignore_from_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nignore = ["VC903"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector, select=["VC9xx"])
+        codes = {r.code for r in results}
+        assert "VC903" not in codes
+        assert "VC901" in codes
+
+    def test_select_from_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nselect = ["VC901"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector)
+        codes = {r.code for r in results}
+        assert codes == {"VC901"}
+
+    def test_cli_select_overrides_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nselect = ["VC901"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector, select=["VC902"])
+        codes = {r.code for r in results}
+        assert codes == {"VC902"}
+
+    def test_cli_ignore_merges_with_pyproject(self, dummy_checks, minimal_connector):
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter]\nignore = ["VC901"]\n', encoding="utf-8"
+        )
+        results = run_checks(minimal_connector, select=["VC9xx"], ignore=["VC902"])
+        codes = {r.code for r in results}
+        assert "VC901" not in codes
+        assert "VC902" not in codes
+        assert "VC903" in codes
+
+    def test_per_file_ignores(self, _clean_registry, minimal_connector):
+        (minimal_connector / "src" / "target.py").write_text(
+            "x = 1\n", encoding="utf-8"
+        )
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter.per-file-ignores]\n"src/target.py" = ["VC960"]\n',
+            encoding="utf-8",
+        )
+
+        @CheckRegistry.register(
+            code="VC960",
+            name="test-pfi",
+            description="Check for per-file-ignores test",
+            severity=Severity.ERROR,
+        )
+        def _check(ctx: ConnectorContext) -> list[CheckFinding]:
+            return [
+                CheckFinding(
+                    message="flagged",
+                    severity=Severity.ERROR,
+                    file_path=ctx.path / "src" / "target.py",
+                    line=1,
+                )
+            ]
+
+        results = run_checks(minimal_connector, select=["VC960"])
+        assert len(results) == 0
+
+    def test_per_file_ignores_no_match(self, _clean_registry, minimal_connector):
+        (minimal_connector / "src" / "other.py").write_text("x = 1\n", encoding="utf-8")
+        (minimal_connector / "pyproject.toml").write_text(
+            '[tool.connector-linter.per-file-ignores]\n"src/target.py" = ["VC961"]\n',
+            encoding="utf-8",
+        )
+
+        @CheckRegistry.register(
+            code="VC961",
+            name="test-pfi-no-match",
+            description="Per-file-ignores miss test",
+            severity=Severity.ERROR,
+        )
+        def _check(ctx: ConnectorContext) -> list[CheckFinding]:
+            return [
+                CheckFinding(
+                    message="flagged",
+                    severity=Severity.ERROR,
+                    file_path=ctx.path / "src" / "other.py",
+                    line=1,
+                )
+            ]
+
+        results = run_checks(minimal_connector, select=["VC961"])
+        assert len(results) == 1
+
+    def test_no_pyproject_runs_all(self, dummy_checks, minimal_connector):
+        results = run_checks(minimal_connector, select=["VC9xx"])
+        codes = {r.code for r in results}
+        assert codes == {"VC901", "VC902", "VC903"}
