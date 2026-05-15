@@ -10,6 +10,7 @@ from connector_linter.models import (
     Severity,
 )
 from connector_linter.registry import CheckRegistry
+from connector_linter.runner import _import_checks_modules
 
 
 @pytest.fixture()
@@ -18,6 +19,7 @@ def _clean_registry():
 
     Tests that register throwaway checks won't leak into other tests.
     """
+    _import_checks_modules()  # ensure all real checks are loaded before saving
     saved = dict(CheckRegistry._checks)
     yield
     CheckRegistry._checks.clear()
