@@ -12,14 +12,23 @@ from lib.sanitization import sanitize_cell
 
 # Order-sensitive list of strategies used by :func:`render_dict_item` to
 # extract a human-readable string from a list-of-dict cell. Each entry is a
-# tuple of keys; the first strategy whose key set is a subset of the dict
-# (and whose values are non-empty) is used.
+# tuple of keys.
+#
+# * **Composite** strategies (more than one key) only match when **every**
+#   key in the tuple is populated on the dict. A partial match falls
+#   through to the next strategy so a dict that only carries a lone
+#   ``source_name`` (no ``url``) does not collapse to that one field
+#   while a more specific complete shape further down the table would
+#   have produced a richer rendering.
+# * **Single-key** strategies match when the one key is populated.
 #
 # Order matters: more specific composites (``source_name``+``url``,
 # ``kill_chain_name``+``phase_name``) come first so they render the
 # information operators expect (``MITRE ATT&CK: https://...``,
-# ``mitre-attack:execution``) instead of falling back to a less informative
-# single field.
+# ``mitre-attack:execution``) when both keys are present. Partial
+# composites then fall through to the single-key fallbacks
+# (``("url",)`` / ``("source_name",)``) at the bottom of the table so
+# the dict still produces a non-empty cell.
 DICT_ITEM_STRATEGIES: Tuple[Tuple[str, ...], ...] = (
     ("source_name", "url"),
     ("kill_chain_name", "phase_name"),
@@ -29,6 +38,8 @@ DICT_ITEM_STRATEGIES: Tuple[Tuple[str, ...], ...] = (
     ("observable_value",),
     ("url",),
     ("source_name",),
+    ("phase_name",),
+    ("kill_chain_name",),
 )
 
 
@@ -36,9 +47,13 @@ def render_dict_item(item: Any) -> str:
     """Render a single dict from a list-of-dict cell.
 
     Tries :data:`DICT_ITEM_STRATEGIES` in order. Composite strategies
-    (more than one key) are joined with ``": "`` except for kill-chain
-    phases which use ``":"`` to keep the canonical ``mitre-attack:execution``
-    form. Falls back to a stable ``json.dumps`` rendering of the dict so
+    require **every** key in the tuple to be populated on the dict — a
+    partial match falls through to the next strategy. Composite values
+    are joined with ``": "`` except for kill-chain phases which use
+    ``":"`` to keep the canonical ``mitre-attack:execution`` form.
+    Single-key strategies match when their one key is populated.
+
+    Falls back to a stable ``json.dumps`` rendering of the dict so
     unsupported shapes (custom enrichment payloads, dicts without any of
     the recognised keys) are still exported instead of silently producing
     an empty cell.
@@ -47,13 +62,17 @@ def render_dict_item(item: Any) -> str:
         return sanitize_cell(item)
     for strategy in DICT_ITEM_STRATEGIES:
         present = [k for k in strategy if item.get(k) not in (None, "")]
-        if not present:
+        if len(present) != len(strategy):
+            # Composite strategies require **all** keys; partial matches
+            # fall through to the next (more specific) strategy in the
+            # table so we never collapse a richer dict to a partial
+            # composite.
             continue
-        if len(present) == 1:
-            return sanitize_cell(item[present[0]])
+        if len(strategy) == 1:
+            return sanitize_cell(item[strategy[0]])
         if strategy == ("kill_chain_name", "phase_name"):
             return sanitize_cell(f"{item['kill_chain_name']}:{item['phase_name']}")
-        return sanitize_cell(": ".join(str(item[k]) for k in present))
+        return sanitize_cell(": ".join(str(item[k]) for k in strategy))
     try:
         return sanitize_cell(
             json.dumps(item, sort_keys=True, default=str, ensure_ascii=False)

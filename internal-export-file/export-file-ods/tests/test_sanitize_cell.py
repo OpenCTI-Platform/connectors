@@ -12,11 +12,7 @@ injection. These tests pin the contract:
 """
 
 import pytest
-from lib.sanitization import (
-    FORMULA_TRIGGERS,
-    LEADING_CONTROL_CHARS,
-    sanitize_cell,
-)
+from lib.sanitization import FORMULA_TRIGGERS, LEADING_CONTROL_CHARS, sanitize_cell
 
 
 class TestSanitizeCellNonStrings:

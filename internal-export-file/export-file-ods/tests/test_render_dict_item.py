@@ -13,11 +13,7 @@ attribute contains dicts (``externalReferences``, ``killChainPhases``,
 """
 
 import pytest
-from lib.rendering import (
-    DICT_ITEM_STRATEGIES,
-    render_dict_item,
-    render_dict_list,
-)
+from lib.rendering import DICT_ITEM_STRATEGIES, render_dict_item, render_dict_list
 
 
 class TestRenderDictItemKnownShapes:
@@ -78,6 +74,32 @@ class TestRenderDictItemKnownShapes:
         assert render_dict_item(item) == (
             "MITRE ATT&CK: https://attack.mitre.org/T1059"
         )
+
+    def test_partial_composite_falls_through_to_richer_complete_strategy(self):
+        # A dict carrying a lone ``source_name`` plus a complete ``name``
+        # strategy further down the table must render the more specific
+        # complete shape (``name``) instead of collapsing to the partial
+        # composite match (``source_name``). Composite strategies require
+        # **all** of their keys to be present.
+        item = {"source_name": "lonely", "name": "T1059"}
+        assert render_dict_item(item) == "T1059"
+
+    def test_partial_composite_falls_through_to_explicit_single_key_fallback(self):
+        # When no richer complete strategy applies, the explicit
+        # single-key fallback (``("source_name",)`` at the bottom of the
+        # table) keeps backward compatibility for dicts that only carry
+        # ``source_name``.
+        assert render_dict_item({"source_name": "internal-vendor"}) == "internal-vendor"
+
+    def test_partial_kill_chain_falls_through_to_phase_name_fallback(self):
+        # ``phase_name`` alone keeps rendering as the bare phase value
+        # via the explicit ``("phase_name",)`` fallback.
+        assert render_dict_item({"phase_name": "execution"}) == "execution"
+
+    def test_partial_kill_chain_with_only_kill_chain_name(self):
+        # ``kill_chain_name`` alone falls through to its explicit
+        # single-key fallback at the bottom of the table.
+        assert render_dict_item({"kill_chain_name": "mitre-attack"}) == "mitre-attack"
 
 
 class TestRenderDictItemFallback:

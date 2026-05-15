@@ -26,11 +26,13 @@ _UNSUPPORTED_ENTITY_TYPES = {
 
 # Headers use dot notation (``hashes.MD5``); the row generator strips the
 # ``hashes.`` prefix to look up the matching algorithm in ``entity["hashes"]``.
+# The canonical algorithm list keeps a stable header order for the
+# common algorithms; ``_build_headers`` adds any extra algorithms found
+# on the actual ``entity["hashes"]`` payloads on top so non-canonical
+# algorithms (anything STIX/OpenCTI may carry beyond MD5/SHA-1/SHA-256
+# /SHA-512/SSDEEP) are not silently dropped from the export.
 _HASH_HEADER_PREFIX = "hashes."
 _HASH_ALGORITHMS: Tuple[str, ...] = ("MD5", "SHA-1", "SHA-256", "SHA-512", "SSDEEP")
-_HASH_HEADERS: Tuple[str, ...] = tuple(
-    f"{_HASH_HEADER_PREFIX}{algo}" for algo in _HASH_ALGORITHMS
-)
 
 
 class ExportFileODSConnector(InternalExportConnector):
@@ -114,15 +116,29 @@ class ExportFileODSConnector(InternalExportConnector):
         relationship rows and would silently turn every ``full`` export
         into a ``simple`` one); for a ``query`` export it is the
         user-defined entity filter (which generally does not apply to
-        relationship rows either). Marking / access restrictions are
-        enforced afterwards when the neighbour objects are fetched
-        through ``opencti_stix_object_or_stix_relationship.list`` with
-        ``access_filter`` ANDed in.
+        relationship rows either).
+
+        ``access_filter`` **is** forwarded as a relationship-list filter
+        when present so marking-restricted graph topology cannot leak
+        through the discovery step. Without that filter a low-marked
+        neighbour could still surface in the export — even though the
+        later neighbour-object fetch removes it — simply because the
+        very existence of a relationship to it would have been
+        observable through this list call. Applying ``access_filter``
+        at both stages keeps the relationship-discovery and the
+        neighbour-object stages consistent.
         """
         candidate_neighbor_ids: set[str] = set()
+        access_filter = self._access_filter_for_relationships()
         for entity_id in [eid for eid in seen_ids if eid]:
+            list_kwargs: Dict[str, Any] = {
+                "fromOrToId": entity_id,
+                "getAll": True,
+            }
+            if access_filter is not None:
+                list_kwargs["filters"] = access_filter
             rels = self.helper.api_impersonate.stix_core_relationship.list(
-                fromOrToId=entity_id, getAll=True
+                **list_kwargs
             )
             self.helper.log_debug(
                 f"Relationships fromOrToId={entity_id}: {len(rels)} found"
@@ -135,6 +151,23 @@ class ExportFileODSConnector(InternalExportConnector):
                     continue
                 candidate_neighbor_ids.add(neighbor_id)
         return candidate_neighbor_ids
+
+    def _access_filter_for_relationships(self) -> Optional[Dict[str, Any]]:
+        """Return ``access_filter`` if it has any usable content, else ``None``.
+
+        ``access_filter`` is treated as optional: an empty / missing
+        ``filters`` and ``filterGroups`` payload is normalised to
+        ``None`` so callers do not pass a no-op filter container to
+        the platform.
+        """
+        access_filter = self.access_filter
+        if not access_filter:
+            return None
+        has_filters = bool((access_filter.get("filters") or []))
+        has_groups = bool((access_filter.get("filterGroups") or []))
+        if not (has_filters or has_groups):
+            return None
+        return access_filter
 
     @staticmethod
     def _build_neighbor_filter(
@@ -202,14 +235,33 @@ class ExportFileODSConnector(InternalExportConnector):
     def _build_headers(self, entities_list: List[Dict[str, Any]]) -> List[str]:
         """Return the alphabetically-sorted header list for the spreadsheet.
 
-        The raw ``hashes`` column is replaced by the per-algorithm
-        ``hashes.<ALGO>`` columns (``_HASH_HEADERS``) since ``_row_for``
-        only knows how to render values from the ``hashes.<ALGO>`` form.
+        The raw ``hashes`` column is replaced by per-algorithm
+        ``hashes.<ALGO>`` columns since ``_row_for`` only knows how to
+        render values from the ``hashes.<ALGO>`` form. The set of
+        per-algorithm columns is the union of:
+
+        * the canonical algorithms (``_HASH_ALGORITHMS``) so common
+          columns appear in a stable order even when the current
+          export only exposes a subset; and
+        * every algorithm actually present on any ``entity["hashes"]``
+          value in the export, so non-canonical algorithms (anything
+          STIX/OpenCTI may carry beyond MD5/SHA-1/SHA-256/SHA-512/SSDEEP)
+          are not silently lost.
         """
         headers: List[str] = sorted(set().union(*(e.keys() for e in entities_list)))
-        if "hashes" in headers:
-            headers.remove("hashes")
-            headers = headers + [h for h in _HASH_HEADERS if h not in headers]
+        if "hashes" not in headers:
+            return headers
+        headers.remove("hashes")
+        algorithms: List[str] = list(_HASH_ALGORITHMS)
+        seen_algorithms = set(algorithms)
+        for entity in entities_list:
+            for hashed in entity.get("hashes") or []:
+                algo = (hashed or {}).get("algorithm")
+                if algo and algo not in seen_algorithms:
+                    algorithms.append(algo)
+                    seen_algorithms.add(algo)
+        hash_headers = [f"{_HASH_HEADER_PREFIX}{algo}" for algo in algorithms]
+        headers = headers + [h for h in hash_headers if h not in headers]
         return headers
 
     def _get_content(self, export_list: List[Tuple[Dict[str, Any], int]]) -> bytes:
@@ -288,13 +340,17 @@ class ExportFileODSConnector(InternalExportConnector):
         Strips directory components (``os.path.basename``) to defend against
         path traversal and removes the literal ``.unknown`` suffix (not via
         ``str.rstrip`` which would mangle filenames such as ``file.unk``).
+        Existing ``.ods`` extensions are preserved as-is so a request
+        with ``file_name="report.ods"`` does not produce ``report.ods.ods``.
         """
         base = os.path.basename(raw_file_name or "")
         if base.endswith(".unknown"):
             base = base[: -len(".unknown")]
         if not base:
             base = "export"
-        return f"{base}.ods"
+        if not base.lower().endswith(".ods"):
+            base = f"{base}.ods"
+        return base
 
     def _push_export(
         self,
