@@ -624,10 +624,12 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 {"group_count": len(rbac_scope[0])},
                             )
                     except RbacConfigError as e:
-                        # Defensive catch - should be handled above, but keep for clarity
-                        unrecognized = None
-                        if len(e.args) > 1 and isinstance(e.args[1], dict):
-                            unrecognized = e.args[1].get("missing_groups")
+                        # Defensive catch - should be handled above, but keep for clarity.
+                        # ``RbacConfigError`` carries structured details on
+                        # ``e.metadata`` (see ``rbac_scope.RbacConfigError``);
+                        # ``BaseException.args`` only contains the message, so
+                        # we read the missing-group list from ``e.metadata``.
+                        unrecognized = e.metadata.get("missing_groups")
                         self.helper.connector_logger.error(
                             "[RBAC] Unknown device groups in config; synchronization aborted.",
                             {

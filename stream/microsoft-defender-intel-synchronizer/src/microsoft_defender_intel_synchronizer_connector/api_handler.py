@@ -476,9 +476,11 @@ class DefenderApiHandler:
                     "[Preflight] RBAC group names validated"
                 )
             except RbacConfigError as e:
-                unrecognized = None
-                if len(e.args) > 1 and isinstance(e.args[1], dict):
-                    unrecognized = e.args[1].get("missing_groups")
+                # ``RbacConfigError`` carries structured details on
+                # ``e.metadata`` (see ``rbac_scope.RbacConfigError``);
+                # ``BaseException.args`` only contains the message, so
+                # we read the missing-group list from ``e.metadata``.
+                unrecognized = e.metadata.get("missing_groups")
                 self.helper.connector_logger.error(
                     "[Preflight] RBAC name validation failed; aborting startup",
                     {
