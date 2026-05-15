@@ -9,8 +9,8 @@ connector:
   validate_before_import: true # Validate any bundle before import
   scope: 'application/pdf,text/plain,text/html,text/markdown'
   auto: false # Enable/disable auto-import of file
+  xtm_one_intent: 'cti.stix_harvester' # XTM One intent for agent-based extraction
   log_level: 'info'
-  xtm_one_intent: 'cti.extractor' # XTM One intent for agent-based extraction
 
 import_document_ai:
   include_relationships: true
