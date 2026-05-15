@@ -177,7 +177,7 @@ graph LR
 
 | Entity         | STIX type        | Description                                                                          |
 |----------------|------------------|--------------------------------------------------------------------------------------|
-| Channel        | `channel`        | One per imported Mattermost channel (deduplicated by name).                          |
+| Channel        | `channel`        | One per imported Mattermost channel, named `<team_name>/<channel_name>` so channels from different teams (or different Mattermost instances) cannot collide. |
 | Media content  | `media-content`  | One per Mattermost post, with the post URL, message and timestamp.                   |
 | Author         | `identity`       | One per Mattermost user (deduplicated by email).                                     |
 | Relationship   | `relationship`   | `media-content related-to channel` and `media-content related-to <root media-content>` for thread replies. |
@@ -188,6 +188,17 @@ Every entity created by the connector carries the TLP marking configured
 through `MATTERMOST_TLP`. The default is `AMBER`. Unknown values are
 rejected at startup so that an unexpected value does not silently fall
 back to `TLP_RED`.
+
+The corresponding `marking-definition` STIX object is included in every
+bundle so the platform always sees the marking by name. Built-in stix2
+markings (`TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:RED`) are emitted
+for clarity even though OpenCTI knows them; `TLP:CLEAR` and
+`TLP:AMBER+STRICT` *must* be emitted explicitly because they are
+OpenCTI-specific markings that `stix2` does not expose as built-in
+constants. `TLP:CLEAR` and `TLP:WHITE` resolve to the same canonical
+marking-definition id (`marking-definition--613f2e26-...`), but the
+connector emits the `TLP:CLEAR` flavour when `MATTERMOST_TLP=CLEAR` so
+the OpenCTI UI shows the modern `TLP:CLEAR` label.
 
 ## Debugging
 
@@ -212,9 +223,11 @@ prints every request including authentication headers.
 
 ## Additional information
 
-- **Channel deduplication**: the connector looks up channels by `name`
-  before creating a new one, so re-importing the same channel does not
-  duplicate the SDO.
+- **Channel deduplication**: the connector looks up channels by their
+  namespaced name (`<team_name>/<channel_name>`) before creating a new
+  one, so re-importing the same channel does not duplicate the SDO and
+  two distinct Mattermost channels (e.g. the `town-square` of two
+  different teams) never collapse onto the same OpenCTI `Channel`.
 - **Author deduplication**: identities are looked up by their email
   address before being created.
 - **Attachment deduplication**: an attachment is uploaded only when the

@@ -21,24 +21,48 @@ from pycti import (
     CustomObservableMediaContent,
 )
 from pycti import Identity as PyctiIdentity
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import StixCoreRelationship as PyctiSCR
 from pycti import (
     get_config_variable,
 )
 
-# ``stix2`` exposes constants for TLP_WHITE / GREEN / AMBER / RED. AMBER+STRICT
-# is an OpenCTI-specific marking and is not exported as a constant, so we keep
-# its canonical id here.
-_TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
 
-_TLP_MAP: Dict[str, str] = {
-    "CLEAR": stix2.TLP_WHITE.id,
-    "WHITE": stix2.TLP_WHITE.id,
-    "GREEN": stix2.TLP_GREEN.id,
-    "AMBER": stix2.TLP_AMBER.id,
-    "AMBER_STRICT": _TLP_AMBER_STRICT_ID,
-    "AMBER+STRICT": _TLP_AMBER_STRICT_ID,
-    "RED": stix2.TLP_RED.id,
+def _make_tlp_marking(definition: str) -> stix2.MarkingDefinition:
+    """Return a ``stix2.MarkingDefinition`` for an OpenCTI TLP value.
+
+    Used for ``TLP:CLEAR`` (which OpenCTI represents with a dedicated
+    ``x_opencti_definition`` value even though the canonical
+    marking-definition id is shared with ``TLP:WHITE``) and for
+    ``TLP:AMBER+STRICT`` (an OpenCTI-specific marking that ``stix2`` does
+    not expose as a built-in constant). Building a real
+    ``stix2.MarkingDefinition`` lets us include the marking object in
+    every bundle, which is what the rest of the OpenCTI connector
+    ecosystem does for these two values.
+    """
+    return stix2.MarkingDefinition(
+        id=PyctiMarkingDefinition.generate_id("TLP", definition),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
+    )
+
+
+# ``stix2`` exposes built-in constants for TLP_WHITE / GREEN / AMBER / RED.
+# ``TLP:CLEAR`` (the modern alias of ``TLP:WHITE`` in OpenCTI) and
+# ``TLP:AMBER+STRICT`` are not built-in stix2 constants — we materialise
+# them as proper ``stix2.MarkingDefinition`` objects so they can be added
+# to every bundle and the platform can register them by name.
+_TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
+    "CLEAR": _make_tlp_marking("TLP:CLEAR"),
+    "WHITE": stix2.TLP_WHITE,
+    "GREEN": stix2.TLP_GREEN,
+    "AMBER": stix2.TLP_AMBER,
+    "AMBER_STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+    "AMBER+STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+    "RED": stix2.TLP_RED,
 }
 
 
@@ -113,7 +137,8 @@ class MattermostConnector(ExternalImportConnector):
             )
             or "AMBER"
         )
-        self.mattermost_marking_id = self._resolve_tlp(tlp_name)
+        self.mattermost_marking: stix2.MarkingDefinition = self._resolve_tlp(tlp_name)
+        self.mattermost_marking_id: str = self.mattermost_marking.id
         self.mattermost_verify: bool = self._coerce_bool(
             get_config_variable(
                 "MATTERMOST_VERIFY",
@@ -200,7 +225,13 @@ class MattermostConnector(ExternalImportConnector):
         return value.strip()
 
     @staticmethod
-    def _resolve_tlp(name: str) -> str:
+    def _resolve_tlp(name: str) -> stix2.MarkingDefinition:
+        """Return the ``stix2.MarkingDefinition`` matching ``name``.
+
+        ``AMBER+STRICT`` is accepted both with the canonical ``+`` and
+        with a ``_`` for environment-variable friendliness; both resolve
+        to the same OpenCTI marking-definition id.
+        """
         normalised = (name or "").strip().upper().replace(" ", "_")
         try:
             return _TLP_MAP[normalised]
@@ -254,6 +285,18 @@ class MattermostConnector(ExternalImportConnector):
         return email
 
     @staticmethod
+    def _namespaced_channel_name(team_name: str, channel_name: str) -> str:
+        """Return the OpenCTI Channel name used to deduplicate ``channel_name``.
+
+        Mattermost channel names are unique within a team, not across the
+        whole instance, so we prefix every channel with its team name to
+        guarantee that two distinct Mattermost channels never collapse
+        into the same OpenCTI Channel SDO (e.g. ``team-a/town-square`` vs
+        ``team-b/town-square``).
+        """
+        return f"{team_name}/{channel_name}"
+
+    @staticmethod
     def _media_content_id(post_url: str) -> str:
         """Return the deterministic STIX id of the media-content for ``post_url``.
 
@@ -278,9 +321,13 @@ class MattermostConnector(ExternalImportConnector):
         channel_name = channel["name"]
         team = self.driver.teams.get_team(channel["team_id"])
         team_name = team["name"]
-        self.helper.log_debug(
-            f"Channel {channel_id} ({channel_name}) on team {team_name}"
-        )
+        # Mattermost channel names are unique within a team, not across
+        # the whole instance — multiple teams can each have their own
+        # ``town-square``. We namespace the OpenCTI Channel SDO by
+        # ``<team_name>/<channel_name>`` so distinct Mattermost channels
+        # never collide on the same OpenCTI Channel.
+        namespaced_channel_name = self._namespaced_channel_name(team_name, channel_name)
+        self.helper.log_debug(f"Channel {channel_id} ({namespaced_channel_name})")
 
         posts = self.driver.posts.get_posts_for_channel(
             channel_id, params={"since": str(start_time * 1000)}
@@ -294,7 +341,9 @@ class MattermostConnector(ExternalImportConnector):
             + (channel.get("header") or "")
         )
 
-        channel_target_ref = self._ensure_channel(channel_name, description, bundle)
+        channel_target_ref = self._ensure_channel(
+            namespaced_channel_name, description, bundle
+        )
         base_url = (
             f"{self.mattermost_protocol}://{self.mattermost_domain}"
             f":{self.mattermost_port}/"
@@ -515,7 +564,14 @@ class MattermostConnector(ExternalImportConnector):
         else:
             start_time = self.mattermost_start_timestamp
 
-        stix_objects: List[Any] = []
+        # Include the configured TLP marking-definition object in the
+        # bundle. Built-in stix2 markings (TLP_WHITE / GREEN / AMBER /
+        # RED) are already known to the platform but emitting them
+        # explicitly is harmless; ``TLP:CLEAR`` / ``TLP:AMBER+STRICT``
+        # are OpenCTI-specific and *must* be present so the platform can
+        # register the marking by name instead of leaving downstream
+        # objects pointing at an unresolved reference.
+        stix_objects: List[Any] = [self.mattermost_marking]
         for channel_id in self.mattermost_channel_ids:
             stix_objects.extend(self._collect_channel_posts(channel_id, start_time))
 

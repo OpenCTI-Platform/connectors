@@ -1,0 +1,7 @@
+# Tests only exercise pure-Python helpers from ``src/main.py``
+# (``_TLP_MAP``, ``_resolve_tlp``, ``_namespaced_channel_name``,
+# ``_media_content_id``). Importing ``main.py`` pulls in ``stix2``,
+# ``pycti`` and ``mattermostdriver``, so we install the same pinned
+# versions used in production.
+-r ../src/requirements.txt
+pytest
