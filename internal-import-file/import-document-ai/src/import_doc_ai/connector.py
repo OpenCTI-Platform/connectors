@@ -100,10 +100,10 @@ class Connector:
             )
         else:
             # Legacy mode: direct call to Ariane web service
-            if not self.config.api_base_url:
+            if not self.config.api_base_url or not self.config.api_key:
                 raise ValueError(
-                    "No agent_slug provided and api_base_url is not configured. "
-                    "Either configure XTM One on the platform or set api_base_url for legacy mode."
+                    "No agent_slug provided and api_base_url/api_key is not configured. "
+                    "Either configure XTM One on the platform or set api_base_url/api_key for legacy mode."
                 )
             ai_bundle = self.import_doc_ia_client.get_bundle(
                 file_name=file.name,
