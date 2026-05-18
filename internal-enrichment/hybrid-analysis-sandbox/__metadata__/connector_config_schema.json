@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/hybrid-analysis-sandbox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "HybridAnalysisSandbox",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "HYBRID_ANALYSIS_API_KEY": {
+      "description": "Hybrid Analysis API token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "HYBRID_ANALYSIS_ENVIRONMENT_ID": {
+      "default": 110,
+      "description": "Analysis environment ID (default: 110).",
+      "type": "integer"
+    },
+    "HYBRID_ANALYSIS_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP for submission.",
+      "type": "string"
+    },
+    "HYBRID_ANALYSIS_TOKEN": {
+      "deprecated": true,
+      "description": "Deprecated/unused setting. Use `api_key` (HYBRID_ANALYSIS_TOKEN) instead.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "HYBRID_ANALYSIS_API_KEY",
+    "HYBRID_ANALYSIS_TOKEN"
+  ],
+  "additionalProperties": true
+}

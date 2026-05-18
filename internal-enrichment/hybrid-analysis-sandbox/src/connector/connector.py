@@ -1,47 +1,30 @@
-# coding: utf-8
 import os
-import sys
 import time
 from datetime import datetime
 from typing import Dict
 
 import requests
 import stix2
-import yaml
+from connector.settings import ConnectorSettings
 from pycti import (
     STIX_EXT_OCTI_SCO,
     AttackPattern,
     MalwareAnalysis,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
-    get_config_variable,
 )
 from stix2 import DomainName, File, IPv4Address, IPv6Address
 
 
 class HybridAnalysis:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config, True)
-        self.api_key = get_config_variable(
-            "HYBRID_ANALYSIS_TOKEN", ["hybrid_analysis", "api_key"], config
-        )
-        self.environment_id = get_config_variable(
-            "HYBRID_ANALYSIS_ENVIRONMENT_ID",
-            ["hybrid_analysis", "environment_id"],
-            config,
-            True,
-            110,
-        )
-        self.max_tlp = get_config_variable(
-            "HYBRID_ANALYSIS_MAX_TLP", ["hybrid_analysis", "max_tlp"], config
-        )
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
+
+        self.api_key = self.config.hybrid_analysis.api_key.get_secret_value()
+        self.environment_id = self.config.hybrid_analysis.environment_id
+        self.max_tlp = self.config.hybrid_analysis.max_tlp
+
         self.api_url = "https://www.hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
@@ -75,26 +58,20 @@ class HybridAnalysis:
         self.helper.api.stix2.put_attribute_in_extension(
             stix_entity, STIX_EXT_OCTI_SCO, "score", report["threat_score"]
         )
-        # Sandbox Operating System
         operating_system = None
         if report["environment_id"] is not None:
             operating_system = stix2.Software(name=report["environment_description"])
             stix_objects.append(operating_system)
-        # List of all the referenced SCO of the analysis
         analysis_sco_refs = []
-
-        # Create external reference
         external_reference = stix2.ExternalReference(
             source_name="Hybrid Analysis",
             url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
             description="Hybrid Analysis Report",
         )
-        # Create tags
         for tag in report["type_short"]:
             self.helper.api.stix2.put_attribute_in_extension(
                 stix_entity, STIX_EXT_OCTI_SCO, "labels", tag, True
             )
-        # Attach the TTPs
         for tactic in report["mitre_attcks"]:
             if (
                 tactic["malicious_identifiers_count"] > 0
@@ -106,9 +83,7 @@ class HybridAnalysis:
                     ),
                     created_by_ref=self.identity,
                     name=tactic["technique"],
-                    custom_properties={
-                        "x_mitre_id": tactic["attck_id"],
-                    },
+                    custom_properties={"x_mitre_id": tactic["attck_id"]},
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
                 relationship = stix2.Relationship(
@@ -123,15 +98,12 @@ class HybridAnalysis:
                 )
                 stix_objects.append(attack_pattern)
                 stix_objects.append(relationship)
-        # Attach the domains
         for domain in report["domains"]:
             if domain != opencti_entity["observable_value"]:
                 domain_stix = DomainName(
                     value=domain,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    custom_properties={
-                        "created_by_ref": self.identity,
-                    },
+                    custom_properties={"created_by_ref": self.identity},
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -144,27 +116,21 @@ class HybridAnalysis:
                     object_marking_refs=[stix2.TLP_WHITE],
                     confidence=self.helper.connect_confidence_level,
                 )
-                # Attach IP to Malware Analysis (through analysis_sco_refs)
                 analysis_sco_refs.append(domain_stix.id)
                 stix_objects.append(domain_stix)
                 stix_objects.append(relationship)
-        # Attach the IP addresses
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
                 host_stix = IPv4Address(
                     value=host,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    custom_properties={
-                        "created_by_ref": self.identity,
-                    },
+                    custom_properties={"created_by_ref": self.identity},
                 )
             else:
                 host_stix = IPv6Address(
                     value=host,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    custom_properties={
-                        "created_by_ref": self.identity,
-                    },
+                    custom_properties={"created_by_ref": self.identity},
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -177,11 +143,9 @@ class HybridAnalysis:
                 object_marking_refs=[stix2.TLP_WHITE],
                 confidence=self.helper.connect_confidence_level,
             )
-            # Attach IP to Malware Analysis (through analysis_sco_refs)
             analysis_sco_refs.append(host_stix.id)
             stix_objects.append(host_stix)
             stix_objects.append(relationship)
-        # Attach other files
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
                 file_stix = File(
@@ -206,9 +170,7 @@ class HybridAnalysis:
                     target_ref=file_stix.id,
                     confidence=self.helper.connect_confidence_level,
                 )
-                # Attach file to Malware Analysis (through analysis_sco_refs)
                 analysis_sco_refs.append(file_stix.id)
-
                 stix_objects.append(file_stix)
                 stix_objects.append(relationship)
         for tactic in report["mitre_attcks"]:
@@ -223,9 +185,7 @@ class HybridAnalysis:
                     created_by_ref=self.identity,
                     name=tactic["technique"],
                     confidence=self.helper.connect_confidence_level,
-                    custom_properties={
-                        "x_mitre_id": tactic["attck_id"],
-                    },
+                    custom_properties={"x_mitre_id": tactic["attck_id"]},
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -238,7 +198,6 @@ class HybridAnalysis:
                 )
                 stix_objects.append(attack_pattern)
                 stix_objects.append(relationship)
-        # Creating the Malware Analysis
         result_name = "Result " + opencti_entity["observable_value"]
         analysis_started = (
             datetime.now()
@@ -279,9 +238,7 @@ class HybridAnalysis:
             "environment_id": self.environment_id,
         }
         r = requests.post(
-            self.api_url + "/submit/url",
-            headers=self.headers,
-            data=values,
+            self.api_url + "/submit/url", headers=self.headers, data=values
         )
         if r.status_code > 299:
             raise ValueError(r.text)
@@ -291,8 +248,7 @@ class HybridAnalysis:
         self.helper.log_info("Analysis in progress...")
         while state == "IN_QUEUE" or state == "IN_PROGRESS":
             r = requests.get(
-                self.api_url + "/report/" + job_id + "/state",
-                headers=self.headers,
+                self.api_url + "/report/" + job_id + "/state", headers=self.headers
             )
             if r.status_code > 299:
                 raise ValueError(r.text)
@@ -302,8 +258,7 @@ class HybridAnalysis:
         if state == "ERROR":
             raise ValueError(result["error"])
         r = requests.get(
-            self.api_url + "/report/" + job_id + "/summary",
-            headers=self.headers,
+            self.api_url + "/report/" + job_id + "/summary", headers=self.headers
         )
         if r.status_code > 299:
             raise ValueError(r.text)
@@ -318,7 +273,6 @@ class HybridAnalysis:
         file_content = self.helper.api.fetch_opencti_file(
             self.helper.opencti_url.rstrip("/") + "/storage/get/" + file_uri, True
         )
-        # Write the file
         f = open(file_name, "wb")
         f.write(file_content)
         f.close()
@@ -340,8 +294,7 @@ class HybridAnalysis:
         self.helper.log_info("Analysis in progress...")
         while state == "IN_QUEUE" or state == "IN_PROGRESS":
             r = requests.get(
-                self.api_url + "/report/" + job_id + "/state",
-                headers=self.headers,
+                self.api_url + "/report/" + job_id + "/state", headers=self.headers
             )
             if r.status_code > 299:
                 raise ValueError(r.text)
@@ -351,8 +304,7 @@ class HybridAnalysis:
         if state == "ERROR":
             raise ValueError(result["error"])
         r = requests.get(
-            self.api_url + "/report/" + job_id + "/summary",
-            headers=self.headers,
+            self.api_url + "/report/" + job_id + "/summary", headers=self.headers
         )
         if r.status_code > 299:
             raise ValueError(r.text)
@@ -364,10 +316,8 @@ class HybridAnalysis:
         self.helper.log_info(
             "Processing the observable " + opencti_entity["observable_value"]
         )
-        # If File or Artifact
         result = []
         if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
-            # First, check if the file is present is HA
             values = None
             for hash in opencti_entity["hashes"]:
                 if hash["algorithm"] == "SHA-256":
@@ -378,15 +328,12 @@ class HybridAnalysis:
                     values = {"hash": hash["hash"]}
             if values is not None:
                 r = requests.get(
-                    self.api_url + "/search/hash",
-                    headers=self.headers,
-                    params=values,
+                    self.api_url + "/search/hash", headers=self.headers, params=values
                 )
                 if r.status_code > 299:
                     raise ValueError(r.text)
                 result = r.json()
         if len(result["reports"]) > 0:
-            # One report is found
             self.helper.log_info("Already found in HA, attaching knowledge...")
             r = requests.get(
                 self.api_url + f"/report/{result['reports'][0]['id']}/summary",
@@ -398,10 +345,8 @@ class HybridAnalysis:
             return self._send_knowledge(
                 stix_objects, stix_entity, opencti_entity, report
             )
-        # If URL
         if opencti_entity["entity_type"] in ["Url", "Domain-Name", "Hostname"]:
             return self._submit_url(stix_objects, stix_entity, opencti_entity)
-        # If no file
         if (
             "importFiles" not in opencti_entity
             or len(opencti_entity["importFiles"]) == 0
@@ -413,8 +358,6 @@ class HybridAnalysis:
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
-
-        # Extract TLP
         tlp = "TLP:CLEAR"
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
@@ -425,22 +368,14 @@ class HybridAnalysis:
             )
         return self._process_observable(stix_objects, stix_entity, opencti_entity)
 
-    # Start the main loop
     def start(self):
         self.helper.listen(message_callback=self._process_message)
+
+    def run(self):
+        self.start()
 
     def detect_ip_version(self, value):
         if len(value) > 16:
             return "IPv6-Addr"
         else:
             return "IPv4-Addr"
-
-
-if __name__ == "__main__":
-    try:
-        hybridAnalysis = HybridAnalysis()
-        hybridAnalysis.start()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
