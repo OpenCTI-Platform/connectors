@@ -51,33 +51,12 @@ This internal enrichment connector submits files, URLs, domains, and hostnames t
 
 ---
 
-## Configuration
+## Configuration variables
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `StixFile`, `Artifact`, `Url`, `Domain-Name`, `Hostname` |
-| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### Hybrid Analysis Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `hybrid_analysis_api_key` | `HYBRID_ANALYSIS_TOKEN` | Yes | Hybrid Analysis API token |
-| `hybrid_analysis_environment_id` | `HYBRID_ANALYSIS_ENVIRONMENT_ID` | No | Analysis environment ID (default: 110) |
-| `hybrid_analysis_max_tlp` | `HYBRID_ANALYSIS_MAX_TLP` | No | Maximum TLP for submission |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 
@@ -101,7 +80,6 @@ services:
       - "CONNECTOR_NAME=Hybrid Analysis (Sandbox Windows 10 64bit)"
       - "CONNECTOR_SCOPE=StixFile,Artifact,Url,Domain-Name,Hostname"
       - CONNECTOR_AUTO=true
-      - CONNECTOR_CONFIDENCE_LEVEL=50
       - CONNECTOR_LOG_LEVEL=error
       - HYBRID_ANALYSIS_TOKEN=ChangeMe
       - HYBRID_ANALYSIS_ENVIRONMENT_ID=160

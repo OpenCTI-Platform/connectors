@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+# connector:
+#   id: '22538379-7caa-41ac-a401-c752db2cd2ac'
+#   name: 'Hybrid Analysis (Sandbox Windows 10 64bit)'
+#   scope: 'StixFile,Artifact,Url,Domain-Name,Hostname'
+#   auto: false # Enable/disable auto-enrichment of observables
+#   log_level: 'error'
+
+hybrid_analysis:
+  api_key: 'ChangeMe'
+#  environment_id: 110
+#  max_tlp: 'TLP:AMBER'
