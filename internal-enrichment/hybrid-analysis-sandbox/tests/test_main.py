@@ -42,7 +42,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "auto": True,
                 },
                 "hybrid_analysis": {
-                    "api_key": "ChangeMe",
+                    "token": "test-api-token",
                 },
             }
         )

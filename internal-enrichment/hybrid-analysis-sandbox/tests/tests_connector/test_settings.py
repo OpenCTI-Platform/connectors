@@ -19,10 +19,10 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "auto": True,
                 },
                 "hybrid_analysis": {
-                    "api_key": "ChangeMe",
+                    "token": "test-api-token",
                     "environment_id": 160,
                     "max_tlp": "TLP:AMBER",
-                    "token": "ChangeMe",
+                    "api_key": "test-api-token",
                 },
             },
             id="full_valid_settings_dict",
@@ -31,7 +31,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
                 "hybrid_analysis": {
-                    "api_key": "ChangeMe",
+                    "token": "test-api-token",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -77,10 +77,9 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                 },
                 "hybrid_analysis": {
-                    "api_key": "ChangeMe",
+                    "token": "test-api-token",
                     "environment_id": 160,
                     "max_tlp": "TLP:AMBER",
-                    "token": "ChangeMe",
                 },
             },
             "opencti.token",
@@ -96,10 +95,9 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                 },
                 "hybrid_analysis": {
-                    "api_key": "ChangeMe",
+                    "token": "test-api-token",
                     "environment_id": 160,
                     "max_tlp": "TLP:AMBER",
-                    "token": "ChangeMe",
                 },
             },
             "connector.id",
