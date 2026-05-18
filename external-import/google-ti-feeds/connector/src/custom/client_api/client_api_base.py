@@ -386,16 +386,23 @@ class BaseClientAPI:
                     break
 
         except Exception as e:
+            # Use the child class's LOG_PREFIX if available, otherwise use base LOG_PREFIX
+            prefix = getattr(self.__class__, "LOG_PREFIX", LOG_PREFIX)
+
             self.logger.error(
                 "Failed to fetch page",
                 {
-                    "prefix": LOG_PREFIX,
+                    "prefix": prefix,
                     "entity_description": entity_description,
                     "error": str(e),
                 },
             )
+            raise
         finally:
+            # Use the child class's LOG_PREFIX if available, otherwise use base LOG_PREFIX
+            prefix = getattr(self.__class__, "LOG_PREFIX", LOG_PREFIX)
+
             self.logger.debug(
                 "Finished fetching",
-                {"prefix": LOG_PREFIX, "entity_description": entity_description},
+                {"prefix": prefix, "entity_description": entity_description},
             )

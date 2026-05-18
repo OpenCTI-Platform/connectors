@@ -1,5 +1,5 @@
-pycti==7.260510.0
-urllib3==2.6.3
+pycti==7.260515.0
+urllib3==2.7.0
 pydantic>=2.10, <3
 pydantic-settings==2.10.1
 aiohttp>=3.9, <4
