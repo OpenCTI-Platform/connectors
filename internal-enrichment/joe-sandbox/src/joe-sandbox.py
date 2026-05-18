@@ -33,6 +33,8 @@ class JoeSandboxConnector:
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
         )
+        if isinstance(self.octi_api_url, str):
+            self.octi_api_url = self.octi_api_url.rstrip("/")
 
         # JoeSandbox class instatiation settings from config
         api_key = get_config_variable(
@@ -48,6 +50,8 @@ class JoeSandboxConnector:
         self._analysis_url = get_config_variable(
             "JOE_SANDBOX_ANALYSIS_URL", ["joe_sandbox", "analysis_url"], config
         )
+        if isinstance(self._analysis_url, str):
+            self._analysis_url = self._analysis_url.rstrip("/")
         accept_tac = get_config_variable(
             "JOE_SANDBOX_ACCEPT_TAC", ["joe_sandbox", "accept_tac"], config
         )
