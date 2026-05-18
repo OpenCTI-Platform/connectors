@@ -27,14 +27,19 @@ CONNECTORS="
     external-import/group-ib
     external-import/mitre
     external-import/opencti
+    external-import/ransomwarelive
     external-import/recorded-future
     external-import/servicenow
+    external-import/taxii2
+    external-import/virustotal-livehunt-notifications
+    internal-enrichment/domaintools
     internal-enrichment/first-epss
     internal-enrichment/google-dns
     internal-enrichment/import-external-reference
     internal-enrichment/ipinfo
     internal-enrichment/tagger
     internal-enrichment/virustotal
+    internal-enrichment/virustotal-downloader
     internal-export-file/export-file-csv
     internal-export-file/export-file-stix
     internal-export-file/export-file-txt
@@ -48,7 +53,9 @@ CONNECTORS="
     internal-import-file/import-file-yara
     internal-import-file/import-ttps-file-navigator
     stream/crowdstrike-endpoint-security
+    stream/splunk
     stream/taxii-post
+    stream/virustotal-livehunt-rules
 "
 
 FAILED=""
@@ -76,4 +83,3 @@ if [ -n "${FAILED}" ]; then
 fi
 
 echo "All UBI9 builds succeeded."
-
