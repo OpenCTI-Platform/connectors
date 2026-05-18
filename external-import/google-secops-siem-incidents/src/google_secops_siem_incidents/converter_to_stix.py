@@ -8,6 +8,7 @@ from google_secops_siem_incidents.mappers.hostname_mapper import map_hostname
 from google_secops_siem_incidents.mappers.incident_mapper import map_incident
 from google_secops_siem_incidents.mappers.ip_mapper import map_ip_addresses
 from google_secops_siem_incidents.mappers.relationship_mapper import map_relationships
+from google_secops_siem_incidents.mappers.url_mapper import map_urls
 from google_secops_siem_incidents.mappers.user_account_mapper import map_user_accounts
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
 
@@ -59,6 +60,9 @@ class ConverterToStix:
         email_adresses = map_email_adresses(
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
+        urls = map_urls(
+            alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
+        )
 
         observables: list = []
         observables.extend(hostnames)
@@ -66,6 +70,7 @@ class ConverterToStix:
         observables.extend(users)
         observables.extend(files)
         observables.extend(email_adresses)
+        observables.extend(urls)
 
         relationships = map_relationships(
             incident, observables, author=self.author, tlp_marking=self.tlp_marking
