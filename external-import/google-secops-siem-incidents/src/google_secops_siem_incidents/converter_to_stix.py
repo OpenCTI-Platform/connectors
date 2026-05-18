@@ -2,6 +2,7 @@
 
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
+from google_secops_siem_incidents.mappers.email_address_mapper import map_email_adresses
 from google_secops_siem_incidents.mappers.file_mapper import map_files
 from google_secops_siem_incidents.mappers.hostname_mapper import map_hostname
 from google_secops_siem_incidents.mappers.incident_mapper import map_incident
@@ -55,12 +56,16 @@ class ConverterToStix:
         files = map_files(
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
+        email_adresses = map_email_adresses(
+            alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
+        )
 
         observables: list = []
         observables.extend(hostnames)
         observables.extend(ips)
         observables.extend(users)
         observables.extend(files)
+        observables.extend(email_adresses)
 
         relationships = map_relationships(
             incident, observables, author=self.author, tlp_marking=self.tlp_marking
