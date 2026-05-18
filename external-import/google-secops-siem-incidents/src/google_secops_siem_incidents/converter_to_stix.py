@@ -2,6 +2,11 @@
 
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
+from pycti import OpenCTIConnectorHelper
+
+from google_secops_siem_incidents.mappers.attack_pattern_mapper import (
+    map_attack_patterns,
+)
 from google_secops_siem_incidents.mappers.email_address_mapper import map_email_adresses
 from google_secops_siem_incidents.mappers.file_mapper import map_files
 from google_secops_siem_incidents.mappers.hostname_mapper import map_hostname
@@ -61,6 +66,9 @@ class ConverterToStix:
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
         urls = map_urls(
+            alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
+        )
+        _ = map_attack_patterns(
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
 
