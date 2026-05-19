@@ -31,7 +31,15 @@ import requests
 import stix2
 import yaml
 from assemblyline_client import get_client
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import MarkingDefinition, OpenCTIConnectorHelper, get_config_variable
+
+# OpenCTI's canonical ID for the custom TLP:CLEAR marking definition. The
+# platform uses a custom marking object (built with this id) rather than
+# the legacy ``stix2.TLP_WHITE`` constant, and ``_check_tlp`` already
+# treats an unmarked observable as ``TLP:CLEAR``. Using the same id here
+# keeps the connector's "no source marking" fallback consistent with
+# both the gate and the rest of the codebase.
+_TLP_CLEAR_MARKING_ID = MarkingDefinition.generate_id("TLP", "TLP:CLEAR")
 
 _BOOL_TRUE = {"true", "1", "yes", "on"}
 _BOOL_FALSE = {"false", "0", "no", "off"}
@@ -319,19 +327,21 @@ class AssemblyLineConnector:
         emits next to the Malware-Analysis SDO) inherit the source
         observable's markings so they cannot be downgraded — a file
         that passes the max-TLP gate with ``TLP:AMBER`` must produce
-        ``TLP:AMBER`` analysis observables, not ``TLP:WHITE`` ones.
+        ``TLP:AMBER`` analysis observables.
 
-        The fallback is ``[stix2.TLP_WHITE.id]`` for the case where
-        the source observable has no marking at all (every analysis
-        object still needs *some* marking so the platform's access
-        control gates work).
+        When the source observable has no marking at all we fall back
+        to OpenCTI's custom ``TLP:CLEAR`` marking (the platform's
+        documented "public" marking, also the implicit default of
+        ``_check_tlp``) rather than the deprecated ``stix2.TLP_WHITE``
+        constant. Every derived object still ends up with *some*
+        marking so the platform's access-control gates can apply.
         """
         refs: List[str] = []
         for marking in observable.get("objectMarking", []) or []:
             standard_id = marking.get("standard_id")
             if standard_id and standard_id not in refs:
                 refs.append(standard_id)
-        return refs or [stix2.TLP_WHITE["id"]]
+        return refs or [_TLP_CLEAR_MARKING_ID]
 
     # ------------------------------------------------------------------ #
     # File retrieval                                                     #
@@ -1104,14 +1114,21 @@ class AssemblyLineConnector:
             # analysis objects in OpenCTI — see ``_source_marking_refs``.
             source_marking_refs = self._source_marking_refs(observable)
 
+            # OpenCTI's observable/SCO authoring convention is the
+            # ``x_opencti_created_by_ref`` custom property, not the
+            # standard STIX ``created_by_ref`` (which is reserved for
+            # SDOs/SROs). Setting the standard field on a SCO would
+            # silently leave the platform's author column unset.
+            sco_author_properties = {
+                "x_opencti_created_by_ref": self.assemblyline_identity_standard_id,
+            }
+
             for domain in malicious_iocs.get("domains", []):
                 try:
                     domain_stix = stix2.DomainName(
                         value=domain,
                         object_marking_refs=source_marking_refs,
-                        custom_properties={
-                            "created_by_ref": self.assemblyline_identity_standard_id,
-                        },
+                        custom_properties=sco_author_properties,
                     )
                     stix_objects.append(domain_stix)
                     analysis_sco_refs.append(domain_stix.id)
@@ -1128,17 +1145,13 @@ class AssemblyLineConnector:
                         ip_stix = stix2.IPv6Address(
                             value=ip,
                             object_marking_refs=source_marking_refs,
-                            custom_properties={
-                                "created_by_ref": self.assemblyline_identity_standard_id,
-                            },
+                            custom_properties=sco_author_properties,
                         )
                     else:
                         ip_stix = stix2.IPv4Address(
                             value=ip,
                             object_marking_refs=source_marking_refs,
-                            custom_properties={
-                                "created_by_ref": self.assemblyline_identity_standard_id,
-                            },
+                            custom_properties=sco_author_properties,
                         )
                     stix_objects.append(ip_stix)
                     analysis_sco_refs.append(ip_stix.id)
@@ -1150,9 +1163,7 @@ class AssemblyLineConnector:
                     url_stix = stix2.URL(
                         value=url,
                         object_marking_refs=source_marking_refs,
-                        custom_properties={
-                            "created_by_ref": self.assemblyline_identity_standard_id,
-                        },
+                        custom_properties=sco_author_properties,
                     )
                     stix_objects.append(url_stix)
                     analysis_sco_refs.append(url_stix.id)
@@ -1215,8 +1226,17 @@ class AssemblyLineConnector:
         opencti_observable_type: str,
         max_score: int,
         description: str,
+        source_marking_refs: Optional[List[str]] = None,
     ) -> Optional[str]:
-        """Create one Indicator (+ optional matching Observable) for an IOC."""
+        """Create one Indicator (+ optional matching Observable) for an IOC.
+
+        ``source_marking_refs`` is the list of marking ids that should
+        be applied to the Indicator and (if enabled) the matching
+        Observable. The caller derives it from the enriched
+        observable's ``objectMarking`` so derived OpenCTI objects
+        cannot be exposed more broadly than the source — a TLP:AMBER
+        file produces TLP:AMBER indicators and observables.
+        """
         try:
             escaped = self._escape_stix_string(ioc_value)
             indicator_data: Dict[str, Any] = {
@@ -1231,6 +1251,8 @@ class AssemblyLineConnector:
             }
             if self.assemblyline_author:
                 indicator_data["createdBy"] = self.assemblyline_author
+            if source_marking_refs:
+                indicator_data["objectMarking"] = source_marking_refs
             indicator = self.helper.api.indicator.create(**indicator_data)
             self.helper.api.stix_core_relationship.create(
                 fromId=observable_id,
@@ -1249,6 +1271,8 @@ class AssemblyLineConnector:
                     }
                     if self.assemblyline_author:
                         obs_data["createdBy"] = self.assemblyline_author
+                    if source_marking_refs:
+                        obs_data["objectMarking"] = source_marking_refs
                     new_observable = self.helper.api.stix_cyber_observable.create(
                         **obs_data
                     )
@@ -1277,7 +1301,7 @@ class AssemblyLineConnector:
 
     def _create_indicators(
         self,
-        observable_id: str,
+        observable: Dict[str, Any],
         max_score: int,
         malicious_iocs: Dict[str, List[str]],
     ) -> Tuple[Dict[str, int], List[str]]:
@@ -1286,7 +1310,15 @@ class AssemblyLineConnector:
         Returns ``(counts, indicator_ids)`` where ``indicator_ids`` is
         the list of created Indicator standard ids, used downstream to
         link MITRE ATT&CK techniques to them with ``related-to``.
+
+        The full source observable is taken (rather than only its id)
+        so each derived Indicator / Observable can inherit the source
+        markings via ``_source_marking_refs``. Without this, a
+        TLP:AMBER file would produce indicators/observables that
+        OpenCTI exposes more broadly than the source SCO.
         """
+        observable_id = observable["id"]
+        source_marking_refs = self._source_marking_refs(observable)
         counts = {"indicators": 0, "observables": 0, "relationships": 0}
         indicator_ids: List[str] = []
 
@@ -1298,6 +1330,7 @@ class AssemblyLineConnector:
                 "Domain-Name",
                 max_score,
                 "Domain contacted during malware analysis",
+                source_marking_refs=source_marking_refs,
             )
             if ind_id:
                 indicator_ids.append(ind_id)
@@ -1317,6 +1350,7 @@ class AssemblyLineConnector:
                 octi_type,
                 max_score,
                 "IP address contacted during malware analysis",
+                source_marking_refs=source_marking_refs,
             )
             if ind_id:
                 indicator_ids.append(ind_id)
@@ -1334,6 +1368,7 @@ class AssemblyLineConnector:
                 "Url",
                 max_score,
                 "URL contacted during malware analysis",
+                source_marking_refs=source_marking_refs,
             )
             if ind_id:
                 indicator_ids.append(ind_id)
@@ -1421,7 +1456,7 @@ class AssemblyLineConnector:
                 self.helper.log_warning(f"Could not update score: {exc}")
 
             counts, indicator_ids = self._create_indicators(
-                observable["id"], max_score, malicious_iocs
+                observable, max_score, malicious_iocs
             )
 
             malware_analysis_id: Optional[str] = None

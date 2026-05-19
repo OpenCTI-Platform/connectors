@@ -355,7 +355,7 @@ class TestIndicatorsRespectCreateObservablesFlag:
     def test_create_observables_false(self) -> None:
         connector = self._setup(create_observables=False)
         counts, indicator_ids = connector._create_indicators(
-            "obs-root",
+            {"id": "obs-root", "objectMarking": []},
             900,
             {
                 "domains": ["evil.com"],
@@ -372,7 +372,7 @@ class TestIndicatorsRespectCreateObservablesFlag:
     def test_create_observables_true(self) -> None:
         connector = self._setup(create_observables=True)
         counts, _ = connector._create_indicators(
-            "obs-root",
+            {"id": "obs-root", "objectMarking": []},
             900,
             {
                 "domains": ["evil.com"],
@@ -386,6 +386,77 @@ class TestIndicatorsRespectCreateObservablesFlag:
         assert counts["indicators"] == 1
 
 
+class TestApiIndicatorAndObservableInheritSourceMarkings:
+    """API-created Indicators / Observables inherit the source observable's markings.
+
+    The earlier review pass fixed marking inheritance for the STIX bundle
+    (Malware-Analysis SDO and derived SCOs). The Indicator / Observable
+    objects created through the OpenCTI REST API were still being made
+    without ``objectMarking``, so a TLP:AMBER source produced indicators
+    that OpenCTI exposed more broadly than the source SCO. These tests
+    pin the fix end-to-end.
+    """
+
+    @staticmethod
+    def _amber_observable() -> Dict[str, Any]:
+        return {
+            "id": "observable-amber",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": stix2.TLP_AMBER["id"],
+                }
+            ],
+        }
+
+    def _connector(self, create_observables: bool) -> AssemblyLineConnector:
+        connector = _make_connector(assemblyline_create_observables=create_observables)
+        connector.helper.api.indicator.create = MagicMock(return_value={"id": "ind-1"})
+        connector.helper.api.stix_core_relationship.create = MagicMock()
+        connector.helper.api.stix_cyber_observable.create = MagicMock(
+            return_value={"id": "obs-1"}
+        )
+        connector.helper.api.stix_cyber_observable.add_label = MagicMock()
+        connector.helper.api.stix2.format_date = MagicMock(return_value="2024-01-01")
+        return connector
+
+    def test_indicator_carries_source_object_marking(self) -> None:
+        connector = self._connector(create_observables=False)
+        connector._create_indicators(
+            self._amber_observable(),
+            900,
+            {"domains": ["evil.com"], "ips": [], "urls": [], "families": []},
+        )
+        indicator_kwargs = connector.helper.api.indicator.create.call_args.kwargs
+        assert indicator_kwargs.get("objectMarking") == [stix2.TLP_AMBER["id"]]
+
+    def test_observable_carries_source_object_marking(self) -> None:
+        connector = self._connector(create_observables=True)
+        connector._create_indicators(
+            self._amber_observable(),
+            900,
+            {"domains": ["evil.com"], "ips": [], "urls": [], "families": []},
+        )
+        obs_kwargs = connector.helper.api.stix_cyber_observable.create.call_args.kwargs
+        assert obs_kwargs.get("objectMarking") == [stix2.TLP_AMBER["id"]]
+
+    def test_unmarked_source_falls_back_to_tlp_clear(self) -> None:
+        # Consistent with ``_check_tlp`` (which treats an unmarked
+        # observable as ``TLP:CLEAR``) and with the platform's
+        # canonical custom marking — not the deprecated TLP:WHITE.
+        from main import _TLP_CLEAR_MARKING_ID
+
+        connector = self._connector(create_observables=False)
+        connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            {"domains": ["evil.com"], "ips": [], "urls": [], "families": []},
+        )
+        indicator_kwargs = connector.helper.api.indicator.create.call_args.kwargs
+        assert indicator_kwargs.get("objectMarking") == [_TLP_CLEAR_MARKING_ID]
+
+
 class TestMalwareFamilyHasNoTrojanLabel:
     """Malware families must not be hard-coded to the ``trojan`` label."""
 
@@ -396,7 +467,7 @@ class TestMalwareFamilyHasNoTrojanLabel:
         connector.helper.api.stix_core_relationship.create = MagicMock()
 
         connector._create_indicators(
-            "obs-root",
+            {"id": "obs-root", "objectMarking": []},
             500,
             {"domains": [], "ips": [], "urls": [], "families": ["EMOTET"]},
         )
@@ -519,30 +590,38 @@ class TestSourceMarkingRefs:
         refs = AssemblyLineConnector._source_marking_refs(observable)
         assert refs == ["marking-definition--a", "marking-definition--b"]
 
-    def test_falls_back_to_tlp_white_when_source_has_no_markings(self) -> None:
+    def test_falls_back_to_tlp_clear_when_source_has_no_markings(self) -> None:
         # When the source observable carries no marking at all we still
         # need every derived analysis object to carry *some* marking so
-        # the platform's access-control gates work — TLP:WHITE is the
-        # documented safe default.
+        # the platform's access-control gates work. We fall back to the
+        # OpenCTI custom ``TLP:CLEAR`` marking — matching ``_check_tlp``,
+        # which treats an unmarked observable as ``TLP:CLEAR`` — rather
+        # than the deprecated ``stix2.TLP_WHITE`` constant.
+        from main import _TLP_CLEAR_MARKING_ID
+
         refs = AssemblyLineConnector._source_marking_refs({"objectMarking": []})
-        assert refs == [stix2.TLP_WHITE["id"]]
+        assert refs == [_TLP_CLEAR_MARKING_ID]
 
     def test_falls_back_when_object_marking_is_missing(self) -> None:
+        from main import _TLP_CLEAR_MARKING_ID
+
         refs = AssemblyLineConnector._source_marking_refs({})
-        assert refs == [stix2.TLP_WHITE["id"]]
+        assert refs == [_TLP_CLEAR_MARKING_ID]
 
     def test_ignores_markings_without_standard_id(self) -> None:
         # ``_check_tlp`` only relies on ``definition`` / ``definition_type``,
         # so a raw test stub may omit ``standard_id``. The marking-refs
         # helper must fall back gracefully (and not emit ``None``) in that
         # case.
+        from main import _TLP_CLEAR_MARKING_ID
+
         observable = {
             "objectMarking": [
                 {"definition_type": "TLP", "definition": "TLP:GREEN"},
             ]
         }
         refs = AssemblyLineConnector._source_marking_refs(observable)
-        assert refs == [stix2.TLP_WHITE["id"]]
+        assert refs == [_TLP_CLEAR_MARKING_ID]
 
 
 class TestMalwareAnalysisPropagatesSourceMarkings:
@@ -643,6 +722,25 @@ class TestMalwareAnalysisPropagatesSourceMarkings:
                 assert (
                     stix2.TLP_WHITE["id"] not in obj.object_marking_refs
                 ), f"{obj.type} was downgraded to TLP:WHITE: {obj.object_marking_refs}"
+
+    def test_derived_scos_use_x_opencti_created_by_ref(self) -> None:
+        # OpenCTI's observable/SCO authoring convention is the
+        # ``x_opencti_created_by_ref`` custom property, not the
+        # standard STIX ``created_by_ref`` (which is reserved for
+        # SDOs/SROs). Setting the standard field on a SCO would
+        # silently leave the platform's author column unset.
+        bundle = self._run()
+        derived_types = {"domain-name", "ipv4-addr", "ipv6-addr", "url"}
+        for obj in bundle.values():
+            if getattr(obj, "type", None) not in derived_types:
+                continue
+            serialized = obj.serialize()
+            assert (
+                "x_opencti_created_by_ref" in serialized
+            ), f"{obj.type} is missing x_opencti_created_by_ref: {serialized}"
+            assert (
+                '"created_by_ref"' not in serialized
+            ), f"{obj.type} should not use the standard SDO created_by_ref: {serialized}"
 
 
 class TestTerminalAssemblyLineStates:
