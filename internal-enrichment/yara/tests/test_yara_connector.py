@@ -142,10 +142,24 @@ class TestScanArtifact:
             }
         ]
         result, errors = connector._scan_artifact(artifact, indicators)
-        # result contains 1 relationship + 1 indicator
-        assert len(result) == 2
-        assert result[0]["relationship_type"] == "related-to"
-        assert result[0]["created_by_ref"] == connector.author["id"]
+        # Result contains 1 relationship + 1 indicator + 1 fallback TLP
+        # MarkingDefinition. The MarkingDefinition is emitted because
+        # neither the Artifact nor the matched Indicator carry an
+        # ``objectMarking`` list, so ``_collect_marking_refs`` falls
+        # back to ``self.tlp_level`` (``clear`` by default) and the
+        # corresponding STIX object must ride along in the bundle so
+        # ``send_stix2_bundle(..., cleanup_inconsistent_bundle=True)``
+        # does not drop the relationship as inconsistent.
+        assert len(result) == 3
+        relationships = [obj for obj in result if obj.get("type") == "relationship"]
+        indicators_emitted = [obj for obj in result if obj.get("type") == "indicator"]
+        markings = [obj for obj in result if obj.get("type") == "marking-definition"]
+        assert len(relationships) == 1
+        assert relationships[0]["relationship_type"] == "related-to"
+        assert relationships[0]["created_by_ref"] == connector.author["id"]
+        assert markings[0]["id"] in relationships[0]["object_marking_refs"]
+        assert len(indicators_emitted) == 1
+        assert len(markings) == 1
         assert errors == []
 
     def test_no_match_no_bundle(self):
@@ -187,6 +201,113 @@ class TestScanArtifact:
         objects, errors = connector._scan_artifact(artifact, indicators)
         assert objects == []
         assert len(errors) == 1
+
+
+class TestMarkingDefinitionInBundle:
+    """``_collect_marking_refs`` fallback emits the corresponding
+    ``MarkingDefinition`` object so the bundle is self-consistent under
+    ``send_stix2_bundle(..., cleanup_inconsistent_bundle=True)``.
+
+    The worker drops relationships whose ``object_marking_refs`` point
+    at marking ids that are not also present as SDOs anywhere in the
+    bundle. ``_collect_marking_refs`` generates the fallback id
+    locally (no platform-side STIX object backs it), so the connector
+    must emit the corresponding ``MarkingDefinition`` itself.
+    """
+
+    def _matching_artifact_and_indicator(
+        self,
+        artifact_markings=None,
+        indicator_markings=None,
+    ):
+        artifact = {
+            "id": "artifact-uuid",
+            "standard_id": "artifact--a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "importFiles": [{"name": "test.bin", "id": "file-123"}],
+        }
+        if artifact_markings is not None:
+            artifact["objectMarking"] = artifact_markings
+        indicator = {
+            "id": "indicator-uuid",
+            "name": "test_rule",
+            "standard_id": "indicator--b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "pattern": 'rule test_rule { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+        }
+        if indicator_markings is not None:
+            indicator["objectMarking"] = indicator_markings
+        return artifact, indicator
+
+    def test_fallback_marking_object_is_added_to_bundle(self):
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact, indicator = self._matching_artifact_and_indicator()
+        result, _errors = connector._scan_artifact(artifact, [indicator])
+
+        markings = [obj for obj in result if obj.get("type") == "marking-definition"]
+        relationships = [obj for obj in result if obj.get("type") == "relationship"]
+        assert (
+            len(markings) == 1
+        ), "fallback TLP MarkingDefinition must ride along in the bundle"
+        # The id on the relationship and on the emitted MarkingDefinition
+        # have to match so the worker does not drop the relationship as
+        # inconsistent.
+        assert markings[0]["id"] in relationships[0]["object_marking_refs"]
+        # Default TLP is ``clear`` (per ``yara.tlp_level`` default),
+        # which materialises as a ``TLP:CLEAR`` marking definition.
+        assert markings[0]["x_opencti_definition"] == "TLP:CLEAR"
+
+    def test_fallback_marking_emitted_once_across_multiple_indicators(self):
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact, indicator = self._matching_artifact_and_indicator()
+        # Two distinct indicators that both match the same artifact; both
+        # fall back to the same TLP, so we should emit the marking
+        # object exactly once.
+        second_indicator = {
+            "id": "indicator-uuid-2",
+            "name": "second_rule",
+            "standard_id": "indicator--c3d4e5f6-a7b8-4c9d-8e1f-2a3b4c5d6e7f",
+            "pattern": 'rule second_rule { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+        }
+        result, _errors = connector._scan_artifact(
+            artifact, [indicator, second_indicator]
+        )
+
+        markings = [obj for obj in result if obj.get("type") == "marking-definition"]
+        assert len(markings) == 1
+
+    def test_no_fallback_marking_when_artifact_carries_markings(self):
+        """When the Artifact already carries its own markings,
+        ``_collect_marking_refs`` does **not** fall back to the
+        configured default, so no MarkingDefinition is added to the
+        bundle by this code path — the marking object is expected to
+        ride along on ``stix_objects`` from the enrichment message.
+        """
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact_marking_id = (
+            "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"  # TLP:GREEN
+        )
+        artifact, indicator = self._matching_artifact_and_indicator(
+            artifact_markings=[{"standard_id": artifact_marking_id}]
+        )
+        result, _errors = connector._scan_artifact(artifact, [indicator])
+
+        markings = [obj for obj in result if obj.get("type") == "marking-definition"]
+        relationships = [obj for obj in result if obj.get("type") == "relationship"]
+        assert markings == []
+        # The relationship still carries the inherited marking ref.
+        assert artifact_marking_id in relationships[0]["object_marking_refs"]
 
 
 class TestPropagateLabels:

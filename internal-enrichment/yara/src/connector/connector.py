@@ -127,8 +127,58 @@ class YaraConnector:
             all_entities += data["entities"]
         return all_entities
 
+    def _build_tlp_marking(self, tlp_label: str) -> stix2.MarkingDefinition:
+        """Return a STIX ``MarkingDefinition`` object for ``tlp_label``.
+
+        Well-known TLP names (``TLP:WHITE`` / ``TLP:GREEN`` / ``TLP:AMBER``
+        / ``TLP:RED``) map to the built-in ``stix2.TLP_*`` constants so
+        their canonical ids are preserved. ``TLP:CLEAR`` and
+        ``TLP:AMBER+STRICT`` are OpenCTI-specific markings that the
+        STIX 2.1 library does not pre-register — they are materialised
+        as custom ``stix2.MarkingDefinition`` objects with the
+        ``x_opencti_definition`` extension so the OpenCTI UI shows the
+        modern label rather than the legacy one.
+        """
+        canonical = tlp_label.upper()
+        built_in = {
+            "TLP:WHITE": stix2.TLP_WHITE,
+            "TLP:GREEN": stix2.TLP_GREEN,
+            "TLP:AMBER": stix2.TLP_AMBER,
+            "TLP:RED": stix2.TLP_RED,
+        }
+        if canonical in built_in:
+            return built_in[canonical]
+        return stix2.MarkingDefinition(
+            id=MarkingDefinition.generate_id("TLP", canonical),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            allow_custom=True,
+            x_opencti_definition_type="TLP",
+            x_opencti_definition=canonical,
+        )
+
     def _collect_marking_refs(self, artifact, indicator):
-        """Collect unique marking definition refs from both entities, falling back to default marking."""
+        """Collect unique marking definition refs from both entities, falling back to default marking.
+
+        Returns a ``(refs, fallback_marking)`` tuple. ``refs`` is the
+        list passed to ``object_marking_refs`` on the emitted
+        relationships (or ``None`` when no marking applies). When the
+        configured default TLP had to be used as a fallback (neither
+        the Artifact nor the matched Indicator carried any marking),
+        ``fallback_marking`` is the corresponding
+        :class:`stix2.MarkingDefinition` object that **must** be added
+        to the bundle so ``send_stix2_bundle(...,
+        cleanup_inconsistent_bundle=True)`` does not drop the
+        relationship as inconsistent — the fallback id is generated
+        locally and has no platform-side STIX object backing it.
+
+        Markings inherited from the Artifact / Indicator are not
+        re-emitted here: they ride along on the enrichment message's
+        ``stix_objects`` (Artifact-side) or live on the platform
+        already (Indicator-side, listed only by ``standard_id`` via
+        the GraphQL ``customAttributes``), and the platform's
+        ingestion path resolves them by id.
+        """
         marking_refs = set()
         for marking in artifact.get("objectMarking", []):
             std_id = marking.get("standard_id")
@@ -138,10 +188,15 @@ class YaraConnector:
             std_id = marking.get("standard_id")
             if std_id:
                 marking_refs.add(std_id)
+        fallback_marking: stix2.MarkingDefinition | None = None
         if not marking_refs and self.tlp_level:
-            tlp_value = "TLP:" + self.tlp_level.upper()
-            marking_refs.add(MarkingDefinition.generate_id("TLP", tlp_value))
-        return list(marking_refs) if marking_refs else None
+            tlp_label = "TLP:" + self.tlp_level.upper()
+            fallback_marking = self._build_tlp_marking(tlp_label)
+            marking_refs.add(fallback_marking.id)
+        return (
+            list(marking_refs) if marking_refs else None,
+            fallback_marking,
+        )
 
     def _scan_artifact(self, artifact, yara_indicators) -> tuple[list, list[str]]:
         self.helper.connector_logger.debug("Scanning Artifact contents with YARA")
@@ -172,6 +227,13 @@ class YaraConnector:
         # change to how we list YARA indicators would not silently break
         # the dedup contract.
         propagated_indicator_ids: set[str] = set()
+        # Marking-definition objects that need to ride along in the
+        # bundle (only the configured-default-TLP fallback case — the
+        # markings inherited from the Artifact / Indicator are already
+        # known to the platform). Dedup by id so an Artifact whose
+        # ``importFiles`` all match the same Indicator does not emit
+        # the same MarkingDefinition N times.
+        fallback_markings: dict[str, stix2.MarkingDefinition] = {}
         errors = []
         for artifact_content in artifact_contents:
             for indicator in yara_indicators:
@@ -188,7 +250,11 @@ class YaraConnector:
                 if not results:
                     continue
 
-                marking_refs = self._collect_marking_refs(artifact, indicator)
+                marking_refs, fallback_marking = self._collect_marking_refs(
+                    artifact, indicator
+                )
+                if fallback_marking is not None:
+                    fallback_markings[fallback_marking.id] = fallback_marking
                 relationship = Relationship(
                     id=StixCoreRelationship.generate_id(
                         "related-to",
@@ -248,7 +314,12 @@ class YaraConnector:
                         )
                     )
 
-        return bundle_objects + list(matched_indicators.values()), errors
+        return (
+            bundle_objects
+            + list(matched_indicators.values())
+            + list(fallback_markings.values()),
+            errors,
+        )
 
     def _propagate_labels(self, artifact: dict, indicator: dict) -> None:
         """Copy every label of ``indicator`` onto ``artifact``.
