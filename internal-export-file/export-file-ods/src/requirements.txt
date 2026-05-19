@@ -1,0 +1,2 @@
+pycti==7.260515.0
+unogenerator==1.2.0
