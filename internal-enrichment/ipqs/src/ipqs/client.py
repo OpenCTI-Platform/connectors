@@ -6,11 +6,9 @@ from typing import Any, Dict, Optional
 from pycti import OpenCTIConnectorHelper
 from requests import session
 from requests.exceptions import (
-    ConnectTimeout,
     HTTPError,
-    InvalidURL,
     JSONDecodeError,
-    ProxyError,
+    RequestException,
 )
 
 from .constants import (
@@ -79,11 +77,22 @@ class IPQSClient:
             )
             response.raise_for_status()
             data = response.json()
-        except (ConnectTimeout, ProxyError, InvalidURL) as error:
-            self.helper.log_error(f"Error connecting to IPQS. Error: {error}")
-            return None
         except HTTPError as error:
+            # HTTP status outside of 2xx — keep the connector alive and
+            # surface the status for the operator.
             self.helper.log_error(f"IPQS HTTP error for {url}: {error}")
+            return None
+        except RequestException as error:
+            # Catch the full ``requests`` exception hierarchy so a slow
+            # response (``ReadTimeout`` / ``Timeout``), a proxy error,
+            # an invalid URL, an SSL error, a chunked-encoding error
+            # or any other transport failure simply returns ``None``
+            # rather than crashing the connector. ``ConnectTimeout``,
+            # ``ProxyError`` and ``InvalidURL`` are all subclasses of
+            # ``RequestException`` so they remain handled.
+            self.helper.log_error(
+                f"Error connecting to IPQS ({type(error).__name__}): {error}"
+            )
             return None
         except (JSONDecodeError, ValueError) as error:
             # Non-JSON / truncated body — keep the connector alive.
@@ -153,8 +162,19 @@ class IPQSClient:
             )
             response.raise_for_status()
             data = response.json()
-        except (ConnectTimeout, ProxyError, InvalidURL, HTTPError) as exc:
-            self.helper.log_error(f"Error connecting to IPQS leaked API: {exc}")
+        except HTTPError as exc:
+            # HTTP status outside of 2xx — keep the connector alive.
+            self.helper.log_error(f"IPQS leaked API HTTP error for {url}: {exc}")
+            return None
+        except RequestException as exc:
+            # Catch the full ``requests`` exception hierarchy here too
+            # (``ReadTimeout`` / ``Timeout`` / ``ProxyError`` /
+            # ``InvalidURL`` / ``SSLError`` / ``ChunkedEncodingError``
+            # / ...) so a slow leaked-API response cannot crash the
+            # enrichment worker.
+            self.helper.log_error(
+                f"Error connecting to IPQS leaked API " f"({type(exc).__name__}): {exc}"
+            )
             return None
         except (JSONDecodeError, ValueError) as exc:
             self.helper.log_error(
