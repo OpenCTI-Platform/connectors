@@ -13,7 +13,11 @@ import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from lib.filenames import sanitize_file_name
-from lib.filters import build_neighbor_filter, build_query_filter
+from lib.filters import (
+    access_filter_has_content,
+    build_neighbor_filter,
+    build_query_filter,
+)
 from lib.internal_export import InternalExportConnector
 from lib.rendering import render_dict_item, render_dict_list
 from lib.sanitization import sanitize_cell
@@ -161,15 +165,22 @@ class ExportFileODSConnector(InternalExportConnector):
         ``filters`` and ``filterGroups`` payload is normalised to
         ``None`` so callers do not pass a no-op filter container to
         the platform.
+
+        The "has usable content" check is delegated to
+        :func:`lib.filters.access_filter_has_content` — the same helper
+        that :func:`lib.filters.build_neighbor_filter` and
+        :func:`lib.filters.build_query_filter` use to decide whether to
+        AND the access filter in. Sharing that helper keeps the
+        relationship-discovery step (this method) and the
+        neighbour-object fetch (``build_neighbor_filter``) from ever
+        diverging on what counts as an "empty" access filter, which is
+        a marking-enforcement invariant the connector must preserve.
         """
-        access_filter = self.access_filter
-        if not access_filter:
-            return None
-        has_filters = bool((access_filter.get("filters") or []))
-        has_groups = bool((access_filter.get("filterGroups") or []))
-        if not (has_filters or has_groups):
-            return None
-        return access_filter
+        return (
+            self.access_filter
+            if access_filter_has_content(self.access_filter)
+            else None
+        )
 
     @staticmethod
     def _row_for(entity: Dict[str, Any], header: str) -> str:

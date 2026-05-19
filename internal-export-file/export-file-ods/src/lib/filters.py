@@ -5,14 +5,20 @@ This module is intentionally dependency-free (no ``unogenerator`` / no
 ``full`` and ``query`` exports can be unit-tested without LibreOffice being
 available on the CI runner.
 
-Two combinators are exposed:
+Three public helpers are exposed:
 
+* :func:`access_filter_has_content` — single source of truth for
+  deciding whether a request's ``access_filter`` carries any usable
+  content. Re-used by both combinators below **and** by the connector
+  worker when it normalises ``access_filter`` for the per-direction
+  relationship-list call, so the "no-op filter" check cannot diverge
+  between neighbour discovery and neighbour fetch.
 * :func:`build_neighbor_filter` — combines a positive ``ids`` filter for
   the neighbour candidates with the request's optional ``access_filter``.
 * :func:`build_query_filter` — combines the user-supplied list filter for a
   ``query`` export with the request's optional ``access_filter``.
 
-Both treat ``access_filter`` as optional: when ``filters`` and
+All three treat ``access_filter`` as optional: when ``filters`` and
 ``filterGroups`` are both empty or missing the filter is considered absent
 and the user filter is returned as-is (or, for the neighbour case, only the
 ``ids`` group is returned). This mirrors the behaviour of every other
@@ -22,12 +28,17 @@ internal-export connector in the repository.
 from typing import Any, Dict, List, Optional
 
 
-def _access_filter_has_content(access_filter: Optional[Dict[str, Any]]) -> bool:
+def access_filter_has_content(access_filter: Optional[Dict[str, Any]]) -> bool:
     """Return ``True`` if ``access_filter`` carries any usable content.
 
     An ``access_filter`` whose ``filters`` and ``filterGroups`` lists are
     both missing/empty is treated as absent — passing it to the platform
     would add a no-op AND clause to the request filter.
+
+    This is the single source of truth for the "usable access filter"
+    check across the connector: both the filter combinators below and
+    the worker's per-direction relationship-list call rely on it, so the
+    neighbour-discovery and neighbour-fetch stages cannot diverge.
     """
     if not access_filter:
         return False
@@ -60,7 +71,7 @@ def build_neighbor_filter(
             }
         ],
     }
-    if _access_filter_has_content(access_filter):
+    if access_filter_has_content(access_filter):
         return {
             "mode": "and",
             "filterGroups": [ids_filter_group, access_filter],
@@ -80,7 +91,7 @@ def build_query_filter(
     user filter is returned as-is (and vice versa). When both are
     populated they are ANDed together.
     """
-    access_has_content = _access_filter_has_content(access_filter)
+    access_has_content = access_filter_has_content(access_filter)
     if access_has_content and list_params_filters is not None:
         return {
             "mode": "and",
@@ -92,4 +103,8 @@ def build_query_filter(
     return access_filter
 
 
-__all__ = ("build_neighbor_filter", "build_query_filter")
+__all__ = (
+    "access_filter_has_content",
+    "build_neighbor_filter",
+    "build_query_filter",
+)

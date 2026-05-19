@@ -6,10 +6,19 @@ positive filter — neighbour ids for ``full`` exports, the user-supplied
 list filter for ``query`` exports. If either combinator silently drops the
 ``access_filter`` a marking-restricted neighbour or query result could leak
 through the export. The cases below pin the contract.
+
+``access_filter_has_content`` is the single source of truth for the
+"usable access filter" check shared between the combinators above and the
+connector worker's per-direction relationship-list call. ``TestAccessFilterHasContent``
+locks the contract so the two stages cannot diverge silently.
 """
 
 import pytest
-from lib.filters import build_neighbor_filter, build_query_filter
+from lib.filters import (
+    access_filter_has_content,
+    build_neighbor_filter,
+    build_query_filter,
+)
 
 _USER_LIST_FILTER = {
     "mode": "and",
@@ -141,3 +150,43 @@ class TestBuildQueryFilter:
     @pytest.mark.parametrize("empty_access", [None, _EMPTY_FILTER, {}])
     def test_empty_access_filter_keeps_the_user_filter(self, empty_access):
         assert build_query_filter(_USER_LIST_FILTER, empty_access) == _USER_LIST_FILTER
+
+
+class TestAccessFilterHasContent:
+    """``access_filter_has_content`` is the shared "usable access filter"
+    predicate used by ``build_neighbor_filter``, ``build_query_filter``
+    and the connector's per-direction relationship-list call. Any
+    divergence between the three would let marking-restricted rows leak
+    through the export, so the contract is pinned here explicitly."""
+
+    @pytest.mark.parametrize("empty_access", [None, {}, _EMPTY_FILTER])
+    def test_empty_or_missing_access_filter_is_treated_as_absent(self, empty_access):
+        assert access_filter_has_content(empty_access) is False
+
+    def test_filters_only_access_filter_is_treated_as_content(self):
+        assert access_filter_has_content(_ACCESS_FILTER) is True
+
+    def test_filter_groups_only_access_filter_is_treated_as_content(self):
+        assert access_filter_has_content(_ACCESS_FILTER_NESTED) is True
+
+    def test_both_filters_and_filter_groups_populated_is_treated_as_content(self):
+        composite = {
+            "mode": "and",
+            "filters": _ACCESS_FILTER["filters"],
+            "filterGroups": [_ACCESS_FILTER],
+        }
+        assert access_filter_has_content(composite) is True
+
+    @pytest.mark.parametrize(
+        "missing_keys_access",
+        [
+            {"mode": "and"},
+            {"filters": None, "filterGroups": None},
+            {"filters": [], "filterGroups": None},
+            {"filters": None, "filterGroups": []},
+        ],
+    )
+    def test_missing_or_none_filters_keys_are_treated_as_absent(
+        self, missing_keys_access
+    ):
+        assert access_filter_has_content(missing_keys_access) is False
