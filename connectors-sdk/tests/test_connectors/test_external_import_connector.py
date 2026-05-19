@@ -7,11 +7,11 @@ import pytest
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
-from connectors_sdk.connectors.external_import.base_external_import_connector import (
-    BaseExternalImportConnector,
+from connectors_sdk.connectors.external_import.external_import_connector import (
+    ExternalImportConnector,
 )
 
-PATCH_HELPER = "connectors_sdk.connectors.external_import.base_external_import_connector.OpenCTIConnectorHelper"
+PATCH_HELPER = "connectors_sdk.connectors.external_import.external_import_connector.OpenCTIConnectorHelper"
 
 
 class DummyProcessor(BaseDataProcessor):
@@ -56,18 +56,16 @@ def _make_state_mock() -> MagicMock:
     return state
 
 
-class TestBaseExternalImportConnector:
+class TestExternalImportConnector:
     def test_init(self, mock_config: MagicMock):
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
-            config=mock_config, data_processors=[proc]
-        )
+        connector = ExternalImportConnector(config=mock_config, data_processors=[proc])
         assert connector.config is mock_config
         assert connector.data_processors == [proc]
 
     def test_init_empty_processors_raises(self, mock_config: MagicMock):
         with pytest.raises(ValueError, match="At least one BaseDataProcessor"):
-            BaseExternalImportConnector(config=mock_config, data_processors=[])
+            ExternalImportConnector(config=mock_config, data_processors=[])
 
     @patch(PATCH_HELPER)
     def test_init_dependencies_wires_up_components(
@@ -76,9 +74,7 @@ class TestBaseExternalImportConnector:
         mock_helper_cls.return_value = _make_helper_mock()
 
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
-            config=mock_config, data_processors=[proc]
-        )
+        connector = ExternalImportConnector(config=mock_config, data_processors=[proc])
         connector._init_dependencies()
 
         assert connector.logger is not None
@@ -96,7 +92,7 @@ class TestBaseExternalImportConnector:
 
         custom_state = MagicMock()
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
+        connector = ExternalImportConnector(
             config=mock_config, data_processors=[proc], state=custom_state
         )
         connector._init_dependencies()
@@ -111,7 +107,7 @@ class TestBaseExternalImportConnector:
         state = _make_state_mock()
 
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
+        connector = ExternalImportConnector(
             config=mock_config, data_processors=[proc], state=state
         )
         connector._init_dependencies()
@@ -131,7 +127,7 @@ class TestBaseExternalImportConnector:
         state.last_run = "2025-01-01T00:00:00+00:00"
 
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
+        connector = ExternalImportConnector(
             config=mock_config, data_processors=[proc], state=state
         )
         connector._init_dependencies()
@@ -148,7 +144,7 @@ class TestBaseExternalImportConnector:
         state = _make_state_mock()
 
         proc = FailingProcessor()
-        connector = BaseExternalImportConnector(
+        connector = ExternalImportConnector(
             config=mock_config, data_processors=[proc], state=state
         )
         connector._init_dependencies()
@@ -166,7 +162,7 @@ class TestBaseExternalImportConnector:
         state.load.side_effect = KeyboardInterrupt()
 
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
+        connector = ExternalImportConnector(
             config=mock_config, data_processors=[proc], state=state
         )
         connector._init_dependencies()
@@ -184,7 +180,7 @@ class TestBaseExternalImportConnector:
         state.load.side_effect = SystemExit(0)
 
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
+        connector = ExternalImportConnector(
             config=mock_config, data_processors=[proc], state=state
         )
         connector._init_dependencies()
@@ -198,9 +194,7 @@ class TestBaseExternalImportConnector:
         mock_helper_cls.return_value = helper
 
         proc = DummyProcessor()
-        connector = BaseExternalImportConnector(
-            config=mock_config, data_processors=[proc]
-        )
+        connector = ExternalImportConnector(config=mock_config, data_processors=[proc])
         connector.start()
 
         helper.schedule_process.assert_called_once_with(

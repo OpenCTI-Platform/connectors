@@ -3,11 +3,11 @@
 from unittest.mock import MagicMock
 
 import pytest
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
-from connectors_sdk.connectors.external_import.work_manager import (
+from connectors_sdk.connectors.external_import._work_manager import (
     WorkManager,
     _Work,
 )
+from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 
 
 class TestWork:

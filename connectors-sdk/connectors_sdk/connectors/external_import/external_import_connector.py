@@ -1,13 +1,13 @@
 """Base external import connector module.
 
-This module provides the ``BaseExternalImportConnector`` class that serves as the foundation
+This module provides the ``ExternalImportConnector`` class that serves as the foundation
 for all external import connectors. It handles the common orchestration logic:
 state management, scheduling, error handling, and running data processors.
 
 Architecture::
 
-    BaseExternalImportConnector
-    ├── OpenCTIConnectorHelper → pycti bridge (created in _init_infrastructure)
+    ExternalImportConnector
+    ├── OpenCTIConnectorHelper → pycti bridge (created in _init_dependencies)
     ├── ConnectorLogger        → Logging (wraps helper's AppLogger)
     ├── ExternalImportConnectorState → State persistence (last_run, custom fields)
     └── BaseDataProcessor[]    → process(): with work_manager: send(transform(collect()))
@@ -26,7 +26,7 @@ from connectors_sdk.states.states import ExternalImportConnectorState
 from pycti import OpenCTIConnectorHelper
 
 
-class BaseExternalImportConnector:
+class ExternalImportConnector:
     """Base class for external import connectors.
 
     This class provides the common orchestration logic for external import connectors:
@@ -36,7 +36,7 @@ class BaseExternalImportConnector:
     - Error handling and logging
     - Running one or more ``BaseDataProcessor`` instances
 
-    The ``OpenCTIConnectorHelper`` is created lazily in ``_init_infrastructure()``
+    The ``OpenCTIConnectorHelper`` is created lazily in ``_init_dependencies()``
     (called by ``start()``), so the connector can be instantiated without
     connecting to OpenCTI. This makes it easier to test.
 
@@ -59,7 +59,7 @@ class BaseExternalImportConnector:
         ...     # send() inherited — handles list or generator from transform()
         ...
         >>> settings = MyConnectorSettings()
-        >>> connector = BaseExternalImportConnector(
+        >>> connector = ExternalImportConnector(
         ...     config=settings,
         ...     data_processors=[IndicatorProcessor()],
         ... )
@@ -75,7 +75,7 @@ class BaseExternalImportConnector:
         """Initialize the base external import connector.
 
         The ``OpenCTIConnectorHelper`` is **not** created here. It will be
-        created when ``start()`` is called (via ``_init_infrastructure()``).
+        created when ``start()`` is called (via ``_init_dependencies()``).
 
         Args:
             config: The connector configuration settings.
@@ -87,7 +87,7 @@ class BaseExternalImportConnector:
             raise ValueError("At least one BaseDataProcessor must be provided.")
         self.config = config
         self.data_processors = data_processors
-        self._state = state
+        self.state = state if state is not None else ExternalImportConnectorState()
 
     def _init_dependencies(self) -> None:
         """Create the OpenCTI connector helper and wire up all components.
@@ -100,9 +100,6 @@ class BaseExternalImportConnector:
         """
         self._helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
         self.logger = ConnectorLogger(self._helper)
-        self.state = (
-            self._state if self._state is not None else ExternalImportConnectorState()
-        )
         self.state.inject_dependencies(self._helper)
         for processor in self.data_processors:
             processor.inject_dependencies(
@@ -168,7 +165,7 @@ class BaseExternalImportConnector:
     def start(self) -> None:
         """Start the connector with scheduled execution.
 
-        Calls ``_init_infrastructure()`` to create the helper and wire up components,
+        Calls ``_init_dependencies()`` to create the helper and wire up components,
         then uses ``OpenCTIConnectorHelper.schedule_process`` to run ``callback``
         at the interval defined by ``connector.duration_period`` in the configuration.
 

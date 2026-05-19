@@ -22,7 +22,7 @@ def test_root_public_api_is_valid():
         "DatetimeFromIsoString",
         "Deprecate",
         "DeprecatedField",
-        "BaseExternalImportConnector",
+        "ExternalImportConnector",
         "ConnectorLogger",
         "BaseDataProcessor",
         "WorkManager",

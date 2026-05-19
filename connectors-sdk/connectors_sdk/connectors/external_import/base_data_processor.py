@@ -23,8 +23,8 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
+from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.connectors.external_import.logger import ConnectorLogger
-from connectors_sdk.connectors.external_import.work_manager import WorkManager
 
 if TYPE_CHECKING:
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
@@ -45,7 +45,7 @@ class BaseDataProcessor(ABC):
     multiple lists (streaming). ``send()`` detects this and acts accordingly.
 
     The ``work_manager``, ``logger`` and ``state`` attributes are injected by
-    ``BaseExternalImportConnector`` via ``inject_dependencies()``.
+    ``ExternalImportConnector`` via ``inject_dependencies()``.
 
     The processor can read and write state fields (e.g. cursors, checkpoints)
     via ``self.state``, but it must **not** call ``state.load()`` or
@@ -85,7 +85,7 @@ class BaseDataProcessor(ABC):
     ) -> None:
         """Inject dependencies from the base connector and create the WorkManager.
 
-        Called by ``BaseExternalImportConnector`` after helper initialization.
+        Called by ``ExternalImportConnector`` after helper initialization.
         Sets ``config``, ``logger`` and ``state``, and creates the ``WorkManager``
         for this processor.
 
@@ -104,7 +104,7 @@ class BaseDataProcessor(ABC):
 
         Override this method to perform initialization that requires
         the injected dependencies (logger, state, config, etc.).
-        Called by ``BaseExternalImportConnector._init_dependencies()``.
+        Called by ``ExternalImportConnector._init_dependencies()``.
 
         By default, does nothing.
         """
