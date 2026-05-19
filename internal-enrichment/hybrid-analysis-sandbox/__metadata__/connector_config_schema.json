@@ -15,12 +15,18 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "HybridAnalysisSandbox",
+      "default": "Hybrid Analysis (Sandbox Windows 10 64bit)",
       "description": "The name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
+      "default": [
+        "StixFile",
+        "Artifact",
+        "Url",
+        "Domain-Name",
+        "Hostname"
+      ],
       "description": "The scope of the connector.",
       "items": {
         "type": "string"
@@ -49,35 +55,96 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "HYBRID_ANALYSIS_API_KEY": {
+    "HYBRID_ANALYSIS_SANDBOX_TOKEN": {
       "description": "Hybrid Analysis API token.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
+    "HYBRID_ANALYSIS_SANDBOX_ENVIRONMENT_ID": {
+      "default": 110,
+      "description": "Analysis environment ID. Available values: 400=Mac Catalina 64 bit (x86), 310=Linux (Ubuntu 20.04, 64 bit), 300=Linux (Ubuntu 16.04, 64 bit), 200=Android Static Analysis, 160=Windows 10 64 bit, 120=Windows 7 64 bit, 110=Windows 7 32 bit (HWP Support), 100=Windows 7 32 bit.",
+      "enum": [
+        400,
+        310,
+        300,
+        200,
+        160,
+        120,
+        110,
+        100
+      ],
+      "type": "integer"
+    },
+    "HYBRID_ANALYSIS_SANDBOX_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Maximum TLP for submission.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "HYBRID_ANALYSIS_SANDBOX_API_KEY": {
+      "default": null,
+      "deprecated": true,
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "description": "Use HYBRID_ANALYSIS_SANDBOX_TOKEN instead. (removal scheduled for 2026-12-31)"
+    },
+    "HYBRID_ANALYSIS_TOKEN": {
+      "description": "Use HYBRID_ANALYSIS_SANDBOX_TOKEN instead. (removal scheduled for 2026-12-31)",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "deprecated": true
+    },
     "HYBRID_ANALYSIS_ENVIRONMENT_ID": {
       "default": 110,
-      "description": "Analysis environment ID (default: 110).",
-      "type": "integer"
+      "description": "Use HYBRID_ANALYSIS_SANDBOX_ENVIRONMENT_ID instead. (removal scheduled for 2026-12-31)",
+      "enum": [
+        400,
+        310,
+        300,
+        200,
+        160,
+        120,
+        110,
+        100
+      ],
+      "type": "integer",
+      "deprecated": true
     },
     "HYBRID_ANALYSIS_MAX_TLP": {
       "default": "TLP:AMBER",
-      "description": "Maximum TLP for submission.",
-      "type": "string"
+      "description": "Use HYBRID_ANALYSIS_SANDBOX_MAX_TLP instead. (removal scheduled for 2026-12-31)",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string",
+      "deprecated": true
     },
-    "HYBRID_ANALYSIS_TOKEN": {
+    "HYBRID_ANALYSIS_API_KEY": {
+      "default": null,
       "deprecated": true,
-      "description": "Deprecated/unused setting. Use `api_key` (HYBRID_ANALYSIS_TOKEN) instead.",
       "format": "password",
       "type": "string",
-      "writeOnly": true
+      "writeOnly": true,
+      "description": "Use HYBRID_ANALYSIS_SANDBOX_TOKEN instead. (removal scheduled for 2026-12-31)"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "HYBRID_ANALYSIS_API_KEY",
-    "HYBRID_ANALYSIS_TOKEN"
+    "HYBRID_ANALYSIS_SANDBOX_TOKEN"
   ],
   "additionalProperties": true
 }

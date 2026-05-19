@@ -7,6 +7,7 @@ import requests
 import stix2
 from connector.settings import ConnectorSettings
 from pycti import (
+    Identity,
     STIX_EXT_OCTI_SCO,
     AttackPattern,
     MalwareAnalysis,
@@ -16,27 +17,35 @@ from pycti import (
 from stix2 import DomainName, File, IPv4Address, IPv6Address
 
 
+class TLPExceededError(ValueError):
+    """Raised when the TLP of the observable is greater than the maximum TLP allowed for enrichment."""
+
+    pass
+
+
 class HybridAnalysis:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
 
-        self.api_key = self.config.hybrid_analysis.api_key.get_secret_value()
+        self.api_key = self.config.hybrid_analysis.token.get_secret_value()
         self.environment_id = self.config.hybrid_analysis.environment_id
         self.max_tlp = self.config.hybrid_analysis.max_tlp
 
-        self.api_url = "https://www.hybrid-analysis.com/api/v2"
+        self.api_url = "https://hybrid-analysis.com/api/v2"
         self.headers = {
             "api-key": self.api_key,
             "user-agent": "OpenCTI Hybrid Analysis Connector - Version 6.0.5",
             "accept": "application/json",
         }
-        self.identity = self.helper.api.identity.create(
-            type="Organization",
+        self.identity = stix2.Identity(
+            id=Identity.generate_id(
+                name="Hybrid Analysis", identity_class="organization"
+            ),
             name="Hybrid Analysis",
+            identity_class="organization",
             description="Hybrid Analysis Sandbox.",
-        )["standard_id"]
-        self._CONNECTOR_RUN_INTERVAL_SEC = 60 * 60
+        )
 
     def _send_knowledge(self, stix_objects, stix_entity, opencti_entity, report):
         if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
@@ -81,7 +90,7 @@ class HybridAnalysis:
                     id=AttackPattern.generate_id(
                         tactic["technique"], tactic["attck_id"]
                     ),
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     name=tactic["technique"],
                     custom_properties={"x_mitre_id": tactic["attck_id"]},
                     object_marking_refs=[stix2.TLP_WHITE],
@@ -91,7 +100,7 @@ class HybridAnalysis:
                         "related-to", stix_entity["id"], attack_pattern.id
                     ),
                     relationship_type="related-to",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     source_ref=stix_entity["id"],
                     target_ref=attack_pattern.id,
                     object_marking_refs=[stix2.TLP_WHITE],
@@ -103,18 +112,17 @@ class HybridAnalysis:
                 domain_stix = DomainName(
                     value=domain,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    custom_properties={"created_by_ref": self.identity},
+                    custom_properties={"created_by_ref": self.identity.id},
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
                         "related-to", stix_entity["id"], domain_stix.id
                     ),
                     relationship_type="related-to",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     source_ref=stix_entity["id"],
                     target_ref=domain_stix.id,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    confidence=self.helper.connect_confidence_level,
                 )
                 analysis_sco_refs.append(domain_stix.id)
                 stix_objects.append(domain_stix)
@@ -124,24 +132,23 @@ class HybridAnalysis:
                 host_stix = IPv4Address(
                     value=host,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    custom_properties={"created_by_ref": self.identity},
+                    custom_properties={"created_by_ref": self.identity.id},
                 )
             else:
                 host_stix = IPv6Address(
                     value=host,
                     object_marking_refs=[stix2.TLP_WHITE],
-                    custom_properties={"created_by_ref": self.identity},
+                    custom_properties={"created_by_ref": self.identity.id},
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
                     "related-to", stix_entity["id"], host_stix.id
                 ),
                 relationship_type="related-to",
-                created_by_ref=self.identity,
+                created_by_ref=self.identity.id,
                 source_ref=stix_entity["id"],
                 target_ref=host_stix.id,
                 object_marking_refs=[stix2.TLP_WHITE],
-                confidence=self.helper.connect_confidence_level,
             )
             analysis_sco_refs.append(host_stix.id)
             stix_objects.append(host_stix)
@@ -157,7 +164,7 @@ class HybridAnalysis:
                     size=file["size"],
                     name=file["name"],
                     custom_properties={"x_opencti_labels": file["type_tags"]},
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     object_marking_refs=[stix2.TLP_WHITE],
                 )
                 relationship = stix2.Relationship(
@@ -165,10 +172,9 @@ class HybridAnalysis:
                         "drops", stix_entity["id"], file_stix.id
                     ),
                     relationship_type="drops",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     source_ref=stix_entity["id"],
                     target_ref=file_stix.id,
-                    confidence=self.helper.connect_confidence_level,
                 )
                 analysis_sco_refs.append(file_stix.id)
                 stix_objects.append(file_stix)
@@ -182,9 +188,8 @@ class HybridAnalysis:
                     id=AttackPattern.generate_id(
                         tactic["technique"], tactic["attck_id"]
                     ),
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     name=tactic["technique"],
-                    confidence=self.helper.connect_confidence_level,
                     custom_properties={"x_mitre_id": tactic["attck_id"]},
                 )
                 relationship = stix2.Relationship(
@@ -192,7 +197,7 @@ class HybridAnalysis:
                         "related-to", stix_entity["id"], attack_pattern.id
                     ),
                     relationship_type="related-to",
-                    created_by_ref=self.identity,
+                    created_by_ref=self.identity.id,
                     source_ref=stix_entity["id"],
                     target_ref=attack_pattern.id,
                 )
@@ -214,7 +219,7 @@ class HybridAnalysis:
             submitted=datetime.now(),
             result=report["verdict"],
             sample_ref=stix_entity["id"],
-            created_by_ref=self.identity,
+            created_by_ref=self.identity.id,
             operating_system_ref=(
                 operating_system["id"] if operating_system is not None else None
             ),
@@ -223,8 +228,14 @@ class HybridAnalysis:
         )
         stix_objects.append(malware_analysis)
         if len(stix_objects) > 0:
-            serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
-            bundles_sent = self.helper.send_stix2_bundle(serialized_bundle)
+            serialized_bundle = self.helper.stix2_create_bundle(
+                [self.identity] + stix_objects
+            )
+            if not serialized_bundle:
+                return "Nothing to attach"
+            bundles_sent = self.helper.send_stix2_bundle(
+                serialized_bundle, cleanup_inconsistent_bundle=True
+            )
             return (
                 "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
             )
@@ -232,7 +243,9 @@ class HybridAnalysis:
             return "Nothing to attach"
 
     def _submit_url(self, stix_objects, stix_entity, opencti_entity):
-        self.helper.log_info("Observable is a URL, triggering the sandbox...")
+        self.helper.connector_logger.info(
+            "Observable is a URL, triggering the sandbox..."
+        )
         values = {
             "url": opencti_entity["observable_value"],
             "environment_id": self.environment_id,
@@ -245,7 +258,7 @@ class HybridAnalysis:
         result = r.json()
         job_id = result["job_id"]
         state = "IN_QUEUE"
-        self.helper.log_info("Analysis in progress...")
+        self.helper.connector_logger.info("Analysis in progress...")
         while state == "IN_QUEUE" or state == "IN_PROGRESS":
             r = requests.get(
                 self.api_url + "/report/" + job_id + "/state", headers=self.headers
@@ -263,11 +276,13 @@ class HybridAnalysis:
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
-        self.helper.log_info("Analysis done, attaching knowledge...")
+        self.helper.connector_logger.info("Analysis done, attaching knowledge...")
         return self._send_knowledge(stix_objects, stix_entity, opencti_entity, result)
 
     def _trigger_sandbox(self, stix_objects, stix_entity, opencti_entity):
-        self.helper.log_info("File not found in HA, triggering the sandbox...")
+        self.helper.connector_logger.info(
+            "File not found in HA, triggering the sandbox..."
+        )
         file_name = opencti_entity["importFiles"][0]["name"]
         file_uri = opencti_entity["importFiles"][0]["id"]
         file_content = self.helper.api.fetch_opencti_file(
@@ -291,7 +306,7 @@ class HybridAnalysis:
         result = r.json()
         job_id = result["job_id"]
         state = "IN_QUEUE"
-        self.helper.log_info("Analysis in progress...")
+        self.helper.connector_logger.info("Analysis in progress...")
         while state == "IN_QUEUE" or state == "IN_PROGRESS":
             r = requests.get(
                 self.api_url + "/report/" + job_id + "/state", headers=self.headers
@@ -309,11 +324,11 @@ class HybridAnalysis:
         if r.status_code > 299:
             raise ValueError(r.text)
         result = r.json()
-        self.helper.log_info("Analysis done, attaching knowledge...")
+        self.helper.connector_logger.info("Analysis done, attaching knowledge...")
         return self._send_knowledge(stix_objects, stix_entity, opencti_entity, result)
 
     def _process_observable(self, stix_objects, stix_entity, opencti_entity):
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             "Processing the observable " + opencti_entity["observable_value"]
         )
         result = []
@@ -333,18 +348,21 @@ class HybridAnalysis:
                 if r.status_code > 299:
                     raise ValueError(r.text)
                 result = r.json()
-        if len(result["reports"]) > 0:
-            self.helper.log_info("Already found in HA, attaching knowledge...")
-            r = requests.get(
-                self.api_url + f"/report/{result['reports'][0]['id']}/summary",
-                headers=self.headers,
-            )
-            if r.status_code > 299:
-                raise ValueError(r.text)
-            report = r.json()
-            return self._send_knowledge(
-                stix_objects, stix_entity, opencti_entity, report
-            )
+
+            if len(result["reports"]) > 0:
+                self.helper.connector_logger.info(
+                    "Already found in HA, attaching knowledge..."
+                )
+                r = requests.get(
+                    self.api_url + f"/report/{result['reports'][0]['id']}/summary",
+                    headers=self.headers,
+                )
+                if r.status_code > 299:
+                    raise ValueError(r.text)
+                report = r.json()
+                return self._send_knowledge(
+                    stix_objects, stix_entity, opencti_entity, report
+                )
         if opencti_entity["entity_type"] in ["Url", "Domain-Name", "Hostname"]:
             return self._submit_url(stix_objects, stix_entity, opencti_entity)
         if (
@@ -358,21 +376,40 @@ class HybridAnalysis:
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
+
         tlp = "TLP:CLEAR"
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
                 tlp = marking_definition["definition"]
-        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
-            raise ValueError(
+
+        try:
+            if OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+                return self._process_observable(
+                    stix_objects, stix_entity, opencti_entity
+                )
+
+            raise TLPExceededError(
                 "Do not send any data, TLP of the observable is greater than MAX TLP"
             )
-        return self._process_observable(stix_objects, stix_entity, opencti_entity)
+
+        except Exception as err:
+            if isinstance(err, TLPExceededError):
+                self.helper.connector_logger.info(f"[CONNECTOR] {str(err)}")
+            else:
+                self.helper.connector_logger.error(
+                    "[CONNECTOR] An unexpected error occurred",
+                    {"error": str(err)},
+                )
+
+            # Send the original bundle if the connector has been triggered by a playbook
+            event_type = data.get("event_type")
+            if not event_type:
+                self.helper.stix2_create_bundle(stix_objects)
+
+            raise err
 
     def start(self):
         self.helper.listen(message_callback=self._process_message)
-
-    def run(self):
-        self.start()
 
     def detect_ip_version(self, value):
         if len(value) > 16:

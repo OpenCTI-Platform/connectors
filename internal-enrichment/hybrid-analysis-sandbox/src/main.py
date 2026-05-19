@@ -20,7 +20,7 @@ if __name__ == "__main__":
         )
 
         connector = HybridAnalysis(config=settings, helper=helper)
-        connector.run()
+        connector.start()
     except Exception:
         traceback.print_exc()
         exit(1)
