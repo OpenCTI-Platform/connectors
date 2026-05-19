@@ -12,31 +12,68 @@ from typing import Any, Callable, Dict, Optional
 
 import stix2
 from pycti import CustomObservableMediaContent
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 
-# ``stix2`` exposes constants for TLP_WHITE / GREEN / AMBER / RED.
-# ``TLP:AMBER+STRICT`` is an OpenCTI-specific marking and is not
-# exported as a constant, so we keep its canonical id here.
-_TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
 
-TLP_MAP: Dict[str, str] = {
-    "CLEAR": stix2.TLP_WHITE.id,
-    "WHITE": stix2.TLP_WHITE.id,
-    "GREEN": stix2.TLP_GREEN.id,
-    "AMBER": stix2.TLP_AMBER.id,
-    "AMBER_STRICT": _TLP_AMBER_STRICT_ID,
-    "AMBER+STRICT": _TLP_AMBER_STRICT_ID,
-    "RED": stix2.TLP_RED.id,
+def _make_tlp_marking(definition: str) -> stix2.MarkingDefinition:
+    """Return a ``stix2.MarkingDefinition`` for an OpenCTI-specific TLP value.
+
+    Used for ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` which the platform
+    represents as custom marking-definition objects (the STIX 2.1
+    library only exposes built-in constants for ``TLP_WHITE`` /
+    ``TLP_GREEN`` / ``TLP_AMBER`` / ``TLP_RED``). Building a real
+    ``stix2.MarkingDefinition`` lets the connector ship the marking
+    object in every bundle, which is what
+    ``connectors-sdk.models.tlp_marking`` and the rest of the
+    external-import family do.
+    """
+    return stix2.MarkingDefinition(
+        id=PyctiMarkingDefinition.generate_id("TLP", definition),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
+    )
+
+
+# ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` are OpenCTI-specific markings
+# and are not exposed as ``stix2`` constants. They are materialised as
+# real ``stix2.MarkingDefinition`` objects so the connector can ship
+# the marking object itself in every emitted bundle (alongside the
+# data referencing it), which is what registers the OpenCTI-specific
+# markings with the platform.
+#
+# ``CLEAR`` is **not** an alias of ``stix2.TLP_WHITE``: although
+# ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")`` happens
+# to derive the same canonical id as ``stix2.TLP_WHITE.id`` (the STIX
+# 2.1 derivation is deterministic on the marking name), the
+# **marking-definition object** the connector emits is different —
+# it carries ``x_opencti_definition='TLP:CLEAR'`` so the OpenCTI UI
+# shows the modern ``TLP:CLEAR`` label rather than the legacy
+# ``TLP:WHITE`` label. Operators who explicitly configure
+# ``MATRIX_TLP=WHITE`` still get the legacy ``stix2.TLP_WHITE``
+# marking object.
+TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
+    "CLEAR": _make_tlp_marking("TLP:CLEAR"),
+    "WHITE": stix2.TLP_WHITE,
+    "GREEN": stix2.TLP_GREEN,
+    "AMBER": stix2.TLP_AMBER,
+    "AMBER_STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+    "AMBER+STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+    "RED": stix2.TLP_RED,
 }
 
 
-def resolve_tlp(name: Any) -> str:
-    """Return the marking-definition id for ``name`` (case-insensitive).
+def resolve_tlp(name: Any) -> stix2.MarkingDefinition:
+    """Return the ``stix2.MarkingDefinition`` for ``name`` (case-insensitive).
 
     Accepted forms (also accepted with any combination of upper/lower
     case, surrounding whitespace, and either ``_`` / space / ``-`` as
     the word separator on the strict variant):
 
-    * ``CLEAR`` / ``WHITE`` (alias of ``CLEAR``)
+    * ``CLEAR`` (OpenCTI-specific ``TLP:CLEAR`` marking)
+    * ``WHITE`` (legacy ``stix2.TLP_WHITE`` marking)
     * ``GREEN``
     * ``AMBER``
     * ``AMBER_STRICT`` / ``AMBER+STRICT`` (also accepted as
@@ -110,10 +147,12 @@ def publication_date_from_event(
     ts = getattr(event, "server_timestamp", None)
     # ``bool`` is a subclass of ``int``; reject it explicitly so a
     # synthetic event carrying ``server_timestamp=True`` does not get
-    # parsed as a millisecond timestamp of 1ms past the epoch.
-    if isinstance(ts, bool):
-        ts = None
-    if isinstance(ts, (int, float)) and ts > 0:
+    # parsed as a millisecond timestamp of 1ms past the epoch. We keep
+    # the raw value in ``ts`` so the fallback warning below logs the
+    # exact value carried by the event (``True`` / ``False`` / ...)
+    # instead of a normalised ``None``, which makes diagnosing
+    # malformed events much easier.
+    if not isinstance(ts, bool) and isinstance(ts, (int, float)) and ts > 0:
         return datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
     event_id = getattr(event, "event_id", "<unknown>")
     log_warning(

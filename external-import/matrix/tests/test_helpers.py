@@ -6,10 +6,17 @@ The helpers exposed here are part of the connector's public contract:
   combination of case, whitespace, ``-`` / ``_`` / ``+`` separators on
   the strict variant), and must raise a clear ``ValueError`` listing
   every supported alias on unknown input;
-* ``TLP_MAP`` must keep ``CLEAR`` and ``WHITE`` pointing at the same
-  canonical id (the OpenCTI ``TLP:WHITE`` id) and ``AMBER_STRICT`` /
-  ``AMBER+STRICT`` pointing at the same canonical
-  ``TLP:AMBER+STRICT`` id;
+* ``TLP_MAP`` must expose every alias as a real
+  ``stix2.MarkingDefinition`` (not a bare id) so the connector can
+  ship the marking object itself in every bundle and the platform can
+  register OpenCTI-specific markings (``TLP:CLEAR`` and
+  ``TLP:AMBER+STRICT``) by name instead of leaving downstream
+  ``object_marking_refs`` pointing at an unresolved reference;
+* ``CLEAR`` is a **distinct** marking from ``WHITE`` (it carries the
+  modern ``TLP:CLEAR`` label and has its own canonical id, generated
+  via ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")``);
+  ``AMBER_STRICT`` and ``AMBER+STRICT`` are two aliases of the same
+  ``TLP:AMBER+STRICT`` marking (also OpenCTI-specific);
 * ``media_content_id`` must produce the same id as
   ``pycti.CustomObservableMediaContent`` would auto-generate from the
   same URL, so thread-reply relationships can be linked deterministically
@@ -30,24 +37,61 @@ from lib.helpers import (
     resolve_tlp,
 )
 from pycti import CustomObservableMediaContent
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 
 
 class TestTLPMap:
-    """Every alias in ``TLP_MAP`` resolves to the right canonical id."""
+    """Every alias in ``TLP_MAP`` exposes a real ``MarkingDefinition``."""
 
     @pytest.mark.parametrize("alias", list(TLP_MAP))
-    def test_every_alias_returns_a_marking_id(self, alias):
-        assert TLP_MAP[alias].startswith("marking-definition--")
+    def test_every_alias_returns_a_marking_definition(self, alias):
+        marking = TLP_MAP[alias]
+        assert isinstance(marking, stix2.MarkingDefinition)
+        assert marking.id.startswith("marking-definition--")
 
-    def test_clear_and_white_share_the_canonical_tlp_white_id(self):
-        # In OpenCTI ``TLP:CLEAR`` is the modern alias of ``TLP:WHITE`` —
-        # both resolve to the same canonical marking-definition id (the
-        # STIX 2.1 ``TLP:WHITE`` id).
-        assert TLP_MAP["CLEAR"] == stix2.TLP_WHITE.id
-        assert TLP_MAP["WHITE"] == stix2.TLP_WHITE.id
+    def test_clear_uses_the_pycti_canonical_id_for_tlp_clear(self):
+        # ``CLEAR`` is built via
+        # ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")`` —
+        # the canonical id pycti derives for ``TLP:CLEAR``. This happens
+        # to share the canonical id of the legacy ``stix2.TLP_WHITE``
+        # constant (the STIX 2.1 derivation is deterministic on the
+        # marking name), but the **marking-definition object** the
+        # connector emits is different — see
+        # ``test_clear_carries_the_clear_label_for_the_ui`` below.
+        canonical_clear_id = PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR")
+        assert TLP_MAP["CLEAR"].id == canonical_clear_id
+
+    def test_clear_is_a_custom_marking_distinct_from_stix2_tlp_white(self):
+        # ``CLEAR`` and ``WHITE`` resolve to **distinct**
+        # ``MarkingDefinition`` objects even though their ids match.
+        # ``WHITE`` is the legacy STIX 2.1 ``TLP_WHITE`` constant;
+        # ``CLEAR`` is a custom marking carrying the modern
+        # ``TLP:CLEAR`` UI label. Emitting the CLEAR-flavoured object
+        # in every bundle is what lets the OpenCTI UI display the
+        # modern label instead of collapsing onto the legacy one.
+        assert TLP_MAP["CLEAR"] is not stix2.TLP_WHITE
+
+    def test_clear_carries_the_clear_label_for_the_ui(self):
+        # The marking object itself carries ``x_opencti_definition``
+        # so OpenCTI displays the modern ``TLP:CLEAR`` label.
+        assert TLP_MAP["CLEAR"].x_opencti_definition == "TLP:CLEAR"
+        assert TLP_MAP["CLEAR"].x_opencti_definition_type == "TLP"
+
+    def test_white_keeps_the_legacy_stix_tlp_white_constant(self):
+        # ``WHITE`` (legacy alias) remains pointed at the STIX 2.1
+        # ``TLP_WHITE`` constant — operators who explicitly configure
+        # ``MATRIX_TLP=WHITE`` get the legacy marking-definition object
+        # instead of the modern ``TLP:CLEAR``-labelled one.
+        assert TLP_MAP["WHITE"] is stix2.TLP_WHITE
 
     def test_amber_strict_aliases_share_the_canonical_id(self):
-        assert TLP_MAP["AMBER_STRICT"] == TLP_MAP["AMBER+STRICT"]
+        canonical_id = PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT")
+        assert TLP_MAP["AMBER_STRICT"].id == canonical_id
+        assert TLP_MAP["AMBER+STRICT"].id == canonical_id
+
+    def test_amber_strict_carries_the_strict_label_for_the_ui(self):
+        assert TLP_MAP["AMBER_STRICT"].x_opencti_definition == "TLP:AMBER+STRICT"
+        assert TLP_MAP["AMBER+STRICT"].x_opencti_definition == "TLP:AMBER+STRICT"
 
     @pytest.mark.parametrize(
         ("alias", "stix2_constant"),
@@ -59,7 +103,7 @@ class TestTLPMap:
         ],
     )
     def test_built_in_aliases_match_stix2_constants(self, alias, stix2_constant):
-        assert TLP_MAP[alias] == stix2_constant.id
+        assert TLP_MAP[alias] is stix2_constant
 
 
 class TestResolveTLP:
@@ -79,7 +123,7 @@ class TestResolveTLP:
         ],
     )
     def test_aliases_are_normalised(self, raw, expected_alias):
-        assert resolve_tlp(raw) == TLP_MAP[expected_alias]
+        assert resolve_tlp(raw) is TLP_MAP[expected_alias]
 
     def test_unknown_value_lists_every_supported_alias(self):
         with pytest.raises(ValueError) as exc:
@@ -184,6 +228,22 @@ class TestPublicationDateFromEvent:
         assert len(warnings) == 1
         assert "$bad:matrix.example.org" in warnings[0]
         assert "server_timestamp" in warnings[0]
+
+    @pytest.mark.parametrize("bool_ts", [True, False])
+    def test_boolean_timestamp_is_logged_with_its_raw_value(self, bool_ts):
+        # ``bool`` is a subclass of ``int``; the helper must reject it
+        # for the parsing step but must keep the original value in the
+        # diagnostic so operators can see exactly what the synthetic /
+        # buggy upstream event carried (``True`` / ``False``) instead
+        # of a normalised ``None``.
+        warnings, log_warning = self._recorder()
+        event = SimpleNamespace(
+            server_timestamp=bool_ts, event_id="$bool:matrix.example.org"
+        )
+        publication_date_from_event(event, log_warning)
+        assert len(warnings) == 1
+        assert repr(bool_ts) in warnings[0]
+        assert "None" not in warnings[0]
 
     def test_missing_server_timestamp_attribute_falls_back(self):
         warnings, log_warning = self._recorder()

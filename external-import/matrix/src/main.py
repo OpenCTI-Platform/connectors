@@ -154,7 +154,14 @@ class MatrixConnector:
         tlp_name = get_config_variable(
             "MATRIX_TLP", ["matrix", "tlp"], config, default="AMBER"
         )
-        self.matrix_marking_id = resolve_tlp(tlp_name)
+        # ``resolve_tlp`` returns the full ``stix2.MarkingDefinition``
+        # so we can both (1) reference it from ``object_marking_refs``
+        # via its canonical id and (2) ship the marking object itself
+        # in every flushed bundle, which is what registers the
+        # OpenCTI-specific markings (``TLP:CLEAR``, ``TLP:AMBER+STRICT``)
+        # with the platform — they are not built-in stix2 constants.
+        self.matrix_marking: stix2.MarkingDefinition = resolve_tlp(tlp_name)
+        self.matrix_marking_id: str = self.matrix_marking.id
         self.matrix_debug: bool = _coerce_bool(
             get_config_variable(
                 "MATRIX_DEBUG",
@@ -326,9 +333,18 @@ class MatrixConnector:
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id, friendly_name
         )
-        objects_count = len(pending)
+        # Prepend the configured marking-definition object so the
+        # OpenCTI-specific markings (``TLP:CLEAR``, ``TLP:AMBER+STRICT``)
+        # are registered with the platform alongside the data that
+        # references them, instead of being left as dangling references.
+        # Built-in stix2 markings (``TLP_WHITE`` / ``TLP_GREEN`` /
+        # ``TLP_AMBER`` / ``TLP_RED``) are already known to the
+        # platform but emitting them explicitly is harmless and keeps
+        # the contract uniform across every supported alias.
+        objects = [self.matrix_marking, *pending]
+        objects_count = len(objects)
         try:
-            bundle = stix2.Bundle(objects=pending, allow_custom=True).serialize()
+            bundle = stix2.Bundle(objects=objects, allow_custom=True).serialize()
             self.helper.log_info(f"Sending {objects_count} STIX objects to OpenCTI...")
             self.helper.send_stix2_bundle(
                 bundle,
