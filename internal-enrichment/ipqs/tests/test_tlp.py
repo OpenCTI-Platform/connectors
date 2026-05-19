@@ -12,8 +12,6 @@ from typing import Any, Dict
 
 import pytest
 import stix2
-from pycti import MarkingDefinition as PyctiMarkingDefinition
-
 from ipqs.ipqs import (
     _TLP_MAP,
     IPQSConnector,
@@ -21,6 +19,7 @@ from ipqs.ipqs import (
     _normalize_tlp,
     _resolve_tlp,
 )
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 
 
 class TestNormalizeTLP:
