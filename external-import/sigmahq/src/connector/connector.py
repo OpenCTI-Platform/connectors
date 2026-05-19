@@ -1,4 +1,5 @@
 import sys
+from typing import Optional
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
@@ -74,6 +75,11 @@ class SigmaHQConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        # ``work_id`` is created lazily below; tracking it in the outer
+        # scope lets the ``except Exception`` block mark the work as
+        # ``in_error=True`` so a crash mid-run does not leave a Work
+        # record stuck in the "running" state in the OpenCTI UI.
+        work_id: Optional[str] = None
         try:
             # Get the current state
             current_state = self.helper.get_state()
@@ -131,6 +137,27 @@ class SigmaHQConnector:
                     release_metadata, self.config.sigmahq.rule_package
                 )
 
+                # Guard against an empty bundle: ``_collect_intelligence``
+                # returns ``[]`` when no asset matched the configured
+                # ``rule_package`` or every rule failed to convert. Sending
+                # an empty bundle would either raise (depending on the
+                # platform version) or create a noisy empty Work entry;
+                # closing the Work with a clean ``Nothing to do`` message
+                # is what every other connector in this repo does.
+                if not stix_objects:
+                    self.helper.connector_logger.info(
+                        "[CONNECTOR] No SigmaHQ rules to publish this run",
+                        {"rule_package": self.config.sigmahq.rule_package},
+                    )
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        (
+                            f"{self.helper.connect_name} connector: "
+                            "no rules to publish (empty bundle)."
+                        ),
+                    )
+                    return
+
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
@@ -176,7 +203,33 @@ class SigmaHQConnector:
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            # Mark the work as ``in_error=True`` when one is open so a
+            # crash mid-run does not leave a "running" Work entry stuck
+            # in the OpenCTI UI. ``exc_info=True`` writes the full
+            # traceback to the connector log so the failing call is
+            # actually actionable for the operator.
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Unhandled exception during run",
+                {"error": str(err)},
+                exc_info=True,
+            )
+            if work_id is not None:
+                try:
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        f"Unhandled exception: {err}",
+                        in_error=True,
+                    )
+                except Exception as close_err:  # noqa: BLE001
+                    # Closing the Work is best-effort: if the platform
+                    # is the underlying cause of the original failure
+                    # (network partition, OpenCTI restart, …) the
+                    # close call will fail too. Log and continue so
+                    # the scheduler can resume on the next tick.
+                    self.helper.connector_logger.error(
+                        "[CONNECTOR] Failed to mark work as in_error",
+                        {"work_id": work_id, "error": str(close_err)},
+                    )
 
     def run(self) -> None:
         """

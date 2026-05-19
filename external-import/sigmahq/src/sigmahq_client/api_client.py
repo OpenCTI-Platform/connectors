@@ -5,6 +5,14 @@ from typing import Any
 import requests
 from pycti import OpenCTIConnectorHelper
 
+# Per-request timeouts (connect, read) for every GitHub call. ``Session.get``
+# without ``timeout`` would hang the connector indefinitely on a stalled
+# GitHub endpoint, blocking the OpenCTI scheduler. The connect budget is
+# tight (5 s) — GitHub's edge resolves almost instantly when it can — and
+# the read budget is generous (120 s) because the release ZIP can be
+# several megabytes.
+_HTTP_TIMEOUT_SECONDS: tuple[float, float] = (5.0, 120.0)
+
 
 class SigmaHQClient:
 
@@ -26,7 +34,7 @@ class SigmaHQClient:
         limited, instead of crashing the connector run.
         """
         try:
-            response = self.session.get(self.base_url)
+            response = self.session.get(self.base_url, timeout=_HTTP_TIMEOUT_SECONDS)
             response.raise_for_status()
             release = response.json()
             return {
@@ -48,20 +56,6 @@ class SigmaHQClient:
             )
             return None
 
-    def download_package(self, url: str) -> bytes | None:
-        """Download the rule package, returning ``None`` on failure."""
-        try:
-            response = self.session.get(url)
-            response.raise_for_status()
-            return response.content
-        except Exception as err:
-            self.helper.connector_logger.error(
-                "An error occurred while downloading latest SigmaHQ rule package",
-                {"error": str(err)},
-                exc_info=True,
-            )
-            return None
-
     def download_and_convert_package(self, url: str) -> list[dict[str, str]]:
         """Download and unzip the rule package.
 
@@ -70,7 +64,7 @@ class SigmaHQClient:
         the connector treats as "no rules to ingest this run".
         """
         try:
-            response = self.session.get(url, stream=True)
+            response = self.session.get(url, stream=True, timeout=_HTTP_TIMEOUT_SECONDS)
             response.raise_for_status()
             zip_content = BytesIO(response.content)
             sigma_rules: list[dict[str, str]] = []

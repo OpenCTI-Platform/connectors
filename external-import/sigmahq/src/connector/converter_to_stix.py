@@ -57,9 +57,28 @@ class ConverterToStix:
 
     @staticmethod
     def _create_tlp_marking(level):
+        # ``TLP:CLEAR`` is an OpenCTI-specific marking, semantically
+        # distinct from the legacy ``TLP:WHITE`` (it carries the modern
+        # label in the UI). The earlier alias ``"clear" -> TLP_WHITE``
+        # silently conflated the two, so indicators ingested with
+        # ``tlp_level="clear"`` ended up displaying ``TLP:WHITE`` in
+        # OpenCTI. The new mapping materialises ``TLP:CLEAR`` as its
+        # own ``MarkingDefinition`` with the canonical
+        # ``x_opencti_definition='TLP:CLEAR'`` extension, mirroring
+        # the ``connectors_sdk.models.TLPMarking`` shape used by
+        # other recent connectors. ``TLP:AMBER+STRICT`` keeps its
+        # existing custom-marking shape for the same reason.
         mapping = {
             "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
+            "clear": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:CLEAR",
+                },
+            ),
             "green": stix2.TLP_GREEN,
             "amber": stix2.TLP_AMBER,
             "amber+strict": stix2.MarkingDefinition(
