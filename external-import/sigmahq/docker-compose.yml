@@ -7,7 +7,7 @@ services:
       - OPENCTI_TOKEN=CHANGEME
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=SigmaHQ
-      - CONNECTOR_SCOPE=Indicator
+      - CONNECTOR_SCOPE=Indicator,Attack-Pattern,Vulnerability,Identity,Marking-Definition,Relationship
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=P1D
       - SIGMAHQ_RULE_PACKAGE=sigma_all_rules # optional, available values: 'sigma_all_rules', 'sigma_core++', 'sigma_core+', 'sigma_core', 'sigma_emerging_threats_addon', (default: 'sigma_all_rules')

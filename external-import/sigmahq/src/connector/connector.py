@@ -30,12 +30,17 @@ class SigmaHQConnector:
         :return: List of STIX objects
         """
         stix_objects = []
-        # retrieve latest release version
-        rules = []
+        # ``download_and_convert_package`` may return an empty list when the
+        # download or zip extraction fails; iterating over the empty default
+        # is safe and lets the connector log a graceful "nothing to do" run.
+        rules: list[dict[str, str]] = []
         for asset in release_metadata["assets"]:
             if rule_package in asset["name"]:
-                rules = self.client.download_and_convert_package(
-                    asset["browser_download_url"]
+                rules = (
+                    self.client.download_and_convert_package(
+                        asset["browser_download_url"]
+                    )
+                    or []
                 )
 
         for rule in rules:
@@ -44,10 +49,13 @@ class SigmaHQConnector:
                 stix_objects.extend(stix_entities)
             except Exception as err:
                 self.helper.connector_logger.error(
-                    f"An exception occurred while converting SigmaHQ rule: {rule['filename']}",
-                    err,
+                    "An exception occurred while converting SigmaHQ rule",
+                    {
+                        "filename": rule.get("filename"),
+                        "error": str(err),
+                    },
+                    exc_info=True,
                 )
-                pass
 
         # Ensure consistent bundle by adding the author and TLP marking
         if len(stix_objects):
@@ -98,10 +106,26 @@ class SigmaHQConnector:
 
             # get latest rule package version
             release_metadata = self.client.get_latest_published_version()
-            latest_version = release_metadata.get("tag").lower()
+            if release_metadata is None or not release_metadata.get("tag"):
+                # GitHub unreachable / rate limited / malformed response. The
+                # client already logged the underlying error; fail the work
+                # explicitly so the OpenCTI UI surfaces a clean error state
+                # instead of crashing on a NoneType lookup below.
+                self.helper.connector_logger.warning(
+                    "Could not fetch the latest SigmaHQ release metadata; "
+                    "skipping this run."
+                )
+                self.helper.api.work.to_processed(
+                    work_id,
+                    "Could not fetch the latest SigmaHQ release metadata.",
+                    in_error=True,
+                )
+                return
+
+            latest_version = release_metadata["tag"].lower()
             if (
                 rule_package_version is None
-                or latest_version.lower() != rule_package_version.lower()
+                or latest_version != rule_package_version.lower()
             ):
                 stix_objects = self._collect_intelligence(
                     release_metadata, self.config.sigmahq.rule_package
@@ -114,9 +138,13 @@ class SigmaHQConnector:
                     cleanup_inconsistent_bundle=True,
                 )
 
+                # Log metadata MUST be a serialisable dict whose values are
+                # primitives — the previous ``{str(len(bundles_sent))}`` was a
+                # *set* containing a single string, which breaks structured
+                # logging serialisation.
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": len(bundles_sent)},
                 )
 
                 # Store the last rule package version as a last run of the connector

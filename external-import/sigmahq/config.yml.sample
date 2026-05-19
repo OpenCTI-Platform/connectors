@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   name: 'SigmaHQ'
-  scope: 'Indicator'
+  scope: 'Indicator,Attack-Pattern,Vulnerability,Identity,Marking-Definition,Relationship'
   log_level: 'error' # optional (default: 'error')
   duration_period: 'P1D' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'P1D')
 
