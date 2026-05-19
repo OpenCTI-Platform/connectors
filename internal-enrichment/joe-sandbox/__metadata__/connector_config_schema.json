@@ -15,7 +15,7 @@
       "type": "string"
     },
     "CONNECTOR_NAME": {
-      "default": "JoeSandbox",
+      "default": "Joe Sandbox",
       "description": "The name of the connector.",
       "type": "string"
     },
@@ -59,7 +59,6 @@
       "type": "string"
     },
     "JOE_SANDBOX_API_KEY": {
-      "default": "**********",
       "description": "The API key for Joe Sandbox",
       "format": "password",
       "type": "string",
@@ -290,7 +289,8 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE"
+    "CONNECTOR_SCOPE",
+    "JOE_SANDBOX_API_KEY"
   ],
   "additionalProperties": true
 }

@@ -12,9 +12,12 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     to the configuration for connectors of type `INTERNAL_ENRICHMENT`.
     """
 
+    # Match the user-facing connector name used in the manifest, sample
+    # config and docker-compose so manager-created deployments display the
+    # same name as the catalog entry and existing self-hosted deployments.
     name: str = Field(
         description="The name of the connector.",
-        default="JoeSandbox",
+        default="Joe Sandbox",
     )
 
 
@@ -31,8 +34,11 @@ class JoeSandboxConfig(BaseConfigModel):
         description="Cloud Pro: https://jbxcloud.joesecurity.org/api, Cloud Basic: https://joesandbox.com/api",
         default="https://jbxcloud.joesecurity.org/api",
     )
+    # No default: the API key is a credential and must be supplied by the
+    # operator (or prompted for by the connector manager). Defaulting to a
+    # placeholder would let deployments start with an invalid credential.
     api_key: SecretStr = Field(
-        description="The API key for Joe Sandbox", default=SecretStr("ChangeMe")
+        description="The API key for Joe Sandbox",
     )
     analysis_url: str = Field(
         description="Cloud Pro: https://jbxcloud.joesecurity.org/analysis, Cloud Basic: https://joesandbox.com/analysis",
