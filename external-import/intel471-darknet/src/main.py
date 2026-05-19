@@ -15,6 +15,7 @@ import stix2
 from bs4 import BeautifulSoup
 from lib.external_import import ExternalImportConnector
 from lib.intel2stix import get_date
+from lib.redaction import redact_url
 from pycti import Channel as PyctiChannel
 from pycti import CustomObjectChannel as Channel
 from pycti import CustomObservableMediaContent as MediaContent
@@ -322,9 +323,14 @@ class Intel471AlertsConnector(ExternalImportConnector):
         except requests.RequestException as exc:
             # Never log the response body — it may contain credentials or
             # other sensitive Intel 471 data. Status code is safe.
+            # The URL is also redacted through ``_redact_url`` because
+            # attachment downloads target third-party CDNs that can
+            # carry signed query parameters / bearer-style tokens which
+            # we must not leak into the connector logs.
             status = getattr(getattr(exc, "response", None), "status_code", None)
             self.helper.log_warning(
-                f"Intel 471 request failed (url={url}, status={status}): {exc}"
+                f"Intel 471 request failed (url={redact_url(url)}, "
+                f"status={status}): {exc}"
             )
             return None
         return response
@@ -1456,10 +1462,17 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 contact = lib.intel2stix.getTypeValueContent(
                     c, self.intel471_darknet_tlp, self.intel471_id
                 )
-                if contact and contact[0] == "Object":
+                if contact and contact[0] == "Object" and contact[1]:
                     objects.extend(contact[1])
-                    for o in contact[1]:
-                        x_source_ids.append(o["id"])
+                    # ``getTypeValueContent`` returns the linkable
+                    # observable / entity as the first element; the
+                    # remaining elements may be ``Indicator`` and
+                    # ``Relationship`` objects which cannot be used as
+                    # the ``source_ref`` of another STIX ``Relationship``
+                    # (the spec only allows SDOs / SCOs there). Only
+                    # link the head so the ``related-to`` relationships
+                    # generated below have valid sources.
+                    x_source_ids.append(contact[1][0]["id"])
         if x_forums:
             x_forums = x_forums[0:-2]
         if "lastUpdated" in actor:
@@ -1884,12 +1897,20 @@ if __name__ == "__main__":
     try:
         connector = Intel471AlertsConnector()
         connector.run()
-    except (KeyboardInterrupt, SystemExit):
-        # Graceful shutdown: propagate the original status so an
-        # orchestrator does not interpret a deliberate ``SIGINT`` /
-        # ``SIGTERM`` as a crash. ``sys.exit(0)`` keeps the historical
-        # behaviour for ``Ctrl+C``.
+    except KeyboardInterrupt:
+        # ``Ctrl+C`` / ``SIGINT``: graceful operator-initiated shutdown.
+        # Always exit ``0`` so container supervisors do not interpret
+        # the deliberate signal as a crash that should trigger a
+        # restart backoff.
         sys.exit(0)
+    except SystemExit:
+        # Let the original ``SystemExit`` propagate so its ``code``
+        # attribute is preserved. Catching it here and unconditionally
+        # exiting ``0`` would mask any non-zero status raised below
+        # this point (helper initialisation, future fatal preconditions
+        # / health checks, …) and make real failures look like clean
+        # exits to the orchestrator.
+        raise
     except Exception as e:
         # Startup / fatal-loop failures: print the traceback and exit
         # non-zero so container supervisors / CI / restart policies

@@ -122,10 +122,18 @@ class ExternalImportConnector:
             )
             self.helper.log_error(msg)
             raise ValueError(msg) from exc
-        if magnitude < 0:
+        if magnitude <= 0:
+            # ``0`` (e.g. ``0m`` / ``0h`` / ``0s``) would make
+            # ``elapsed >= interval_seconds`` true on every iteration
+            # and the worker loop would call ``_collect_intelligence``
+            # back-to-back with only the inner one-second floor from
+            # ``_sleep_seconds`` between attempts — hammering Intel 471
+            # and OpenCTI for no good reason. Require a strictly
+            # positive interval so a misconfiguration cannot push the
+            # connector into a tight collection loop.
             msg = (
                 f"CONNECTOR_RUN_EVERY value '{self.interval}' must be a "
-                "non-negative integer."
+                "strictly positive integer."
             )
             self.helper.log_error(msg)
             raise ValueError(msg)
