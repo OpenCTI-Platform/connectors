@@ -75,6 +75,48 @@ def defender_file_dedup_key(observable_data: dict) -> tuple[str, str] | None:
     return None
 
 
+# Defender's ``CertificateThumbprint`` indicator is keyed on the
+# certificate fingerprint hash. ``_build_request_body`` prefers SHA-1
+# (the canonical thumbprint algorithm), falls back to SHA-256, then
+# MD5, so the dedup key uses the same order — picking a different
+# hash here than the api_handler picks on POST would create a
+# duplicate Defender indicator on every cycle.
+_CERTIFICATE_HASH_PREFERENCE: Final = ("sha1", "sha256", "md5")
+
+
+def defender_certificate_dedup_key(observable_data: dict) -> tuple[str, str] | None:
+    """Return ``("CertificateThumbprint", thumbprint)`` for a STIX x509-certificate.
+
+    OpenCTI ``x509-certificate`` observables carry their fingerprint
+    in ``hashes`` rather than in ``value`` (which is the bug Copilot
+    spotted on the planner: deriving the dedup key from
+    ``observable_data["value"]`` made ``clean_value`` always empty,
+    so certificate indicators were silently dropped from the planning
+    pass). This helper mirrors :func:`defender_file_dedup_key` for
+    certificates so they participate in the same key-based dedup as
+    every other observable type.
+
+    Returns :data:`None` when no usable hash is available — the
+    planner then falls back to the ``externalId`` path.
+    """
+    hashes = observable_data.get("hashes")
+    if not isinstance(hashes, dict):
+        return None
+    normalised: dict[str, str] = {}
+    for raw_algo, raw_value in hashes.items():
+        if not isinstance(raw_algo, str) or not raw_value:
+            continue
+        algo = FILE_HASH_TYPES_MAPPER.get(raw_algo.lower())
+        if not algo:
+            continue
+        normalised[algo] = str(raw_value).strip()
+    for algo in _CERTIFICATE_HASH_PREFERENCE:
+        value = normalised.get(algo)
+        if value:
+            return "CertificateThumbprint", value
+    return None
+
+
 # Only these indicator types are written to Defender.
 # All other types (e.g., WebCategory) are read-only in our connector.
 CREATABLE_INDICATOR_TYPES: Final = {

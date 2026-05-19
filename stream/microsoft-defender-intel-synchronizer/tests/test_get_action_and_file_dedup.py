@@ -1,4 +1,8 @@
-"""Pin the contract for the helpers touched by the May 2026 Copilot review.
+"""Regression tests for the score → action mapping and the file dedup key.
+
+This suite pins three behavioural contracts that earlier regressions
+had silently broken — the rationale is captured here so future
+maintainers know what each test guards against:
 
 * :func:`microsoft_defender_intel_synchronizer_connector.utils.get_action` —
   ``score == 0`` (or a missing ``x_opencti_score``) must fall back to the
@@ -27,6 +31,7 @@ from microsoft_defender_intel_synchronizer_connector.config_variables import (
     ConfigConnector,
 )
 from microsoft_defender_intel_synchronizer_connector.utils import (
+    defender_certificate_dedup_key,
     defender_file_dedup_key,
     get_action,
 )
@@ -159,6 +164,100 @@ class TestDefenderFileDedupKey:
         }
         assert defender_file_dedup_key(observable) == (
             "FileSha1",
+            "1111111111111111111111111111111111111111",
+        )
+
+
+class TestDefenderCertificateDedupKey:
+    """``defender_certificate_dedup_key`` derives the thumbprint from ``hashes``.
+
+    STIX ``x509-certificate`` observables carry the fingerprint in
+    ``hashes`` rather than in ``value``. The previous planner code
+    keyed off ``observable_data["value"]``, which was always empty
+    for certificate observables — the result was that certificate
+    indicators were silently dropped from the planning pass and
+    never staged for create. This test class pins the new helper so
+    a regression cannot reintroduce that behaviour.
+
+    The helper must use the same hash preference (``sha1`` first,
+    then ``sha256``, then ``md5``) as ``api_handler._build_request_body``,
+    otherwise the planner and the POST builder would pick different
+    thumbprints and Defender would treat them as two different
+    indicators.
+    """
+
+    def test_prefers_sha1_over_sha256(self):
+        observable = {
+            "type": "x509-certificate",
+            "hashes": {
+                "SHA-1": "1111111111111111111111111111111111111111",
+                "SHA-256": (
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                ),
+            },
+        }
+        assert defender_certificate_dedup_key(observable) == (
+            "CertificateThumbprint",
+            "1111111111111111111111111111111111111111",
+        )
+
+    def test_falls_back_to_sha256_when_sha1_missing(self):
+        observable = {
+            "type": "x509-certificate",
+            "hashes": {
+                "SHA-256": (
+                    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                    "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                ),
+            },
+        }
+        assert defender_certificate_dedup_key(observable) == (
+            "CertificateThumbprint",
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        )
+
+    def test_falls_back_to_md5_when_no_better_hash(self):
+        # Certificates can be keyed on MD5 in legacy environments,
+        # so the helper accepts it as the final fallback.
+        observable = {
+            "type": "x509-certificate",
+            "hashes": {"MD5": "ffffffffffffffffffffffffffffffff"},
+        }
+        assert defender_certificate_dedup_key(observable) == (
+            "CertificateThumbprint",
+            "ffffffffffffffffffffffffffffffff",
+        )
+
+    def test_no_hashes_returns_none(self):
+        # When the observable carries no usable hash the planner falls
+        # back to the ``externalId`` fast-path — the helper signals
+        # that with ``None``.
+        assert defender_certificate_dedup_key({"type": "x509-certificate"}) is None
+        assert (
+            defender_certificate_dedup_key({"type": "x509-certificate", "hashes": {}})
+            is None
+        )
+        assert (
+            defender_certificate_dedup_key(
+                {"type": "x509-certificate", "hashes": "not-a-dict"}
+            )
+            is None
+        )
+
+    @pytest.mark.parametrize(
+        "algo_key",
+        ["sha-1", "Sha-1", "SHA1", "sha1"],
+    )
+    def test_hash_algorithm_label_is_case_insensitive(self, algo_key):
+        observable = {
+            "type": "x509-certificate",
+            "hashes": {
+                algo_key: "1111111111111111111111111111111111111111",
+            },
+        }
+        assert defender_certificate_dedup_key(observable) == (
+            "CertificateThumbprint",
             "1111111111111111111111111111111111111111",
         )
 

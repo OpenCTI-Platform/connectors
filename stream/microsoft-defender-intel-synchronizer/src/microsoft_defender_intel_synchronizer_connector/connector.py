@@ -17,6 +17,7 @@ from .rbac_scope import (
 from .types import RBACScope, ScopeKey
 from .utils import (
     FILE_HASH_TYPES_MAPPER,
+    defender_certificate_dedup_key,
     defender_file_dedup_key,
     indicator_value,
     is_defender_supported_domain,
@@ -913,8 +914,20 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                 continue
                             key_type, clean_value = file_key
                         elif obs_type == "x509-certificate":
-                            key_type = "CertificateThumbprint"
-                            clean_value = indicator_value(raw_value)
+                            # Certificate observables carry the
+                            # thumbprint in ``hashes`` rather than in
+                            # ``value`` — deriving the dedup key from
+                            # ``raw_value`` would always be empty and
+                            # the loop would ``continue`` before staging
+                            # the indicator (Defender thumbprint
+                            # indicators were silently dropped from the
+                            # planning pass before this fix). Mirror
+                            # ``defender_file_dedup_key`` for files.
+                            cert_key = defender_certificate_dedup_key(observable_data)
+                            if cert_key is None:
+                                opencti_indicators_to_create.append(observable_data)
+                                continue
+                            key_type, clean_value = cert_key
                         else:
                             continue
 
