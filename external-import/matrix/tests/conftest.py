@@ -1,10 +1,17 @@
 """Pytest configuration for the Matrix external-import connector tests.
 
-The tests only exercise pure-Python helpers from ``src/main.py``
-(``_resolve_tlp``, ``_TLP_MAP``, ``MatrixConnector._media_content_id``)
-so we just put the connector ``src`` directory on ``sys.path`` and let
-the modules import normally. ``pycti`` / ``stix2`` / ``matrix-nio`` are
-pulled in through the test requirements file.
+The tests only exercise the dependency-free helpers under
+``src/lib/helpers.py`` — ``TLP_MAP``, :func:`resolve_tlp` and
+:func:`media_content_id` — plus a couple of small static helpers from
+``src/main.py`` (channel / identity naming, timestamp coercion) that
+have no ``matrix-nio`` / ``libolm`` dependency. We just put the
+connector ``src`` directory on ``sys.path`` so the test modules can
+``from lib.helpers import ...`` (and import the static helpers from
+``main``) without pulling in the asyncio runtime or ``libolm``.
+
+``pycti`` and ``stix2`` are pulled in through the test requirements
+file; ``matrix-nio`` / ``libolm`` are deliberately **not** required so
+the suite runs on a vanilla CI runner.
 """
 
 import sys

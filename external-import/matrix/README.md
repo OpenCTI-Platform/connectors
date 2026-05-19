@@ -56,7 +56,9 @@ To use this connector you need:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.4.3
+- OpenCTI Platform >= 6.7.0 (matches the `pycti==7.260515.0` pin in
+  `src/requirements.txt`; the `pycti` 7.x line targets the OpenCTI
+  6.7+ API).
 - `libolm` (compiled by the connector's Dockerfile; if running outside
   Docker you must install it from your distribution: `libolm-dev` on
   Debian/Ubuntu, `olm-devel` on Fedora, …).

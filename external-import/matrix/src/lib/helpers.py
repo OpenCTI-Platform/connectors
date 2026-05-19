@@ -2,11 +2,13 @@
 
 This module is intentionally dependency-free of ``matrix-nio`` and the
 asyncio runtime so its contracts (TLP normalisation, deterministic
-``media-content`` id derivation) can be unit-tested on any CI runner
-without ``libolm`` being installed.
+``media-content`` id derivation, channel-name fallback, event timestamp
+coercion) can be unit-tested on any CI runner without ``libolm`` being
+installed.
 """
 
-from typing import Any, Dict
+from datetime import datetime, timezone
+from typing import Any, Callable, Dict, Optional
 
 import stix2
 from pycti import CustomObservableMediaContent
@@ -73,4 +75,58 @@ def media_content_id(event_id: str) -> str:
     return stub["id"]
 
 
-__all__ = ("TLP_MAP", "resolve_tlp", "media_content_id")
+def channel_display_name(room_id: str, room_name: Optional[str]) -> str:
+    """Return the human-friendly name to use for a Matrix room.
+
+    The Matrix ``room_id`` (e.g. ``!abcdef:matrix.example.org``) is an
+    opaque identifier — operators looking at the *Channels* list in
+    OpenCTI expect to see the room display name (``#general``) instead.
+    Falls back to the raw ``room_id`` when the display name is empty
+    or :data:`None` so the Channel SDO is always queryable. The
+    deterministic ``standard_id`` is still computed from ``room_id``
+    so dedup is unaffected by the name we pick here.
+    """
+    name = (room_name or "").strip()
+    return name or room_id
+
+
+def publication_date_from_event(
+    event: Any, log_warning: Callable[[str], None]
+) -> datetime:
+    """Return a timezone-aware UTC ``datetime`` for ``event.server_timestamp``.
+
+    Matrix events normally carry a millisecond Unix timestamp, but
+    malformed / synthetic events may have a missing or non-numeric
+    ``server_timestamp``. Rather than letting the resulting
+    ``TypeError`` cascade through the connector's outer ``except`` block
+    (which would silently drop the event), we fall back to "now" and
+    call ``log_warning`` so operators can see that something is off
+    without losing the row.
+
+    ``log_warning`` is injected so this helper can be unit-tested
+    without a live ``OpenCTIConnectorHelper`` — the connector passes
+    ``self.helper.log_warning`` at runtime.
+    """
+    ts = getattr(event, "server_timestamp", None)
+    # ``bool`` is a subclass of ``int``; reject it explicitly so a
+    # synthetic event carrying ``server_timestamp=True`` does not get
+    # parsed as a millisecond timestamp of 1ms past the epoch.
+    if isinstance(ts, bool):
+        ts = None
+    if isinstance(ts, (int, float)) and ts > 0:
+        return datetime.fromtimestamp(ts / 1000, tz=timezone.utc)
+    event_id = getattr(event, "event_id", "<unknown>")
+    log_warning(
+        f"Event {event_id} has no usable server_timestamp ({ts!r}); "
+        "falling back to current time."
+    )
+    return datetime.now(tz=timezone.utc)
+
+
+__all__ = (
+    "TLP_MAP",
+    "resolve_tlp",
+    "media_content_id",
+    "channel_display_name",
+    "publication_date_from_event",
+)

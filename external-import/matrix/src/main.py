@@ -21,7 +21,12 @@ from typing import Any, Dict, List, Optional
 
 import stix2
 import yaml
-from lib.helpers import media_content_id, resolve_tlp
+from lib.helpers import (
+    channel_display_name,
+    media_content_id,
+    publication_date_from_event,
+    resolve_tlp,
+)
 from nio import (
     AsyncClient,
     AsyncClientConfig,
@@ -266,6 +271,13 @@ class MatrixConnector:
             try:
                 await asyncio.to_thread(self._send_pending_objects, pending)
                 self._consecutive_failures = 0
+                # Only advance ``_last_flush_ts`` on a successful flush.
+                # On failure we leave it untouched so the next periodic
+                # tick can retry as soon as it fires, instead of waiting
+                # another ``_FLUSH_INTERVAL_SECONDS`` window in a quiet
+                # room (where the size-trigger from ``_on_event`` won't
+                # fire either).
+                self._last_flush_ts = time.monotonic()
             except Exception as exc:  # noqa: BLE001
                 self._consecutive_failures += 1
                 if self._consecutive_failures >= _MAX_FLUSH_FAILURES:
@@ -275,18 +287,23 @@ class MatrixConnector:
                         f"flush failures (last error: {exc})."
                     )
                     self._consecutive_failures = 0
+                    # The poison batch has been dropped; treat that as
+                    # "we made progress" so the timer restarts here.
+                    self._last_flush_ts = time.monotonic()
                 else:
                     # Put the failed batch back at the front of the
                     # buffer so the next flush cycle retries it. Newer
                     # events that arrived during the failed send remain
-                    # at the end of the buffer.
+                    # at the end of the buffer. ``_last_flush_ts`` is
+                    # **not** updated, so the next periodic tick fires
+                    # at the originally-scheduled time and retries
+                    # without waiting another full interval.
                     self.bundle = pending + self.bundle
                     self.helper.log_warning(
                         f"Flush failed (attempt {self._consecutive_failures}/"
                         f"{_MAX_FLUSH_FAILURES}); will retry on the next "
                         f"flush cycle: {exc}"
                     )
-            self._last_flush_ts = time.monotonic()
 
     def _send_pending_objects(self, pending: List[Any]) -> None:
         """Synchronous OpenCTI HTTP work called via :func:`asyncio.to_thread`.
@@ -339,7 +356,20 @@ class MatrixConnector:
             f"{objects_count} STIX objects."
         )
         self.helper.log_info(message)
-        self.helper.api.work.to_processed(work_id, message)
+        # ``send_stix2_bundle`` succeeded — the batch is already in
+        # OpenCTI's ingestion queue. A failure to close the Work record
+        # here must **not** propagate to the caller, otherwise
+        # ``_flush_bundle`` would treat the whole batch as failed and
+        # re-prepend it to the buffer, causing a duplicate send. Log
+        # the close-failure loudly so an operator can clean up the
+        # dangling in-progress Work manually.
+        try:
+            self.helper.api.work.to_processed(work_id, message)
+        except Exception as report_exc:  # noqa: BLE001
+            self.helper.log_error(
+                f"Bundle was sent successfully but could not mark "
+                f"work {work_id} as processed: {report_exc}"
+            )
 
     async def _periodic_flush(self) -> None:
         """Background task that drains the buffer on a timer.
@@ -375,7 +405,7 @@ class MatrixConnector:
             return b""
         return body
 
-    def _ensure_channel(self, room_id: str, room_name: str) -> str:
+    def _ensure_channel(self, room_id: str, room_name: Optional[str]) -> str:
         """Return the deterministic STIX id of the channel for ``room_id``.
 
         The Channel SDO is emitted into the buffer **once per connector
@@ -387,21 +417,37 @@ class MatrixConnector:
         by ``standard_id`` on ingestion, so if the Channel was created
         by a previous connector run (or by another tooling) the same
         deterministic id resolves to the existing SDO.
+
+        The Channel ``name`` is the human-friendly room display name
+        (with a fallback to the raw ``room_id``); the opaque
+        ``room_id`` is preserved on the SDO as the description and as
+        an ``x_opencti_aliases`` entry so analysts can search by either
+        form. The deterministic ``standard_id`` is always computed
+        from ``room_id``.
         """
         channel_id = PyctiChannel.generate_id(room_id)
         if channel_id in self._known_channel_ids:
             return channel_id
+        display_name = channel_display_name(room_id, room_name)
+        # Avoid carrying a redundant ``room_id`` alias when the display
+        # name already collapses back to ``room_id`` (empty / missing
+        # display name). The ``standard_id`` already carries the opaque
+        # id so dedup is never affected.
+        aliases = [room_id] if display_name != room_id else []
         channel = CustomObjectChannel(
             id=channel_id,
-            name=room_id,
-            description=room_name,
+            name=display_name,
+            description=f"Matrix room {room_id}",
             object_marking_refs=[self.matrix_marking_id],
             channel_types=["Matrix"],
             allow_custom=True,
+            custom_properties=({"x_opencti_aliases": aliases} if aliases else {}),
         )
         self.bundle.append(channel)
         self._known_channel_ids.add(channel_id)
-        self.helper.log_debug(f"Channel object queued: {channel_id}")
+        self.helper.log_debug(
+            f"Channel object queued: {channel_id} (name='{display_name}')"
+        )
         return channel_id
 
     def _ensure_author(self, sender: str) -> str:
@@ -411,6 +457,13 @@ class MatrixConnector:
         emitted into the buffer once per connector lifetime, the
         deterministic ``standard_id`` is used for relationships, and
         the platform handles cross-run deduplication on ingestion.
+
+        The Matrix sender id (e.g. ``@alice:matrix.example.org``) is
+        preserved as the Identity ``name`` so the SDO is uniquely
+        identifiable even when the OpenCTI tenant also contains
+        manually-created identities, and is also exposed as an
+        ``x_opencti_aliases`` entry so analysts can search by the
+        Matrix handle.
         """
         author_id = PyctiIdentity.generate_id(sender, "individual")
         if author_id in self._known_author_ids:
@@ -421,6 +474,8 @@ class MatrixConnector:
             identity_class="individual",
             description="Matrix author",
             object_marking_refs=[self.matrix_marking_id],
+            allow_custom=True,
+            custom_properties={"x_opencti_aliases": [sender]},
         )
         self.bundle.append(author)
         self._known_author_ids.add(author_id)
@@ -501,7 +556,7 @@ class MatrixConnector:
             )
         except (KeyError, ValueError, TypeError) as exc:
             self.helper.log_warning(
-                f"Could not decrypt attachment for event " f"{event.event_id}: {exc}"
+                f"Could not decrypt attachment for event {event.event_id}: {exc}"
             )
             return None
         content = event.source.get("content", {})
@@ -531,22 +586,35 @@ class MatrixConnector:
                 f"({room.display_name}) ts={event.server_timestamp}"
             )
 
-            publication_date = datetime.fromtimestamp(
-                event.server_timestamp / 1000, tz=timezone.utc
+            # We defer the ``_ensure_channel`` / ``_ensure_author`` calls
+            # until after the supported-event-type check below. Building
+            # the publication date first costs nothing but lets us bail
+            # on unknown event types before allocating Channel / Identity
+            # SDOs that the buffer would otherwise carry around for an
+            # event that never produces a ``media-content`` observable.
+            publication_date = publication_date_from_event(
+                event, self.helper.log_warning
             )
             sender = event.sender
             room_id = room.room_id
             room_name = room.display_name
-
-            channel_id = self._ensure_channel(room_id, room_name)
-            author_id = self._ensure_author(sender)
             content_data = event.source.get("content") or {}
             thread_root = self._resolve_thread_root(content_data)
 
             media_content: Optional[Any] = None
+            author_id: Optional[str] = None
+            channel_id: Optional[str] = None
 
             edit_target_event_id: Optional[str] = None
             if isinstance(event, _TEXT_EVENTS):
+                # Only build the Channel / Identity SDOs when we are
+                # certain the event will produce a ``media-content``
+                # observable. For unknown / unsupported event types we
+                # bail in the ``else`` branch below without polluting
+                # the buffer (and the in-memory caches) with orphan
+                # SDOs.
+                channel_id = self._ensure_channel(room_id, room_name)
+                author_id = self._ensure_author(sender)
                 relates = content_data.get("m.relates_to") or {}
                 is_edit = (
                     "m.new_content" in content_data
@@ -576,6 +644,11 @@ class MatrixConnector:
             elif isinstance(event, _ENCRYPTED_FILE_EVENTS):
                 attachment = await self._decrypt_attachment(event)
                 if attachment is not None:
+                    # Decryption succeeded — emit the Channel / Identity
+                    # SDOs only now that we know we will produce a
+                    # ``media-content`` observable.
+                    channel_id = self._ensure_channel(room_id, room_name)
+                    author_id = self._ensure_author(sender)
                     media_content = self._build_media_content(
                         url=event.event_id,
                         publication_date=publication_date,
@@ -587,6 +660,8 @@ class MatrixConnector:
             elif isinstance(event, _PLAIN_FILE_EVENTS):
                 attachment = await self._plain_attachment(event)
                 if attachment is not None:
+                    channel_id = self._ensure_channel(room_id, room_name)
+                    author_id = self._ensure_author(sender)
                     media_content = self._build_media_content(
                         url=event.event_id,
                         publication_date=publication_date,
@@ -602,13 +677,12 @@ class MatrixConnector:
                 return
 
             if media_content is None:
-                # Nothing to publish for this event (unsupported subtype,
-                # decryption failure, empty download, ...). The channel
-                # / author SDOs we may have just appended above are still
-                # valid descriptions of the room / sender and will be
-                # flushed normally with the next batch; do NOT wipe the
-                # whole buffer, which would silently drop events
-                # previously buffered from other rooms / handlers.
+                # Attachment download / decryption failed (the unknown
+                # event branch above already returned). Because the
+                # Channel / Identity SDOs are now only emitted inside
+                # the ``if attachment is not None`` branches, we have
+                # nothing extra to roll back here — the buffer is
+                # untouched and other rooms' batches are preserved.
                 return
 
             self.bundle.append(media_content)
@@ -685,8 +759,14 @@ def _run() -> None:
         asyncio.run(MatrixConnector().run_client())
     except KeyboardInterrupt:
         sys.exit(0)
-    except Exception as exc:  # noqa: BLE001 - last-resort safety net
-        print(exc)
+    except Exception:  # noqa: BLE001 - last-resort safety net
+        # Use ``traceback.print_exc`` so the full traceback is preserved
+        # (instead of the bare ``str(exc)`` from ``print(exc)``). The
+        # ``OpenCTIConnectorHelper`` logger may not be reachable here
+        # (the helper itself may have failed to initialise), so we fall
+        # back to stderr — which Docker / systemd / Kubernetes capture
+        # the same way as the helper's logs.
+        traceback.print_exc()
         time.sleep(10)
         sys.exit(1)
 
