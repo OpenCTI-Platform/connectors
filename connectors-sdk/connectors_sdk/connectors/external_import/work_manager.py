@@ -33,12 +33,14 @@ class _Work:
     (success, fail, delete) is managed by the ``WorkManager``.
 
     Attributes:
-        work_id: The OpenCTI work identifier.
+        id: The OpenCTI work identifier.
+        name: The human-readable name of the work, displayed in the OpenCTI UI.
     """
 
     def __init__(
         self,
         work_id: str,
+        work_name: str,
         helper: OpenCTIConnectorHelper,
         logger: ConnectorLogger,
     ) -> None:
@@ -46,10 +48,12 @@ class _Work:
 
         Args:
             work_id: The work ID returned by OpenCTI.
+            work_name: The human-readable name of the work, displayed in the OpenCTI UI.
             helper: The ``OpenCTIConnectorHelper`` instance.
             logger: The ``ConnectorLogger`` instance for logging.
         """
-        self.work_id = work_id
+        self.id = work_id
+        self.name = work_name
         self._helper = helper
         self._logger = logger
         self._closed = False
@@ -80,20 +84,19 @@ class _Work:
             f"Work '{work_id}' initiated",
             {"work_name": work_name},
         )
-        return cls(work_id, helper, logger)
+        return cls(work_id, work_name, helper, logger)
 
     def send_bundle(self, bundle_objects: list[Any], **kwargs: Any) -> None:
         """Create a STIX bundle from objects and send it to OpenCTI.
 
         Args:
-            bundle_objects: A list of STIX objects to include in the bundle.
+            bundle_objects: A list of STIX/SDK objects to include in the bundle.
             **kwargs: Additional arguments forwarded to ``send_stix2_bundle``
                 (e.g. ``cleanup_inconsistent_bundle``, ``update``, ``entities_types``).
         """
-        bundle = self._helper.stix2_create_bundle(bundle_objects)
-        bundles_sent = self._helper.send_stix2_bundle(
-            bundle, work_id=self.work_id, **kwargs
-        )
+        stix_objects = self._to_stix(bundle_objects)
+        bundle = self._helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self._helper.send_stix2_bundle(bundle, work_id=self.id, **kwargs)
         self._has_sent_bundles = True
         self._logger.info(
             "Sent STIX objects to OpenCTI",
@@ -106,7 +109,7 @@ class _Work:
         Args:
             message: A completion message stored alongside the work.
         """
-        self._helper.api.work.to_processed(self.work_id, message)
+        self._helper.api.work.to_processed(self.id, message)
         self._logger.info(message)
         self._closed = True
 
@@ -116,7 +119,7 @@ class _Work:
         Args:
             message: An error message stored alongside the work.
         """
-        self._helper.api.work.to_processed(self.work_id, message, in_error=True)
+        self._helper.api.work.to_processed(self.id, message, in_error=True)
         self._logger.error(message)
         self._closed = True
 
@@ -127,12 +130,20 @@ class _Work:
             This is a destructive operation. It should only be called from
             the ``WorkManager`` to clean up orphaned or invalid works.
         """
-        self._helper.api.work.delete(id=self.work_id)
+        self._helper.api.work.delete(id=self.id)
         self._logger.info(
             "Work deleted",
-            {"work_id": self.work_id},
+            {"work_id": self.id},
         )
         self._closed = True
+
+    @staticmethod
+    def _to_stix(objects: list[Any]) -> list[Any]:
+        """Convert objects to stix2, calling ``to_stix2_object()`` when available."""
+        return [
+            obj.to_stix2_object() if hasattr(obj, "to_stix2_object") else obj
+            for obj in objects
+        ]
 
 
 class WorkManager:
@@ -168,7 +179,6 @@ class WorkManager:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        logger: ConnectorLogger,
     ) -> None:
         """Initialize the work manager.
 
@@ -177,15 +187,13 @@ class WorkManager:
             logger: The ``ConnectorLogger`` instance.
         """
         self._helper = helper
-        self._logger = logger
+        self._logger = ConnectorLogger(helper)
         self._current_work: _Work | None = None
-        self._current_work_name: str | None = None
         self._active = False
 
     def __enter__(self) -> WorkManager:
         """Enter the context manager."""
         self._current_work = None
-        self._current_work_name = None
         self._active = True
         return self
 
@@ -209,7 +217,6 @@ class WorkManager:
             else:
                 self._current_work.success("Work completed successfully")
         self._current_work = None
-        self._current_work_name = None
         self._active = False
 
     def send(
@@ -234,11 +241,10 @@ class WorkManager:
         if not self._active:
             msg = "WorkManager.send() must be called inside a 'with' block."
             raise RuntimeError(msg)
-        if self._current_work is None or self._current_work_name != work_name:
+        if self._current_work is None or self._current_work.name != work_name:
             self._close_current_work()
             self._current_work = _Work.create(self._helper, self._logger, work_name)
-            self._current_work_name = work_name
-        self._current_work.send_bundle(self._to_stix(bundle_objects), **kwargs)
+        self._current_work.send_bundle(bundle_objects, **kwargs)
 
     def _close_current_work(self) -> None:
         """Close the current work if it exists and is not already closed."""
@@ -247,11 +253,3 @@ class WorkManager:
                 self._current_work._delete()
             else:
                 self._current_work.success("Work completed successfully")
-
-    @staticmethod
-    def _to_stix(objects: list[Any]) -> list[Any]:
-        """Convert objects to stix2, calling ``to_stix2_object()`` when available."""
-        return [
-            obj.to_stix2_object() if hasattr(obj, "to_stix2_object") else obj
-            for obj in objects
-        ]

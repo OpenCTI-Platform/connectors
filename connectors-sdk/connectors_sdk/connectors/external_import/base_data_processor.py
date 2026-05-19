@@ -23,10 +23,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
+from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 from connectors_sdk.connectors.external_import.work_manager import WorkManager
 
 if TYPE_CHECKING:
-    from connectors_sdk.connectors.external_import.logger import ConnectorLogger
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
     from connectors_sdk.states.states import ExternalImportConnectorState
     from pycti import OpenCTIConnectorHelper
@@ -62,6 +62,9 @@ class BaseDataProcessor(ABC):
 
     Attributes:
         work_name: A human-readable name for the work created by this processor.
+            Changing ``work_name`` between calls to ``send()`` (or between iterations
+            in a generator-based ``transform()``) will close the current work and
+            open a new one with the updated name.
         config: The connector settings, injected via ``inject_dependencies()``.
         work_manager: The ``WorkManager`` instance, created in ``inject_dependencies()``.
         logger: The ``ConnectorLogger`` instance, injected via ``inject_dependencies()``.
@@ -78,7 +81,6 @@ class BaseDataProcessor(ABC):
         self,
         config: BaseConnectorSettings,
         helper: OpenCTIConnectorHelper,
-        logger: ConnectorLogger,
         state: ExternalImportConnectorState,
     ) -> None:
         """Inject dependencies from the base connector and create the WorkManager.
@@ -90,12 +92,11 @@ class BaseDataProcessor(ABC):
         Args:
             config: The connector configuration settings.
             helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance.
             state: The ``ExternalImportConnectorState`` instance.
         """
         self.config = config
-        self.work_manager = WorkManager(helper, logger)
-        self.logger = logger
+        self.work_manager = WorkManager(helper)
+        self.logger = ConnectorLogger(helper)
         self.state = state
 
     def post_init(self) -> None:  # noqa: B027
@@ -103,7 +104,7 @@ class BaseDataProcessor(ABC):
 
         Override this method to perform initialization that requires
         the injected dependencies (logger, state, config, etc.).
-        Called by ``BaseExternalImportConnector._init_infrastructure()``.
+        Called by ``BaseExternalImportConnector._init_dependencies()``.
 
         By default, does nothing.
         """

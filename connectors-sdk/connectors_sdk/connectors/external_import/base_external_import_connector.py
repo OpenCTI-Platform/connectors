@@ -81,7 +81,7 @@ class BaseExternalImportConnector:
             config: The connector configuration settings.
             data_processors: The list of ``BaseDataProcessor`` instances to run.
             state: Optional custom state instance. If ``None``, a default
-                ``ExternalImportConnectorState`` is created in ``_init_infrastructure()``.
+                ``ExternalImportConnectorState`` is created in ``_init_dependencies()``.
         """
         if not data_processors:
             raise ValueError("At least one BaseDataProcessor must be provided.")
@@ -89,13 +89,13 @@ class BaseExternalImportConnector:
         self.data_processors = data_processors
         self._state = state
 
-    def _init_infrastructure(self) -> None:
+    def _init_dependencies(self) -> None:
         """Create the OpenCTI connector helper and wire up all components.
 
         This method:
         1. Creates the ``OpenCTIConnectorHelper`` from the config
         2. Creates the ``ConnectorLogger``
-        3. Initializes the state and attaches the helper to it
+        3. Initializes the state and injects dependencies
         4. Calls ``inject_dependencies()`` on each data processor
         """
         self._helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
@@ -103,12 +103,11 @@ class BaseExternalImportConnector:
         self.state = (
             self._state if self._state is not None else ExternalImportConnectorState()
         )
-        self.state.attach_opencti_connector_helper(self._helper)
+        self.state.inject_dependencies(self._helper)
         for processor in self.data_processors:
             processor.inject_dependencies(
                 config=self.config,
                 helper=self._helper,
-                logger=self.logger,
                 state=self.state,
             )
             processor.post_init()
@@ -181,7 +180,7 @@ class BaseExternalImportConnector:
             The ``config.connector`` must be a ``BaseExternalImportConnectorConfig``
             (or subclass) with a ``duration_period`` field.
         """
-        self._init_infrastructure()
+        self._init_dependencies()
         self._helper.schedule_process(
             message_callback=self.callback,
             duration_period=self.config.connector.duration_period.total_seconds(),  # type: ignore[attr-defined]

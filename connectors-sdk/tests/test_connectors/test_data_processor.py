@@ -73,7 +73,6 @@ class TestBaseDataProcessor:
         processor.inject_dependencies(
             config=MagicMock(),
             helper=mock_helper,
-            logger=mock_logger,
             state=MagicMock(),
         )
         processor.post_init()
