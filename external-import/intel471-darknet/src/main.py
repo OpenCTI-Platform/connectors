@@ -435,28 +435,20 @@ class Intel471AlertsConnector(ExternalImportConnector):
         """
         objects = []
         x_message = BeautifulSoup(privateMessage["message"], features="lxml").get_text()
-        x_forum = (
-            privateMessage["links"]["forum"]["name"]
-            if "forum" in privateMessage["links"]
-            else ""
-        )
-        x_thread = (
-            privateMessage["links"]["thread"]["uid"]
-            if "thread" in privateMessage["links"]
-            else ""
-        )
-        x_actor = (
-            privateMessage["links"]["authorActor"]["handle"]
-            if "authorActor" in privateMessage["links"]
-            and "handle" in privateMessage["links"]["authorActor"]
-            else ""
-        )
-        x_recipient = (
-            privateMessage["links"]["recipientActor"]["handle"]
-            if "recipientActor" in privateMessage["links"]
-            and "handle" in privateMessage["links"]["recipientActor"]
-            else ""
-        )
+        # Normalise ``links`` to a local dict so a private-message payload
+        # without a ``links`` object (or with ``links: null``) cannot raise
+        # ``KeyError`` and silently drop the alert while the cycle keeps
+        # advancing ``last_run``. Same defensive pattern as
+        # ``_getActorContent`` / ``_getEntityContent``.
+        links = privateMessage.get("links") or {}
+        forum = links.get("forum") or {}
+        x_forum = forum.get("name", "")
+        thread = links.get("thread") or {}
+        x_thread = thread.get("uid", "")
+        author_actor = links.get("authorActor") or {}
+        x_actor = author_actor.get("handle", "")
+        recipient_actor = links.get("recipientActor") or {}
+        x_recipient = recipient_actor.get("handle", "")
         if "lastUpdated" in privateMessage:
             lu = privateMessage["lastUpdated"] / 1000
             x_lastupdate = get_date(_stix_timestamp(lu))
@@ -467,8 +459,8 @@ class Intel471AlertsConnector(ExternalImportConnector):
 
         # are there some images?
         octi_filelist = []
-        if "images" in privateMessage["links"]:
-            forum_imagelist = privateMessage["links"]["images"]
+        forum_imagelist = links.get("images") or []
+        if forum_imagelist:
             # self.helper.log_debug(f"Images? {forum_imagelist}")
             for f in forum_imagelist:
                 try:
@@ -651,20 +643,18 @@ class Intel471AlertsConnector(ExternalImportConnector):
         """
         objects = []
         x_message = BeautifulSoup(post["message"], "lxml").get_text()
-        x_actor = (
-            post["links"]["authorActor"]["handle"]
-            if "authorActor" in post["links"]
-            else ""
-        )
-        x_forum = post["links"]["forum"]["name"] if "forum" in post["links"] else ""
-        if "thread" in post["links"]:
-            x_thread = (
-                post["links"]["thread"]["topic"]
-                if "topic" in post["links"]["thread"]
-                else post["links"]["thread"]["uid"]
-            )
-        else:
-            x_thread = ""
+        # Normalise ``links`` to a local dict so a post payload without a
+        # ``links`` object (or with ``links: null``) cannot raise
+        # ``KeyError`` and silently drop the alert while the cycle keeps
+        # advancing ``last_run``. Same defensive pattern as
+        # ``_getActorContent`` / ``_getEntityContent``.
+        links = post.get("links") or {}
+        author_actor = links.get("authorActor") or {}
+        x_actor = author_actor.get("handle", "")
+        forum = links.get("forum") or {}
+        x_forum = forum.get("name", "")
+        thread = links.get("thread") or {}
+        x_thread = thread.get("topic") or thread.get("uid", "")
         if "lastUpdated" in post:
             lu = post["lastUpdated"] / 1000
             x_lastupdate = get_date(_stix_timestamp(lu))
@@ -675,8 +665,8 @@ class Intel471AlertsConnector(ExternalImportConnector):
 
         # are there some images?
         octi_filelist = []
-        if "images" in post["links"]:
-            forum_imagelist = post["links"]["images"]
+        forum_imagelist = links.get("images") or []
+        if forum_imagelist:
             # self.helper.log_debug(f"Images? {forum_imagelist}")
             for f in forum_imagelist:
                 try:
