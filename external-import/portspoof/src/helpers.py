@@ -45,13 +45,6 @@ def parse_iso_datetime(iso_string: Optional[str]) -> datetime:
         return datetime.now(timezone.utc)
 
 
-def datetime_serializer(obj: Any) -> str:
-    """JSON serializer for datetime objects."""
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    raise TypeError(f"Type {type(obj)} not serializable")
-
-
 def generate_labels(
     state: Dict[str, Any],
     intelligence: Dict[str, Any],

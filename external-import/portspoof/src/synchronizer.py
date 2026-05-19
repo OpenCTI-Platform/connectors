@@ -136,11 +136,27 @@ def build_config_from_env() -> Dict[str, Any]:
     # ``CONNECTOR_ID`` must be stable across restarts: OpenCTI uses it as the
     # connector's identity, so generating a fresh UUID on every startup would
     # register a new connector each time and break work tracking continuity.
+    # We also validate the *shape* — a non-UUID (or non-v4 UUID) makes the
+    # connector register inconsistently in OpenCTI, and the error surfaces
+    # only much later as a confusing "connector not found" issue. Failing
+    # fast at startup is the cheaper alternative.
     connector_id = os.getenv("CONNECTOR_ID")
     if not connector_id:
         raise ValueError(
             "Missing required environment variable: CONNECTOR_ID must be set "
             "to a stable UUIDv4 to preserve the connector's identity across restarts"
+        )
+    try:
+        parsed_connector_id = uuid.UUID(connector_id)
+    except (ValueError, AttributeError, TypeError) as exc:
+        raise ValueError(
+            f"Invalid CONNECTOR_ID {connector_id!r}: must be a valid UUIDv4 "
+            "(e.g. the output of `uuidgen -r`); see README for details."
+        ) from exc
+    if parsed_connector_id.version != 4:
+        raise ValueError(
+            f"Invalid CONNECTOR_ID {connector_id!r}: must be a UUIDv4 "
+            f"(got UUID version {parsed_connector_id.version})."
         )
 
     queue_protocol = os.getenv("CONNECTOR_QUEUE_PROTOCOL", "api")

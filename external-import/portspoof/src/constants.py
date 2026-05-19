@@ -6,7 +6,6 @@ import uuid
 # OpenCTI namespace UUID for deterministic ID generation
 OPENCTI_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 
-TLP_CLEAR_STIX_ID = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 OPENCTI_SSL_VERIFY_DEFAULT = True
 
 # Identity

@@ -7,14 +7,45 @@ import sys
 import time
 from enum import Enum
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlsplit, urlunsplit
 
 import pika
+from constants import (
+    DLQ_EXCHANGE,
+    DLQ_QUEUE,
+    FULL_STATE_EXCHANGE,
+    MAX_RETRIES_DEFAULT,
+    PREFETCH_COUNT_DEFAULT,
+    QUEUE_NAME_DEFAULT,
+)
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from synchronizer import StixSynchronizer, build_config_from_env
 from validation import ValidationError, validate_ip_address
 
 load_dotenv()
+
+
+def _redact_rabbitmq_url(url: str) -> str:
+    """Return ``url`` with any embedded credentials masked.
+
+    AMQP URLs frequently embed credentials as ``amqp://user:pass@host:port/``.
+    Logging the raw URL would emit the password (and often the user) at
+    ``INFO`` level into operator logs, which is exactly the kind of secret
+    that the connector is expected to *not* surface. ``urlsplit`` lets us
+    rebuild the URL without the userinfo segment so the log line still
+    carries the useful information (scheme + host + port + vhost path).
+    """
+    try:
+        parts = urlsplit(url)
+    except ValueError:
+        return "<unparseable url>"
+    netloc = parts.hostname or ""
+    if parts.port is not None:
+        netloc = f"{netloc}:{parts.port}"
+    if parts.username is not None or parts.password is not None:
+        netloc = f"***:***@{netloc}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
 
 def _resolve_log_level() -> str:
@@ -48,12 +79,14 @@ if log_file:
 logging.basicConfig(level=LOG_LEVEL, format=log_format, handlers=log_handlers)
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL", "amqp://guest:guest@rabbitmq:5672/")
-FULL_STATE_EXCHANGE = "portspoof-full-state-updates"
-QUEUE_NAME = os.getenv("RABBITMQ_QUEUE_NAME", "opencti-connector-queue")
-DLQ_EXCHANGE = "opencti-connector-dlq"
-DLQ_QUEUE = "opencti-connector-dlq-queue"
-PREFETCH_COUNT = int(os.getenv("PREFETCH_COUNT", "10"))
-MAX_RETRIES = int(os.getenv("MAX_RETRIES", "3"))
+# ``FULL_STATE_EXCHANGE`` / ``DLQ_EXCHANGE`` / ``DLQ_QUEUE`` are owned by
+# ``constants.py`` so every module sees the same value. Anything that can
+# be overridden by the operator (``RABBITMQ_QUEUE_NAME``, ``PREFETCH_COUNT``,
+# ``MAX_RETRIES``) is read here and falls back to the canonical default
+# constant.
+QUEUE_NAME = os.getenv("RABBITMQ_QUEUE_NAME", QUEUE_NAME_DEFAULT)
+PREFETCH_COUNT = int(os.getenv("PREFETCH_COUNT", str(PREFETCH_COUNT_DEFAULT)))
+MAX_RETRIES = int(os.getenv("MAX_RETRIES", str(MAX_RETRIES_DEFAULT)))
 
 # Custom header that travels with the message across re-publishes. The
 # RabbitMQ ``x-death`` header is only updated when a message is *actually*
@@ -255,7 +288,9 @@ class OpenCTIConsumer:
 
     def setup_connection(self):
         """Setup RabbitMQ connection, channels, and exchanges/queues."""
-        logging.info(f"Connecting to RabbitMQ at {RABBITMQ_URL}...")
+        logging.info(
+            f"Connecting to RabbitMQ at {_redact_rabbitmq_url(RABBITMQ_URL)}..."
+        )
         self.connection = pika.BlockingConnection(pika.URLParameters(RABBITMQ_URL))
         self.channel = self.connection.channel()
 
@@ -310,6 +345,16 @@ class OpenCTIConsumer:
         except (TypeError, ValueError):
             delivery_count = 0
 
+        # ``total_messages_processed`` is incremented for **every** delivery
+        # the consumer receives, regardless of how it ends up — success,
+        # permanent failure (DLQ), or transient failure (requeue / DLQ on
+        # retry exhaustion). Without this, ``validation_errors`` /
+        # ``sync_errors`` would still be incremented on the failure paths
+        # while the total only counted successes, so ``success_rate`` could
+        # exceed 100% (or go negative when errors > successes).
+        self.stats["total_messages_processed"] += 1
+        self.message_counter += 1
+
         try:
             state = decode_and_validate(body)
 
@@ -331,9 +376,6 @@ class OpenCTIConsumer:
                 )
                 # Channel closed - will reconnect in outer loop
 
-            self.stats["total_messages_processed"] += 1
-            self.message_counter += 1
-
             current_time = time.time()
             if (
                 self.message_counter >= 50
@@ -350,6 +392,13 @@ class OpenCTIConsumer:
                 logging.error(
                     f"Permanent error processing message: {type(e).__name__}: {e}"
                 )
+                # Session telemetry can carry sensor identifiers, target
+                # hosts and other internal data — emitting the body by
+                # default would push that into operator logs every time a
+                # malformed message arrives. The minimal identifiers
+                # (``session_id`` / ``source_ip``) are usually enough to
+                # locate the offending publisher; the full body is only
+                # logged when ``PS_DEBUG_FULL_DUMPS=1`` is set explicitly.
                 try:
                     body_str = (
                         body.decode("utf-8") if isinstance(body, bytes) else str(body)
@@ -357,9 +406,26 @@ class OpenCTIConsumer:
                     if DEBUG_FULL_DUMPS:
                         logging.error(f"Problematic message body: {body_str}")
                     else:
-                        logging.error(
-                            f"Problematic message body: {body_str[:1000]}... (truncated)"
-                        )
+                        identifiers = {}
+                        try:
+                            payload = json.loads(body_str)
+                            if isinstance(payload, dict):
+                                for key in ("session_id", "source_ip"):
+                                    if key in payload:
+                                        identifiers[key] = payload[key]
+                        except (ValueError, TypeError):
+                            identifiers = {}
+                        if identifiers:
+                            logging.error(
+                                "Problematic message identifiers: "
+                                f"{identifiers} (set PS_DEBUG_FULL_DUMPS=1 to "
+                                "log the full body)"
+                            )
+                        else:
+                            logging.error(
+                                "Problematic message body suppressed (set "
+                                "PS_DEBUG_FULL_DUMPS=1 to log the full body)"
+                            )
                 except (UnicodeDecodeError, AttributeError):
                     pass
 
