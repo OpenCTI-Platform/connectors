@@ -188,8 +188,13 @@ class ExportFileODSConnector(InternalExportConnector):
         if header.startswith(HASH_HEADER_PREFIX):
             algo = header[len(HASH_HEADER_PREFIX) :]
             for hashed in entity.get("hashes") or []:
-                if hashed.get("algorithm") == algo:
-                    return sanitize_cell(hashed.get("hash"))
+                # Defensively coerce ``None`` / non-dict items to an empty
+                # dict, matching ``lib.headers.build_headers`` — a single
+                # malformed entry in ``entity["hashes"]`` should not abort
+                # the entire export with ``AttributeError``.
+                hashed_dict = hashed if isinstance(hashed, dict) else {}
+                if hashed_dict.get("algorithm") == algo:
+                    return sanitize_cell(hashed_dict.get("hash"))
             return ""
 
         value = entity.get(header)
