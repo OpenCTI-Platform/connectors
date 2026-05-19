@@ -19,18 +19,25 @@ ENV CONNECTOR_TYPE=INTERNAL_EXPORT_FILE \
 # their ``/usr/local`` Python cannot import the system ``pyuno`` C
 # extension (ABI mismatch).
 #
-# ``git`` is required because the CircleCI rolling/prerelease build rewrites
-# the ``pycti==<version>`` line in ``requirements.txt`` to a
-# ``pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@<ref>...``
-# requirement, which pip can only resolve when ``git`` is on ``PATH``. It is
-# purged again at the end of the install layer so it does not bloat the
-# runtime image.
-#
 # ``PIP_BREAK_SYSTEM_PACKAGES=1`` is set above so ``pip`` is allowed to
 # install into the system Python on Debian Bookworm (PEP 668). This is the
 # same interpreter that ``python3-uno`` is built against, so installing
 # ``pycti`` and ``unogenerator`` alongside it is what makes the UNO bridge
 # importable from the connector process without any path tricks.
+
+# Copy the requirements file first so the apt install, ``pip install`` and
+# ``git`` purge below all happen in a single layer — Docker layers are
+# immutable, so installing ``git`` in one ``RUN`` and purging it in a later
+# ``RUN`` would still ship the ``git`` binaries in the published image.
+WORKDIR /opt/opencti-connector-export-file-ods
+COPY src/requirements.txt /opt/opencti-connector-export-file-ods/requirements.txt
+
+# ``git`` is required because the CircleCI rolling/prerelease build rewrites
+# the ``pycti==<version>`` line in ``requirements.txt`` to a
+# ``pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@<ref>...``
+# requirement, which pip can only resolve when ``git`` is on ``PATH``. It is
+# purged in the same ``RUN`` layer as the install so the runtime image is
+# not bloated.
 # hadolint ignore=DL3008
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -47,15 +54,13 @@ RUN apt-get update && \
         python3 \
         python3-pip \
         python3-uno && \
+    pip3 install --no-cache-dir -r requirements.txt && \
+    apt-get purge -y --auto-remove git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 COPY src /opt/opencti-connector-export-file-ods
-WORKDIR /opt/opencti-connector-export-file-ods
-RUN pip3 install --no-cache-dir -r requirements.txt && \
-    mkdir -p /opt/opencti-connector-export-file-ods/tmp && \
-    apt-get purge -y --auto-remove git && \
-    rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /opt/opencti-connector-export-file-ods/tmp
 
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

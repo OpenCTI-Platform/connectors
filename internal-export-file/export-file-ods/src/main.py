@@ -12,6 +12,8 @@ import tempfile
 import time
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from lib.filenames import sanitize_file_name
+from lib.filters import build_neighbor_filter, build_query_filter
 from lib.internal_export import InternalExportConnector
 from lib.rendering import render_dict_item, render_dict_list
 from lib.sanitization import sanitize_cell
@@ -87,7 +89,7 @@ class ExportFileODSConnector(InternalExportConnector):
         if not candidate_neighbor_ids:
             return export_list
 
-        neighbor_filter = self._build_neighbor_filter(
+        neighbor_filter = build_neighbor_filter(
             sorted(candidate_neighbor_ids), self.access_filter
         )
         neighbors = (
@@ -170,40 +172,6 @@ class ExportFileODSConnector(InternalExportConnector):
         return access_filter
 
     @staticmethod
-    def _build_neighbor_filter(
-        neighbor_ids: List[str],
-        access_filter: Optional[Dict[str, Any]],
-    ) -> Dict[str, Any]:
-        """Build a filter selecting ``neighbor_ids`` and applying ``access_filter``.
-
-        The neighbour ids are passed as a positive ``ids`` filter; the
-        request's ``access_filter`` (when present and non-empty) is ANDed
-        with it so the unified entity endpoint enforces the same marking
-        restrictions the platform applied to the selected entities.
-        """
-        ids_filter_group: Dict[str, Any] = {
-            "mode": "and",
-            "filterGroups": [],
-            "filters": [
-                {
-                    "key": "ids",
-                    "values": neighbor_ids,
-                    "operator": "eq",
-                    "mode": "or",
-                }
-            ],
-        }
-        access_filter_content = (access_filter or {}).get("filters") or []
-        access_filter_groups = (access_filter or {}).get("filterGroups") or []
-        if access_filter and (access_filter_content or access_filter_groups):
-            return {
-                "mode": "and",
-                "filterGroups": [ids_filter_group, access_filter],
-                "filters": [],
-            }
-        return ids_filter_group
-
-    @staticmethod
     def _row_for(entity: Dict[str, Any], header: str) -> str:
         """Render the cell content for ``header`` on ``entity``."""
         if header.startswith(_HASH_HEADER_PREFIX):
@@ -233,12 +201,18 @@ class ExportFileODSConnector(InternalExportConnector):
         return ""
 
     def _build_headers(self, entities_list: List[Dict[str, Any]]) -> List[str]:
-        """Return the alphabetically-sorted header list for the spreadsheet.
+        """Return the header list for the spreadsheet.
 
-        The raw ``hashes`` column is replaced by per-algorithm
-        ``hashes.<ALGO>`` columns since ``_row_for`` only knows how to
-        render values from the ``hashes.<ALGO>`` form. The set of
-        per-algorithm columns is the union of:
+        The base columns are derived from the union of every entity's
+        keys and rendered in alphabetical order so the spreadsheet has
+        a deterministic, scannable layout for "regular" attributes.
+
+        The raw ``hashes`` column is then replaced by per-algorithm
+        ``hashes.<ALGO>`` columns appended **after** the sorted base
+        headers (``_row_for`` only knows how to render values from the
+        ``hashes.<ALGO>`` form, so a bare ``hashes`` header would always
+        render as an empty cell). The set of per-algorithm columns is
+        the union of:
 
         * the canonical algorithms (``_HASH_ALGORITHMS``) so common
           columns appear in a stable order even when the current
@@ -309,49 +283,6 @@ class ExportFileODSConnector(InternalExportConnector):
             )
         )
 
-    @staticmethod
-    def _build_query_filter(
-        list_params_filters: Optional[Dict[str, Any]],
-        access_filter: Optional[Dict[str, Any]],
-    ) -> Optional[Dict[str, Any]]:
-        """Combine the user filter and the access (marking) filter.
-
-        Either side may be missing or empty: when ``access_filter`` has no
-        ``filters`` and no ``filterGroups`` it is treated as absent and the
-        user filter is returned as-is (and vice versa).
-        """
-        access_has_content = bool(
-            (access_filter or {}).get("filters")
-            or (access_filter or {}).get("filterGroups")
-        )
-        if access_has_content and list_params_filters is not None:
-            return {
-                "mode": "and",
-                "filterGroups": [list_params_filters, access_filter],
-                "filters": [],
-            }
-        if not access_has_content:
-            return list_params_filters
-        return access_filter
-
-    def _sanitize_file_name(self, raw_file_name: str) -> str:
-        """Return a safe ``<name>.ods`` filename from the request payload.
-
-        Strips directory components (``os.path.basename``) to defend against
-        path traversal and removes the literal ``.unknown`` suffix (not via
-        ``str.rstrip`` which would mangle filenames such as ``file.unk``).
-        Existing ``.ods`` extensions are preserved as-is so a request
-        with ``file_name="report.ods"`` does not produce ``report.ods.ods``.
-        """
-        base = os.path.basename(raw_file_name or "")
-        if base.endswith(".unknown"):
-            base = base[: -len(".unknown")]
-        if not base:
-            base = "export"
-        if not base.lower().endswith(".ods"):
-            base = f"{base}.ods"
-        return base
-
     def _push_export(
         self,
         entity_type: str,
@@ -380,7 +311,7 @@ class ExportFileODSConnector(InternalExportConnector):
     def _process_message(self, data: Dict[str, Any]) -> str:
         """Process an export request."""
         self.helper.log_debug(f"Export request payload: {data}")
-        self.file_name = self._sanitize_file_name(data.get("file_name", ""))
+        self.file_name = sanitize_file_name(data.get("file_name", ""))
         file_markings = data.get("file_markings") or []
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
@@ -404,7 +335,7 @@ class ExportFileODSConnector(InternalExportConnector):
         else:  # export_scope == "query"
             list_params = data["list_params"]
             list_params_filters = list_params.get("filters")
-            export_query_filter = self._build_query_filter(
+            export_query_filter = build_query_filter(
                 list_params_filters, self.access_filter
             )
             entities_list = self.helper.api_impersonate.stix2.export_entities_list(

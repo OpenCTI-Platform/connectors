@@ -9,11 +9,14 @@ stock CI runner). The test suite therefore only exercises the
   control-character stripping and formula-trigger escaping.
 * ``lib.rendering`` (``test_render_dict_item.py``) — list-of-dict
   cell rendering strategies.
+* ``lib.filters`` (``test_filters.py``) — access-filter composition
+  for ``full`` neighbour and ``query`` exports.
+* ``lib.filenames`` (``test_sanitize_file_name.py``) — output
+  filename sanitisation.
 
-We just add the connector ``src`` directory to ``sys.path`` so the
-test modules can ``from lib.sanitization import sanitize_cell`` /
-``from lib.rendering import render_dict_item`` without pulling in
-``unogenerator``.
+We just add the connector ``src`` directory to ``sys.path`` so the test
+modules can ``from lib.<module> import <symbol>`` without pulling in
+``unogenerator`` / ``pycti``.
 """
 
 import sys

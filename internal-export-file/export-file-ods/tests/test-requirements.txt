@@ -1,8 +1,13 @@
 # The test suite only exercises the **dependency-free** helper modules
-# under ``src/lib/`` -- ``lib.sanitization`` (``test_sanitize_cell.py``)
-# and ``lib.rendering`` (``test_render_dict_item.py``). Both are
-# intentionally free of ``unogenerator`` / ``pycti`` imports so the
-# regression tests can run on a CI runner that does not have
-# LibreOffice installed. We therefore do *not* pull in
+# under ``src/lib/``:
+#
+# * ``lib.sanitization`` (``test_sanitize_cell.py``)
+# * ``lib.rendering`` (``test_render_dict_item.py``)
+# * ``lib.filters`` (``test_filters.py``)
+# * ``lib.filenames`` (``test_sanitize_file_name.py``)
+#
+# All four are intentionally free of ``unogenerator`` / ``pycti``
+# imports so the regression tests can run on a CI runner that does not
+# have LibreOffice installed. We therefore do *not* pull in
 # ``src/requirements.txt`` here.
 pytest
