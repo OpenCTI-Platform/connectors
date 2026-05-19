@@ -39,12 +39,15 @@ class IPQSClient:
     _MAX_POLLING_ATTEMPTS = 9
     _POLLING_INTERVAL_SECONDS = 10
     _REQUEST_TIMEOUT_SECONDS = 60
-    # Postback is a small status-check JSON response, so the per-request
-    # timeout is kept low to honour the overall ~90 s polling budget.
-    # With ``_MAX_POLLING_ATTEMPTS * (_POLLING_INTERVAL_SECONDS +
-    # _POSTBACK_REQUEST_TIMEOUT_SECONDS)`` we cap the worst case at
-    # ~180 s (most runs return well before that). The overall deadline
-    # below caps it absolutely.
+    # Postback is a small status-check JSON response. The per-request
+    # timeout is kept low (10 s) so a stuck postback call cannot eat
+    # the whole polling budget on its own. The attempt-level upper
+    # bound is therefore
+    # ``_MAX_POLLING_ATTEMPTS * (_POLLING_INTERVAL_SECONDS +
+    # _POSTBACK_REQUEST_TIMEOUT_SECONDS) == 9 * (10 + 10) == 180 s``,
+    # but ``_POLLING_BUDGET_SECONDS`` below caps the loop absolutely
+    # at the documented 120 s so the worker is never blocked longer
+    # than that on a single Artifact enrichment.
     _POSTBACK_REQUEST_TIMEOUT_SECONDS = 10
     # Hard ceiling on the postback polling loop — even if every
     # iteration burns its full per-request timeout we still bail out

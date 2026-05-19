@@ -193,9 +193,9 @@ The connector assigns risk labels based on fraud scores for the fraud-and-risk-s
 
 The `Artifact` branch implements the IPQS Malware File Scanner API following the same defensive flow originally proposed in [PR #5970](https://github.com/OpenCTI-Platform/connectors/pull/5970):
 
-1. **Lookup first** — the file is hashed and submitted to `/malware/lookup`. If IPQS already has a recent (24h) verdict the call returns `status="cached"` and the connector skips straight to step 4.
+1. **Lookup first** — the file content is uploaded to `/malware/lookup`. IPQS hashes the upload server-side and, if it already has a recent (24h) verdict for that hash, returns `status="cached"` and the connector skips straight to step 4.
 2. **Submit** — on a cache miss the file content is uploaded to `/malware/scan`. IPQS responds with a `request_id`.
-3. **Poll** — `/postback` is polled with the `request_id` up to 9 times (10s apart, ~90s budget) until the scan completes or surfaces an error.
+3. **Poll** — `/postback` is polled with the `request_id` (up to 9 attempts, 10s apart) until the scan completes, the upstream surfaces an error, or a hard 120s polling deadline is reached. Each `/postback` call additionally uses a 10s per-request timeout so a stuck request cannot eat the whole budget.
 4. **Build the bundle** — on success the connector:
    - sets the observable's `x_opencti_score` (100 if any engine flagged the file, 50 otherwise);
    - attaches a `Clean` / `Malicious` label to the observable;
