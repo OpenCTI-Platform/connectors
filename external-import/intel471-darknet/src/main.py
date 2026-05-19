@@ -1801,12 +1801,26 @@ class Intel471AlertsConnector(ExternalImportConnector):
                     objs = None
                     try:
                         objs = self._get_stix_objects(a)
+                    except Intel471RequestError:
+                        # The per-alert ``/reports/{uid}`` lookup inside
+                        # ``_get_stix_objects`` also goes through
+                        # ``_intel471_get_json_or_raise``. Letting the
+                        # broad ``except Exception`` below swallow that
+                        # would log the failure, return successfully
+                        # from ``_collect_alerts``, and ``_run_cycle``
+                        # would then advance ``last_run`` — permanently
+                        # dropping the report alert. Re-raising here
+                        # propagates the failure up to ``_run_cycle``,
+                        # which marks the work in-error and leaves the
+                        # cursor untouched so the same window is
+                        # retried on the next cycle.
+                        raise
                     except Exception as e:  # noqa: BLE001
-                        # Per-alert transformation failures should not
-                        # abort the whole run, but we deliberately
-                        # **do not** silence the outer HTTP error
-                        # branch — that is handled by the
-                        # ``_intel471_get_json_or_raise`` call above.
+                        # Per-alert *transformation* failures (KeyError,
+                        # ValueError, ...) should not abort the whole
+                        # run: log and skip the offending alert but
+                        # keep advancing through the rest of the
+                        # window.
                         self.helper.log_error(f"Error retrieving alert: {e}")
                         self.helper.log_error(traceback.format_exc())
                     if objs:

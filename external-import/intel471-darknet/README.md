@@ -49,7 +49,9 @@ of:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.4.3
+- OpenCTI Platform >= 6.7.0 (matches the `pycti==7.260515.0` pin in
+  `src/requirements.txt`; the `pycti` 7.x line targets the OpenCTI
+  6.7+ API).
 - An Intel 471 account with API access.
 
 ## Configuration variables
