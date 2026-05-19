@@ -5,7 +5,6 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -145,26 +144,6 @@ def classify_error(exception: Exception) -> ErrorType:
         return ErrorType.PERMANENT
     else:
         return ErrorType.TRANSIENT
-
-
-def datetime_serializer(obj):
-    """JSON serializer for datetime objects"""
-    if isinstance(obj, datetime):
-        return obj.isoformat()
-    raise TypeError(f"Type {type(obj)} not serializable")
-
-
-def safe_dump(data, max_length=1000):
-    """Serialize data to JSON with optional truncation for logging."""
-    try:
-        dumped = json.dumps(data, default=datetime_serializer)
-        if DEBUG_FULL_DUMPS:
-            return dumped
-        if len(dumped) > max_length:
-            return dumped[:max_length] + f"... (truncated, {len(dumped)} total chars)"
-        return dumped
-    except Exception as e:
-        return f"<Failed to serialize: {e}>"
 
 
 def decode_and_validate(body: bytes) -> FullSessionState:

@@ -528,7 +528,16 @@ class IpObservableManager:
 **For TTP analysis:** See ThreatActor graph for complete attack patterns and relationships.
 """
 
+        # Author and labels on STIX 2.1 SCOs (``IPv4-Addr`` /
+        # ``IPv6-Addr``) ride through the OpenCTI extension fields
+        # rather than as top-level STIX properties — the stix2 library
+        # does not declare ``created_by_ref`` / ``labels`` on SCOs and
+        # would otherwise reject them as extra properties. See
+        # ``connectors-sdk/connectors_sdk/models/base_observable_entity.py``
+        # for the canonical shape.
         custom_properties = {
+            "x_opencti_created_by_ref": created_by_ref,
+            "x_opencti_labels": labels,
             "x_opencti_score": attacker_score,
             "x_opencti_description": description.strip(),
             "x_portspoof_tcp_ports": tcp_ports_total,
@@ -548,8 +557,6 @@ class IpObservableManager:
         if ":" in source_ip:
             return IPv6Address(
                 value=source_ip,
-                created_by_ref=created_by_ref,
-                labels=labels,
                 object_marking_refs=marking_refs,
                 custom_properties=custom_properties,
                 allow_custom=True,
@@ -557,8 +564,6 @@ class IpObservableManager:
         else:
             return IPv4Address(
                 value=source_ip,
-                created_by_ref=created_by_ref,
-                labels=labels,
                 object_marking_refs=marking_refs,
                 custom_properties=custom_properties,
                 allow_custom=True,
@@ -587,7 +592,12 @@ class IpObservableManager:
             f"session:{session_id[:8]}",
         ]
 
+        # SCO author / labels are carried by the OpenCTI extension
+        # fields, not the STIX 2.1 top-level properties — see the
+        # comment on ``create_source_ip_observable``.
         custom_properties = {
+            "x_opencti_created_by_ref": created_by_ref,
+            "x_opencti_labels": labels,
             "x_opencti_description": description,
         }
 
@@ -596,8 +606,6 @@ class IpObservableManager:
                 observables.append(
                     IPv6Address(
                         value=ip,
-                        created_by_ref=created_by_ref,
-                        labels=labels,
                         object_marking_refs=marking_refs,
                         custom_properties=custom_properties,
                         allow_custom=True,
@@ -607,8 +615,6 @@ class IpObservableManager:
                 observables.append(
                     IPv4Address(
                         value=ip,
-                        created_by_ref=created_by_ref,
-                        labels=labels,
                         object_marking_refs=marking_refs,
                         custom_properties=custom_properties,
                         allow_custom=True,
@@ -654,18 +660,23 @@ class IpObservableManager:
                 {"src_ref": source_ip_observable.id, "dst_ref": target_ip_obs.id},
             )
 
+            # ``NetworkTraffic`` is a STIX 2.1 SCO too: author and
+            # labels ride through the OpenCTI extension fields
+            # (``x_opencti_created_by_ref`` / ``x_opencti_labels``),
+            # not as top-level STIX properties — same rationale as
+            # the IPv4 / IPv6 observables above.
             nt = NetworkTraffic(
                 id=nt_id,
                 src_ref=source_ip_observable.id,
                 dst_ref=target_ip_obs.id,
                 protocols=["tcp", "udp"],
-                created_by_ref=created_by_ref,
                 custom_properties={
+                    "x_opencti_created_by_ref": created_by_ref,
                     "x_opencti_description": description,
                     "x_opencti_score": network_traffic_score,
                     "x_opencti_aliases": [alias],
                     "x_opencti_additional_names": [alias],
-                    "labels": [
+                    "x_opencti_labels": [
                         "portspoof-pro",
                         "network-reconnaissance",
                         f"target:{idx}",
@@ -904,12 +915,6 @@ class ObservedDataManager:
 **Note:** Port data is cumulative across all targets. Individual per-target port mappings are not available in PortSpoofPro's aggregator output.
 """
         return description.strip()
-
-    @staticmethod
-    def _map_threat_level(alert_level: int) -> str:
-        """Map alert level to threat level string."""
-        mapping = {0: "Info", 1: "Suspicious", 2: "High", 3: "Critical"}
-        return mapping.get(alert_level, "Unknown")
 
 
 class StixSynchronizer:
