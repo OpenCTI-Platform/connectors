@@ -283,7 +283,9 @@ class TestMediaContentAttachmentsOmission:
         """
         custom_properties: Dict[str, Any] = {
             "x_opencti_description": "hello",
-            "created_by_ref": "identity--00000000-0000-0000-0000-000000000000",
+            "x_opencti_created_by_ref": (
+                "identity--00000000-0000-0000-0000-000000000000"
+            ),
         }
         if attachments:
             custom_properties["x_opencti_files"] = attachments
@@ -304,3 +306,16 @@ class TestMediaContentAttachmentsOmission:
         attachments = [{"name": "abc_report.pdf", "data": "Zm9v", "mime_type": ""}]
         observable = self._build_media_content(attachments)
         assert observable["x_opencti_files"] == attachments
+
+    def test_author_is_carried_via_x_opencti_created_by_ref(self):
+        # OpenCTI's STIX 2.0 converter reads the author of an observable
+        # via ``x_opencti_created_by_ref`` (see
+        # ``opencti-graphql/src/database/stix-2-0-converter.ts``); the
+        # SDO-only ``created_by_ref`` would be silently dropped. Pin the
+        # contract so a regression cannot reintroduce the wrong key.
+        observable = self._build_media_content([])
+        assert (
+            observable["x_opencti_created_by_ref"]
+            == "identity--00000000-0000-0000-0000-000000000000"
+        )
+        assert "created_by_ref" not in observable

@@ -275,7 +275,8 @@ class MattermostConnector(ExternalImportConnector):
         # posts share the same author. The cached id is the
         # ``standard_id`` returned by ``identity.list`` for existing
         # authors and the ``stix2.Identity.id`` for newly-created ones,
-        # which is what ``CustomObservableMediaContent.created_by_ref``
+        # which is what
+        # ``CustomObservableMediaContent.custom_properties["x_opencti_created_by_ref"]``
         # expects.
         self._author_id_cache: Dict[str, str] = {}
         # ``post_url -> set(filename)`` so we hit OpenCTI's
@@ -517,15 +518,19 @@ class MattermostConnector(ExternalImportConnector):
         # is not necessary. The post body is carried in ``content`` (its
         # semantic home on a ``media-content`` SCO); ``x_opencti_description``
         # mirrors it so the observable shows a user-facing description in
-        # the OpenCTI UI. ``created_by_ref`` and ``x_opencti_files`` are
-        # OpenCTI extensions and are emitted through ``custom_properties``.
+        # the OpenCTI UI. ``x_opencti_created_by_ref`` and ``x_opencti_files``
+        # are OpenCTI extensions and are emitted through ``custom_properties``.
+        # The platform's STIX 2.0 converter reads the author via
+        # ``x_opencti_created_by_ref`` (not the SDO-only ``created_by_ref``)
+        # for observables — see ``connectors_sdk.models.base_observable_entity``
+        # and ``opencti-graphql/src/database/stix-2-0-converter.ts``.
         # ``x_opencti_files`` is only added when there is at least one
         # attachment, matching the convention used by other
         # external-import connectors and avoiding spurious updates when
         # ``CONNECTOR_UPDATE_EXISTING_DATA`` is enabled.
         custom_properties: Dict[str, Any] = {
             "x_opencti_description": content,
-            "created_by_ref": author_id,
+            "x_opencti_created_by_ref": author_id,
         }
         if attachments:
             custom_properties["x_opencti_files"] = attachments
