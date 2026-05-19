@@ -39,6 +39,18 @@ class IPQSClient:
     _MAX_POLLING_ATTEMPTS = 9
     _POLLING_INTERVAL_SECONDS = 10
     _REQUEST_TIMEOUT_SECONDS = 60
+    # Postback is a small status-check JSON response, so the per-request
+    # timeout is kept low to honour the overall ~90 s polling budget.
+    # With ``_MAX_POLLING_ATTEMPTS * (_POLLING_INTERVAL_SECONDS +
+    # _POSTBACK_REQUEST_TIMEOUT_SECONDS)`` we cap the worst case at
+    # ~180 s (most runs return well before that). The overall deadline
+    # below caps it absolutely.
+    _POSTBACK_REQUEST_TIMEOUT_SECONDS = 10
+    # Hard ceiling on the postback polling loop — even if every
+    # iteration burns its full per-request timeout we still bail out
+    # at this point so a single slow scan cannot tie up the enrichment
+    # worker indefinitely.
+    _POLLING_BUDGET_SECONDS = 120
 
     def __init__(
         self, helper: OpenCTIConnectorHelper, base_url: str, api_key: str
@@ -196,6 +208,7 @@ class IPQSClient:
         endpoint: str,
         params: Optional[dict] = None,
         file: Optional[dict] = None,
+        timeout: Optional[int] = None,
     ) -> Optional[dict]:
         """Send a request to the IPQS malware-file-scanner API.
 
@@ -203,7 +216,14 @@ class IPQSClient:
         because of a network / SSL / HTTP error, an unavailable upstream
         service, or an invalid JSON payload. Callers MUST handle ``None``
         explicitly.
+
+        ``timeout`` overrides the default per-request timeout — used by
+        the postback polling loop to enforce a tighter budget than the
+        60 s default that fits an actual scan submission.
         """
+        request_timeout = (
+            timeout if timeout is not None else self._REQUEST_TIMEOUT_SECONDS
+        )
         url = f"{self.url}{endpoint}"
         is_post = bool(file) or bool(params and params.get("url"))
         try:
@@ -214,14 +234,14 @@ class IPQSClient:
                     headers=self.headers,
                     files=file,
                     json=params,
-                    timeout=self._REQUEST_TIMEOUT_SECONDS,
+                    timeout=request_timeout,
                 )
             else:
                 response = self.session.get(
                     url,
                     headers=self.headers,
                     params=params,
-                    timeout=self._REQUEST_TIMEOUT_SECONDS,
+                    timeout=request_timeout,
                 )
 
             if response.status_code == 503:
@@ -305,19 +325,49 @@ class IPQSClient:
 
         request_id = response.get("request_id")
         if not request_id:
+            # Without a ``request_id`` we cannot poll for the final
+            # verdict. Returning the partial scan response as-is would
+            # let ``_process_artifact`` treat the acknowledgement as a
+            # final result (and potentially mark a still-running scan
+            # as ``Clean``). Convert it into an explicit failure so the
+            # caller raises a failure note instead of building an
+            # indicator from incomplete data.
             self.helper.log_error(
                 "Scan response missing 'request_id'; cannot poll for results."
             )
+            original_message = response.get("message", "")
+            failure_message = (
+                "IPQS scan response did not include a request_id; "
+                "results cannot be polled."
+            )
+            if original_message:
+                failure_message = f"{failure_message} (upstream: {original_message})"
+            response["success"] = False
+            response["message"] = failure_message
             return response
 
-        # Poll the postback endpoint for an asynchronous result.
+        # Poll the postback endpoint for an asynchronous result. The
+        # overall deadline caps the worst case to
+        # ``_POLLING_BUDGET_SECONDS`` (default 120s) even if every
+        # iteration burns its full per-request timeout — a single slow
+        # scan can no longer tie up the enrichment worker indefinitely.
         postback_params = {"request_id": request_id}
+        deadline = time.monotonic() + self._POLLING_BUDGET_SECONDS
         for _ in range(self._MAX_POLLING_ATTEMPTS):
             if response.get("status") != "pending":
                 break
+            if time.monotonic() >= deadline:
+                self.helper.log_warning(
+                    "IPQS postback polling budget exhausted "
+                    f"({self._POLLING_BUDGET_SECONDS}s); "
+                    "returning the last known response."
+                )
+                break
             time.sleep(self._POLLING_INTERVAL_SECONDS)
             postback_response = self._query_malware(
-                self._MALWARE_POSTBACK_ENDPOINT, params=postback_params
+                self._MALWARE_POSTBACK_ENDPOINT,
+                params=postback_params,
+                timeout=self._POSTBACK_REQUEST_TIMEOUT_SECONDS,
             )
             if postback_response is None:
                 self.helper.log_error(

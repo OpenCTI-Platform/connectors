@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 
 import pycti
 import stix2
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Note as PyctiNote
 from pycti import OpenCTIConnectorHelper, get_config_variable
 from stix2 import Identity
@@ -24,23 +25,41 @@ _MALICIOUS_FILE_SCORE = 100
 # in ``README.md`` and ``config.yml.sample`` — keep all three in sync.
 _DEFAULT_IPQS_BASE_URL = "https://ipqualityscore.com/api/json"
 
-# AMBER+STRICT is an OpenCTI-specific marking and is not exported as a
-# ``stix2`` constant. The canonical OpenCTI id is hard-coded here so
-# ``IPQS_DEFAULT_TLP=TLP:AMBER+STRICT`` is not silently downgraded to plain
-# ``TLP:AMBER`` when applied to the connector-emitted STIX objects.
-_TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
 
-# TLP-aliases the connector accepts in ``IPQS_DEFAULT_TLP`` / ``IPQS_MAX_TLP``.
-# Values are marking-definition **ids** so AMBER+STRICT, which does not have
-# a ``stix2`` constant, can be expressed without instantiating a fake STIX
-# object whose ``definition_type`` would not match the real marking.
-_TLP_MAP: Dict[str, str] = {
-    "TLP:CLEAR": stix2.TLP_WHITE.id,
-    "TLP:WHITE": stix2.TLP_WHITE.id,
-    "TLP:GREEN": stix2.TLP_GREEN.id,
-    "TLP:AMBER": stix2.TLP_AMBER.id,
-    "TLP:AMBER+STRICT": _TLP_AMBER_STRICT_ID,
-    "TLP:RED": stix2.TLP_RED.id,
+def _make_tlp_marking(definition: str) -> stix2.MarkingDefinition:
+    """Return a ``stix2.MarkingDefinition`` for an OpenCTI-specific TLP value.
+
+    Used for ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` which the platform
+    represents as custom marking-definition objects (the STIX 2.1
+    library only exposes built-in constants for ``TLP_WHITE`` /
+    ``TLP_GREEN`` / ``TLP_AMBER`` / ``TLP_RED``). Building a real
+    ``stix2.MarkingDefinition`` lets the connector ship the marking
+    object in every bundle so the OpenCTI UI displays the right label
+    (e.g. ``TLP:CLEAR`` rather than the legacy ``TLP:WHITE``).
+    """
+    return stix2.MarkingDefinition(
+        id=PyctiMarkingDefinition.generate_id("TLP", definition),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
+    )
+
+
+# ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` are OpenCTI-specific markings
+# and are not exposed as ``stix2`` constants. We materialise them as
+# real ``stix2.MarkingDefinition`` objects (mirroring the convention in
+# ``connectors-sdk.models.tlp_marking``) so the connector can ship the
+# marking object itself in every emitted bundle and the platform can
+# register the right UI label for each one.
+_TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
+    "TLP:CLEAR": _make_tlp_marking("TLP:CLEAR"),
+    "TLP:WHITE": stix2.TLP_WHITE,
+    "TLP:GREEN": stix2.TLP_GREEN,
+    "TLP:AMBER": stix2.TLP_AMBER,
+    "TLP:AMBER+STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+    "TLP:RED": stix2.TLP_RED,
 }
 
 
@@ -49,9 +68,35 @@ def _normalize_tlp(value: Optional[str], fallback: str = "TLP:CLEAR") -> str:
     if not value or not isinstance(value, str):
         return fallback
     normalized = value.strip().upper()
+    # Whitespace-only inputs (`"   "`) strip down to an empty string;
+    # without this guard we would happily return ``"TLP:"`` and let it
+    # propagate into ``_TLP_MAP`` lookups, which raise. Treat an empty
+    # post-strip value as missing and use the fallback.
+    if not normalized:
+        return fallback
     if not normalized.startswith("TLP:"):
         normalized = f"TLP:{normalized}"
     return normalized
+
+
+def _resolve_tlp(env_var: str, value: Optional[str]) -> stix2.MarkingDefinition:
+    """Return the ``stix2.MarkingDefinition`` for a configured TLP string.
+
+    Unknown / mistyped TLP values raise :class:`ValueError` at startup
+    listing every supported alias verbatim instead of silently falling
+    back to ``TLP:WHITE`` — a silent fallback could downgrade Artifact
+    indicators / failure notes from the operator's intended marking to
+    a less-restrictive one (e.g. typing ``ANBER`` instead of ``AMBER``
+    would have emitted ``TLP:WHITE``-marked notes).
+    """
+    normalized = _normalize_tlp(value)
+    try:
+        return _TLP_MAP[normalized]
+    except KeyError as exc:
+        valid = ", ".join(sorted(_TLP_MAP))
+        raise ValueError(
+            f"Unsupported {env_var} value {value!r}. Expected one of {valid}."
+        ) from exc
 
 
 class IPQSConnector:
@@ -132,10 +177,26 @@ class IPQSConnector:
             config,
         )
 
-        # TLP handling for the Artifact branch. Kept optional and
-        # defaulted so the existing fraud-and-risk-scoring branches
-        # behave exactly as before for users who do not configure
-        # these variables.
+        # TLP handling.
+        #
+        # * ``IPQS_DEFAULT_TLP`` (default ``TLP:CLEAR``) is the marking
+        #   applied to STIX objects emitted by the new Artifact /
+        #   failure-note branches when the source observable carries no
+        #   marking of its own. The fraud-and-risk-scoring branches
+        #   produced before this change do **not** use this default —
+        #   their markings are unchanged.
+        # * ``IPQS_MAX_TLP`` (default ``TLP:AMBER``) gates **every**
+        #   enrichment branch (IP / Email / URL / Phone / Artifact)
+        #   through ``_check_max_tlp``: observables marked above this
+        #   threshold are skipped with an explicit message. Operators
+        #   running the previous version with TLP:RED observables must
+        #   set ``IPQS_MAX_TLP=TLP:RED`` to keep the existing behaviour.
+        #
+        # Both values are resolved through ``_resolve_tlp`` which raises
+        # :class:`ValueError` on a mistyped / unknown TLP alias instead
+        # of silently falling back to ``TLP:WHITE`` (which would have
+        # downgraded Artifact indicators / failure notes from the
+        # operator's intended marking).
         self.default_tlp_string = _normalize_tlp(
             get_config_variable(
                 "IPQS_DEFAULT_TLP",
@@ -144,9 +205,10 @@ class IPQSConnector:
                 default="TLP:CLEAR",
             )
         )
-        self.default_tlp_id: str = _TLP_MAP.get(
-            self.default_tlp_string, stix2.TLP_WHITE.id
+        self.default_tlp_marking: stix2.MarkingDefinition = _resolve_tlp(
+            "IPQS_DEFAULT_TLP", self.default_tlp_string
         )
+        self.default_tlp_id: str = self.default_tlp_marking.id
 
         self.max_tlp = _normalize_tlp(
             get_config_variable(
@@ -156,6 +218,9 @@ class IPQSConnector:
                 default="TLP:AMBER",
             )
         )
+        # Validate ``IPQS_MAX_TLP`` at startup too so a typo fails fast
+        # instead of letting the gate silently pass everything.
+        _resolve_tlp("IPQS_MAX_TLP", self.max_tlp)
 
     # ------------------------------------------------------------------
     # Helpers shared with the Artifact / failure-note branches
@@ -226,6 +291,46 @@ class IPQSConnector:
             return []
         return [self.default_tlp_id]
 
+    @staticmethod
+    def _observable_marking_refs(observable: Dict[str, Any]) -> List[str]:
+        """Extract marking-definition refs from an OpenCTI observable.
+
+        Supports both the GraphQL ``objectMarking`` shape (list of dicts
+        with a ``standard_id``) and a plain ``object_marking_refs`` list
+        of ids. Returns ``[]`` when the observable carries no marking
+        — callers must fall back to ``_default_marking_refs`` (or the
+        equivalent helper) in that case.
+        """
+        refs: List[str] = []
+        raw = observable.get("objectMarking")
+        if raw is None:
+            raw = observable.get("object_marking_refs")
+        if isinstance(raw, list):
+            for marking in raw:
+                if isinstance(marking, dict) and marking.get("standard_id"):
+                    refs.append(marking["standard_id"])
+                elif isinstance(marking, str):
+                    refs.append(marking)
+        # Deduplicate while preserving order.
+        seen: set = set()
+        result: List[str] = []
+        for ref in refs:
+            if ref not in seen:
+                seen.add(ref)
+                result.append(ref)
+        return result
+
+    def _note_marking_refs(self, observable: Dict[str, Any]) -> List[str]:
+        """Return the marking refs to apply to a failure ``Note``.
+
+        Inherits the source observable's markings (so an ``AMBER`` /
+        ``AMBER+STRICT`` artifact never produces a less-restrictive
+        ``CLEAR`` / ``WHITE`` diagnostic note) and falls back to the
+        connector default only when the observable has no marking of
+        its own.
+        """
+        return self._observable_marking_refs(observable) or self._default_marking_refs()
+
     def _send_failure_note(
         self,
         response: Dict[str, Any],
@@ -241,6 +346,12 @@ class IPQSConnector:
         ``standard_id`` so two unrelated observables that hit the same
         upstream message (e.g. ``"No response received from IPQS API."``)
         produce two distinct notes instead of merging into a single one.
+
+        The Note inherits the source observable's TLP markings — a
+        TLP:AMBER artifact whose enrichment fails produces a TLP:AMBER
+        diagnostic Note, never a less-restrictive ``TLP:CLEAR`` /
+        ``TLP:WHITE`` one that could leak the existence of the artifact
+        to user groups not entitled to see it.
         """
         message = response.get("message", "")
         labels = ["enrichment-failed"]
@@ -251,6 +362,7 @@ class IPQSConnector:
 
         content = f"IPQS enrichment failed for {observable['standard_id']}: {message}"
         note_id = PyctiNote.generate_id(created=None, content=content)
+        marking_refs = self._note_marking_refs(observable)
         note = stix2.Note(
             id=note_id,
             abstract="IPQS enrichment failed",
@@ -259,10 +371,17 @@ class IPQSConnector:
             created_by_ref=self.author,
             confidence=self.helper.connect_confidence_level,
             labels=labels,
-            object_marking_refs=self._default_marking_refs(),
+            object_marking_refs=marking_refs,
         )
+        # Include the configured default marking-definition object in
+        # the bundle so OpenCTI-specific markings (``TLP:CLEAR``,
+        # ``TLP:AMBER+STRICT``) are registered with the platform by
+        # name even when this is the connector's first emission for the
+        # observable. The platform deduplicates by ``id`` on subsequent
+        # bundles.
+        bundle_objects: List[Any] = [self.author, self.default_tlp_marking, note]
         self.helper.send_stix2_bundle(
-            stix2.Bundle(self.author, note, allow_custom=True).serialize()
+            stix2.Bundle(*bundle_objects, allow_custom=True).serialize()
         )
 
     def _process_ip(self, observable):
@@ -447,7 +566,23 @@ class IPQSConnector:
                 file={"file": (file_name, file_content)}
             )
         except Exception as error:  # pylint: disable=broad-exception-caught
+            # Surface the failure to the operator through a STIX Note
+            # attached to the observable (not just a log line) so the
+            # diagnostic is visible from the OpenCTI UI without having
+            # to inspect connector logs. ``_send_failure_note`` is
+            # defensive enough to render any ``message`` without
+            # leaking the ``payload_bin`` of the source observable.
             self.helper.log_error(f"Failed to process file {file_name}: {error}")
+            self._send_failure_note(
+                {
+                    "success": False,
+                    "message": (
+                        f"Failed to download or submit file {file_name!r} to "
+                        f"IPQS: {error}"
+                    ),
+                },
+                observable,
+            )
             return None
 
         if response is None:
@@ -504,6 +639,12 @@ class IPQSConnector:
             score,
             default_object_marking_refs=self._default_marking_refs(),
         )
+        # Ship the configured default marking-definition object alongside
+        # the bundle so non-built-in markings (``TLP:CLEAR`` /
+        # ``TLP:AMBER+STRICT``) are registered with the platform by name
+        # rather than being left as dangling references. OpenCTI
+        # deduplicates by ``id`` on subsequent emissions.
+        builder.bundle.append(self.default_tlp_marking)
 
         description_lines: List[str] = []
         for field, label in self.client.file_enrich_fields.items():
