@@ -144,7 +144,11 @@ def test_settings_should_accept_valid_input(settings_dict):
 @pytest.mark.parametrize(
     "settings_dict, field_name",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
+        # With an empty dict, ``_OpenCTIConfig`` is the first to fail because
+        # its ``url`` and ``token`` fields have no defaults; pydantic surfaces
+        # those nested fields (rather than the ``opencti`` parent) when the
+        # default_factory raises.
+        pytest.param({}, "url", id="empty_settings_dict"),
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:PORT", "token": "test-token"},
@@ -268,6 +272,27 @@ def test_settings_should_accept_valid_input(settings_dict):
             "connector.id",
             id="missing_connector_id",
         ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "auto": True,
+                },
+                "joe_sandbox": {
+                    "api_url": "https://jbxcloud.joesecurity.org/api",
+                    # api_key intentionally omitted: it is a credential and
+                    # must be supplied by the operator/manager. Settings
+                    # validation MUST refuse to start without it.
+                    "analysis_url": "https://jbxcloud.joesecurity.org/analysis",
+                },
+            },
+            "joe_sandbox.api_key",
+            id="missing_joe_sandbox_api_key",
+        ),
     ],
 )
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
@@ -277,6 +302,9 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     a fake and invalid dict (instead of the env/config vars parsed from `config.yml`, `.env` or env vars).
 
     :param settings_dict: The dict to use as `ConnectorSettings` input
+    :param field_name: The field name that is expected to be reported in the
+        validation error message. Asserting the error mentions this field
+        prevents regressions where the wrong field becomes the failing one.
     """
 
     class FakeConnectorSettings(ConnectorSettings):
@@ -291,4 +319,15 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)
+    # Walk the chained pydantic ValidationError to assert that the expected
+    # field path is among the failing ones. Without this assertion, the
+    # parametrized ``field_name`` would not actually be exercised: any
+    # configuration error in the dict would still pass the test.
+    cause = err.value.__cause__
+    assert cause is not None, "ConfigValidationError must wrap the pydantic error"
+    error_locs = [".".join(str(p) for p in error["loc"]) for error in cause.errors()]
+    assert any(loc.startswith(field_name) for loc in error_locs), (
+        f"Expected a validation error for field {field_name!r}, "
+        f"got errors for: {error_locs}"
+    )

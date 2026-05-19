@@ -21,6 +21,12 @@ class JoeSandboxConnector:
             type="Organization", name="Joe Security", description="Joe Security"
         )["standard_id"]
         self.octi_api_url = self.config.opencti.url
+        # ``proxies`` is documented (and stored in the manager-facing schema)
+        # as a JSON-encoded map; ``requests`` and therefore ``jbxapi``
+        # expect a mapping. Decode it here so a configured proxy is
+        # actually honoured at runtime.
+        proxies_raw = self.config.joe_sandbox.proxies
+        proxies = json.loads(proxies_raw) if proxies_raw else None
         self.joe_sandbox_client = jbxapi.JoeSandbox(
             apikey=self.config.joe_sandbox.api_key.get_secret_value(),
             apiurl=self.config.joe_sandbox.api_url,
@@ -28,7 +34,7 @@ class JoeSandboxConnector:
             timeout=self.config.joe_sandbox.api_timeout,
             verify_ssl=self.config.joe_sandbox.verify_ssl,
             retries=self.config.joe_sandbox.api_retries,
-            proxies=self.config.joe_sandbox.proxies,
+            proxies=proxies,
             user_agent=self.config.joe_sandbox.user_agent,
         )
         self._report_types = self.config.joe_sandbox.report_types.split(",")
@@ -314,10 +320,8 @@ class JoeSandboxConnector:
                     name, json_report = self.joe_sandbox_client.analysis_download(
                         webid, "json", password=self._encrypt_with_password
                     )
-                    bundle_objects = self._process_json_report(
-                        self, observable, json_report
-                    )
                     json_report = json.loads(json_report)
+                    bundle_objects = self._process_json(observable, json_report)
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
                         file_name=name,
@@ -333,10 +337,8 @@ class JoeSandboxConnector:
                     name, json_report = self.joe_sandbox_client.analysis_download(
                         webid, "lightjsonfixed", password=self._encrypt_with_password
                     )
-                    bundle_objects = self._process_json_report(
-                        self, observable, json_report
-                    )
                     json_report = json.loads(json_report)
+                    bundle_objects = self._process_json(observable, json_report)
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
                         file_name=name,
