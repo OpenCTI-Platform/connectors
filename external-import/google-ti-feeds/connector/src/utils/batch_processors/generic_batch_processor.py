@@ -161,9 +161,6 @@ class GenericBatchProcessor:
             Configured exception class: If batch processing fails
 
         """
-        if not self._current_batch:
-            return self._handle_empty_batch()
-
         batch_items = self._current_batch.copy()
         self._current_batch.clear()
 
@@ -224,24 +221,10 @@ class GenericBatchProcessor:
                     {"prefix": LOG_PREFIX, "error": str(state_err)},
                 )
         else:
-            current_time = self.config.get_current_timestamp()
             self._logger.info(
-                "State update: Setting to current time",
-                {
-                    "prefix": LOG_PREFIX,
-                    "state_key": self.config.state_key,
-                    "current_time": current_time,
-                },
+                "State update skipped: no successfully ingested entity date tracked",
+                {"prefix": LOG_PREFIX, "state_key": self.config.state_key},
             )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.config.state_key, date_str=current_time
-                )
-            except Exception as state_err:
-                self._logger.error(
-                    "Failed to update final state with current time",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
 
     def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics.
@@ -291,42 +274,6 @@ class GenericBatchProcessor:
         """
         if date_str and (not self._latest_date or date_str > self._latest_date):
             self._latest_date = date_str
-
-    def _handle_empty_batch(self) -> str | None:
-        """Handle processing of empty batches based on configuration.
-
-        Returns:
-            None (empty batches don't create work)
-
-        Raises:
-            Configured exception class: If empty_batch_behavior is 'error'
-
-        """
-        if self.config.empty_batch_behavior == "error":
-            raise self.config.create_exception("Cannot process empty batch")
-
-        if self.config.empty_batch_behavior == "update_state":
-            current_time = self.config.get_current_timestamp()
-            self._logger.debug(
-                "Updating state with current time for empty batch",
-                {"prefix": LOG_PREFIX, "current_time": current_time},
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.config.state_key, date_str=current_time
-                )
-                self._latest_date = current_time
-            except Exception as state_err:
-                self._logger.warning(
-                    "Failed to update state for empty batch",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
-
-        self._logger.info(
-            "No items in batch to process",
-            {"prefix": LOG_PREFIX, "display_name": self.config.display_name},
-        )
-        return None
 
     def _process_batch_with_retries(
         self, batch_items: list[Any], batch_num: int

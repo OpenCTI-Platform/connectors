@@ -98,6 +98,97 @@ DataSizeFromString = Annotated[
 ]
 
 
+# MISP defines four threat-level values (1=High, 2=Medium, 3=Low, 4=Undefined).
+# Level "4" is required in the mapping because it is also used as the
+# fall-back score for events whose ``threat_level_id`` is not one of 1/2/3/4
+# (e.g. legacy values such as "0" or "5" returned by older MISP instances).
+_MISP_THREAT_LEVELS = ("1", "2", "3", "4")
+
+
+def parse_threat_level_score_mapping(value: Any) -> dict[str, int]:
+    """Parse a MISP threat-level -> OpenCTI score mapping.
+
+    Accepts either:
+
+    * a dict (e.g. coming from ``config.yml`` or a JSON document), or
+    * a string of the form ``"<level>:<score>;<level>:<score>"`` (typically
+      used when the value is passed via an environment variable).
+
+    Each level must be one of ``"1"`` (High), ``"2"`` (Medium), ``"3"``
+    (Low) or ``"4"`` (Undefined), and each score must be an integer in the
+    closed interval ``[0, 100]``. The mapping must explicitly cover level
+    ``"4"`` so that events with an unrecognized threat level always resolve
+    to a well-defined score.
+
+    Raises ``ValueError`` for any malformed input. Returning a strict error
+    here (rather than silently falling back to defaults) lets the connector
+    fail fast at startup instead of producing surprising scores at runtime.
+    """
+    if isinstance(value, dict):
+        pairs = [(str(level), score) for level, score in value.items()]
+    elif isinstance(value, str):
+        pairs = []
+        for raw_pair in value.split(";"):
+            pair = raw_pair.strip()
+            if not pair:
+                continue
+            if ":" not in pair:
+                raise ValueError(
+                    f"Invalid threat_level_score_mapping entry '{pair}': "
+                    "expected '<level>:<score>'."
+                )
+            raw_level, raw_score = pair.split(":", 1)
+            pairs.append((raw_level.strip(), raw_score.strip()))
+    else:
+        raise ValueError(
+            "threat_level_score_mapping must be a string like "
+            "'1:90;2:60;3:30;4:50' or an equivalent mapping."
+        )
+
+    mapping: dict[str, int] = {}
+    for level, raw_score in pairs:
+        if level not in _MISP_THREAT_LEVELS:
+            raise ValueError(
+                f"Invalid threat_level_score_mapping entry '{level}:{raw_score}': "
+                "level must be one of '1' (High), '2' (Medium), '3' (Low) "
+                "or '4' (Undefined)."
+            )
+        try:
+            score = int(raw_score)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Invalid threat_level_score_mapping entry '{level}:{raw_score}': "
+                "score must be an integer."
+            ) from exc
+        if not 0 <= score <= 100:
+            raise ValueError(
+                f"Invalid threat_level_score_mapping entry '{level}:{raw_score}': "
+                "score must be between 0 and 100."
+            )
+        mapping[level] = score
+
+    if "4" not in mapping:
+        raise ValueError(
+            "threat_level_score_mapping must define a score for level '4' "
+            "(Undefined), which is used as the fallback for events whose "
+            "threat level is unrecognized."
+        )
+
+    return mapping
+
+
+ThreatLevelScoreMappingFromString = Annotated[
+    dict[str, int],
+    BeforeValidator(parse_threat_level_score_mapping),
+    PlainSerializer(
+        lambda value: ";".join(f"{level}:{score}" for level, score in value.items()),
+        return_type=str,
+        when_used="json",
+    ),
+    WithJsonSchema({"type": "string"}),
+]
+
+
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     """
     Override the `BaseExternalImportConnectorConfig` to add parameters and/or defaults
@@ -251,6 +342,17 @@ class MispConfig(BaseConfigModel):
     import_threat_levels: ListFromString = Field(
         description="List of threat levels to filter MISP events to import, **including** only events with these threat levels.",
         default=[],
+    )
+    threat_level_score_mapping: ThreatLevelScoreMappingFromString = Field(
+        description=(
+            "Mapping of MISP threat levels (1=High, 2=Medium, 3=Low, "
+            "4=Undefined) to OpenCTI scores. Format: "
+            "'<level>:<score>;<level>:<score>'. Each score must be an "
+            "integer between 0 and 100; level '4' must be defined and is "
+            "also used as the fallback score for events with an unrecognized "
+            "threat level."
+        ),
+        default="1:90;2:60;3:30;4:50",
     )
     import_only_published: bool = Field(
         description="Whether to only import published MISP events or not.",
