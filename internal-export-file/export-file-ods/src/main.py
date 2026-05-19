@@ -18,6 +18,7 @@ from lib.filters import (
     build_neighbor_filter,
     build_query_filter,
 )
+from lib.headers import HASH_HEADER_PREFIX, build_headers
 from lib.internal_export import InternalExportConnector
 from lib.rendering import render_dict_item, render_dict_list
 from lib.sanitization import sanitize_cell
@@ -33,11 +34,10 @@ _UNSUPPORTED_ENTITY_TYPES = {
 # Headers use dot notation (``hashes.MD5``); the row generator strips the
 # ``hashes.`` prefix to look up the matching algorithm in ``entity["hashes"]``.
 # The canonical algorithm list keeps a stable header order for the
-# common algorithms; ``_build_headers`` adds any extra algorithms found
-# on the actual ``entity["hashes"]`` payloads on top so non-canonical
-# algorithms (anything STIX/OpenCTI may carry beyond MD5/SHA-1/SHA-256
-# /SHA-512/SSDEEP) are not silently dropped from the export.
-_HASH_HEADER_PREFIX = "hashes."
+# common algorithms; ``lib.headers.build_headers`` adds any extra
+# algorithms found on the actual ``entity["hashes"]`` payloads on top so
+# non-canonical algorithms (anything STIX/OpenCTI may carry beyond
+# MD5/SHA-1/SHA-256/SHA-512/SSDEEP) are not silently dropped.
 _HASH_ALGORITHMS: Tuple[str, ...] = ("MD5", "SHA-1", "SHA-256", "SHA-512", "SSDEEP")
 
 
@@ -185,8 +185,8 @@ class ExportFileODSConnector(InternalExportConnector):
     @staticmethod
     def _row_for(entity: Dict[str, Any], header: str) -> str:
         """Render the cell content for ``header`` on ``entity``."""
-        if header.startswith(_HASH_HEADER_PREFIX):
-            algo = header[len(_HASH_HEADER_PREFIX) :]
+        if header.startswith(HASH_HEADER_PREFIX):
+            algo = header[len(HASH_HEADER_PREFIX) :]
             for hashed in entity.get("hashes") or []:
                 if hashed.get("algorithm") == algo:
                     return sanitize_cell(hashed.get("hash"))
@@ -211,48 +211,16 @@ class ExportFileODSConnector(InternalExportConnector):
             return render_dict_item(value)
         return ""
 
-    def _build_headers(self, entities_list: List[Dict[str, Any]]) -> List[str]:
-        """Return the header list for the spreadsheet.
-
-        The base columns are derived from the union of every entity's
-        keys and rendered in alphabetical order so the spreadsheet has
-        a deterministic, scannable layout for "regular" attributes.
-
-        The raw ``hashes`` column is then replaced by per-algorithm
-        ``hashes.<ALGO>`` columns appended **after** the sorted base
-        headers (``_row_for`` only knows how to render values from the
-        ``hashes.<ALGO>`` form, so a bare ``hashes`` header would always
-        render as an empty cell). The set of per-algorithm columns is
-        the union of:
-
-        * the canonical algorithms (``_HASH_ALGORITHMS``) so common
-          columns appear in a stable order even when the current
-          export only exposes a subset; and
-        * every algorithm actually present on any ``entity["hashes"]``
-          value in the export, so non-canonical algorithms (anything
-          STIX/OpenCTI may carry beyond MD5/SHA-1/SHA-256/SHA-512/SSDEEP)
-          are not silently lost.
-        """
-        headers: List[str] = sorted(set().union(*(e.keys() for e in entities_list)))
-        if "hashes" not in headers:
-            return headers
-        headers.remove("hashes")
-        algorithms: List[str] = list(_HASH_ALGORITHMS)
-        seen_algorithms = set(algorithms)
-        for entity in entities_list:
-            for hashed in entity.get("hashes") or []:
-                algo = (hashed or {}).get("algorithm")
-                if algo and algo not in seen_algorithms:
-                    algorithms.append(algo)
-                    seen_algorithms.add(algo)
-        hash_headers = [f"{_HASH_HEADER_PREFIX}{algo}" for algo in algorithms]
-        headers = headers + [h for h in hash_headers if h not in headers]
-        return headers
-
     def _get_content(self, export_list: List[Tuple[Dict[str, Any], int]]) -> bytes:
         """Render ``export_list`` as an ODS document and return its bytes."""
         entities_list = [entry[0] for entry in export_list]
-        headers = self._build_headers(entities_list)
+        # ``lib.headers.build_headers`` is dependency-free so the header
+        # logic can be unit-tested without LibreOffice; it also builds
+        # the union of entity keys iteratively (``set.update`` per
+        # entity) rather than via ``set().union(*generator)`` so memory
+        # stays linear in the number of entities and we don't hit
+        # CPython's positional-argument unpacking limit on large exports.
+        headers = build_headers(entities_list, _HASH_ALGORITHMS)
 
         tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
         os.makedirs(tmp_dir, exist_ok=True)
