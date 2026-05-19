@@ -24,6 +24,7 @@ assemblyline:
   
   # Submission settings
   submission_profile: 'static_with_dynamic'  # static, dynamic, static_with_dynamic
+  classification: 'TLP:C'  # AssemblyLine classification marker attached to every submission
   timeout: 600  # Maximum wait time for analysis (seconds)
   force_resubmit: false  # Force new analysis even if file was already analyzed
   max_file_size_mb: 1  # Skip files larger than this (MB)

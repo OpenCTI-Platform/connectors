@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/assemblyline_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "AssemblyLine",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "StixFile"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": true,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 80,
+      "description": "Default confidence level (0-100) attached to STIX objects created by the connector.",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "ASSEMBLYLINE_URL": {
+      "description": "Base URL of the AssemblyLine 4 deployment (e.g. https://assemblyline.example.com).",
+      "format": "uri",
+      "type": "string"
+    },
+    "ASSEMBLYLINE_USER": {
+      "description": "AssemblyLine API user name.",
+      "type": "string"
+    },
+    "ASSEMBLYLINE_APIKEY": {
+      "description": "AssemblyLine API key associated with the configured user.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ASSEMBLYLINE_VERIFY_SSL": {
+      "default": true,
+      "description": "Set to false to disable TLS verification (self-signed AssemblyLine deployments).",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_SUBMISSION_PROFILE": {
+      "default": "static_with_dynamic",
+      "description": "AssemblyLine submission profile.",
+      "enum": [
+        "static",
+        "dynamic",
+        "static_with_dynamic"
+      ],
+      "type": "string"
+    },
+    "ASSEMBLYLINE_CLASSIFICATION": {
+      "default": "TLP:C",
+      "description": "AssemblyLine classification marker attached to every submission.",
+      "type": "string"
+    },
+    "ASSEMBLYLINE_TIMEOUT": {
+      "default": 600,
+      "description": "Maximum number of seconds to wait for a submission to complete before giving up.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "ASSEMBLYLINE_FORCE_RESUBMIT": {
+      "default": false,
+      "description": "When true, every enrichment re-submits the file even if AssemblyLine already has results for it.",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_MAX_FILE_SIZE_MB": {
+      "default": 1,
+      "description": "Files larger than this size (in MB) are skipped (the AssemblyLine API would reject them anyway).",
+      "minimum": 0,
+      "type": "number"
+    },
+    "ASSEMBLYLINE_INCLUDE_SUSPICIOUS": {
+      "default": false,
+      "description": "When true, suspicious-rated IOCs are imported alongside malicious-rated ones.",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_CREATE_ATTACK_PATTERNS": {
+      "default": true,
+      "description": "When true, MITRE ATT&CK techniques observed by AssemblyLine become Attack-Pattern SDOs in OpenCTI.",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_CREATE_MALWARE_ANALYSIS": {
+      "default": true,
+      "description": "When true, the connector emits a Malware-Analysis SDO that surfaces in the Malware Analysis section of the observable.",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "When true, an Observable is created next to each generated Indicator and linked through a based-on relationship.",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_SEQUENTIAL_MODE": {
+      "default": true,
+      "description": "When true, the connector waits for AssemblyLine to be idle (no in-flight submission) before sending a new one. The wait is capped by ASSEMBLYLINE_TIMEOUT.",
+      "type": "boolean"
+    },
+    "ASSEMBLYLINE_POLL_INTERVAL": {
+      "default": 30,
+      "description": "Seconds between idle-checks when ASSEMBLYLINE_SEQUENTIAL_MODE is enabled.",
+      "minimum": 1,
+      "type": "integer"
+    },
+    "ASSEMBLYLINE_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Observables marked above this TLP are skipped. The connector will not submit their file content to the external AssemblyLine deployment.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ASSEMBLYLINE_URL",
+    "ASSEMBLYLINE_USER",
+    "ASSEMBLYLINE_APIKEY"
+  ],
+  "additionalProperties": true
+}

@@ -1182,6 +1182,7 @@ class AssemblyLineConnector:
                 created_by_ref=self.assemblyline_identity_standard_id,
                 analysis_sco_refs=analysis_sco_refs or None,
                 external_references=[external_reference],
+                object_marking_refs=source_marking_refs,
             )
             stix_objects.append(malware_analysis)
 
@@ -1611,6 +1612,7 @@ View full results in AssemblyLine: {self.assemblyline_url}/submission/{sid}
             "abstract": "AssemblyLine Analysis Results",
             "content": note_content,
             "object_refs": [observable["id"]],
+            "objectMarking": self._source_marking_refs(observable),
         }
         if self.assemblyline_author:
             note_data["createdBy"] = self.assemblyline_author

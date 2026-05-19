@@ -742,6 +742,89 @@ class TestMalwareAnalysisPropagatesSourceMarkings:
                 '"created_by_ref"' not in serialized
             ), f"{obj.type} should not use the standard SDO created_by_ref: {serialized}"
 
+    def test_malware_analysis_inherits_amber(self) -> None:
+        # The Malware-Analysis SDO carries the verdict, submission id
+        # and score derived from the enriched file. Without the
+        # source marking, OpenCTI would expose the analysis result
+        # more broadly than the source observable, which silently
+        # leaks ``TLP:AMBER`` analysis metadata to user groups that
+        # are only allowed to see the (correctly marked) source.
+        bundle = self._run()
+        malware_analysis = next(
+            o for o in bundle.values() if getattr(o, "type", None) == "malware-analysis"
+        )
+        assert malware_analysis.object_marking_refs == [stix2.TLP_AMBER["id"]], (
+            "Malware-Analysis SDO should inherit the source marking, got: "
+            f"{getattr(malware_analysis, 'object_marking_refs', None)}"
+        )
+
+
+class TestSummaryNoteInheritsSourceMarking:
+    """``_create_summary_note`` propagates the source observable's TLP.
+
+    The summary Note built by the REST API path contains the verdict,
+    submission id, file hash, size and IOC counts derived from the
+    enriched file — leaking it to a broader audience than the source
+    observable is the same access-control bug as the SCO downgrade,
+    just through a different code path. The fix passes the source
+    markings through ``_source_marking_refs`` and sets them on
+    ``note_data["objectMarking"]`` so the API-created Note inherits
+    the same TLP as the enriched observable. ``_source_marking_refs``
+    is also what gives us the ``TLP:CLEAR`` fallback for unmarked
+    sources, matching the bundle-side behaviour.
+    """
+
+    @staticmethod
+    def _captured_note(observable: Dict[str, Any]) -> Dict[str, Any]:
+        connector = _make_connector()
+        note_create = MagicMock()
+        connector.helper.api = MagicMock(note=MagicMock(create=note_create))
+        connector._create_summary_note(
+            observable=observable,
+            results={"sid": "sid-1", "max_score": 1500, "file_info": {}},
+            malicious_iocs={
+                "domains": [],
+                "ips": [],
+                "urls": [],
+                "families": [],
+            },
+            counts={"observables": 0, "indicators": 0},
+            malware_analysis_id="malware-analysis--abc",
+            attack_patterns_count=0,
+        )
+        assert note_create.called, "Expected helper.api.note.create to be called"
+        return note_create.call_args.kwargs
+
+    def test_amber_source_propagates_to_note(self) -> None:
+        observable = {
+            "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": stix2.TLP_AMBER["id"],
+                }
+            ],
+        }
+        kwargs = self._captured_note(observable)
+        assert kwargs.get("objectMarking") == [stix2.TLP_AMBER["id"]], (
+            "Summary Note should inherit the source TLP:AMBER marking, got: "
+            f"{kwargs.get('objectMarking')}"
+        )
+
+    def test_unmarked_source_falls_back_to_tlp_clear(self) -> None:
+        observable = {
+            "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+            "objectMarking": [],
+        }
+        kwargs = self._captured_note(observable)
+        from main import _TLP_CLEAR_MARKING_ID
+
+        assert kwargs.get("objectMarking") == [_TLP_CLEAR_MARKING_ID], (
+            "Unmarked source should fall back to OpenCTI's TLP:CLEAR (not WHITE), got: "
+            f"{kwargs.get('objectMarking')}"
+        )
+
 
 class TestTerminalAssemblyLineStates:
     """Terminal AssemblyLine submission states must surface immediately.
