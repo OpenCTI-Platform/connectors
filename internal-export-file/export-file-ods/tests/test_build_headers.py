@@ -148,18 +148,25 @@ class TestNoHashesColumn:
 class TestLargeInputs:
     """``build_headers`` does not hit CPython's positional-argument limit.
 
-    Copilot flagged that the previous ``set().union(*generator)`` could
-    blow the argument list on large exports. ``build_headers`` builds
-    the union iteratively (``set.update`` per entity), so even a list
-    that would have overflowed the positional-argument limit on the
-    previous implementation completes in linear memory.
+    A naive ``sorted(set().union(*(entity.keys() for entity in entities)))``
+    implementation expands the generator into one positional argument
+    per entity. CPython rejects function calls beyond a hard
+    positional-argument ceiling (around one million arguments on
+    most builds, but the exact limit is implementation-defined and
+    has been lowered in the past), so an export with enough entities
+    would crash with ``TypeError: too many positional arguments``.
+    ``build_headers`` builds the union iteratively (``set.update``
+    per entity) so the size of the input never reaches the call
+    stack — the function therefore scales linearly in memory and
+    cannot trip this limit regardless of how big the export gets.
     """
 
     def test_many_entities_completes_without_unpacking_overflow(self):
-        # CPython's "too many positional arguments" call limit kicks in
-        # somewhere below 1M arguments on most builds; we generate 10k
-        # entities — large enough to be representative of a busy
-        # export and small enough to stay fast in CI.
+        # 10k entities is large enough to be representative of a busy
+        # export and small enough to keep this case fast in CI; the
+        # generator-unpacking variant would still complete at this
+        # size, so this is a forward-looking regression test rather
+        # than a reproduction of the failure mode.
         entities = [{f"k_{i}": i} for i in range(10_000)]
         headers = build_headers(entities, _CANONICAL)
         assert len(headers) == 10_000

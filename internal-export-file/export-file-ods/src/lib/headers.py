@@ -41,25 +41,38 @@ def build_headers(
     export does not actually carry them. Extra algorithms present on
     the data are appended after the canonical ones in the order in
     which they are first encountered.
+
+    Implementation note: the function makes **one** pass over
+    ``entities_list``, collecting both the union of entity keys and
+    the per-algorithm column set on the same iteration. This avoids
+    eagerly materialising ``entities_list`` into an extra N-sized
+    list, which matters on large exports where the connector hands
+    several thousand entities to ``_get_content``. Generators /
+    iterators are also accepted (the input is consumed exactly once).
     """
-    entities_seq = list(entities_list)
-
     header_set: set = set()
-    for entity in entities_seq:
-        header_set.update(entity.keys())
-    headers: List[str] = sorted(header_set)
-    if "hashes" not in headers:
-        return headers
-    headers.remove("hashes")
-
     algorithms: List[str] = list(canonical_hash_algorithms)
-    seen_algorithms = set(algorithms)
-    for entity in entities_seq:
+    seen_algorithms: set = set(algorithms)
+
+    for entity in entities_list:
+        header_set.update(entity.keys())
+        # Track per-algorithm columns inline so we can stream a
+        # generator input and still emit ``hashes.<ALGO>`` columns
+        # for any algorithm that shows up on the data. The cost of
+        # this branch when ``hashes`` is absent from a given entity
+        # is just a single ``dict.get`` returning ``None`` / an empty
+        # list, so the single-pass design stays cheap on entity
+        # types that do not carry hashes.
         for hashed in entity.get("hashes") or []:
             algorithm = (hashed or {}).get("algorithm")
             if algorithm and algorithm not in seen_algorithms:
                 algorithms.append(algorithm)
                 seen_algorithms.add(algorithm)
+
+    headers: List[str] = sorted(header_set)
+    if "hashes" not in headers:
+        return headers
+    headers.remove("hashes")
 
     hash_headers = [f"{HASH_HEADER_PREFIX}{algorithm}" for algorithm in algorithms]
     return headers + [header for header in hash_headers if header not in headers]
