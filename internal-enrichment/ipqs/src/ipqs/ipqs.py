@@ -331,13 +331,21 @@ class IPQSConnector:
     _SENSITIVE_OBSERVABLE_FIELDS = ("credential", "account_login")
 
     @classmethod
-    def _redact_observable(cls, observable: Dict[str, Any]) -> Dict[str, Any]:
+    def _redact_observable(cls, observable: Any) -> Any:
         """Return a log-safe copy of ``observable``.
 
         Drops every value listed in :data:`_SENSITIVE_OBSERVABLE_FIELDS`
         (``credential`` / ``account_login``) and replaces it with a
         ``***REDACTED***`` marker so operators can still see that the
         field was present without leaking its value into the logs.
+
+        The signature is intentionally permissive: this helper is
+        called from a debug-logging path, so it must never raise on a
+        surprising input shape (e.g. a non-``dict`` payload from a
+        future OpenCTI version). Non-``dict`` inputs are returned
+        unchanged — the parameter and return types are therefore
+        widened to :data:`typing.Any` to reflect that contract and
+        keep static analysers honest.
         """
         if not isinstance(observable, dict):
             return observable
