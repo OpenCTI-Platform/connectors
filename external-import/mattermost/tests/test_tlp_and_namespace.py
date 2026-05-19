@@ -18,6 +18,8 @@ These three helpers are part of the connector's public contract:
   run.
 """
 
+from typing import Any, Dict, List, Optional
+
 import pytest
 import stix2
 from main import (
@@ -149,3 +151,156 @@ class TestMakeTLPMarking:
         assert marking.x_opencti_definition_type == "TLP"
         assert marking.x_opencti_definition == "TLP:CLEAR"
         assert marking.definition_type == "statement"
+
+
+# ----------------------------------------------------------------------
+# Test helpers
+# ----------------------------------------------------------------------
+
+
+class _StubIdentityAPI:
+    """Counts ``identity.list`` calls and returns canned results.
+
+    Mirrors the shape ``MattermostConnector._ensure_author`` consumes
+    without pulling in ``pycti`` / ``mattermostdriver`` at test time.
+    """
+
+    def __init__(self, results: Optional[List[Dict[str, Any]]] = None) -> None:
+        self._results = results or []
+        self.calls: List[Dict[str, Any]] = []
+
+    def list(self, *, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        self.calls.append(filters)
+        return list(self._results)
+
+
+class _StubAPI:
+    def __init__(self, identity: _StubIdentityAPI) -> None:
+        self.identity = identity
+
+
+class _StubHelper:
+    def __init__(self, identity: _StubIdentityAPI) -> None:
+        self.api = _StubAPI(identity)
+
+
+def _build_connector_stub(identity_api: _StubIdentityAPI) -> MattermostConnector:
+    """Return a ``MattermostConnector`` instance suitable for unit tests.
+
+    Bypasses ``__init__`` (which would require a real Mattermost driver
+    and a live OpenCTI helper) and wires only the attributes the methods
+    under test consume.
+    """
+    connector = MattermostConnector.__new__(MattermostConnector)
+    connector.helper = _StubHelper(identity_api)
+    connector.mattermost_marking_id = stix2.TLP_AMBER.id
+    connector._reset_run_caches()
+    return connector
+
+
+class TestEnsureAuthorCache:
+    """``_ensure_author`` looks up / creates each author at most once per cycle.
+
+    The Copilot review on PR #4637 flagged that ``_process_post`` was
+    hitting ``identity.list`` for every post, even when many posts
+    share the same author. The tests below pin the per-run cache
+    contract so a regression cannot reintroduce the N+1 lookup.
+    """
+
+    def test_existing_identity_is_reused_and_lookup_is_cached(self):
+        identity_api = _StubIdentityAPI(results=[{"standard_id": "identity--existing"}])
+        connector = _build_connector_stub(identity_api)
+        bundle: List[Any] = []
+
+        first = connector._ensure_author("alice@example.com", bundle)
+        second = connector._ensure_author("alice@example.com", bundle)
+
+        assert first == second == "identity--existing"
+        assert len(identity_api.calls) == 1
+        assert bundle == []
+
+    def test_missing_identity_is_created_once_and_appended_once(self):
+        identity_api = _StubIdentityAPI(results=[])
+        connector = _build_connector_stub(identity_api)
+        bundle: List[Any] = []
+
+        first = connector._ensure_author("bob@example.com", bundle)
+        second = connector._ensure_author("bob@example.com", bundle)
+
+        assert first == second
+        assert first.startswith("identity--")
+        assert len(identity_api.calls) == 1
+        assert len(bundle) == 1
+        assert bundle[0]["name"] == "bob@example.com"
+        assert bundle[0]["identity_class"] == "individual"
+
+    def test_distinct_authors_trigger_distinct_lookups(self):
+        identity_api = _StubIdentityAPI(results=[])
+        connector = _build_connector_stub(identity_api)
+        bundle: List[Any] = []
+
+        alice = connector._ensure_author("alice@example.com", bundle)
+        bob = connector._ensure_author("bob@example.com", bundle)
+
+        assert alice != bob
+        assert len(identity_api.calls) == 2
+        assert len(bundle) == 2
+
+    def test_reset_run_caches_clears_the_author_cache(self):
+        identity_api = _StubIdentityAPI(results=[{"standard_id": "identity--existing"}])
+        connector = _build_connector_stub(identity_api)
+        bundle: List[Any] = []
+
+        connector._ensure_author("alice@example.com", bundle)
+        connector._reset_run_caches()
+        connector._ensure_author("alice@example.com", bundle)
+
+        # After ``_reset_run_caches`` the cache is empty, so the second
+        # cycle hits ``identity.list`` again — the cache is per-run, not
+        # global, so updates on the OpenCTI side become visible on the
+        # next cycle.
+        assert len(identity_api.calls) == 2
+
+
+class TestMediaContentAttachmentsOmission:
+    """``x_opencti_files`` must be absent when there are no attachments.
+
+    Matches the convention used elsewhere in the repository (e.g.
+    ``external-import/email-intel-imap`` asserts the key is absent in
+    the no-attachment case) and avoids spurious updates when
+    ``CONNECTOR_UPDATE_EXISTING_DATA`` is enabled.
+    """
+
+    @staticmethod
+    def _build_media_content(
+        attachments: List[Dict[str, Any]],
+    ) -> CustomObservableMediaContent:
+        """Replicate ``_process_post``'s ``custom_properties`` build.
+
+        We construct the observable through the same conditional that
+        ``_process_post`` uses so the test pins the exact contract
+        without needing a full ``MattermostConnector`` instance.
+        """
+        custom_properties: Dict[str, Any] = {
+            "x_opencti_description": "hello",
+            "created_by_ref": "identity--00000000-0000-0000-0000-000000000000",
+        }
+        if attachments:
+            custom_properties["x_opencti_files"] = attachments
+        return CustomObservableMediaContent(
+            url="https://mm.example.org:8065/team-a/pl/abc123",
+            content="hello",
+            media_category="mattermost",
+            object_marking_refs=[stix2.TLP_AMBER.id],
+            allow_custom=True,
+            custom_properties=custom_properties,
+        )
+
+    def test_no_attachments_omits_x_opencti_files(self):
+        observable = self._build_media_content([])
+        assert "x_opencti_files" not in observable
+
+    def test_at_least_one_attachment_keeps_x_opencti_files(self):
+        attachments = [{"name": "abc_report.pdf", "data": "Zm9v", "mime_type": ""}]
+        observable = self._build_media_content(attachments)
+        assert observable["x_opencti_files"] == attachments

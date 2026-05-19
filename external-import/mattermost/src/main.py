@@ -269,6 +269,15 @@ class MattermostConnector(ExternalImportConnector):
         # ``user_id -> email`` so we hit Mattermost's ``users.get_user``
         # at most once per author per run, even on busy channels.
         self._user_email_cache: Dict[str, str] = {}
+        # ``email -> author standard_id`` so we hit OpenCTI's
+        # ``identity.list`` / append a newly-built ``stix2.Identity`` to
+        # the bundle at most once per author per run, even when many
+        # posts share the same author. The cached id is the
+        # ``standard_id`` returned by ``identity.list`` for existing
+        # authors and the ``stix2.Identity.id`` for newly-created ones,
+        # which is what ``CustomObservableMediaContent.created_by_ref``
+        # expects.
+        self._author_id_cache: Dict[str, str] = {}
         # ``post_url -> set(filename)`` so we hit OpenCTI's
         # ``stix_cyber_observable.list`` / ``.read`` at most once
         # per post-URL per run, regardless of how many attachments
@@ -283,6 +292,39 @@ class MattermostConnector(ExternalImportConnector):
         email = self.driver.users.get_user(user_id)["email"]
         self._user_email_cache[user_id] = email
         return email
+
+    def _ensure_author(self, email: str, bundle: List[Any]) -> str:
+        """Return the author id for ``email``, caching the answer for this run.
+
+        Hits OpenCTI's ``identity.list`` at most once per distinct author
+        per cycle: on the first occurrence the existing identity is
+        re-used (its ``standard_id`` is cached) or a new
+        ``stix2.Identity`` is created and appended to ``bundle`` (its
+        ``id`` is cached). Subsequent posts by the same author skip both
+        the API lookup and the bundle append, so a channel with N posts
+        from K distinct authors triggers exactly K identity lookups
+        instead of N.
+        """
+        cached = self._author_id_cache.get(email)
+        if cached is not None:
+            return cached
+        identities = self.helper.api.identity.list(
+            filters=self._list_filter("name", email)
+        )
+        if identities:
+            author_id = identities[0]["standard_id"]
+        else:
+            author = stix2.Identity(
+                id=PyctiIdentity.generate_id(email, "individual"),
+                name=email,
+                identity_class="individual",
+                description="Mattermost author",
+                object_marking_refs=[self.mattermost_marking_id],
+            )
+            bundle.append(author)
+            author_id = author["id"]
+        self._author_id_cache[email] = author_id
+        return author_id
 
     @staticmethod
     def _namespaced_channel_name(team_name: str, channel_name: str) -> str:
@@ -440,25 +482,13 @@ class MattermostConnector(ExternalImportConnector):
         )
 
         # Author -----------------------------------------------------------
-        # Cached for the duration of the run to avoid one
-        # ``users.get_user`` call per post on busy channels.
+        # Both the Mattermost user lookup (``_author_email``) and the
+        # OpenCTI identity lookup (``_ensure_author``) are cached for the
+        # duration of the run so a busy channel with many posts from a
+        # handful of distinct authors triggers a small constant number
+        # of API calls instead of one pair per post.
         email = self._author_email(post["user_id"])
-        identities = self.helper.api.identity.list(
-            filters=self._list_filter("name", email)
-        )
-        if identities:
-            author = identities[0]
-            author_id = author["standard_id"]
-        else:
-            author = stix2.Identity(
-                id=PyctiIdentity.generate_id(email, "individual"),
-                name=email,
-                identity_class="individual",
-                description="Mattermost author",
-                object_marking_refs=[self.mattermost_marking_id],
-            )
-            author_id = author["id"]
-            bundle.append(author)
+        author_id = self._ensure_author(email, bundle)
 
         # Attachments ------------------------------------------------------
         attachments: List[Dict[str, Any]] = []
@@ -489,6 +519,16 @@ class MattermostConnector(ExternalImportConnector):
         # mirrors it so the observable shows a user-facing description in
         # the OpenCTI UI. ``created_by_ref`` and ``x_opencti_files`` are
         # OpenCTI extensions and are emitted through ``custom_properties``.
+        # ``x_opencti_files`` is only added when there is at least one
+        # attachment, matching the convention used by other
+        # external-import connectors and avoiding spurious updates when
+        # ``CONNECTOR_UPDATE_EXISTING_DATA`` is enabled.
+        custom_properties: Dict[str, Any] = {
+            "x_opencti_description": content,
+            "created_by_ref": author_id,
+        }
+        if attachments:
+            custom_properties["x_opencti_files"] = attachments
         media_content = CustomObservableMediaContent(
             url=post_url,
             content=content,
@@ -496,11 +536,7 @@ class MattermostConnector(ExternalImportConnector):
             media_category="mattermost",
             object_marking_refs=[self.mattermost_marking_id],
             allow_custom=True,
-            custom_properties={
-                "x_opencti_description": content,
-                "created_by_ref": author_id,
-                "x_opencti_files": attachments,
-            },
+            custom_properties=custom_properties,
         )
         bundle.append(media_content)
         bundle.append(
