@@ -200,7 +200,7 @@ The `Artifact` branch implements the IPQS Malware File Scanner API following the
    - sets the observable's `x_opencti_score` (100 if any engine flagged the file, 50 otherwise);
    - attaches a `Clean` / `Malicious` label to the observable;
    - builds an `Indicator` with the canonical `[file:hashes.'SHA-256' = '<hash>']` pattern, the detection verdict (`x_opencti_detection`), and a `based-on` relationship to the observable;
-   - attaches an external reference (`source_name="IPQS File Analyzer"`, `external_id=<request_id>`) to the observable.
+   - attaches an external reference (`source_name="IPQS File Analyzer"`, `external_id=<request_id>`) to the observable **when the IPQS response carries a `request_id`**. Cache hits (`status="cached"` on `/malware/lookup`) intentionally skip the external reference because the upstream does not surface a stable `request_id` for cached verdicts.
 5. **Failure path** — when IPQS returns `success=false` (no credits, invalid input, ...) or the upstream is unreachable, the connector emits a `Note` (`abstract="IPQS enrichment failed"`) attached to the observable so the operator can diagnose the issue from the OpenCTI UI without inspecting connector logs.
 
 ### Generated STIX Objects
@@ -229,7 +229,7 @@ Common issues:
 - **Unsupported Entity Type**: Check connector scope configuration
 - **Rate Limiting**: IPQS may limit requests based on your plan
 - **Artifact / `Insufficient Credits`**: each malware scan costs 10 IPQS credits — check your account balance or upgrade
-- **Artifact / timeouts**: complex samples may take longer than the 90s polling budget; rerun the enrichment, the cache will surface the result once IPQS completes the scan
+- **Artifact / timeouts**: complex samples may take longer than the hard 120s polling budget (`_POLLING_BUDGET_SECONDS`, with a per-`/postback`-request 10s `_POSTBACK_REQUEST_TIMEOUT_SECONDS`); rerun the enrichment — the cache will surface the result once IPQS completes the scan
 - **Artifact / `IPQS authentication failed (HTTP 401)`**: the malware-file-scanner endpoints require a paid plan distinct from the fraud-scoring plan
 
 ---

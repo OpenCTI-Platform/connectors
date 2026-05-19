@@ -230,7 +230,14 @@ class IPQSClient:
         url = f"{self.url}{endpoint}"
         is_post = bool(file) or bool(params and params.get("url"))
         try:
-            self.helper.log_info(f"IPQS malware request: {endpoint}")
+            # ``debug`` rather than ``info`` because the postback polling
+            # loop hits this code path up to ``_MAX_POLLING_ATTEMPTS`` times
+            # per Artifact enrichment — emitting one INFO line per call
+            # would flood normal ``info``-level deployments with N noisy
+            # lines per single enrichment. ``get_malware_scan_info``
+            # already logs the lookup / scan / postback lifecycle at INFO
+            # so operators still see the high-level state changes.
+            self.helper.log_debug(f"IPQS malware request: {endpoint}")
             if is_post:
                 response = self.session.post(
                     url,
@@ -304,7 +311,12 @@ class IPQSClient:
             )
             return None
 
-        # Try the cache first.
+        # Try the cache first. Lifecycle events for the malware-scan flow
+        # are emitted at INFO so operators see one log line per Artifact
+        # enrichment (lookup → scan → polling start → completion), while
+        # the per-request lines from ``_query_malware`` are kept at DEBUG
+        # to avoid a flood during postback polling.
+        self.helper.log_info("IPQS malware scan: looking up cached verdict.")
         response = self._query_malware(
             self._MALWARE_LOOKUP_ENDPOINT, file=file, params=params
         )
@@ -312,9 +324,13 @@ class IPQSClient:
             self.helper.log_error("No response received from IPQS lookup request.")
             return None
         if response.get("status") == "cached":
+            self.helper.log_info("IPQS malware scan: cache hit; no scan submitted.")
             return response
 
         # Cache miss: submit a scan request.
+        self.helper.log_info(
+            "IPQS malware scan: cache miss, submitting file to /malware/scan."
+        )
         response = self._query_malware(
             self._MALWARE_SCAN_ENDPOINT, file=file, params=params
         )
@@ -354,6 +370,10 @@ class IPQSClient:
         # ``_POLLING_BUDGET_SECONDS`` (default 120s) even if every
         # iteration burns its full per-request timeout — a single slow
         # scan can no longer tie up the enrichment worker indefinitely.
+        self.helper.log_info(
+            "IPQS malware scan: polling /postback for "
+            f"request_id={request_id} (budget={self._POLLING_BUDGET_SECONDS}s)."
+        )
         postback_params = {"request_id": request_id}
         deadline = time.monotonic() + self._POLLING_BUDGET_SECONDS
         for _ in range(self._MAX_POLLING_ATTEMPTS):
