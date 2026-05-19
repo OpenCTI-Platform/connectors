@@ -1,0 +1,30 @@
+services:
+  connector-usta:
+    image: opencti/connector-usta:latest
+    # build:
+    #   context: .
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=ChangeMe
+      
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=USTA
+      # - CONNECTOR_SCOPE=indicator,observable,malware,identity,incident,user-account,report,threat-actor
+      - CONNECTOR_LOG_LEVEL=info
+      # - CONNECTOR_DURATION_PERIOD=PT30M
+      # - CONNECTOR_QUEUE_THRESHOLD=500
+      
+      # - USTA_API_BASE_URL=https://usta.prodaft.com
+      - USTA_API_KEY=ChangeMe
+      # - USTA_IMPORT_START_DATE=P90D
+      # - USTA_PAGE_SIZE=100
+      # - USTA_IMPORT_MALICIOUS_URLS=true
+      # - USTA_IMPORT_PHISHING_SITES=true
+      # - USTA_IMPORT_MALWARE_HASHES=true
+      # - USTA_IMPORT_COMPROMISED_CREDENTIALS=true
+      # - USTA_IMPORT_CREDIT_CARDS=true
+      # - USTA_IMPORT_DEEP_SIGHT_TICKETS=true
+      # - USTA_STORE_CREDENTIAL_PASSWORD=false
+      # - USTA_TLP_LEVEL=red
+      # - USTA_CONFIDENCE_LEVEL=99
+    restart: always

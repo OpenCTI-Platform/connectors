@@ -49,3 +49,21 @@ def test_note_to_stix2_object_returns_valid_stix_object(
     # Then: A valid STIX2.1 Note is returned
     assert isinstance(stix2_obj, Stix2Note)
     assert isinstance(stix2_obj, Stix2Note)
+
+
+def test_note_to_stix2_object_returns_valid_stix_object_with_reference_object(
+    fake_valid_reference,
+):
+    """Test that Note to_stix2_object method returns a valid STIX2.1 Note with reference object."""
+    # Given: A valid Note instance
+    note = Note(
+        publication_date="2025-01-01T12:00:00Z",
+        content="Test content",
+        objects=[fake_valid_reference],
+    )
+    # When: calling to_stix2_object method
+    stix2_obj = note.to_stix2_object()
+    # Then: A valid STIX2.1 Note is returned
+    # object_refs should be a Reference model id
+    assert isinstance(stix2_obj, Stix2Note)
+    assert stix2_obj.object_refs == [fake_valid_reference.id]

@@ -1,6 +1,12 @@
 # OpenCTI External Import Connector - ProofPoint ET Reputation
 
-Table of Contents
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
+The ProofPoint ET Reputation connector imports malicious IP addresses and domain names from ProofPoint's Emerging Threats Intelligence Rep List into OpenCTI as observables and indicators.
+
+## Table of Contents
 
 - [OpenCTI External Import Connector - ProofPoint ET Reputation](#opencti-external-import-connector---proofpoint-et-reputation)
   - [Introduction](#introduction)
@@ -22,7 +28,6 @@ Table of Contents
     - [Use Cases](#use-cases)
   - [Debugging](#debugging)
   - [Examples in OpenCTI](#examples-in-opencti)
-
 
 ## Introduction
 
@@ -149,7 +154,6 @@ However, if you would like to force an immediate download of a new batch of enti
 Find the connector, and click on the refresh button to reset the connector's state and force a new
 download of data by re-running the connector.
 
-
 ## Behavior
 
 - STIX objects Ingestion into OpenCTI:
@@ -191,18 +195,13 @@ flowchart TD
 
 - **Token Location:** The ProofPoint ET Reputation API token is obtained from the ProofPoint platform and must be configured in the config.yml file under `api_token`, or defined as the `PROOFPOINT_ET_REPUTATION_API_TOKEN` environment variable in the Docker configuration. This information is available at the following address once the user is logged in: https://etadmin.proofpoint.com/iqrisk-list
 
-
 - **Duration Period:** The duration_period parameter is set to 24 hours by default. This value represents the interval between successive runs of the connector, allowing sufficient time for data to be ingested into OpenCTI after each collection. This period allows a balance to be struck between the ingest and update cycles of data from ProofPoint, while avoiding redundant collection processes. In addition, ProofPoint's documentation states that `on average, approximately 30% of the list is refreshed every three to four weeks`.
-
 
 - **Asynchronous fetch data:** The connector uses the ThreadPoolExecutor for asynchronous execution of GET requests. Performance is improved by simultaneously retrieving data from the ProofPoint endpoints for the `iprepdata.json` and `domainrepdata.json` collections.
 
-
 - **Model Validation:** Data ingested by ProofPoint is validated against defined models to ensure compliance and consistency. Any data that does not conform to these models is logged and ignored to maintain data quality. 
 
-
 - **Min Score Filtering:** The connector applies a filtering mechanism based on the min_score parameter. Entities with scores below the configured threshold are excluded from processing, allowing users to control the granularity and relevance of the ingested data.
-
 
 - **Marking Definition:** By default, all observables, indicators and their relationships are generated with a `TLP:AMBER+STRICT` marking
 
@@ -212,9 +211,7 @@ flowchart TD
 
 - **Data Ingested:** The values shown in the tables below were collected at a specific time and are based on the data available at that time. It is important to note that the amount of data collected may vary depending on updates to the ProofPoint ET Reputation lists, and the specific conditions associated with each connector run. These figures are therefore indicative and may change over time.
 
-
 - **Ingestion Time:** The ingestion time is indicative and may vary depending on a number of factors, such as the size of the data collected, network performance, current connector load, and specific user-defined configurations, such as minimum score thresholds or options for generating indicators and relationships. These elements can have a significant impact on the overall duration of the process.
-
 
 - **Environment for Ingestion:** The metrics presented were collected in a controlled development environment (Windows) under the following conditions: 
 
@@ -281,22 +278,17 @@ Here are some examples of the debug logs you can expect to see when debugging is
 - Entity Ignored Due Model Validation Error
   - `"message": "[CONNECTOR] Model validation: The entity or reputation score does not conform to the schema. The entity has been ignored.", "attributes": {"collection": "Domain-Name", "entity": "::example0.info", "category_and_score": {"VPN": "100"}`
 
-
 - Entity Ignored Due to Minimum Score Configuration
   - `"message": "[CONNECTOR] The creation of the entity was ignored due to your configuration of the min_score variable", "attributes": {"collection": "Domain-Name", "min_score_config": 70, "entity": "example1-domain.com", "entity_score": 30}`
-
 
 - Observable Generation Success
   - `"message": "[CONNECTOR] The generation of observable in stix2 format from reputation data has been a success.", "attributes": {"observable_id": "domain-name--UUID", "observable_value": "example2-domain.com"}`
 
-
 - Indicator Generation Success
   - `"message": "[CONNECTOR] The generation of indicator in stix2 format from reputation data has been a success.", "attributes": {"indicator_id": "indicator--UUID", "indicator_name": "example2-domain.com"}`
 
-
 - Relationship Generation Success
   - `"message": "[CONNECTOR] The generation of the relationship between the observable and the indicator was a success.", "attributes": {"relationship_id": "relationship--UUID", "source_ref": "indicator--UUID", "relationship_type": "based-on", "target_ref": "domain-name--UUID"}`
-
 
 ## Examples in OpenCTI
 
@@ -335,6 +327,3 @@ Example Author:
 - Author Organization
 
 ![Author Organization](./__docs__/media/Author-Organization.png)
-
-
-

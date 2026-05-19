@@ -58,7 +58,9 @@ def is_stix_indicator(data: dict) -> bool:
     :param data: Data to check
     :return: True if data represents a STIX Indicator, False otherwise
     """
-    return data["type"] == "indicator" and data["pattern_type"].startswith("stix")
+    return data.get("type") == "indicator" and data.get("pattern_type", "").startswith(
+        "stix"
+    )
 
 
 def is_observable(data: dict) -> bool:

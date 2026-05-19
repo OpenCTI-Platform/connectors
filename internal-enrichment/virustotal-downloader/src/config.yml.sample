@@ -1,6 +1,10 @@
 opencti:
-  url: 'ChangeMe'
+  url: 'http://localhost'
   token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
 
 virustotal_downloader:
   api_key: 'ChangeMe' # See https://www.virustotal.com/gui/user/YOURUSERNAME/apikey

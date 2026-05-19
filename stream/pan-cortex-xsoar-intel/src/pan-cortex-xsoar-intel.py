@@ -195,6 +195,12 @@ class XSoarConnector:
 
         self._org_name_cache = {}
 
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
+
     def is_filtered(self, data: dict):
         return "type" in data and data["type"] not in ["indicator"]
 

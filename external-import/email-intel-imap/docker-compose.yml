@@ -1,24 +1,25 @@
 version: '3'
 services:
   email-intel-imap:
-    image: opencti/connector-email-intel-imap:rolling
+    image: opencti/connector-email-intel-imap:latest
     environment:
       # OpenCTI configuration
-      OPENCTI_URL: http://localhost:PORT
-      OPENCTI_TOKEN: ChangeMe
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
       # Common connector configuration
-#      CONNECTOR_ID: email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601
-#      CONNECTOR_NAME: Email Intel IMAP
-#      CONNECTOR_SCOPE: email-intel-imap
-#      CONNECTOR_LOG_LEVEL: error
-#      CONNECTOR_DURATION_PERIOD: PT1H
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Email Intel IMAP
+      - CONNECTOR_SCOPE=email-intel-imap
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H
       # Connector configuration
-#      EMAIL_INTEL_IMAP_TLP_LEVEL: amber+strict
-#      EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE: P30D
-      EMAIL_INTEL_IMAP_HOST: ChangeMe
-      EMAIL_INTEL_IMAP_PORT: ChangeMe
-      EMAIL_INTEL_IMAP_USERNAME: ChangeMe
-      EMAIL_INTEL_IMAP_PASSWORD: ChangeMe
-#      EMAIL_INTEL_IMAP_MAILBOX: INBOX
-#      EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES: application/pdf,text/csv,text/plain
-      EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON: '{"token": ChangeMe, "refresh_token": "ChangeMe", ...}'
+      - EMAIL_INTEL_IMAP_HOST=ChangeMe
+      - EMAIL_INTEL_IMAP_PORT=ChangeMe
+      - EMAIL_INTEL_IMAP_USERNAME=ChangeMe
+      - EMAIL_INTEL_IMAP_PASSWORD=ChangeMe
+      # - EMAIL_INTEL_IMAP_TLP_LEVEL=amber+strict # Optional
+      # - EMAIL_INTEL_IMAP_RELATIVE_IMPORT_START_DATE=P30D # Optional
+      # - EMAIL_INTEL_IMAP_MAILBOX=INBOX # Optional
+      # - EMAIL_INTEL_IMAP_ATTACHMENTS_MIME_TYPES=application/pdf,text/csv,text/plain # Optional
+      # - EMAIL_INTEL_IMAP_GOOGLE_TOKEN_JSON='{"token": "ChangeMe", "refresh_token": "ChangeMe"}' # Optional, for Gmail
+    restart: always

@@ -1,8 +1,12 @@
 # OpenCTI SentinelOne Intel Stream Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 The SentinelOne Intel Stream Connector is a standalone Python process that monitors the creation of STIX Indicators in OpenCTI and automatically creates them in a SentinelOne Instance. 
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI SentinelOne Intel Stream Connector](#opencti-sentinelone-intel-stream-connector)
     - [Introduction](#introduction)
@@ -21,6 +25,8 @@ Table of Contents
     - [Behavior](#behavior)
     - [Debugging](#debugging)
     - [Additional information](#additional-information)
+
+## Status Filigran
 
 ## Introduction
 
@@ -59,8 +65,6 @@ Your SentinelOne URL is simply the first component of the URL you use to access 
 
 When configuring the connector, do not include the terminating `/`. For example, for the above image, you would input `https://mysentinelone.instance.net`
 
-
-
 ## Configuration variables
 
 There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
@@ -84,7 +88,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector ID                          | id                          | `CONNECTOR_ID`                          | /                                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
 | Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM                             | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
 | Connector Name                        | name                        | `CONNECTOR_NAME`                        | SentinelOne Intel Stream Connector | Yes       | Name of the connector.                                                                                                                                 |
-| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | all                                | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
+| Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       | sentinelone                                | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
 | Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info                               | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
 | Connector Live Stream ID              | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | live                               | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
 | Connector Live Stream Listen Delete   | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                               | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
@@ -98,7 +102,7 @@ Below are the parameters you'll need to set for the connector:
 
 | Parameter    | config.yml | Docker environment variable    | Mandatory | Description                                                                                      |
 |--------------|------------|--------------------------------|-----------|--------------------------------------------------------------------------------------------------| 
-| API URL      | url        | `SENTINELONE_INTEL_URL`        | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
+| API URL      | api_url        | `SENTINELONE_INTEL_API_URL`        | Yes       | The base URL of your SentinelOne management console (e.g., https://your-console.sentinelone.net) |
 | API Key      | api_key    | `SENTINELONE_INTEL_API_KEY`    | Yes       | SentinelOne API token for authentication                                                         |
 | Account ID   | account_id | `SENTINELONE_INTEL_ACCOUNT_ID` | No        | SentinelOne Account ID for scoping indicators (at least one ID required)                         |
 | Site ID      | site_id    | `SENTINELONE_INTEL_SITE_ID`    | No        | SentinelOne Site ID for scoping indicators (cannot be used with Account ID)                      |
@@ -152,7 +156,6 @@ python3 main.py
 After Installation, the connector should require minimal interaction to use, and should update automatically at a
 regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
 
-
 <br>
 
 ### Creating the Connector User
@@ -183,8 +186,6 @@ It is best practice to create a new user under the `Connectors` group and to use
 
 <br>
 
-
-
 ## Behavior
 
 The connector simply consumes the assigned stream, filtering for events where Indicators that use STIX patterns are found. The connector will determine if the Indicator's pattern is of a format SentinelOne can accept and will enact the required processing in order to push it to a SentinelOne instance as such. 
@@ -196,7 +197,6 @@ Based on the IOC types SentinelOne supports, the connector can only process Indi
 Alongside this, the connector is only able to consume basic **single-expression** STIX patterns (e.g., file:hashes.'SHA-256' = '<hash>').
 
 Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or multiple observables are **not supported** and will thus be ignored.
-
 
 ## Debugging
 

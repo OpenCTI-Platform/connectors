@@ -1,15 +1,14 @@
 version: '1'
 services:
   connector-fortinet-ti:
-    image: opencti/connector-fortinet-ti:rolling
+    image: opencti/connector-fortinet-ti:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=CHANGME
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=FORTINET-TI
       - CONNECTOR_LOG_LEVEL=error
-      - FORTINET_API_KEY=CHANGME
+      - FORTINET_API_KEY=ChangeMe
       - FORTINET_INTERVAL=24                    # In hours
       - FORTINET_URL=https://premiumapi.fortinet.com/v1/cti/feed/stix2?cc=all
       - FORTINET_IOC_SCORE=50                   # The score to be set on Indicators and Observables

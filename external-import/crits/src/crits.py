@@ -398,8 +398,6 @@ class CRITsConnector:
             **dynamic_params,
         )
 
-        return None
-
     def ip_to_stix(self, crits_obj, custom_properties):
         custom_properties["description"] = crits_obj.get("description", "")
         custom_properties["labels"] = crits_obj.get("bucket_list", [])
@@ -1264,6 +1262,6 @@ if __name__ == "__main__":
         connector = CRITsConnector()
         connector.run()
     except Exception as e:
-        print(e)
+        OpenCTIConnectorHelper.log_error(str(e))
         time.sleep(10)
-        sys.exit(0)
+        sys.exit(1)

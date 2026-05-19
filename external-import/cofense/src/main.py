@@ -2,7 +2,7 @@ import os
 import sys
 import time
 import traceback
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import stix2
@@ -152,7 +152,7 @@ class CofenseIntel(CofenseIntegration):
             description="CofenseIntel",
         )
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         friendly_name = "CofenseIntel run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
         work_id = helper.api.work.initiate_work(helper.connect_id, friendly_name)
 
@@ -254,7 +254,7 @@ def get_position() -> tuple:
     except Exception as e:
         helper.log_warning("No position found, defaulting to 30 days ago", e)
 
-    init_date = int((datetime.utcnow() - timedelta(days=30)).timestamp())
+    init_date = int((datetime.now(timezone.utc) - timedelta(days=30)).timestamp())
     return None, init_date
 
 
@@ -268,7 +268,7 @@ if __name__ == "__main__":
                     last_run = current_state["last_run"]
                     helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )

@@ -171,7 +171,10 @@ class FlashpointConfig(ConfigBaseModel):
     api_key: SecretStr = Field(description="The API key to connect to Flashpoint.")
     import_start_date: DatetimeFromIsoString = Field(
         description="The date from which to start importing data.",
+        # `default_factory` is used to set a dynamic default value (datetime) at runtime
         default_factory=lambda: iso_string_validator("P30D"),  # 30 days ago
+        # but a fixed default value (ISO string) must be used in the schema for documentation purposes
+        json_schema_extra={"default": "P30D"},
     )
     import_reports: bool = Field(
         description="Whether to import reports from Flashpoint or not.",
@@ -179,6 +182,10 @@ class FlashpointConfig(ConfigBaseModel):
     )
     indicators_in_reports: bool = Field(
         description="Whether to include indicators in the reports imported from MispFeed or not.",
+        default=False,
+    )
+    create_reports: bool = Field(
+        description="Whether to create reports or groupings from MispFeed events or not.",
         default=False,
     )
     guess_relationships_from_reports: bool = Field(

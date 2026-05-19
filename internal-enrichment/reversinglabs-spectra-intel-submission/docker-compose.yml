@@ -1,11 +1,11 @@
 version: '3'
 services:
   connector-reversinglabs-spectra-intel-submission:
-    image: opencti/connector-reversinglabs-spectra-intel-submission:rolling
+    image: opencti/connector-reversinglabs-spectra-intel-submission:latest
     environment:
       - CONNECTOR_NAME=ReversingLabs Spectra Intelligence Submission
       - CONNECTOR_SCOPE=Artifact,Url,StixFile,File
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=Changeme
       - CONNECTOR_ID=Changeme
       - CONNECTOR_CONFIDENCE_LEVEL=100 # From 0 (Unknown) to 100 (Fully trusted).

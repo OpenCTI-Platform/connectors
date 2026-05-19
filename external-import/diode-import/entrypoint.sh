@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-diode-import
 
 # Start the connector
-python3 diode-import.py
+python3 diode_import.py

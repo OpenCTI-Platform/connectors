@@ -1,26 +1,45 @@
 # OpenCTI Intel 471 Connector v2
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
 ## Description
 
-Intel 471 delivers structured technical and non-technical data and intelligence on cyber threats.
+[Intel 471](https://www.intel471.com) delivers structured technical and non-technical intelligence on cyber threats. This connector allows for seamless ingestion of Intel 471 data into the OpenCTI platform.
 
-This connector ingests STIX 2.1 objects from Intel 471's Titan cybercrime intelligence platform.
+### 🌐 The Evolution: Verity471
+The connector now supports both the legacy **Titan** platform and the new **Verity471** platform. Verity471 acts as a **superset** of Titan: it maintains full functional parity with all existing Titan features while introducing expanded data coverage and streamlined stream logic.
 
-Version 2 of the connector differs from the [OpenCTI Intel 471 Connector](../intel471) in that it replaces IoC stream with Reports stream 
-and it introduces several enhancements. For full list please refer to the [changelog](changelog.md). Intel 471 recommends using version 2 of the connector.
+## Data Streams & Platform Comparison
 
-Intel 471 Website: [https://www.intel471.com](https://www.intel471.com)
+The following table outlines the data availability across both platforms.
 
-This connector runs four streams at this time:
+| Stream | Titan Support | Verity471 Support | Produced Objects | Platform Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| **Indicators** | ✅ | ✅ | `Indicator`, `Malware`, Observables | **Titan:** IPv4, File, URL.<br>**Verity:** Adds Domain and Email. |
+| **YARA** | ✅ | ❌ | `Indicator`, `Malware` | **Verity:** Merged into the **Indicators** stream for a unified experience. |
+| **Reports** | ✅ | ✅ | `Report`, `Malware`, Observables | **Titan:** Fintel, Info, Malware, Spot, Breach Alerts.<br>**Verity:** Adds Geopol intel reports. |
+| **Vulnerabilities** | ✅ | ✅ | `Vulnerability` | Full parity across both platforms. |
 
-| Stream          | Operation                                                                                            | Produced objects
-|-----------------|------------------------------------------------------------------------------------------------------|--------------------------------------------------
-| Indicators      | Fetches malware indicators from `/indicators` application programming interface (API) endpoint       | `Indicator` and `Malware` SDOs related using `Relationship` object; `URL`, `IPv4Address` or `File` Observable related with the `Indicator` SDO using `Relationship` object
-| YARA            | Fetches YARA rules from `/yara` API endpoint                                                         | `Indicator` and `Malware` SDOs related using `Relationship` object
-| Reports         | Fetches reports from `/reports`, `/breachAlerts`, `/spotReports` and `/malwareReports` API endpoints | `Report` SDO and one or more SDO/SCO such as `Malware`, `ThreatActor`, `DomainName`, etc. related with this Report using Report's internal property `object_refs`.
-| Vulnerabilities | Fetches Common Vulnerabilities and Exposures (CVE) reports from `/cve/reports` API endpoint          | `Vulnerability` SDO
+> Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
 
-Each stream can be enabled or disabled and configured separately (see "Configuration" section for more details).
+## 🚀 Migration Guide (Titan to Verity471)
+
+Migrating is a straightforward "drop-in" replacement. Because Verity471 provides full parity for existing features, your current data and dashboards will remain consistent.
+
+### Step 1: Prepare
+* Ensure you have your Verity471 API credentials ready.
+
+### Step 2: Update Configuration
+Stop your current connector and modify your `docker-compose.yml` or `config.yml`:
+1.  **Change Backend**: Set the `INTEL471_BACKEND` variable to `verity471`.
+2.  **Update Credentials**: Input your new Verity471 API credentials.
+3. **Reset State**: To avoid data overlap and prevent duplicate ingestion during the platform switch, update all `INTEL471_INITIAL_HISTORY_*` variables to the **current date** in epoch milliseconds (e.g., `1738756800000`). This ensures the connector starts fresh with Verity471 data from the moment of migration.
+4. Note that **YARA** standalone settings are no longer relevant when using Verity471 and will be ignored, as that data now flows through the **Indicators** stream. You may remove these settings from your configuration to keep it clean.
+
+### Step 3: Restart
+Launch the connector. It will immediately begin ingesting the enriched Verity471 data (including new observables and Geopol reports) into your OpenCTI environment.
 
 ## Prerequisites
 
@@ -28,24 +47,9 @@ Intel 471 account with API credentials.
 
 Available as part of Intel 471's paid subscriptions. For more information, please contact sales@intel471.com.
 
-## Configuration
+### Configuration variables
 
-Configuration options can be set as environment variables, and in `docker-compose.yml`, or in `config.yml`.
-
-| Env variable                        | config.yaml variable       | Description
-|-------------------------------------|----------------------------|--------------------------------------------------
-| INTEL471_API_USERNAME               | api_username               | Titan API username
-| INTEL471_API_KEY                    | api_key                    | Titan API key
-| INTEL471_INTERVAL_INDICATORS        | interval_indicators        | How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.
-| INTEL471_INITIAL_HISTORY_INDICATORS | initial_history_indicators | Initial date in epoch milliseconds UTC, such as 1643989649000, the malware indicators should be fetched from on the connector's first run. If not set, they will be fetched from the connector's start date. Excludes historical dates.
-| INTEL471_INTERVAL_REPORTS           | interval_reports           | Same as INTEL471_INTERVAL_INDICATORS variable, but for reports.
-| INTEL471_INITIAL_HISTORY_REPORTS    | initial_history_reports    | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for reports.
-| INTEL471_INTERVAL_CVES              | interval_cves              | Same as INTEL471_INTERVAL_INDICATORS variable, but for CVE reports.
-| INTEL471_INITIAL_HISTORY_CVES       | initial_history_cves       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for CVE reports.
-| INTEL471_INTERVAL_YARA              | interval_yara              | Same as INTEL471_INTERVAL_INDICATORS variable, but for YARA rules.
-| INTEL471_INITIAL_HISTORY_YARA       | initial_history_yara       | Same as INTEL471_INITIAL_HISTORY_INDICATORS variable, but for YARA rules.
-| INTEL471_PROXY                      | proxy                      | Optional Proxy URL, for example `http://user:pass@localhost:3128`
-| INTEL471_IOC_SCORE                      | ioc_score                      | Indicator [score](https://docs.opencti.io/latest/usage/indicators-lifecycle/). Defaults to `70`.
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
@@ -70,7 +74,7 @@ Then, start the docker container with the provided `docker-compose.yml` or integ
 ## Usage
 
 Navigate to **Data->Connectors->Intel471** and observe completed works and works in progress. They should start to appear after
-configured intervals, if new data was available in Titan.
+configured intervals, if new data was available in Titan/Verity471.
 
 To see the indicators created by Indicators stream, and YARA stream, navigate to **Observations->Indicators**.
 
@@ -79,6 +83,5 @@ To see the malware objects created by Indicators stream and YARA stream, navigat
 To see the Reports created by Reports stream, navigate to **Analysis->Reports**.
 
 To see the CVEs created by Vulnerabilities stream, navigate to **Arsenal->Vulnerabilities**.
-
 
 **Pro-tip**: Creating a new user and API token for the connector can help you more easily track which STIX2 objects were created by the connector.

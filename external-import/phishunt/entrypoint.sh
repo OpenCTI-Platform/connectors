@@ -4,4 +4,4 @@
 cd /opt/opencti-connector-phishunt
 
 # Start the connector
-python3 phishunt.py
+python3 main.py

@@ -1,8 +1,9 @@
 opencti: # OpenCTI Parameters
-  url: 'http://localhost:PORT' # REQUIRED
+  url: 'http://localhost'
   token: 'ChangeMe' # REQUIRED
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   # Connector definition parameters - REQUIRED
   id: 'ChangeMe'
 

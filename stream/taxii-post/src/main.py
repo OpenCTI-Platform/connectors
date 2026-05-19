@@ -71,6 +71,19 @@ class TaxiiPostConnector:
         self.taxii_stix_version = get_config_variable(
             "TAXII_STIX_VERSION", ["taxii", "stix_version"], config
         )
+        self.taxii_api_root = get_config_variable(
+            "TAXII_API_ROOT", ["taxii", "api_root"], config, default="root"
+        )
+
+    def check_stream_id(self):
+        """
+        In case of stream_id configuration is missing, raise ValueError
+        """
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
 
     def _process_message(self, msg):
         try:
@@ -80,7 +93,9 @@ class TaxiiPostConnector:
         self.helper.log_info("Processing the object " + data["id"])
         url = (
             self.taxii_url
-            + "/root/collections/"
+            + "/"
+            + self.taxii_api_root
+            + "/collections/"
             + self.taxii_collection_id
             + "/objects/"
         )
@@ -144,6 +159,7 @@ class TaxiiPostConnector:
             self.helper.log_error(str(e))
 
     def start(self):
+        self.check_stream_id()
         self.helper.listen_stream(self._process_message)
 
 

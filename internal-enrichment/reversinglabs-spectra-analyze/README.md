@@ -1,62 +1,196 @@
-# ReversingLabs Spectra Analyze Submission
+# OpenCTI ReversingLabs Spectra Analyze Connector
 
-The ReversingLabs Spectra Analyze connector supports enrichment of observables and creation of indicators based on the analysis result received from ReversingLabs Spectra Analyze. Connector enables file and url submission to the Spectra Analyze. Based on the result, connector creates indicators, malwares, calculates score, adds labels and creates relationships between created objects for submitted observable.
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
 
-It enables `file` and `URL` submission to the ReversingLabs Spectra Analyze platform and obtaining network threat intelligence reports for `URLs`, `domains` and `IP addresses`.
+## Table of Contents
 
-The connector works for the following observable types in OpenCTI:
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [ReversingLabs Spectra Analyze Configuration](#reversinglabs-spectra-analyze-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
 
-- Artifact
-- Domain-Name
-- IPv4-Addr
+---
 
+## Introduction
+
+The ReversingLabs Spectra Analyze connector enables file and URL submission to [ReversingLabs Spectra Analyze](https://www.reversinglabs.com/products/spectra-analyze) appliances for deep analysis. It also provides network threat intelligence reports for URLs, domains, and IP addresses.
+
+Key features:
+- File submission for sandbox analysis
+- URL submission for analysis
+- Network threat intelligence for IPs and domains
+- Automatic indicator creation with labels
+- Malware entity creation with relationships
+- Score calculation based on analysis results
+
+---
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 6.5.6
-- Verified and tested on 6.0.10 and 6.5.6
+- ReversingLabs Spectra Analyze appliance with API access
+- Network access to Spectra Analyze API
 
-### Configuration
+---
 
-Configuration parameters are provided using environment variables as described below. Some of them are placed directly in the `docker-compose.yml` since they are not expected to be modified by final users once that they have been defined by the developer of the connector.
+## Configuration
 
-Expected environment variables to be set in the  `docker-compose.yml` that describe the connector itself. Most of the time, these values are NOT expected to be changed.
+### OpenCTI Configuration
 
-| Parameter         | Docker envvar     | Mandatory | Description                              |
-|-------------------|-------------------|-----------|------------------------------------------|
-| `connector_name`  | `CONNECTOR_NAME`  | Yes       | A connector name to be shown in OpenCTI. |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes       | Supported scope. E. g., `text/html`.     |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
-However, there are other values which are expected to be configured by end users. The following values are expected to be defined in the `.env` file or `/etc/environments`. This file is included in the `.gitignore` to avoid leaking sensitive data).  Note that the `.env.sample` file can be used as a reference.
+### Base Connector Configuration
 
-The ones that follow are connector's generic execution parameters expected to be added for export connectors.
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Artifact,IPv4-Addr,Domain-Name` |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment (default: false) |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
 
-| Parameter                                      | Docker envvar                                  | Mandatory | Description                                                                                                                                 |
-|------------------------------------------------|------------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| `opencti_url`                                  | `OPENCTI_URL`                                  | Yes       | The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`                                |
-| `opencti_token`                                | `OPENCTI_TOKEN`                                | Yes       | The default admin token configured in the OpenCTI platform parameters file.                                                                 |
-| `connector_id`                                 | `CONNECTOR_ID`                                 | Yes       | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                          |
-| `connector_name`                               | `CONNECTOR_NAME`                               | Yes       | The name of the connector.                                                                                                                  |
-| `connector_scope`                              | `CONNECTOR_SCOPE`                              | Yes       | The scope of the connector.                                                                                                                 |
-| `connector_log_level`                          | `CONNECTOR_LOG_LEVEL`                          | Yes       | The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).                                               |
-| `connector_auto`                               | `CONNECTOR_AUTO`                               | No	       | Enable or disable auto-enrichmnet on observable (default: false)                                                                            |
-| `reversinglabs_spectra_analyze_url`            | `REVERSINGLABS_SPECTRA_ANALYZE_URL`            | Yes       | The URL of the Spectra Analyze Appliance                                                                                                    |
-| `reversinglabs_spectra_analyze_token`          | `REVERSINGLABS_SPECTRA_ANALYZE_TOKEN`          | Yes       | Token used to authenticate to the Spectra Analyze Appliance                                                                                 |
-| `reversinglabs_spectra_analyze_max_tlp`        | `REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP`        | No        | Maximum TLP for entity that connector can enrich. Default: `TLP:AMBER                                                                       |
-| `reversinglabs_spectra_analyze_sandbox_os`     | `REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS`     | No        | The platform to execute the sample on. Supported values are `windows11`, `windows10`, `windows7`, `macos11`, `linux`. Default: `windows 10` |
-| `reversinglabs_spectra_analyze_cloud_analysis` | `REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS` | No        | Choose whether sample will be analyzed on Spectra Intelligence or Local Appliance. Supported values are `True` and `False`. Default: True   |
+### ReversingLabs Spectra Analyze Configuration
 
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `reversinglabs_spectra_analyze_url` | `REVERSINGLABS_SPECTRA_ANALYZE_URL` | Yes | Spectra Analyze appliance URL |
+| `reversinglabs_spectra_analyze_token` | `REVERSINGLABS_SPECTRA_ANALYZE_TOKEN` | Yes | API authentication token |
+| `reversinglabs_spectra_analyze_max_tlp` | `REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP` | No | Maximum TLP for enrichment (default: TLP:AMBER) |
+| `reversinglabs_spectra_analyze_sandbox_os` | `REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS` | No | Sandbox OS (windows11, windows10, windows7, macos11, linux) |
+| `reversinglabs_spectra_analyze_cloud_analysis` | `REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS` | No | Use cloud analysis (default: true) |
 
-### Debugging ###
+---
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.log_{LOG_LEVEL}("Sample message")`, i. e., `self.helper.log_error("An error message")`.
+## Deployment
 
+### Docker Deployment
 
-### Additional information
+Build a Docker Image using the provided `Dockerfile`.
 
-| Status            | Date     | Comment |
-|-------------------|----------|---------|
-| Filigran Verified | 30-11-25 |         |
+Example `docker-compose.yml`:
+
+```yaml
+version: '3'
+services:
+  connector-reversinglabs-spectra-analyze:
+    image: opencti/connector-reversinglabs-spectra-analyze:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ReversingLabs Spectra Analyze
+      - CONNECTOR_SCOPE=Artifact,IPv4-Addr,Domain-Name
+      - CONNECTOR_LOG_LEVEL=info
+      - REVERSINGLABS_SPECTRA_ANALYZE_URL=ChangeMe
+      - REVERSINGLABS_SPECTRA_ANALYZE_TOKEN=ChangeMe
+      - REVERSINGLABS_SPECTRA_ANALYZE_MAX_TLP=TLP:AMBER
+      - REVERSINGLABS_SPECTRA_ANALYZE_SANDBOX_OS=windows10
+      - REVERSINGLABS_SPECTRA_ANALYZE_CLOUD_ANALYSIS=true
+    restart: always
+```
+
+### Manual Deployment
+
+1. Clone the repository
+2. Copy `.env.sample` to `.env` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the connector
+
+---
+
+## Usage
+
+The connector enriches observables by:
+1. Submitting files/artifacts to Spectra Analyze for sandbox analysis
+2. Querying network threat intelligence for IPs and domains
+3. Creating malware entities, indicators, and relationships
+4. Applying threat scores and labels
+
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
+
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[Observable] --> B[Spectra Analyze Connector]
+    B --> C{Spectra Analyze API}
+    C --> D[Sandbox Analysis]
+    C --> E[Network Intel]
+    D --> F[Analysis Results]
+    E --> F
+    F --> G[Malware/Indicator]
+    F --> H[Labels/Score]
+    G --> I[OpenCTI]
+    H --> I
+```
+
+### Enrichment Mapping
+
+| Observable Type | Analysis Type | Description |
+|-----------------|---------------|-------------|
+| Artifact | Sandbox Analysis | File submitted to sandbox for dynamic analysis |
+| IPv4-Addr | Network Intel | IP address threat intelligence |
+| Domain-Name | Network Intel | Domain threat intelligence |
+
+### Sandbox OS Options
+
+| Value | Description |
+|-------|-------------|
+| `windows11` | Windows 11 environment |
+| `windows10` | Windows 10 environment (default) |
+| `windows7` | Windows 7 environment |
+| `macos11` | macOS 11 environment |
+| `linux` | Linux environment |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Malware | Identified malware families |
+| Indicator | Threat indicators from analysis |
+| Labels | Threat classification labels |
+| Relationship | Links between entities |
+| Score | Calculated threat score |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
+- Submission status
+- Analysis progress
+- Result processing details
+
+---
+
+## Additional Information
+
+- [ReversingLabs](https://www.reversinglabs.com/)
+- [Spectra Analyze](https://www.reversinglabs.com/products/spectra-analyze)

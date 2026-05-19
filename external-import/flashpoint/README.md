@@ -1,5 +1,9 @@
 # OpenCTI Flashpoint Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 This connector integrates Flashpoint with the OpenCTI platform.
 It pulls various threat intelligence data from Flashpoint and imports it into OpenCTI, providing enhanced visibility into security threats.
 
@@ -46,7 +50,6 @@ Priority: **YAML > .env > environment > defaults**.
 Find all the configuration variables available here: [Connector Configurations](./__metadata__)
 
 ⚠️ Please be aware that `CONNECTOR_DURATION_PERIOD` default value takes precedence over `FLASHPOINT_INTERVAL` default value if none of them are set.
-
 
 ## Deployment
 
@@ -172,7 +175,6 @@ graph LR
 
 %% Relationships
   FlashpointReport --> OpenCTIReport --> OpenCTIExternalReference
-
 
 %% Relationships to reports
   OpenCTIReport -- references --> OpenCTIAttackPattern

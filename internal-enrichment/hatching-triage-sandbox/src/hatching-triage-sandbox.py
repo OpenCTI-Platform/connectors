@@ -97,11 +97,18 @@ class HatchingTriageSandboxConnector:
 
         bundle_objects = []
 
+        if "us-sandbox.recordedfuture.com" in self.base_url:
+            report_url = f"https://us-sandbox.recordedfuture.com/{sample_id}/"
+        elif "sandbox.recordedfuture.com" in self.base_url:
+            report_url = f"https://sandbox.recordedfuture.com/{sample_id}/"
+        else:
+            report_url = f"https://triage.ge/{sample_id}/"
+
         # Create external reference
         # Analysis URL
         external_reference = self.helper.api.external_reference.create(
             source_name="Hatching Triage Sandbox Analysis",
-            url=f"https://tria.ge/{sample_id}/",
+            url=report_url,
             description="Hatching Triage Sandbox Analysis",
         )
         self.helper.api.stix_cyber_observable.add_external_reference(

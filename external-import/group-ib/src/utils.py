@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from config import ConfigConnector
 from isodate import parse_duration
@@ -90,4 +90,4 @@ class ExternalImportHelper:
         new_interval = ExternalImportHelper.get_interval(
             interval=interval, helper=helper
         ) - (timestamp - last_run)
-        return datetime.now() + timedelta(seconds=new_interval)
+        return datetime.now(timezone.utc) + timedelta(seconds=new_interval)

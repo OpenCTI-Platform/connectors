@@ -1,5 +1,9 @@
 # 📬 Email Intel IMAP Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 The **Email Intel IMAP Connector** enables the ingestion of cyber threat intelligence reports received via email into
 the OpenCTI platform using the IMAP protocol. This connector allows organizations to automate the collection of
 intelligence shared through email by regularly polling a mailbox and transforming each message into an OpenCTI report.

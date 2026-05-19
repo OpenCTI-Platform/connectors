@@ -1,12 +1,12 @@
 {
   "title": "ANY.RUN Feed",
   "slug": "anyrun-feed",
-  "description": "Import TI feed from ANY.RUN Interactive Online Malware Sandbox",
-  "short_description": "Import TI feed from ANY.RUN Interactive Online Malware Sandbox",
+  "description": "ANY.RUN’s TI Feeds is a continuously updated source of fresh network-based Indicators of Compromise (IOCs): IPs, domains, and URLs.",
+  "short_description": "The connector for Threat Intelligence Feeds provides OpenCTI users with simple, automated access to uniquely sourced and accurate indicators of compromise.",
   "logo": "external-import/anyrun-feed/__metadata__/logo.png",
   "use_cases": [
     "Threat Intelligence",
-    "Sandbox"
+    "Commercial Threat Intel"
   ],
   "verified": true,
   "last_verified_date": null,

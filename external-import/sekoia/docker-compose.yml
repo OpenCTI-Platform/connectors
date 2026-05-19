@@ -1,9 +1,9 @@
 version: '3'
 services:
   connector-sekoia:
-    image: opencti/connector-sekoia:rolling
+    image: opencti/connector-sekoia:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
       - SEKOIA_API_KEY=ChangeMe
     restart: always

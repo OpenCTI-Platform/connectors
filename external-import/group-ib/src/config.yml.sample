@@ -1,13 +1,13 @@
 opencti:
   # http://opencti:8080 - for docker deployment, http://localhost:8080 - for manual deployment
-  url: "http://opencti:8080"
+  url: 'http://localhost'
   # Use one as provided by the OpenCTI platform
   token: ""
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   # Generate one with uuidgen (https://www.uuidgenerator.net/version4)
   id: ""
-  type: "EXTERNAL_IMPORT"
   name: "Group-IB Connector"
   scope: "stix2,ipv4-addr,ipv6-addr,vulnerability,domain,url,StixFile"
   docker_container_name: "gib_connector"

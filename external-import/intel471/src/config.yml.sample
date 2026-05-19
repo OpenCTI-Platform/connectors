@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  url: 'http://localhost'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'Intel471'
   scope: 'malware,vulnerability,indicator'
   confidence_level: 70
@@ -12,8 +12,8 @@ connector:
   log_level: 'info'
 
 intel471:
-  api_username: CHANGEME
-  api_key: CHANGEME
+  api_username: ChangeMe
+  api_key: ChangeMe
   interval_indicators: 60
   initial_history_indicators: 0
   interval_yara: 60

@@ -1,0 +1,4 @@
+-r ../src/requirements.txt
+pytest==9.0.3
+responses~=0.25.0
+freezegun==1.5.5

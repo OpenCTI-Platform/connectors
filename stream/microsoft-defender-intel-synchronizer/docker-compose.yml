@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-microsoft-defender-intel-synchronizer:
-    image: opencti/connector-microsoft-defender-intel-synchronizer:rolling
+    image: opencti/connector-microsoft-defender-intel-synchronizer:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
@@ -18,4 +18,4 @@ services:
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_EXPIRE_TIME=30 # Number of days for IOC to expire in Sentinel
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS=ID1,ID2,etc.
       - MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_INTERVAL=300
-    restart: unless-stopped
+    restart: always

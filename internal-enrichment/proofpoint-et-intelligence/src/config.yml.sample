@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'INTERNAL_ENRICHMENT'
   id: 'ChangeMe'
   name: 'ProofPoint ET Intelligence'
   scope: 'IPv4-Addr,Domain-Name,StixFile'

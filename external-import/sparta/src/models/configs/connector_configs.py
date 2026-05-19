@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated, Literal
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs import ConfigBaseSettings
 from pydantic import Field, HttpUrl, PlainSerializer, field_validator
 
@@ -42,7 +42,7 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
         description="Determines the verbosity of the logs.",
     )
     duration_period: timedelta = Field(
-        default="PT5H",
+        default="P7D",
         description="Duration between two scheduled runs of the connector (ISO 8601 format).",
     )
 

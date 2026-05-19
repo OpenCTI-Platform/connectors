@@ -6,13 +6,13 @@ import requests
 class Downloader:
     def __init__(self, conf):
         # connection
-        self.api_url = str(conf.get("baseurl", "https://api.rstcloud.net/v1/"))
+        self.api_url = str(conf.get("baseurl", "https://api.rstcloud.net/v1"))
         self.api_key = str(conf.get("apikey", "REPLACEME"))
         self.timeout = (
             int(conf.get("contimeout", 30)),
-            int(conf.get("readtimeout", 60)),
+            int(conf.get("readtimeout", 120)),
         )
-        self.retry = int(conf.get("retry", 5))
+        self.retry = int(conf.get("retry", 2))
         self.verify = bool(conf.get("ssl_verify", True))
         self.proxy = str(conf.get("proxy", ""))
         self.time_range = str(conf.get("latest", "latest"))

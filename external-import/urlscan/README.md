@@ -1,5 +1,9 @@
 # OpenCTI Urlscan.io Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
+
 ## Installation
 
 The Urlscan connector is a standalone Python process that must have access to the OpenCTI platform and the RabbitMQ server.

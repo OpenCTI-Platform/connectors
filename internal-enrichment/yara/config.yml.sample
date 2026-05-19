@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: '840210d2-cb25-4841-81c2-850b431918ee'
+  name: 'YARA'
+  scope: 'Artifact' # MIME type or SCO
+  auto: true # Enable/disable auto-enrichment of observables
+  log_level: 'info'
+
+yara:
+  tlp_level: 'clear'

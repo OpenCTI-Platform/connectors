@@ -1,38 +1,33 @@
 # OpenCTI Tanium Incidents Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Table of Contents
+The Tanium Incidents connector imports security alerts from Tanium Threat Response into OpenCTI as incidents and sightings.
+
+## Table of Contents
 
 - [OpenCTI Tanium Incidents Connector](#opencti-tanium-incidents-connector)
-    - [Introduction](#introduction)
-    - [Installation](#installation)
-        - [Requirements](#requirements)
-    - [Configuration variables](#configuration-variables)
-        - [OpenCTI environment variables](#opencti-environment-variables)
-        - [Base connector environment variables](#base-connector-environment-variables)
-        - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-    - [Deployment](#deployment)
-        - [Docker Deployment](#docker-deployment)
-        - [Manual Deployment](#manual-deployment)
-    - [Usage](#usage)
-    - [Behavior](#behavior)
-    - [Debugging](#debugging)
-    - [Additional information](#additional-information)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-This connector allows organizations to feed OpenCTI Sightings using **Tanium Alerts** knowledge.
-
-This connector leverages OpenCTI connector *scheduler*, so it imports Tanium alerts and create corresponding sightings
-in OpenCTI at a defined periodicity.
+This connector allows organizations to feed OpenCTI sightings using **Tanium Threat Response** alerts. It imports Tanium alerts and creates corresponding incidents and sightings in OpenCTI at a defined periodicity.
 
 ![Import workflow overview](doc/workflow.png "Import workflow overview")
 
@@ -42,15 +37,13 @@ in OpenCTI at a defined periodicity.
 
 - OpenCTI Platform >= 5.0.0
 - Tanium Threat Response >= 3.X.X
+- Tanium API access token
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -59,88 +52,177 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter                 | config.yml                | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|---------------------------|---------------------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID              | id                        | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type            | type                      | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name            | name                      | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope           | scope                     | `CONNECTOR_SCOPE`           | tanium          | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level                 | log_level                 | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Duration Period | connector_duration_period | `CONNECTOR_DURATION_PERIOD` | /               | Yes       | Interval duration between connector launches (must be in ISO 8601 format)                |
+| Parameter                 | config.yml        | Docker environment variable   | Default | Mandatory | Description                                                              |
+|---------------------------|-------------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------|
+| Connector ID              | id                | `CONNECTOR_ID`                |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name            | name              | `CONNECTOR_NAME`              | Tanium  | No        | Name of the connector.                                                   |
+| Connector Scope           | scope             | `CONNECTOR_SCOPE`             | tanium  | No        | The scope or type of data the connector is importing.                    |
+| Log Level                 | log_level         | `CONNECTOR_LOG_LEVEL`         | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
+| Connector Duration Period | duration_period   | `CONNECTOR_DURATION_PERIOD`   |         | Yes       | Interval between runs in ISO 8601 format (e.g., `PT1H`).                 |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter               | config.yml                         | Docker environment variable          | Default | Mandatory | Description                                                                             |
-|-------------------------|------------------------------------|--------------------------------------|---------|-----------|-----------------------------------------------------------------------------------------|
-| Tanium API base URL     | tanium_incidents_url               | `TANIUM_INCIDENTS_URL`               |         | Yes       | The Tanium instance API URL.                                                            |
-| Tanium Console base URL | tanium_incidents_url_console       | `TANIUM_INCIDENTS_URL_CONSOLE`       |         | Yes       | The Tanium instance console URL.                                                        |
-| SSL verification        | tanium_incidents_ssl_verify        | `TANIUM_INCIDENTS_SSL_VERIFY`        | True    | Yes       | Enable the SSL certificate check                                                        |
-| Tanium API token        | tanium_incidents_token             | `TANIUM_INCIDENTS_TOKEN`             |         | Yes       | The Tanium login user.                                                                  |
-| Alerts import           | tanium_incidents_import_alerts     | `TANIUM_INCIDENTS_IMPORT_ALERTS`     | True    | No        | Enable alerts import                                                                    |
-| Import start date       | tanium_incidents_import_start_date | `TANIUM_INCIDENTS_IMPORT_START_DATE` |         | No        | Import starting date (in YYYY-MM-DD format) - used only if connector's state is not set |
+| Parameter               | config.yml                         | Docker environment variable          | Default | Mandatory | Description                                                    |
+|-------------------------|------------------------------------|--------------------------------------|---------|-----------|----------------------------------------------------------------|
+| Tanium API Base URL     | tanium_incidents_url               | `TANIUM_INCIDENTS_URL`               |         | Yes       | The Tanium instance API URL.                                   |
+| Tanium Console Base URL | tanium_incidents_url_console       | `TANIUM_INCIDENTS_URL_CONSOLE`       |         | Yes       | The Tanium instance console URL.                               |
+| SSL Verification        | tanium_incidents_ssl_verify        | `TANIUM_INCIDENTS_SSL_VERIFY`        | True    | No        | Enable SSL certificate verification.                           |
+| Tanium API Token        | tanium_incidents_token             | `TANIUM_INCIDENTS_TOKEN`             |         | Yes       | The Tanium API token.                                          |
+| Import Alerts           | tanium_incidents_import_alerts     | `TANIUM_INCIDENTS_IMPORT_ALERTS`     | True    | No        | Enable alerts import.                                          |
+| Import Start Date       | tanium_incidents_import_start_date | `TANIUM_INCIDENTS_IMPORT_START_DATE` |         | No        | Starting date (YYYY-MM-DD), used only if state is not set.     |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-tanium-incidents:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-tanium-incidents:
+    image: opencti/connector-tanium-incidents:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Tanium Incidents
+      - CONNECTOR_SCOPE=tanium
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - TANIUM_INCIDENTS_URL=https://tanium.example.com/api
+      - TANIUM_INCIDENTS_URL_CONSOLE=https://tanium.example.com
+      - TANIUM_INCIDENTS_SSL_VERIFY=true
+      - TANIUM_INCIDENTS_TOKEN=ChangeMe
+      - TANIUM_INCIDENTS_IMPORT_ALERTS=true
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a
-regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+## Behavior
+
+The connector fetches alerts from Tanium Threat Response API and converts them into OpenCTI incidents with associated observables and sightings.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph Tanium Threat Response
+        direction TB
+        API[Tanium API]
+        Alerts[Security Alerts]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Incident[Incident]
+        Sighting[Sighting]
+        Hostname[Hostname Observable]
+        IPv4[IPv4-Addr Observable]
+        UserAccount[User-Account Observable]
+        File[File Observable]
+        AttackPattern[Attack Pattern]
+    end
+
+    API --> Alerts
+    Alerts --> Incident
+    Alerts --> Sighting
+    Alerts --> Hostname
+    Alerts --> IPv4
+    Alerts --> UserAccount
+    Alerts --> File
+    Alerts --> AttackPattern
+    
+    Sighting -- sighting-of --> AttackPattern
+    Sighting -- where-sighted --> Hostname
+```
+
+### Entity Mapping
+
+| Tanium Alert Field        | OpenCTI Entity      | Description                                      |
+|---------------------------|---------------------|--------------------------------------------------|
+| Alert                     | Incident            | Security incident with severity and description  |
+| MITRE Technique           | Attack Pattern      | MITRE ATT&CK technique with x_mitre_id           |
+| computerName              | Hostname            | Custom hostname observable                       |
+| computerIpAddress         | IPv4-Addr           | Computer IP address observable                   |
+| process.user              | User-Account        | User account associated with alert               |
+| process.file              | File                | File with hashes (MD5, SHA-1, SHA-256)           |
+| Alert Detection           | Sighting            | Sighting linking ATT&CK technique to hostname    |
+
+### Incident Properties
+
+| Tanium Field     | OpenCTI Property       | Description                          |
+|------------------|------------------------|--------------------------------------|
+| name             | name                   | Alert name                           |
+| alertedAt        | created                | Alert timestamp                      |
+| description      | description            | Alert description                    |
+| priority         | severity               | Alert priority level                 |
+| guid             | external_reference     | Link to Tanium console               |
+
+### Relationships Created
+
+| Source        | Relationship     | Target          | Description                           |
+|---------------|------------------|-----------------|---------------------------------------|
+| Sighting      | sighting-of      | Attack Pattern  | What was sighted                      |
+| Sighting      | where-sighted    | Hostname        | Where the sighting occurred           |
+| Incident      | related-to       | Observable      | Incident related observables          |
+
+### Processing Details
+
+1. **Alert Fetching**: Retrieves alerts from Tanium Threat Response API
+2. **Incident Creation**: Creates incident with severity, description, and external reference to Tanium console
+3. **Observable Extraction**: Extracts hostname, IP, user account, and file observables from alert details
+4. **Attack Pattern Mapping**: Maps MITRE ATT&CK techniques to attack patterns
+5. **Sighting Creation**: Creates sightings linking attack patterns to observed hosts
+
+### TLP Marking
+
+All imported data is marked with **TLP:RED** by default as it represents sensitive internal security alert data.
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e.,
-`self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
+
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
+
+## Additional information
+
+- **External References**: Each incident links back to the Tanium console for detailed investigation
+- **MITRE ATT&CK**: Attack patterns include `x_mitre_id` for proper mapping
+- **File Hashes**: Supports MD5, SHA-1, and SHA-256 hash extraction
+- **Reference**: [Tanium Threat Response](https://www.tanium.com/products/tanium-threat-response/)

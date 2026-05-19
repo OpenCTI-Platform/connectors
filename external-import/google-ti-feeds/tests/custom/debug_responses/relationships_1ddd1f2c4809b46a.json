@@ -1,6 +1,6 @@
 {
   "request_info": {
-    "endpoint": "https://www.virustotal.com/api/v3/collections/report--24-10020775/relationships/threat_actors",
+    "endpoint": "https://www.virustotal.com/api/v3/collections/report--25-20031886/relationships/threat_actors",
     "query_params": {},
     "entity_type": "relationships",
     "method": "GET"
@@ -8,7 +8,7 @@
   "response": [
     {
       "type": "collection",
-      "id": "threat-actor--562df3e6-c6c7-526f-800e-b633c189d75c"
+      "id": "threat-actor--673ef4f7-d7d8-637f-911f-c744d29ae86d"
     }
   ]
 }

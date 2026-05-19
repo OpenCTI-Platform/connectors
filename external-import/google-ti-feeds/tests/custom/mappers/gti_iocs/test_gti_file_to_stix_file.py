@@ -304,7 +304,7 @@ def test_gti_file_to_stix_minimal_data(
     _then_stix_file_has_correct_properties(
         file_observable, minimal_file_data, mock_organization, mock_tlp_marking
     )
-    _then_stix_indicator_has_unknown_type(indicator)
+    _then_stix_indicator_has_no_type(indicator)
 
 
 # Scenario: Convert GTI file with timestamps to STIX objects
@@ -506,10 +506,10 @@ def test_gti_file_to_stix_with_empty_verdict(
     # When converting to STIX
     stix_objects = _when_convert_to_stix(mapper)
 
-    # Then STIX objects should be created with unknown indicator type
+    # Then STIX objects should be created with no indicator type
     _then_stix_objects_created_successfully(stix_objects)
     file_observable, indicator, relationship = stix_objects
-    _then_stix_indicator_has_unknown_type(indicator)
+    _then_stix_indicator_has_no_type(indicator)
 
 
 # Scenario: Convert GTI file with invalid timestamps to STIX objects
@@ -584,37 +584,12 @@ def test_get_timestamps_without_data(
     assert timestamps["modified"].tzinfo == timezone.utc  # noqa: S101
 
 
-# Scenario: Extract score with mandiant confidence score available
+# Scenario: Extract score with threat score
 @pytest.mark.order(1)
-def test_get_score_with_mandiant_score(
+def test_get_score_with_threat_score(
     mock_organization: Identity, mock_tlp_marking: MarkingDefinition
 ) -> None:
-    """Test _get_score method with mandiant confidence score."""
-    # Given a file with mandiant confidence score
-    file_data = GTIFileDataFactory.build(
-        attributes=FileModelFactory.build(
-            gti_assessment=GTIAssessmentFactory.build(
-                contributing_factors=ContributingFactorsFactory.build(
-                    mandiant_confidence_score=85
-                )
-            )
-        )
-    )
-    mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
-
-    # When getting score
-    score = mapper._get_score()
-
-    # Then score should be returned
-    assert score == 85  # noqa: S101
-
-
-# Scenario: Extract score with threat score fallback
-@pytest.mark.order(1)
-def test_get_score_with_threat_score_fallback(
-    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
-) -> None:
-    """Test _get_score method with threat score fallback."""
+    """Test _get_score method with threat score."""
     # Given a file with threat score but no mandiant score
     file_data = GTIFileDataFactory.build(
         attributes=FileModelFactory.build(
@@ -631,8 +606,34 @@ def test_get_score_with_threat_score_fallback(
     # When getting score
     score = mapper._get_score()
 
-    # Then threat score should be returned as fallback
+    # Then threat score should be returned
     assert score == 70  # noqa: S101
+
+
+# Scenario: Extract score with mandiant confidence score available fallback
+@pytest.mark.order(1)
+def test_get_score_with_mandiant_score_fallback(
+    mock_organization: Identity, mock_tlp_marking: MarkingDefinition
+) -> None:
+    """Test _get_score method with mandiant confidence score fallback."""
+    # Given a file with mandiant confidence score
+    file_data = GTIFileDataFactory.build(
+        attributes=FileModelFactory.build(
+            gti_assessment=GTIAssessmentFactory.build(
+                contributing_factors=ContributingFactorsFactory.build(
+                    mandiant_confidence_score=85
+                ),
+                threat_score=None,
+            )
+        )
+    )
+    mapper = _given_gti_file_mapper(file_data, mock_organization, mock_tlp_marking)
+
+    # When getting score
+    score = mapper._get_score()
+
+    # Then score should be returned as fallback
+    assert score == 85  # noqa: S101
 
 
 # Scenario: Extract score without any score data available
@@ -791,8 +792,8 @@ def test_determine_indicator_types_without_verdict(
     # When determining indicator types
     indicator_types = mapper._determine_indicator_types()
 
-    # Then unknown indicator type should be returned
-    assert indicator_types == [IndicatorTypeOV.UNKNOWN]  # noqa: S101
+    # Then no indicator type should be returned
+    assert indicator_types == []  # noqa: S101
 
 
 # Scenario: Test create STIX file method
@@ -963,9 +964,12 @@ def _then_stix_indicator_has_type(
     assert expected_type in indicator.indicator_types  # noqa: S101
 
 
-def _then_stix_indicator_has_unknown_type(indicator: Any) -> None:
-    """Assert that STIX indicator has unknown type."""
-    _then_stix_indicator_has_type(indicator, IndicatorTypeOV.UNKNOWN)
+def _then_stix_indicator_has_no_type(indicator: Any) -> None:
+    """Assert that STIX indicator has no type."""
+    indicator_types = getattr(indicator, "indicator_types", None)
+    assert (
+        indicator_types == []
+    ), f"Expected empty indicator_types, got: {indicator_types}"  # noqa: S101
 
 
 def _then_stix_indicator_has_correct_timestamps(

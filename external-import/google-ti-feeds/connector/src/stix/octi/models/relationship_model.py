@@ -86,15 +86,6 @@ class OctiRelationshipModel:
 
         """
         description = kwargs.pop("description", None)
-        if description is None:
-            if report_name and target_name:
-                description = (
-                    f"Report '{report_name}' {relationship_type} '{target_name}'"
-                )
-            elif report_name:
-                description = f"Report '{report_name}' {relationship_type} entity"
-            else:
-                description = f"Report {relationship_type} entity"
 
         return OctiRelationshipModel.create(
             relationship_type=relationship_type,

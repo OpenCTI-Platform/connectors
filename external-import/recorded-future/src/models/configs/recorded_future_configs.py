@@ -1,6 +1,6 @@
 from typing import Literal, Optional
 
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from models.configs.base_settings import ConfigBaseSettings
 from pydantic import Field, PositiveInt, SecretStr, field_validator
 
@@ -65,9 +65,20 @@ class _ConfigLoaderRecordedFuture(ConfigBaseSettings):
     )
     ta_to_intrusion_set: bool = Field(
         default=False,
-        alias="TA_to_intrusion_set",
-        description="Whether to convert Threat Actor entities to Intrusion Set entities.",
+        description="Whether to map Threat Actor entities to Intrusion Set instead of Threat Actor.",
     )
+
+    @field_validator("ta_to_intrusion_set", mode="before")
+    @classmethod
+    def validate_ta_to_intrusion_set(cls, v: str | bool) -> bool:
+        """Convert ta_to_intrusion_set value to bool."""
+        if isinstance(v, bool):
+            return v
+        elif isinstance(v, str) and v.strip().lower() != "false":
+            return True
+        else:
+            return False
+
     risk_as_score: bool = Field(
         default=True,
         description="Whether to import risk scores as confidence scores in OpenCTI.",
@@ -133,6 +144,13 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
         default=False,
         description="Whether to enable fetching Recorded Future playbook alerts.",
     )
+    categories: Optional[ListFromString] = Field(
+        default=["domain_abuse", "identity_novel_exposures", "code_repo_leakage"],
+        description=(
+            "Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence."
+            "Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'."
+        ),
+    )
     severity_threshold_domain_abuse: Literal["Informational", "Moderate", "High"] = (
         Field(
             default="Informational",
@@ -150,6 +168,12 @@ class _ConfigLoaderPlaybookAlert(ConfigBaseSettings):
     ] = Field(
         default="Informational",
         description="Minimum severity threshold for code repository leakage playbook alerts.",
+    )
+    severity_threshold_cyber_vulnerability: Literal[
+        "Informational", "Moderate", "High"
+    ] = Field(
+        default="Informational",
+        description="Minimum severity threshold for cyber vulnerabilities playbook alerts.",
     )
     debug: bool = Field(
         default=False,

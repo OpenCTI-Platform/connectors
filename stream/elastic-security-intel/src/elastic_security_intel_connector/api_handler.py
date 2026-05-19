@@ -32,6 +32,11 @@ class ElasticApiHandler:
             "Accept": "application/json",
             "kbn-xsrf": "true",  # Required for Kibana API calls
         }
+        self.cert = (
+            (config.elastic_client_cert, config.elastic_client_key)
+            if config.elastic_client_cert and config.elastic_client_key
+            else None
+        )
         self.verify_ssl = config.elastic_verify_ssl
         self.ca_cert = config.elastic_ca_cert
         self.index_name = config.elastic_index_name
@@ -197,6 +202,7 @@ class ElasticApiHandler:
                 headers=self.headers,  # Already includes kbn-xsrf header
                 json=rule,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -262,6 +268,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=rule_update,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -298,6 +305,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 params=params,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -332,6 +340,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 params=params,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -862,14 +871,22 @@ class ElasticApiHandler:
                                 {"opencti_id": opencti_id},
                             )
 
-            # Always create threat intel entry for all indicators
-            if operation in ["create", "update"]:
+            if operation == "create":
                 result = self.create_indicator(indicator_data)
                 if not result:
                     success = False
                 else:
                     self.helper.connector_logger.info(
-                        f"Created/Updated threat intel entry for {pattern_type} indicator",
+                        f"Created threat intel entry for {pattern_type} indicator",
+                        {"opencti_id": opencti_id},
+                    )
+            elif operation == "update":
+                result = self.update_indicator(indicator_data)
+                if not result:
+                    success = False
+                else:
+                    self.helper.connector_logger.info(
+                        f"Updated threat intel entry for {pattern_type} indicator",
                         {"opencti_id": opencti_id},
                     )
             elif operation == "delete":
@@ -907,6 +924,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=ecs_doc,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -971,6 +989,7 @@ class ElasticApiHandler:
                 headers={**self.headers, "Content-Type": "application/x-ndjson"},
                 data=bulk_data,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=60,  # Longer timeout for bulk operations
             )
 
@@ -1046,14 +1065,20 @@ class ElasticApiHandler:
             delete_query = {"query": {"term": {"opencti_doc_id": doc_id}}}
 
             delete_url = f"{self.elastic_url}/{self.index_name}/_delete_by_query"
-            requests.post(
+            delete_request = requests.post(
                 delete_url,
                 headers=self.headers,
                 json=delete_query,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
-
+            if delete_request.status_code == 200:
+                delete_result = delete_request.json()
+                self.helper.connector_logger.debug(
+                    f"Successfully deleted {delete_result["total"]} old indicator for update",
+                    {"opencti_doc_id": doc_id},
+                )
             # Now create the new document (data streams are append-only)
             url = f"{self.elastic_url}/{self.index_name}/_doc"
             response = requests.post(
@@ -1061,6 +1086,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=ecs_doc,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -1104,6 +1130,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=delete_query,
                 verify=self._get_verify_config(),
+                cert=self.cert,
                 timeout=30,
             )
 
@@ -1142,7 +1169,11 @@ class ElasticApiHandler:
                 url = f"{self.elastic_url}/_cluster/health"
 
             response = requests.get(
-                url, headers=self.headers, verify=self._get_verify_config(), timeout=10
+                url,
+                headers=self.headers,
+                verify=self._get_verify_config(),
+                cert=self.cert,
+                timeout=10,
             )
 
             # Accept various success codes
@@ -1417,7 +1448,10 @@ class ElasticApiHandler:
             # Check if template already exists
             check_url = f"{self.elastic_url}/_index_template/logs-ti_custom_opencti"
             check_response = requests.get(
-                check_url, headers=self.headers, verify=self._get_verify_config()
+                check_url,
+                headers=self.headers,
+                verify=self._get_verify_config(),
+                cert=self.cert,
             )
 
             template_exists = check_response.status_code == 200
@@ -1429,6 +1463,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 json=index_template,
                 verify=self._get_verify_config(),
+                cert=self.cert,
             )
 
             if response.status_code in [200, 201]:

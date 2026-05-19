@@ -39,5 +39,8 @@ class ConnectorClient:
         response.raise_for_status()
         resp_ascii = str(response.content, "ascii").split("\n")
         # All the bambenek files have a large number of comment lines at the top. This filters those out
-        filtered_entries = [entry for entry in resp_ascii if not entry.startswith("#")]
+        # Also filter out empty lines to avoid processing invalid entries
+        filtered_entries = [
+            entry for entry in resp_ascii if entry and not entry.startswith("#")
+        ]
         return filtered_entries

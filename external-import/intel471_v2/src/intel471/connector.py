@@ -1,101 +1,62 @@
-import os
 import signal
 from queue import Queue
 
-import yaml
 from apscheduler.jobstores.memory import MemoryJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.schedulers.base import BaseScheduler
-from pycti import OpenCTIConnectorHelper, get_config_variable
-from yaml.parser import ParserError
+from intel471.common import HelperRequest
+from intel471.settings import ConnectorSettings
+from intel471.streams.core.base import Intel471Stream
+from pycti import OpenCTIConnectorHelper
 
-from . import HelperRequest
-from .streams.breach_alerts import Intel471BreachAlertsStream
-from .streams.common import Intel471Stream
-from .streams.cves import Intel471CVEsStream
-from .streams.indicators import Intel471IndicatorsStream
-from .streams.malware_reports import Intel471MalwareReportsStream
-from .streams.reports import Intel471ReportsStream
-from .streams.spot_reports import Intel471SpotReportsStream
-from .streams.yara import Intel471YARAStream
+from .backend import ClientWrapper, get_client
 
 
 class Intel471Connector:
-    def __init__(self) -> None:
-        config: dict = self._init_config()
+
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
+        self.config = config
+        self.helper = helper
         self.scheduler: BaseScheduler = self._init_scheduler()
-        self.helper = OpenCTIConnectorHelper(config)
-        # We'll use queues to coordinate helper state reads/writes from threaded streams
         self.in_queue = Queue()
         self.out_queues: dict[str, Queue] = {}
-
-        update_existing_data = bool(
-            get_config_variable(
-                "CONNECTOR_UPDATE_EXISTING_DATA",
-                ["connector", "update_existing_data"],
-                config,
-            )
+        update_existing_data = False
+        api_username = self.config.intel471.api_username
+        api_key = self.config.intel471.api_key.get_secret_value()
+        proxy_url = self.config.intel471.proxy
+        ioc_score = self.config.intel471.ioc_score
+        backend_name = self.config.intel471.backend
+        client_wrapper: ClientWrapper = get_client(
+            backend_name, api_username, api_key, proxy_url
         )
-        api_username = get_config_variable(
-            "INTEL471_API_USERNAME", ["intel471", "api_username"], config
-        )
-        api_key = get_config_variable(
-            "INTEL471_API_KEY", ["intel471", "api_key"], config
-        )
-        proxy_url = get_config_variable("INTEL471_PROXY", ["intel471", "proxy"], config)
-        ioc_score = get_config_variable(
-            "INTEL471_IOC_SCORE",
-            ["intel471", "ioc_score"],
-            config,
-            isNumber=True,
-            default=70,
-        )
-
-        for stream_class in (
-            Intel471IndicatorsStream,
-            Intel471CVEsStream,
-            Intel471YARAStream,
-            Intel471ReportsStream,
-            Intel471BreachAlertsStream,
-            Intel471SpotReportsStream,
-            Intel471MalwareReportsStream,
-        ):
-            if interval := get_config_variable(
-                f"INTEL471_INTERVAL_{stream_class.group_label}".upper(),
-                ["intel471", f"interval_{stream_class.group_label}"],
-                config,
-                isNumber=True,
-                default=0,
+        for stream_class in client_wrapper.streams:
+            if interval := getattr(
+                self.config.intel471, f"interval_{stream_class.group_label}"
             ):
                 self.out_queues[stream_class.label] = Queue()
-                initial_history = get_config_variable(
-                    f"INTEL471_INITIAL_HISTORY_{stream_class.group_label}".upper(),
-                    ["intel471", f"initial_history_{stream_class.group_label}"],
-                    config,
-                    isNumber=True,
-                    default=0,
+                initial_history = getattr(
+                    self.config.intel471, f"initial_history_{stream_class.group_label}"
                 )
                 self.add_job(
                     stream_class(
+                        client_wrapper,
                         self.helper,
-                        api_username,
-                        api_key,
                         self.out_queues[stream_class.label],
                         self.in_queue,
                         initial_history,
                         update_existing_data,
-                        proxy_url,
                         ioc_score,
                     ),
                     interval,
                 )
-
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
     def run(self) -> None:
         self.scheduler.start()
-        self.handle_helper_state()  # main loop
+        self.handle_helper_state()
 
     def handle_helper_state(self) -> None:
         """
@@ -137,17 +98,6 @@ class Intel471Connector:
             job_defaults={"coalesce": True},
             timezone="UTC",
         )
-
-    @staticmethod
-    def _init_config() -> dict:
-        config_file_path = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "..", "config.yml"
-        )
-        try:
-            with open(config_file_path) as fh:
-                return yaml.load(fh, Loader=yaml.FullLoader)
-        except (FileNotFoundError, ParserError):
-            return {}
 
     def _signal_handler(self, *args) -> None:
         self.helper.log_info("Shutting down")

@@ -2,6 +2,10 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.settings.annotated_types import (
+    DatetimeFromIsoString,
+    ListFromString,
+)
 from connectors_sdk.settings.base_settings import (
     BaseConfigModel,
     BaseConnectorSettings,
@@ -11,10 +15,15 @@ from connectors_sdk.settings.base_settings import (
     BaseInternalImportFileConnectorConfig,
     BaseStreamConnectorConfig,
 )
+from connectors_sdk.settings.deprecations import (
+    Deprecate,
+    DeprecatedField,
+)
 from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.states.states import ExternalImportConnectorState
 
 __all__ = [
     # Base Settings
@@ -29,4 +38,12 @@ __all__ = [
     # Exceptions
     "ConfigError",
     "ConfigValidationError",
+    # Annotated types
+    "DatetimeFromIsoString",
+    "ListFromString",
+    # Deprecations
+    "Deprecate",
+    "DeprecatedField",
+    # Connector States
+    "ExternalImportConnectorState",
 ]

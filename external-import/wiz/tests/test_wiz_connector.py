@@ -1,17 +1,44 @@
 import datetime
+from typing import Any
 
 import freezegun
 import pytest
 import stix2
 from external_import_connector import ConnectorWiz
-from external_import_connector.config_variables import ConfigConnector
+from external_import_connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+
+
+class StubConnectorSettings(ConnectorSettings):
+    """Stub settings for testing purposes."""
+
+    @classmethod
+    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        return handler(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "wiz": {
+                    "threat_actor_as_intrusion_set": "False",
+                    "tlp_level": "clear",
+                },
+            }
+        )
 
 
 @pytest.mark.usefixtures("mocked_requests")
 @freezegun.freeze_time("2025-03-17T00:00:00Z")
 def test_author(mocked_helper: OpenCTIConnectorHelper):
-    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+    connector = ConnectorWiz(config=StubConnectorSettings(), helper=mocked_helper)
 
     stix_objects = connector._collect_intelligence()
 
@@ -33,7 +60,7 @@ def test_author(mocked_helper: OpenCTIConnectorHelper):
 @freezegun.freeze_time("2025-03-17T00:00:00Z")
 @pytest.mark.usefixtures("mocked_requests")
 def test_object_marking_refs(mocked_helper: OpenCTIConnectorHelper):
-    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+    connector = ConnectorWiz(config=StubConnectorSettings(), helper=mocked_helper)
 
     stix_objects = connector._collect_intelligence()
 
@@ -55,7 +82,7 @@ def test_object_marking_refs(mocked_helper: OpenCTIConnectorHelper):
 @freezegun.freeze_time("2025-03-17T00:00:00Z")
 @pytest.mark.usefixtures("mocked_requests")
 def test_external_references(mocked_helper: OpenCTIConnectorHelper):
-    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+    connector = ConnectorWiz(config=StubConnectorSettings(), helper=mocked_helper)
 
     stix_objects = connector._collect_intelligence()
 
@@ -76,17 +103,25 @@ def test_external_references(mocked_helper: OpenCTIConnectorHelper):
 
 @pytest.mark.usefixtures("mocked_requests")
 def test_send_stix2_bundle_update_argument(mocked_helper: OpenCTIConnectorHelper):
-    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+    connector = ConnectorWiz(config=StubConnectorSettings(), helper=mocked_helper)
 
     connector.process_message()
 
-    assert not mocked_helper.send_stix2_bundle.call_args.kwargs.get("update", False)
+    # Verify send_stix2_bundle was called
+    assert mocked_helper.send_stix2_bundle.called
+    # Verify the update argument is not True (either False or not present)
+    call_kwargs = (
+        mocked_helper.send_stix2_bundle.call_args.kwargs
+        if mocked_helper.send_stix2_bundle.call_args
+        else {}
+    )
+    assert not call_kwargs.get("update", False)
 
 
 @freezegun.freeze_time("2025-03-13T10:24:00Z")
 @pytest.mark.usefixtures("mocked_requests")
 def test_deprecated_modified_entity_and_state(mocked_helper: OpenCTIConnectorHelper):
-    connector = ConnectorWiz(config=ConfigConnector(), helper=mocked_helper)
+    connector = ConnectorWiz(config=StubConnectorSettings(), helper=mocked_helper)
 
     entities = connector._collect_intelligence()
     assert len(entities) == 8

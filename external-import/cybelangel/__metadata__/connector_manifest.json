@@ -1,0 +1,22 @@
+{
+  "title": "CybelAngel",
+  "slug": "cybelangel",
+  "description": "Imports CybelAngel claimed-attack threat intelligence into OpenCTI as STIX 2.1 objects. For every claimed attack, the connector creates Intrusion Sets for the threat actors, Locations for the targeted countries, Identity objects for the victim organizations and impacted industries, a Campaign per (threat actor, victim) pair, and the corresponding `targets` / `attributed-to` relationships. Authentication uses OAuth2 client credentials against the CybelAngel platform API.",
+  "short_description": "Imports CybelAngel claimed-attack threat intelligence as STIX 2.1 Campaigns / Intrusion Sets / victim Identities.",
+  "logo": null,
+  "use_cases": [
+    "Threat Intelligence",
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.7.0",
+  "subscription_link": "https://cybelangel.com/contact-us/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/cybelangel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-cybelangel",
+  "container_type": "EXTERNAL_IMPORT"
+}

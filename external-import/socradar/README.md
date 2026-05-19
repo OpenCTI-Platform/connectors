@@ -1,10 +1,11 @@
-| Status            | Date       | Comment |
-| ----------------- | ---------- | ------- |
-| Filigran Verified | 2025-09-23 |         |
 
 # OpenCTI SOCRadar Connector
 
-Table of Contents
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner Verified | -    | -       |
+
+## Table of Contents
 
 - [OpenCTI SOCRadar Connector](#opencti-socradar-connector)
   - [Introduction](#introduction)

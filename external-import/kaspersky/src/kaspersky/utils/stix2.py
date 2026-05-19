@@ -366,7 +366,7 @@ def create_intrusion_set(
     external_references: Optional[List[stix2.ExternalReference]] = None,
     object_markings: Optional[List[stix2.MarkingDefinition]] = None,
 ) -> stix2.IntrusionSet:
-    """Create a intrusion set."""
+    """Create an intrusion set."""
     if intrusion_set_id is None:
         intrusion_set_id = IntrusionSet.generate_id(name)
 

@@ -1,10 +1,10 @@
 opencti:
-  url: 'http://opencti:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
-  id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'MWDB Artifacts'
   scope: 'mwdb'
   log_level: 'info'

@@ -12,7 +12,7 @@ from connector.src.custom.configs.gti_config_common import (
     validate_origins_list,
     validate_report_types_list,
 )
-from connectors_sdk.core.pydantic import ListFromString
+from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
 
 
@@ -41,6 +41,12 @@ class GTIReportConfig(GTIBaseConfig):
         description="Comma-separated list of report origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
         examples=["All", "partner,google threat intelligence", "crowdsourced"],
+    )
+
+    report_extra_filters: ListFromString = Field(
+        default=[],
+        description="Optional List of additional filters to add to query when fetching reports.",
+        examples=["name:phishing"],
     )
 
     @field_validator("report_types", mode="after")

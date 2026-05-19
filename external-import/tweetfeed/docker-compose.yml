@@ -1,7 +1,7 @@
-version: "3"
+version: '3'
 services:
   connector-tweetfeed:
-    image: opencti/connector-tweetfeed:rolling
+    image: opencti/connector-tweetfeed:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
