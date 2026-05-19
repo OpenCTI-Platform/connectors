@@ -17,6 +17,7 @@ from .rbac_scope import (
 from .types import RBACScope, ScopeKey
 from .utils import (
     FILE_HASH_TYPES_MAPPER,
+    defender_file_dedup_key,
     indicator_value,
     is_defender_supported_domain,
 )
@@ -557,9 +558,17 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                         if opencti_indicators:
                             try:
                                 first_node = opencti_indicators[0]
+                                # ``globalSearch`` results can include
+                                # non-Indicator nodes that expose the
+                                # update timestamp as ``updated_at``
+                                # rather than the Indicator-specific
+                                # ``modified`` field. Fall back to
+                                # ``updated_at`` so the state remains
+                                # meaningful (and stops silently
+                                # storing ``None``) for those nodes.
                                 state[collection]["last_timestamp"] = first_node.get(
                                     "modified"
-                                )
+                                ) or first_node.get("updated_at")
                             except (IndexError, TypeError, AttributeError) as e:
                                 self.helper.connector_logger.warning(
                                     "[STATE] Could not extract timestamp from first node",
@@ -878,21 +887,37 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                         # Map obs type to a Defender indicatorType label used in keys (same as utils.IOC_TYPES)
                         if obs_type in ("domain-name", "hostname"):
                             key_type = "DomainName"
+                            clean_value = indicator_value(raw_value)
                         elif obs_type in ("ipv4-addr", "ipv6-addr"):
                             key_type = "IpAddress"
+                            clean_value = indicator_value(raw_value)
                         elif obs_type == "url":
                             key_type = "Url"
+                            clean_value = indicator_value(raw_value)
                         elif obs_type == "file":
-                            # Can't know sha1/sha256 here; allow create to proceed and let api handler return None for md5
-                            # To avoid over-filtering, skip key-based check for file and rely on externalId path.
-                            opencti_indicators_to_create.append(observable_data)
-                            continue
+                            # Derive the dedup key from the observable's
+                            # hashes (SHA-256 preferred over SHA-1; MD5
+                            # is excluded because Defender rejects
+                            # ``FileMd5`` create requests). Multiple
+                            # OpenCTI indicators commonly share the same
+                            # SHA value (different ``externalId`` but
+                            # same hash), so relying on ``externalId``
+                            # alone would create duplicate Defender
+                            # indicators and burn through the 15k tenant
+                            # quota. When no usable hash is present we
+                            # fall back to the externalId fast-path the
+                            # planner already ran above.
+                            file_key = defender_file_dedup_key(observable_data)
+                            if file_key is None:
+                                opencti_indicators_to_create.append(observable_data)
+                                continue
+                            key_type, clean_value = file_key
                         elif obs_type == "x509-certificate":
                             key_type = "CertificateThumbprint"
+                            clean_value = indicator_value(raw_value)
                         else:
                             continue
 
-                        clean_value = indicator_value(raw_value)
                         if not clean_value:
                             continue
                         rbac_for_key = rbac_scope

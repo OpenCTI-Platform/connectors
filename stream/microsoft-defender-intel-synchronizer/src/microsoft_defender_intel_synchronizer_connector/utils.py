@@ -35,6 +35,46 @@ FILE_HASH_TYPES_MAPPER: Final = {
     "sha256": "sha256",
 }
 
+# Hash algorithms Defender accepts as indicators, in decreasing
+# preference order. ``md5`` is intentionally excluded — the Defender
+# Indicators API rejects ``FileMd5`` for create requests, so using it
+# as a de-dup key would never match an existing indicator anyway.
+_FILE_HASH_PREFERENCE: Final = ("sha256", "sha1")
+
+
+def defender_file_dedup_key(observable_data: dict) -> tuple[str, str] | None:
+    """Return ``(indicatorType, hash_value)`` for a STIX file observable.
+
+    Picks the highest-priority Defender-supported hash present on the
+    observable (SHA-256 preferred over SHA-1; MD5 is intentionally
+    ignored because Defender rejects ``FileMd5`` create requests).
+    Returns :data:`None` when no usable hash is available, which lets
+    the caller fall back to the ``externalId`` path.
+
+    The returned tuple matches the ``(indicatorType, indicatorValue)``
+    shape used by :func:`connector._key_from_candidate`, so file
+    observables can now participate in the same key-based dedup as
+    every other observable type instead of being treated as
+    externalId-only.
+    """
+    hashes = observable_data.get("hashes")
+    if not isinstance(hashes, dict):
+        return None
+    normalised: dict[str, str] = {}
+    for raw_algo, raw_value in hashes.items():
+        if not isinstance(raw_algo, str) or not raw_value:
+            continue
+        algo = FILE_HASH_TYPES_MAPPER.get(raw_algo.lower())
+        if not algo:
+            continue
+        normalised[algo] = str(raw_value).strip()
+    for algo in _FILE_HASH_PREFERENCE:
+        value = normalised.get(algo)
+        if value:
+            return IOC_TYPES[algo], value
+    return None
+
+
 # Only these indicator types are written to Defender.
 # All other types (e.g., WebCategory) are read-only in our connector.
 CREATABLE_INDICATOR_TYPES: Final = {
@@ -106,10 +146,24 @@ def _score_from_any(data: dict) -> int:
 def get_action(data: dict, default_action: str | None = None) -> str:
     """
     Determine the effective action for this observable.
+
     Precedence:
-      1) Per-observable override (__policy_action) if present
-      2) Connector-level default_action (if provided)
-      3) Existing score-based mapping (unchanged)
+      1) Per-observable override (``__policy_action``) if present.
+      2) Connector-level ``default_action`` (if provided).
+      3) Score-based mapping.
+
+    Score-based mapping (defensive, defaults to ``Audit``):
+      * ``score >= 60``         -> ``Block``
+      * ``30 < score < 60``     -> ``Warn``
+      * ``0 < score < 30``      -> ``Audit``
+      * ``score == 0`` / missing -> ``Audit``
+
+    A missing or zero ``x_opencti_score`` (e.g. observables imported
+    without a score, or score normalisation failures) MUST NOT
+    automatically produce an ``Allowed`` indicator in Defender — that
+    would silently allow-list IOCs. The mapping therefore falls back
+    to ``Audit`` for the ``score == 0`` case, matching the sibling
+    ``stream/microsoft-defender-intel`` connector's safe default.
     """
     if isinstance(data, dict):
         v = data.get("__policy_action")
@@ -120,16 +174,11 @@ def get_action(data: dict, default_action: str | None = None) -> str:
         return str(default_action)
 
     score = _score_from_any(data)
-    action = "Audit"
     if score >= 60:
-        action = "Block"
-    elif 30 < score < 60:
-        action = "Warn"
-    elif 0 < score < 30:
-        action = "Audit"
-    elif score == 0:
-        action = "Allowed"
-    return action
+        return "Block"
+    if 30 < score < 60:
+        return "Warn"
+    return "Audit"
 
 
 def get_educate_url(o: dict[str, Any], default_url: Optional[str]) -> Optional[str]:

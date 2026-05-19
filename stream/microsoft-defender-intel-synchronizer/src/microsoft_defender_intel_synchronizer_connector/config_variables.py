@@ -1,10 +1,13 @@
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any, List, TypedDict
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
+
+_logger = logging.getLogger(__name__)
 
 
 class CollectionPolicy(TypedDict, total=False):
@@ -225,13 +228,36 @@ class ConfigConnector:
                 if fk in v and v[fk] is not None:
                     pol[fk] = v[fk]
 
+            # Defensive int coercion: a non-numeric override (e.g.
+            # ``expire_time: "forever"`` from a hand-edited config)
+            # must not crash connector startup. Drop the offending key
+            # so the connector-level default is used instead, and log
+            # a warning so the operator can fix the config.
             if "expire_time" in pol:
-                pol["expire_time"] = int(pol["expire_time"])
+                try:
+                    pol["expire_time"] = int(pol["expire_time"])
+                except (TypeError, ValueError):
+                    bad_value = pol.pop("expire_time")
+                    _logger.warning(
+                        "Ignoring invalid per-collection 'expire_time' "
+                        "override %r (not an integer); falling back to "
+                        "the connector default.",
+                        bad_value,
+                    )
 
             if "max_indicators" in pol:
-                value = int(pol["max_indicators"])
-                value = max(min(value, 15000), 1)
-                pol["max_indicators"] = value
+                try:
+                    value = int(pol["max_indicators"])
+                    value = max(min(value, 15000), 1)
+                    pol["max_indicators"] = value
+                except (TypeError, ValueError):
+                    bad_value = pol.pop("max_indicators")
+                    _logger.warning(
+                        "Ignoring invalid per-collection 'max_indicators' "
+                        "override %r (not an integer); falling back to "
+                        "the connector default.",
+                        bad_value,
+                    )
 
             if "rbac_group_names" in pol and pol["rbac_group_names"] is not None:
                 r = pol["rbac_group_names"]
