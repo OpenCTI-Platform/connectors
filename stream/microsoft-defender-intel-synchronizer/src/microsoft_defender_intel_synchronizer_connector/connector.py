@@ -823,17 +823,36 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                     policy["educate_url"]
                                 )
 
-                            # Per-collection RBAC (names -> ids)
-                            if policy.get("rbac_group_names"):
-                                names = [
-                                    str(x)
-                                    for x in (policy.get("rbac_group_names") or [])
-                                ]
+                            # Per-collection RBAC (names -> ids).
+                            #
+                            # Apply the same trim / drop-blanks / dedupe
+                            # normalisation as ``resolve_rbac_scope_or_abort``
+                            # — otherwise a config carrying e.g.
+                            # ``"  endpoints  "`` would pass validation
+                            # (which strips) but mismatch ``self._rbac_map``
+                            # here (which would look up the un-stripped
+                            # name) and falsely raise "RBAC groups vanished
+                            # during run".
+                            normalised_names: list[str] = []
+                            seen_names: set[str] = set()
+                            for raw_name in policy.get("rbac_group_names") or []:
+                                if raw_name is None:
+                                    continue
+                                trimmed = str(raw_name).strip()
+                                if not trimmed or trimmed in seen_names:
+                                    continue
+                                seen_names.add(trimmed)
+                                normalised_names.append(trimmed)
 
-                                # Fail-closed: ensure configured names still exist in the run-time RBAC map.
-                                # If any are missing, raise so the run aborts (connector will re-init).
+                            if normalised_names:
+                                # Fail-closed: ensure configured names still
+                                # exist in the run-time RBAC map. If any are
+                                # missing, raise so the run aborts (connector
+                                # will re-init).
                                 missing_names = [
-                                    n for n in names if n not in self._rbac_map
+                                    n
+                                    for n in normalised_names
+                                    if n not in self._rbac_map
                                 ]
                                 if missing_names:
                                     raise RbacConfigError(
@@ -842,11 +861,15 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                     )
 
                                 # Safe to map now
-                                ids = [self._rbac_map[n] for n in names]
+                                ids = [self._rbac_map[n] for n in normalised_names]
 
-                                # Attach both arrays; API handler will prefer these over global scope.
-                                observable_data["rbacGroupNames"] = names
+                                # Attach both arrays; API handler will prefer
+                                # these over global scope.
+                                observable_data["rbacGroupNames"] = normalised_names
                                 observable_data["rbacGroupIds"] = ids
+                            # else: all configured names were blank -> no
+                            # per-collection RBAC override; the observable
+                            # inherits the global scope downstream.
 
                         # Map observable type -> Defender indicatorType label
                         # (We reuse IOC_TYPES mapping implicitly in api handler;

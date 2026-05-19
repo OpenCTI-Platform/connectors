@@ -88,13 +88,13 @@ def defender_certificate_dedup_key(observable_data: dict) -> tuple[str, str] | N
     """Return ``("CertificateThumbprint", thumbprint)`` for a STIX x509-certificate.
 
     OpenCTI ``x509-certificate`` observables carry their fingerprint
-    in ``hashes`` rather than in ``value`` (which is the bug Copilot
-    spotted on the planner: deriving the dedup key from
-    ``observable_data["value"]`` made ``clean_value`` always empty,
-    so certificate indicators were silently dropped from the planning
-    pass). This helper mirrors :func:`defender_file_dedup_key` for
-    certificates so they participate in the same key-based dedup as
-    every other observable type.
+    in ``hashes`` rather than in ``value``. The previous planner
+    derived the dedup key from ``observable_data["value"]`` (empty
+    for certificates), which silently dropped every certificate
+    indicator from the planning pass. This helper mirrors
+    :func:`defender_file_dedup_key` for certificates so they
+    participate in the same key-based dedup as every other observable
+    type.
 
     Returns :data:`None` when no usable hash is available — the
     planner then falls back to the ``externalId`` path.
