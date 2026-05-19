@@ -45,5 +45,4 @@ THREAT_ACTOR_BATCH_PROCESSOR_CONFIG = GenericBatchProcessorConfig(
     date_extraction_function=threat_actor_extract_stix_date,
     postprocessing_function=log_batch_completion,
     validation_function=validate_stix_object,
-    empty_batch_behavior="update_state",
 )
