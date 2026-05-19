@@ -268,6 +268,24 @@ class TestClientAPIReportDownloadPdf:
         result = await client.download_report_pdf("report--test-123")
         assert result is None  # noqa: S101
 
+    @pytest.mark.asyncio
+    async def test_download_report_pdf_non_https_url(self, dummy_config, logger):
+        """Should return None when API returns a non-HTTPS URL."""
+        mock_api_client = AsyncMock()
+        mock_api_client.call_api = AsyncMock(
+            return_value={"data": "http://insecure.example.com/report.pdf"}
+        )
+
+        client = ClientAPIReport(
+            config=dummy_config,
+            logger=logger,
+            api_client=mock_api_client,
+            fetcher_factory=MagicMock(),
+        )
+
+        result = await client.download_report_pdf("report--test-123")
+        assert result is None  # noqa: S101
+
 
 # =====================
 # ClientAPI delegation Tests
@@ -370,7 +388,7 @@ class TestAttachReportPdf:
 
         assert result is entities  # noqa: S101
         assert (
-            not hasattr(report_entity.custom_properties, "x_opencti_files")
+            "x_opencti_files" not in report_entity.custom_properties
             or report_entity.custom_properties.get("x_opencti_files") is None
             or len(report_entity.custom_properties.get("x_opencti_files", [])) == 0
         )  # noqa: S101

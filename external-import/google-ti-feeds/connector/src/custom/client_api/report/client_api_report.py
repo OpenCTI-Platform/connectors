@@ -190,6 +190,13 @@ class ClientAPIReport(BaseClientAPI):
                 )
                 return None
 
+            if not pdf_url.startswith("https://"):
+                self.logger.warning(
+                    "PDF URL does not use HTTPS, skipping download",
+                    {"prefix": self.LOG_PREFIX, "report_id": report_id},
+                )
+                return None
+
             self.logger.info(
                 "Downloading report PDF",
                 {"prefix": self.LOG_PREFIX, "report_id": report_id},
