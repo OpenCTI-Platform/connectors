@@ -79,8 +79,24 @@ class IPQSClient:
             data = response.json()
         except HTTPError as error:
             # HTTP status outside of 2xx — keep the connector alive and
-            # surface the status for the operator.
+            # surface the status for the operator. ``HTTPError`` is a
+            # subclass of ``RequestException`` so the ordering matters:
+            # this branch must come before the broader transport branch
+            # below to keep the dedicated log message.
             self.helper.log_error(f"IPQS HTTP error for {url}: {error}")
+            return None
+        except (JSONDecodeError, ValueError) as error:
+            # Non-JSON / truncated body — keep the connector alive.
+            # ``requests.exceptions.JSONDecodeError`` inherits from
+            # both ``ValueError`` and (via ``InvalidJSONError``)
+            # ``RequestException``, so this branch *must* come before
+            # the catch-all ``except RequestException`` below; otherwise
+            # an IPQS response with an HTML / text error body would be
+            # logged as a connectivity failure instead of an actionable
+            # "non-JSON response" log line.
+            self.helper.log_error(
+                f"IPQS returned a non-JSON response for {url}: {error}"
+            )
             return None
         except RequestException as error:
             # Catch the full ``requests`` exception hierarchy so a slow
@@ -92,12 +108,6 @@ class IPQSClient:
             # ``RequestException`` so they remain handled.
             self.helper.log_error(
                 f"Error connecting to IPQS ({type(error).__name__}): {error}"
-            )
-            return None
-        except (JSONDecodeError, ValueError) as error:
-            # Non-JSON / truncated body — keep the connector alive.
-            self.helper.log_error(
-                f"IPQS returned a non-JSON response for {url}: {error}"
             )
             return None
 
@@ -164,7 +174,23 @@ class IPQSClient:
             data = response.json()
         except HTTPError as exc:
             # HTTP status outside of 2xx — keep the connector alive.
+            # ``HTTPError`` is a subclass of ``RequestException`` so the
+            # ordering matters: this branch must come before the broader
+            # transport branch below to keep the dedicated log message.
             self.helper.log_error(f"IPQS leaked API HTTP error for {url}: {exc}")
+            return None
+        except (JSONDecodeError, ValueError) as exc:
+            # Non-JSON / truncated body — keep the connector alive.
+            # ``requests.exceptions.JSONDecodeError`` inherits from
+            # both ``ValueError`` and (via ``InvalidJSONError``)
+            # ``RequestException``, so this branch *must* come before
+            # the catch-all ``except RequestException`` below; otherwise
+            # a leaked-API response with an HTML / text error body
+            # would be logged as a connectivity failure instead of an
+            # actionable "non-JSON response" log line.
+            self.helper.log_error(
+                f"IPQS leaked API returned a non-JSON response for {url}: {exc}"
+            )
             return None
         except RequestException as exc:
             # Catch the full ``requests`` exception hierarchy here too
@@ -174,11 +200,6 @@ class IPQSClient:
             # enrichment worker.
             self.helper.log_error(
                 f"Error connecting to IPQS leaked API " f"({type(exc).__name__}): {exc}"
-            )
-            return None
-        except (JSONDecodeError, ValueError) as exc:
-            self.helper.log_error(
-                f"IPQS leaked API returned a non-JSON response for {url}: {exc}"
             )
             return None
 
