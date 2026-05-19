@@ -18,12 +18,23 @@ from urllib.parse import urlparse
 
 
 def redact_url(url) -> str:
-    """Return ``url`` with its query and fragment redacted.
+    """Return ``url`` with its userinfo, query and fragment redacted.
 
     Accepts arbitrary input — ``None`` and non-string objects are
     handled defensively so a logging call never raises an exception
     that masks the underlying network error the caller is trying to
     surface. The return value is always a printable ``str``.
+
+    The authority is rebuilt from :attr:`urllib.parse.ParseResult.hostname`
+    and :attr:`~urllib.parse.ParseResult.port` (not from ``netloc``),
+    so any ``username:password@`` userinfo embedded in the URL is
+    stripped. Without this guard, a URL such as
+    ``https://token:secret@cdn.example.org/file?sig=xyz`` would log
+    ``token:secret@cdn.example.org`` after the query was redacted —
+    leaking the credentials we are trying to redact in the first
+    place. The Intel 471 API returns ``imageOriginal`` / attachment
+    links that originate from third-party CDNs, so the URL shape is
+    not under the connector's control.
 
     Examples
     --------
@@ -31,6 +42,8 @@ def redact_url(url) -> str:
     'https://cdn.example.org/img.png?<redacted>'
     >>> redact_url("https://api.intel471.com/alerts/123")
     'https://api.intel471.com/alerts/123'
+    >>> redact_url("https://token:secret@cdn.example.org/file?sig=xyz")
+    'https://cdn.example.org/file?<redacted>'
     >>> redact_url(None)
     '<empty url>'
     """
@@ -40,10 +53,32 @@ def redact_url(url) -> str:
         parsed = urlparse(str(url))
     except Exception:  # noqa: BLE001 - defensive: never fail a log call
         return "<unparseable url>"
-    if parsed.scheme:
-        base = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
+    # Rebuild the authority from ``hostname`` and ``port`` so any
+    # ``username:password@`` userinfo embedded in ``netloc`` is
+    # stripped before we log the redacted URL. ``parsed.hostname`` is
+    # already lowercased by ``urllib.parse``; ``parsed.port`` returns
+    # ``None`` (not zero) when no port was specified, so the
+    # ``f"…:{port}"`` branch is only taken when an explicit port is
+    # present in the original URL.
+    try:
+        port = parsed.port
+    except ValueError:  # malformed port (e.g. ``host:abc``)
+        port = None
+    hostname = parsed.hostname or ""
+    if port is not None:
+        authority = f"{hostname}:{port}"
     else:
-        base = f"{parsed.netloc}{parsed.path}"
+        authority = hostname
+    # ``parsed.netloc`` is empty (and ``hostname`` is empty) for
+    # protocol-relative or path-only inputs such as ``/relative`` or
+    # ``mailto:a@b``; in that case fall back to whatever the parser
+    # exposed so the redacted string still surfaces something useful.
+    if not authority and parsed.netloc:
+        authority = parsed.netloc
+    if parsed.scheme:
+        base = f"{parsed.scheme}://{authority}{parsed.path}"
+    else:
+        base = f"{authority}{parsed.path}"
     if parsed.query:
         base += "?<redacted>"
     if parsed.fragment:

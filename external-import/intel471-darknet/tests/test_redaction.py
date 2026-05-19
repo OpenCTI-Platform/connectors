@@ -115,10 +115,67 @@ class TestNoCredentialLeak:
             "https://cdn.example.org/file?token=DEADBEEF",
             "https://example.org/path?api_key=DEADBEEF",
             "https://example.org/path#DEADBEEF",
+            # Userinfo-bearing URLs (``user:password@host``) must not
+            # leak through ``netloc``. The Intel 471 API returns
+            # third-party CDN URLs whose shape is not under the
+            # connector's control, so a hostile or accidentally
+            # misconfigured upstream could send back a userinfo-bearing
+            # ``imageOriginal`` URL — the helper must still scrub it.
+            "https://USER:DEADBEEF@cdn.example.org/file?sig=xyz",
+            "https://USER:DEADBEEF@cdn.example.org/file#frag",
+            "https://USER:DEADBEEF@cdn.example.org/file",
         ],
     )
     def test_signed_query_value_never_appears_in_output(self, url):
         assert "DEADBEEF" not in redact_url(url)
+
+
+class TestUserInfoStripping:
+    """``username:password@`` userinfo is stripped from the redacted URL.
+
+    ``urllib.parse.urlparse`` keeps userinfo in ``parsed.netloc``, so a
+    naive ``f"{scheme}://{netloc}{path}"`` rebuild would still log
+    ``token:secret@host``. The redaction helper rebuilds the authority
+    from ``parsed.hostname`` and ``parsed.port`` so the userinfo never
+    reaches the log line.
+    """
+
+    def test_userinfo_is_dropped_from_authority(self):
+        url = "https://token:secret@cdn.example.org/file?sig=xyz"
+        result = redact_url(url)
+        assert result == "https://cdn.example.org/file?<redacted>"
+        assert "token" not in result
+        assert "secret" not in result
+        assert "@" not in result
+
+    def test_userinfo_is_dropped_when_no_query_or_fragment(self):
+        url = "https://token:secret@cdn.example.org/file"
+        result = redact_url(url)
+        assert result == "https://cdn.example.org/file"
+        assert "token" not in result
+        assert "secret" not in result
+
+    def test_userinfo_is_dropped_with_explicit_port(self):
+        url = "https://token:secret@cdn.example.org:8443/file?sig=xyz"
+        result = redact_url(url)
+        assert result == "https://cdn.example.org:8443/file?<redacted>"
+        assert "token" not in result
+        assert "secret" not in result
+
+    def test_password_only_userinfo_is_dropped(self):
+        url = "https://secret@cdn.example.org/file"
+        result = redact_url(url)
+        assert result == "https://cdn.example.org/file"
+        assert "secret" not in result
+
+    def test_malformed_port_does_not_raise(self):
+        # ``parsed.port`` raises ``ValueError`` when the port isn't a
+        # valid integer; the helper must coerce that to ``None`` and
+        # still emit a printable string instead of crashing the
+        # logging call.
+        result = redact_url("https://host:notaport/file?s=DEAD")
+        assert isinstance(result, str)
+        assert "DEAD" not in result
 
 
 class TestRedactUrlInText:
