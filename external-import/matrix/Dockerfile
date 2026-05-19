@@ -37,11 +37,17 @@ RUN apk add --no-cache \
 
 COPY build_and_install_libolm.sh /scripts/
 RUN chmod u+x /scripts/build_and_install_libolm.sh && \
-    /scripts/build_and_install_libolm.sh "${LIBOLM_VERSION}" /python-libs
+    /scripts/build_and_install_libolm.sh "${LIBOLM_VERSION}"
 
 # Install the connector's Python dependencies into ``/python-libs`` so they
 # can be copied over to the runtime stage without dragging the build
-# toolchain along.
+# toolchain along. ``matrix-nio[e2e]`` pulls in ``python-olm`` from PyPI
+# which is then compiled against the libolm headers / shared library
+# installed by ``build_and_install_libolm.sh`` above, so the resulting
+# ``olm`` Python package lands in the same
+# ``/python-libs/lib/python3.12/site-packages/`` layout as the rest of
+# the dependencies — ready to be copied over to ``/usr/local`` in the
+# runtime stage.
 COPY src/requirements.txt /tmp/requirements.txt
 RUN pip install --prefix=/python-libs --no-warn-script-location --no-cache-dir \
         -r /tmp/requirements.txt
