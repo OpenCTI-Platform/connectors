@@ -131,6 +131,27 @@ class ConfigConnector:
         taxii_collections, taxii_overrides = self._parse_taxii_collections(
             raw_collections
         )
+        # Fail-closed: ``taxii_collections`` is the source of truth for which
+        # OpenCTI indicators this connector is allowed to publish to
+        # Defender. If the parsed list is empty (missing / blank config,
+        # malformed JSON that fell through to CSV with no items, ...), the
+        # downstream sync loop in ``connector.run()`` would still proceed
+        # with ``opencti_ids = []``; combined with ``update_only_owned``,
+        # that turns every owned Defender indicator into a deletion
+        # candidate. Raising at config time prevents an empty-config
+        # restart from wiping all previously-published indicators.
+        if not taxii_collections:
+            self.helper.connector_logger.error(
+                "Error: MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS "
+                "is missing or empty. The connector cannot decide what to "
+                "synchronise — refusing to start to avoid deleting every "
+                "owned Defender indicator on the next sync cycle."
+            )
+            raise RuntimeError(
+                "Invalid configuration: "
+                "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS "
+                "must contain at least one collection id."
+            )
         self.taxii_collections = taxii_collections
         self.taxii_overrides = taxii_overrides
         self.interval = get_config_variable(

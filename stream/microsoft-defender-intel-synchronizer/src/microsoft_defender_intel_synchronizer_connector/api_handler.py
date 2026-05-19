@@ -139,8 +139,13 @@ class DefenderApiHandler:
                 except (AttributeError, TypeError, UnicodeDecodeError) as parse_error:
                     # Best-effort enrichment of error metadata; if we cannot read
                     # the response details we still want to raise the original error.
+                    # ``connector_logger.debug``'s second positional argument is
+                    # treated as a structured-meta dict (not a printf-style
+                    # interpolation argument), so the failure reason must be
+                    # surfaced via the meta dict to actually appear in the log.
                     self.helper.connector_logger.debug(
-                        "Failed to parse error response details: %s", parse_error
+                        "Failed to parse error response details",
+                        {"error": str(parse_error)},
                     )
             self.helper.connector_logger.error(error_message, meta)
             raise DefenderApiHandlerError(error_message, meta) from e
@@ -376,13 +381,19 @@ class DefenderApiHandler:
                 {"error": e.msg, "meta": e.metadata},
             )
             return False
-        except (
-            requests.exceptions.RequestException,
-            KeyError,
-        ) as e:
+        except Exception as e:
+            # ``_get_authorization_header`` already wraps every
+            # ``RequestException`` / ``KeyError`` into a
+            # ``DefenderApiHandlerError`` (handled above), so this branch
+            # only fires on a *truly* unexpected failure (e.g. the
+            # requests stack itself blowing up before the wrapper runs,
+            # or a programmer mistake in the auth code). We still want
+            # to fail closed rather than crash the run, but we log the
+            # exception type so operators can tell genuine surprises
+            # apart from the documented Defender error path.
             self.helper.connector_logger.error(
-                "[Preflight] Token acquisition failed",
-                {"error": str(e)},
+                "[Preflight] Token acquisition failed with unexpected error",
+                {"error_type": type(e).__name__, "error": str(e)},
             )
             return False
 
