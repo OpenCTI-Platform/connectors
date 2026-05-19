@@ -24,17 +24,28 @@ if TYPE_CHECKING:
 LOG_PREFIX = "[EventConverter]"
 
 
-def event_threat_level_to_opencti_score(threat_level: str) -> int:
-    """Convert MISP Event's threat level into OpenCTI score."""
-    if threat_level == "1":
-        score = 90
-    elif threat_level == "2":
-        score = 60
-    elif threat_level == "3":
-        score = 30
-    else:
-        score = 50
-    return score
+# Used when no explicit mapping is provided. Matches the legacy behavior so
+# upgrading users who do not set ``MISP_THREAT_LEVEL_SCORE_MAPPING`` keep
+# getting identical scores.
+DEFAULT_THREAT_LEVEL_SCORE_MAPPING: dict[str, int] = {
+    "1": 90,
+    "2": 60,
+    "3": 30,
+    "4": 50,
+}
+
+
+def event_threat_level_to_opencti_score(
+    threat_level: str, mapping: dict[str, int] | None = None
+) -> int:
+    """Convert a MISP Event's threat level into an OpenCTI score.
+
+    The MISP API documents four threat-level values (1/2/3/4); any other
+    value coming from the wire falls back to the score associated with
+    level ``"4"`` (Undefined).
+    """
+    score_by_level = mapping or DEFAULT_THREAT_LEVEL_SCORE_MAPPING
+    return score_by_level.get(str(threat_level), score_by_level["4"])
 
 
 def find_event_attribute(
@@ -84,6 +95,7 @@ class EventConverter:
         default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
         threats_guesser: "ThreatsGuesser | None" = None,
+        threat_level_score_mapping: dict[str, int] | None = None,
     ):
         self.logger = logger
         self.config = ConverterConfig(
@@ -104,6 +116,7 @@ class EventConverter:
             original_tags_to_keep_as_labels=original_tags_to_keep_as_labels,
             default_attribute_score=default_attribute_score,
             guess_threats_from_tags=guess_threats_from_tags,
+            threat_level_score_mapping=threat_level_score_mapping,
         )
 
         # Reminder for (future) developpers
@@ -279,7 +292,10 @@ class EventConverter:
 
         # Extract report's object refs from Event's attributes and objects
         score = (
-            event_threat_level_to_opencti_score(event.Event.threat_level_id)
+            event_threat_level_to_opencti_score(
+                event.Event.threat_level_id,
+                self.config.threat_level_score_mapping,
+            )
             if event.Event.threat_level_id
             else None
         )
