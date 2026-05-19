@@ -1,5 +1,10 @@
 import stix2
-from api_client.models import AttributeCategory, AttributeType, ExtendedAttributeItem
+from api_client.models import (
+    AttributeCategory,
+    AttributeType,
+    ExtendedAttributeItem,
+    TagItem,
+)
 from connector.use_cases.common import ConverterConfig
 from connector.use_cases.convert_attribute import AttributeConverter
 
@@ -49,3 +54,43 @@ class TestThreatActorAttributionConversion:
         intrusion_sets = [obj for obj in result if isinstance(obj, stix2.IntrusionSet)]
         assert len(intrusion_sets) == 1
         assert intrusion_sets[0]["name"] == "APT28"
+
+
+class TestLabelsPropagation:
+    """Regression tests for the label-propagation fix (#4532)."""
+
+    def test_process_does_not_mutate_caller_labels(self):
+        """``AttributeConverter.process`` must never mutate its caller's list.
+
+        Regression test for OpenCTI-Platform/connectors#4532: the previous
+        implementation aliased the caller's ``labels`` list as
+        ``attribute_labels`` and ``append``-ed the attribute tags to it,
+        which made tags bleed into every subsequent attribute / object
+        processed in the same event.
+        """
+        config = _make_config()
+        converter = AttributeConverter(config)
+        author = _make_author()
+        attribute = ExtendedAttributeItem(
+            type=AttributeType.domain,
+            category=AttributeCategory.Network_activity,
+            value="foo.bar",
+            comment="",
+            Tag=[TagItem(name="phishing")],
+        )
+
+        shared_labels = ["tlp:clear", "campaign:Alpha"]
+        snapshot_before = list(shared_labels)
+
+        converter.process(
+            attribute,
+            labels=shared_labels,
+            score=50,
+            author=author,
+            markings=[],
+            external_references=[],
+        )
+
+        # The caller's list must be untouched. ``snapshot_before`` is the
+        # exact same content as ``shared_labels`` had at call time.
+        assert shared_labels == snapshot_before
