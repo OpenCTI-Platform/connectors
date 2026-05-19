@@ -1,7 +1,7 @@
 {
   "title": "AssemblyLine",
   "slug": "assemblyline",
-  "description": "Enrich OpenCTI Artifacts and StixFiles by submitting them to an AssemblyLine 4 deployment for sandbox analysis. AssemblyLine results are pushed back as a Malware-Analysis SDO, malicious indicators (domains, IPs, URLs, file hashes), MITRE ATT&CK Attack Patterns observed at runtime, a Note summarising the verdict, and an external reference to the AssemblyLine submission.",
+  "description": "Enrich OpenCTI Artifacts and StixFiles by submitting them to an AssemblyLine 4 deployment for sandbox analysis. AssemblyLine results are pushed back as a Malware-Analysis SDO, malicious indicators (domains, IPs, URLs), Malware SDOs for attributed families, MITRE ATT&CK Attack Patterns observed at runtime, a Note summarising the verdict, and an external reference to the AssemblyLine submission.",
   "short_description": "Sandbox-analysis enrichment for StixFile / Artifact observables backed by AssemblyLine 4.",
   "logo": "internal-enrichment/assemblyline/__metadata__/logo.png",
   "use_cases": [

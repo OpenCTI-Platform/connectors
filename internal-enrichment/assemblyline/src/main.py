@@ -40,6 +40,19 @@ _DEFAULT_HTTP_TIMEOUT = 60  # seconds, used for non-streaming AssemblyLine calls
 _POLL_SLEEP_SECONDS = 10
 
 
+class AssemblyLineTerminalError(Exception):
+    """Raised when AssemblyLine reports a terminal submission state.
+
+    ``failed`` / ``error`` / ``cancelled`` are end-of-life submission
+    states — polling them again will never make them succeed. Using a
+    dedicated exception type lets the polling loop's broad
+    ``except Exception`` catch transient errors (network glitch /
+    intermittent ``ApiException`` from ``assemblyline-client``) while
+    propagating terminal failures immediately instead of letting the
+    connector loop until the global timeout.
+    """
+
+
 def _coerce_bool(value: Any, default: bool) -> bool:
     """Best-effort conversion of a config value to ``bool``.
 
@@ -297,6 +310,28 @@ class AssemblyLineConnector:
                 f"Do not send any data, TLP of the observable ({tlp}) is greater than "
                 f"max TLP ({self.assemblyline_max_tlp})"
             )
+
+    @staticmethod
+    def _source_marking_refs(observable: Dict[str, Any]) -> List[str]:
+        """Return the ``object_marking_refs`` to apply to derived objects.
+
+        Derived analysis SCOs (the domains / IPs / URLs the connector
+        emits next to the Malware-Analysis SDO) inherit the source
+        observable's markings so they cannot be downgraded — a file
+        that passes the max-TLP gate with ``TLP:AMBER`` must produce
+        ``TLP:AMBER`` analysis observables, not ``TLP:WHITE`` ones.
+
+        The fallback is ``[stix2.TLP_WHITE.id]`` for the case where
+        the source observable has no marking at all (every analysis
+        object still needs *some* marking so the platform's access
+        control gates work).
+        """
+        refs: List[str] = []
+        for marking in observable.get("objectMarking", []) or []:
+            standard_id = marking.get("standard_id")
+            if standard_id and standard_id not in refs:
+                refs.append(standard_id)
+        return refs or [stix2.TLP_WHITE["id"]]
 
     # ------------------------------------------------------------------ #
     # File retrieval                                                     #
@@ -748,14 +783,20 @@ class AssemblyLineConnector:
                         result["sid"] = submission_id
                         return result
                     if state == "failed":
-                        raise Exception(
+                        raise AssemblyLineTerminalError(
                             f"AssemblyLine analysis failed for submission {submission_id}"
                         )
                     if state in ("error", "cancelled"):
-                        raise Exception(
+                        raise AssemblyLineTerminalError(
                             f"AssemblyLine analysis {state} for submission {submission_id}"
                         )
                     self.helper.log_info(f"Analysis still running, state: {state}")
+            except AssemblyLineTerminalError:
+                # Terminal AssemblyLine states (failed / error / cancelled)
+                # cannot recover by polling again — surface them to the
+                # caller immediately instead of waiting until the global
+                # timeout.
+                raise
             except Exception as exc:
                 if "does not exist" in str(exc).lower():
                     raise Exception(
@@ -1058,12 +1099,16 @@ class AssemblyLineConnector:
 
             stix_objects: List[Any] = []
             analysis_sco_refs: List[str] = []
+            # Derived analysis SCOs inherit the source observable's
+            # markings so a TLP:AMBER file cannot produce TLP:WHITE
+            # analysis objects in OpenCTI — see ``_source_marking_refs``.
+            source_marking_refs = self._source_marking_refs(observable)
 
             for domain in malicious_iocs.get("domains", []):
                 try:
                     domain_stix = stix2.DomainName(
                         value=domain,
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=source_marking_refs,
                         custom_properties={
                             "created_by_ref": self.assemblyline_identity_standard_id,
                         },
@@ -1082,7 +1127,7 @@ class AssemblyLineConnector:
                     if self._is_ipv6(ip):
                         ip_stix = stix2.IPv6Address(
                             value=ip,
-                            object_marking_refs=[stix2.TLP_WHITE],
+                            object_marking_refs=source_marking_refs,
                             custom_properties={
                                 "created_by_ref": self.assemblyline_identity_standard_id,
                             },
@@ -1090,7 +1135,7 @@ class AssemblyLineConnector:
                     else:
                         ip_stix = stix2.IPv4Address(
                             value=ip,
-                            object_marking_refs=[stix2.TLP_WHITE],
+                            object_marking_refs=source_marking_refs,
                             custom_properties={
                                 "created_by_ref": self.assemblyline_identity_standard_id,
                             },
@@ -1104,7 +1149,7 @@ class AssemblyLineConnector:
                 try:
                     url_stix = stix2.URL(
                         value=url,
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=source_marking_refs,
                         custom_properties={
                             "created_by_ref": self.assemblyline_identity_standard_id,
                         },
