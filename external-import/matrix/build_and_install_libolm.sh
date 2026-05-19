@@ -46,6 +46,14 @@ cd /tmp/olm
 # ``matrix-nio[e2e]``) compiles its C extension against those headers,
 # and the resulting Python package is installed into the same prefix
 # layout pip uses for every other dependency.
+#
+# We use ``cmake --install build`` (and not ``make install``) because
+# this is an out-of-source build: ``cmake . -Bbuild`` generates the
+# ``Makefile`` under ``./build/``, not in the source root, so a bare
+# ``make install`` from ``/tmp/olm`` would fail with
+# ``No rule to make target 'install'``. ``cmake --install build`` is
+# also the canonical mate to ``cmake --build build`` and works
+# identically with any generator CMake picks.
 cmake . -Bbuild
 cmake --build build
-make install
+cmake --install build
