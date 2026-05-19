@@ -1,6 +1,5 @@
 """IPQS client module."""
 
-import re
 from typing import Any, Dict, Optional
 
 from pycti import OpenCTIConnectorHelper
@@ -24,10 +23,6 @@ from .constants import (
 # Default per-request timeout (seconds) applied to every HTTP call so a
 # stuck Intel network does not block the worker indefinitely.
 _HTTP_TIMEOUT_SECONDS = 30
-
-# Lightweight email-shape detector used to pick the right ``leaked``
-# endpoint for a User-Account observable.
-_EMAIL_RE = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
 
 class IPQSClient:
@@ -135,8 +130,32 @@ class IPQSClient:
     # ------------------------------------------------------------------
     @staticmethod
     def looks_like_email(value: str) -> bool:
-        """Return ``True`` when ``value`` looks like an email address."""
-        return bool(_EMAIL_RE.fullmatch((value or "").strip()))
+        """Return ``True`` when ``value`` looks like an email address.
+
+        Uses a permissive shape check (single ``@``, non-empty local and
+        domain parts, at least one ``.`` in the domain) rather than a
+        strict ASCII-TLD regex so that IDN/punycode domains (e.g.
+        ``user@example.xn--p1ai``) and multi-label TLDs (e.g.
+        ``user@example.co.uk``) are routed to ``/leaked/email`` instead
+        of being misrouted to ``/leaked/username`` — the latter would
+        silently miss leak matches for any address whose TLD is not a
+        plain ASCII-letters-only string.
+        """
+        cleaned = (value or "").strip()
+        if cleaned.count("@") != 1:
+            return False
+        local, _, domain = cleaned.partition("@")
+        if not local or not domain:
+            return False
+        # Reject whitespace anywhere in the local or domain parts; a
+        # full RFC-5322 parser would be overkill for the routing
+        # decision but a stray space is a clear "not an email" signal.
+        if any(c.isspace() for c in cleaned):
+            return False
+        # Require a dot in the domain part so bare hostnames
+        # (``user@localhost``) still take the ``/leaked/username``
+        # path. The domain part itself cannot start or end with a dot.
+        return "." in domain and not domain.startswith(".") and not domain.endswith(".")
 
     def get_leaked_info(self, leak_endpoint: str, value: str):
         """Return the IPQS Darkweb-Leak enrichment for ``value``.

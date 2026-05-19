@@ -13,7 +13,7 @@ from stix2 import (
     Relationship,
 )
 
-from .constants import RiskColor, RiskCriticality
+from .constants import RiskColor, RiskCriticality, to_bool
 
 # Mapping from risk criticality to the OpenCTI label hex colour. Several
 # criticality levels intentionally share the same colour so the operator
@@ -224,12 +224,22 @@ class IPQSBuilder:
         both surface a high-severity OpenCTI label
         (``IPQS:VERDICT="CRITICAL"`` / ``"INVALID"``) so the analyst
         immediately sees the verdict in the UI.
+
+        IPQS encodes ``disposable`` / ``valid`` either as native JSON
+        booleans or as the strings ``"True"`` / ``"False"`` depending on
+        the endpoint version, so both inputs are normalised through
+        :func:`to_bool` before the ``match`` statement: a native
+        ``True`` from the API would otherwise fall through the
+        ``"True"`` string pattern and silently produce the wrong
+        verdict.
         """
+        disposable = to_bool(disposable)
+        valid = to_bool(valid)
         match (disposable, valid, self.score):
-            case ("True", _, _):
+            case (True, _, _):
                 # Disposable -> CRITICAL (same label as the IPQS UI).
                 risk_criticality = RiskCriticality.CRITICAL
-            case (_, "False", _):
+            case (_, False, _):
                 risk_criticality = RiskCriticality.INVALID
             case (_, _, 100):
                 risk_criticality = RiskCriticality.HIGH
@@ -247,9 +257,17 @@ class IPQSBuilder:
         Both ``malware`` and ``phishing`` IPQS flags collapse to
         ``IPQS:VERDICT="CRITICAL"`` in OpenCTI — the same label the
         IPQS portal uses for these high-severity verdicts.
+
+        IPQS encodes ``malware`` / ``phishing`` either as native JSON
+        booleans or as the strings ``"True"`` / ``"False"`` depending
+        on the endpoint version, so both inputs are normalised through
+        :func:`to_bool` before the ``match`` statement (see the
+        rationale on :meth:`email_address_risk_scoring`).
         """
+        malware = to_bool(malware)
+        phishing = to_bool(phishing)
         match (malware, phishing, self.score):
-            case ("True", _, _) | (_, "True", _):
+            case (True, _, _) | (_, True, _):
                 # Malware / phishing -> CRITICAL.
                 risk_criticality = RiskCriticality.CRITICAL
             case (_, _, s) if s >= 90:
@@ -265,9 +283,18 @@ class IPQSBuilder:
         return self._verdict_label(risk_criticality)
 
     def phone_address_risk_scoring(self, valid, active):
-        """Compute the verdict label for a Phone observable."""
+        """Compute the verdict label for a Phone observable.
+
+        IPQS encodes ``valid`` / ``active`` either as native JSON
+        booleans or as the strings ``"True"`` / ``"False"`` depending
+        on the endpoint version, so both inputs are normalised through
+        :func:`to_bool` before the ``match`` statement (see the
+        rationale on :meth:`email_address_risk_scoring`).
+        """
+        valid = to_bool(valid)
+        active = to_bool(active)
         match (valid, active, self.score):
-            case ("False", _, _) | (_, "False", _):
+            case (False, _, _) | (_, False, _):
                 risk_criticality = RiskCriticality.MEDIUM
             case (_, _, s) if 90 <= s <= 100:
                 risk_criticality = RiskCriticality.HIGH
