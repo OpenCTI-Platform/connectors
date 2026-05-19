@@ -78,10 +78,13 @@ class TestTLPMap:
         assert TLP_MAP["CLEAR"].x_opencti_definition_type == "TLP"
 
     def test_white_keeps_the_legacy_stix_tlp_white_constant(self):
-        # ``WHITE`` (legacy alias) remains pointed at the STIX 2.1
-        # ``TLP_WHITE`` constant — operators who explicitly configure
-        # ``MATRIX_TLP=WHITE`` get the legacy marking-definition object
-        # instead of the modern ``TLP:CLEAR``-labelled one.
+        # ``WHITE`` is a legacy alternative to ``CLEAR`` (not an alias):
+        # they resolve to **distinct** marking-definition objects.
+        # ``WHITE`` remains pointed at the built-in STIX 2.1
+        # ``stix2.TLP_WHITE`` constant — operators who explicitly
+        # configure ``MATRIX_TLP=WHITE`` keep the legacy
+        # marking-definition object instead of the modern
+        # ``TLP:CLEAR``-labelled one.
         assert TLP_MAP["WHITE"] is stix2.TLP_WHITE
 
     def test_amber_strict_aliases_share_the_canonical_id(self):

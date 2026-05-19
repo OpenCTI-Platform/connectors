@@ -14,8 +14,14 @@ services:
       - MATRIX_PASSWORD=ChangeMe
       - MATRIX_DEVICE_NAME=octi_bot
       # TLP marking applied to created entities. Supported values:
-      # CLEAR, WHITE (alias of CLEAR), GREEN, AMBER, AMBER_STRICT
-      # (also accepted as AMBER+STRICT / AMBER STRICT / AMBER-STRICT), RED.
+      #   CLEAR             — modern OpenCTI marking
+      #                       (``x_opencti_definition='TLP:CLEAR'``)
+      #   WHITE             — legacy ``stix2.TLP_WHITE`` constant
+      #                       (distinct marking-definition object from CLEAR,
+      #                       kept for backwards compatibility)
+      #   GREEN, AMBER, RED — built-in stix2 markings
+      #   AMBER_STRICT      — also accepted as AMBER+STRICT /
+      #                       AMBER STRICT / AMBER-STRICT
       # Case-insensitive.
       - MATRIX_TLP=AMBER
       - MATRIX_DEBUG=false
