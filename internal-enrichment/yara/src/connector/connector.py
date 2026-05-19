@@ -338,18 +338,17 @@ class YaraConnector:
                 if malware_standard_id not in seen_malware_ids:
                     seen_malware_ids.add(malware_standard_id)
                     malware_name = target.get("name") or malware_standard_id
-                    malware_sdo_kwargs: dict = {
-                        "id": malware_standard_id,
-                        "name": malware_name,
-                        "is_family": bool(target.get("is_family", False)),
-                        "allow_custom": True,
-                    }
-                    malware_description = target.get("description")
-                    if malware_description:
-                        malware_sdo_kwargs["description"] = malware_description
-                    if marking_refs:
-                        malware_sdo_kwargs["object_marking_refs"] = marking_refs
-                    out.append(stix2.Malware(**malware_sdo_kwargs))
+                    malware_description = target.get("description") or None
+                    out.append(
+                        stix2.Malware(
+                            id=malware_standard_id,
+                            name=malware_name,
+                            is_family=bool(target.get("is_family", False)),
+                            description=malware_description,
+                            object_marking_refs=marking_refs or None,
+                            allow_custom=True,
+                        )
+                    )
 
                 malware_relationship = Relationship(
                     id=StixCoreRelationship.generate_id(
