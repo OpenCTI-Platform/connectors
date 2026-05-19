@@ -496,9 +496,12 @@ class Intel471AlertsConnector(ExternalImportConnector):
 
         # does the sender/receiver already exist in OCTI?
         # ``x_sender_id`` / ``x_receiver_id`` track *real* identity ids; the
-        # ``created_by_ref`` placed on ``MediaContent`` falls back to the
-        # connector author when no sender identity could be extracted so it
-        # is always a valid STIX reference.
+        # ``x_opencti_created_by_ref`` placed on ``MediaContent`` falls back
+        # to the connector author when no sender identity could be extracted
+        # so it is always a valid STIX reference (OpenCTI carries the
+        # observable author through the ``x_opencti_*`` extension field, not
+        # the STIX-standard ``created_by_ref`` which is an SDO property — see
+        # ``connectors-sdk/connectors_sdk/models/base_observable_entity.py``).
         x_sender_id = ""
         x_receiver_id = ""
         if x_actor:
@@ -580,7 +583,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             object_marking_refs=self.intel471_darknet_tlp,
             allow_custom=True,
             custom_properties={
-                "created_by_ref": x_sender_id or self.intel471_id,
+                "x_opencti_created_by_ref": x_sender_id or self.intel471_id,
                 "x_opencti_files": octi_filelist,
             },
         )
@@ -760,7 +763,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             object_marking_refs=self.intel471_darknet_tlp,
             allow_custom=True,
             custom_properties={
-                "created_by_ref": x_author_id or self.intel471_id,
+                "x_opencti_created_by_ref": x_author_id or self.intel471_id,
                 "x_opencti_files": octi_filelist,
             },
         )
@@ -895,7 +898,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             object_marking_refs=self.intel471_darknet_tlp,
             allow_custom=True,
             custom_properties={
-                "created_by_ref": x_author_id or self.intel471_id,
+                "x_opencti_created_by_ref": x_author_id or self.intel471_id,
                 "x_opencti_files": octi_filelist,
             },
         )

@@ -3,6 +3,8 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from urllib.parse import urlparse
 
 import stix2
+from pycti import CustomObservableCryptographicKey as CryptoKey
+from pycti import CustomObservablePhoneNumber as PhoneNumber
 from pycti.entities.opencti_identity import Identity as PyctiIdentity
 from pycti.entities.opencti_indicator import Indicator as PyctiIndicator
 from pycti.entities.opencti_location import Location as PyctiLocation
@@ -14,49 +16,23 @@ from pycti.entities.opencti_threat_actor_individual import (
     ThreatActorIndividual as PyctiTAI,
 )
 from pycti.entities.opencti_vulnerability import Vulnerability as PyctiVulnerability
-from stix2 import CustomObservable
 from stix2.canonicalization.Canonicalize import canonicalize
-from stix2.properties import (
-    ListProperty,
-    ReferenceProperty,
-    StringProperty,
-)
 
-# STIX 2.1 expects ``object_marking_refs`` to be a list of marking-definition
-# references. The previous definition used ``StringProperty``, which would
-# have made callers (which pass a list of marking ids) emit invalid STIX
-# and could prevent OpenCTI ingestion.
-_OBJECT_MARKING_REFS_PROPERTY = ListProperty(
-    ReferenceProperty(valid_types="marking-definition", spec_version="2.1")
-)
-
-
-@CustomObservable(
-    "cryptographic-key",
-    [
-        ("id", StringProperty(required=True)),
-        ("value", StringProperty(required=True)),
-        ("description", StringProperty()),
-        ("created_by_ref", ReferenceProperty(valid_types="identity")),
-        ("object_marking_refs", _OBJECT_MARKING_REFS_PROPERTY),
-    ],
-)
-class CryptoKey:
-    pass
-
-
-@CustomObservable(
-    "phone-number",
-    [
-        ("id", StringProperty(required=True)),
-        ("value", StringProperty(required=True)),
-        ("description", StringProperty()),
-        ("created_by_ref", ReferenceProperty(valid_types="identity")),
-        ("object_marking_refs", _OBJECT_MARKING_REFS_PROPERTY),
-    ],
-)
-class PhoneNumber:
-    pass
+# ``pycti`` ships pre-registered ``CustomObservableCryptographicKey`` and
+# ``CustomObservablePhoneNumber`` classes (see ``pycti/__init__.py``).
+# The original version of this connector re-declared them through
+# ``@CustomObservable(...)``, which raised ``DuplicateRegistrationError``
+# at import time on any modern ``pycti`` and prevented the connector
+# from ever starting. The pre-registered classes only declare the
+# STIX-required core properties (``id``, ``value``, ``object_marking_refs``,
+# ...), so we carry the connector-specific extras (``description``,
+# ``x_opencti_created_by_ref``) through ``custom_properties`` with
+# ``allow_custom=True`` instead — same pattern as
+# ``pycti.CustomObservableMediaContent`` is consumed in ``main.py``.
+#
+# OpenCTI carries the observable author through ``x_opencti_created_by_ref``
+# (see ``connectors-sdk/connectors_sdk/models/base_observable_entity.py``),
+# not the STIX-standard ``created_by_ref`` which only applies to SDOs.
 
 
 def generate_observable_id(value, observable):
@@ -300,8 +276,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                         id=generate_file_id(entity["value"], "", "", ""),
                         name=entity["value"],
                         custom_properties={
-                            "description": entity["type"],
-                            "created_by_ref": creator,
+                            "x_opencti_description": entity["type"],
+                            "x_opencti_created_by_ref": creator,
                         },
                         object_marking_refs=markings,
                     )
@@ -321,9 +297,12 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                     CryptoKey(
                         id=generate_observable_id(entity["value"], "cryptographic-key"),
                         value=entity["value"],
-                        description=entity["type"],
-                        created_by_ref=creator,
                         object_marking_refs=markings,
+                        allow_custom=True,
+                        custom_properties={
+                            "x_opencti_description": entity["type"],
+                            "x_opencti_created_by_ref": creator,
+                        },
                     )
                 ],
             )
@@ -358,8 +337,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                         id=generate_observable_id(entity["value"], "user-account"),
                         user_id=entity["value"],
                         custom_properties={
-                            "description": entity["type"],
-                            "created_by_ref": creator,
+                            "x_opencti_description": entity["type"],
+                            "x_opencti_created_by_ref": creator,
                         },
                         object_marking_refs=markings,
                     )
@@ -374,7 +353,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                         id=generate_observable_id(entity["value"], "user-account"),
                         user_id=entity["value"],
                         account_type=entity["type"].lower(),
-                        custom_properties={"created_by_ref": creator},
+                        custom_properties={"x_opencti_created_by_ref": creator},
                         object_marking_refs=markings,
                     )
                 ],
@@ -393,8 +372,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 id=generate_observable_id(d, "domain-name"),
                 value=d,
                 custom_properties={
-                    "description": entity["type"],
-                    "created_by_ref": creator,
+                    "x_opencti_description": entity["type"],
+                    "x_opencti_created_by_ref": creator,
                 },
                 object_marking_refs=markings,
             )
@@ -425,8 +404,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                         id=generate_observable_id(entity["value"], "email-addr"),
                         value=entity["value"],
                         custom_properties={
-                            "description": entity["type"],
-                            "created_by_ref": creator,
+                            "x_opencti_description": entity["type"],
+                            "x_opencti_created_by_ref": creator,
                         },
                         object_marking_refs=markings,
                     )
@@ -453,8 +432,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 id=generate_observable_id(ip, "ipv4-addr"),
                 value=ip,
                 custom_properties={
-                    "description": entity["type"],
-                    "created_by_ref": creator,
+                    "x_opencti_description": entity["type"],
+                    "x_opencti_created_by_ref": creator,
                 },
                 object_marking_refs=markings,
             )
@@ -483,8 +462,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                 id=generate_observable_id(ip, "ipv6-addr"),
                 value=ip,
                 custom_properties={
-                    "description": entity["type"],
-                    "created_by_ref": creator,
+                    "x_opencti_description": entity["type"],
+                    "x_opencti_created_by_ref": creator,
                 },
                 object_marking_refs=markings,
             )
@@ -516,8 +495,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                     id=generate_observable_id(ip, "ipv4-addr"),
                     value=ip,
                     custom_properties={
-                        "description": entity["type"],
-                        "created_by_ref": creator,
+                        "x_opencti_description": entity["type"],
+                        "x_opencti_created_by_ref": creator,
                     },
                     object_marking_refs=markings,
                 )
@@ -533,8 +512,8 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                     id=generate_observable_id(ip, "ipv6-addr"),
                     value=ip,
                     custom_properties={
-                        "description": entity["type"],
-                        "created_by_ref": creator,
+                        "x_opencti_description": entity["type"],
+                        "x_opencti_created_by_ref": creator,
                     },
                     object_marking_refs=markings,
                 )
@@ -578,8 +557,11 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                     PhoneNumber(
                         id=generate_observable_id(entity["value"], "phone-number"),
                         value=entity["value"],
-                        created_by_ref=creator,
                         object_marking_refs=markings,
+                        allow_custom=True,
+                        custom_properties={
+                            "x_opencti_created_by_ref": creator,
+                        },
                     )
                 ],
             )
@@ -589,7 +571,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
             observable = stix2.URL(
                 id=generate_observable_id(url, "url"),
                 value=url,
-                custom_properties={"created_by_ref": creator},
+                custom_properties={"x_opencti_created_by_ref": creator},
                 object_marking_refs=markings,
             )
             # Intel 471 URLs can legitimately contain single quotes and
@@ -622,7 +604,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
             observable = stix2.File(
                 id=generate_file_id("", "", "", h),
                 hashes={"MD5": h},
-                custom_properties={"created_by_ref": creator},
+                custom_properties={"x_opencti_created_by_ref": creator},
                 object_marking_refs=markings,
             )
             pattern = f"[file:hashes.'MD5' = '{h}']"
@@ -650,7 +632,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
             observable = stix2.File(
                 id=generate_file_id("", "", h, ""),
                 hashes={"SHA-1": h},
-                custom_properties={"created_by_ref": creator},
+                custom_properties={"x_opencti_created_by_ref": creator},
                 object_marking_refs=markings,
             )
             pattern = f"[file:hashes.'SHA-1' = '{h}']"
@@ -678,7 +660,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
             observable = stix2.File(
                 id=generate_file_id("", h, "", ""),
                 hashes={"SHA-256": h},
-                custom_properties={"created_by_ref": creator},
+                custom_properties={"x_opencti_created_by_ref": creator},
                 object_marking_refs=markings,
             )
             pattern = f"[file:hashes.'SHA-256' = '{h}']"
@@ -723,7 +705,7 @@ def getTypeValueContent(entity: dict, markings, creator) -> ():
                             entity["value"].lstrip("AS"), "autonomous-system"
                         ),
                         number=int(entity["value"].lstrip("AS")),
-                        custom_properties={"created_by_ref": creator},
+                        custom_properties={"x_opencti_created_by_ref": creator},
                         object_marking_refs=markings,
                     )
                 ],
