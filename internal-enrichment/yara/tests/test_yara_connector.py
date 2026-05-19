@@ -37,12 +37,6 @@ def _build_stub_settings(yara: dict | None = None) -> ConnectorSettings:
     return _StubSettings()
 
 
-# Backwards-compatible alias for the existing tests that just want a
-# default-configured connector (the yara block defaults are applied by
-# ``YaraConfig`` itself when ``yara`` is missing from the dict).
-StubConnectorSettings = _build_stub_settings
-
-
 def _make_connector(yara: dict | None = None):
     settings = _build_stub_settings(yara=yara)
     helper = MagicMock()
@@ -267,6 +261,34 @@ class TestPropagateLabels:
         assert len(calls) == 1
         assert calls[0].kwargs["label_id"] == "label-1"
 
+    def test_logs_warning_for_malformed_label_payloads(self):
+        # Each malformed ``objectLabel`` entry must produce a warning
+        # log so an operator can spot a malformed platform response;
+        # the loop still continues for the well-formed entry.
+        connector = _make_connector(yara={"propagate_labels": True})
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact, indicator = self._matching_artifact_and_indicator(
+            [
+                {"id": "label-1", "value": "apt", "color": "#ff0000"},
+                {"value": "noid", "color": "#ff0000"},  # missing ``id``
+                "string-label",  # not a dict
+            ]
+        )
+        connector._scan_artifact(artifact, [indicator])
+
+        warning_calls = connector.helper.connector_logger.warning.call_args_list
+        warning_messages = [call.args[0] for call in warning_calls]
+        # One warning per malformed entry (missing id + non-dict), no
+        # warning for the well-formed ``label-1`` entry.
+        assert any("not a dict" in msg for msg in warning_messages)
+        assert any("without 'id'" in msg for msg in warning_messages)
+        # ``add_label`` is still called for the well-formed entry.
+        calls = connector.helper.api.stix_cyber_observable.add_label.call_args_list
+        assert len(calls) == 1
+        assert calls[0].kwargs["label_id"] == "label-1"
+
 
 class TestPropagateMalwareRelationships:
     """Tests for the optional Artifact -> Malware relationship propagation."""
@@ -296,12 +318,21 @@ class TestPropagateMalwareRelationships:
             return_value=[
                 {
                     "to": {
-                        "standard_id": ("malware--11111111-1111-4111-8111-111111111111")
+                        "standard_id": (
+                            "malware--11111111-1111-4111-8111-111111111111"
+                        ),
+                        "name": "Emotet",
+                        "description": "Banking trojan",
+                        "is_family": True,
                     }
                 },
                 {
                     "to": {
-                        "standard_id": ("malware--22222222-2222-4222-8222-222222222222")
+                        "standard_id": (
+                            "malware--22222222-2222-4222-8222-222222222222"
+                        ),
+                        "name": "TrickBot",
+                        "is_family": False,
                     }
                 },
             ]
@@ -312,19 +343,78 @@ class TestPropagateMalwareRelationships:
         assert errors == []
 
         # ``stix_core_relationship.list`` is called with the documented
-        # filter (relationship_type='indicates', toTypes=['Malware']).
-        connector.helper.api.stix_core_relationship.list.assert_called_once_with(
-            fromId=indicator["id"],
-            relationship_type="indicates",
-            toTypes=["Malware"],
-        )
+        # filter (relationship_type='indicates', toTypes=['Malware'])
+        # and a ``customAttributes`` block that fetches the Malware
+        # fields needed to build the SDO (name, description, is_family).
+        call = connector.helper.api.stix_core_relationship.list.call_args
+        assert call.kwargs["fromId"] == indicator["id"]
+        assert call.kwargs["relationship_type"] == "indicates"
+        assert call.kwargs["toTypes"] == ["Malware"]
+        assert "customAttributes" in call.kwargs
+        assert "is_family" in call.kwargs["customAttributes"]
 
-        # One Artifact -> Indicator + one Indicator + two Artifact -> Malware.
+        # The bundle now carries both the Artifact -> Malware
+        # ``related-to`` relationships AND the Malware SDOs themselves
+        # so ``send_stix2_bundle(..., cleanup_inconsistent_bundle=True)``
+        # cannot drop the relationships for missing targets.
         relationship_targets = [
             obj["target_ref"] for obj in result if obj["type"] == "relationship"
         ]
         assert "malware--11111111-1111-4111-8111-111111111111" in relationship_targets
         assert "malware--22222222-2222-4222-8222-222222222222" in relationship_targets
+
+        malware_sdos = [obj for obj in result if obj["type"] == "malware"]
+        malware_by_id = {obj["id"]: obj for obj in malware_sdos}
+        assert set(malware_by_id) == {
+            "malware--11111111-1111-4111-8111-111111111111",
+            "malware--22222222-2222-4222-8222-222222222222",
+        }
+        emotet = malware_by_id["malware--11111111-1111-4111-8111-111111111111"]
+        assert emotet["name"] == "Emotet"
+        assert emotet["is_family"] is True
+        assert emotet["description"] == "Banking trojan"
+        trickbot = malware_by_id["malware--22222222-2222-4222-8222-222222222222"]
+        assert trickbot["name"] == "TrickBot"
+        assert trickbot["is_family"] is False
+
+    def test_malware_sdo_is_emitted_once_per_target(self):
+        # The same Malware is returned by two distinct ``indicates``
+        # relationships from the indicator: the SDO must only be emitted
+        # once in the bundle (deduped by ``standard_id``) so we do not
+        # carry duplicate Malware payloads.
+        connector = _make_connector(yara={"propagate_malware_relationship": True})
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        connector.helper.api.stix_core_relationship.list = MagicMock(
+            return_value=[
+                {
+                    "to": {
+                        "standard_id": (
+                            "malware--44444444-4444-4444-8444-444444444444"
+                        ),
+                        "name": "Emotet",
+                        "is_family": True,
+                    }
+                },
+                {
+                    "to": {
+                        "standard_id": (
+                            "malware--44444444-4444-4444-8444-444444444444"
+                        ),
+                        "name": "Emotet",
+                        "is_family": True,
+                    }
+                },
+            ]
+        )
+        artifact, indicator = self._matching_artifact_and_indicator()
+
+        result, _ = connector._scan_artifact(artifact, [indicator])
+
+        malware_sdos = [obj for obj in result if obj["type"] == "malware"]
+        assert len(malware_sdos) == 1
+        assert malware_sdos[0]["id"] == "malware--44444444-4444-4444-8444-444444444444"
 
     def test_does_nothing_when_disabled(self):
         connector = _make_connector(yara={"propagate_malware_relationship": False})
@@ -349,7 +439,11 @@ class TestPropagateMalwareRelationships:
                 {"to": {}},  # missing standard_id
                 {
                     "to": {
-                        "standard_id": ("malware--33333333-3333-4333-8333-333333333333")
+                        "standard_id": (
+                            "malware--33333333-3333-4333-8333-333333333333"
+                        ),
+                        "name": "RemoteAccessTool",
+                        "is_family": False,
                     }
                 },
             ]
@@ -368,3 +462,8 @@ class TestPropagateMalwareRelationships:
             malware_relationships[0]["target_ref"]
             == "malware--33333333-3333-4333-8333-333333333333"
         )
+        # Only the relationship with a usable ``standard_id`` produces a
+        # Malware SDO in the bundle.
+        malware_sdos = [obj for obj in result if obj["type"] == "malware"]
+        assert len(malware_sdos) == 1
+        assert malware_sdos[0]["id"] == "malware--33333333-3333-4333-8333-333333333333"

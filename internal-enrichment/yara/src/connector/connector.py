@@ -9,6 +9,36 @@ from pycti import (
 )
 from stix2 import Relationship
 
+# Custom GraphQL attributes used by ``_build_malware_relationships`` when
+# listing the matched Indicator's ``indicates -> Malware`` relationships.
+# We extend the default ``to`` block with the Malware fields needed to
+# build a minimal :class:`stix2.Malware` SDO (``name``, ``description``,
+# ``is_family``) so the Artifact -> Malware ``related-to`` relationships
+# we emit are NOT silently dropped by
+# ``send_stix2_bundle(..., cleanup_inconsistent_bundle=True)`` for
+# missing target SDOs.
+_INDICATES_MALWARE_LIST_ATTRIBUTES = """
+    id
+    standard_id
+    entity_type
+    parent_types
+    relationship_type
+    to {
+        ... on BasicObject {
+            id
+            entity_type
+        }
+        ... on StixObject {
+            standard_id
+        }
+        ... on Malware {
+            name
+            description
+            is_family
+        }
+    }
+"""
+
 
 class YaraConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -203,13 +233,37 @@ class YaraConnector:
         set, not re-emit a full STIX object that would also have to
         carry every other property.
 
-        Per-label failures are logged at ``error`` level and do not
+        Malformed ``objectLabel`` entries (non-dict items or dicts
+        missing the ``id`` field) are logged at ``warning`` level so an
+        operator can spot a malformed payload coming back from the
+        platform; per-label API failures are logged at ``error`` level.
+        In both cases the loop continues so a single bad label does not
         abort the rest of the scan.
         """
+        artifact_ref = artifact.get("observable_value", artifact.get("id"))
+        indicator_name = indicator.get("name")
         labels = indicator.get("objectLabel") or []
         for label in labels:
-            label_id = label.get("id") if isinstance(label, dict) else None
+            if not isinstance(label, dict):
+                self.helper.connector_logger.warning(
+                    "Skipping malformed objectLabel entry (not a dict)",
+                    meta={
+                        "label": repr(label)[:80],
+                        "indicator": indicator_name,
+                        "artifact": artifact_ref,
+                    },
+                )
+                continue
+            label_id = label.get("id")
             if not label_id:
+                self.helper.connector_logger.warning(
+                    "Skipping objectLabel entry without 'id'",
+                    meta={
+                        "label": label.get("value"),
+                        "indicator": indicator_name,
+                        "artifact": artifact_ref,
+                    },
+                )
                 continue
             try:
                 self.helper.api.stix_cyber_observable.add_label(
@@ -218,51 +272,85 @@ class YaraConnector:
             except Exception as exc:  # noqa: BLE001 - we only want to log
                 self.helper.connector_logger.error(
                     "Error propagating label from YARA Indicator to Artifact",
-                    {
+                    meta={
                         "label": label.get("value", label_id),
-                        "indicator": indicator.get("name"),
-                        "artifact": artifact.get(
-                            "observable_value", artifact.get("id")
-                        ),
+                        "indicator": indicator_name,
+                        "artifact": artifact_ref,
                         "error": str(exc),
                     },
                 )
 
     def _build_malware_relationships(
         self, artifact: dict, indicator: dict, marking_refs
-    ) -> list[Relationship]:
-        """Return STIX ``related-to`` relationships from ``artifact`` to every
-        Malware entity that ``indicator`` ``indicates``.
+    ) -> list:
+        """Return STIX objects propagating the Malware link onto ``artifact``.
 
-        Only ``indicates`` relationships are considered (matches the
-        documented behaviour): a stray ``related-to`` / ``part-of``
-        leaving the indicator must not pull in malware the YARA rule
-        does not actually indicate.
+        For every Malware entity that ``indicator`` ``indicates`` we
+        emit two things:
 
-        ``marking_refs`` reuses the marking set computed for the
-        Artifact -> Indicator relationship, so the propagated
-        Artifact -> Malware relationships carry the same TLP markings.
+        * the target ``stix2.Malware`` SDO (deduplicated by
+          ``standard_id``) so ``send_stix2_bundle(...,
+          cleanup_inconsistent_bundle=True)`` does not drop the
+          relationship as "inconsistent" when the Malware is not yet
+          present in the bundle the caller built for this enrichment;
+        * the ``related-to`` STIX relationship from ``artifact`` to
+          the Malware (carrying ``marking_refs`` so it inherits the
+          Artifact -> Indicator TLP markings).
+
+        Only ``indicates`` relationships are considered: a stray
+        ``related-to`` / ``part-of`` leaving the indicator must not
+        pull in malware the YARA rule does not actually indicate.
+
+        The Malware SDO is built from the fields returned by
+        :data:`_INDICATES_MALWARE_LIST_ATTRIBUTES` (``name``,
+        ``is_family``, ``description``). ``standard_id`` is used as
+        the SDO id so the platform merges by id on ingestion and the
+        existing Malware entity is not overwritten (only linked).
         """
+        indicator_name = indicator.get("name")
         try:
             relationships = self.helper.api.stix_core_relationship.list(
                 fromId=indicator["id"],
                 relationship_type="indicates",
                 toTypes=["Malware"],
+                customAttributes=_INDICATES_MALWARE_LIST_ATTRIBUTES,
             )
         except Exception as exc:  # noqa: BLE001
             self.helper.connector_logger.error(
                 "Error listing 'indicates' relationships from YARA Indicator",
-                {"indicator": indicator.get("name"), "error": str(exc)},
+                meta={"indicator": indicator_name, "error": str(exc)},
             )
             return []
 
-        out: list[Relationship] = []
+        out: list = []
+        seen_malware_ids: set[str] = set()
         for rel in relationships or []:
             target = (rel.get("to") or {}) if isinstance(rel, dict) else {}
             malware_standard_id = target.get("standard_id")
             if not malware_standard_id:
                 continue
             try:
+                # Emit the Malware SDO once per cycle so the
+                # Artifact -> Malware relationship survives
+                # ``cleanup_inconsistent_bundle=True``. ``standard_id``
+                # matches the existing entity in OpenCTI so the
+                # ingestion path links / merges, not creates a new SDO.
+                if malware_standard_id not in seen_malware_ids:
+                    seen_malware_ids.add(malware_standard_id)
+                    malware_name = target.get("name") or malware_standard_id
+                    malware_sdo_kwargs: dict = {
+                        "id": malware_standard_id,
+                        "name": malware_name,
+                        "is_family": bool(target.get("is_family", False)),
+                        "allow_custom": True,
+                    }
+                    malware_description = target.get("description")
+                    if malware_description:
+                        malware_sdo_kwargs["description"] = malware_description
+                    if marking_refs:
+                        malware_sdo_kwargs["object_marking_refs"] = marking_refs
+                    out.append(stix2.Malware(**malware_sdo_kwargs))
+
                 malware_relationship = Relationship(
                     id=StixCoreRelationship.generate_id(
                         "related-to",
@@ -285,16 +373,16 @@ class YaraConnector:
                 out.append(malware_relationship)
                 self.helper.connector_logger.debug(
                     "Propagated Artifact -> Malware relationship",
-                    {
+                    meta={
                         "artifact": artifact["standard_id"],
                         "malware": malware_standard_id,
-                        "indicator": indicator.get("name"),
+                        "indicator": indicator_name,
                     },
                 )
             except Exception as exc:  # noqa: BLE001
                 self.helper.connector_logger.error(
                     "Error building Artifact -> Malware relationship",
-                    {"indicator": indicator.get("name"), "error": str(exc)},
+                    meta={"indicator": indicator_name, "error": str(exc)},
                 )
         return out
 
@@ -324,7 +412,7 @@ class YaraConnector:
         if entity_type not in self.config.connector.scope:
             self.helper.connector_logger.info(
                 "Entity type not in connector scope, forwarding original bundle",
-                {"entity_id": entity_id, "entity_type": entity_type},
+                meta={"entity_id": entity_id, "entity_type": entity_type},
             )
             bundle = self.helper.stix2_create_bundle(stix_objects)
             self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
