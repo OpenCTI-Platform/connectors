@@ -168,6 +168,14 @@ class ExternalImportConnector:
         self.helper.log_info(f"Starting {self.helper.connect_name} connector...")
         interval_seconds = self._get_interval()
         while True:
+            # Default: sleep up to a full interval (capped by ``_sleep_seconds``
+            # at ``_MAX_SLEEP_SECONDS`` so we remain responsive to shutdown
+            # signals). When the cycle decided *not* to run because the
+            # configured interval has not elapsed yet, we shorten the sleep
+            # to the time remaining until the next scheduled run so short
+            # ``CONNECTOR_RUN_EVERY`` values (e.g. ``30s``) actually fire
+            # on time instead of being delayed by an unconditional sleep.
+            next_sleep_seconds = interval_seconds
             try:
                 timestamp = int(time.time())
                 current_state = self.helper.get_state() or {}
@@ -194,6 +202,7 @@ class ExternalImportConnector:
                         f"{self.helper.connect_name} connector will not run, "
                         f"next run in: {remaining}s"
                     )
+                    next_sleep_seconds = remaining
             except (KeyboardInterrupt, SystemExit):
                 self.helper.log_info(f"{self.helper.connect_name} connector stopped")
                 sys.exit(0)
@@ -205,7 +214,7 @@ class ExternalImportConnector:
                 self.helper.force_ping()
                 sys.exit(0)
 
-            time.sleep(self._sleep_seconds(interval_seconds))
+            time.sleep(self._sleep_seconds(next_sleep_seconds))
 
     def _run_cycle(self, *, last_run: Optional[int], timestamp: int) -> None:
         """Execute one collection cycle and persist the new ``last_run``.
@@ -269,15 +278,22 @@ class ExternalImportConnector:
         self.helper.set_state(current_state)
         self.helper.api.work.to_processed(work_id, message)
 
-    def _sleep_seconds(self, interval_seconds: int) -> int:
+    def _sleep_seconds(self, requested_seconds: int) -> int:
         """Return the number of seconds to sleep before checking again.
 
-        Capped to :data:`_MAX_SLEEP_SECONDS` so the connector stays
-        responsive to shutdown signals on long intervals, and to the
-        configured interval (with a small floor) so users that set a short
-        ``CONNECTOR_RUN_EVERY`` (e.g. ``30s``) actually see their jobs fire
-        on time instead of being delayed by an unconditional 60s sleep.
+        ``requested_seconds`` is the caller's desired sleep duration
+        (either the configured interval, or the remaining time until
+        the next scheduled run). The value is clamped to the range
+        ``[_MIN_SLEEP_SECONDS, _MAX_SLEEP_SECONDS]`` so:
+
+        * short ``CONNECTOR_RUN_EVERY`` values (e.g. ``30s``) actually
+          see their jobs fire on time instead of being delayed by an
+          unconditional 60s sleep,
+        * long intervals stay responsive to shutdown signals because
+          the loop wakes up every ``_MAX_SLEEP_SECONDS`` at most,
+        * zero or negative values fall back to the minimum floor so
+          the loop cannot busy-wait.
         """
-        if interval_seconds <= 0:
+        if requested_seconds <= 0:
             return _MIN_SLEEP_SECONDS
-        return max(_MIN_SLEEP_SECONDS, min(_MAX_SLEEP_SECONDS, interval_seconds))
+        return max(_MIN_SLEEP_SECONDS, min(_MAX_SLEEP_SECONDS, requested_seconds))

@@ -1,7 +1,19 @@
-# Tests only exercise pure-Python helpers from ``src/main.py``
-# (``_TLP_MAP``, ``_resolve_tlp``, ``_namespaced_channel_name``,
-# ``_media_content_id``). Importing ``main.py`` pulls in ``stix2``,
-# ``pycti`` and ``mattermostdriver``, so we install the same pinned
-# versions used in production.
+# Tests exercise pure-Python helpers and small fixtures from
+# ``src/main.py``:
+#
+# * ``_TLP_MAP`` / ``_resolve_tlp`` / ``_make_tlp_marking`` (TLP
+#   resolution and marking-definition shape);
+# * ``_namespaced_channel_name`` (team/channel name namespacing);
+# * ``_media_content_id`` (deterministic SCO id from the post URL);
+# * ``_ensure_author`` (per-run author cache: identity.list called at
+#   most once per author per cycle, ``_reset_run_caches`` clears it);
+# * the conditional ``custom_properties`` payload built around
+#   ``CustomObservableMediaContent`` (``x_opencti_files`` only when
+#   the post has attachments; the author is carried via
+#   ``x_opencti_created_by_ref``, not the SDO-only ``created_by_ref``).
+#
+# Importing ``main.py`` pulls in ``stix2``, ``pycti`` and
+# ``mattermostdriver``, so we install the same pinned versions used in
+# production.
 -r ../src/requirements.txt
 pytest

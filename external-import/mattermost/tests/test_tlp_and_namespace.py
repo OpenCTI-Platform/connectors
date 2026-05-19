@@ -1,7 +1,9 @@
-"""Unit tests for the TLP map, channel-name namespacing and the
-deterministic media-content id helper.
+"""Unit tests for the TLP map, channel-name namespacing, the
+deterministic media-content id helper, the per-run author cache and
+the conditional ``custom_properties`` payload built around
+``CustomObservableMediaContent``.
 
-These three helpers are part of the connector's public contract:
+These helpers are part of the connector's public contract:
 
 * a misconfigured ``MATTERMOST_TLP`` value must raise a clear error
   listing every accepted alias;
@@ -15,13 +17,26 @@ These three helpers are part of the connector's public contract:
 * the deterministic media-content id derived from a post URL must match
   the id ``CustomObservableMediaContent`` would auto-generate, so thread
   replies can be linked even when their root was ingested in a previous
-  run.
+  run;
+* ``_ensure_author`` must hit ``identity.list`` (and append to the
+  bundle) at most once per author per run;
+* ``custom_properties`` must omit ``x_opencti_files`` when the post
+  has no attachments and must carry the author via
+  ``x_opencti_created_by_ref``, not the SDO-only ``created_by_ref``;
+* ``_sleep_seconds`` must clamp its input to
+  ``[_MIN_SLEEP_SECONDS, _MAX_SLEEP_SECONDS]`` so the scheduler
+  cannot oversleep past the next scheduled run.
 """
 
 from typing import Any, Dict, List, Optional
 
 import pytest
 import stix2
+from lib.external_import import (
+    _MAX_SLEEP_SECONDS,
+    _MIN_SLEEP_SECONDS,
+    ExternalImportConnector,
+)
 from main import (
     _TLP_MAP,
     MattermostConnector,
@@ -319,3 +334,40 @@ class TestMediaContentAttachmentsOmission:
             == "identity--00000000-0000-0000-0000-000000000000"
         )
         assert "created_by_ref" not in observable
+
+
+class TestSleepSeconds:
+    """``_sleep_seconds`` clamps its input to ``[MIN, MAX]``.
+
+    Pinned by the Copilot review on PR #4637: when the connector
+    decides it is not yet time to run, ``run()`` now passes the
+    *remaining* time (rather than the full interval) so short
+    ``CONNECTOR_RUN_EVERY`` values fire on time. The contract is that
+    the value is clamped to ``[_MIN_SLEEP_SECONDS, _MAX_SLEEP_SECONDS]``
+    so we cannot oversleep past the next scheduled run or busy-wait.
+    """
+
+    @staticmethod
+    def _sleep_seconds(value: int) -> int:
+        # ``_sleep_seconds`` is a plain method, but it only touches its
+        # own argument, so we can bypass ``__init__`` and the
+        # ``OpenCTIConnectorHelper`` it would build.
+        return ExternalImportConnector._sleep_seconds(
+            ExternalImportConnector.__new__(ExternalImportConnector), value
+        )
+
+    def test_long_interval_is_capped_at_max(self):
+        assert self._sleep_seconds(3600) == _MAX_SLEEP_SECONDS
+
+    def test_short_remaining_time_is_passed_through(self):
+        # Regression test: an interval of 30s with 5s remaining used to
+        # sleep 30s (oversleep), which delayed the next run by 25s.
+        # With the fix, the loop passes ``remaining`` and we get 5s back.
+        assert self._sleep_seconds(5) == 5
+
+    def test_one_second_remaining_is_returned_as_is(self):
+        assert self._sleep_seconds(_MIN_SLEEP_SECONDS) == _MIN_SLEEP_SECONDS
+
+    @pytest.mark.parametrize("value", [0, -1, -100])
+    def test_non_positive_values_fall_back_to_min(self, value):
+        assert self._sleep_seconds(value) == _MIN_SLEEP_SECONDS
