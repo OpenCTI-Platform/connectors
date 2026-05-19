@@ -520,8 +520,15 @@ class AttributeConverter:
         if is_external_reference or is_attachment:
             return stix_objects
 
-        # Extract STIX indicator's metadata from MISP event's attribute's tag
-        attribute_labels = labels
+        # Extract STIX indicator's metadata from MISP event's attribute's tag.
+        # ``labels`` is owned by the caller (the event converter passes a
+        # ``deepcopy(event_labels)`` per attribute, but the object converter
+        # forwards its own list verbatim). Without making a fresh copy here,
+        # ``attribute_labels.append(label)`` below would mutate the caller's
+        # list, which causes attribute-level tags to bleed into every
+        # subsequent attribute / object processed in the same event
+        # (see OpenCTI-Platform/connectors#4532).
+        attribute_labels = list(labels)
         attribute_markings = []
 
         for tag in attribute.Tag or []:
