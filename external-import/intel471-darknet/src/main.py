@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Dict, Optional
 from urllib.parse import urlparse
 
 import lib.intel2stix
@@ -15,17 +15,40 @@ import stix2
 from bs4 import BeautifulSoup
 from lib.external_import import ExternalImportConnector
 from lib.intel2stix import get_date
-from lib.redaction import redact_url
+from lib.redaction import redact_url, redact_url_in_text
 from pycti import Channel as PyctiChannel
 from pycti import CustomObjectChannel as Channel
 from pycti import CustomObservableMediaContent as MediaContent
 from pycti import Identity as PyctiIdentity
 from pycti import Incident as PyctiIncident
+from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Report as PyctiReport
 from pycti import StixCoreRelationship as PyctiSCR
 from pycti import ThreatActorIndividual as PyctiTAI
 from pycti import get_config_variable
 from stix2 import Identity, Incident, Relationship, Report
+
+
+def _make_tlp_marking(definition: str) -> stix2.MarkingDefinition:
+    """Return a ``stix2.MarkingDefinition`` for an OpenCTI-specific TLP value.
+
+    Used for ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` which the platform
+    represents as custom marking-definition objects (the STIX 2.1
+    library only exposes built-in constants for ``TLP_WHITE`` /
+    ``TLP_GREEN`` / ``TLP_AMBER`` / ``TLP_RED``). Building a real
+    ``stix2.MarkingDefinition`` lets the connector ship the marking
+    object in every bundle so the OpenCTI UI displays the right label
+    (``TLP:CLEAR`` rather than the legacy ``TLP:WHITE``).
+    """
+    return stix2.MarkingDefinition(
+        id=PyctiMarkingDefinition.generate_id("TLP", definition),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
+    )
+
 
 # Default timeout (seconds) applied to every Intel471 HTTP call so that a
 # stuck network does not block the connector loop indefinitely.
@@ -133,17 +156,22 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # references, so we store the resolved id as a one-element list.
         # Every callsite ends up writing ``object_marking_refs=self.intel471_darknet_tlp``
         # which therefore produces a valid STIX value.
-        self.intel471_darknet_tlp = [
-            self._get_tlp(
-                get_config_variable(
-                    "INTEL471_DARKNET_TLP",
-                    ["intel471_darknet", "tlp"],
-                    config,
-                    default="AMBER",
-                )
-                or "AMBER"
+        #
+        # ``intel471_darknet_marking`` is the full ``stix2.MarkingDefinition``
+        # object; ``_collect_intelligence`` prepends it to every emitted
+        # bundle so OpenCTI-specific markings (``TLP:CLEAR`` /
+        # ``TLP:AMBER+STRICT``) are registered with the platform by
+        # name and the right UI label is preserved.
+        self.intel471_darknet_marking: stix2.MarkingDefinition = self._get_tlp(
+            get_config_variable(
+                "INTEL471_DARKNET_TLP",
+                ["intel471_darknet", "tlp"],
+                config,
+                default="AMBER",
             )
-        ]
+            or "AMBER"
+        )
+        self.intel471_darknet_tlp = [self.intel471_darknet_marking.id]
         self.intel471_watchers = {}
 
         # collecting watchers
@@ -180,15 +208,22 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # STIX-id stays the same (it is deterministic via
         # ``PyctiIdentity.generate_id``) and OpenCTI simply reconciles
         # the two — no duplicate is created.
+        # ``Intel 471`` (with a space) is the brand's canonical spelling.
+        # Using the same string for both the STIX ``Identity`` creation
+        # and the platform-side lookup is what makes the deterministic
+        # ``PyctiIdentity.generate_id`` collapse cleanly onto an
+        # existing identity rather than producing a duplicate
+        # ``Intel471 Inc.`` SDO next to the existing ``Intel 471 Inc.``.
+        intel471_author_name = "Intel 471 Inc."
         self.intel471_author = stix2.Identity(
-            id=PyctiIdentity.generate_id("Intel471 Inc.", "organization"),
-            name="Intel471 Inc.",
+            id=PyctiIdentity.generate_id(intel471_author_name, "organization"),
+            name=intel471_author_name,
             identity_class="organization",
             object_marking_refs=self.intel471_darknet_tlp,
         )
         self.intel471_id = self.intel471_author["id"]
         identity_list = self.helper.api.identity.list(
-            filters=self._name_filter("Intel 471 Inc."),
+            filters=self._name_filter(intel471_author_name),
         )
         if identity_list:
             self.helper.log_debug(
@@ -201,35 +236,46 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 f"bundle (x_author_id = {self.intel471_id})"
             )
 
-    _TLP_AMBER_STRICT_ID = "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
-    _TLP_MAP = {
-        "CLEAR": stix2.TLP_WHITE.id,
-        "WHITE": stix2.TLP_WHITE.id,
-        "GREEN": stix2.TLP_GREEN.id,
-        "AMBER": stix2.TLP_AMBER.id,
-        "AMBER_STRICT": _TLP_AMBER_STRICT_ID,
-        "AMBER+STRICT": _TLP_AMBER_STRICT_ID,
-        "RED": stix2.TLP_RED.id,
+    # ``CLEAR`` is **not** an alias of ``stix2.TLP_WHITE``: although
+    # ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")`` happens
+    # to derive the same canonical id as ``stix2.TLP_WHITE.id`` (the STIX
+    # 2.1 derivation is deterministic on the marking name), the
+    # **marking-definition object** the connector emits is different —
+    # it carries ``x_opencti_definition='TLP:CLEAR'`` so the OpenCTI UI
+    # shows the modern ``TLP:CLEAR`` label rather than the legacy
+    # ``TLP:WHITE`` label. ``WHITE`` is the legacy alternative and keeps
+    # the built-in ``stix2.TLP_WHITE`` constant.
+    _TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
+        "CLEAR": _make_tlp_marking("TLP:CLEAR"),
+        "WHITE": stix2.TLP_WHITE,
+        "GREEN": stix2.TLP_GREEN,
+        "AMBER": stix2.TLP_AMBER,
+        "AMBER_STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+        "AMBER+STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+        "RED": stix2.TLP_RED,
     }
 
     @classmethod
-    def _get_tlp(cls, tlp_string: str) -> str:
-        """Return the marking-definition id for ``tlp_string``.
+    def _get_tlp(cls, tlp_string: str) -> stix2.MarkingDefinition:
+        """Return the ``stix2.MarkingDefinition`` for ``tlp_string``.
 
         Normalises case so ``amber``/``Amber``/``AMBER`` all match, and
         accepts both ``AMBER_STRICT`` and the documented ``AMBER+STRICT``
-        spellings. The previous version silently mapped both ``WHITE`` and
-        ``CLEAR`` (and unknown values) to ``TLP_RED`` — they now map to
-        ``TLP_WHITE`` (the canonical "no restriction" marking), and
-        unknown values raise a clear ``ValueError`` at startup.
+        spellings. ``CLEAR`` resolves to a custom OpenCTI marking with
+        ``x_opencti_definition='TLP:CLEAR'``; ``WHITE`` is kept as a
+        legacy alternative pointing at the built-in ``stix2.TLP_WHITE``
+        constant. Unknown values raise a clear ``ValueError`` at
+        startup.
         """
         normalised = (tlp_string or "").strip().upper().replace(" ", "_")
         try:
             return cls._TLP_MAP[normalised]
         except KeyError as exc:
-            valid = ", ".join(
-                sorted({"CLEAR", "GREEN", "AMBER", "AMBER_STRICT", "RED"})
-            )
+            # Derive the alias list from ``_TLP_MAP`` so the error
+            # message stays in sync with the code if aliases are added
+            # later — the previous hand-rolled list silently dropped
+            # ``WHITE`` and ``AMBER+STRICT`` from the diagnostic.
+            valid = ", ".join(sorted(cls._TLP_MAP))
             raise ValueError(  # noqa: TRY003 - human-friendly startup error
                 f"Unsupported INTEL471_DARKNET_TLP value '{tlp_string}'. "
                 f"Expected one of {valid}."
@@ -323,14 +369,19 @@ class Intel471AlertsConnector(ExternalImportConnector):
         except requests.RequestException as exc:
             # Never log the response body — it may contain credentials or
             # other sensitive Intel 471 data. Status code is safe.
-            # The URL is also redacted through ``_redact_url`` because
+            # The URL is also redacted through ``redact_url`` because
             # attachment downloads target third-party CDNs that can
             # carry signed query parameters / bearer-style tokens which
-            # we must not leak into the connector logs.
+            # we must not leak into the connector logs. ``requests``
+            # itself formats most exceptions as ``"... for url: <full-url>"``
+            # so the original full URL ends up in the exception message
+            # too — ``redact_url_in_text`` sanitises that copy as well.
             status = getattr(getattr(exc, "response", None), "status_code", None)
+            sanitized_exc = redact_url_in_text(str(exc), url)
             self.helper.log_warning(
-                f"Intel 471 request failed (url={redact_url(url)}, "
-                f"status={status}): {exc}"
+                f"Intel 471 request failed "
+                f"(url={redact_url(url)}, status={status}, "
+                f"exception={type(exc).__name__}): {sanitized_exc}"
             )
             return None
         return response
@@ -1881,9 +1932,16 @@ class Intel471AlertsConnector(ExternalImportConnector):
         # resolves in OpenCTI even when this is the very first run and
         # the identity has never been ingested before. The id is
         # deterministic, so subsequent runs just reconcile against the
-        # existing identity without creating a duplicate.
+        # existing identity without creating a duplicate. The configured
+        # TLP marking-definition object is also prepended so
+        # OpenCTI-specific markings (``TLP:CLEAR`` / ``TLP:AMBER+STRICT``)
+        # are registered with the platform by name — built-in stix2
+        # markings (``WHITE`` / ``GREEN`` / ``AMBER`` / ``RED``) are
+        # already known to the platform but emitting them explicitly is
+        # harmless and keeps the contract uniform across every alias.
         if stix_objects:
             stix_objects.insert(0, self.intel471_author)
+            stix_objects.insert(0, self.intel471_darknet_marking)
 
         self.helper.log_info(
             f"{len(stix_objects)} STIX2 objects have been compiled by "

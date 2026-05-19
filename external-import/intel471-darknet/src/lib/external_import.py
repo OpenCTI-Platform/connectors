@@ -174,9 +174,22 @@ class ExternalImportConnector:
                         f"{self.helper.connect_name} connector will not run, "
                         f"next run in: {remaining}s"
                     )
-            except (KeyboardInterrupt, SystemExit):
+            except KeyboardInterrupt:
+                # ``Ctrl+C`` / ``SIGINT``: graceful operator-initiated
+                # shutdown. Always exit ``0`` so container supervisors
+                # do not treat the deliberate signal as a crash that
+                # should trigger a restart backoff.
                 self.helper.log_info(f"{self.helper.connect_name} connector stopped")
                 sys.exit(0)
+            except SystemExit:
+                # Re-raise so the original ``SystemExit.code`` propagates
+                # to the orchestrator. Catching it here and unconditionally
+                # exiting ``0`` would mask any non-zero status raised
+                # from helper code or future fatal preconditions /
+                # health checks and make real failures look like clean
+                # exits.
+                self.helper.log_info(f"{self.helper.connect_name} connector stopped")
+                raise
             except Exception as exc:  # noqa: BLE001 - last-resort safety net
                 self.helper.log_error(str(exc))
 

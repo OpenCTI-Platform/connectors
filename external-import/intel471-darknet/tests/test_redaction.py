@@ -19,7 +19,7 @@ short-lived credentials never reach the connector logs:
 """
 
 import pytest
-from lib.redaction import redact_url
+from lib.redaction import redact_url, redact_url_in_text
 
 
 class TestQueryAndFragmentRedaction:
@@ -119,3 +119,69 @@ class TestNoCredentialLeak:
     )
     def test_signed_query_value_never_appears_in_output(self, url):
         assert "DEADBEEF" not in redact_url(url)
+
+
+class TestRedactUrlInText:
+    """``redact_url_in_text`` redacts URL substrings inside arbitrary text.
+
+    ``requests.RequestException`` instances embed the original URL in
+    their ``str()`` representation — ``"403 Client Error: Forbidden
+    for url: <full-url>?signed=..."``. Logging ``str(exc)`` directly
+    therefore leaks the signed query string even when the URL was
+    redacted in the surrounding warning. ``redact_url_in_text`` is
+    the helper that substitutes the known full URL with its redacted
+    form inside an arbitrary text payload (typically an exception
+    message) so the warning line cannot leak credentials through
+    that secondary channel.
+    """
+
+    def test_replaces_full_url_with_redacted_form(self):
+        url = "https://s3.amazonaws.com/img.png?X-Amz-Signature=DEADBEEF"
+        text = (
+            "403 Client Error: Forbidden for url: "
+            "https://s3.amazonaws.com/img.png?X-Amz-Signature=DEADBEEF"
+        )
+        result = redact_url_in_text(text, url)
+        assert "DEADBEEF" not in result
+        assert "X-Amz-Signature" not in result
+        assert "https://s3.amazonaws.com/img.png?<redacted>" in result
+        # The HTTP-status prefix is preserved so operators can still
+        # diagnose the failure.
+        assert "403 Client Error" in result
+
+    def test_replaces_every_occurrence(self):
+        url = "https://example.org/p?t=DEAD"
+        text = (
+            "first https://example.org/p?t=DEAD middle https://example.org/p?t=DEAD end"
+        )
+        result = redact_url_in_text(text, url)
+        assert "DEAD" not in result
+        assert result.count("https://example.org/p?<redacted>") == 2
+
+    def test_returns_text_unchanged_when_url_not_present(self):
+        text = "ConnectionError: connection reset by peer"
+        assert redact_url_in_text(text, "https://nowhere.example.org/") == text
+
+    @pytest.mark.parametrize(
+        ("text", "url", "expected"),
+        [
+            ("", "https://x", ""),
+            (None, "https://x", ""),
+            ("plain text", None, "plain text"),
+            ("plain text", "", "plain text"),
+        ],
+    )
+    def test_defensive_empty_inputs(self, text, url, expected):
+        assert redact_url_in_text(text, url) == expected
+
+    def test_non_string_text_is_coerced(self):
+        # ``str(exc)`` is the common case but the helper must accept
+        # any input that can be coerced to ``str`` (e.g. a future
+        # ``requests`` exception subclass with a non-``str`` payload).
+        class _Exc:
+            def __str__(self) -> str:
+                return "ConnectionError to https://example.org/path?s=X"
+
+        result = redact_url_in_text(_Exc(), "https://example.org/path?s=X")
+        assert "?s=X" not in result
+        assert "https://example.org/path?<redacted>" in result

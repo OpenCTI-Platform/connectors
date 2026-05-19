@@ -51,4 +51,39 @@ def redact_url(url) -> str:
     return base or "<empty url>"
 
 
-__all__ = ("redact_url",)
+def redact_url_in_text(text, url) -> str:
+    """Return ``text`` with every occurrence of ``url`` replaced by its redacted form.
+
+    The connector's HTTP-failure warnings include both the URL we
+    were trying to fetch and the underlying ``requests`` exception
+    message. ``requests`` formats most exceptions as
+    ``"... for url: <full-url>"`` so the original full URL ends up
+    in the exception text — including any signed query parameters
+    on third-party CDN downloads. ``redact_url_in_text`` sanitises
+    the exception text by substituting the known full URL with the
+    output of :func:`redact_url` so the warning still surfaces the
+    underlying error (HTTP status, connection-error class, …)
+    without leaking the signed query string back into the logs.
+
+    Defensive: accepts arbitrary input for both arguments and never
+    raises (a failing substitution returns ``str(text)`` so the
+    caller's log call still produces something printable).
+    """
+    if not text:
+        return ""
+    try:
+        text_str = text if isinstance(text, str) else str(text)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not url:
+        return text_str
+    try:
+        url_str = url if isinstance(url, str) else str(url)
+    except Exception:  # noqa: BLE001
+        return text_str
+    if not url_str or url_str not in text_str:
+        return text_str
+    return text_str.replace(url_str, redact_url(url_str))
+
+
+__all__ = ("redact_url", "redact_url_in_text")
