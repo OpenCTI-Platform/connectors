@@ -437,9 +437,13 @@ class MatrixConnector:
         The Channel ``name`` is the human-friendly room display name
         (with a fallback to the raw ``room_id``); the opaque
         ``room_id`` is preserved on the SDO as the description and as
-        an ``x_opencti_aliases`` entry so analysts can search by either
-        form. The deterministic ``standard_id`` is always computed
-        from ``room_id``.
+        an entry in the first-class ``aliases`` field (declared on
+        ``CustomObjectChannel``, indexed by OpenCTI as the canonical
+        Channel-alias field — see also
+        ``connectors-sdk.models.channel`` and
+        ``external-import/flashpoint``) so analysts can search by
+        either form. The deterministic ``standard_id`` is always
+        computed from ``room_id``.
         """
         channel_id = PyctiChannel.generate_id(room_id)
         if channel_id in self._known_channel_ids:
@@ -449,15 +453,14 @@ class MatrixConnector:
         # name already collapses back to ``room_id`` (empty / missing
         # display name). The ``standard_id`` already carries the opaque
         # id so dedup is never affected.
-        aliases = [room_id] if display_name != room_id else []
+        aliases = [room_id] if display_name != room_id else None
         channel = CustomObjectChannel(
             id=channel_id,
             name=display_name,
             description=f"Matrix room {room_id}",
+            aliases=aliases,
             object_marking_refs=[self.matrix_marking_id],
             channel_types=["Matrix"],
-            allow_custom=True,
-            custom_properties=({"x_opencti_aliases": aliases} if aliases else {}),
         )
         self.bundle.append(channel)
         self._known_channel_ids.add(channel_id)
