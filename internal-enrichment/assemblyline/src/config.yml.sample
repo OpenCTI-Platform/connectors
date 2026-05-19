@@ -1,0 +1,44 @@
+# OpenCTI AssemblyLine Connector Configuration
+# Copy this file to config.yml and fill in your values
+# Environment variables take precedence over this file
+
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'  # Generate with: uuidgen
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'AssemblyLine'
+  scope: 'Artifact,StixFile'
+  auto: true  # Enable automatic enrichment
+  confidence_level: 80  # 0-100
+  log_level: 'info'  # debug, info, warning, error
+
+assemblyline:
+  # Connection settings
+  url: 'https://assemblyline.example.com'
+  user: 'admin'
+  apikey: 'ChangeMe'
+  verify_ssl: true  # Set to false for self-signed certificates
+  
+  # Submission settings
+  submission_profile: 'static_with_dynamic'  # static, dynamic, static_with_dynamic
+  timeout: 600  # Maximum wait time for analysis (seconds)
+  force_resubmit: false  # Force new analysis even if file was already analyzed
+  max_file_size_mb: 1  # Skip files larger than this (MB)
+  
+  # IOC extraction settings
+  include_suspicious: false  # Include suspicious IOCs (not just malicious)
+  
+  # Feature toggles
+  create_attack_patterns: true  # Create MITRE ATT&CK Attack Patterns
+  create_malware_analysis: true  # Create Malware Analysis SDO
+  create_observables: true  # Create Observables from Indicators
+  
+  # Sequential mode (prevents AssemblyLine overload)
+  sequential_mode: true  # Wait for AL to be idle before submitting (bounded by timeout)
+  poll_interval: 30  # Seconds between checks when AL is busy
+
+  # TLP gate: skip observables marked above this TLP level
+  max_tlp: 'TLP:AMBER'
