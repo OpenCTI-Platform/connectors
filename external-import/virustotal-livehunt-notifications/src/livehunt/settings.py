@@ -122,6 +122,48 @@ class VirusTotalLiveHuntNotificationsConfig(BaseConfigModel):
         description="Add livehunt name and matched yara rules label to the alert",
         default=True,
     )
+    get_malware_config: bool = Field(
+        description=(
+            "Extract C2 infrastructure (domains, IPs, URLs) from VirusTotal's "
+            "malware configuration analysis and add the resulting observables "
+            "to the bundle. Only effective when ``create_file`` is true."
+        ),
+        default=False,
+    )
+    create_file_indicators: bool = Field(
+        description="Create a File indicator for each matched file.",
+        default=False,
+    )
+    create_domain_name_indicators: bool = Field(
+        description=(
+            "Create Domain-Name indicators for domains extracted from the "
+            "malware configuration."
+        ),
+        default=False,
+    )
+    create_ip_indicators: bool = Field(
+        description=(
+            "Create IPv4/IPv6 indicators for IP addresses extracted from the "
+            "malware configuration."
+        ),
+        default=False,
+    )
+    create_url_indicators: bool = Field(
+        description=(
+            "Create URL indicators for URLs extracted from the malware "
+            "configuration."
+        ),
+        default=False,
+    )
+    limit: int | None = Field(
+        description=(
+            "Maximum number of notifications to process per run. Useful when "
+            "the VirusTotal API quota is small. Leave unset to process every "
+            "available notification."
+        ),
+        default=None,
+        ge=1,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):
