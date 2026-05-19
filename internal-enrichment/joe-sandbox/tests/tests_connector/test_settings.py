@@ -114,6 +114,33 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
             },
             id="minimal_valid_settings_dict",
         ),
+        # ``proxies`` may legitimately carry a JSON-encoded scheme->URL
+        # map. The validator on ``JoeSandboxConfig.proxies`` decodes
+        # the string at validation time only to verify shape (not to
+        # mutate the stored value), so the manager-facing JSON schema
+        # keeps its ``"type": "string"`` shape and the runtime keeps
+        # re-decoding the string before passing to ``jbxapi``.
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "auto": True,
+                },
+                "joe_sandbox": {
+                    "api_url": "https://jbxcloud.joesecurity.org/api",
+                    "api_key": "test-api-key",
+                    "analysis_url": "https://jbxcloud.joesecurity.org/analysis",
+                    "proxies": (
+                        '{"http": "http://proxy:8080", "https": "http://proxy:8080"}'
+                    ),
+                },
+            },
+            id="valid_settings_dict_with_proxies",
+        ),
     ],
 )
 def test_settings_should_accept_valid_input(settings_dict):
@@ -292,6 +319,54 @@ def test_settings_should_accept_valid_input(settings_dict):
             },
             "joe_sandbox.api_key",
             id="missing_joe_sandbox_api_key",
+        ),
+        # ``proxies`` is documented as a JSON-encoded map; the validator
+        # on ``JoeSandboxConfig.proxies`` (see
+        # ``_validate_proxies_is_json_object``) surfaces malformed
+        # input as ``ConfigValidationError`` at startup rather than
+        # letting the connector crash later with a generic
+        # ``JSONDecodeError`` once an enrichment message arrives.
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "auto": True,
+                },
+                "joe_sandbox": {
+                    "api_url": "https://jbxcloud.joesecurity.org/api",
+                    "api_key": "test-api-key",
+                    "analysis_url": "https://jbxcloud.joesecurity.org/analysis",
+                    "proxies": "not-valid-json",
+                },
+            },
+            "joe_sandbox.proxies",
+            id="malformed_joe_sandbox_proxies_json",
+        ),
+        pytest.param(
+            {
+                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "auto": True,
+                },
+                "joe_sandbox": {
+                    "api_url": "https://jbxcloud.joesecurity.org/api",
+                    "api_key": "test-api-key",
+                    "analysis_url": "https://jbxcloud.joesecurity.org/analysis",
+                    # Valid JSON, but the connector / requests need a
+                    # scheme->URL *mapping*, not a list.
+                    "proxies": '["http://proxy:8080"]',
+                },
+            },
+            "joe_sandbox.proxies",
+            id="joe_sandbox_proxies_not_a_json_object",
         ),
     ],
 )

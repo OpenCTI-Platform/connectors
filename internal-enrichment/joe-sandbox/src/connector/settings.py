@@ -1,9 +1,11 @@
+import json
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -60,6 +62,52 @@ class JoeSandboxConfig(BaseConfigModel):
         description="A JSON encoded map of proxies to use for API calls. See https://requests.readthedocs.io/en/latest/user/advanced/?highlight=proxy#proxies",
         default=None,
     )
+
+    @field_validator("proxies", mode="after")
+    @classmethod
+    def _validate_proxies_is_json_object(cls, value: str | None) -> str | None:
+        """Fail-fast at config validation when ``JOE_SANDBOX_PROXIES`` is
+        not a JSON-encoded object.
+
+        The connector passes the parsed value as ``proxies={…}`` to
+        ``jbxapi.JoeSandbox`` (and therefore ``requests``), which expects
+        a *mapping* from scheme to proxy URL. A non-JSON value, a JSON
+        scalar, or a JSON array would crash the connector at runtime
+        with an unhelpful ``JSONDecodeError`` / ``AttributeError`` only
+        once the first enrichment message arrives. Validating here
+        surfaces the configuration error as ``ConfigValidationError``
+        at startup with a clear message for ``JOE_SANDBOX_PROXIES``, so
+        the manager / operator can fix the config before the connector
+        starts serving traffic.
+
+        The validator deliberately returns the original *string* rather
+        than the parsed dict so the manager-facing JSON schema
+        (``connector_config_schema.json``) keeps its ``"type": "string"``
+        shape — the runtime in :mod:`connector.connector` re-decodes it
+        before passing to ``jbxapi``.
+        """
+        if value is None:
+            return None
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "JOE_SANDBOX_PROXIES must be a JSON-encoded object "
+                '(e.g. \'{"http": "http://proxy:8080", "https": '
+                '"http://proxy:8080"}\'); got invalid JSON: '
+                f"{exc.msg} (line {exc.lineno}, column {exc.colno})"
+            ) from exc
+        if not isinstance(parsed, dict):
+            raise ValueError(
+                "JOE_SANDBOX_PROXIES must decode to a JSON object "
+                "(a scheme->URL map); "
+                f"got a JSON {type(parsed).__name__} instead."
+            )
+        return value
+
     user_agent: str = Field(
         description="The user agent. Use this when you write an integration with Joe Sandbox so that it is possible to track how often an integration is being used.",
         default="OpenCTI",
