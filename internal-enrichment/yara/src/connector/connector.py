@@ -150,6 +150,28 @@ class YaraConnector:
 
         bundle_objects = []
         matched_indicators = {}
+        # Track indicators whose *propagation side-effects* (label
+        # propagation, ``indicates`` -> Malware relationship lookup +
+        # emission) have already run for this artifact. ``_scan_artifact``
+        # iterates over every ``importFile`` of the Artifact and every
+        # YARA indicator, so a single Artifact / Indicator pair can match
+        # repeatedly (one match per file). Without this guard we would:
+        #
+        # * call ``stix_cyber_observable.add_label`` once per file per
+        #   label (the OpenCTI side-channel API is idempotent, but the
+        #   duplicate mutations are wasted round-trips);
+        # * call ``stix_core_relationship.list`` once per file (waste);
+        # * append duplicate Artifact -> Malware ``related-to``
+        #   relationships and duplicate Malware SDOs to ``bundle_objects``
+        #   (the STIX ``Relationship.id`` is deterministic so a downstream
+        #   dedup would catch them, but we should not rely on that).
+        #
+        # Keying on ``standard_id`` (rather than ``id``) is intentional:
+        # the platform identity of an indicator is its ``standard_id``,
+        # which is what every other emit / lookup uses, and a future
+        # change to how we list YARA indicators would not silently break
+        # the dedup contract.
+        propagated_indicator_ids: set[str] = set()
         errors = []
         for artifact_content in artifact_contents:
             for indicator in yara_indicators:
@@ -197,6 +219,13 @@ class YaraConnector:
                 self.helper.connector_logger.debug(
                     f"Created Relationship from Artifact to YARA Indicator {indicator['name']}"
                 )
+
+                # Run the optional propagation side-effects at most once
+                # per Artifact / Indicator pair (the loop above repeats
+                # the match for every file under the same artifact).
+                if indicator["standard_id"] in propagated_indicator_ids:
+                    continue
+                propagated_indicator_ids.add(indicator["standard_id"])
 
                 # Optional: propagate every label carried by the matching
                 # YARA indicator onto the enriched artifact. Labels are read
@@ -306,6 +335,17 @@ class YaraConnector:
         ``is_family``, ``description``). ``standard_id`` is used as
         the SDO id so the platform merges by id on ingestion and the
         existing Malware entity is not overwritten (only linked).
+
+        The Malware SDO is deliberately emitted **without**
+        ``object_marking_refs``. The SDO's only purpose is to keep the
+        bundle self-consistent for
+        ``cleanup_inconsistent_bundle=True``; the OpenCTI ingestion
+        path merges by ``standard_id``, so attaching markings would
+        propagate the Artifact / Indicator TLP onto the existing
+        Malware entity (potentially over-restricting an entity that
+        is shared across the platform). The TLP markings stay on the
+        Artifact -> Malware ``related-to`` relationship, which is the
+        new object actually owned by this enrichment cycle.
         """
         indicator_name = indicator.get("name")
         try:
@@ -335,6 +375,11 @@ class YaraConnector:
                 # ``cleanup_inconsistent_bundle=True``. ``standard_id``
                 # matches the existing entity in OpenCTI so the
                 # ingestion path links / merges, not creates a new SDO.
+                # We intentionally do not set ``object_marking_refs``
+                # here so the merge does not pollute the existing
+                # Malware entity's markings; the Artifact -> Malware
+                # ``related-to`` relationship carries ``marking_refs``
+                # instead.
                 if malware_standard_id not in seen_malware_ids:
                     seen_malware_ids.add(malware_standard_id)
                     malware_name = target.get("name") or malware_standard_id
@@ -345,7 +390,6 @@ class YaraConnector:
                             name=malware_name,
                             is_family=bool(target.get("is_family", False)),
                             description=malware_description,
-                            object_marking_refs=marking_refs or None,
                             allow_custom=True,
                         )
                     )

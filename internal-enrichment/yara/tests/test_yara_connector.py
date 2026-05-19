@@ -467,3 +467,227 @@ class TestPropagateMalwareRelationships:
         malware_sdos = [obj for obj in result if obj["type"] == "malware"]
         assert len(malware_sdos) == 1
         assert malware_sdos[0]["id"] == "malware--33333333-3333-4333-8333-333333333333"
+
+    def test_malware_sdo_has_no_marking_refs(self):
+        # The Malware SDO emitted by ``_build_malware_relationships``
+        # uses the existing platform ``standard_id`` as its STIX ``id``,
+        # so OpenCTI's ingestion path merges by id rather than creating
+        # a new entity. Setting ``object_marking_refs`` on it would
+        # propagate the Artifact / Indicator TLP markings onto the
+        # already-existing Malware entity (potentially over-restricting
+        # an entity shared across the platform). The TLP markings
+        # belong on the Artifact -> Malware ``related-to`` relationship
+        # only, which is the new object actually owned by this
+        # enrichment cycle.
+        artifact = {
+            "id": "artifact-uuid",
+            "standard_id": "artifact--a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "importFiles": [{"name": "test.bin", "id": "file-123"}],
+            "objectMarking": [
+                {
+                    "standard_id": (
+                        "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+                    )
+                }
+            ],
+        }
+        indicator = {
+            "id": "indicator-uuid",
+            "name": "test_rule",
+            "standard_id": "indicator--b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "pattern": 'rule test_rule { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+        }
+        connector = _make_connector(yara={"propagate_malware_relationship": True})
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        connector.helper.api.stix_core_relationship.list = MagicMock(
+            return_value=[
+                {
+                    "to": {
+                        "standard_id": (
+                            "malware--55555555-5555-4555-8555-555555555555"
+                        ),
+                        "name": "Emotet",
+                        "is_family": True,
+                    }
+                },
+            ]
+        )
+
+        result, _ = connector._scan_artifact(artifact, [indicator])
+
+        # The Malware SDO must NOT carry ``object_marking_refs``.
+        malware_sdos = [obj for obj in result if obj["type"] == "malware"]
+        assert len(malware_sdos) == 1
+        assert "object_marking_refs" not in malware_sdos[0]
+
+        # The Artifact -> Malware ``related-to`` relationship still
+        # carries the Artifact's TLP markings, because that is the new
+        # object this enrichment cycle owns.
+        malware_relationships = [
+            obj
+            for obj in result
+            if obj["type"] == "relationship"
+            and obj["target_ref"].startswith("malware--")
+        ]
+        assert len(malware_relationships) == 1
+        assert malware_relationships[0]["object_marking_refs"] == [
+            "marking-definition--34098fce-860f-48ae-8e50-ebd3cc5e41da"
+        ]
+
+
+class TestScanArtifactDedupAcrossFiles:
+    """``_scan_artifact`` runs propagation side-effects at most once per indicator.
+
+    An Artifact may carry multiple ``importFiles``. The original
+    implementation iterated ``for artifact_content in artifact_contents:
+    for indicator in yara_indicators:`` and triggered the optional
+    propagation side-effects (``stix_cyber_observable.add_label`` and
+    ``stix_core_relationship.list``) on **every** file match — so a
+    single Artifact / Indicator pair could produce N duplicate
+    ``add_label`` mutations and N duplicate ``stix_core_relationship.list``
+    round-trips when the same indicator matched N files. The dedup
+    contract below pins the fix: propagation runs at most once per
+    Artifact / Indicator pair, keyed by the indicator's
+    ``standard_id``.
+    """
+
+    def _multi_file_artifact_and_indicator(self, *, labels=None):
+        artifact = {
+            "id": "artifact-uuid",
+            "standard_id": "artifact--a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "importFiles": [
+                {"name": "first.bin", "id": "file-1"},
+                {"name": "second.bin", "id": "file-2"},
+                {"name": "third.bin", "id": "file-3"},
+            ],
+        }
+        indicator = {
+            "id": "indicator-uuid",
+            "name": "test_rule",
+            "standard_id": "indicator--b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "pattern": 'rule test_rule { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+        }
+        if labels is not None:
+            indicator["objectLabel"] = labels
+        return artifact, indicator
+
+    def test_add_label_runs_once_per_indicator_even_with_multiple_matching_files(
+        self,
+    ):
+        connector = _make_connector(yara={"propagate_labels": True})
+        # Every ``fetch_opencti_file`` call returns the matching payload
+        # so the same indicator matches all three files.
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact, indicator = self._multi_file_artifact_and_indicator(
+            labels=[{"id": "label-1", "value": "apt", "color": "#ff0000"}]
+        )
+
+        connector._scan_artifact(artifact, [indicator])
+
+        # ``add_label`` is called once per *label*, not once per
+        # (file × label) — so a single label across three matching
+        # files produces exactly one mutation.
+        calls = connector.helper.api.stix_cyber_observable.add_label.call_args_list
+        assert len(calls) == 1
+        assert calls[0].kwargs["label_id"] == "label-1"
+
+    def test_malware_lookup_runs_once_per_indicator_even_with_multiple_matching_files(
+        self,
+    ):
+        connector = _make_connector(yara={"propagate_malware_relationship": True})
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        connector.helper.api.stix_core_relationship.list = MagicMock(
+            return_value=[
+                {
+                    "to": {
+                        "standard_id": (
+                            "malware--66666666-6666-4666-8666-666666666666"
+                        ),
+                        "name": "Emotet",
+                        "is_family": True,
+                    }
+                },
+            ]
+        )
+        artifact, indicator = self._multi_file_artifact_and_indicator()
+
+        result, _ = connector._scan_artifact(artifact, [indicator])
+
+        # ``stix_core_relationship.list`` is called once per indicator,
+        # not once per (file × indicator).
+        assert connector.helper.api.stix_core_relationship.list.call_count == 1
+
+        # The Artifact -> Malware ``related-to`` relationship and the
+        # Malware SDO are each emitted at most once across the multi-file
+        # scan (the per-file Artifact -> Indicator ``related-to`` is
+        # **not** deduped — that one is fine to emit multiple times
+        # because each match represents one file's worth of evidence,
+        # and the deterministic STIX id would dedupe it on ingestion if
+        # required).
+        malware_sdos = [obj for obj in result if obj["type"] == "malware"]
+        assert len(malware_sdos) == 1
+        malware_relationships = [
+            obj
+            for obj in result
+            if obj["type"] == "relationship"
+            and obj["target_ref"].startswith("malware--")
+        ]
+        assert len(malware_relationships) == 1
+
+    def test_propagation_still_runs_for_each_distinct_indicator(self):
+        # Dedup is *per Artifact / Indicator pair*, not per Artifact:
+        # if two different indicators both match the artifact, both
+        # must trigger their own propagation side-effects.
+        connector = _make_connector(
+            yara={
+                "propagate_labels": True,
+                "propagate_malware_relationship": True,
+            }
+        )
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        connector.helper.api.stix_core_relationship.list = MagicMock(return_value=[])
+        artifact, _ = self._multi_file_artifact_and_indicator()
+        indicator_a = {
+            "id": "indicator-a",
+            "name": "rule_a",
+            "standard_id": "indicator--aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "pattern": 'rule rule_a { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+            "objectLabel": [{"id": "label-a", "value": "apt", "color": "#ff0000"}],
+        }
+        indicator_b = {
+            "id": "indicator-b",
+            "name": "rule_b",
+            "standard_id": "indicator--bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "pattern": 'rule rule_b { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+            "objectLabel": [
+                {"id": "label-b", "value": "ransomware", "color": "#00ff00"}
+            ],
+        }
+
+        connector._scan_artifact(artifact, [indicator_a, indicator_b])
+
+        # Label propagation runs once per indicator (one ``add_label``
+        # mutation per indicator, not per matching file).
+        calls = connector.helper.api.stix_cyber_observable.add_label.call_args_list
+        label_ids = sorted(c.kwargs["label_id"] for c in calls)
+        assert label_ids == ["label-a", "label-b"]
+
+        # Malware-relationship lookup runs once per indicator (two
+        # distinct indicators -> two lookups, not 2 × 3 files).
+        assert connector.helper.api.stix_core_relationship.list.call_count == 2
