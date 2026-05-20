@@ -66,6 +66,15 @@ class TestIsValidDomainName:
             "evil.example.com.",
             "http://evil.example.com",
             "evil. example.com",
+            # RFC 1123 forbids a leading hyphen on **every** label, not
+            # only the first. Pin the per-label rule explicitly so a
+            # regex regression cannot let these through.
+            "a.-b.com",
+            "evil.-sub.example.com",
+            # And a trailing hyphen on any label is forbidden too.
+            "a.b-.com",
+            "evil.sub-.example.com",
+            "trailing-.example.com",
         ],
     )
     def test_invalid_domains(self, domain: str) -> None:

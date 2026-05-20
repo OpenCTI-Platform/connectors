@@ -33,9 +33,23 @@ def _escape_stix_pattern_value(value: str) -> str:
 # right now, blocked by the connector's network policy, or only resolve
 # AAAA, and we still want to ingest it as an IOC. The previous live
 # ``dns.google`` lookup also added up to 5 s per host of latency.
+#
+# Every label MUST start and end with an alphanumeric character — RFC 1123
+# explicitly disallows leading or trailing hyphens **on every label**, not
+# only the first one. The ``_LABEL`` building block encodes that:
+#
+#   * ``[a-zA-Z0-9]`` — first char must be alphanumeric (no leading ``-``);
+#   * ``(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?`` — optional middle + trailing
+#     run, but if present the trailing char MUST be alphanumeric (no
+#     trailing ``-``). The ``?`` makes single-char labels (e.g. ``a.b.c``,
+#     ``1.example.com``) still valid.
+#
+# The previous regex only had a ``(?!-)`` lookahead on the first label,
+# so values like ``a.-b.com`` / ``a.b-.com`` slipped through despite
+# the comment claiming RFC-style validation.
+_LABEL = r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
 _DOMAIN_REGEX = re.compile(
-    r"^(?=.{1,253}$)(?!-)[a-zA-Z0-9-]{1,63}"
-    r"(?:\.[a-zA-Z0-9-]{1,63})*\.[a-zA-Z]{2,63}$"
+    rf"^(?=.{{1,253}}$){_LABEL}(?:\.{_LABEL})*\.[a-zA-Z]{{2,63}}$"
 )
 
 
