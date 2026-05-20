@@ -32,18 +32,33 @@ class BaseCrowdstrikeClient:
         :return: None
         """
 
-        if response["status_code"] >= 400:
-            error_message = response["body"]["errors"][0]["message"]
-            status_code = response["status_code"]
+        status_code = response.get("status_code")
+        if status_code is None or status_code < 400:
+            return
 
-            # Log 403 (permission denied) as warning since it's often expected/handled gracefully
-            if status_code == 403:
-                self.helper.connector_logger.warning(
-                    "[API] Permission denied accessing resource",
-                    {"error_message": error_message},
-                )
-            else:
-                self.helper.connector_logger.error(
-                    "[API] Error while querying CrowdStrike API",
-                    {"error_message": error_message},
-                )
+        # ``response["body"]["errors"][0]["message"]`` is not guaranteed:
+        # a 403 can return an empty body, ``errors`` can be missing /
+        # ``None`` / ``[]`` (the upstream sometimes reports a generic
+        # failure without a specific item), and the first entry can be
+        # a non-dict. Unpack defensively here so a secondary
+        # ``IndexError`` / ``KeyError`` / ``TypeError`` cannot mask the
+        # real status-code diagnostic before the caller (e.g.
+        # ``_get_related_iocs``) gets a chance to handle the failure
+        # gracefully.
+        body = response.get("body") or {}
+        errors = body.get("errors") or []
+        first_error = errors[0] if errors else {}
+        error_message = (
+            first_error.get("message") if isinstance(first_error, dict) else None
+        ) or "no error message returned by CrowdStrike API"
+
+        if status_code == 403:
+            self.helper.connector_logger.warning(
+                "[API] Permission denied accessing resource",
+                {"error_message": error_message, "status_code": status_code},
+            )
+        else:
+            self.helper.connector_logger.error(
+                "[API] Error while querying CrowdStrike API",
+                {"error_message": error_message, "status_code": status_code},
+            )
