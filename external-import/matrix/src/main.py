@@ -293,6 +293,17 @@ class MatrixConnector:
                         f"after {self._consecutive_failures} consecutive "
                         f"flush failures (last error: {exc})."
                     )
+                    # Forget every Channel / Identity SDO that lived
+                    # **only** in the dropped batch. Without this, the
+                    # in-memory ``_known_*`` caches still consider those
+                    # ids ``known`` after the SDOs themselves have been
+                    # silently dropped, so the next ``_ensure_channel``
+                    # / ``_ensure_author`` call for the same room /
+                    # sender would short-circuit and **not** re-emit
+                    # the SDO — and the next flushed bundle would carry
+                    # media-content / relationships that reference ids
+                    # the platform has never ingested.
+                    self._forget_dropped_known_ids(pending)
                     self._consecutive_failures = 0
                     # The poison batch has been dropped; treat that as
                     # "we made progress" so the timer restarts here.
@@ -311,6 +322,35 @@ class MatrixConnector:
                         f"{_MAX_FLUSH_FAILURES}); will retry on the next "
                         f"flush cycle: {exc}"
                     )
+
+    def _forget_dropped_known_ids(self, pending: List[Any]) -> None:
+        """Prune ``_known_channel_ids`` / ``_known_author_ids`` after a drop.
+
+        Called from :meth:`_flush_bundle` when a batch is discarded
+        after ``_MAX_FLUSH_FAILURES`` consecutive flush failures.
+        Any Channel / Identity SDO present in the dropped batch was
+        only ever emitted into the buffer once (the in-memory caches
+        guarantee at-most-once emission per connector lifetime), so
+        if the batch never reaches OpenCTI we must forget those ids
+        too — otherwise the next event from the same room / sender
+        finds the id in ``_known_*``, skips the SDO re-emission, and
+        the next flushed bundle ends up carrying media-content /
+        relationships that reference a Channel / Identity id the
+        platform has never ingested (silent dangling references).
+
+        We only remove ids that are currently in the caches; any
+        Channel / Identity SDO that was *also* emitted in a previous
+        successful flush stays known (the platform already has it).
+        """
+        for obj in pending:
+            stix_id = getattr(obj, "id", None)
+            if not stix_id:
+                continue
+            stix_type = getattr(obj, "type", None)
+            if stix_type == "channel":
+                self._known_channel_ids.discard(stix_id)
+            elif stix_type == "identity":
+                self._known_author_ids.discard(stix_id)
 
     def _send_pending_objects(self, pending: List[Any]) -> None:
         """Synchronous OpenCTI HTTP work called via :func:`asyncio.to_thread`.
