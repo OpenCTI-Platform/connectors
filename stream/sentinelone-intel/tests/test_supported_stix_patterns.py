@@ -1,15 +1,16 @@
 """Regression tests for ``SUPPORTED_STIX_PATTERNS`` in ``client.py``.
 
-Pins the file-hash filter contract introduced by #5580 / #5428:
+Pins the file-hash filter contract tracked by issue #5428:
 
 * The connector must accept every shape OpenCTI is known to emit for
   file-hash indicators — STIX 2.1 canonical (``SHA-256``), single-
   quoted algorithm (``'SHA-256'``), lower-case (``sha-256``), the
   legacy non-hyphenated form (``SHA256``) — because SentinelOne
-  itself accepts every variant on the wire (see issue #5428).
+  itself accepts every variant on the wire.
 * The connector must continue to reject hash algorithms it cannot
-  push (``SHA-512``), non-file STIX object types in the file-hash
-  branch, and malformed patterns.
+  push (``SHA-512``), patterns with unbalanced algorithm quotes
+  (e.g. ``[file:hashes.'SHA-256 = ...]``), non-file STIX object
+  types in the file-hash branch, and malformed patterns.
 * The other supported branches (``domain-name``, ``url``,
   ``ipv4-addr``) remain case-sensitive — STIX object type names are
   lower-case-only per spec, and matching ``IPV4-ADDR`` would mask a
@@ -59,6 +60,15 @@ _FILE_HASH_REJECTED = [
     "[file:hashes.SHA-512 = 'aa']",
     "[file:hashes.'SHA-512' = 'aa']",
     "[file:hashes.sha512 = 'aa']",
+    # Unbalanced algorithm-name quotes — the regex must not accept a
+    # mix of quoted-open and unquoted-close (or vice-versa). The
+    # backreference in the file-hash pattern is what enforces this;
+    # an earlier shape used independent ``'?`` quantifiers and would
+    # silently swallow these malformed payloads.
+    "[file:hashes.'SHA-256 = 'aa']",
+    "[file:hashes.SHA-256' = 'aa']",
+    "[file:hashes.'sha-1 = 'aa']",
+    "[file:hashes.md5' = 'aa']",
     # Malformed (no value quotes):
     "[file:hashes.SHA-256 = aa]",
     # Wrong operator:

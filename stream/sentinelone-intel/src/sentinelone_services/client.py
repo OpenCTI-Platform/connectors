@@ -30,15 +30,20 @@ IOC_ENDPOINT_URL = "/web/api/v2.1/threat-intelligence/iocs/stix"
 #     ``hash-algorithm-ov`` literal;
 #   - lowercase variants           ``[file:hashes.sha-256 = '...']``;
 #   - the legacy non-hyphenated form ``[file:hashes.SHA256 = '...']``.
-# ``'?`` flanks the algorithm token to accept the optionally-quoted
-# form, ``SHA-?1`` / ``SHA-?256`` make the hyphen optional, and the
-# inline ``(?i:...)`` flag makes only the algorithm token (not the
-# ``file:hashes`` object key) case-insensitive — STIX object types
-# themselves are lower-case-only per spec.
+# The ``('?)`` capture group holds an optional opening quote and the
+# ``\1`` backreference requires the closing quote to match it, so
+# unbalanced shapes such as ``[file:hashes.'SHA-256 = ...]`` or
+# ``[file:hashes.SHA-256' = ...]`` are rejected (would otherwise be
+# matched by the previous independent-``'?`` form). ``SHA-?1`` /
+# ``SHA-?256`` make the hyphen optional, and the inline ``(?i:...)``
+# local flag makes only the algorithm token case-insensitive — the
+# surrounding ``[file:hashes...]`` object key stays case-sensitive
+# because STIX object types are lower-case-only per spec.
 
 SUPPORTED_STIX_PATTERNS = [
     re.compile(
-        r"^\s*\[file:hashes\.'?(?i:MD5|SHA-?1|SHA-?256)'?\s*=\s*\'[^\']+\'\s*\]\s*$"
+        r"^\s*\[file:hashes\.(?i:('?)(?:MD5|SHA-?1|SHA-?256)\1)"
+        r"\s*=\s*\'[^\']+\'\s*\]\s*$"
     ),
     re.compile(r"^\s*\[domain-name:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[url:value\s*=\s*\'[^\']+\'\s*\]\s*$"),

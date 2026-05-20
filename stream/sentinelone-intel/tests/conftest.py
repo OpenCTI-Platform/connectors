@@ -2,9 +2,15 @@
 
 * Adds the connector's ``src`` directory to ``sys.path`` so the tests
   can ``from sentinelone_services.client import ...``.
-* Breaks the existing circular import between ``sentinelone_services``
-  and ``sentinelone_connector`` so the regex constants under test can
-  be imported directly.
+* Breaks the pre-existing circular import between
+  ``sentinelone_services`` and ``sentinelone_connector`` by stubbing
+  *only* the symbols ``client.py`` actually pulls in at module-import
+  time. The stub is intentionally a real ``types.ModuleType`` (not a
+  catch-all ``MagicMock``) so any *new* module-level access on
+  ``sentinelone_connector.*`` introduced by a future ``client.py``
+  refactor fails loudly with ``ModuleNotFoundError`` / ``AttributeError``
+  at test collection — instead of silently returning a mock and
+  hiding a regression of the import surface.
 
 The cycle exists in the production code:
 
@@ -21,17 +27,30 @@ The cycle exists in the production code:
 The worker entry-point (``src/main.py``) avoids this at runtime
 because it imports the packages in an order that pre-populates both
 namespaces. Importing ``sentinelone_services.client`` *directly* from
-a test does tickle the cycle, though — so we stub the
-``sentinelone_connector`` package here. The regex constants under
-test are module-level ``re.compile`` calls that do not depend on the
-stubbed symbols.
+a test does tickle the cycle, though — hence the stub.
 """
 
 import sys
+import types
 from pathlib import Path
-from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-sys.modules.setdefault("sentinelone_connector", MagicMock())
-sys.modules.setdefault("sentinelone_connector.settings", MagicMock())
+
+class _ConnectorSettingsStub:
+    """Minimal placeholder for ``sentinelone_connector.settings.ConnectorSettings``.
+
+    The regex constants under test are module-level ``re.compile`` calls
+    that never touch ``ConnectorSettings``; the type only needs to exist
+    as an importable name so ``client.py``'s ``from
+    sentinelone_connector.settings import ConnectorSettings`` resolves.
+    """
+
+
+_connector_pkg = types.ModuleType("sentinelone_connector")
+_connector_settings = types.ModuleType("sentinelone_connector.settings")
+_connector_settings.ConnectorSettings = _ConnectorSettingsStub
+_connector_pkg.settings = _connector_settings
+
+sys.modules.setdefault("sentinelone_connector", _connector_pkg)
+sys.modules.setdefault("sentinelone_connector.settings", _connector_settings)
