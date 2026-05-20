@@ -330,7 +330,7 @@ class JoeSandboxConnector:
                         webid, "json", password=self._encrypt_with_password
                     )
                     json_report = json.loads(json_report)
-                    bundle_objects = self._process_json(observable, json_report)
+                    bundle_objects.extend(self._process_json(observable, json_report))
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
                         file_name=name,
@@ -347,7 +347,7 @@ class JoeSandboxConnector:
                         webid, "lightjsonfixed", password=self._encrypt_with_password
                     )
                     json_report = json.loads(json_report)
-                    bundle_objects = self._process_json(observable, json_report)
+                    bundle_objects.extend(self._process_json(observable, json_report))
                     self.helper.api.external_reference.add_file(
                         id=external_reference["id"],
                         file_name=name,
