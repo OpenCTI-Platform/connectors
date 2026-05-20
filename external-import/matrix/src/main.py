@@ -450,7 +450,17 @@ class MatrixConnector:
     # ------------------------------------------------------------------
     async def _download_attachment(self, url: str) -> bytes:
         """Download an attachment from the Matrix media repository."""
-        assert self.client is not None
+        # Explicit guard instead of ``assert self.client is not None`` —
+        # ``assert`` is stripped under ``python -O`` and would surface
+        # any shutdown-edge-case ``None`` as an opaque ``AttributeError``
+        # on ``None.download(...)``. ``RuntimeError`` keeps the diagnostic
+        # under both runtimes and is the same shape every other
+        # ``self.client`` user in this file expects (the sync loop /
+        # ``_periodic_flush`` already log the exception and continue).
+        if self.client is None:
+            raise RuntimeError(
+                "Matrix client is not initialised — cannot download attachment."
+            )
         self.helper.log_debug(f"Downloading attachment: {url}")
         response = await self.client.download(mxc=url)
         body = getattr(response, "body", None)
