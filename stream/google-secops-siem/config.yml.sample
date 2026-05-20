@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+#   id: '9257254e-b4ef-4592-ab11-6d37d4aa321f'
+#   name: 'Google SecOps SIEM'
+#   log_level: 'error'
+#   scope: 'google-secops-siem'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+#   live_stream_listen_delete: true
+#   live_stream_no_dependencies: true
+
+secops_siem:
+  # project_region: 'us'
+  project_id: 'ChangeMe'
+  project_instance: 'ChangeMe'
+  private_key_id: 'ChangeMe'
+  private_key: 'ChangeMe'
+  client_email: 'ChangeMe'
+  client_id: 'ChangeMe'
+  # auth_uri: 'https://accounts.google.com/o/oauth2/auth'
+  # token_uri: 'https://oauth2.googleapis.com/token'
+  # auth_provider_cert: 'https://www.googleapis.com/oauth2/v1/certs'
+  client_cert_url: 'ChangeMe'

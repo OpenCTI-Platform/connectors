@@ -1,0 +1,17 @@
+comment:
+    layout: "diff, files, condensed_footer"
+    hide_project_coverage: true # set to true
+    require_changes: "coverage_drop AND uncovered_patch"
+
+ignore:
+  # Ignore any folder whose name starts with "test" anywhere in the tree
+  - "**/test*/**"
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        informational: true
+    patch:
+      default:
+        target: 80%

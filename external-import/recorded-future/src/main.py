@@ -137,6 +137,7 @@ class RFConnector:
                     self.RF.rf_alerts_api,
                     self.RF.opencti_default_severity,
                     self.RF.tlp,
+                    self.RF.rf_initial_lookback,
                 )
                 self.alerts.start()
                 threads.append(self.alerts)

@@ -1,0 +1,26 @@
+[project]
+name = "connector-linter"
+version = "0.1.0"
+description = "OpenCTI Connector Verified Linter — validates connectors against Verified status criteria."
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.0",
+]
+
+[project.scripts]
+connector-linter = "connector_linter.__main__:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["connector_linter"]
+
+[dependency-groups]
+dev = [
+    "black>=26.3.1",
+    "isort>=8.0.1",
+    "pre-commit>=4.6.0",
+    "pytest>=8.0",
+]

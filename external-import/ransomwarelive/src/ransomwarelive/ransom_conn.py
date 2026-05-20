@@ -29,7 +29,7 @@ class RansomwareAPIConnector:
         self.last_run_datetime_with_ingested_data = None
         self.converter_to_stix = ConverterToStix()
         self.author = self.converter_to_stix.author
-        self.api_client = RansomwareAPIClient()
+        self.api_client = RansomwareAPIClient(helper=self.helper)
 
     def location_fetcher(self, country: str):
         """
@@ -327,6 +327,11 @@ class RansomwareAPIConnector:
         """Collects historic intelligence from ransomware.live"""
         # fetching group information
         group_data = self.api_client.get_feed("groups")
+        if not group_data:
+            self.helper.connector_logger.info(
+                "No group data retrieved from ransomware.live API"
+            )
+            return
 
         # Checking if the historic year is less than 2020 as there is no data past 2020
         year = (
@@ -345,6 +350,11 @@ class RansomwareAPIConnector:
                 bundles = []
                 path = year_url + "/" + str(month)
                 response_json = self.api_client.get_feed(path)
+                if not response_json:
+                    self.helper.connector_logger.info(
+                        f"No data retrieved from ransomware.live API for {year}/{month}"
+                    )
+                    continue
 
                 for item in response_json:
                     try:
@@ -401,18 +411,29 @@ class RansomwareAPIConnector:
         """Collects intelligence from the last 24 on ransomware.live"""
         # fetching group information
         group_data = self.api_client.get_feed("groups")
+        if not group_data:
+            self.helper.connector_logger.info(
+                "No group data retrieved from ransomware.live API"
+            )
+            return
 
         # fetching recent requests
         response_json = self.api_client.get_feed("recentvictims")
+        if not response_json:
+            self.helper.connector_logger.info(
+                "No recent victim data retrieved from ransomware.live API"
+            )
+            return
 
         nb_stix_objects = 0
         bundles = []
         last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
 
         for item in response_json:
-            created = datetime.strptime(
-                item.get("discovered"), "%Y-%m-%d %H:%M:%S.%f"
-            ).replace(tzinfo=timezone.utc)
+            discovered_raw = item.get("discovered")
+            created = safe_datetime(discovered_raw)
+            if created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
 
             # We only retrieve the data from the last 24h.
             # If no last_run, just put time_diff to 0.

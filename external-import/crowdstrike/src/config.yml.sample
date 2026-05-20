@@ -29,6 +29,7 @@ crowdstrike:
   report_target_industries: ''
   report_guess_malware: false # Use report tags to guess malware
   report_guess_relations: false # Automatically guess and create relationships between entities in reports
+  report_extract_iocs: '' # Comma-separated list of IOC types to extract from report text as observables. Supported: ipv4,ipv6,domain,url,md5,sha1,sha256. Leave empty to disable.
   indicator_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1,password,username'
   indicator_ip_max_age: 'P90D' # ISO8601 Duration format. Covers both IPv4 and IPv6.
@@ -44,5 +45,6 @@ crowdstrike:
   indicator_high_score: 80
   indicator_high_score_labels: 'MaliciousConfidence/High'
   indicator_unwanted_labels: '' # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
+  indicator_max_records_per_run: 20000 # Max indicators ingested per run (CrowdStrike can return up to ~1.5M IoCs over 30 days). Set to 0 (or any negative number) to disable the cap.
   no_file_trigger_import: true
   attack_version: "17.1"

@@ -71,6 +71,11 @@
       "description": "Whether to verify SSL certificates for the feed URL.",
       "type": "boolean"
     },
+    "MISP_FEED_HTTP_AUTHORIZATION_HEADER": {
+      "default": null,
+      "description": "Optional value of the HTTP `Authorization` header sent on every request to the feed URL (e.g. `Basic <base64(user:password)>` or `Bearer <token>`).",
+      "type": "string"
+    },
     "MISP_FEED_BUCKET_NAME": {
       "default": null,
       "description": "Bucket Name where the MISP's files are stored",
