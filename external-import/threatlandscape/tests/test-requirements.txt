@@ -1,0 +1,5 @@
+-r ../src/requirements.txt
+pytest
+pytest-cov>=4.1.0
+responses
+faker>=20.0.0
