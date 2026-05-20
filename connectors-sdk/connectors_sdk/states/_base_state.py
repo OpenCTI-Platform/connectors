@@ -107,7 +107,7 @@ class BaseConnectorState(BaseModel, ABC):
         _ = context  # Unused argument (required by pydantic)
         self._can_be_loaded = True
 
-    def attach_opencti_connector_helper(self, helper: OpenCTIConnectorHelper) -> None:
+    def inject_dependencies(self, helper: OpenCTIConnectorHelper) -> None:
         """Attach an instance of `OpenCTIConnectorHelper` to the state.
         This is used to link the state instance to the corresponding `pycti` state API,
         so that it can be loaded from / saved to OpenCTI.
@@ -130,7 +130,7 @@ class BaseConnectorState(BaseModel, ABC):
         """
         if not self._client:
             raise RuntimeError(
-                "State client is not initialized. Call `attach_opencti_connector_helper` method first."
+                "State client is not initialized. Call `inject_dependencies` method first."
             )
 
         if not self._can_be_loaded and not force:
@@ -159,7 +159,7 @@ class BaseConnectorState(BaseModel, ABC):
         """Save the state to OpenCTI."""
         if not self._client:
             raise RuntimeError(
-                "State client is not initialized. Call `attach_opencti_connector_helper` method first."
+                "State client is not initialized. Call `inject_dependencies` method first."
             )
 
         self._client.save_state(self)

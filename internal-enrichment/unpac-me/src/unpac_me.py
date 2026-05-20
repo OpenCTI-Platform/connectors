@@ -32,6 +32,8 @@ class UnpacMeConnector:
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
         )
+        if isinstance(self.octi_api_url, str):
+            self.octi_api_url = self.octi_api_url.rstrip("/")
 
         # Get URL and private from config, use to instantiate the client
         user_agent = get_config_variable(

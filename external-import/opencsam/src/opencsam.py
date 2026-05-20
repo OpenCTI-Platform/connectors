@@ -34,6 +34,8 @@ class OpenCSAM:
         self.opencsam_api_url = get_config_variable(
             "OPENCSAM_API_URL", ["opencsam", "api_url"], config
         )
+        if isinstance(self.opencsam_api_url, str):
+            self.opencsam_api_url = self.opencsam_api_url.rstrip("/")
         self.opencsam_api_key = get_config_variable(
             "OPENCSAM_API_KEY", ["opencsam", "api_key"], config
         )

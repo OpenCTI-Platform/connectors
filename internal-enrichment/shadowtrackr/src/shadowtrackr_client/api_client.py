@@ -18,7 +18,7 @@ class ShadowTrackrClient:
         self.helper = helper
         self.logger = helper.connector_logger
 
-        self.base_url = base_url
+        self.base_url = base_url.rstrip("/") if isinstance(base_url, str) else base_url
         self.api_key = api_key
         # Define headers in session and update when needed
         self.session = requests.Session()

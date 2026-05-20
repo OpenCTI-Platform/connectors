@@ -40,9 +40,16 @@ class IPQSClient:
         every endpoint — including the ``/leaked/...`` family — so the
         secret is never written to the URL (and therefore never ends up
         in HTTP access logs).
+
+        ``base_url`` is normalised through ``.rstrip("/")`` so the
+        per-endpoint URL builders never produce a double slash; the
+        ``isinstance`` guard mirrors the defensive shape applied
+        repo-wide by ``[all] Fix url to avoid double slash`` (#6394)
+        and protects against a future config typing change that might
+        pass a non-``str`` value here.
         """
         self.helper = helper
-        self.url = base_url.rstrip("/")
+        self.url = base_url.rstrip("/") if isinstance(base_url, str) else base_url
         self.session = session()
         self.session.headers.update({"IPQS-KEY": api_key})
 
