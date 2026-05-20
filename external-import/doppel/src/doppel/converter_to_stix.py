@@ -192,7 +192,7 @@ class ConverterToStix:
         """
         Create Note object
         """
-        return Note(
+        note = Note(
             id=PyctiNote.generate_id(
                 content=note_body,
                 created=note_timestamp,
@@ -206,6 +206,7 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
         )
+        return json.loads(note.serialize())
  
     def _create_indicator(
         self,
@@ -218,7 +219,9 @@ class ConverterToStix:
         """
         Create Indicator object
         """
+        priority = calculate_priority(alert.get("score", 0))
         labels_flat = build_labels(alert)
+        labels_flat.append(f"priority:{priority}")
         external_references = build_external_references(alert)
         custom_properties = build_custom_properties(alert, self.author.id)
  
@@ -378,6 +381,7 @@ class ConverterToStix:
         """
         Generic method to create STIX Cyber Observables (PhoneNumber, DomainName, IPv4Address).
         """
+        priority = calculate_priority(alert.get("score", 0))
         # Map types to their respective classes
         type_map = {
             "phone": PhoneNumber,
@@ -398,6 +402,7 @@ class ConverterToStix:
         # Add extra properties for Domain and IP types
         if obs_type in ["domain", "ipv4"]:
             labels_flat = build_labels(alert)
+            labels_flat.append(f"priority:{priority}")
             external_references = build_external_references(alert)
             
             params.update({
@@ -937,15 +942,7 @@ class ConverterToStix:
         filter_obj_id = obj_id if (obj_id and "--" in str(obj_id)) else obj.get("standard_id")
 
         note_refs = [filter_obj_id, observable_id]
-        # if obj_type == "RFTCase":
-        #     note_refs = [obj.get("standard_id"), observable_id]
-        # else:    
-        #     note_refs = [obj.get("id"), observable_id]
 
-        print(f"\n\nOBJECT IN NOTE HANDLING: {obj}\n\n")
-
-        print(f"\n\nNOTE REFS: {note_refs}\n\n")
-        
         note_body = f"Alert {alert_id} has been {queue_state}"
         created_at = (
             parse_iso_datetime(alert["created_at"])
