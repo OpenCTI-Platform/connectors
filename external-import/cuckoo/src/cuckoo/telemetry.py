@@ -36,7 +36,9 @@ class openCTIInterface:
         self.report = report
         self.labels = labels
         self.update = update
-        self.cuckoo_url = CuckooURL
+        self.cuckoo_url = (
+            CuckooURL.rstrip("/") if isinstance(CuckooURL, str) else CuckooURL
+        )
         self.EnableNetTraffic = EnableNetTraffic
         self.EnableRegKeys = EnableRegKeys
         self.ReportScore = ReportScore

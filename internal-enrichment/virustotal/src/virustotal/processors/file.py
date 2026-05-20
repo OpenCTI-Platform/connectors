@@ -114,7 +114,9 @@ class FileProcessor(EntityProcessor):
         self.helper.api.work.to_received(self.helper.work_id, message)
         self.helper.log_debug(message)
 
-        artifact_url = f"{self.helper.opencti_url}/storage/get/{file_meta['id']}"
+        artifact_url = (
+            f"{self.helper.opencti_url.rstrip('/')}/storage/get/{file_meta['id']}"
+        )
         try:
             artifact = self.helper.api.fetch_opencti_file(artifact_url, binary=True)
         except Exception as err:
