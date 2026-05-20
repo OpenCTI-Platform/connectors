@@ -812,3 +812,74 @@ class TestScanArtifactDedupAcrossFiles:
         # Malware-relationship lookup runs once per indicator (two
         # distinct indicators -> two lookups, not 2 × 3 files).
         assert connector.helper.api.stix_core_relationship.list.call_count == 2
+
+    def test_malware_dedup_is_shared_across_indicators(self):
+        # Two different YARA Indicators commonly ``indicates`` the
+        # same Malware (a generic loader rule + a family-specific
+        # config rule, both pointing at the same Malware SDO). The
+        # ``_build_malware_relationships`` helper deduplicates Malware
+        # SDOs and Artifact -> Malware relationships **across** the
+        # whole ``_scan_artifact`` run, not just within one call —
+        # so the bundle carries each Malware SDO and each Artifact ->
+        # Malware ``related-to`` relationship at most once even when
+        # several Indicators point at the same target.
+        connector = _make_connector(yara={"propagate_malware_relationship": True})
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        # Both indicators ``indicates`` the same Malware (Emotet).
+        shared_malware = {
+            "to": {
+                "standard_id": "malware--66666666-6666-4666-8666-666666666666",
+                "name": "Emotet",
+                "is_family": True,
+            }
+        }
+        connector.helper.api.stix_core_relationship.list = MagicMock(
+            return_value=[shared_malware]
+        )
+        artifact, _ = self._multi_file_artifact_and_indicator()
+        indicator_a = {
+            "id": "indicator-a",
+            "name": "rule_a",
+            "standard_id": "indicator--aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            "pattern": 'rule rule_a { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+        }
+        indicator_b = {
+            "id": "indicator-b",
+            "name": "rule_b",
+            "standard_id": "indicator--bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            "pattern": 'rule rule_b { strings: $a = "test data" condition: $a }',
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+        }
+
+        result, _errors = connector._scan_artifact(artifact, [indicator_a, indicator_b])
+
+        # The per-indicator ``indicates`` lookup still fires twice
+        # (one per Indicator) — that's expected and exercises the
+        # cross-call dedup.
+        assert connector.helper.api.stix_core_relationship.list.call_count == 2
+
+        # Across both calls, the shared Emotet Malware SDO is emitted
+        # exactly once into the bundle.
+        malware_sdos = [obj for obj in result if obj["type"] == "malware"]
+        assert len(malware_sdos) == 1
+        assert malware_sdos[0]["id"] == "malware--66666666-6666-4666-8666-666666666666"
+
+        # The Artifact -> Malware ``related-to`` relationship is also
+        # emitted exactly once (the deterministic STIX id is the same
+        # because both source / target ids are the same).
+        malware_relationships = [
+            obj
+            for obj in result
+            if obj["type"] == "relationship"
+            and obj["target_ref"].startswith("malware--")
+        ]
+        assert len(malware_relationships) == 1
+        assert (
+            malware_relationships[0]["target_ref"]
+            == "malware--66666666-6666-4666-8666-666666666666"
+        )

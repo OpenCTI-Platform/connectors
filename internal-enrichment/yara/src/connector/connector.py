@@ -234,6 +234,18 @@ class YaraConnector:
         # ``importFiles`` all match the same Indicator does not emit
         # the same MarkingDefinition N times.
         fallback_markings: dict[str, stix2.MarkingDefinition] = {}
+        # Cross-Indicator dedup for propagated Malware. Multiple YARA
+        # Indicators commonly ``indicates`` the same Malware family
+        # (e.g. a generic loader rule + a family-specific config rule
+        # both pointing at the same Malware SDO). Without a shared set,
+        # each ``_build_malware_relationships`` call would re-emit the
+        # same Malware SDO and the same Artifact -> Malware ``related-to``
+        # relationship (their STIX ids are deterministic, so the platform
+        # would collapse them on ingestion, but the bundle would carry
+        # the duplicates over the wire). Dedup by ``standard_id`` (for
+        # Malware) and by deterministic relationship id.
+        seen_malware_ids: set[str] = set()
+        seen_malware_relationship_ids: set[str] = set()
         errors = []
         for artifact_content in artifact_contents:
             for indicator in yara_indicators:
@@ -310,7 +322,11 @@ class YaraConnector:
                 if self.config.yara.propagate_malware_relationship:
                     bundle_objects.extend(
                         self._build_malware_relationships(
-                            artifact, indicator, marking_refs
+                            artifact,
+                            indicator,
+                            marking_refs,
+                            seen_malware_ids=seen_malware_ids,
+                            seen_relationship_ids=seen_malware_relationship_ids,
                         )
                     )
 
@@ -381,7 +397,13 @@ class YaraConnector:
                 )
 
     def _build_malware_relationships(
-        self, artifact: dict, indicator: dict, marking_refs
+        self,
+        artifact: dict,
+        indicator: dict,
+        marking_refs,
+        *,
+        seen_malware_ids: set[str] | None = None,
+        seen_relationship_ids: set[str] | None = None,
     ) -> list:
         """Return STIX objects propagating the Malware link onto ``artifact``.
 
@@ -417,7 +439,27 @@ class YaraConnector:
         is shared across the platform). The TLP markings stay on the
         Artifact -> Malware ``related-to`` relationship, which is the
         new object actually owned by this enrichment cycle.
+
+        ``seen_malware_ids`` / ``seen_relationship_ids`` are
+        caller-owned sets that let :meth:`_scan_artifact` share dedup
+        state across multiple ``_build_malware_relationships`` calls.
+        Two different YARA Indicators commonly ``indicates`` the same
+        Malware family (a generic loader rule + a family-specific
+        config rule, both pointing at the same Malware SDO), so
+        without a shared set the second call would re-emit both the
+        Malware SDO and the Artifact -> Malware ``related-to``
+        relationship (their STIX ids are deterministic so the platform
+        would collapse the duplicates on ingestion, but the wire
+        payload would still carry them). When the caller passes
+        ``None`` (e.g. unit tests that exercise the helper in
+        isolation) we fall back to per-call sets — preserving the
+        single-call dedup the helper has always provided.
         """
+        if seen_malware_ids is None:
+            seen_malware_ids = set()
+        if seen_relationship_ids is None:
+            seen_relationship_ids = set()
+
         indicator_name = indicator.get("name")
         try:
             relationships = self.helper.api.stix_core_relationship.list(
@@ -434,7 +476,6 @@ class YaraConnector:
             return []
 
         out: list = []
-        seen_malware_ids: set[str] = set()
         for rel in relationships or []:
             target = (rel.get("to") or {}) if isinstance(rel, dict) else {}
             malware_standard_id = target.get("standard_id")
@@ -465,12 +506,22 @@ class YaraConnector:
                         )
                     )
 
+                # Dedup the Artifact -> Malware ``related-to``
+                # relationship across the whole ``_scan_artifact`` run
+                # (the deterministic STIX id is identical for two
+                # Indicators that both ``indicates`` the same Malware).
+                # The platform would collapse duplicates on ingestion,
+                # but emitting them here would inflate the bundle.
+                malware_relationship_id = StixCoreRelationship.generate_id(
+                    "related-to",
+                    artifact["standard_id"],
+                    malware_standard_id,
+                )
+                if malware_relationship_id in seen_relationship_ids:
+                    continue
+                seen_relationship_ids.add(malware_relationship_id)
                 malware_relationship = Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to",
-                        artifact["standard_id"],
-                        malware_standard_id,
-                    ),
+                    id=malware_relationship_id,
                     relationship_type="related-to",
                     created_by_ref=self.author["id"],
                     source_ref=artifact["standard_id"],
