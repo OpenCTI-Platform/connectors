@@ -18,9 +18,7 @@ from pycti import Identity as PyctiIdentity
 from pycti import Indicator as PyctiIndicator
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Note as PyctiNote
-from pycti import (
-    OpenCTIConnectorHelper,
-)
+from pycti import OpenCTIConnectorHelper
 from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pycti.utils.constants import CustomObservablePhoneNumber as PhoneNumber
 from stix2 import (
@@ -841,7 +839,7 @@ class ConverterToStix:
                 {"alert_id": alert.get("id")},
             )
             rft_case = self._handle_rft_cases_new(alert, observables, stix_objects)
-            
+
             return rft_case
 
     def _handle_rft_cases_existing(
