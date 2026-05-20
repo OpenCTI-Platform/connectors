@@ -296,6 +296,46 @@ class ConfigConnector:
 
             return pol
 
+        def _collect_dict_form(
+            items: Any,
+        ) -> tuple[list[str], dict[str, CollectionPolicy]]:
+            """
+            Walk a ``(key, value)`` iterable from the YAML / JSON map form
+            of ``taxii_collections`` and return the ordered list of
+            normalised, non-blank collection ids together with the
+            matching overrides map.
+
+            Keys are stripped; blank keys are dropped; **duplicate keys
+            after normalisation keep the first occurrence and emit a
+            warning**. Without this, two input keys that collapse to the
+            same normalised id (e.g. ``"COLL1"`` and ``"  COLL1  "``)
+            would both land in ``order`` (causing the same collection to
+            be fetched twice) and the later one would silently overwrite
+            the first one's per-collection policy in ``overrides`` — a
+            config typo would then turn into either a duplicated fetch
+            pass or a silently dropped policy, depending on YAML key
+            order.
+            """
+            order: list[str] = []
+            overrides: dict[str, CollectionPolicy] = {}
+            for k, v in items:
+                key = str(k).strip()
+                if not key:
+                    continue
+                if key in overrides:
+                    _logger.warning(
+                        "Duplicate taxii_collections key %r (normalised "
+                        "from %r): keeping the first occurrence; the "
+                        "later entry's per-collection overrides are "
+                        "ignored. Fix the config to remove the duplicate.",
+                        key,
+                        k,
+                    )
+                    continue
+                order.append(key)
+                overrides[key] = _normalize_policy(v)
+            return order, overrides
+
         # 1) Normalize Python objects (dict/list) passed directly from YAML loader.
         # Both branches mirror the CSV fallback below (line 346): strip every
         # entry / key and drop blanks. Without this, a config with stray
@@ -306,15 +346,7 @@ class ConfigConnector:
         # ``taxii_collections`` list silently plans a deletion of every
         # connector-owned Defender indicator on the next sync cycle.
         if isinstance(raw, dict):
-            order: list[str] = []
-            overrides: dict[str, CollectionPolicy] = {}
-            for k, v in raw.items():
-                key = str(k).strip()
-                if not key:
-                    continue
-                order.append(key)
-                overrides[key] = _normalize_policy(v)
-            return order, overrides
+            return _collect_dict_form(raw.items())
 
         if isinstance(raw, list):
             # raw is already the list form; strip + drop blanks (and ``None``)
@@ -347,15 +379,7 @@ class ConfigConnector:
                 return ids, {}
 
             if isinstance(data, dict):
-                order: list[str] = []
-                overrides: dict[str, CollectionPolicy] = {}
-                for k, v in data.items():
-                    key = str(k).strip()
-                    if not key:
-                        continue
-                    order.append(key)
-                    overrides[key] = _normalize_policy(v)
-                return order, overrides
+                return _collect_dict_form(data.items())
 
             if isinstance(data, list):
                 # Mirror the CSV branch: strip + drop blanks (and ``None``) so a

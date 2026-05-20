@@ -109,3 +109,50 @@ def test_parse_json_dict_strips_and_drops_blank_keys():
     assert ids == ["COLL1"]
     assert overrides["COLL1"]["action"] == "Audit"
     assert "" not in overrides
+
+
+# --- Duplicate-key dedup (after whitespace normalisation) -----------------
+#
+# When two map keys collapse to the same id after ``str(k).strip()`` (e.g.
+# ``"COLL1"`` and ``"  COLL1  "`` in the same YAML / JSON map), the parser
+# must keep the **first** occurrence and ignore subsequent duplicates. Without
+# this, ``order`` would contain the same collection id twice (causing
+# duplicated fetch passes against the OpenCTI TAXII stream) and the later
+# entry would silently overwrite the first one's per-collection policy in
+# ``overrides``. A typo in the config would then either double the work or
+# silently drop the operator's intended ``action``/``expire_time``/etc.
+
+
+def test_parse_python_dict_dedupes_normalised_keys(caplog):
+    py = {
+        "COLL1": {"action": "Audit"},
+        "  COLL1  ": {"action": "Block"},
+        "COLL2": None,
+    }
+    with caplog.at_level("WARNING"):
+        ids, overrides = ConfigConnector._parse_taxii_collections(py)
+    assert ids == ["COLL1", "COLL2"]
+    # First occurrence wins; the later "Block" override is dropped.
+    assert overrides["COLL1"]["action"] == "Audit"
+    assert overrides["COLL2"] == {}
+    assert any(
+        "Duplicate taxii_collections key" in rec.message for rec in caplog.records
+    )
+
+
+def test_parse_json_dict_dedupes_normalised_keys(caplog):
+    raw = json.dumps(
+        {
+            "COLL1": {"action": "Audit"},
+            "  COLL1  ": {"action": "Block"},
+            "COLL2": None,
+        }
+    )
+    with caplog.at_level("WARNING"):
+        ids, overrides = ConfigConnector._parse_taxii_collections(raw)
+    assert ids == ["COLL1", "COLL2"]
+    assert overrides["COLL1"]["action"] == "Audit"
+    assert overrides["COLL2"] == {}
+    assert any(
+        "Duplicate taxii_collections key" in rec.message for rec in caplog.records
+    )
