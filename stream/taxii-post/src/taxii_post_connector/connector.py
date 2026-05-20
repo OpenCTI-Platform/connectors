@@ -74,20 +74,17 @@ class TaxiiPostConnector:
                 del data_object["created_by_ref"]
             if self.config.stix_version != "2.1":
                 del data_object["extensions"]
-                if "spec_version" in data_object:
-                    del data_object["spec_version"]
-                if "revoked" in data_object:
-                    del data_object["revoked"]
-                if "confidence" in data_object:
-                    del data_object["confidence"]
-                if "lang" in data_object:
-                    del data_object["lang"]
-                if "pattern_type" in data_object:
-                    del data_object["pattern_type"]
-                if "pattern_version" in data_object:
-                    del data_object["pattern_version"]
-                if "is_family" in data_object:
-                    del data_object["is_family"]
+                for key in (
+                    "spec_version",
+                    "revoked",
+                    "confidence",
+                    "lang",
+                    "pattern_type",
+                    "pattern_version",
+                    "is_family",
+                ):
+                    if key in data_object:
+                        del data_object[key]
             bundle = {
                 "type": "bundle",
                 "spec_version": self.config.stix_version,
