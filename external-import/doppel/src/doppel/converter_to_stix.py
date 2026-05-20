@@ -11,16 +11,14 @@ from doppel.stix_helpers import (
     in_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
-from pycti import (
-    OpenCTIConnectorHelper,
-    CaseRft as PyctiCaseRft,
-    Identity as PyctiIdentity,
-    Grouping as PyctiGrouping,
-    Indicator as PyctiIndicator,
-    MarkingDefinition as PyctiMarkingDefinition,
-    Note as PyctiNote,
-    StixCoreRelationship as PyctiStixCoreRelationship,
-)
+from pycti import CaseRft as PyctiCaseRft
+from pycti import Grouping as PyctiGrouping
+from pycti import Identity as PyctiIdentity
+from pycti import Indicator as PyctiIndicator
+from pycti import MarkingDefinition as PyctiMarkingDefinition
+from pycti import Note as PyctiNote
+from pycti import OpenCTIConnectorHelper
+from pycti import StixCoreRelationship as PyctiStixCoreRelationship
 from pycti.utils.constants import CustomObservablePhoneNumber as PhoneNumber
 from stix2 import (
     TLP_AMBER,
@@ -45,9 +43,7 @@ class ConverterToStix:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        tlp_level: Literal[
-            "clear", "white", "green", "amber", "amber+strict", "red"
-        ],
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
         enable_grouping_case: bool = False,
         enable_rft_case: bool = False,
     ):
@@ -72,9 +68,7 @@ class ConverterToStix:
         :return: Identity Stix2 object
         """
         return Identity(
-            id=PyctiIdentity.generate_id(
-                name="Doppel", identity_class="organization"
-            ),
+            id=PyctiIdentity.generate_id(name="Doppel", identity_class="organization"),
             name="Doppel",
             identity_class="organization",
             description="Threat Intelligence Provider",
@@ -93,9 +87,7 @@ class ConverterToStix:
             "green": TLP_GREEN,
             "amber": TLP_AMBER,
             "amber+strict": Stix2MarkingDefinition(
-                id=PyctiMarkingDefinition.generate_id(
-                    "TLP", "TLP:AMBER+STRICT"
-                ),
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
                 definition_type="statement",
                 definition={"statement": "custom"},
                 custom_properties={
@@ -236,9 +228,7 @@ class ConverterToStix:
             created_by_ref=self.author.id,
             object_marking_refs=[self.tlp_marking.id],
             labels=labels_flat or None,
-            external_references=external_references
-            if external_references
-            else None,
+            external_references=external_references if external_references else None,
             valid_from=created_at,
             custom_properties=custom_properties,
             allow_custom=True,
