@@ -241,9 +241,14 @@ class IPQSConnector:
             pattern = f"[user-account:account_login = '{_stix_quote(value)}']"
             response = self.client.get_leaked_info(LEAK_USERNAME_OR_EMAIL, value)
             # ``account_login`` itself is the public identifier of the
-            # account (typically an email or username); we keep it
-            # visible as the indicator name and use the standard
-            # (non-sensitive) code path below.
+            # account (typically an email or username), so we keep it
+            # visible as the indicator name in OpenCTI's UI search
+            # index. We still set ``sensitive=True`` below so the
+            # connector's own debug log does NOT echo the plaintext
+            # username / email back through the STIX pattern —
+            # ``account_login`` is listed in
+            # ``_SENSITIVE_OBSERVABLE_FIELDS`` precisely because
+            # logging it verbatim is PII exposure.
         else:
             return (
                 "User-Account observable is missing both ``account_login`` "
@@ -276,7 +281,15 @@ class IPQSConnector:
             pattern=pattern,
             indicator_value=value,
             description=description,
-            sensitive=bool(credential),
+            # All Darkweb-Leak User-Account lookups embed PII in the
+            # STIX pattern (plaintext password for credential lookups,
+            # plaintext username / email for account-login lookups),
+            # so the pattern is always redacted in the debug log.
+            # ``public_name`` then independently controls whether the
+            # indicator *name* is replaced: yes for credentials,
+            # no for account-logins (the account login is the public
+            # identifier and stays visible in OpenCTI's UI).
+            sensitive=True,
             public_name=public_name,
         )
         return builder.send_bundle()

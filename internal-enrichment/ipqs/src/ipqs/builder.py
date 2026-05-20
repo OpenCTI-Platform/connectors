@@ -118,21 +118,29 @@ class IPQSBuilder:
         :meth:`update_labels`; ``labels["value"]`` is wrapped in a list
         so the STIX ``labels`` property is always an array.
 
-        When ``sensitive`` is :data:`True` the indicator carries a
-        non-sensitive ``name`` (``public_name`` if provided, otherwise
-        ``"User account credential exposure"``) and the debug log
-        only echoes the indicator id — never the raw STIX pattern,
-        which on Darkweb-Leak credential lookups embeds the plaintext
-        password. The pattern itself is still stored on the
-        :class:`Indicator` (it is required by STIX), but it is never
-        echoed to the connector logs.
+        Two independent knobs control the privacy surface of the
+        created Indicator:
+
+        * ``sensitive`` — when :data:`True`, the debug log echoes the
+          indicator id but **never** the raw STIX pattern. This protects
+          *all* PII-bearing leak lookups: a ``credential`` (plaintext
+          password) AND an ``account_login`` (username / email), both
+          of which would otherwise be reconstructible from the
+          logged pattern.
+        * ``public_name`` — overrides the indicator ``name`` carried on
+          the STIX object. Used for ``credential`` lookups, where
+          embedding the plaintext password as the indicator name would
+          be unsafe; ``account_login`` lookups leave this :data:`None`
+          so the username / email stays visible in OpenCTI's UI search
+          index (it is the public identifier of the account, just not
+          something that should land in connector logs verbatim).
+
+        The pattern itself is still stored on the :class:`Indicator`
+        (it is required by STIX), but ``sensitive`` controls whether
+        the connector's own debug log ever echoes it.
         """
-        if sensitive:
-            indicator_name = public_name or "User account credential exposure"
-            log_pattern = "***REDACTED-PATTERN***"
-        else:
-            indicator_name = indicator_value
-            log_pattern = pattern
+        indicator_name = public_name or indicator_value
+        log_pattern = "***REDACTED-PATTERN***" if sensitive else pattern
         indicator_id = pycti.Indicator.generate_id(pattern)
         self.helper.log_debug(
             f"[IPQS] creating indicator {indicator_id} with pattern {log_pattern}"
