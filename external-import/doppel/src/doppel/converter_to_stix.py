@@ -114,7 +114,7 @@ class ConverterToStix:
         Create Request for Takedown case
         """
         priority = calculate_priority(alert.get("score", 0))
-        case_name = f"Doppel Takedown - {alert.get('entity', 'Unknown')} ({alert.get('id')})"
+        case_name = f"Doppel Takedown - {alert.get('entity')} ({alert.get('id')})"
         now = datetime.now(timezone.utc).isoformat()
         object_ids = [obj["id"] for obj in object_refs if isinstance(obj, dict) and "id" in obj]
 
@@ -262,6 +262,9 @@ class ConverterToStix:
         :param entity_value: Value of the entity
         :return: List of indicator objects or empty
         """
+        if observable_name.startswith("http"):
+            obv_stripped = observable_name.split("://")
+            observable_name = obv_stripped[1]
         # First, try searching by custom property (may not work if not indexed)
         filters = {
             "mode": "and",
@@ -324,6 +327,9 @@ class ConverterToStix:
         :param alert_id: Doppel alert ID
         :return: List of RFT case objects or empty list
         """
+        if entity.startswith("http"):
+            obv_stripped = entity.split("://")
+            entity = obv_stripped[1]
         filters = {
             "mode": "and",
             "filters": [
