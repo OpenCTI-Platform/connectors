@@ -54,6 +54,14 @@ cd /tmp/olm
 # ``No rule to make target 'install'``. ``cmake --install build`` is
 # also the canonical mate to ``cmake --build build`` and works
 # identically with any generator CMake picks.
-cmake . -Bbuild
+#
+# ``-DCMAKE_POLICY_VERSION_MINIMUM=3.5`` is required because libolm's
+# ``CMakeLists.txt`` declares a ``cmake_minimum_required`` value older
+# than 3.5, and CMake 4.x (shipped by recent ``python:3.12-alpine``
+# images) removed compatibility with CMake < 3.5. Without this flag,
+# configuration fails with "Compatibility with CMake < 3.5 has been
+# removed from CMake". The override is safe: libolm builds cleanly
+# with the 3.5 policy set.
+cmake . -Bbuild -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 cmake --build build
 cmake --install build

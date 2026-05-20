@@ -1,3 +1,11 @@
 pycti==7.260515.0
-matrix-nio[e2e]==0.25.2
+matrix-nio==0.25.2
+# matrix-nio's ``[e2e]`` extra pins ``cachetools~=5.3`` which conflicts with
+# pycti's ``cachetools~=7.0.1`` (the pip resolver fails the install). Matrix-nio
+# only uses ``cachetools.LRUCache(maxsize)`` whose API is stable across 5.x–7.x,
+# so we list the other ``[e2e]`` dependencies (atomicwrites / peewee /
+# python-olm) explicitly here and let pycti dictate the cachetools version.
+atomicwrites~=1.4
+peewee~=3.14
+python-olm~=3.2
 stix2==3.0.1
