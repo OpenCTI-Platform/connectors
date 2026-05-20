@@ -55,3 +55,57 @@ def test_parse_json_map_with_max_indicators():
     assert ids == ["id1", "id2"]
     assert overrides["id1"]["max_indicators"] == 123
     assert overrides["id2"]["max_indicators"] == 50
+
+
+# --- Whitespace / blank normalisation on every input shape ----------------
+#
+# The CSV branch has always stripped + filtered empties, but the YAML list,
+# YAML dict, JSON list and JSON dict branches used to forward whitespace and
+# blank entries verbatim. A `taxii_collections: ['COLL1', '  ', '']` config
+# could therefore reach the runtime layer with three "collection ids", bypass
+# the empty-collections fail-fast guard added in `config_variables.__init__`,
+# and feed a blank id to Defender on the next sync cycle — and on a
+# `update_only_owned=true` deployment, that effectively means planning a
+# deletion of every connector-owned Defender indicator. These cases pin the
+# normalisation: every parsing branch must drop blank / whitespace-only
+# entries the same way the CSV branch does.
+
+
+def test_parse_python_list_strips_and_drops_blanks():
+    # ``None`` is dropped (a bare ``-`` in a YAML list becomes Python ``None``)
+    # rather than being stringified to the literal ``"None"``; whitespace-only
+    # entries are dropped too.
+    ids, overrides = ConfigConnector._parse_taxii_collections(
+        ["COLL1", "  COLL2  ", "", "   ", None, "COLL3"]
+    )
+    assert ids == ["COLL1", "COLL2", "COLL3"]
+    assert overrides == {}
+
+
+def test_parse_python_list_all_blank_returns_empty():
+    ids, overrides = ConfigConnector._parse_taxii_collections(["", "   ", "\t"])
+    assert ids == []
+    assert overrides == {}
+
+
+def test_parse_python_dict_strips_and_drops_blank_keys():
+    py = {"  COLL1  ": {"action": "Audit"}, "": {"action": "Block"}}
+    ids, overrides = ConfigConnector._parse_taxii_collections(py)
+    assert ids == ["COLL1"]
+    assert overrides["COLL1"]["action"] == "Audit"
+    assert "" not in overrides
+
+
+def test_parse_json_list_strips_and_drops_blanks():
+    raw = json.dumps(["COLL1", "  COLL2  ", "", "   ", "COLL3"])
+    ids, overrides = ConfigConnector._parse_taxii_collections(raw)
+    assert ids == ["COLL1", "COLL2", "COLL3"]
+    assert overrides == {}
+
+
+def test_parse_json_dict_strips_and_drops_blank_keys():
+    raw = json.dumps({"  COLL1  ": {"action": "Audit"}, "": {"action": "Block"}})
+    ids, overrides = ConfigConnector._parse_taxii_collections(raw)
+    assert ids == ["COLL1"]
+    assert overrides["COLL1"]["action"] == "Audit"
+    assert "" not in overrides

@@ -293,19 +293,33 @@ class ConfigConnector:
 
             return pol
 
-        # 1) Normalize Python objects (dict/list) passed directly from YAML loader
+        # 1) Normalize Python objects (dict/list) passed directly from YAML loader.
+        # Both branches mirror the CSV fallback below (line 346): strip every
+        # entry / key and drop blanks. Without this, a config with stray
+        # whitespace (``['COLL1', '  ', '']`` or a dict with a blank key) would
+        # bypass the later "empty collections" fail-fast guard and let a
+        # blank collection id reach Defender at runtime — and on a
+        # ``update_only_owned=true`` deployment, an effectively-empty
+        # ``taxii_collections`` list silently plans a deletion of every
+        # connector-owned Defender indicator on the next sync cycle.
         if isinstance(raw, dict):
             order: list[str] = []
             overrides: dict[str, CollectionPolicy] = {}
             for k, v in raw.items():
-                key = str(k)
+                key = str(k).strip()
+                if not key:
+                    continue
                 order.append(key)
                 overrides[key] = _normalize_policy(v)
             return order, overrides
 
         if isinstance(raw, list):
-            # raw is already the list form
-            return [str(x) for x in raw], {}
+            # raw is already the list form; strip + drop blanks (and ``None``)
+            # like the CSV branch. ``None`` is dropped explicitly so an empty
+            # YAML list entry (``-`` on its own line, which yaml.safe_load
+            # turns into ``None``) is not preserved as the literal string
+            # ``"None"``.
+            return [s for s in (str(x).strip() for x in raw if x is not None) if s], {}
 
         # 2) Handle string inputs (CSV or JSON)
         s = raw or ""
@@ -333,13 +347,20 @@ class ConfigConnector:
                 order: list[str] = []
                 overrides: dict[str, CollectionPolicy] = {}
                 for k, v in data.items():
-                    key = str(k)
+                    key = str(k).strip()
+                    if not key:
+                        continue
                     order.append(key)
                     overrides[key] = _normalize_policy(v)
                 return order, overrides
 
             if isinstance(data, list):
-                return [str(x) for x in data], {}
+                # Mirror the CSV branch: strip + drop blanks (and ``None``) so a
+                # JSON list with whitespace / ``null`` entries cannot bypass the
+                # empty-collections guard.
+                return [
+                    s for s in (str(x).strip() for x in data if x is not None) if s
+                ], {}
 
         # CSV fallback
         ids = [x.strip() for x in s.split(",") if x.strip()]
