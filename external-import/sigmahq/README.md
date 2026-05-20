@@ -31,6 +31,5 @@ By importing these rules as indicators in OpenCTI, organizations can enrich thei
 
 Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
-For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/).
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector. For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 

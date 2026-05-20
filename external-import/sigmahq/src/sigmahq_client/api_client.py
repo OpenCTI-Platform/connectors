@@ -64,7 +64,13 @@ class SigmaHQClient:
         the connector treats as "no rules to ingest this run".
         """
         try:
-            response = self.session.get(url, stream=True, timeout=_HTTP_TIMEOUT_SECONDS)
+            # ``zipfile.ZipFile`` needs a seekable buffer, and we ultimately
+            # read the entire archive into memory below — so ``stream=True``
+            # (which would force us to also iterate ``response.iter_content``
+            # to materialise the bytes) buys nothing and only complicates
+            # the error path. A plain buffered ``GET`` is both simpler and
+            # equivalent on peak memory.
+            response = self.session.get(url, timeout=_HTTP_TIMEOUT_SECONDS)
             response.raise_for_status()
             zip_content = BytesIO(response.content)
             sigma_rules: list[dict[str, str]] = []

@@ -5,7 +5,7 @@
   "short_description": "The SigmaHQ connector ingests Sigma detection rules from the SigmaHQ repository (https://sigmahq.io) as indicators in OpenCTI. It imports over 3000 detection rules including generic detection rules, threat hunting rules, emerging threat rules, compliance rules, and placeholder rules, making community-driven detection logic accessible for threat intelligence operations.",
   "logo": "external-import/sigmahq/__metadata__/logo.png",
   "use_cases" : ["Open Source Threat Intel"],
-  "verified": true,
+  "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 80,

@@ -42,7 +42,7 @@ class ConverterToStix:
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
         self.author = self.create_author()
 
-    def create_author(self) -> dict:
+    def create_author(self) -> stix2.Identity:
         """
         Create Author
         :return: Author in Stix2 object
@@ -56,7 +56,7 @@ class ConverterToStix:
         return author
 
     @staticmethod
-    def _create_tlp_marking(level):
+    def _create_tlp_marking(level: str) -> stix2.MarkingDefinition:
         # ``TLP:CLEAR`` is an OpenCTI-specific marking, semantically
         # distinct from the legacy ``TLP:WHITE`` (it carries the modern
         # label in the UI). The earlier alias ``"clear" -> TLP_WHITE``
