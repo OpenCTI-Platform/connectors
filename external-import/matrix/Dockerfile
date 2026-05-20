@@ -25,6 +25,19 @@ FROM docker.io/python:${PYTHON_VERSION}-alpine AS builder
 
 ARG LIBOLM_VERSION
 
+# Apply the legacy CMake-policy minimum to every CMake invocation in this
+# stage. libolm's ``CMakeLists.txt`` declares a ``cmake_minimum_required``
+# value older than 3.5, and CMake 4.x (shipped by the ``python:3.12-alpine``
+# image since the 4.x release) removed compatibility with CMake < 3.5,
+# causing both the system libolm install below and ``python-olm``'s
+# bundled libolm build (triggered transitively by ``matrix-nio[e2e]``
+# during the ``pip install`` step further down) to fail with:
+# "Compatibility with CMake < 3.5 has been removed from CMake".
+# The ``CMAKE_POLICY_VERSION_MINIMUM`` CMake variable can also be
+# initialised from an environment variable, so setting it here covers
+# every nested ``cmake`` call without having to patch each one.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
 # hadolint ignore=DL3018
 RUN apk add --no-cache \
         cmake \
