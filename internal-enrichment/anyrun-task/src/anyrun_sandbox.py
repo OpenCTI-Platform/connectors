@@ -108,7 +108,9 @@ class AnyRunSandbox:
         :param file: OpenCTI file params
         :return: File data
         """
-        artifact_url = f'{self._helper.opencti_url}/storage/get/{file.get("id")}'
+        artifact_url = (
+            f'{self._helper.opencti_url.rstrip("/")}/storage/get/{file.get("id")}'
+        )
         try:
             return self._helper.api.fetch_opencti_file(
                 artifact_url, binary=True

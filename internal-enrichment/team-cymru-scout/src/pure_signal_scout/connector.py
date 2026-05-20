@@ -9,7 +9,7 @@ from pycti import OpenCTIConnectorHelper
 
 class PureSignalScoutConnectorConfig:
     def __init__(self, config):
-        self.api_base_url = config.pure_signal_scout.api_url
+        self.api_base_url = config.pure_signal_scout.api_url.rstrip("/")
         self.api_key = config.pure_signal_scout.api_token.get_secret_value()
         self.max_tlp = config.pure_signal_scout.max_tlp
 

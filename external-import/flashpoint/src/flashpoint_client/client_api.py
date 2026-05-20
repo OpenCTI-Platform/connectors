@@ -27,7 +27,9 @@ class FlashpointClient:
         """
         Initialize the client with necessary configurations
         """
-        self.api_base_url = api_base_url
+        self.api_base_url = (
+            api_base_url.rstrip("/") if isinstance(api_base_url, str) else api_base_url
+        )
 
         # Define headers in session and update when needed
         headers = {
