@@ -193,8 +193,16 @@ class YaraConnector:
             tlp_label = "TLP:" + self.tlp_level.upper()
             fallback_marking = self._build_tlp_marking(tlp_label)
             marking_refs.add(fallback_marking.id)
+        # ``marking_refs`` is collected into a ``set`` for dedup, but Python
+        # set iteration order is unspecified and effectively random across
+        # processes. Sort before returning so the ``object_marking_refs``
+        # array on every emitted relationship is stable across runs — two
+        # consecutive scans of the same artifact must produce the same
+        # STIX payload (identical bytes), otherwise OpenCTI's ingestion
+        # path would see "modified" objects on every cycle and trigger
+        # unnecessary downstream diff / update work.
         return (
-            list(marking_refs) if marking_refs else None,
+            sorted(marking_refs) if marking_refs else None,
             fallback_marking,
         )
 

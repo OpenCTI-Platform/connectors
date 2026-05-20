@@ -159,10 +159,16 @@ flowchart LR
 
 ### Generated STIX Objects
 
+The connector emits a small enrichment bundle per matching Artifact. Every object below rides along in the same `send_stix2_bundle(..., cleanup_inconsistent_bundle=True)` call, so any SDO referenced by an emitted Relationship must itself be present in the bundle — otherwise the worker drops the Relationship as inconsistent. That constraint is the reason the connector emits minimal Indicator / Malware / MarkingDefinition SDOs alongside the Relationships.
+
 | Object Type | Description |
 |-------------|-------------|
-| Relationship | `related-to` from Artifact to matching YARA Indicator |
-| Relationship | `related-to` from Artifact to each Malware the matched YARA Indicator `indicates` (only when `YARA_PROPAGATE_MALWARE_RELATIONSHIP=true`) |
+| Identity | A single `organization` Identity named `YARA`, set as `created_by_ref` on every Relationship the connector emits. |
+| Relationship | `related-to` from Artifact to matching YARA Indicator. Carries TLP `object_marking_refs` (Artifact and Indicator markings if any, otherwise the configured `YARA_TLP_LEVEL` fallback). |
+| Indicator | Minimal SDO for every matched YARA Indicator (re-emitted with the same `standard_id` the platform already knows). Required so the Artifact -> Indicator Relationship above survives `cleanup_inconsistent_bundle=True`; the platform merges by `standard_id`, so the platform-side Indicator is not overwritten. |
+| Relationship | `related-to` from Artifact to each Malware the matched YARA Indicator `indicates` (only when `YARA_PROPAGATE_MALWARE_RELATIONSHIP=true`). Inherits the same TLP markings as the Artifact -> Indicator Relationship. Deduplicated across multiple matching Indicators that point at the same Malware. |
+| Malware | Minimal SDO (`name`, `description`, `is_family`) for every Malware referenced by the propagated Artifact -> Malware Relationships (only when `YARA_PROPAGATE_MALWARE_RELATIONSHIP=true`). Same role as the Indicator SDO above: keeps the bundle self-consistent under `cleanup_inconsistent_bundle=True`. **Intentionally emitted without `object_marking_refs`** so the platform merge does not over-restrict an existing shared Malware entity with the Artifact's TLP — the TLP stays on the Artifact -> Malware Relationship, which is the only object actually owned by this enrichment cycle. |
+| MarkingDefinition | Fallback TLP marking corresponding to `YARA_TLP_LEVEL`. Emitted **only** when neither the Artifact nor the matched Indicator carry an `objectMarking` (the fallback id is generated locally and has no platform-side backing, so the corresponding SDO must ride along in the bundle). When the Artifact / Indicator already carry markings, no MarkingDefinition is added by the connector — those markings come in on the enrichment message itself or live on the platform already. |
 
 ---
 

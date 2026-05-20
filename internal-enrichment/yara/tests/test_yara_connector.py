@@ -309,6 +309,47 @@ class TestMarkingDefinitionInBundle:
         # The relationship still carries the inherited marking ref.
         assert artifact_marking_id in relationships[0]["object_marking_refs"]
 
+    def test_marking_refs_are_sorted_for_deterministic_emission(self):
+        """``object_marking_refs`` MUST be emitted in a stable order.
+
+        ``_collect_marking_refs`` collects refs into a Python ``set`` for
+        dedup, and ``set`` iteration order is unspecified across
+        processes. Two consecutive scans of the same Artifact must
+        therefore produce identical STIX bytes — otherwise OpenCTI's
+        ingestion path would see the same Relationship as "modified" on
+        every cycle, triggering needless downstream diff / update work.
+        Pinning the contract: marking refs come out sorted.
+        """
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        # Two markings whose alphanumeric order is the opposite of the
+        # order they appear in the ``objectMarking`` payload, so we can
+        # distinguish "preserved insertion order" from "sorted". Both
+        # ids are valid STIX 2.1 UUIDv4 (variant nibble in
+        # ``{8, 9, a, b}``).
+        artifact_marking_id = "marking-definition--ffffffff-eeee-4ddd-bbbb-aaaaaaaaaaaa"
+        indicator_marking_id = (
+            "marking-definition--00000000-0000-4000-8000-000000000000"
+        )
+        artifact, indicator = self._matching_artifact_and_indicator(
+            artifact_markings=[{"standard_id": artifact_marking_id}],
+            indicator_markings=[{"standard_id": indicator_marking_id}],
+        )
+        result, _errors = connector._scan_artifact(artifact, [indicator])
+
+        relationships = [obj for obj in result if obj.get("type") == "relationship"]
+        assert len(relationships) == 1
+        refs = list(relationships[0]["object_marking_refs"])
+        assert refs == sorted(refs), (
+            "object_marking_refs must be emitted in deterministic "
+            f"(sorted) order; got {refs!r}"
+        )
+        # And both inherited markings made it through.
+        assert artifact_marking_id in refs
+        assert indicator_marking_id in refs
+
 
 class TestPropagateLabels:
     """Tests for the optional label-propagation path."""
