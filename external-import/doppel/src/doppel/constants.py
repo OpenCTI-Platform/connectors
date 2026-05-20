@@ -13,6 +13,6 @@ DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO = [
     "ecommerce",
     "crypto",
     "email",
-    'paid_ads',
-    'darkweb'
+    "paid_ads",
+    "darkweb",
 ]
