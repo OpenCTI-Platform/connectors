@@ -1,31 +1,27 @@
 """Convert IOC delta entries to STIX objects."""
 
-import uuid
+import ipaddress
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
-from connector.src.custom.mappers.gti_iocs.gti_domain_to_stix_domain import (
-    GTIDomainToSTIXDomain,
-)
-from connector.src.custom.mappers.gti_iocs.gti_file_to_stix_file import (
-    GTIFileToSTIXFile,
-)
-from connector.src.custom.mappers.gti_iocs.gti_ip_to_stix_ip import GTIIPToSTIXIP
-from connector.src.custom.mappers.gti_iocs.gti_url_to_stix_url import GTIUrlToSTIXUrl
-from connector.src.custom.models.gti import gti_domain_model as domain_models
-from connector.src.custom.models.gti import gti_file_model as file_models
-from connector.src.custom.models.gti import gti_ip_addresses_model as ip_models
-from connector.src.custom.models.gti import gti_url_model as url_models
-from connector.src.custom.models.gti.gti_domain_model import GTIDomainData
-from connector.src.custom.models.gti.gti_file_model import GTIFileData
 from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaEntry,
     IOCDeltaGTIAssessment,
+    IOCDeltaRelationshipItem,
 )
-from connector.src.custom.models.gti.gti_ip_addresses_model import GTIIPData
-from connector.src.custom.models.gti.gti_url_model import GTIURLData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
+from connector.src.stix.v21.models.sdos.tool_model import ToolModel
+from connectors_sdk.models import (
+    AttackPattern,
+    Campaign,
+    ExternalReference,
+    Indicator,
+    Malware,
+    Relationship,
+)
+from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
+from stix2.base import _STIXBase
 
 if TYPE_CHECKING:
     import logging
@@ -33,43 +29,6 @@ if TYPE_CHECKING:
     from connector.src.custom.configs import GTIConfig
 
 LOG_PREFIX = "[ConvertToSTIXIndicator]"
-
-# Fixed namespace for deterministic UUIDv5 conversion of GTI entity IDs
-_GTI_STIX_NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
-
-REL_MAPPINGS = {
-    "malware_families": "indicates",
-    "campaigns": "indicates",
-    "threat_actors": "indicates",
-    "software_toolkits": "indicates",
-    "vulnerabilities": "related-to",
-    "reports": "related-to",
-}
-
-
-def _normalize_gti_stix_id(gti_id: str) -> str | None:
-    """Convert a GTI entity ID to a valid STIX identifier.
-
-    GTI IDs use the correct STIX type prefix but a non-UUID suffix
-    (e.g. ``report--22-00000647``). A UUIDv5 is derived deterministically
-    from the full GTI ID so the mapping is stable and reversible.
-
-    IDs that already carry a valid UUIDv4 or UUIDv5 suffix are returned
-    unchanged. Returns ``None`` when the input has no ``--`` separator.
-    """
-    if "--" not in gti_id:
-        return None
-
-    obj_type, suffix = gti_id.split("--", 1)
-
-    try:
-        parsed = uuid.UUID(suffix)
-        if parsed.version in (4, 5):
-            return gti_id  # already a valid STIX identifier
-    except ValueError:
-        pass
-
-    return f"{obj_type}--{uuid.uuid5(_GTI_STIX_NAMESPACE, gti_id)}"
 
 
 class ConvertToSTIXIndicator(BaseConvertToSTIX):
@@ -83,6 +42,14 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             "file": self._convert_file,
             "ip_address": self._convert_ip,
             "url": self._convert_url,
+        }
+
+        self._relation_mappings = {
+            "malware_families": self._create_relation_malware_family,
+            "campaigns": self._create_relation_campaign,
+            "threat_actors": self._create_relation_threat_actor,
+            "software_toolkits": self._create_relation_software_toolkit,
+            "attack_techniques": self._create_relation_attack_technique,
         }
 
     def convert(self, ioc_data: dict[str, Any]) -> list[Any]:
@@ -102,7 +69,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
                 {"prefix": LOG_PREFIX, "type": entry.type, "id": entry.id},
             )
             if converter := self._converter.get(entry.type):
-                stix_objects = converter(entry)
+                ioc_entry = converter(entry)
             else:
                 self.logger.debug(
                     "Unknown IOC type, skipping",
@@ -121,10 +88,9 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             )
             return []
 
-        rel_objects = self._build_relationships(entry, stix_objects)
-        stix_objects.extend(rel_objects)
+        rel_objects = self._build_relationships(entry, ioc_entry)
 
-        return stix_objects
+        return rel_objects
 
     @staticmethod
     def _map_assessment(delta: IOCDeltaGTIAssessment, models: Any) -> Any:
@@ -150,150 +116,315 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             ),
         )
 
-    def _convert_file(self, entry: IOCDeltaEntry) -> list[Any]:
+    def _convert_file(self, entry: IOCDeltaEntry) -> Indicator | None:
+        """Convert a file IOC delta entry to a STIX Indicator with file observable."""
         attrs = entry.attributes
-        file_attrs = None
-        if attrs:
-            gti_assessment = (
-                self._map_assessment(attrs.gti_assessment, file_models)
-                if attrs.gti_assessment
-                else None
-            )
-            file_attrs = file_models.FileModel(
-                sha256=attrs.sha256,
-                md5=attrs.md5,
-                sha1=attrs.sha1,
-                meaningful_name=attrs.meaningful_name,
-                names=attrs.names,
-                size=attrs.size,
-                last_modification_date=attrs.last_modification_date,
-                gti_assessment=gti_assessment,
-            )
-        file_data = GTIFileData(id=entry.id, type="file", attributes=file_attrs)
-        mapper = GTIFileToSTIXFile(
-            file=file_data,
-            organization=self.organization,
-            tlp_marking=self.tlp_marking,
-        )
-        return mapper.to_stix()
+        if attrs is None:
+            return None
 
-    def _convert_ip(self, entry: IOCDeltaEntry) -> list[Any]:
-        attrs = entry.attributes
-        ip_attrs = None
-        if attrs:
-            gti_assessment = (
-                self._map_assessment(attrs.gti_assessment, ip_models)
-                if attrs.gti_assessment
-                else None
-            )
-            ip_attrs = ip_models.IPModel(
-                last_modification_date=attrs.last_modification_date,
-                gti_assessment=gti_assessment,
-            )
-        ip_data = GTIIPData(id=entry.id, type="ip_address", attributes=ip_attrs)
-        mapper = GTIIPToSTIXIP(
-            ip=ip_data,
-            organization=self.organization,
-            tlp_marking=self.tlp_marking,
-        )
-        return mapper.to_stix()
+        hashes = {}
+        patterns = []
+        for hash_algo, hash_value in [
+            (HashAlgorithm.SHA256, attrs.sha256),
+            (HashAlgorithm.MD5, attrs.md5),
+            (HashAlgorithm.SHA1, attrs.sha1),
+        ]:
+            if hash_value is None:
+                continue
+            patterns.append(f"file:hashes.'{hash_algo.value}' = '{hash_value}'")
+            hashes[hash_algo] = hash_value
 
-    def _convert_url(self, entry: IOCDeltaEntry) -> list[Any]:
-        attrs = entry.attributes
-        url_attrs = None
-        if attrs:
-            gti_assessment = (
-                self._map_assessment(attrs.gti_assessment, url_models)
-                if attrs.gti_assessment
-                else None
-            )
-            url_attrs = url_models.URLModel(
-                url=attrs.url,
-                last_modification_date=attrs.last_modification_date,
-                gti_assessment=gti_assessment,
-            )
-        url_data = GTIURLData(id=entry.id, type="url", attributes=url_attrs)
-        mapper = GTIUrlToSTIXUrl(
-            url=url_data,
-            organization=self.organization,
-            tlp_marking=self.tlp_marking,
-        )
-        return mapper.to_stix()
+        if not patterns:
+            return None
 
-    def _convert_domain(self, entry: IOCDeltaEntry) -> list[Any]:
-        attrs = entry.attributes
-        domain_attrs = None
-        if attrs:
-            gti_assessment = (
-                self._map_assessment(attrs.gti_assessment, domain_models)
-                if attrs.gti_assessment
+        pattern = f"[{' OR '.join(patterns)}]"
+
+        if attrs.gti_assessment and attrs.gti_assessment.threat_score:
+            score = attrs.gti_assessment.threat_score.value
+        else:
+            score = None
+
+        return Indicator(
+            name=attrs.meaningful_name if attrs.meaningful_name else entry.id,
+            pattern=pattern,
+            pattern_type="stix",
+            main_observable_type="StixFile",
+            author=self.organization,
+            markings=[self.tlp_marking],
+            score=score,
+            valid_from=(
+                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
+                if attrs.creation_date
                 else None
-            )
-            domain_attrs = domain_models.DomainModel(
-                last_modification_date=attrs.last_modification_date,
-                gti_assessment=gti_assessment,
-            )
-        domain_data = GTIDomainData(id=entry.id, type="domain", attributes=domain_attrs)
-        mapper = GTIDomainToSTIXDomain(
-            domain=domain_data,
-            organization=self.organization,
-            tlp_marking=self.tlp_marking,
+            ),
+            create_observables=True,
         )
-        return mapper.to_stix()
+
+    def _detect_ip_version(self, ip_addr: str) -> str:
+        """Detect if IP is IPv4 or IPv6.
+
+        Returns:
+            str: "ipv4" or "ipv6"
+
+        Raises:
+            ValueError: If IP format is invalid
+
+        """
+        try:
+            ip_obj = ipaddress.ip_address(ip_addr)
+            if isinstance(ip_obj, ipaddress.IPv4Address):
+                return "ipv4"
+            else:
+                return "ipv6"
+        except ValueError as e:
+            raise ValueError(f"Invalid IP address format '{ip_addr}': {e}") from e
+
+    def _convert_ip(self, entry: IOCDeltaEntry) -> Indicator | None:
+        """Convert an IP address IOC delta entry to a STIX Indicator with IP observable."""
+        attrs = entry.attributes
+
+        if attrs is None:
+            return None
+
+        ip_version = self._detect_ip_version(entry.id)
+        pattern = f"[{ip_version}-addr:value = '{entry.id}']"
+        observable_type = "IPv4-Addr" if ip_version == "ipv4" else "IPv6-Addr"
+
+        return Indicator(
+            name=entry.id,
+            pattern=pattern,
+            pattern_type="stix",
+            main_observable_type=observable_type,
+            author=self.organization,
+            markings=[self.tlp_marking],
+            score=(
+                attrs.gti_assessment.threat_score.value
+                if attrs.gti_assessment and attrs.gti_assessment.threat_score
+                else None
+            ),
+            valid_from=(
+                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
+                if attrs.creation_date
+                else None
+            ),
+            create_observables=True,
+        )
+
+    def _convert_url(self, entry: IOCDeltaEntry) -> Indicator | None:
+        """Convert a URL IOC delta entry to a STIX Indicator with URL observable."""
+        attrs = entry.attributes
+        if attrs is None or attrs.url is None:
+            return None
+
+        return Indicator(
+            name=attrs.url,
+            pattern=f"[url:value = '{attrs.url}']",
+            pattern_type="stix",
+            main_observable_type="Url",
+            author=self.organization,
+            markings=[self.tlp_marking],
+            score=(
+                attrs.gti_assessment.threat_score.value
+                if attrs.gti_assessment and attrs.gti_assessment.threat_score
+                else None
+            ),
+            valid_from=(
+                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
+                if attrs.creation_date
+                else None
+            ),
+            create_observables=True,
+        )
+
+    def _convert_domain(self, entry: IOCDeltaEntry) -> Indicator | None:
+        """Convert a domain IOC delta entry to a STIX Indicator with domain observable."""
+        attrs = entry.attributes
+        if attrs is None:
+            return None
+
+        return Indicator(
+            name=entry.id,
+            pattern=f"[domain-name:value = '{entry.id}']",
+            pattern_type="stix",
+            main_observable_type="Domain-Name",
+            author=self.organization,
+            markings=[self.tlp_marking],
+            score=(
+                attrs.gti_assessment.threat_score.value
+                if attrs.gti_assessment and attrs.gti_assessment.threat_score
+                else None
+            ),
+            valid_from=(
+                datetime.fromtimestamp(attrs.creation_date, tz=timezone.utc)
+                if attrs.creation_date
+                else None
+            ),
+            create_observables=True,
+        )
 
     def _build_relationships(
-        self, entry: IOCDeltaEntry, stix_objects: list[Any]
-    ) -> list[Any]:
-        if not entry.relationships or not stix_objects:
+        self, entry: IOCDeltaEntry, ioc_entry: Indicator
+    ) -> list[_STIXBase]:
+        """Build STIX relationship objects based on the relationships in the IOC delta entry."""
+        if not entry.relationships:
             return []
 
-        indicator_obj = next(
-            (obj for obj in stix_objects if getattr(obj, "type", None) == "indicator"),
-            None,
-        )
-        if not indicator_obj:
-            return []
+        rels: list[_STIXBase] = [ioc_entry.to_stix2_object()]
 
-        rels = []
-        now = datetime.now(timezone.utc)
-
-        for rel_field, rel_type in REL_MAPPINGS.items():
+        for rel_field, rel_func in self._relation_mappings.items():
             rel_data = getattr(entry.relationships, rel_field, None)
             if not rel_data:
                 continue
             for item in rel_data.data:
-                if not item.id:
-                    continue
-                target_ref = _normalize_gti_stix_id(item.id)
-                if not target_ref:
-                    self.logger.debug(
-                        "Skipping relationship: cannot normalise GTI ID to STIX",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "gti_id": item.id,
-                        },
-                    )
-                    continue
-                try:
-                    rel = OctiRelationshipModel.create(
-                        relationship_type=rel_type,
-                        source_ref=indicator_obj.id,
-                        target_ref=target_ref,
-                        organization_id=self.organization.id,
-                        marking_ids=[self.tlp_marking.id],
-                        created=now,
-                        modified=now,
-                    )
-                    rels.append(rel)
-                except Exception as e:
-                    self.logger.debug(
-                        "Failed to create relationship",
-                        {
-                            "prefix": LOG_PREFIX,
-                            "rel_type": rel_type,
-                            "target_id": target_ref,
-                            "error": str(e),
-                        },
-                    )
+                rels.extend(rel_func(ioc_entry, item))
 
         return rels
+
+    def _create_relation_malware_family(
+        self, ioc_entry: Indicator, malware_data: IOCDeltaRelationshipItem
+    ) -> list[_STIXBase]:
+
+        if not malware_data.attributes or not malware_data.attributes.name:
+            return []
+
+        malware_name = malware_data.attributes.name
+
+        malware = Malware(
+            name=malware_name,
+            is_family=True,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        relationship = Relationship(
+            type=RelationshipType.INDICATES,
+            source=ioc_entry,
+            target=malware,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        return [
+            malware.to_stix2_object(),
+            relationship.to_stix2_object(),
+        ]
+
+    def _create_relation_campaign(
+        self, ioc_entry: Indicator, campaign_data: IOCDeltaRelationshipItem
+    ) -> list[_STIXBase]:
+        if not campaign_data.attributes or not campaign_data.attributes.name:
+            return []
+
+        campaign_name = campaign_data.attributes.name
+
+        campaign = Campaign(
+            name=campaign_name,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        relationship = Relationship(
+            type=RelationshipType.INDICATES,
+            source=ioc_entry,
+            target=campaign,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        return [
+            campaign.to_stix2_object(),
+            relationship.to_stix2_object(),
+        ]
+
+    def _create_relation_threat_actor(
+        self,
+        ioc_entry: Indicator,
+        threat_actor_data: IOCDeltaRelationshipItem,
+    ) -> list[_STIXBase]:
+        if not threat_actor_data.attributes or not threat_actor_data.attributes.name:
+            return []
+
+        threat_actor_name = threat_actor_data.attributes.name
+
+        threat_actor = ThreatActorGroup(
+            name=threat_actor_name,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+        relationship = Relationship(
+            type=RelationshipType.INDICATES,
+            source=ioc_entry,
+            target=threat_actor,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        return [
+            threat_actor.to_stix2_object(),
+            relationship.to_stix2_object(),
+        ]
+
+    def _create_relation_software_toolkit(
+        self,
+        ioc_entry: Indicator,
+        software_toolkit_data: IOCDeltaRelationshipItem,
+    ) -> list[_STIXBase]:
+        if (
+            not software_toolkit_data.attributes
+            or not software_toolkit_data.attributes.name
+        ):
+            return []
+
+        software_toolkit_name = software_toolkit_data.attributes.name
+
+        # TODO: TO BE CHANGED ONCE TOOL MODEL IS ADDED TO CONNECTORS-SDK
+        software_toolkit = ToolModel(
+            name=software_toolkit_name,
+        )
+
+        now = datetime.now(timezone.utc)
+
+        relationship = OctiRelationshipModel.create(
+            relationship_type=RelationshipType.INDICATES.value,
+            source_ref=ioc_entry.id,
+            target_ref=software_toolkit.id,
+            organization_id=self.organization.id,
+            marking_ids=[self.tlp_marking.id],
+            created=now,
+            modified=now,
+        )
+
+        return [
+            software_toolkit.to_stix2_object(),
+            relationship.to_stix2_object(),
+        ]
+
+    def _create_relation_attack_technique(
+        self,
+        ioc_entry: Indicator,
+        attack_technique_data: IOCDeltaRelationshipItem,
+    ) -> list[_STIXBase]:
+        if not attack_technique_data.id:
+            return []
+
+        attack_technique_id = attack_technique_data.id
+
+        attack_pattern = AttackPattern(
+            name=attack_technique_id.upper(),
+            mitre_id=attack_technique_id.upper(),
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        relationship = Relationship(
+            type=RelationshipType.INDICATES,
+            source=ioc_entry,
+            target=attack_pattern,
+            author=self.organization,
+            markings=[self.tlp_marking],
+        )
+
+        return [
+            attack_pattern.to_stix2_object(),
+            relationship.to_stix2_object(),
+        ]

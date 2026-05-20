@@ -21,7 +21,18 @@ class IOCDeltaGTIAssessment(BaseModel):
     threat_score: IOCDeltaThreatScore | None = Field(None)
 
 
+class IOCDeltaRelationshipItemAttributes(BaseModel):
+    collection_type: str | None = Field(None)
+    name: str | None = Field(None)
+
+
 class IOCDeltaRelationshipItem(BaseModel):
+    type: str | None = Field(None)
+    id: str | None = Field(None)
+    attributes: IOCDeltaRelationshipItemAttributes | None = Field(None)
+
+
+class IOCDeltaRelationshipAttackTechniqueItem(BaseModel):
     type: str | None = Field(None)
     id: str | None = Field(None)
 
@@ -37,6 +48,7 @@ class IOCDeltaRelationships(BaseModel):
     reports: IOCDeltaRelationshipData | None = Field(None)
     software_toolkits: IOCDeltaRelationshipData | None = Field(None)
     vulnerabilities: IOCDeltaRelationshipData | None = Field(None)
+    attack_techniques: IOCDeltaRelationshipAttackTechniqueItem | None = Field(None)
 
 
 class IOCDeltaAttributes(BaseModel):
