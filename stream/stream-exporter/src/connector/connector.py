@@ -16,13 +16,6 @@ from pycti import OpenCTIConnectorHelper, get_config_variable
 from .metrics import Metrics
 
 
-class UploadFailed(Exception):
-    """Exception raised when the upload of the file failed."""
-
-    def __init__(self, name: str):
-        super().__init__(f"File {name} was not uploaded to minio.")
-
-
 class StreamExporterConnector:
     """Stream Exporter connector."""
 
@@ -285,8 +278,23 @@ class StreamExporterConnector:
                 )
             except Exception as exc:
                 # Fail to upload the file, stopping connector.
+                # ``write_events`` re-arms itself through a ``threading.Timer``
+                # at the end of every successful call, so on every iteration
+                # after the first we are running inside the Timer thread —
+                # where a plain ``raise`` is swallowed (Timer threads have no
+                # parent to bubble the exception to) and would leave the
+                # connector stuck with no signal to the supervisor. Mirror
+                # the ``consume()`` failure path: log the error, print the
+                # traceback for diagnostics, then ``os._exit(1)`` so the
+                # supervisor / Docker can restart the connector cleanly.
+                import traceback
+
                 self.metrics.write_error()
-                raise UploadFailed(object_path) from exc
+                self.helper.log_error(
+                    f"MinIO upload failed for {object_path}, stopping connector: {exc}"
+                )
+                traceback.print_exc()
+                os._exit(1)  # exit the current process, killing all threads
 
             self.helper.log_debug(f"Result of minio: {res}")
             self.metrics.write()

@@ -23,3 +23,5 @@ taxii:
   password: 'ChangeMe' # Password for basic auth
   version: '2.1' # Version for TAXII
   stix_version: '2.1' # Version for STIX
+  delete_created_by_ref: true # Strip created_by_ref from objects before posting
+  delete_marking_definition: true # Strip object_marking_refs from objects before posting

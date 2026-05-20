@@ -1,132 +1,243 @@
-# -*- coding: utf-8 -*-
 """IPQS client module."""
 
+from typing import Any, Dict, Optional
+
 from pycti import OpenCTIConnectorHelper
-from requests import Response, session
-from requests.exceptions import ConnectTimeout, HTTPError, InvalidURL, ProxyError
+from requests import session
+from requests.exceptions import (
+    HTTPError,
+    JSONDecodeError,
+    RequestException,
+)
+
+from .constants import (
+    EMAIL_ENRICH_FIELDS,
+    IP_ENRICH_FIELDS,
+    LEAK_PASSWORD,
+    LEAK_USERNAME_OR_EMAIL,
+    PHONE_ENRICH_FIELDS,
+    URL_ENRICH_FIELDS,
+    to_bool,
+)
+
+# Default per-request timeout (seconds) applied to every HTTP call so a
+# stuck Intel network does not block the worker indefinitely.
+_HTTP_TIMEOUT_SECONDS = 30
 
 
 class IPQSClient:
-    """IPQS client."""
+    """Thin wrapper around the IPQS HTTP API."""
 
     def __init__(
-        self, helper: OpenCTIConnectorHelper, base_url: str, api_key: str
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: str,
+        api_key: str,
     ) -> None:
-        """Initialize IPQS client."""
-        self.helper = helper
-        self.url = base_url
-        self.headers = {"IPQS-KEY": api_key}
-        self.session = session()
-        self.ip_enrich_fields = {
-            "zip_code": "Zip Code",
-            "ISP": "ISP",
-            "ASN": "ASN",
-            "organization": "Organization",
-            "is_crawler": "Is Crawler",
-            "timezone": "Timezone",
-            "mobile": "Mobile",
-            "host": "Host",
-            "proxy": "Proxy",
-            "vpn": "VPN",
-            "tor": "TOR",
-            "active_vpn": "Active VPN",
-            "active_tor": "Active TOR",
-            "recent_abuse": "Recent Abuse",
-            "bot_status": "Bot Status",
-            "connection_type": "Connection Type",
-            "abuse_velocity": "Abuse Velocity",
-            "country_code": "Country Code",
-            "region": "Region",
-            "city": "City",
-            "latitude": "Latitude",
-            "longitude": "Longitude",
-        }
-        self.url_enrich_fields = {
-            "unsafe": "Unsafe",
-            "server": "Server",
-            "domain_rank": "Domain Rank",
-            "dns_valid": "DNS Valid",
-            "parking": "Parking",
-            "spamming": "Spamming",
-            "malware": "Malware",
-            "phishing": "Phishing",
-            "suspicious": "Suspicious",
-            "adult": "Adult",
-            "category": "Category",
-            "domain_age": "Domain Age",
-            "domain": "IPQS: Domain",
-            "ip_address": "IPQS: IP Address",
-        }
-        self.email_enrich_fields = {
-            "valid": "Valid",
-            "disposable": "Disposable",
-            "smtp_score": "SMTP Score",
-            "overall_score": "Overall Score",
-            "first_name": "First Name",
-            "generic": "Generic",
-            "common": "Common",
-            "dns_valid": "DNS Valid",
-            "honeypot": "Honeypot",
-            "deliverability": "Deliverability",
-            "frequent_complainer": "Frequent Complainer",
-            "spam_trap_score": "Spam Trap Score",
-            "catch_all": "Catch All",
-            "timed_out": "Timed Out",
-            "suspect": "Suspect",
-            "recent_abuse": "Recent Abuse",
-            "suggested_domain": "Suggested Domain",
-            "leaked": "Leaked",
-            "sanitized_email": "Sanitized Email",
-            "domain_age": "Domain Age",
-            "first_seen": "First Seen",
-        }
-        self.phone_enrich_fields = {
-            "formatted": "Formatted",
-            "local_format": "Local Format",
-            "valid": "Valid",
-            "recent_abuse": "Recent Abuse",
-            "VOIP": "VOIP",
-            "prepaid": "Prepaid",
-            "risky": "Risky",
-            "active": "Active",
-            "carrier": "Carrier",
-            "line_type": "Line Type",
-            "city": "City",
-            "zip_code": "Zip Code",
-            "dialing_code": "Dialing Code",
-            "active_status": "Active Status",
-            "leaked": "Leaked",
-            "name": "Name",
-            "timezone": "Timezone",
-            "do_not_call": "Do Not Call",
-            "country": "Country",
-            "region": "Region",
-        }
+        """Initialise IPQS client.
 
-    def _query(self, url: str, params: dict = None) -> Response:
-        """General get method to fetch the response from ipqs."""
+        The API key is sent through the ``IPQS-KEY`` HTTP header for
+        every endpoint — including the ``/leaked/...`` family — so the
+        secret is never written to the URL (and therefore never ends up
+        in HTTP access logs).
+
+        ``base_url`` is normalised through ``.rstrip("/")`` so the
+        per-endpoint URL builders never produce a double slash; the
+        ``isinstance`` guard mirrors the defensive shape applied
+        repo-wide by ``[all] Fix url to avoid double slash`` (#6394)
+        and protects against a future config typing change that might
+        pass a non-``str`` value here.
+        """
+        self.helper = helper
+        self.url = base_url.rstrip("/") if isinstance(base_url, str) else base_url
+        self.session = session()
+        self.session.headers.update({"IPQS-KEY": api_key})
+
+        # Field maps consumed by the enrichment workers.
+        self.ip_enrich_fields = IP_ENRICH_FIELDS
+        self.url_enrich_fields = URL_ENRICH_FIELDS
+        self.email_enrich_fields = EMAIL_ENRICH_FIELDS
+        self.phone_enrich_fields = PHONE_ENRICH_FIELDS
+
+    # ------------------------------------------------------------------
+    # GET (legacy IP / URL / Email / Phone enrichment)
+    # ------------------------------------------------------------------
+    def _query(
+        self, url: str, params: Optional[Dict[str, Any]] = None
+    ) -> Optional[Dict[str, Any]]:
+        """Issue a GET request and return the parsed JSON body.
+
+        Returns ``None`` for every condition that prevents a usable
+        response (network error, non-2xx HTTP status, non-JSON body,
+        IPQS ``success == False`` payload). Callers must treat the
+        return value as optional rather than calling ``.get(...)`` on it
+        directly.
+        """
         try:
-            response = self.session.get(url, headers=self.headers, params=params).json()
-            if str(response["success"]) != "True":
-                msg = response["message"]
-                self.helper.log_error(f"Error: {msg}")
-                return None
-            return response
-        except (ConnectTimeout, ProxyError, InvalidURL) as error:
-            msg = "Error connecting with the ipqs."
-            self.helper.log_error(f"{msg} Error: {error}")
+            response = self.session.get(
+                url, params=params, timeout=_HTTP_TIMEOUT_SECONDS
+            )
+            response.raise_for_status()
+            data = response.json()
+        except HTTPError as error:
+            # HTTP status outside of 2xx — keep the connector alive and
+            # surface the status for the operator. ``HTTPError`` is a
+            # subclass of ``RequestException`` so the ordering matters:
+            # this branch must come before the broader transport branch
+            # below to keep the dedicated log message.
+            self.helper.log_error(f"IPQS HTTP error for {url}: {error}")
+            return None
+        except (JSONDecodeError, ValueError) as error:
+            # Non-JSON / truncated body — keep the connector alive.
+            # ``requests.exceptions.JSONDecodeError`` inherits from
+            # both ``ValueError`` and (via ``InvalidJSONError``)
+            # ``RequestException``, so this branch *must* come before
+            # the catch-all ``except RequestException`` below; otherwise
+            # an IPQS response with an HTML / text error body would be
+            # logged as a connectivity failure instead of an actionable
+            # "non-JSON response" log line.
+            self.helper.log_error(
+                f"IPQS returned a non-JSON response for {url}: {error}"
+            )
+            return None
+        except RequestException as error:
+            # Catch the full ``requests`` exception hierarchy so a slow
+            # response (``ReadTimeout`` / ``Timeout``), a proxy error,
+            # an invalid URL, an SSL error, a chunked-encoding error
+            # or any other transport failure simply returns ``None``
+            # rather than crashing the connector. ``ConnectTimeout``,
+            # ``ProxyError`` and ``InvalidURL`` are all subclasses of
+            # ``RequestException`` so they remain handled.
+            self.helper.log_error(
+                f"Error connecting to IPQS ({type(error).__name__}): {error}"
+            )
             return None
 
-    def get_ipqs_info(self, enrich_type, enrich_value):
-        """
-        Returns the IPQS data.
+        if not to_bool(data.get("success")):
+            self.helper.log_error(f"Error: {data.get('message')}")
+            return None
+        return data
+
+    def get_ipqs_info(
+        self, enrich_type: str, enrich_value: str
+    ) -> Optional[Dict[str, Any]]:
+        """Return the IPQS enrichment for the given observable value.
+
+        Always returns either the parsed JSON dict on success or
+        ``None`` on any failure (network, HTTP status, JSON decode,
+        ``success == False``); the underlying error has already been
+        logged by :meth:`_query`.
         """
         url = f"{self.url}/{enrich_type}"
         params = {enrich_type: enrich_value}
+        return self._query(url, params)
+
+    # ------------------------------------------------------------------
+    # POST (leaked credentials / passwords)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def looks_like_email(value: str) -> bool:
+        """Return ``True`` when ``value`` looks like an email address.
+
+        Uses a permissive shape check (single ``@``, non-empty local and
+        domain parts, at least one ``.`` in the domain) rather than a
+        strict ASCII-TLD regex so that IDN/punycode domains (e.g.
+        ``user@example.xn--p1ai``) and multi-label TLDs (e.g.
+        ``user@example.co.uk``) are routed to ``/leaked/email`` instead
+        of being misrouted to ``/leaked/username`` — the latter would
+        silently miss leak matches for any address whose TLD is not a
+        plain ASCII-letters-only string.
+        """
+        cleaned = (value or "").strip()
+        if cleaned.count("@") != 1:
+            return False
+        local, _, domain = cleaned.partition("@")
+        if not local or not domain:
+            return False
+        # Reject whitespace anywhere in the local or domain parts; a
+        # full RFC-5322 parser would be overkill for the routing
+        # decision but a stray space is a clear "not an email" signal.
+        if any(c.isspace() for c in cleaned):
+            return False
+        # Require a dot in the domain part so bare hostnames
+        # (``user@localhost``) still take the ``/leaked/username``
+        # path. The domain part itself cannot start or end with a dot.
+        return "." in domain and not domain.startswith(".") and not domain.endswith(".")
+
+    def get_leaked_info(self, leak_endpoint: str, value: str):
+        """Return the IPQS Darkweb-Leak enrichment for ``value``.
+
+        ``leak_endpoint`` is one of
+        :data:`~.constants.LEAK_USERNAME_OR_EMAIL` (when the
+        User-Account observable carries an ``account_login``) or
+        :data:`~.constants.LEAK_PASSWORD` (when it carries a
+        ``credential``). The IPQS leak API expects different JSON keys
+        depending on the kind of data being looked up:
+
+        * ``email`` for an email-shaped account login;
+        * ``username`` for any other login;
+        * ``password`` for a credential.
+
+        The API key is sent through the ``IPQS-KEY`` header inherited
+        from the shared session — *never* as a path component, which
+        would risk leaking the secret into HTTP access logs.
+        """
+        if leak_endpoint == LEAK_USERNAME_OR_EMAIL:
+            query_kind = "email" if self.looks_like_email(value) else "username"
+        elif leak_endpoint == LEAK_PASSWORD:
+            query_kind = "password"
+        else:
+            raise ValueError(f"Unsupported leak endpoint: {leak_endpoint!r}")
+
+        url = f"{self.url}/leaked/{query_kind}"
         try:
-            response = self._query(url, params)
-        except HTTPError as error:
-            msg = f"Error when requesting data from ipqs. {error.response}: {error.response.reason}"
-            self.helper.log_error(msg)
-            raise
-        return response
+            response = self.session.post(
+                url,
+                json={query_kind: value},
+                timeout=_HTTP_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except HTTPError as exc:
+            # HTTP status outside of 2xx — keep the connector alive.
+            # ``HTTPError`` is a subclass of ``RequestException`` so the
+            # ordering matters: this branch must come before the broader
+            # transport branch below to keep the dedicated log message.
+            self.helper.log_error(f"IPQS leaked API HTTP error for {url}: {exc}")
+            return None
+        except (JSONDecodeError, ValueError) as exc:
+            # Non-JSON / truncated body — keep the connector alive.
+            # ``requests.exceptions.JSONDecodeError`` inherits from
+            # both ``ValueError`` and (via ``InvalidJSONError``)
+            # ``RequestException``, so this branch *must* come before
+            # the catch-all ``except RequestException`` below; otherwise
+            # a leaked-API response with an HTML / text error body
+            # would be logged as a connectivity failure instead of an
+            # actionable "non-JSON response" log line.
+            self.helper.log_error(
+                f"IPQS leaked API returned a non-JSON response for {url}: {exc}"
+            )
+            return None
+        except RequestException as exc:
+            # Catch the full ``requests`` exception hierarchy here too
+            # (``ReadTimeout`` / ``Timeout`` / ``ProxyError`` /
+            # ``InvalidURL`` / ``SSLError`` / ``ChunkedEncodingError``
+            # / ...) so a slow leaked-API response cannot crash the
+            # enrichment worker.
+            self.helper.log_error(
+                f"Error connecting to IPQS leaked API " f"({type(exc).__name__}): {exc}"
+            )
+            return None
+
+        # IPQS encodes ``success`` either as a native JSON boolean or as
+        # the strings ``"True"`` / ``"False"`` depending on the endpoint
+        # (the legacy GET endpoints handled by ``_query`` use the string
+        # form). ``to_bool`` normalises both shapes so a ``success ==
+        # "False"`` payload from the leaked API is treated as a failure
+        # — a naive ``data.get("success", False)`` would treat the
+        # non-empty string ``"False"`` as truthy and let a failed lookup
+        # produce indicators / labels.
+        if not to_bool(data.get("success")):
+            self.helper.log_error(f"IPQS leaked API error: {data.get('message')}")
+            return None
+        return data

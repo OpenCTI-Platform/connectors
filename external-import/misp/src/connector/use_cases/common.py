@@ -89,7 +89,11 @@ class ConverterConfig:
     ):
         self.report_type = report_type
         self.report_description_attribute_filters = report_description_attribute_filters
-        self.external_reference_base_url = external_reference_base_url
+        self.external_reference_base_url = (
+            external_reference_base_url.rstrip("/")
+            if isinstance(external_reference_base_url, str)
+            else external_reference_base_url
+        )
         self.convert_event_to_report = convert_event_to_report
         self.convert_attribute_to_associated_file = convert_attribute_to_associated_file
         self.convert_attribute_to_indicator = convert_attribute_to_indicator

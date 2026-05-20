@@ -29,7 +29,7 @@
 
 ## Introduction
 
-IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector analyzes IP addresses, email addresses, phone numbers, URLs, and domains to identify sophisticated bad actors and high-risk behavior.
+IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector analyzes IP addresses, email addresses, phone numbers, URLs, domains and `User-Account` observables (Darkweb-Leak lookups) to identify sophisticated bad actors and high-risk behavior.
 
 Key features:
 - IP address fraud scoring and proxy detection
@@ -37,6 +37,7 @@ Key features:
 - Phone number verification and fraud detection
 - URL and domain reputation analysis
 - Malware and phishing detection
+- Darkweb-Leak lookup for `User-Account` observables (username, email, password)
 
 ---
 
@@ -65,7 +66,7 @@ Key features:
 |-----------|---------------|-----------|-------------|
 | `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
 | `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Domain-Name`, `IPv4-Addr`, `Email-Addr`, `Url`, `Phone-Number` |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Domain-Name`, `IPv4-Addr`, `Email-Addr`, `Url`, `Phone-Number`, `User-Account` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
@@ -99,7 +100,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=IPQS Fraud and Risk Scoring
-      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number
+      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number,User-Account
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=15
       - CONNECTOR_LOG_LEVEL=error
@@ -159,34 +160,57 @@ flowchart LR
 
 ### Enrichment Mapping
 
-| Entity Type | IPQS Endpoint | Enrichment Data |
-|-------------|---------------|-----------------|
-| IPv4-Addr | IP | Fraud score, proxy detection, ASN, VPN, TOR |
-| Email-Addr | Email | Fraud score, disposable, valid, deliverability |
-| URL/Domain-Name | URL | Risk score, malware, phishing, suspicious |
-| Phone-Number | Phone | Fraud score, valid, active, carrier info |
+| Entity Type     | IPQS Endpoint                          | Enrichment Data                                                                                              |
+|-----------------|----------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| IPv4-Addr       | `/ip`                                  | Fraud score, proxy detection, ASN, VPN, TOR.                                                                 |
+| Email-Addr      | `/email`                               | Fraud score, disposable, valid, deliverability.                                                              |
+| URL/Domain-Name | `/url`                                 | Risk score, malware, phishing, suspicious.                                                                   |
+| Phone-Number    | `/phone`                               | Fraud score, valid, active, carrier info.                                                                    |
+| User-Account    | `/leaked/email` or `/leaked/username` (when an `account_login` is set) or `/leaked/password` (when a `credential` is set) | Darkweb-Leak exposure (`exposed`, `plain_text_password`, sources, first-seen timestamp). |
+
+### Darkweb-Leak (User-Account)
+
+When a `User-Account` observable is submitted, the connector picks one of
+the IPQS `/leaked/...` endpoints depending on which value is populated:
+
+- `account_login` that looks like an email → `/leaked/email`;
+- any other `account_login` → `/leaked/username`;
+- `credential` → `/leaked/password`. If both `account_login` and
+  `credential` are present, the credential lookup takes precedence
+  (passwords are the more sensitive value to know about).
+
+The verdict policy for User-Account observables is simple: any positive
+exposure (either `exposed=True` or `plain_text_password=True`) yields a
+`CRITICAL` score (100). A clean response yields `CLEAN` (0).
+
+The IPQS API key is **always** sent through the `IPQS-KEY` HTTP header
+— never in the URL path — so it is not leaked in HTTP access logs.
 
 ### Risk Scoring
 
-The connector assigns risk labels based on fraud scores:
+The connector renders an `IPQS:VERDICT="…"` label on each enriched
+observable. The mapping is endpoint-specific (see `builder.py` for the
+exact match statements) but follows the same colour palette:
 
-| Score Range | Risk Level | Description |
-|-------------|------------|-------------|
-| 0-25 | Low | Likely legitimate |
-| 26-50 | Medium | Moderate risk |
-| 51-75 | High | Suspicious activity |
-| 76-100 | Critical | High fraud risk |
+| Verdict label   | Hex colour | Meaning                                                                                                                       |
+|-----------------|------------|-------------------------------------------------------------------------------------------------------------------------------|
+| CLEAN           | `#CDCDCD`  | No evidence of risk.                                                                                                          |
+| LOW RISK        | `#CDCDCD`  | Marginal score, observable is probably benign.                                                                                |
+| MODERATE RISK   | `#FFCF00`  | Mid-range fraud score; investigate.                                                                                           |
+| SUSPICIOUS      | `#FFCF00`  | Mid-range fraud score with one or more risky attributes.                                                                      |
+| HIGH RISK       | `#D10028`  | High fraud score.                                                                                                             |
+| CRITICAL        | `#D10028`  | Score == 100, IPQS-flagged disposable email, or `exposed`/`plain_text_password` for User-Account.                             |
+| INVALID         | `#D10028`  | The observable is invalid according to IPQS (e.g. malformed email).                                                           |
 
 ### Generated STIX Objects
 
 | Object Type | Description |
 |-------------|-------------|
-| Identity | IPQS organization identity |
-| Indicator | Pattern-based indicator with fraud score |
-| Autonomous System | ASN for IP addresses (if enabled) |
-| IPv4-Addr | Resolved IP for domains (if enabled) |
-| Relationship | `based-on` (indicator to observable), `belongs-to` (IP to ASN), `resolves-to` (domain to IP) |
-| Note | Detailed enrichment data in markdown format |
+| Identity          | IPQS organization identity                                                                                                |
+| Indicator         | Pattern-based indicator with fraud / leak score, description and `IPQS:VERDICT` label                                     |
+| Autonomous System | ASN for IP addresses (if `IPQS_IP_ADD_RELATIONSHIPS=true`)                                                                |
+| IPv4-Addr         | Resolved IP for domains (if `IPQS_DOMAIN_ADD_RELATIONSHIPS=true`)                                                          |
+| Relationship      | `based-on` (indicator to observable), `belongs-to` (IP to ASN), `resolves-to` (domain to IP)                              |
 
 ---
 
