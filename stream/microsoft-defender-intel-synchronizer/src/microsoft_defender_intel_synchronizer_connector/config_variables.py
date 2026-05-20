@@ -85,7 +85,10 @@ class ConfigConnector:
         # Enforce hard limits to prevent misconfiguration from causing API errors or performance issues.
         self.max_indicators = max(min(original_max_indicators, 15000), 1)
         if original_max_indicators != self.max_indicators:
-            self.helper.log_warning(
+            # ``self.helper.log_warning`` is the deprecated pycti shim; the
+            # repo's linter (VC503) and every other call site in this
+            # connector use ``connector_logger.<level>(msg, structured_meta)``.
+            self.helper.connector_logger.warning(
                 "Configured max_indicators is out of bounds; clamping to allowed range [1, 15000].",
                 {
                     "max_indicators": original_max_indicators,
