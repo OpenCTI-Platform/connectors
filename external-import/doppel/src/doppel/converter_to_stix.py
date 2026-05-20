@@ -841,11 +841,7 @@ class ConverterToStix:
                 {"alert_id": alert.get("id")},
             )
             rft_case = self._handle_rft_cases_new(alert, observables, stix_objects)
-            # Add Note.
-            if rft_case:
-                _ = self._handle_note_addition(
-                    rft_case, alert, observables, stix_objects
-                )
+            
             return rft_case
 
     def _handle_rft_cases_existing(
