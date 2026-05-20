@@ -68,6 +68,8 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
+| Parameter        | config.yml          | Docker environment variable | Default | Mandatory | Description                                                |
+|------------------|---------------------|-----------------------------|---------|-----------|------------------------------------------------------------|
 | TAXII URL        | taxii.url           | `TAXII_URL`                 |         | Yes       | URL of the TAXII server.                                   |
 | SSL Verify       | taxii.ssl_verify    | `TAXII_SSL_VERIFY`          | true    | No        | Verify SSL certificates.                                   |
 | API Root         | taxii.api_root      | `TAXII_API_ROOT`            | root    | No        | TAXII API root (path segment between server URL and /collections/). |
