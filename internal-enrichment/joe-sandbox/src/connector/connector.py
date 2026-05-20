@@ -19,7 +19,17 @@ class JoeSandboxConnector:
         self.identity = self.helper.api.identity.create(
             type="Organization", name="Joe Security", description="Joe Security"
         )["standard_id"]
-        self.octi_api_url = self.config.opencti.url
+        # ``self.config.opencti.url`` is a pydantic ``HttpUrl`` that normalizes
+        # with a trailing ``/`` (e.g. ``http://host:8080/``); strip it once so
+        # downstream ``f"{self.octi_api_url}/storage/get/..."`` URLs never
+        # produce a double slash (``requests`` >= 2.34.0 no longer normalizes
+        # them, see ``tests/test_url_construction.py``).
+        self.octi_api_url = str(self.config.opencti.url).rstrip("/")
+        # ``self.config.joe_sandbox.analysis_url`` is operator-supplied and
+        # may or may not carry a trailing slash; normalize once so the
+        # per-analysis URL built in ``_process_analyses`` is always
+        # ``<analysis_url>/<webid>`` (no ``//``).
+        self._analysis_url = self.config.joe_sandbox.analysis_url.rstrip("/")
         # ``proxies`` is documented (and stored in the manager-facing schema)
         # as a JSON-encoded map; ``requests`` and therefore ``jbxapi``
         # expect a mapping. Decode it here so a configured proxy is
@@ -229,7 +239,7 @@ class JoeSandboxConnector:
             webid = analysis_dict["webid"]
             threatname = analysis_dict["threatname"]
             detection = analysis_dict["detection"]
-            analysis_url = f"{self.config.joe_sandbox.analysis_url.rstrip('/')}/{webid}"
+            analysis_url = f"{self._analysis_url}/{webid}"
             external_reference = self.helper.api.external_reference.create(
                 source_name=f"Joe Sandbox Analysis [{detection}-{threatname}-{webid}]",
                 url=analysis_url,
