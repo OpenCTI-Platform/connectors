@@ -357,6 +357,7 @@ class StixBuilder:
                 objects.extend(relationships)
                 malware_id = malware_obj["id"]
                 self._malware_cache[family.lower()] = malware_obj
+                objects.append(self._create_rel(entity["id"], "related-to", malware_id))
 
         # === CREATE SEPARATE NOTES (to get IDs for indicator) ===
         # NOTE: OpenCTI displays notes in reverse insertion order (last-in appears first).
