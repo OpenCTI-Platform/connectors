@@ -128,7 +128,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             ["intel471", "api_url"],
             config,
             default="https://api.intel471.com/v1",
-        )
+        ).rstrip("/")
         self.intel471_api_username = get_config_variable(
             "INTEL471_API_USERNAME",
             ["intel471", "api_username"],
