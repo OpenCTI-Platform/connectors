@@ -1,8 +1,8 @@
 # OpenCTI SigmaHQ Connector
 
-| Status            | Date       | Comment |
-| ----------------- |------------| ------- |
-| Filigran Verified | 2026-01-05 | -       |
+| Status              | Date | Comment |
+| ------------------- | ---- | ------- |
+| Filigran Maintained | -    | -       |
 
 ## Introduction
 

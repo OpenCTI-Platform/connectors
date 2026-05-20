@@ -109,17 +109,31 @@ class ConverterToStix:
             if tag.namespace == "attack":
                 if is_valid_technique_id(tag.name):
                     name = tag.name.upper()
+                    # ``created_by_ref`` + ``object_marking_refs`` mirror the
+                    # Indicator below so the AttackPattern carries the same
+                    # author / TLP marking — without them OpenCTI ingests an
+                    # unmarked / unattributed AttackPattern that breaks
+                    # marking-based access control downstream.
                     technique = stix2.AttackPattern(
                         id=AttackPattern.generate_id(name, name),
                         name=name,
                         custom_properties={"x_mitre_id": name},
+                        created_by_ref=self.author.id,
+                        object_marking_refs=[self.tlp_marking.id],
                     )
                     related_techniques.append(technique)
                     stix_objects.append(technique)
             if tag.namespace == "cve":
                 name = "CVE-" + tag.name
+                # Same rationale as the AttackPattern above — the
+                # Vulnerability inherits the rule's author / TLP marking so
+                # access-control / marking propagation stays consistent
+                # across every object in the bundle.
                 vulnerability = stix2.Vulnerability(
-                    id=Vulnerability.generate_id(name), name=name
+                    id=Vulnerability.generate_id(name),
+                    name=name,
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.tlp_marking.id],
                 )
                 related_vulnerabilities.append(vulnerability)
                 stix_objects.append(vulnerability)
