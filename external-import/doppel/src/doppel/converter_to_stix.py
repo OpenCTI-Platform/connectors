@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import Literal
+import json
 
 from doppel.stix_helpers import (
     build_custom_properties,
@@ -7,8 +8,7 @@ from doppel.stix_helpers import (
     build_external_references,
     build_labels,
     calculate_priority,
-    is_reverted_state,
-    is_takedown_state,
+    in_takedown_state,
 )
 from doppel.utils import parse_iso_datetime
 from pycti import (
@@ -35,13 +35,13 @@ from stix2 import (
 )
 from stix2 import MarkingDefinition as Stix2MarkingDefinition
 from stix2 import Note, Relationship as Stix2Relationship
-
-
+from doppel.constants import DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO
+ 
 class ConverterToStix:
     """
     Provides methods for converting various types of input data into STIX 2.1 objects.
     """
-
+ 
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
@@ -53,7 +53,7 @@ class ConverterToStix:
     ):
         """
         Initialize the converter with necessary configuration.
-
+ 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             tlp_level (str): The TLP level to add to the created STIX entities.
@@ -65,7 +65,7 @@ class ConverterToStix:
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
         self.enable_grouping_case = enable_grouping_case
         self.enable_rft_case = enable_rft_case
-
+ 
     def create_author(self) -> Identity:
         """
         Create author object
@@ -80,7 +80,7 @@ class ConverterToStix:
             description="Threat Intelligence Provider",
             allow_custom=True,
         )
-
+ 
     @staticmethod
     def _create_tlp_marking(level: str) -> Stix2MarkingDefinition:
         """
@@ -106,60 +106,9 @@ class ConverterToStix:
             "red": TLP_RED,
         }
         return mapping[level]
-
-    def create_phone_number(
-        self, phone_number: str, alert: dict
-    ) -> PhoneNumber:
-        """
-        Create PhoneNumber object
-        """
-        custom_properties = build_custom_properties(alert, self.author.id)
-        return PhoneNumber(
-            value=phone_number,
-            object_marking_refs=[self.tlp_marking.id],
-            custom_properties=custom_properties,
-        )
-
-    def create_domain(self, domain_name: str, alert: dict) -> DomainName:
-        """
-        Create DomainName object
-        """
-        labels_flat = build_labels(alert)
-        external_references = build_external_references(alert)
-        custom_properties = build_custom_properties(alert, self.author.id)
-
-        return DomainName(
-            value=domain_name,
-            object_marking_refs=[self.tlp_marking.id],
-            labels=labels_flat or None,
-            external_references=external_references
-            if external_references
-            else None,
-            custom_properties=custom_properties,
-            allow_custom=True,
-        )
-
-    def create_ipv4(self, ip_address: str, alert: dict) -> IPv4Address:
-        """
-        Create IPv4Address object
-        """
-        labels_flat = build_labels(alert)
-        external_references = build_external_references(alert)
-        custom_properties = build_custom_properties(alert, self.author.id)
-
-        return IPv4Address(
-            value=ip_address,
-            object_marking_refs=[self.tlp_marking.id],
-            labels=labels_flat or None,
-            external_references=external_references
-            if external_references
-            else None,
-            custom_properties=custom_properties,
-            allow_custom=True,
-        )
-
-    def create_case_rft(
-        self, alert: dict, object_refs: list, observable_id: str
+ 
+    def _create_case_rft(
+        self, alert: dict, object_refs: list,
     ) -> dict:
         """
         Create Request for Takedown case
@@ -167,6 +116,7 @@ class ConverterToStix:
         priority = calculate_priority(alert.get("score", 0))
         case_name = f"Doppel Takedown - {alert.get('entity')} ({alert.get('id')})"
         now = datetime.now(timezone.utc).isoformat()
+        object_ids = [obj["id"] for obj in object_refs if isinstance(obj, dict) and "id" in obj]
 
         return {
             "type": "case-rft",
@@ -180,13 +130,13 @@ class ConverterToStix:
             "custom_properties": build_custom_properties(
                 alert, self.author.id
             ),
-            "object_refs": object_refs,
+            "object_refs": object_ids,
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.tlp_marking.id],
             "allow_custom": True,
         }
-
-    def create_grouping_case(self, alert: dict, object_refs: list) -> Grouping:
+ 
+    def _create_grouping_case(self, alert: dict, object_refs: list) -> Grouping:
         """
         Create Grouping case object
         """
@@ -194,7 +144,7 @@ class ConverterToStix:
         grouping_name = f"Case for Alert {alert['id']}"
         case_labels = build_labels(alert)
         case_labels.append(f"priority:{priority}")
-
+ 
         return Grouping(
             id=PyctiGrouping.generate_id(
                 name=grouping_name, context="suspicious-activity"
@@ -209,14 +159,14 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
         )
-
-    def create_relationship(
+ 
+    def _create_relationship(
         self, source_id: str, target_id: str, relationship_type: str
-    ) -> Stix2Relationship:
+    ):
         """
         Create Stix2Relationship object
         """
-        return Stix2Relationship(
+        relationship = Stix2Relationship(
             id=PyctiStixCoreRelationship.generate_id(
                 relationship_type=relationship_type,
                 source_ref=source_id,
@@ -230,7 +180,9 @@ class ConverterToStix:
             allow_custom=True,
         )
 
-    def create_note(
+        return json.loads(relationship.serialize())
+ 
+    def _create_note(
         self,
         note_content: str,
         note_body: str,
@@ -240,7 +192,7 @@ class ConverterToStix:
         """
         Create Note object
         """
-        return Note(
+        note = Note(
             id=PyctiNote.generate_id(
                 content=note_body,
                 created=note_timestamp,
@@ -254,8 +206,9 @@ class ConverterToStix:
             object_marking_refs=[self.tlp_marking.id],
             allow_custom=True,
         )
-
-    def create_indicator(
+        return json.loads(note.serialize())
+ 
+    def _create_indicator(
         self,
         alert: dict,
         pattern: str,
@@ -266,11 +219,13 @@ class ConverterToStix:
         """
         Create Indicator object
         """
+        priority = calculate_priority(alert.get("score", 0))
         labels_flat = build_labels(alert)
+        labels_flat.append(f"priority:{priority}")
         external_references = build_external_references(alert)
         custom_properties = build_custom_properties(alert, self.author.id)
-
-        return Indicator(
+ 
+        indicator =  Indicator(
             id=PyctiIndicator.generate_id(pattern),
             pattern=pattern,
             pattern_type="stix",
@@ -290,221 +245,21 @@ class ConverterToStix:
             revoked=False,
         )
 
-    def convert_alerts_to_stix(self, alerts: list):
-        """
-        Convert list of alerts to stix2 Observable objects:
-        domain-name, phone number and ipv4-addr
-
-        :param alerts: list of alerts
-        :return: Serialized STIX Bundle object
-        """
-        stix_objects = [self.author, self.tlp_marking]
-
-        for alert in alerts:
-            alert_id = alert.get("id")
-            try:
-                entity_value = alert.get("entity")
-                # Extract required fields
-                ipv4_address = (
-                    alert.get("entity_content", {})
-                    .get("root_domain", {})
-                    .get("ip_address")
-                )
-                product_type = alert.get("product")
-                case_refs = []
-
-                domain_observable = None
-                phone_number_observable = None
-                ipv4_observable = None
-
-                # Create domain object if exist, else create phone number instead
-                if product_type == "telco":
-                    phone_number_observable = self.create_phone_number(
-                        entity_value, alert
-                    )
-                    stix_objects.append(phone_number_observable)
-                    case_refs.append(phone_number_observable)
-                elif product_type in [
-                    "domains",
-                    "social_media",
-                    "mobile_apps",
-                    "ecommerce",
-                    "crypto",
-                    "email",
-                    "paid_ads",
-                    "darkweb",
-                ]:
-                    domain_observable = self.create_domain(entity_value, alert)
-                    stix_objects.append(domain_observable)
-                    case_refs.append(domain_observable)
-                else:
-                    self.helper.connector_logger.warning(
-                        "[DoppelConverter] Unknown product type, skipping alert",
-                        {"alert_id": alert_id, "product_type": product_type},
-                    )
-                    continue
-
-                # Create ipv4 object if exists
-                if ipv4_address:
-                    ipv4_observable = self.create_ipv4(ipv4_address, alert)
-                    stix_objects.append(ipv4_observable)
-                    case_refs.append(ipv4_observable)
-
-                    # Create relationship between ipv4 and domain
-                    if domain_observable:
-                        relationship = self.create_relationship(
-                            source_id=domain_observable.id,
-                            target_id=ipv4_observable.id,
-                            relationship_type="resolves-to",
-                        )
-                        stix_objects.append(relationship)
-
-                # Create grouping case
-                if case_refs and self.enable_grouping_case:
-                    grouping_case = self.create_grouping_case(
-                        alert, object_refs=case_refs
-                    )
-                    stix_objects.append(grouping_case)
-
-                    for entity in case_refs:
-                        related_to = self.create_relationship(
-                            source_id=grouping_case.id,
-                            target_id=entity.id,
-                            relationship_type="related-to",
-                        )
-                        stix_objects.append(related_to)
-
-                # DETECT STATE TRANSITIONS
-                self._handle_state_transitions(
-                    domain_observable or phone_number_observable,
-                    alert,
-                    stix_objects,
-                    entity_value,
-                )
-
-            except Exception as e:
-                # Unexpected errors - log and raise
-                self.helper.connector_logger.error(
-                    "[DoppelConverter] Failed to process alert",
-                    {"alert_id": alert_id, "error": str(e)},
-                )
-                raise
-
-        return self.helper.stix2_create_bundle(stix_objects)
-
-    def _handle_state_transitions(
-        self,
-        current_observable: DomainName | PhoneNumber,
-        alert: dict,
-        stix_objects: list,
-        observable_name: str,
-    ):
-        """
-        Handle state transitions based on queue_state if observable already exists
-
-        Warning: self.helper.api calls may cause latency in the process.
-
-        :param alert_queue_state: queue_state of alert
-        :param current_observable: DomainName or PhoneNumber entity
-        :param alert: dict of alert data
-        :param stix_objects: Stix objects list
-        :param observable_name: Name of the observable
-        :return: None
-        """
-        # Check if observable already exists in octi
-        observable_octi = self.helper.api.stix_cyber_observable.read(
-            id=current_observable.id
+        self.helper.connector_logger.info(
+            "[create indicator] Indicator created",
+            {
+                "indicators": indicator,
+            },
         )
-
-        alert_queue_state = alert.get("queue_state")
-        if observable_octi:
-            self.helper.connector_logger.debug(
-                "[Handle state transition] Observable found in OCTI",
-                {
-                    "current_observable_id": current_observable.id,
-                    "observable_name": observable_name,
-                    "alert_queue_state": alert_queue_state,
-                },
-            )
-
-            # Extract previous queue_state from label for reference/logging only
-            previous_queue_state = None
-
-            # Retrieve previous queue_state from the observable
-            label_queue_state = [
-                label["value"]
-                for label in observable_octi["objectLabel"]
-                if label["value"].startswith("queue_state:")
-            ]
-            label_entity_state = [
-                label["value"]
-                for label in observable_octi["objectLabel"]
-                if label["value"].startswith("entity_state:")
-            ]
-            if label_queue_state and label_entity_state:
-                previous_queue_state = label_queue_state[0].replace(
-                    "queue_state:", ""
-                )
-                label_entity_state = label_entity_state[0].replace(
-                    "entity_state:", ""
-                )
-                self.helper.api.stix_cyber_observable.remove_label(
-                    id=observable_octi["id"], label_name=label_queue_state
-                )
-                print(f"REMOVING ENTITY STATE LABEL - {label_entity_state}")
-                self.helper.api.stix_cyber_observable.remove_label(
-                    id=observable_octi["id"], label_name=label_entity_state
-                )
-
-            # Use current alert_queue_state for decision logic (not label-based)
-            is_takedown_now = is_takedown_state(alert_queue_state)
-            is_reverted_now = is_reverted_state(alert_queue_state)
-
-            self.helper.connector_logger.debug(
-                "[Handle state transition] State analysis",
-                {
-                    "is_takedown_now": is_takedown_now,
-                    "is_reverted_now": is_reverted_now,
-                    "previous_queue_state": previous_queue_state,
-                },
-            )
-
-            # STATE DECISION: Based on current alert_queue_state
-            if is_takedown_now:
-                # Alert is in actioned/taken_down state
-                # Create or update indicator + RFT case
-                self.helper.connector_logger.debug(
-                    "[Handle state transition] Alert in takedown state - processing takedown",
-                    {
-                        "alert_id": alert.get("id"),
-                        "queue_state": alert_queue_state,
-                    },
-                )
-                self._process_takedown(
-                    alert, current_observable.id, stix_objects, observable_name
-                )
-
-            elif is_reverted_now:
-                # Alert is in non-actioned state (monitoring, doppel_review, archived, needs_confirmation)
-                # Check if indicator exists, revoke it if present
-                self.helper.connector_logger.debug(
-                    "[Handle state transition] Alert in monitoring state - checking for reversion",
-                    {
-                        "alert_id": alert.get("id"),
-                        "queue_state": alert_queue_state,
-                    },
-                )
-                self._process_reversion(
-                    alert, current_observable.id, stix_objects, observable_name
-                )
-
-    def _find_indicators_by_alert_id(
-        self, alert_id: str, observable_name: str
+        return json.loads(indicator.serialize())
+ 
+    def _find_indicators_by_alert_id_or_entity_value(
+        self, alert_id: str, entity_value: str
     ) -> list:
         """
         Find indicators by alert_id stored in x_opencti_workflow_id or external_id
         :param alert_id: Doppel alert ID
-        :param observable_name: Name of the observable
+        :param entity_value: Value of the entity
         :return: List of indicator objects or empty
         """
         if observable_name.startswith("http"):
@@ -518,34 +273,34 @@ class ConverterToStix:
             ],
             "filterGroups": [],
         }
-
+ 
         indicators_list = self.helper.api.indicator.list(filters=filters)
-
+ 
         if indicators_list:
             self.helper.connector_logger.info(
                 "[DoppelConverter] Found indicators for alert_id",
                 {"alert_id": alert_id, "count": len(indicators_list)},
             )
             return indicators_list
-
+ 
         # If not found, search by name
         else:
             self.helper.connector_logger.info(
                 "[DoppelConverter] No indicators found by workflow_id, trying name search",
-                {"alert_id": alert_id, "search_value": observable_name},
+                {"alert_id": alert_id, "search_value": entity_value},
             )
-
+ 
             # Search by indicator name (which is the observable value)
             filters = {
                 "mode": "and",
                 "filters": [
-                    {"key": "name", "values": [observable_name]},
+                    {"key": "name", "values": [entity_value]},
                 ],
                 "filterGroups": [],
             }
-
+ 
             indicators_result = self.helper.api.indicator.list(filters=filters)
-
+ 
             # Filter results to only include indicators with matching external_id
             filtered_indicators = []
             if indicators_result:
@@ -554,21 +309,21 @@ class ConverterToStix:
                     for ext_ref in ext_refs:
                         if ext_ref.get("external_id") == alert_id:
                             filtered_indicators.append(indicator)
-
+ 
             if filtered_indicators:
                 self.helper.connector_logger.info(
                     "[DoppelConverter] Found indicators for alert_id",
                     {"alert_id": alert_id, "count": len(filtered_indicators)},
                 )
                 return filtered_indicators
-
+ 
         return []
-
-    def _find_rft_cases_by_alert_id(self, entity: str, alert_id: str) -> list:
+ 
+    def _find_rft_cases_by_alert_id(self, alert_id: str, entity_value: str) -> list:
         """
         Find RFT cases by alert_id stored in x_opencti_workflow_id.
         Used for revocation during reversion workflow.
-
+ 
         :param alert_id: Doppel alert ID
         :return: List of RFT case objects or empty list
         """
@@ -582,83 +337,619 @@ class ConverterToStix:
             ],
             "filterGroups": [],
         }
-
+ 
         rft_cases = self.helper.api.case_rft.list(filters=filters)
 
+ 
         if rft_cases:
             self.helper.connector_logger.info(
                 "[DoppelConverter] Found existing RFT cases for alert_id",
                 {"alert_id": alert_id, "count": len(rft_cases)},
             )
             return rft_cases
+        # If not found, search by name
         else:
             self.helper.connector_logger.info(
-                "[DoppelConverter] No RFT found by workflow_id, trying entity search",
-                {"alert_id": alert_id, "search_value": entity},
+                "[DoppelConverter] No RFT Cases found by workflow_id, trying name search",
+                {"alert_id": alert_id, "search_value": entity_value},
             )
-
-            # Search by entity value
+            case_name = f"Doppel Takedown - {entity_value} ({alert_id})"
+            # Search by RFT Case name (which is the observable value)
             filters = {
                 "mode": "and",
                 "filters": [
-                    {"key": "name", "values": [entity]},
+                    {"key": "name", "values": [case_name]},
                 ],
                 "filterGroups": [],
             }
-
+ 
             rft_result = self.helper.api.case_rft.list(filters=filters)
 
-            # Filter results to only include rft cases
-            filtered_rft = []
+            # Filter results to only include RFT Case with matching external_id
+            filtered_rft_cases = []
             if rft_result:
-                for rft in rft_result:
-                    ext_refs = rft.get("externalReferences", [])
+                for rft_case in rft_result:
+                    ext_refs = rft_case.get("externalReferences", [])
                     for ext_ref in ext_refs:
                         if ext_ref.get("external_id") == alert_id:
-                            filtered_rft.append(rft)
-
-            if filtered_rft:
+                            filtered_rft_cases.append(rft_case)
+ 
+            if filtered_rft_cases:
                 self.helper.connector_logger.info(
-                    "[DoppelConverter] Found rft cases for alert_id",
-                    {"alert_id": alert_id, "count": len(filtered_rft)},
+                    "[DoppelConverter] Found RFT Case for alert_id",
+                    {"alert_id": alert_id, "count": len(filtered_rft_cases)},
                 )
-                return filtered_rft
+                return filtered_rft_cases
 
         return []
-
-    def _process_takedown(
-        self,
-        alert: dict,
-        observable_id: str,
-        stix_objects: list,
-        observable_name: str,
-    ) -> None:
+ 
+    def _create_observable(self, obs_type: str, observable_value: str, alert: dict):
         """
-        Process takedown workflow: Create Indicator (based-on Observable)
-        with revoked=False and relationship with observable
+        Generic method to create STIX Cyber Observables (PhoneNumber, DomainName, IPv4Address).
+        """
+        priority = calculate_priority(alert.get("score", 0))
+        # Map types to their respective classes
+        type_map = {
+            "phone": PhoneNumber,
+            "domain": DomainName,
+            "ipv4": IPv4Address
+        }
+        
+        observable_class = type_map.get(obs_type)
+ 
+        # Common properties
+        custom_properties = build_custom_properties(alert, self.author.id)
+        params = {
+            "value": observable_value,
+            "object_marking_refs": [self.tlp_marking.id],
+            "custom_properties": custom_properties,
+        }
+ 
+        # Add extra properties for Domain and IP types
+        if obs_type in ["domain", "ipv4"]:
+            labels_flat = build_labels(alert)
+            labels_flat.append(f"priority:{priority}")
+            external_references = build_external_references(alert)
+            
+            params.update({
+                "labels": labels_flat or None,
+                "external_references": external_references or None,
+                "allow_custom": True,
+            })
+        obj = observable_class(**params)
 
-        :param alert: dict of alert data
-        :param observable_id: Id of the observable
-        :param stix_objects: Stix objects list
-        :param observable_name: Name of the observable
-        :return: None
+        return json.loads(obj.serialize())
+    
+    def convert_alerts_to_stix(self, alerts: list):
+        """
+        Convert list of alerts to stix2 Observable objects:
+        
+        Business Logic:
+ 
+        ## Object Creation:
+        1. Observables
+            a. Creation
+                - For telco product type - Create PhoneNumber observable
+                - For domain product type - Create Domain observable and if IP address is present in alert data then create IP observable as well.
+                - For other product types which doesn't fall in above 2 categories - Create Domain observable
+            b. Relationship between observables
+                - For domain product type - Create resolves-to relationship between Domain and IP observables
+ 
+        2. Create Grouping case
+            a. If enabled by user - Create Grouping case for each alert and relate observables to it.
+            b. If not enabled by user - Skip grouping case creation.
+ 
+        3. Create Indicators 
+            a. Check if indicator already exists for given alert.
+            b. If indicator exists - Update it based on alert data and status (Actioned/Taken down or not)
+            c. If indicator does not exist - Create new indicator if alert is in actioned/taken down state. If not in actioned/taken down state - Skip indicator creation.
+ 
+        4. Create RFT Cases
+            a. Check if RFT case creation is enabled by user or not. If not enabled - Skip entire RFT case creation process.
+            b. If enabled - Check if RFT case already exists for given alert.
+            c. If RFT case exists - Update it based on alert data and status (Actioned/Taken down or not)
+            d. If RFT case does not exist - Create new RFT case if alert is in actioned/taken down state. If not in actioned/taken down state - Skip RFT case creation.
+        
+        ## Relationships:
+        1. For domain product type - Create resolves-to relationship between Domain and IP observables
+        2. If grouping case is created - Create related-to relationship between grouping case and observables
+        3. If indicators are created - Create based-on relationship between indicators and observables (with primary observable if multiple)
+        4. If RFT case is created - Create related-to relationship between RFT case and observables
+        """
+        stix_objects = [self.author, self.tlp_marking]
+ 
+        for alert in alerts:
+            #######- --------- observables ------------#######
+            observables = self._handle_observable_creation(alert, stix_objects)
+            if not observables:
+                self.helper.connector_logger.warning(
+                    "[DoppelConverter] No observables created for alert, skipping",
+                    {"alert_id": alert.get("id")},
+                )
+                continue
+            # Domain resolves-to IP relationship
+            if len(observables) == 2:
+                _ = self._handle_domain_ip_relationship(observables, stix_objects)
+ 
+            _ = self._handle_update_observables_labels(alert, observables)
+ 
+            # #######- --------- Grouping Case ------------#######
+            grouping_case = self._handle_grouping_case_creation(alert, observables, stix_objects)
+            # # Grouping case related to observable relationships
+            if grouping_case:
+                _ = self._handle_observable_grouping_case_relationship(grouping_case, observables, stix_objects)
+                _ = self._handle_labels(alert, 'GroupingCase', grouping_case)
+            
+            # #######- --------- Indicators ------------#######
+            indicators = self._handle_indicators(alert, observables, stix_objects)
+            # # Indicator based-on Observable relationships
+            if indicators:
+                _ = self._handle_indicator_observable_relationship(observables, indicators, stix_objects)
+ 
+            # #######- --------- RFT Cases ------------#######
+            rft_case = self._handle_rft_case(alert, observables, stix_objects)
+            # # Build observable and RFT relationships
+            if rft_case:
+                _ = self._handle_rft_case_observable_relationship(rft_case, observables, stix_objects)
+ 
+ 
+        return self.helper.stix2_create_bundle(stix_objects)
+                    
+    def _handle_observable_creation(self, alert, stix_objects):
+        """
+        Handle creation of observables based on product type
+        """
+        product_type = alert.get("product")
+        observables = []
+ 
+        try:
+            if product_type == "telco":
+                phone_number = alert.get("entity")
+                phone_number_observable = self._create_observable('phone', phone_number, alert)
+                stix_objects.append(phone_number_observable)
+                observables.append(phone_number_observable)
+            elif product_type == "domains":
+                domain = alert.get("entity")
+                domain_observable = self._create_observable('domain', domain, alert)
+                stix_objects.append(domain_observable)
+                observables.append(domain_observable)
+ 
+                ip_address = alert.get("entity_content", {}).get("root_domain", {}).get("ip_address")
+                
+                if ip_address:
+                    ipv4_observable = self._create_observable('ipv4', ip_address, alert)
+                    stix_objects.append(ipv4_observable)
+                    observables.append(ipv4_observable)
+            # We may consider to change this in future.
+            elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
+                domain = alert.get("entity")
+                domain_observable = self._create_observable('domain', domain, alert)
+                stix_objects.append(domain_observable)
+                observables.append(domain_observable)
+            else:
+                self.helper.connector_logger.warning(
+                    "[DoppelConverter] Unsupported product type, skipping alert",
+                    {"alert_id": alert.get("id"), "product_type": product_type},
+                )
+            return observables
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "[DoppelConverter] Failed to create observables",
+                {"alert_id": alert.get("id"), "error": str(e)},
+            )
+            raise
+    
+    def _handle_domain_ip_relationship(self, observables, stix_objects):
+        """Handle creation of resolves-to relationship between domain and IP observables"""
+
+        if len(observables) == 2:
+            domain_obs = observables[0]
+            ipv4_obs = observables[1]
+            
+            is_domain = domain_obs.get("type") == "domain-name"
+            is_ipv4 = ipv4_obs.get("type") == "ipv4-addr"
+
+            if is_domain and is_ipv4:
+                relationship = self._create_relationship(
+                    source_id=domain_obs["id"],
+                    target_id=ipv4_obs["id"],
+                    relationship_type="resolves-to",
+                )
+                  
+                stix_objects.append(relationship)
+            
+    
+    def _handle_update_observables_labels(self, alert, observables):
+        """If observable already exist in the OpenCTI we should update with new data."""
+        for observable in observables:
+            self._handle_labels(alert, 'Observable', observable)
+        
+    def _handle_grouping_case_creation(self, alert, observables, stix_objects):
+        """
+        Handle creation of grouping case and relationships with observables
+        """        
+        if self.enable_grouping_case and observables:
+            observable_ids = [obs["id"] for obs in observables]
+            
+            grouping_case = self._create_grouping_case(
+                alert, object_refs=observable_ids
+            )
+            
+            if hasattr(grouping_case, "serialize"):
+                grouping_case = json.loads(grouping_case.serialize())
+                
+            stix_objects.append(grouping_case)
+            return grouping_case
+        return None
+ 
+    def _handle_observable_grouping_case_relationship(self, grouping_case, observables, stix_objects):
+        """
+        Handle creation of relationships between grouping case and observables
+        """
+        for observable in observables:
+            relationship = self._create_relationship(
+                source_id=grouping_case["id"],
+                target_id=observable["id"],
+                relationship_type="related-to",
+            )
+            
+            stix_objects.append(relationship)
+ 
+    def _handle_indicators(self, alert, observables, stix_objects):
+ 
+        # First of all check do we've indicators already present or not
+        # with given alert_id or alert_entity value (observable value)
+        alert_id = alert.get("id")
+        entity_value = alert.get("entity", "")
+ 
+        existing_indicators = self._find_indicators_by_alert_id_or_entity_value(
+            alert_id, entity_value
+        )
+ 
+        if existing_indicators:
+            self.helper.connector_logger.info(
+                "[DoppelConverter - Handle Indicator] Processing existing indicator",
+                {"alert_id": alert.get("id")},
+            )
+            self._handle_indicators_existing(existing_indicators, alert, observables, stix_objects)
+        else:
+
+            self.helper.connector_logger.info(
+                "[DoppelConverter - Handle Indicator] Processing a new indicator",
+                {"alert_id": alert.get("id")},
+            )
+
+            indicators = self._handle_indicators_new(alert, observables, stix_objects)
+ 
+            # Add Note.
+            for indicator in indicators:
+                _ = self._handle_note_addition(indicator, alert, observables, stix_objects)
+ 
+            return indicators
+     
+    def _handle_indicators_existing(self, existing_indicators, alert, observables, stix_objects):
+        """When an indicator for given alert data already exists.
+        
+        Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
+            If actioned - Update indicator with latest data.
+            If non-actioned - Revoke the indicator as part of reversion workflow and update indicator with latest data.
+        """
+ 
+        alert_id = alert.get("id")
+        for indicator in existing_indicators: 
+                
+            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
+            
+            # If taken_down/actioned = False
+            # If any other state = True
+            revoke_indicator = not in_taken_down_state
+            
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Updating indicator revoke status",
+                {
+                    "alert_id": alert_id,
+                    "indicator_standard_id": indicator["standard_id"],
+                    "setting revoked to": revoke_indicator
+                },
+            )
+            
+            self.helper.api.indicator.update_field(
+                id=indicator["id"],
+                input={"key": "revoked", "value": revoke_indicator},
+            )
+            # Add Note.
+            _ = self._handle_note_addition(indicator, alert, observables, stix_objects)
+ 
+            # update labels.
+            _ = self._handle_labels(alert, 'Indicator', indicator)
+            
+    def _handle_indicators_new(self, alert, observables, stix_objects):
+        """When an indicator for given alert data does not exist.
+ 
+        1. Check the status:
+ 
+           If actioned/taken Down Create Indicator.
+           if not actioned or taken down - we don't need to do anything here.
+        
+ 
+        Args:
+            alert (_type_): _description_
+            observables (_type_): _description_
+            stix_objects (_type_): _description_
+        """
+ 
+        queue_state = alert.get("queue_state")
+
+        if not in_takedown_state(queue_state):
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Alert is not in takedown state, skipping indicator creation",
+                {"alert_id": alert.get("id"), "queue_state": queue_state},
+            )
+            return []
+        # else in_taken_down_state = actioned/taken_down
+ 
+        product_type = alert.get("product")
+        
+        alert_id = alert.get("id")
+        entity_value = alert.get("entity", "")
+ 
+        created_at = (
+            parse_iso_datetime(alert["created_at"])
+            if alert.get("created_at")
+            else None
+        )
+        modified_at = (
+            parse_iso_datetime(alert.get("last_activity_timestamp"))
+            if alert.get("last_activity_timestamp")
+            else None
+        )
+ 
+        indicators = []      
+ 
+        if product_type == "telco":
+            pattern = f"[tracking-number:value = '{entity_value}']"
+            name = entity_value
+            phone_number_indicator = self._create_indicator(
+                alert, pattern, name, created_at, modified_at
+            )
+
+            if hasattr(phone_number_indicator, "serialize"):
+                phone_number_indicator = json.loads(phone_number_indicator.serialize())
+
+            stix_objects.append(phone_number_indicator)
+            indicators.append(phone_number_indicator)  
+        elif product_type == "domains":
+            pattern = f"[domain-name:value = '{entity_value}']"
+            name = entity_value
+ 
+            domain_indicator = self._create_indicator(
+                alert, pattern, name, created_at, modified_at
+            )
+                
+            stix_objects.append(domain_indicator)
+            indicators.append(domain_indicator) 
+ 
+            ip_address = alert.get("entity_content", {}).get("root_domain", {}).get("ip_address")
+            
+            if ip_address:
+                pattern = f"[ipv4-addr:value = '{ip_address}']"
+                name = ip_address
+ 
+                ipv4_indicator = self._create_indicator(
+                    alert, pattern, name, created_at, modified_at
+                )
+                    
+                stix_objects.append(ipv4_indicator)
+                indicators.append(ipv4_indicator)
+        elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
+            pattern = f"[domain-name:value = '{entity_value}']"
+            name = entity_value
+            domain_indicator = self._create_indicator(
+                alert, pattern, name, created_at, modified_at
+            )
+                
+            stix_objects.append(domain_indicator)
+            indicators.append(domain_indicator) 
+        else:
+            self.helper.connector_logger.warning(
+                "[DoppelConverter] Unsupported product type, skipping alert",
+                {"alert_id": alert_id, "product_type": product_type},
+            )
+        return indicators
+ 
+    def _handle_indicator_observable_relationship(self, observables, indicators, stix_objects):
+        """Handle creation of based-on relationship between indicators and observables
+        
+ 
+        Build relationship with only primary observable.
+ 
+        Observables
+            PhoneNumber / Domain / Domain + IP (If product type is domain and IP is present in alert data)
+        Indicator 
+            PhoneNumber / Domain / Domain + IP (If product type is domain and IP is present in alert data)
+ 
+        Relationships:
+            Indicator (Domain) based-on Observable (Domain)
+            Indicator (IP) based-on Observable (Domain)
+            Indicator (PhoneNumber) based-on Observable (PhoneNumber)
+        """            
+
+        for indicator in indicators:
+            indicator_based_on_observable_relationship = self._create_relationship(
+                source_id=indicator["id"],
+                target_id=observables[0]["id"], # Just build relationship with primary observable / Domain
+                relationship_type="based-on",
+            )
+
+            stix_objects.append(indicator_based_on_observable_relationship)  
+                
+    def _handle_rft_case(self, alert, observables, stix_objects):
+        """Handle RFT Case Creation
+        
+        
+        1. Check if RFT case already present or not
+ 
+        2. If present
+            a. We need to update it
+ 
+        3. Not Present 
+            a. If alert queue state is actioned/taken down = we need to create one
+            b. if alert queue state is not actioned/taken down = we don't need to do anything
+        """
+ 
+        # If RFT case creation is not enabled by user - Skip the process for RFT case
+        if not self.enable_rft_case:
+            self.helper.connector_logger.info(
+                "[Handle RFT Case] RFT Case Creation is not enabled by User.",
+                {
+                    "RFT Case Creation enable": self.enable_rft_case,
+                }
+            )
+            return
+        
+        
+        # Check if RFT case is already present or not with given alert_id
+        alert_id = alert.get("id")
+        entity_value = alert.get("entity")
+        existing_rft_cases = self._find_rft_cases_by_alert_id(alert_id, entity_value)
+ 
+        if existing_rft_cases:
+            self.helper.connector_logger.info(
+                "[DoppelConverter - Handle RFT Case] Processing existing RFT Case",
+                {"alert_id": alert.get("id")},
+            )
+            _ = self._handle_rft_cases_existing(existing_rft_cases, alert, observables, stix_objects)
+        else:
+            self.helper.connector_logger.info(
+                "[DoppelConverter - Handle RFT Case] Processing New RFT Case",
+                {"alert_id": alert.get("id")},
+            )
+            rft_case = self._handle_rft_cases_new(alert, observables, stix_objects)
+            # Add Note.
+            if rft_case:
+                _ = self._handle_note_addition(rft_case, alert, observables, stix_objects)
+            return rft_case
+        
+    def _handle_rft_cases_existing(self, existing_rft_cases, alert, observables, stix_objects):
+        """When an RFT case for given alert data already exists.
+        
+        Here we need to consider both the cases - actioned (TakenDown/Actioned) + Non-Actioned(Rest all)
+            If actioned - Update RFT case with latest data.
+            If non-actioned - Revoke the RFT case as part of reversion workflow and update RFT case with latest data.
+        """
+ 
+        alert_id = alert.get("id")
+        for rft_case in existing_rft_cases: 
+            in_taken_down_state = in_takedown_state(alert.get("queue_state"))
+            
+            # If taken_down/actioned => Revoke = False
+            # If any other state => Revoke = True
+            revoke_rft_case = not in_taken_down_state
+            
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Updating RFT case revoke status",
+                {
+                    "alert_id": alert_id,
+                    "case_standard_id": rft_case["id"],
+                    "setting revoked to": revoke_rft_case
+                },
+            )
+            
+            self.helper.api.stix_domain_object.update_field(
+                id=rft_case["id"],
+                input={
+                    "key": "revoked", 
+                    "value": [str(revoke_rft_case).lower()]
+                },
+            )
+ 
+            # Add Note.
+            _ = self._handle_note_addition(rft_case, alert, observables, stix_objects)
+ 
+            # Update Labels.
+            _ = self._handle_labels(alert, 'RFTCase', rft_case)
+ 
+    def _handle_rft_cases_new(self, alert, observables, stix_objects):
+        """When an RFT case for given alert data does not exist.
+ 
+        1. Check the status:
+ 
+           If actioned/taken Down Create RFT case.
+           if not actioned or taken down - we don't need to do anything here.
         """
         alert_id = alert.get("id")
         queue_state = alert.get("queue_state")
-
-        self.helper.connector_logger.info(
-            "[DoppelConverter] Processing takedown workflow",
-            {"alert_id": alert_id, "queue_state": queue_state},
+ 
+        if not in_takedown_state(queue_state):
+            self.helper.connector_logger.info(
+                "[DoppelConverter] Alert is not in takedown state, skipping RFT case creation",
+                {"alert_id": alert_id, "queue_state": queue_state},
+            )
+            return None
+        
+        rft_case = self._create_case_rft(
+            alert,
+            object_refs=observables
         )
 
-        # Extract domain/IP
-        entity_content = alert.get("entity_content", {})
-        root_domain = entity_content.get("root_domain", {})
-        domain_name = root_domain.get("domain")
-        ipv4_address = root_domain.get("ip_address", "")
-        phone_value = alert.get("entity")
+        self.helper.connector_logger.info(
+            "[RFT Case] RFT Case Creation",
+            {"rft_case": rft_case},
+        )
 
-        # Parse timestamps once for indicator/note reuse
+        stix_objects.append(rft_case)
+        return rft_case
+    
+    def _handle_rft_case_observable_relationship(self, rft_case, observables, stix_objects):
+        """Handle creation of related-to relationship between RFT case and observables.
+ 
+        Business Logic:
+        - One case relate to one or more observables.
+        - We can have multiple observables for an alert where product type = domains and IP present.
+        """
+        try:
+            self.helper.connector_logger.info(
+                "[RFT - Observable Relationship] RFT & Observable relationship",
+                {"rft_case": rft_case, "observables": observables},
+            )
+
+            for observable in observables:
+                relationship = self._create_relationship(
+                    source_id=rft_case["id"],
+                    target_id=observable["id"],
+                    relationship_type="related-to",
+                )
+
+                stix_objects.append(relationship)
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "[DoppelConverter] Failed to create relationship between RFT case and observable",
+                {"case_id": rft_case.id, "error": str(e)},
+            )
+ 
+    def _handle_note_addition(self, obj, alert, observables, stix_objects):
+ 
+        """Handle update of note content when indicator already exists.
+ 
+        Whenever we have an indicator already present for given alert data and if we find that the indicator is revoked but alert is in actioned/taken down state - we will update the note content to reflect the current status of the alert.
+        """
+        ### Adding Note with details about update in Doppel queue state.
+        self.helper.connector_logger.info(
+            "[DoppelConverter] Note addition",
+            {"obj": obj, "observables": observables},
+        )
+        
+        alert_id = alert.get("id")
+        queue_state = alert.get("queue_state")
+        observable_id = observables[0].get("id")
+        note_content = f"Doppel alert queue state updated to {alert.get('queue_state')}. Setting revoked to {not in_takedown_state(queue_state)}."
+        
+        obj_id = obj.get("id")
+        filter_obj_id = obj_id if (obj_id and "--" in str(obj_id)) else obj.get("standard_id")
+
+        note_refs = [filter_obj_id, observable_id]
+
+        note_body = f"Alert {alert_id} has been {queue_state}"
         created_at = (
             parse_iso_datetime(alert["created_at"])
             if alert.get("created_at")
@@ -670,286 +961,117 @@ class ConverterToStix:
             else None
         )
         note_timestamp = modified_at or created_at or datetime.now()
-        note_content = (
-            "Alert is Actioned"
-            if queue_state and queue_state.lower() == "actioned"
-            else "Moved to Takedown"
+        note = self._create_note(
+            note_content, note_body, note_refs, note_timestamp,
         )
-        note_body = f"Alert {alert_id} has been {queue_state}"
+        stix_objects.append(note)
+ 
+    # ERR: If object already present then only try to update.
+    def _handle_labels(self, alert, target_obj_type, target_object):
+        """Update data in OpenCTI object based on changes in Alert."""
+ 
+        new_labels = build_labels(alert)
+        
+        try:
+            if target_obj_type == "Observable":
+                observable_id = target_object.get("id")
 
-        # Find existing indicators for this alert
-        existing_indicators = self._find_indicators_by_alert_id(
-            alert_id, observable_name
-        )
-
-        if existing_indicators:  # Indicator already exists
-            for indicator in existing_indicators:
-                # Un-revoke if previously revoked
-                if indicator["revoked"]:
-                    self.helper.connector_logger.info(
-                        "[DoppelConverter] Un-revoking indicator after re-takedown",
-                        {
-                            "alert_id": alert_id,
-                            "indicator_standard_id": indicator["standard_id"],
-                        },
+                labels_to_remove = self._get_labels_to_remove(target_obj_type, target_object)
+                for label_name in labels_to_remove or []:
+                    self.helper.api.stix_cyber_observable.remove_label(
+                        id=target_object["id"], label_name=label_name
                     )
-
-                    # Update to revoked=false
-                    self.helper.api.indicator.update_field(
-                        id=indicator["standard_id"],
-                        input={"key": "revoked", "value": False},
-                    )
-
-                # Always record note when takedown/actioned occurs
-                note_refs = [indicator["standard_id"], observable_id]
-                note = self.create_note(
-                    note_content, note_body, note_refs, note_timestamp
-                )
-                stix_objects.append(note)
-
-        else:  # Create new indicator
-            # Build pattern
-            if domain_name:
-                pattern = f"[domain-name:value = '{domain_name}']"
-                name = domain_name
-            elif phone_value:
-                pattern = f"[tracking-number:value = '{phone_value}']"
-                name = phone_value
-            elif ipv4_address:
-                pattern = f"[ipv4-addr:value = '{ipv4_address}']"
-                name = ipv4_address
-            else:
-                return
-
-            case_refs = []
-
-            # Create Indicator
-            indicator = self.create_indicator(
-                alert, pattern, name, created_at, modified_at
+                if new_labels:
+                    for label_name in new_labels:
+                        self.helper.api.stix_cyber_observable.add_label(
+                            id=observable_id, label_name=label_name
+                        )
+            elif target_obj_type == "Indicator":
+                indicator_id = target_object.get("id")
+                if indicator_id:
+                    labels_to_remove = self._get_labels_to_remove(target_obj_type, target_object)
+                    if not in_takedown_state(alert.get("queue_state")):
+                        labels_to_remove.append('revoked-false-positive')
+                    else:
+                        new_labels.append('revoked-false-positive')
+ 
+                    for label_name in labels_to_remove or []:
+                        self.helper.api.stix_domain_object.remove_label(
+                            id=indicator_id, label_name=label_name
+                        )
+                    if new_labels:
+                        for label_name in new_labels:
+                            self.helper.api.stix_domain_object.add_label(
+                                id=indicator_id, label_name=label_name
+                            )
+            elif target_obj_type == "GroupingCase":
+                grouping_case_id = target_object.get("id")
+                if grouping_case_id:
+                    labels_to_remove = self._get_labels_to_remove(target_obj_type, target_object)
+                    
+                    for label_name in labels_to_remove or []:
+                        self.helper.api.stix_domain_object.remove_label(
+                            id=grouping_case_id, label_name=label_name
+                        )
+                    if new_labels:
+                        for label_name in new_labels:
+                            self.helper.api.stix_domain_object.add_label(
+                                id=grouping_case_id, label_name=label_name
+                            )
+            elif target_obj_type == "RFTCase":
+                RFT_case_id = target_object.get("id")
+                if RFT_case_id:
+                    labels_to_remove = self._get_labels_to_remove(target_obj_type, target_object)
+                    
+                    if not in_takedown_state(alert.get("queue_state")):
+                            labels_to_remove.append('revoked-false-positive')
+                    else:
+                        new_labels.append('revoked-false-positive')
+ 
+                    for label_name in labels_to_remove or []:
+                        self.helper.api.stix_domain_object.remove_label(
+                            id=RFT_case_id, label_name=label_name
+                        )
+                    if new_labels:
+                        for label_name in new_labels:
+                            self.helper.api.stix_domain_object.add_label(
+                                id=RFT_case_id, 
+                                label_name=label_name
+                            )
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "[DoppelConverter] Failed to update tags",
+                {"alert_id": alert.get("id"), "error": str(e)},
             )
-            stix_objects.append(indicator)
-            case_refs.append(indicator.id)
-            case_refs.append(observable_id)
+ 
+    def _get_labels_to_remove(self, target_obj_type, obj):
+        """Return labels added by Doppel Alert."""
+        managed_prefixes = ("queue_state:", "entity_state:", "severity:", "platform:", "brand:")
 
-            self.helper.connector_logger.debug(
-                "[Process taken down] New Indicator created",
-                {
-                    "alert_id": alert_id,
-                    "name": name,
-                    "indicator_pattern": indicator.pattern,
-                },
+        if target_obj_type == "Observable":
+            obj = self.helper.api.stix_cyber_observable.read(
+                id=obj.get('id')
             )
-
-            # Create based-on relationship to primary observable
-            indicator_relationship = self.create_relationship(
-                source_id=indicator.id,
-                target_id=observable_id,
-                relationship_type="based-on",
+        elif target_obj_type == "GroupingCase":
+            obj = self.helper.api.stix_domain_object.read(
+                id=obj.get('id')
             )
-            stix_objects.append(indicator_relationship)
+        
+        # elif target_obj_type == "Indicator":
+        #     obj = self.helper.api.stix_domain_object.read(
+        #         id=obj.get('id')
+        #     )
 
-            # Create RFT case (if enabled)
-            if self.enable_rft_case:
-                case_rft = self.create_case_rft(
-                    alert, object_refs=case_refs, observable_id=observable_id
-                )
-                stix_objects.append(case_rft)
-                
-                rft_relationship = self.create_relationship(
-                    source_id=case_rft["id"],
-                    target_id=indicator.id,
-                    relationship_type="related-to",
-                )
-                stix_objects.append(rft_relationship)
+        # elif target_obj_type == "RFTCase":
+        #     object_octi = self.helper.api.stix_domain_object.read(
+        #         id=obj.get('id')
+        #     )
 
-            self.helper.connector_logger.info(
-                "[DoppelConverter] Created based-on relationship for new indicator",
-                {
-                    "alert_id": alert_id,
-                    "indicator_id": indicator.id,
-                    "observable_id": observable_id,
-                },
-            )
-
-            # Add note referencing both indicator and observable
-            note_refs = [indicator.id, observable_id]
-            note = self.create_note(
-                note_content, note_body, note_refs, note_timestamp
-            )
-            stix_objects.append(note)
-
-            self.helper.connector_logger.info(
-                "[DoppelConverter] Created indicator for takedown alert",
-                {"alert_id": alert_id, "pattern": pattern},
-            )
-
-    def _process_reversion(
-        self,
-        alert: dict,
-        observable_id: str,
-        stix_objects: list,
-        observable_name: str,
-    ) -> None:
-        """
-        Process reversion workflow:
-        - Revoke Indicator
-        - Revoke RFT Cases
-        - Create Note with all revoked refs
-
-        :param alert: dict of alert data
-        :param observable_id: Id of the observable
-        :param stix_objects: Stix objects list
-        :param observable_name: Name of the observable
-        :return: None
-        """
-        alert_id = alert["id"]
-        entity = alert["entity"]
-        queue_state = alert["queue_state"]
-
-        self.helper.connector_logger.info(
-            "[DoppelConverter] Processing reversion workflow",
-            {"alert_id": alert_id, "queue_state": queue_state},
-        )
-
-        # Parse timestamps once for reuse
-        modified = (
-            parse_iso_datetime(alert.get("last_activity_timestamp"))
-            if alert.get("last_activity_timestamp")
-            else datetime.now()
-        )
-
-        # Collect all revoked refs to include in note
-        all_revoked_refs = []
-
-        # Find existing indicators for this alert
-        existing_indicators = self._find_indicators_by_alert_id(
-            alert_id, observable_name
-        )
-
-        indicators_to_revoke = [
-            ind for ind in existing_indicators if not ind.get("revoked", False)
+        labels = [
+            label["value"]
+            for label in obj["objectLabel"]
+            if label["value"].startswith(managed_prefixes)
         ]
 
-        if not indicators_to_revoke:
-            self.helper.connector_logger.info(
-                "[DoppelConverter] No indicators found to revoke",
-                {"alert_id": alert_id},
-            )
-        else:
-            revoked_indicators_count = 0
-            for indicator in indicators_to_revoke:
-                self.helper.connector_logger.info(
-                    "[DoppelConverter] Revoking indicator",
-                    {"alert_id": alert_id, "indicator_id": indicator["id"]},
-                )
-                all_revoked_refs.append(indicator["standard_id"])
-
-                # Use OpenCTI API to revoke the indicator
-                try:
-                    self.helper.api.indicator.update_field(
-                        id=indicator["id"],
-                        input={"key": "revoked", "value": True},
-                    )
-
-                    # Add revoked-false-positive label
-                    label = self.helper.api.label.create(
-                        value="revoked-false-positive"
-                    )
-                    self.helper.api.indicator.add_label(
-                        id=indicator["id"], label_id=label["id"]
-                    )
-
-                    self.helper.connector_logger.info(
-                        "[DoppelConverter] Successfully revoked indicator via API",
-                        {
-                            "alert_id": alert_id,
-                            "indicator_id": indicator["id"],
-                        },
-                    )
-                    revoked_indicators_count += 1
-                except Exception as e:
-                    self.helper.connector_logger.error(
-                        "[DoppelConverter] Error revoking indicator via API",
-                        {
-                            "alert_id": alert_id,
-                            "indicator_id": indicator["id"],
-                            "error": str(e),
-                        },
-                    )
-
-            self.helper.connector_logger.info(
-                "[DoppelConverter] Revoked indicators",
-                {
-                    "alert_id": alert_id,
-                    "revoked_indicators_count": revoked_indicators_count,
-                },
-            )
-
-        # Find and revoke RFT cases for this alert
-        existing_rft_cases = self._find_rft_cases_by_alert_id(entity, alert_id)
-        rft_cases_to_revoke = [
-            case
-            for case in existing_rft_cases
-            if not case.get("revoked", False)
-        ]
-
-        if rft_cases_to_revoke:
-            self.helper.connector_logger.info(
-                "[DoppelConverter] Found RFT cases to revoke",
-                {"alert_id": alert_id, "count": len(rft_cases_to_revoke)},
-            )
-
-            revoked_rft_cases_count = 0
-            for rft_case in rft_cases_to_revoke:
-                self.helper.connector_logger.info(
-                    "[DoppelConverter] Revoking RFT case",
-                    {"alert_id": alert_id, "case_id": rft_case["id"]},
-                )
-                all_revoked_refs.append(rft_case["standard_id"])
-
-                # Use OpenCTI API to revoke the RFT case
-                try:
-                    self.helper.api.case_rft.update_field(
-                        id=rft_case["id"],
-                        input={"key": "revoked", "value": True},
-                    )
-
-                    self.helper.connector_logger.info(
-                        "[DoppelConverter] Successfully revoked RFT case via API",
-                        {"alert_id": alert_id, "case_id": rft_case["id"]},
-                    )
-                    revoked_rft_cases_count += 1
-                except Exception as e:
-                    self.helper.connector_logger.error(
-                        "[DoppelConverter] Error revoking RFT case via API",
-                        {
-                            "alert_id": alert_id,
-                            "case_id": rft_case["id"],
-                            "error": str(e),
-                        },
-                    )
-
-            self.helper.connector_logger.info(
-                "[DoppelConverter] Revoked RFT cases",
-                {
-                    "alert_id": alert_id,
-                    "revoked_rft_cases_count": revoked_rft_cases_count,
-                },
-            )
-        else:
-            self.helper.connector_logger.info(
-                "[DoppelConverter] No RFT cases found to revoke",
-                {"alert_id": alert_id},
-            )
-
-        # Add reversion note to observable and all revoked cases
-        all_revoked_refs.append(observable_id)
-
-        if all_revoked_refs:
-            reversion_note = self.create_note(
-                note_content="Moved from taken down back to unresolved",
-                note_body=f"Alert {alert_id} has been reverted from takedown state to {queue_state}",
-                note_refs=all_revoked_refs,
-                note_timestamp=modified,
-            )
-            stix_objects.append(reversion_note)
+        return labels
+        
