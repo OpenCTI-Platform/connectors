@@ -57,43 +57,47 @@ def _make_state_mock() -> MagicMock:
 
 
 class TestExternalImportConnector:
-    def test_init(self, mock_config: MagicMock):
+    def test_init(self, mock_settings: MagicMock):
         proc = DummyProcessor()
-        connector = ExternalImportConnector(config=mock_config, data_processors=[proc])
-        assert connector.config is mock_config
+        connector = ExternalImportConnector(
+            settings=mock_settings, data_processors=[proc]
+        )
+        assert connector.settings is mock_settings
         assert connector.data_processors == [proc]
 
-    def test_init_empty_processors_raises(self, mock_config: MagicMock):
+    def test_init_empty_processors_raises(self, mock_settings: MagicMock):
         with pytest.raises(ValueError, match="At least one BaseDataProcessor"):
-            ExternalImportConnector(config=mock_config, data_processors=[])
+            ExternalImportConnector(settings=mock_settings, data_processors=[])
 
     @patch(PATCH_HELPER)
     def test_init_dependencies_wires_up_components(
-        self, mock_helper_cls: MagicMock, mock_config: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
     ):
         mock_helper_cls.return_value = _make_helper_mock()
 
         proc = DummyProcessor()
-        connector = ExternalImportConnector(config=mock_config, data_processors=[proc])
+        connector = ExternalImportConnector(
+            settings=mock_settings, data_processors=[proc]
+        )
         connector._init_dependencies()
 
         assert connector.logger is not None
         assert connector.state is not None
-        assert proc.config is mock_config
+        assert proc.settings is mock_settings
         assert proc.logger is not None
         assert proc.state is connector.state
         assert proc.work_manager is not None
 
     @patch(PATCH_HELPER)
     def test_init_dependencies_custom_state(
-        self, mock_helper_cls: MagicMock, mock_config: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
     ):
         mock_helper_cls.return_value = _make_helper_mock()
 
         custom_state = MagicMock()
         proc = DummyProcessor()
         connector = ExternalImportConnector(
-            config=mock_config, data_processors=[proc], state=custom_state
+            settings=mock_settings, data_processors=[proc], state=custom_state
         )
         connector._init_dependencies()
 
@@ -101,14 +105,16 @@ class TestExternalImportConnector:
         assert proc.state is custom_state
 
     @patch(PATCH_HELPER)
-    def test_callback_success(self, mock_helper_cls: MagicMock, mock_config: MagicMock):
+    def test_callback_success(
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
+    ):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
         state = _make_state_mock()
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(
-            config=mock_config, data_processors=[proc], state=state
+            settings=mock_settings, data_processors=[proc], state=state
         )
         connector._init_dependencies()
         connector.callback()
@@ -119,7 +125,7 @@ class TestExternalImportConnector:
 
     @patch(PATCH_HELPER)
     def test_callback_with_last_run(
-        self, mock_helper_cls: MagicMock, mock_config: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
     ):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
@@ -128,7 +134,7 @@ class TestExternalImportConnector:
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(
-            config=mock_config, data_processors=[proc], state=state
+            settings=mock_settings, data_processors=[proc], state=state
         )
         connector._init_dependencies()
         connector.callback()
@@ -137,7 +143,7 @@ class TestExternalImportConnector:
 
     @patch(PATCH_HELPER)
     def test_callback_exception_is_logged(
-        self, mock_helper_cls: MagicMock, mock_config: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
     ):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
@@ -145,7 +151,7 @@ class TestExternalImportConnector:
 
         proc = FailingProcessor()
         connector = ExternalImportConnector(
-            config=mock_config, data_processors=[proc], state=state
+            settings=mock_settings, data_processors=[proc], state=state
         )
         connector._init_dependencies()
         connector.callback()
@@ -154,7 +160,7 @@ class TestExternalImportConnector:
 
     @patch(PATCH_HELPER)
     def test_callback_keyboard_interrupt(
-        self, mock_helper_cls: MagicMock, mock_config: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
     ):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
@@ -163,7 +169,7 @@ class TestExternalImportConnector:
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(
-            config=mock_config, data_processors=[proc], state=state
+            settings=mock_settings, data_processors=[proc], state=state
         )
         connector._init_dependencies()
 
@@ -172,7 +178,7 @@ class TestExternalImportConnector:
 
     @patch(PATCH_HELPER)
     def test_callback_system_exit(
-        self, mock_helper_cls: MagicMock, mock_config: MagicMock
+        self, mock_helper_cls: MagicMock, mock_settings: MagicMock
     ):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
@@ -181,7 +187,7 @@ class TestExternalImportConnector:
 
         proc = DummyProcessor()
         connector = ExternalImportConnector(
-            config=mock_config, data_processors=[proc], state=state
+            settings=mock_settings, data_processors=[proc], state=state
         )
         connector._init_dependencies()
 
@@ -189,12 +195,14 @@ class TestExternalImportConnector:
             connector.callback()
 
     @patch(PATCH_HELPER)
-    def test_start(self, mock_helper_cls: MagicMock, mock_config: MagicMock):
+    def test_start(self, mock_helper_cls: MagicMock, mock_settings: MagicMock):
         helper = _make_helper_mock()
         mock_helper_cls.return_value = helper
 
         proc = DummyProcessor()
-        connector = ExternalImportConnector(config=mock_config, data_processors=[proc])
+        connector = ExternalImportConnector(
+            settings=mock_settings, data_processors=[proc]
+        )
         connector.start()
 
         helper.schedule_process.assert_called_once_with(
