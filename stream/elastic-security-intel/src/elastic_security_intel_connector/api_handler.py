@@ -1247,8 +1247,11 @@ class ElasticApiHandler:
             )
             if reason:
                 return str(reason)
-        except Exception:
-            pass
+        except Exception as exc:
+            self.helper.connector_logger.debug(
+                "Could not parse error response as JSON",
+                {"error": str(exc)},
+            )
         text = response.text
         if len(text) > max_length:
             return text[:max_length] + "..."
@@ -1285,9 +1288,30 @@ class ElasticApiHandler:
                 )
                 return True
 
+            if check_response.status_code in (401, 403):
+                self.helper.connector_logger.warning(
+                    f"Authentication/authorization error checking data stream existence: {check_response.status_code}",
+                    {
+                        "data_stream": self.index_name,
+                        "response": self._truncate_response(check_response),
+                        "hint": "Check that the API key has the 'monitor' cluster privilege.",
+                    },
+                )
+                return False
+
+            if check_response.status_code >= 500:
+                self.helper.connector_logger.warning(
+                    f"Server error checking data stream existence: {check_response.status_code}",
+                    {
+                        "data_stream": self.index_name,
+                        "response": self._truncate_response(check_response),
+                    },
+                )
+                return False
+
             if check_response.status_code != 404:
-                # Unexpected status: warn but still attempt creation so that
-                # transient errors (e.g. proxy 502) do not block startup.
+                # Some other unexpected status – warn but still attempt creation
+                # so that transient proxy/redirect responses do not block startup.
                 self.helper.connector_logger.warning(
                     f"Unexpected status checking data stream existence: {check_response.status_code}",
                     {
@@ -1620,7 +1644,13 @@ class ElasticApiHandler:
                 # "data_stream [...] must not contain the following characters"
                 # that can occur when the first document write attempts to implicitly
                 # create the data stream before it is properly configured.
-                self.setup_data_stream()
+                if not self.setup_data_stream():
+                    self.helper.connector_logger.warning(
+                        "Data stream initialization failed; Elasticsearch 8 may raise "
+                        "errors on the first document write if the data stream cannot "
+                        "be auto-created. Check the logs above for details.",
+                        {"data_stream": self.index_name},
+                    )
                 return True
             else:
                 self.helper.connector_logger.error(
