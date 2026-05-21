@@ -53,6 +53,15 @@ class QRadarConnector:
             config,
             default="OpenCTI",
         )
+        ignore_types_str = get_config_variable(
+            "QRADAR_IGNORE_TYPES",
+            ["qradar", "ignore_types"],
+            config,
+            default="label,marking-definition,identity",
+        )
+        self.qradar_ignore_types = [
+            t.strip() for t in ignore_types_str.split(",") if t.strip()
+        ]
 
         self.base_url_sets = self.qradar_url + "/api/reference_data_collections/sets"
         self.base_url_set_entries = (
@@ -153,9 +162,9 @@ class QRadarConnector:
             if not already_exist:
                 r = requests.post(
                     url=self.base_url_sets,
-                    json={
+                    params={
                         "name": self.collection_sets[key]["name"],
-                        "entry_type": self.collection_sets[key]["type"],
+                        "element_type": self.collection_sets[key]["type"],
                     },
                     headers=self.headers,
                     verify=self.qradar_ssl_verify,
@@ -307,6 +316,8 @@ class QRadarConnector:
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
+            if data["type"] in self.qradar_ignore_types:
+                return None
             if data["type"] == "indicator" and data["pattern_type"].startswith("stix"):
                 indicator_data = self._process_indicator(data)
             elif data["type"] == "file":
