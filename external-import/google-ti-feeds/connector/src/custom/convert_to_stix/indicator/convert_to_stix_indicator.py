@@ -88,6 +88,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             )
             return []
 
+        if not ioc_entry:
+            self.logger.debug(
+                "Conversion returned None, skipping",
+                {"prefix": LOG_PREFIX, "type": entry.type, "id": entry.id},
+            )
+            return []
+
         rel_objects = self._build_relationships(entry, ioc_entry)
 
         return rel_objects
@@ -158,6 +165,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
                 else None
             ),
             create_observables=True,
+            external_references=[
+                ExternalReference(
+                    source_name=f"[GTI] File {entry.id}",
+                    description="Google Threat Intelligence File Link",
+                    url=f"https://www.virustotal.com/gui/file/{entry.id}",
+                )
+            ],
         )
 
     def _detect_ip_version(self, ip_addr: str) -> str:
@@ -208,6 +222,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
                 else None
             ),
             create_observables=True,
+            external_references=[
+                ExternalReference(
+                    source_name=f"[GTI] IP {entry.id}",
+                    description="Google Threat Intelligence IP Link",
+                    url=f"https://www.virustotal.com/gui/ip-address/{entry.id}",
+                )
+            ],
         )
 
     def _convert_url(self, entry: IOCDeltaEntry) -> Indicator | None:
@@ -234,6 +255,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
                 else None
             ),
             create_observables=True,
+            external_references=[
+                ExternalReference(
+                    source_name=f"[GTI] URL {attrs.url}",
+                    description="Google Threat Intelligence URL Link",
+                    url=f"https://www.virustotal.com/gui/url/{entry.id}",
+                )
+            ],
         )
 
     def _convert_domain(self, entry: IOCDeltaEntry) -> Indicator | None:
@@ -260,6 +288,13 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
                 else None
             ),
             create_observables=True,
+            external_references=[
+                ExternalReference(
+                    source_name=f"[GTI] Domain {entry.id}",
+                    description="Google Threat Intelligence Domain Link",
+                    url=f"https://www.virustotal.com/gui/domain/{entry.id}",
+                )
+            ],
         )
 
     def _build_relationships(
