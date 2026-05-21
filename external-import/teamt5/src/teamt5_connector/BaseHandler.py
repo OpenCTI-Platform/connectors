@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-TEAMT5_API_BASE_URL = "https://api.threatvision.org"
-
 # STIX 2.1 cyber observable types (SCOs). OpenCTI uses
 # ``x_opencti_created_by_ref`` on SCOs because the STIX 2.1 spec only defines
 # ``created_by_ref`` on SDOs/SROs; setting it on an SCO produces an invalid
@@ -97,7 +95,13 @@ class BaseHandler(ABC):
         :return: A list containing all bundle references published to the API since the last run timestamp.
         """
 
-        url = f"{str(TEAMT5_API_BASE_URL).rstrip('/')}{self.url_suffix}"
+        # Build the listing URL from the user-configured base URL so the
+        # connector targets the same host as the OAuth / API-key client
+        # (private deployments, on-prem instances, staging, etc.). Falling
+        # back to a hard-coded ``api.threatvision.org`` would silently bypass
+        # ``TEAMT5_API_BASE_URL`` / ``teamt5.api_base_url`` for pagination
+        # even though token exchange already honours it.
+        url = f"{self.config.teamt5.api_base_url.rstrip('/')}{self.url_suffix}"
         retrieved_bundle_refs = []
         failure_count = 0
 

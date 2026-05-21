@@ -68,7 +68,8 @@ class TeamT5Config(BaseConfigModel):
         default="clear",
     )
     first_run_retrieval_timestamp: int = Field(
-        description="Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data."
+        description="Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data. Defaults to 0 (i.e. the full TeamT5 catalogue) so existing deployments that never set this variable continue to start.",
+        default=0,
     )
 
     @model_validator(mode="after")

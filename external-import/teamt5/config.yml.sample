@@ -19,4 +19,6 @@ teamt5:
   # Deprecated: pre-obtained Bearer token (use client_id + client_secret instead)
   # api_key: 'ChangeMe'
   tlp_level: 'clear' # available values are: clear, white, green, amber, amber+strict, red - Default: 'clear'
-  first_run_retrieval_timestamp: 'ChangeMe'
+  # Optional. Unix timestamp of the earliest intel to pull on the first run.
+  # Defaults to 0 (full TeamT5 catalogue) when unset.
+  first_run_retrieval_timestamp: 0

@@ -69,7 +69,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Client Secret | teamt5.client_secret | `TEAMT5_CLIENT_SECRET` |         | OAuth 2.0 client secret. Requires `client_id` to also be set. |
 | API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | **Deprecated.** Pre-obtained Bearer token. Use `client_id`/`client_secret` instead. |
 | TLP Level    | teamt5.tlp_level    | `TEAMT5_TLP_LEVEL`      | clear   | The TLP marking to be set for ingested entities. Options: clear, white, green, amber, amber+strict, red. |
-| First Run Retrieval Timestamp | teamt5.first_run_retrieval_timestamp | `TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP` |         | Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data. |
+| First Run Retrieval Timestamp | teamt5.first_run_retrieval_timestamp | `TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP` | `0`     | Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data. Defaults to `0` (the full TeamT5 catalogue). |
 
 ### Authentication
 

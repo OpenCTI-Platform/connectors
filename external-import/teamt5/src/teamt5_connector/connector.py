@@ -102,7 +102,7 @@ class TeamT5Connector:
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 "Connector stopped...",
-                {"connector_name": self.helper.connect_name},
+                meta={"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:

@@ -17,6 +17,8 @@ services:
       # Deprecated: pre-obtained Bearer token (use client_id + client_secret instead)
       # - TEAMT5_API_KEY=ChangeMe
       - TEAMT5_TLP_LEVEL=clear
-      - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=ChangeMe
+      # Optional. Unix timestamp of the earliest intel to pull on the first run.
+      # Defaults to 0 (full TeamT5 catalogue) when unset.
+      - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=0
 
     restart: always
