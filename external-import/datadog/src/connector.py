@@ -401,15 +401,34 @@ class DataDogConnector:
                     f"Sent bundle with {len(all_stix_objects)} objects to OpenCTI"
                 )
 
-                # Update last import timestamp
-                self._update_import_timestamp(current_time)
+                # Only advance the ``last_run_timestamp`` cursor when
+                # every processed item produced STIX objects. If some
+                # alerts failed to convert (``object_errors > 0``),
+                # holding the cursor at its previous value lets the
+                # next cycle retry them — advancing past would silently
+                # drop them from the ingest forever. The processed
+                # alerts that DID succeed are still in the bundle we
+                # just sent; OpenCTI's deterministic ids guarantee
+                # they will be deduplicated on the retry pass.
+                if object_errors == 0:
+                    self._update_import_timestamp(current_time)
+                    timestamp_advanced = True
+                else:
+                    self.helper.log_warning(
+                        f"Bundle sent with {object_errors} conversion error(s); "
+                        "holding last_run_timestamp at the previous value so the "
+                        "failed alerts are retried on the next cycle."
+                    )
+                    timestamp_advanced = False
 
                 return {
                     "imported": 1,  # One bundle sent
                     "errors": object_errors,
                     "processed": len(results.get("processed_items", [])),
                     "objects": len(all_stix_objects),
-                    "timestamp": current_time.isoformat(),
+                    "timestamp": (
+                        current_time.isoformat() if timestamp_advanced else None
+                    ),
                 }
 
             except Exception as e:

@@ -186,6 +186,14 @@ class DataDogClient:
 
             all_signals = []
             next_cursor = None
+            # ``pagination_failed`` flips to True if any page fetch
+            # returns ``None`` (the bounded 429 retry exhausted, a 5xx
+            # blew through, etc.). We MUST surface that to the caller
+            # — silently returning ``success=True`` with partial data
+            # would cause the connector to advance the state cursor
+            # past signals it never actually fetched, permanently
+            # skipping them on the next cycle.
+            pagination_failed = False
 
             # Paginate through results
             while True:
@@ -196,6 +204,13 @@ class DataDogClient:
                     "GET", endpoint, params=params, headers=headers
                 )
                 if not response:
+                    self.helper.log_error(
+                        "Security Signals pagination aborted: page fetch failed "
+                        f"after {len(all_signals)} signal(s); the state cursor "
+                        "will NOT be advanced so the remaining window is "
+                        "retried on the next cycle."
+                    )
+                    pagination_failed = True
                     break
 
                 signals = response.get("data", [])
@@ -216,6 +231,9 @@ class DataDogClient:
                         "Reached 10,000 signal limit, stopping pagination"
                     )
                     break
+
+            if pagination_failed:
+                return None
 
             self.helper.log_info(
                 f"Security Signals API returned {len(all_signals)} total signals"
@@ -483,6 +501,41 @@ class DataDogClient:
             # Use double newlines for better markdown rendering
             full_description = "\n\n".join(description_parts)
 
+            # Extract the rule query / creator / assignee that
+            # ``_extract_alert_context`` (importer) and
+            # ``_create_context_note`` (converter) consume — without
+            # these three fields, the explanatory Note the README
+            # advertises ("monitor query, tags and assignee") would
+            # render with empty values for each missing field. The
+            # DataDog Security Monitoring v2 signal payload carries
+            # them under ``attributes.attributes.workflow``:
+            #
+            #   * ``workflow.rule.query`` — the monitor query string;
+            #   * ``workflow.rule.creation_author_handle`` —
+            #     historically the user handle that created the rule;
+            #   * ``workflow.triage.assignee`` — the user that was
+            #     assigned the triage for this signal (only set once
+            #     a user has claimed it).
+            #
+            # ``_create_context_note`` expects ``creator`` /
+            # ``assignee`` as dicts with a ``name`` key, so we
+            # normalise to that shape here. Each one is omitted from
+            # the alert dict when the upstream signal does not carry
+            # the field so the Note rendering's truthiness guards
+            # short-circuit cleanly.
+            triage_info = workflow.get("triage", {})
+            assignee_info = triage_info.get("assignee", {})
+            assignee_handle = (
+                assignee_info.get("handle") if isinstance(assignee_info, dict) else None
+            )
+            creator_handle = rule_info.get("creation_author_handle") or rule_info.get(
+                "creator_handle"
+            )
+
+            alert_creator = {"name": creator_handle} if creator_handle else None
+            alert_assignee = {"name": assignee_handle} if assignee_handle else None
+            rule_query = rule_info.get("query") or ""
+
             # Include the raw signal data for observable extraction from samples
             alert = {
                 "id": signal_id,
@@ -498,6 +551,9 @@ class DataDogClient:
                 "signal_id": signal_id,
                 "rule_id": rule_info.get("id"),
                 "rule_name": rule_info.get("name"),
+                "query": rule_query,
+                "creator": alert_creator,
+                "assignee": alert_assignee,
                 "attack_type": appsec_info.get("attack_attempt", "unknown"),
                 "user_agent": http_info.get(
                     "useragent"

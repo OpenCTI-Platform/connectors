@@ -185,19 +185,37 @@ class DataImporter:
                                 {"type": "ipv6", "value": ip, "source": "field_search"}
                             )
 
-            # Process hosts/hostnames
+            # Process hosts/hostnames. ``host`` values from upstream
+            # field searches may carry a ``:port`` suffix (e.g.
+            # ``example.com:443``) or be a bracketed IPv6 literal
+            # (``[2001:db8::1]:443``). ``host.split(":")[0]`` is wrong
+            # for the IPv6 case — it would yield ``"[2001"`` and drop
+            # the observable entirely. IPv6 literals are not domain
+            # candidates anyway (they are handled by the IP-extraction
+            # pass above), so the safest thing is to skip bracketed
+            # values here and only strip a trailing ``:<digits>`` from
+            # the non-bracketed (domain) case.
             all_hosts = hosts + hostnames
             for host in all_hosts:
-                if isinstance(host, str):
-                    domain = host.split(":")[0]  # Strip port
-                    if self._is_valid_domain(domain):
-                        observables.append(
-                            {
-                                "type": "domain",
-                                "value": domain,
-                                "source": "field_search",
-                            }
-                        )
+                if not isinstance(host, str) or not host:
+                    continue
+                if host.startswith("["):
+                    # IPv6 literal — never a domain. Already covered by
+                    # the IP-extraction branch above.
+                    continue
+                domain = host
+                if ":" in domain:
+                    head, _, tail = domain.rpartition(":")
+                    if tail.isdigit():
+                        domain = head
+                if self._is_valid_domain(domain):
+                    observables.append(
+                        {
+                            "type": "domain",
+                            "value": domain,
+                            "source": "field_search",
+                        }
+                    )
 
             # Process URLs
             for url in urls:
@@ -383,7 +401,21 @@ class DataImporter:
 
     def _map_priority_to_severity(self, priority: str) -> str:
         """
-        Map DataDog priority to severity level
+        Map DataDog priority to severity level — strict inverse of
+        ``DataDogClient._convert_signal_to_alert`` (and the README
+        configuration table):
+
+        - ``critical`` → ``P1``  (client) becomes ``P1`` → ``critical``
+        - ``high``     → ``P2``                       ``P2`` → ``high``
+        - ``medium``   → ``P3``                       ``P3`` → ``medium``
+        - ``low``      → ``P4``                       ``P4`` → ``low``
+        - ``info``     → ``P5``                       ``P5`` → ``info``
+
+        ``P0`` does not appear in the client's forward mapping but is
+        documented by DataDog as a valid "above-critical" priority
+        level — mapped to ``critical`` here as the closest STIX
+        equivalent so a P0 signal never silently degrades to a lower
+        severity.
 
         Args:
             priority: DataDog priority (P0-P5 or None)
@@ -393,9 +425,9 @@ class DataImporter:
         """
         priority_map = {
             "P0": "critical",
-            "P1": "high",
-            "P2": "medium",
-            "P3": "low",
+            "P1": "critical",
+            "P2": "high",
+            "P3": "medium",
             "P4": "low",
             "P5": "info",
             None: "unknown",

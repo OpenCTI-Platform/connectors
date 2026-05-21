@@ -395,7 +395,7 @@ class StixConverter:
 
     def _create_custom_case_object(
         self, case_data: dict[str, Any], observables: list[Any] = None
-    ) -> dict[str, Any] | None:
+    ) -> CustomObjectCaseIncident | None:
         """
         Create custom incident response case object
 
