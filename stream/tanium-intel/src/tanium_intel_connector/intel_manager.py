@@ -1,5 +1,7 @@
 from pycti import OpenCTIConnectorHelper
 
+PATTERN_TYPE_YARA = "yara"
+
 
 class IntelManager:
     def __init__(self, helper, tanium_api_handler, cache):
@@ -171,12 +173,23 @@ class IntelManager:
         )
         intel_id = self.cache.get("intel", indicator_opencti_id)
         if intel_id is None:
-            if indicator.get("pattern_type") == "yara":
+            if indicator.get("pattern_type") == PATTERN_TYPE_YARA:
                 self.helper.connector_logger.info(
                     "[UPDATE] YARA indicator not found in cache, creating intel",
                     {"id": indicator_opencti_id},
                 )
-                return self.create_intel_from_indicator(indicator)
+                created_intel_id = self.create_intel_from_indicator(indicator)
+                if created_intel_id is None:
+                    self.helper.connector_logger.error(
+                        "[UPDATE] Failed to create YARA intel from cache-miss update",
+                        {"id": indicator_opencti_id},
+                    )
+                else:
+                    self.helper.connector_logger.info(
+                        "[UPDATE] YARA intel created from cache-miss update",
+                        {"id": indicator_opencti_id, "intel_id": created_intel_id},
+                    )
+                return created_intel_id
             self.helper.connector_logger.info(
                 "[UPDATE] Indicator does not exist, doing nothing",
                 {"id": indicator_opencti_id},
