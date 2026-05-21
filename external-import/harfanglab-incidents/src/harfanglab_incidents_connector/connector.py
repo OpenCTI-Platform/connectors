@@ -322,6 +322,7 @@ class HarfanglabIncidentsConnector:
                 self.helper.send_stix2_bundle(
                     stix_bundle,
                     work_id=work_id,
+                    update=True,
                     cleanup_inconsistent_bundle=True,
                 )
                 self.helper.log_info("[CONNECTOR] STIX bundle sent successfully")
