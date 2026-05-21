@@ -7,11 +7,11 @@ from lib.actor_typing import infer_actor_entity_type
 from pycti import CustomObservableCryptographicKey as CryptoKey
 from pycti import CustomObservablePhoneNumber as PhoneNumber
 from pycti import IntrusionSet as PyctiIntrusionSet
+from pycti import Malware as PyctiMalware
 from pycti import ThreatActorGroup as PyctiTAG
 from pycti.entities.opencti_identity import Identity as PyctiIdentity
 from pycti.entities.opencti_indicator import Indicator as PyctiIndicator
 from pycti.entities.opencti_location import Location as PyctiLocation
-from pycti.entities.opencti_malware import Malware as PyctiMalware
 from pycti.entities.opencti_stix_core_relationship import (
     StixCoreRelationship as PyctiSCR,
 )
