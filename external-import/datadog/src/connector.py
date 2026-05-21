@@ -211,6 +211,15 @@ class DataDogConnector:
         if not self.api_token:
             raise ValueError("DATADOG_TOKEN is required")
 
+        # DataDog's Security Monitoring v2 API rejects calls without
+        # the App key with a 403 (the client already sends it on every
+        # request). Failing fast here with a clear message keeps the
+        # connector from looping on permission errors when the
+        # operator forgets to set ``DATADOG_APP_KEY`` — both keys are
+        # listed as required in the README and samples.
+        if not self.app_key:
+            raise ValueError("DATADOG_APP_KEY is required")
+
         if not isinstance(self.import_interval, int) or self.import_interval <= 0:
             raise ValueError("import_interval must be a positive integer (minutes)")
 

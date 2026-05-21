@@ -502,7 +502,7 @@ class DataDogClient:
                 "user_agent": http_info.get(
                     "useragent"
                 ),  # Add user agent for observable extraction
-                "raw_signal": signal,  # Inaclude raw signal for sample-based observable extraction
+                "raw_signal": signal,  # Include raw signal for sample-based observable extraction
             }
 
             return alert

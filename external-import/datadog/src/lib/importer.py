@@ -413,11 +413,24 @@ class DataImporter:
         Returns:
             Parsed datetime or None
         """
-        if not timestamp_value:
+        # Explicit ``is None`` (rather than truthiness) so a legitimate
+        # epoch value of ``0`` — i.e. ``1970-01-01T00:00:00Z`` — is
+        # parsed instead of being silently dropped as "missing".
+        # ``""`` strings are also rejected up front so the ``str``
+        # branch below does not see empty input.
+        if timestamp_value is None or timestamp_value == "":
             return None
 
         try:
-            if isinstance(timestamp_value, int | float):
+            # Use the tuple form for ``isinstance`` (universally
+            # supported across Python versions and the conventional
+            # idiom in this repo). ``bool`` is intentionally NOT
+            # accepted even though it is an ``int`` subclass — a
+            # boolean here would almost certainly be a caller bug
+            # rather than a literal epoch 0 / 1.
+            if isinstance(timestamp_value, bool):
+                return None
+            if isinstance(timestamp_value, (int, float)):
                 # ``datetime.fromtimestamp`` without ``tz`` returns a
                 # naive datetime in local time — which makes the
                 # resulting STIX ``created`` / ``modified`` shift

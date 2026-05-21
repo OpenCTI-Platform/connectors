@@ -766,6 +766,15 @@ class StixConverter:
             if context.get("tags"):
                 content += f"Tags: {', '.join(context['tags'])}\n"
 
+            # ``query`` is the DataDog monitor query (FQL/log search
+            # expression) that triggered the signal. Surfacing it on
+            # the Note gives the analyst a one-click pivot back to the
+            # raw rule definition and matches the contract advertised
+            # by both the README and the catalog manifest description.
+            query = context.get("query")
+            if query:
+                content += f"Monitor query: {query}\n"
+
             if context.get("creator"):
                 creator_name = context["creator"].get("name", "Unknown")
                 content += f"Creator: {creator_name}\n"
