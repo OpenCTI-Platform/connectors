@@ -199,3 +199,54 @@ def test_report_with_iocs_in_description_produces_observables(
     assert "ipv4-addr" in bundle_types
     assert "domain-name" in bundle_types
     assert "file" in bundle_types  # SHA-256 creates a File observable
+
+
+def _build_importer_for_ioc_extraction(
+    author_identity: Identity, tlp_marking: MarkingDefinition, create_observables: bool
+) -> ReportImporter:
+    importer = ReportImporter.__new__(ReportImporter)
+    importer.author = author_identity
+    importer.tlp_marking = tlp_marking
+    importer.indicator_config = {"create_observables": create_observables}
+    importer.report_extract_iocs = ["ipv4", "domain", "sha256"]
+    importer._info = lambda *args, **kwargs: None
+    importer._warning = lambda *args, **kwargs: None
+    return importer
+
+
+def test_extract_iocs_respects_create_observables_disabled(
+    author_identity, tlp_marking
+):
+    importer = _build_importer_for_ioc_extraction(
+        author_identity, tlp_marking, create_observables=False
+    )
+
+    report = {
+        "description": (
+            "45.33.32.156 evil.example.com "
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+    }
+
+    observables = importer._extract_iocs_from_report(report)
+    assert observables == []
+
+
+def test_extract_iocs_when_create_observables_enabled(author_identity, tlp_marking):
+    importer = _build_importer_for_ioc_extraction(
+        author_identity, tlp_marking, create_observables=True
+    )
+
+    report = {
+        "description": (
+            "45.33.32.156 evil.example.com "
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+    }
+
+    observables = importer._extract_iocs_from_report(report)
+    observable_types = {observable.type for observable in observables}
+
+    assert "ipv4-addr" in observable_types
+    assert "domain-name" in observable_types
+    assert "file" in observable_types

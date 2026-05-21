@@ -486,6 +486,9 @@ class ReportImporter(BaseImporter):
 
     def _extract_iocs_from_report(self, report) -> list[_Observable]:
         """Extract IOCs from report text content and create STIX observables."""
+        if not self.indicator_config.get("create_observables", True):
+            return []
+
         if not self.report_extract_iocs:
             return []
 
