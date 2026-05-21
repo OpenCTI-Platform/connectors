@@ -1,5 +1,5 @@
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
@@ -25,7 +25,11 @@ class SigmaHQConnector:
             tlp_level="clear",
         )
 
-    def _collect_intelligence(self, release_metadata, rule_package) -> list:
+    def _collect_intelligence(
+        self,
+        release_metadata: dict[str, Any],
+        rule_package: str,
+    ) -> list:
         """
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects

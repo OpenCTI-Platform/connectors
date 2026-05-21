@@ -110,10 +110,14 @@ class ConverterToStix:
         }
         return mapping[level]
 
-    def convert_sigma_rule(self, rule):
-        """
-        :param rule:
-        :return:
+    def convert_sigma_rule(self, rule: dict[str, str]) -> list:
+        """Convert one Sigma rule into its STIX representation.
+
+        :param rule: ``{"filename": str, "rule_content": str}`` as produced
+            by :meth:`SigmaHQClient.download_and_convert_package`.
+        :return: list of STIX 2.1 objects (Indicator, optional
+            AttackPatterns / Vulnerabilities, and one ``indicates``
+            relationship per related SDO).
         """
 
         stix_objects = []

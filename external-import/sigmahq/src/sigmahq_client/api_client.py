@@ -13,6 +13,19 @@ from pycti import OpenCTIConnectorHelper
 # several megabytes.
 _HTTP_TIMEOUT_SECONDS: tuple[float, float] = (5.0, 120.0)
 
+# GitHub explicitly recommends sending an ``Accept`` header that pins the
+# REST API version and a descriptive ``User-Agent`` so requests can be
+# attributed back to the integration on the GitHub side (and so we are
+# not silently moved to the anonymous rate-limit bucket). See
+# https://docs.github.com/en/rest/overview/resources-in-the-rest-api.
+# ``X-GitHub-Api-Version`` opts us in to a specific, stable API surface
+# rather than whichever version GitHub happens to default to.
+_GITHUB_API_HEADERS: dict[str, str] = {
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "opencti-connector-sigmahq",
+}
+
 
 class SigmaHQClient:
 
@@ -23,8 +36,12 @@ class SigmaHQClient:
         self.helper = helper
         self.base_url = "https://api.github.com/repos/SigmaHQ/sigma/releases/latest"
 
-        # Define headers in session and update when needed
+        # Reuse a single ``requests.Session`` so TCP connections are pooled
+        # across the metadata call + the release-asset download. Headers
+        # are set once on the session and merged into every outgoing
+        # request; per-call overrides can still be passed to ``get``.
         self.session = requests.Session()
+        self.session.headers.update(_GITHUB_API_HEADERS)
 
     def get_latest_published_version(self) -> dict[str, Any] | None:
         """Return the latest SigmaHQ release metadata, or ``None`` on failure.
