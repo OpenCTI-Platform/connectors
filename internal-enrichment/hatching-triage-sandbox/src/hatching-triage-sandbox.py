@@ -468,19 +468,30 @@ class HatchingTriageSandboxConnector:
         bundles_sent = self.helper.send_stix2_bundle(bundle)
         return f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
 
-    def _process_file(self, observable, entity_type):
+    def _process_file(self, observable, entity_type, entity_id=None):
         self.helper.log_info("Triggering the sandbox...")
 
         sample_id = None
         observable_value = observable["observable_value"]
 
         if entity_type == "artifact":
-            if not observable["importFiles"]:
+            import_files = observable.get("importFiles", [])
+
+            # In auto-enrichment flows the enrichment payload may not include
+            # importFiles. Reload the observable with files before failing.
+            if not import_files and entity_id:
+                observable_with_files = self.helper.api.stix_cyber_observable.read(
+                    id=entity_id, withFiles=True
+                )
+                if observable_with_files:
+                    import_files = observable_with_files.get("importFiles", [])
+
+            if not import_files:
                 raise ValueError(f"No files found for {observable_value}")
 
             # Build the URI to download the file
-            file_name = observable["importFiles"][0]["name"]
-            file_id = observable["importFiles"][0]["id"]
+            file_name = import_files[0]["name"]
+            file_id = import_files[0]["id"]
             file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
             file_content = self.helper.api.fetch_opencti_file(file_uri, True)
             sha256 = self._get_sha256(file_content)
@@ -552,18 +563,19 @@ class HatchingTriageSandboxConnector:
 
         return sample_id
 
-    def _process_observable(self, observable, entity_type):
+    def _process_observable(self, observable, entity_type, entity_id=None):
         self.helper.log_info(
             "Processing the observable " + observable["observable_value"]
         )
 
         # If File, Artifact
-        return self._process_file(observable, entity_type)
+        return self._process_file(observable, entity_type, entity_id)
 
     def _process_message(self, data: Dict):
         observable = data["enrichment_entity"]
         stix_objects = data["stix_objects"]
         entity_type = observable["entity_type"].lower()
+        entity_id = data.get("entity_id")
 
         # Extract TLP
         tlp = "TLP:CLEAR"
@@ -576,7 +588,7 @@ class HatchingTriageSandboxConnector:
             )
 
         if entity_type in ["artifact", "url"]:
-            return self._process_observable(observable, entity_type)
+            return self._process_observable(observable, entity_type, entity_id)
         else:
             if not data.get("event_type"):
                 self._send_bundle(stix_objects)
