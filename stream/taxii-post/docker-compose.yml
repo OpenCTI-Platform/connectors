@@ -22,4 +22,7 @@ services:
       - TAXII_PASSWORD= # Password for basic auth
       - TAXII_VERSION=2.1 # Version for TAXII
       - TAXII_STIX_VERSION=2.1 # Version for STIX
+      - TAXII_DELETE_CREATED_BY_REF=true
+      - TAXII_DELETE_MARKING_DEFINITION=true
+
     restart: always

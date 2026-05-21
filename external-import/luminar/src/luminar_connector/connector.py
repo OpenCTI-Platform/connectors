@@ -114,7 +114,7 @@ class ConnectorLuminar:
         self.helper = OpenCTIConnectorHelper(self.config.load)
 
         # Extra config
-        self.luminar_base_url = self.config.luminar_base_url
+        self.luminar_base_url = str(self.config.luminar_base_url).rstrip("/")
         self.luminar_account_id = self.config.luminar_account_id
         self.luminar_client_id = self.config.luminar_client_id
         self.luminar_client_secret = self.config.luminar_client_secret
