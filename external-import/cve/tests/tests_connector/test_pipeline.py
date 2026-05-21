@@ -456,6 +456,20 @@ async def test_no_duplicate_stix_objects_in_bundle():
         ), f"Bundle {i} has duplicate STIX IDs: {[x for x in ids if ids.count(x) > 1]}"
 
 
+async def test_vulnerability_dates_are_normalized_to_utc():
+    """Published and modified dates from NVD should be normalized to UTC."""
+    converter, _ = _make_converter(num_pages=1, vulns_per_page=1)
+    vulnerability = make_vulnerability("CVE-2024-9999")
+    vulnerability["cve"]["published"] = "2024-09-24T23:30:00.000-05:00"
+    vulnerability["cve"]["lastModified"] = "2024-09-25T01:15:00.000Z"
+
+    stix_vulnerability = converter._vulnerability_to_stix2(vulnerability)
+    stix_vulnerability_data = json.loads(stix_vulnerability.serialize())
+
+    assert stix_vulnerability_data["created"] == "2024-09-25T04:30:00.000Z"
+    assert stix_vulnerability_data["modified"] == "2024-09-25T01:15:00.000Z"
+
+
 async def test_timeout_error_is_retried_not_silenced():
     """TimeoutError from aiohttp must be retried by request(), not swallowed
     as None by get_complete_collection() which would crash the TaskGroup.
