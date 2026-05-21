@@ -8,7 +8,13 @@ services:
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=ChangeMe
       - "CONNECTOR_NAME=Ransomware Connector"
-      - CONNECTOR_SCOPE=identity,attack-pattern,course-of-action,intrusion-set,malware,tool,report
+      # Comma-separated STIX entity types this connector is allowed to
+      # write. The set below mirrors the entities ``create_bundle_list``
+      # actually emits — including every flag-gated optional SDO and
+      # the relationships that bind them together. Trim it down to the
+      # subset matching the ``CONNECTOR_CREATE_*`` flags enabled below
+      # if you want a tighter scope.
+      - CONNECTOR_SCOPE=identity,domain-name,location,threat-actor,intrusion-set,campaign,report,relationship
       - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error
       - CONNECTOR_DURATION_PERIOD=PT12H # ISO 8601 period between two scheduled runs
       - CONNECTOR_PULL_HISTORY=false # Set to true to backfill historical data; produces a large initial ingest

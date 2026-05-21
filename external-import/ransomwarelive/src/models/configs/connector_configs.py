@@ -56,7 +56,15 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     )
     history_start_year: PositiveInt = Field(
         default=2023,
-        description="The year to start from.",
+        description=(
+            "Year (or ``YYYYMM``) to start the historical backfill "
+            "from. Accepts the four-digit year shape (``2023``) — "
+            "backfill begins on January 1st of that year — or the "
+            "six-digit year-month shape (``202306``) — backfill "
+            "begins on the first of that month. The ransomware.live "
+            "feed only goes back to 2020; values older than 2020 "
+            "are clamped to ``2020-01`` at runtime."
+        ),
     )
 
     # Entity-creation flags. Every flag defaults to ``False`` so the

@@ -271,6 +271,13 @@ class RansomwareAPIConnector:
                 and relation_threat_actor_victim
                 and threat_actor
             ):
+                # The Threat Actor SDO itself has to be referenced from
+                # the Report alongside its outgoing ``targets``
+                # relationship — otherwise enabling ``create_report``
+                # together with ``create_threat_actor`` produces a
+                # Report whose ``object_refs`` reach the relationship
+                # but not the Threat Actor entity at the source of it.
+                object_refs.append(threat_actor.id)
                 object_refs.append(relation_threat_actor_victim.get("id"))
             if (
                 self.config.connector.create_threat_actor
@@ -365,9 +372,14 @@ class RansomwareAPIConnector:
                             relation_campaign_sector.get("id")
                         )
 
-        # 7. Creating Domain object
+        # 7. Creating Domain object — guard the unicode-strip against a
+        # missing/null ``domain`` field. ``item.get("domain")`` can be
+        # ``None`` (or absent) and calling ``.replace`` on it would
+        # ``AttributeError`` and abort the whole bundle build for the
+        # victim. Defaulting to an empty string keeps the downstream
+        # ``is_domain`` / ``domain_extractor`` checks happy.
         domain_name = None
-        domain_obj = item.get("domain").replace("\u200b", "")
+        domain_obj = (item.get("domain") or "").replace("\u200b", "")
 
         if is_domain(item.get("victim")):
             domain_name = domain_extractor(item.get("victim"))
@@ -624,10 +636,20 @@ class RansomwareAPIConnector:
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 
+            # ``timedelta.seconds`` returns only the 0..86399
+            # seconds-of-day component and silently wraps negative
+            # deltas (items disclosed older than ``last_run - 1 day``)
+            # back into the in-window range, defeating the 24h filter
+            # and re-importing every old victim on every cycle.
+            # ``total_seconds()`` preserves the day component (and the
+            # sign) so the comparison behaves correctly across day
+            # boundaries.
             if not last_run_datetime:
                 time_diff = 0
             else:
-                time_diff = (created - (last_run_datetime - timedelta(days=1))).seconds
+                time_diff = (
+                    created - (last_run_datetime - timedelta(days=1))
+                ).total_seconds()
 
             if time_diff < ONE_DAY_IN_SECONDS:
                 try:
