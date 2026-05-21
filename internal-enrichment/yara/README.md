@@ -141,8 +141,10 @@ flowchart LR
     H --> J{Propagate Malware?}
     H --> K{Propagate Labels?}
     J -->|Yes| L[Add Artifact related-to Malware]
+    J -->|No| N[OpenCTI]
     K -->|Yes| M[Add YARA labels to Artifact]
-    H --> N[OpenCTI]
+    K -->|No| N
+    H --> N
     L --> N
     M --> N
 ```
