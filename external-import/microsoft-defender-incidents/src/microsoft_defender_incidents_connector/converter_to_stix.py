@@ -1,3 +1,5 @@
+import re
+
 import stix2
 import stix2.exceptions
 from pycti import (
@@ -12,6 +14,8 @@ from pycti import (
 )
 
 from .utils import CASE_INCIDENT_PRIORITIES, format_datetime
+
+MITRE_TECHNIQUE_ID_PATTERN = re.compile(r"(T\d{4}(?:\.\d{3})?)", re.IGNORECASE)
 
 
 def handle_stix2_error(decorated_function):
@@ -50,6 +54,33 @@ class ConverterToStix:
             description="Import incidents according to alerts found in Microsoft Defender",
         )
         self.all_hashes = set()
+
+    @staticmethod
+    def _normalize_mitre_technique(technique: str | None) -> str | None:
+        """
+        Extract and normalize a MITRE ATT&CK technique ID from raw technique data.
+        """
+        if not isinstance(technique, str):
+            return None
+
+        normalized_technique = technique.strip().upper()
+        if not normalized_technique:
+            return None
+
+        match = MITRE_TECHNIQUE_ID_PATTERN.search(normalized_technique)
+        return match.group(1) if match else None
+
+    @staticmethod
+    def _build_mitre_technique_url(technique_id: str) -> str:
+        """
+        Build official MITRE ATT&CK technique URL from a normalized technique ID.
+        """
+        main_technique, _, sub_technique = technique_id.partition(".")
+        if sub_technique:
+            return (
+                f"https://attack.mitre.org/techniques/{main_technique}/{sub_technique}/"
+            )
+        return f"https://attack.mitre.org/techniques/{main_technique}/"
 
     @staticmethod
     def create_author_identity(
@@ -332,18 +363,33 @@ class ConverterToStix:
         return stix_hostname
 
     @handle_stix2_error
-    def create_mitre_attack_pattern(self, technique: str) -> stix2.AttackPattern:
+    def create_mitre_attack_pattern(self, technique: str) -> stix2.AttackPattern | None:
         """
         Create STIX 2.1 Attack Pattern object
-        :param technique: Mitre Attack Pattern name
+        :param technique: Raw Mitre Attack Pattern
         :return: Attack Pattern in STIX 2.1 format
         """
+        technique_id = self._normalize_mitre_technique(technique)
+        if not technique_id:
+            self.helper.connector_logger.warning(
+                "The mitre technique cannot be converted to an ATT&CK technique ID.",
+                {"technique": technique},
+            )
+            return None
+
         stix_attack_pattern = stix2.AttackPattern(
-            id=AttackPattern.generate_id(technique, technique),
-            name=technique,
+            id=AttackPattern.generate_id(technique_id, technique_id),
+            name=technique_id,
             object_marking_refs=[self.tlp_marking],
             created_by_ref=self.author["id"],
-            custom_properties={"x_mitre_id": technique},
+            custom_properties={"x_mitre_id": technique_id},
+            external_references=[
+                {
+                    "source_name": "mitre-attack",
+                    "external_id": technique_id,
+                    "url": self._build_mitre_technique_url(technique_id),
+                }
+            ],
         )
         return stix_attack_pattern
 
