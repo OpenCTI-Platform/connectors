@@ -192,9 +192,20 @@ class Connector:
                 triggering_entity.object_marking_refs, ai_bundle, extend=True
             )
 
-        else:  # Create a Report with the file
-            report = make_report(file, ai_bundle.get("objects", []))
-            ai_bundle = extend_bundle(ai_bundle, [report])
+        else:
+            ai_reports_bundle = filter_bundle_entities_by_type(ai_bundle, {"report"})
+            ai_reports = ai_reports_bundle.get("objects", [])
+            if len(ai_reports) > 0:
+                first_report = ai_reports[0]
+                updated_report = update_custom_properties(
+                    {"x_opencti_files": [file.to_custom_property()]}, first_report
+                )
+                ai_bundle = replace_in_bundle(
+                    ai_bundle, first_report["id"], new_object=updated_report
+                )
+            else:  # Create a Report with the file
+                report = make_report(file, ai_bundle.get("objects", []))
+                ai_bundle = extend_bundle(ai_bundle, [report])
 
         ## send bundle to OpenCTI
         # TODO sanitize entity with name <2 char
