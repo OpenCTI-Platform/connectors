@@ -388,12 +388,17 @@ def feeder_enriched():
 class TestConnectorRegistration:
     def test_connector_active(self):
         result = graphql("{ connectors { name active connector_type } }")
-        polyswarm = [
-            c for c in result["connectors"] if "polyswarm" in c["name"].lower()
+        enrichment = [
+            c
+            for c in result["connectors"]
+            if "polyswarm enrichment" in c["name"].lower()
         ]
-        assert len(polyswarm) == 1
-        assert polyswarm[0]["active"] is True
-        assert polyswarm[0]["connector_type"] == "INTERNAL_ENRICHMENT"
+        assert len(enrichment) == 1, (
+            "Expected exactly one 'PolySwarm Enrichment' connector. "
+            f"Got: {[c['name'] for c in result['connectors']]}"
+        )
+        assert enrichment[0]["active"] is True
+        assert enrichment[0]["connector_type"] == "INTERNAL_ENRICHMENT"
 
 
 class TestEnrichmentCreatesNote:

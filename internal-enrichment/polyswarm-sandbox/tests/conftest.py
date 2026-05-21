@@ -1,6 +1,7 @@
 """Shared fixtures for polyswarm-sandbox unit tests."""
 
 import os
+import subprocess
 import sys
 
 import pytest
@@ -9,6 +10,48 @@ import vcr
 # Add src/ to path
 SRC_DIR = os.path.join(os.path.dirname(__file__), os.pardir, "src")
 sys.path.insert(0, os.path.abspath(SRC_DIR))
+
+
+# stix2-validator >=3.3 ships without the OASIS STIX 2.1 JSON schemas in its
+# wheel but still looks for them at <install>/schemas-<version>/schemas/.
+# Fetch them once into a cache dir and patch ValidationOptions so every
+# validate_string() call has a schema_dir to consult.
+_SCHEMA_REPO = "https://github.com/oasis-open/cti-stix2-json-schemas.git"
+_SCHEMA_CACHE = os.path.expanduser("~/.cache/polyswarm-stix-tests/cti-stix2-json-schemas")
+
+
+def _ensure_stix21_schemas():
+    if not os.path.isdir(_SCHEMA_CACHE):
+        os.makedirs(os.path.dirname(_SCHEMA_CACHE), exist_ok=True)
+        subprocess.run(
+            ["git", "clone", "--depth", "1", _SCHEMA_REPO, _SCHEMA_CACHE],
+            check=True,
+            capture_output=True,
+        )
+    # OASIS repo master holds STIX 2.1 schemas directly under schemas/
+    return os.path.join(_SCHEMA_CACHE, "schemas")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _patch_stix_validator_schema_dir():
+    try:
+        from stix2validator import validator as validator_module
+    except ImportError:
+        yield
+        return
+    schema_dir = _ensure_stix21_schemas()
+    original_get_error_generator = validator_module._get_error_generator
+
+    def patched(name, obj, sd=None, version=None, default="core"):
+        if sd is None:
+            sd = schema_dir
+        if version is None:
+            return original_get_error_generator(name, obj, sd, default=default)
+        return original_get_error_generator(name, obj, sd, version=version, default=default)
+
+    validator_module._get_error_generator = patched
+    yield
+    validator_module._get_error_generator = original_get_error_generator
 
 
 class StubHelper:
