@@ -10,7 +10,7 @@
     "Sandbox"
   ],
   "verified": true,
-  "last_verified_date": null,
+  "last_verified_date": "2026-05-21",
   "playbook_supported": true,
   "max_confidence_level": 60,
   "support_version": ">=5.6.1",
