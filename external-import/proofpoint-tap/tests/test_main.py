@@ -2,8 +2,9 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
-from proofpoint_tap import Connector, ConnectorSettings
 from pycti import OpenCTIConnectorHelper
+
+from proofpoint_tap import Connector, ConnectorSettings
 
 
 @pytest.fixture
@@ -113,3 +114,29 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     assert connector._helper == helper
     assert connector._campaigns == mock_campaigns
     assert connector._events == mock_events
+
+
+def test_initiate_work_logs_last_ingestion_run_attempt():
+    settings = StubConnectorSettings()
+    mock_helper = MagicMock()
+    mock_helper.connector_logger = MagicMock()
+    mock_helper.connect_id = "connector-id"
+    mock_helper.connect_name = "Test Connector"
+    mock_helper.get_state.return_value = {
+        "last_campaign_datetime": "2026-01-01T00:00:00+00:00"
+    }
+    mock_helper.api.work.initiate_work.return_value = "work-id"
+
+    connector = Connector(
+        config=settings,
+        helper=mock_helper,
+        campaigns=MagicMock(),
+        events=MagicMock(),
+    )
+
+    connector._initiate_work()
+
+    mock_helper.connector_logger.info.assert_any_call(
+        "[CONNECTOR] Connector last ingestion run attempt last_campaign_datetime",
+        {"last_campaign_datetime": "2026-01-01T00:00:00+00:00"},
+    )

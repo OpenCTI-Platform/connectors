@@ -109,7 +109,7 @@ class Connector:
             last_ingested_datetime_str = state.get(state_key)
             if last_ingested_datetime_str is not None:
                 self._logger.info(
-                    f"[CONNECTOR] Connector last ingested {state_key} datetime",
+                    f"[CONNECTOR] Connector last ingestion run attempt {state_key}",
                     {state_key: last_ingested_datetime_str},
                 )
                 self._logger.warning(
