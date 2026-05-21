@@ -529,40 +529,6 @@ def filter_relationship_triplets(
     )
 
 
-def update_author(
-    author_id: str, stix_object: stix2.v21._STIXBase21
-) -> stix2.v21._STIXBase21:
-    """Attach an author (identity) to a STIX object.
-
-    Args:
-        author_id (str): The ID of the author identity to attach.
-        stix_object (stix2.v21._STIXBase21): The STIX object to process.
-
-    Returns:
-        (stix2.v21._STIXBase21): The processed STIX object with the author attached.
-
-    Examples:
-        >>> import stix2
-        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
-        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
-        >>> malware_with_author = attach_author(identity["id"], malware)
-        >>> # observable case
-        >>> ip = stix2.IPv4Address(value="127.0.0.1")
-        >>> ip_with_author = attach_author(identity["id"], ip)
-    """
-    object_dict = json.loads(stix_object.serialize())
-
-    try:
-        object_dict["created_by_ref"] = author_id
-        return stix2.parse(object_dict)
-    except stix2.exceptions.ExtraPropertiesError:
-        # for some stix object created by ref is not supported (ex: observable)
-        # we use x_opencti_created_by_ref instead
-        object_dict.pop("created_by_ref", None)
-        object_dict["x_opencti_created_by_ref"] = author_id
-        return stix2.parse(object_dict, allow_custom=True)
-
-
 def update_object_marking_refs(
     marking_ids: list[str], stix_object: stix2.v21._STIXBase21, extend: bool = True
 ) -> stix2.v21._STIXBase21:
