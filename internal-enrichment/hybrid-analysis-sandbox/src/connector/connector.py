@@ -1,13 +1,14 @@
 import time
+from copy import deepcopy
 from datetime import datetime
 from urllib.parse import urljoin
 
 import stix2
 from connector.settings import ConnectorSettings
+from hybrid_analysis_client import HybridAnalysisAPIError, HybridAnalysisClient
 from pycti import (
-    Identity,
-    STIX_EXT_OCTI_SCO,
     AttackPattern,
+    Identity,
     MalwareAnalysis,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
@@ -15,10 +16,8 @@ from pycti import (
 from stix2 import DomainName, File, IPv4Address, IPv6Address
 
 
-class TLPExceededError(ValueError):
-    """Raised when the TLP of the observable is greater than the maximum TLP allowed for enrichment."""
-
-    pass
+class HybridAnalysisReportError(Exception):
+    """Custom exception for errors related to Hybrid Analysis processing file."""
 
 
 class HybridAnalysis:
@@ -37,6 +36,7 @@ class HybridAnalysis:
 
         self.max_tlp = self.config.hybrid_analysis_sandbox.max_tlp
 
+        # Author to add to ingested objects
         self.identity = stix2.Identity(
             id=Identity.generate_id(
                 name="Hybrid Analysis", identity_class="organization"
@@ -45,41 +45,68 @@ class HybridAnalysis:
             identity_class="organization",
             description="Hybrid Analysis Sandbox.",
         )
+        # TLP marking to apply to ingested objects
+        self.tlp = stix2.TLP_WHITE
 
-    def _send_knowledge(self, stix_objects, stix_entity, opencti_entity, report):
-        if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
-            if report["md5"] is not None:
-                stix_entity["hashes"]["MD5"] = report["md5"]
-            if report["sha1"] is not None:
-                stix_entity["hashes"]["SHA-1"] = report["sha1"]
-            if report["sha256"] is not None:
-                stix_entity["hashes"]["SHA-256"] = report["sha256"]
-            self.helper.api.stix2.put_attribute_in_extension(
-                stix_entity,
-                STIX_EXT_OCTI_SCO,
-                "additional_names",
-                report["submit_name"],
-                True,
+    def _create_knowledge(
+        self, stix_entity: dict, opencti_entity: dict, report: dict
+    ) -> list[stix2.v21._STIXBase21]:
+        """Create STIX objects based on the Hybrid Analysis report.
+        :param stix_entity: The original STIX entity being enriched.
+        :param opencti_entity: The OpenCTI representation of the entity being enriched.
+        :param report: The Hybrid Analysis report data.
+        :return: A list of enriched STIX objects.
+        """
+        # Do not modify original entity (to avoid side effects in case of error)
+        enriched_entity = deepcopy(stix_entity)
+
+        # Replace original entity with enriched entity
+        enriched_objects = [
+            (
+                enriched_entity
+                if stix_object["id"] == enriched_entity["id"]
+                else stix_object
             )
-            if opencti_entity["entity_type"] == "StixFile":
-                stix_entity["size"] = report["size"]
-        self.helper.api.stix2.put_attribute_in_extension(
-            stix_entity, STIX_EXT_OCTI_SCO, "score", report["threat_score"]
-        )
+            for stix_object in self.stix_objects
+        ]
+
+        if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
+            # Modifying the hashes will produce new `Standard STIX ID`s on OpenCTI side
+            # This is an **expected** behavior handled by OpenCTI during bundle ingestion
+            if report["md5"] is not None:
+                if enriched_entity.get("hashes") is None:
+                    enriched_entity["hashes"] = {}
+                enriched_entity["hashes"]["MD5"] = report["md5"]
+            if report["sha1"] is not None:
+                if enriched_entity.get("hashes") is None:
+                    enriched_entity["hashes"] = {}
+                enriched_entity["hashes"]["SHA-1"] = report["sha1"]
+            if report["sha256"] is not None:
+                if enriched_entity.get("hashes") is None:
+                    enriched_entity["hashes"] = {}
+                enriched_entity["hashes"]["SHA-256"] = report["sha256"]
+
+            if report["submit_name"] is not None:
+                enriched_entity["x_opencti_additional_names"] = report["submit_name"]
+
+        if opencti_entity["entity_type"] == "StixFile":
+            enriched_entity["size"] = report["size"]
+
+        if report["threat_score"] is not None:
+            enriched_entity["x_opencti_score"] = report["threat_score"]
+
         operating_system = None
         if report["environment_id"] is not None:
             operating_system = stix2.Software(name=report["environment_description"])
-            stix_objects.append(operating_system)
+            enriched_objects.append(operating_system)
+
         analysis_sco_refs = []
-        external_reference = stix2.ExternalReference(
-            source_name="Hybrid Analysis",
-            url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
-            description="Hybrid Analysis Report",
-        )
+
         for tag in report["type_short"]:
-            self.helper.api.stix2.put_attribute_in_extension(
-                stix_entity, STIX_EXT_OCTI_SCO, "labels", tag, True
-            )
+            if enriched_entity.get("labels") is None:
+                enriched_entity["labels"] = []
+            enriched_entity["labels"].append(tag)
+
         for tactic in report["mitre_attcks"]:
             if (
                 tactic["malicious_identifiers_count"] > 0
@@ -96,62 +123,65 @@ class HybridAnalysis:
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_entity["id"], attack_pattern.id
+                        "related-to", enriched_entity["id"], attack_pattern.id
                     ),
                     relationship_type="related-to",
                     created_by_ref=self.identity.id,
-                    source_ref=stix_entity["id"],
+                    source_ref=enriched_entity["id"],
                     target_ref=attack_pattern.id,
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[self.tlp],
                 )
-                stix_objects.append(attack_pattern)
-                stix_objects.append(relationship)
+                enriched_objects.append(attack_pattern)
+                enriched_objects.append(relationship)
+
         for domain in report["domains"]:
             if domain != opencti_entity["observable_value"]:
                 domain_stix = DomainName(
                     value=domain,
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[self.tlp],
                     custom_properties={"created_by_ref": self.identity.id},
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to", stix_entity["id"], domain_stix.id
+                        "related-to", enriched_entity["id"], domain_stix.id
                     ),
                     relationship_type="related-to",
                     created_by_ref=self.identity.id,
-                    source_ref=stix_entity["id"],
+                    source_ref=enriched_entity["id"],
                     target_ref=domain_stix.id,
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[self.tlp],
                 )
                 analysis_sco_refs.append(domain_stix.id)
-                stix_objects.append(domain_stix)
-                stix_objects.append(relationship)
+                enriched_objects.append(domain_stix)
+                enriched_objects.append(relationship)
+
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
                 host_stix = IPv4Address(
                     value=host,
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[self.tlp],
                     custom_properties={"created_by_ref": self.identity.id},
                 )
             else:
                 host_stix = IPv6Address(
                     value=host,
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[self.tlp],
                     custom_properties={"created_by_ref": self.identity.id},
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
-                    "related-to", stix_entity["id"], host_stix.id
+                    "related-to", enriched_entity["id"], host_stix.id
                 ),
                 relationship_type="related-to",
                 created_by_ref=self.identity.id,
-                source_ref=stix_entity["id"],
+                source_ref=enriched_entity["id"],
                 target_ref=host_stix.id,
-                object_marking_refs=[stix2.TLP_WHITE],
+                object_marking_refs=[self.tlp],
             )
             analysis_sco_refs.append(host_stix.id)
-            stix_objects.append(host_stix)
-            stix_objects.append(relationship)
+            enriched_objects.append(host_stix)
+            enriched_objects.append(relationship)
+
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
                 file_stix = File(
@@ -164,51 +194,31 @@ class HybridAnalysis:
                     name=file["name"],
                     custom_properties={"x_opencti_labels": file["type_tags"]},
                     created_by_ref=self.identity.id,
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[self.tlp],
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "drops", stix_entity["id"], file_stix.id
+                        "drops", enriched_entity["id"], file_stix.id
                     ),
                     relationship_type="drops",
                     created_by_ref=self.identity.id,
-                    source_ref=stix_entity["id"],
+                    source_ref=enriched_entity["id"],
                     target_ref=file_stix.id,
                 )
                 analysis_sco_refs.append(file_stix.id)
-                stix_objects.append(file_stix)
-                stix_objects.append(relationship)
-        for tactic in report["mitre_attcks"]:
-            if (
-                tactic["malicious_identifiers_count"] > 0
-                or tactic["suspicious_identifiers_count"] > 0
-            ):
-                attack_pattern = stix2.AttackPattern(
-                    id=AttackPattern.generate_id(
-                        tactic["technique"], tactic["attck_id"]
-                    ),
-                    created_by_ref=self.identity.id,
-                    name=tactic["technique"],
-                    custom_properties={"x_mitre_id": tactic["attck_id"]},
-                )
-                relationship = stix2.Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", stix_entity["id"], attack_pattern.id
-                    ),
-                    relationship_type="related-to",
-                    created_by_ref=self.identity.id,
-                    source_ref=stix_entity["id"],
-                    target_ref=attack_pattern.id,
-                )
-                stix_objects.append(attack_pattern)
-                stix_objects.append(relationship)
+                enriched_objects.append(file_stix)
+                enriched_objects.append(relationship)
+
         result_name = "Result " + opencti_entity["observable_value"]
         analysis_started = (
             datetime.now()
             if report["analysis_start_time"] is None
-            else datetime.strptime(
-                report["analysis_start_time"], "%Y-%m-%dT%H:%M:%S+00:00"
-            )
+            else datetime.fromisoformat(report["analysis_start_time"])
+        )
+        external_reference = stix2.ExternalReference(
+            source_name="Hybrid Analysis",
+            url="https://www.hybrid-analysis.com/sample/" + report["sha256"],
+            description="Hybrid Analysis Report",
         )
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name, "HybridAnalysis"),
@@ -217,7 +227,7 @@ class HybridAnalysis:
             analysis_started=analysis_started,
             submitted=datetime.now(),
             result=report["verdict"],
-            sample_ref=stix_entity["id"],
+            sample_ref=enriched_entity["id"],
             created_by_ref=self.identity.id,
             operating_system_ref=(
                 operating_system["id"] if operating_system is not None else None
@@ -225,21 +235,9 @@ class HybridAnalysis:
             analysis_sco_refs=analysis_sco_refs,
             external_references=[external_reference],
         )
-        stix_objects.append(malware_analysis)
-        if len(stix_objects) > 0:
-            serialized_bundle = self.helper.stix2_create_bundle(
-                [self.identity] + stix_objects
-            )
-            if not serialized_bundle:
-                return "Nothing to attach"
-            bundles_sent = self.helper.send_stix2_bundle(
-                serialized_bundle, cleanup_inconsistent_bundle=True
-            )
-            return (
-                "Sent " + str(len(bundles_sent)) + " stix bundle(s) for worker import"
-            )
-        else:
-            return "Nothing to attach"
+        enriched_objects.append(malware_analysis)
+
+        return [self.identity, self.tlp] + enriched_objects
 
     def _get_report(self, report_id: str) -> dict:
         """Poll the Hybrid Analysis API until the report of submitted file is ready and return the report summary.
@@ -369,11 +367,38 @@ class HybridAnalysis:
             self.helper.connector_logger.info(message)
             return message
 
+        enriched_objects = self._create_knowledge(stix_entity, opencti_entity, report)
+        bundles_sent = self._send_bundle(enriched_objects)
 
-    def _process_message(self, data: Dict):
+        message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+        self.helper.connector_logger.info(message)
+        return message
+
+    def _send_bundle(
+        self, stix_objects: list[stix2.v21._STIXBase21] | list[dict]
+    ) -> list[str]:
+        """Send a STIX bundle to OpenCTI.
+        :param stix_objects: The list of STIX objects to include in the bundle.
+        :return: List of the serialized bundle sent to OpenCTI.
+        """
+        if len(stix_objects) == 0:
+            return []
+
+        bundle = self.helper.stix2_create_bundle(stix_objects)
+        return self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)  # type: ignore[union-attr]
+
+    def _process_message(self, data: dict) -> str:
+        """Process incoming message from OpenCTI.
+        For playbook compatibility, the original bundle is sent back to OpenCTI in case of error during the enrichment process.
+        :param data: The message data containing the STIX objects and entity information.
+        :return: A message indicating the result of the operation.
+        """
         stix_objects = data["stix_objects"]
         stix_entity = data["stix_entity"]
         opencti_entity = data["enrichment_entity"]
+
+        self.stix_objects = stix_objects
+        original_stix_objects = deepcopy(stix_objects)  # save a copy in case of error
 
         tlp = "TLP:CLEAR"
         for marking_definition in opencti_entity["objectMarking"]:
@@ -381,35 +406,38 @@ class HybridAnalysis:
                 tlp = marking_definition["definition"]
 
         try:
-            if OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
-                return self._process_observable(
-                    stix_objects, stix_entity, opencti_entity
-                )
+            if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+                self._send_bundle(original_stix_objects)
 
-            raise TLPExceededError(
-                "Do not send any data, TLP of the observable is greater than MAX TLP"
+                message = "Do not send any data, TLP of the observable is greater than MAX TLP"
+                self.helper.connector_logger.info(f"[CONNECTOR] {message}")
+                return message
+
+            return self._process_observable(stix_entity, opencti_entity)
+
+        except (HybridAnalysisAPIError, HybridAnalysisReportError) as err:
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] {err.__class__.__name__}: {str(err)}"
             )
-
+            self._send_bundle(original_stix_objects)
+            raise err
         except Exception as err:
-            if isinstance(err, TLPExceededError):
-                self.helper.connector_logger.info(f"[CONNECTOR] {str(err)}")
-            else:
-                self.helper.connector_logger.error(
-                    "[CONNECTOR] An unexpected error occurred",
-                    {"error": str(err)},
-                )
-
-            # Send the original bundle if the connector has been triggered by a playbook
-            event_type = data.get("event_type")
-            if not event_type:
-                self.helper.stix2_create_bundle(stix_objects)
-
+            self.helper.connector_logger.error(
+                "[CONNECTOR] An unexpected error occurred",
+                {"error": str(err)},
+            )
+            self._send_bundle(original_stix_objects)
             raise err
 
     def start(self):
+        """Start the connector by listening to messages from OpenCTI."""
         self.helper.listen(message_callback=self._process_message)
 
     def detect_ip_version(self, value):
+        """Detect the IP version (IPv4 or IPv6) based on the length of the IP address string.
+        :param value: The IP address string to analyze.
+        :return: "IPv4-Addr" if the value is an IPv4 address, "IPv6-Addr" if it is an IPv6 address.
+        """
         if len(value) > 16:
             return "IPv6-Addr"
         else:
