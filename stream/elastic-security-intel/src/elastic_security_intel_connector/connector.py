@@ -7,7 +7,7 @@ It also supports custom pattern types for Elastic query languages.
 """
 
 import json
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pycti import OpenCTIConnectorHelper
 
@@ -24,6 +24,8 @@ class ElasticSecurityIntelConnector:
     indicators with Elastic Security's threat intelligence index and creates SIEM rules
     for pattern-based indicators.
     """
+
+    MAX_LOG_DATA_LENGTH = 500
 
     def __init__(self):
         """Initialize the connector with necessary configurations"""
@@ -312,7 +314,7 @@ class ElasticSecurityIntelConnector:
             )
             self._process_observable_batch([data], "delete")
 
-    def validate_json(self, msg) -> Dict | None:
+    def validate_json(self, msg) -> Optional[Dict]:
         """
         Validate and parse JSON data from the stream
         :param msg: Message event from stream
@@ -322,9 +324,15 @@ class ElasticSecurityIntelConnector:
             parsed_msg = json.loads(msg.data)
             return parsed_msg
         except json.JSONDecodeError as err:
+            if isinstance(msg.data, bytes):
+                msg_data = msg.data.decode("utf-8", errors="replace")
+            else:
+                msg_data = str(msg.data)
+            if len(msg_data) > self.MAX_LOG_DATA_LENGTH:
+                msg_data = f"{msg_data[: self.MAX_LOG_DATA_LENGTH]}...(truncated)"
             self.helper.connector_logger.error(
                 "Data cannot be parsed to JSON",
-                {"error": str(err), "msg_data": msg.data},
+                {"error": str(err), "msg_data": msg_data},
             )
             return None
 
