@@ -139,7 +139,13 @@ class VirusTotalLiveHuntNotificationsConfig(BaseConfigModel):
         default=False,
     )
     create_file_indicators: bool = Field(
-        description="Create a File indicator for each matched file.",
+        description=(
+            "Create a File indicator (SHA-256 pattern) for each matched "
+            "file. Only effective when ``create_file`` is true — the "
+            "File indicator is emitted alongside the File observable in "
+            "``LivehuntBuilder.create_file``, so leaving ``create_file`` "
+            "off means this flag has no effect."
+        ),
         default=False,
     )
     create_domain_name_indicators: bool = Field(

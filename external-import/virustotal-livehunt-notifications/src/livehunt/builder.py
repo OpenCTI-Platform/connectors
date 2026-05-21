@@ -246,7 +246,18 @@ class LivehuntBuilder:
                         file_id,
                     )
 
-            if len(self.bundle) > 0:
+            # ``self.bundle`` is initialised with ``[author, tlp_marking]``
+            # in ``__init__`` and reset to the same baseline by
+            # ``send_bundle`` at the end of every iteration. A literal
+            # ``len(self.bundle) > 0`` would therefore always be True
+            # and we'd initiate / close a Work for notifications that
+            # produced no per-notification entities (e.g. when
+            # ``create_alert`` / ``create_file`` / ``create_yara_rule``
+            # are all disabled, or every file filter short-circuited the
+            # path above). Compare against the default-bundle size so a
+            # Work is only opened when at least one entity was actually
+            # appended.
+            if len(self.bundle) > len(self._default_bundle):
                 if work_id is None:
                     work_id = self.initiate_work(timestamp)
                 self.send_bundle(work_id)
@@ -420,7 +431,16 @@ class LivehuntBuilder:
             external_references=[external_reference],
             custom_properties={
                 "x_opencti_score": vt_score,
-                "created_by_ref": self.author.id,
+                # ``stix2.File`` is a SCO (Stix Cyber Observable); its
+                # author must be carried via the OpenCTI-specific
+                # ``x_opencti_created_by_ref`` custom property rather
+                # than ``created_by_ref`` (which is an SDO-only field
+                # and would land as an inert custom attribute on a
+                # SCO). The malware-config observables below
+                # (Domain-Name / IPv4-Addr / IPv6-Addr / URL) already
+                # use the same shape, and the connectors-sdk
+                # ``BaseObservableEntity`` sets author this way too.
+                "x_opencti_created_by_ref": self.author.id,
                 "x_opencti_additional_names": x_opencti_additional_names,
             },
             allow_custom=True,
