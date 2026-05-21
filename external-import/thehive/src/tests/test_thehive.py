@@ -92,3 +92,63 @@ class TheHiveTest(unittest.TestCase):
         )
 
         self.assertEqual(processed_comments[0]["id"], processed_comments[1]["id"])
+
+    @patch.object(module, "CustomObjectCaseIncident")
+    def test_process_main_case_assignee_mapping(
+        self, m_custom_case, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """testing process_main_case user mapping against case assignee"""
+        _now = int(time.time() * 1000)
+        _case = MagicMock()
+        _case_values = {
+            "_createdAt": _now,
+            "extendedStatus": "InProgress",
+            "assignee": "toto@cyber.local",
+            "owner": "owner@cyber.local",
+            "title": "Case title",
+            "description": "Case description",
+            "tags": [],
+            "severity": 2,
+        }
+        _case.get.side_effect = _case_values.get
+
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+        _connector.thehive_user_mapping = [" toto@cyber.local : 88ec0c6a-13ce "]
+
+        _connector.process_main_case(_case, markings=[])
+
+        self.assertEqual(
+            m_custom_case.call_args.kwargs.get("x_opencti_assignee_ids"),
+            ["88ec0c6a-13ce"],
+        )
+
+    @patch.object(module, "CustomObjectCaseIncident")
+    def test_process_main_case_owner_mapping_fallback(
+        self, m_custom_case, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """testing process_main_case keeps backward compatibility with owner mapping"""
+        _now = int(time.time() * 1000)
+        _case = MagicMock()
+        _case_values = {
+            "_createdAt": _now,
+            "extendedStatus": "InProgress",
+            "assignee": None,
+            "owner": "toto@cyber.local",
+            "title": "Case title",
+            "description": "Case description",
+            "tags": [],
+            "severity": 2,
+        }
+        _case.get.side_effect = _case_values.get
+
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+        _connector.thehive_user_mapping = ["toto@cyber.local:88ec0c6a-13ce"]
+
+        _connector.process_main_case(_case, markings=[])
+
+        self.assertEqual(
+            m_custom_case.call_args.kwargs.get("x_opencti_assignee_ids"),
+            ["88ec0c6a-13ce"],
+        )

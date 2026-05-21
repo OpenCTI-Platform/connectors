@@ -147,6 +147,27 @@ class TheHive:
             self.thehive_url, self.thehive_api_key, verify=self.thehive_check_ssl
         )
 
+    def map_thehive_user_to_opencti(self, *thehive_users):
+        """Map one of the TheHive usernames/emails to an OpenCTI user id."""
+        if len(self.thehive_user_mapping) == 0:
+            return None
+
+        normalized_users = {
+            str(thehive_user).strip()
+            for thehive_user in thehive_users
+            if thehive_user is not None and str(thehive_user).strip()
+        }
+        if len(normalized_users) == 0:
+            return None
+
+        for user_mapping in self.thehive_user_mapping:
+            if ":" not in user_mapping:
+                continue
+            thehive_user, opencti_user = user_mapping.split(":", 1)
+            if thehive_user.strip() in normalized_users:
+                return opencti_user.strip()
+        return None
+
     def construct_query(self, type, last_date):
         """Construct query for alert or cases based on the last_date."""
         self.helper.log_info(
@@ -479,12 +500,9 @@ class TheHive:
                 case_status_mapping_split = case_status_mapping.split(":")
                 if case.get("extendedStatus") == case_status_mapping_split[0]:
                     opencti_case_status = case_status_mapping_split[1]
-        opencti_case_user = None
-        if len(self.thehive_user_mapping) > 0:
-            for user_mapping in self.thehive_user_mapping:
-                user_mapping_split = user_mapping.split(":")
-                if case.get("owner") == user_mapping_split[0]:
-                    opencti_case_user = user_mapping_split[1]
+        opencti_case_user = self.map_thehive_user_to_opencti(
+            case.get("assignee"), case.get("owner")
+        )
         stix_case = CustomObjectCaseIncident(
             id=CaseIncident.generate_id(case.get("title"), created),
             name=case.get("title"),
@@ -600,12 +618,7 @@ class TheHive:
                     task_status_mapping_split = task_status_mapping.split(":")
                     if task.get("status") == task_status_mapping_split[0]:
                         opencti_task_status = task_status_mapping_split[1]
-            opencti_task_user = None
-            if len(self.thehive_user_mapping) > 0:
-                for user_mapping in self.thehive_user_mapping:
-                    user_mapping_split = user_mapping.split(":")
-                    if task.get("assignee") == user_mapping_split[0]:
-                        opencti_task_user = user_mapping_split[1]
+            opencti_task_user = self.map_thehive_user_to_opencti(task.get("assignee"))
             stix_task = CustomObjectTask(
                 id=Task.generate_id(task.get("title"), created),
                 name=task.get("title"),
