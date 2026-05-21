@@ -1,13 +1,15 @@
 """Note."""
 
+import warnings
 from collections import OrderedDict
+from typing import Any
 
 import stix2.properties
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.enums import NoteType
 from connectors_sdk.models.reference import Reference
 from pycti import Note as PyctiNote
-from pydantic import AwareDatetime, Field
+from pydantic import AwareDatetime, Field, model_validator
 from stix2.v21 import Note as Stix2Note
 
 
@@ -32,8 +34,9 @@ class Note(BaseIdentifiedEntity):
     content: str = Field(
         description="The main content of the note.",
     )
-    publication_date: AwareDatetime = Field(
-        description="Publication date of the note.",
+    publication_date: AwareDatetime | None = Field(
+        default=None,
+        description="Deprecated: Use 'created' instead. Publication date of the note.",
     )
     abstract: str | None = Field(
         default=None,
@@ -56,12 +59,33 @@ class Note(BaseIdentifiedEntity):
         description="OCTI objects this note applies to.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_publication_date_vs_created(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            pub_date = data.get("publication_date")
+            created = data.get("created")
+            if pub_date is not None and created is not None:
+                raise ValueError(
+                    "Cannot set both 'publication_date' and 'created'. "
+                    "'publication_date' is deprecated, use 'created' instead."
+                )
+            if pub_date is not None:
+                warnings.warn(
+                    "'publication_date' is deprecated, use 'created' instead.",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                data["created"] = pub_date
+                data["publication_date"] = None
+        return data
+
     def to_stix2_object(self) -> Stix2Note:
         """Make stix object."""
         return NoteStix(
             id=PyctiNote.generate_id(
                 content=self.content,
-                created=self.publication_date,
+                created=self.created,
                 abstract=self.abstract,
             ),
             abstract=self.abstract,
@@ -69,7 +93,6 @@ class Note(BaseIdentifiedEntity):
             labels=self.labels,
             authors=self.authors,
             object_refs=[obj.id for obj in self.objects or []],
-            created=self.publication_date,  # usually set by stix2 lib but here it MUST be equal to the datetime used for note's id.
             allow_custom=True,
             note_types=self.note_types,
             **self._common_stix2_properties()
