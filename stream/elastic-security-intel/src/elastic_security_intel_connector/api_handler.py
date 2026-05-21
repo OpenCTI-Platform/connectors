@@ -1245,7 +1245,7 @@ class ElasticApiHandler:
             )
             if reason:
                 return str(reason)
-        except (ValueError, requests.exceptions.JSONDecodeError) as exc:
+        except ValueError as exc:
             self.helper.connector_logger.debug(
                 "Could not parse error response as JSON",
                 {"error": str(exc)},
@@ -1287,7 +1287,7 @@ class ElasticApiHandler:
                 return True
 
             if check_response.status_code in (401, 403):
-                self.helper.connector_logger.warning(
+                self.helper.connector_logger.error(
                     "Authentication/authorization error checking data stream existence",
                     {
                         "status_code": check_response.status_code,
@@ -1362,16 +1362,6 @@ class ElasticApiHandler:
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.warning(
                 "Network error while setting up data stream",
-                {
-                    "data_stream": self.index_name,
-                    "error_type": type(e).__name__,
-                    "error": str(e),
-                },
-            )
-            return False
-        except Exception as e:
-            self.helper.connector_logger.warning(
-                "Unexpected error setting up data stream",
                 {
                     "data_stream": self.index_name,
                     "error_type": type(e).__name__,
