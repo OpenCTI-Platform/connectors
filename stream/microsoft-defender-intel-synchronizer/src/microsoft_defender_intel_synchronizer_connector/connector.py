@@ -53,6 +53,100 @@ def parse_modified(item):
     return dt if dt >= EPOCH_UTC else EPOCH_UTC
 
 
+# Hash-based Defender indicator types are keyed on hex fingerprints.
+# Defender preserves whatever case the value was first submitted with,
+# so a tenant that previously ran with an uppercase-emitting pipeline
+# will return ``ABCDEF…`` here while the connector now emits
+# ``abcdef…`` (``_convert_indicator_to_observables`` / the
+# ``defender_*_dedup_key`` helpers in ``utils`` both already
+# ``.lower()`` the extracted hash). Without normalising both sides of
+# the dedup key the planner would treat the two forms as different
+# indicators and re-create a duplicate on every sync cycle.
+# Lower-casing here is safe (hex hashes are case-insensitive by
+# definition) and stripping is defensive for any whitespace Defender
+# might round-trip.
+_HASH_INDICATOR_TYPES: Final = frozenset(
+    {"FileSha1", "FileSha256", "FileMd5", "CertificateThumbprint"}
+)
+
+
+def _normalize_indicator_value(indicator_type: str, value: Any) -> str:
+    """Canonicalise an indicator value for the dedup key.
+
+    For hash-based ``indicator_type`` values the function returns
+    ``value.strip().lower()`` so that ``ABCDEF…`` and ``abcdef…``
+    collapse to the same key. For every other indicator type the
+    value is returned unchanged (it was already canonicalised by
+    ``indicator_value()`` earlier in the pipeline).
+
+    Non-string inputs (``None`` / unexpected shapes from a Defender
+    response) collapse to the empty string so callers do not need
+    to defensively type-check before building the key.
+    """
+    if not isinstance(value, str):
+        return ""
+    if indicator_type in _HASH_INDICATOR_TYPES:
+        return value.strip().lower()
+    return value
+
+
+def _normalize_scope_ids_from_def(ind: dict[str, Any]) -> tuple[int, ...]:
+    """Return the Defender indicator's RBAC scope ids as a sorted tuple.
+
+    Empty / missing / non-int-coercible values collapse to ``()``,
+    matching the "tenant-wide" scope key shape used elsewhere in the
+    planner.
+    """
+    ids = ind.get("rbacGroupIds") or []
+    try:
+        return tuple(sorted(int(x) for x in ids))
+    except (ValueError, TypeError):
+        return tuple()
+
+
+def key_from_def(ind: dict[str, Any]) -> ScopeKey:
+    """Compute the dedup key for a Defender-side indicator.
+
+    Returns ``(indicatorType, normalised_value, scope_ids)`` where
+    ``normalised_value`` is case-folded for hash-based types so
+    upper-case ``indicatorValue`` round-trips from older Defender
+    runs do not produce duplicate keys for the same hash. See
+    :func:`_normalize_indicator_value` for the normalisation
+    contract.
+    """
+    indicator_type = ind.get("indicatorType", "")
+    return (
+        indicator_type,
+        _normalize_indicator_value(indicator_type, ind.get("indicatorValue", "")),
+        _normalize_scope_ids_from_def(ind),
+    )
+
+
+def key_from_candidate(
+    indicator_type: str,
+    indicator_value: str,
+    rbac_scope_pair: RBACScope | None,
+) -> ScopeKey:
+    """Compute the dedup key for an OpenCTI-side candidate.
+
+    Mirrors :func:`key_from_def` so the planner can look up an
+    OpenCTI candidate in the same ``ScopeKey``-indexed dict it
+    populated from the Defender response. The hash-value
+    normalisation applied here keeps the two key spaces aligned
+    regardless of case differences from upstream feeds.
+    """
+    scope_ids = [] if not rbac_scope_pair else rbac_scope_pair[1]
+    normalised_value = _normalize_indicator_value(indicator_type, indicator_value)
+    try:
+        return (
+            indicator_type,
+            normalised_value,
+            tuple(sorted(int(x) for x in scope_ids)),
+        )
+    except (ValueError, TypeError):
+        return (indicator_type, normalised_value, tuple())
+
+
 def sort_key(item: dict) -> tuple:
     """
     Sort key used by the connector:
@@ -212,9 +306,21 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     if mot in {"domain-name", "url", "ipv4-addr", "ipv6-addr"}:
                         observables.append({"type": mot, "value": name})
             else:
-                # Observable nodes (globalSearch) carry the atomic value directly
+                # Observable nodes (globalSearch) carry the atomic value directly.
+                #
+                # ``entity_type`` arrives lower-cased from the caller but the
+                # OpenCTI GraphQL layer is inconsistent about hyphenation: the
+                # ``__typename`` of an observable node comes back as the
+                # hyphenated STIX type (``ipv4-addr``, ``ipv6-addr``,
+                # ``x509-certificate``, …) for some entry points and as the
+                # non-hyphenated camel-case-stripped form (``ipv4addr``,
+                # ``ipv6addr``, ``x509certificate``, …) for others. Looking up
+                # only one of the two forms silently drops every observable
+                # of the other shape, so we normalise by stripping ``-`` from
+                # the key before lookup — both ``ipv4-addr`` and ``ipv4addr``
+                # then map to the same Defender indicator type.
                 type_map = {
-                    "domain-name": "domain-name",
+                    "domainname": "domain-name",
                     "hostname": "domain-name",  # Normalize hostname to domain-name for Defender
                     "url": "url",
                     "ipv4addr": "ipv4-addr",
@@ -223,7 +329,7 @@ class MicrosoftDefenderIntelSynchronizerConnector:
                     "hashedobservable": "file",
                     "x509certificate": "x509-certificate",
                 }
-                obs_type = type_map.get(entity_type)
+                obs_type = type_map.get(entity_type.replace("-", ""))
                 if not obs_type:
                     return []
 
@@ -680,36 +786,13 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 # Action/metadata deliberately ignored (we may change action)
                 # Tenant-wide is represented by empty RBAC arrays in API.
                 # ------------------------------------------------------------
-                def _normalize_scope_ids_from_def(
-                    ind: dict[str, Any],
-                ) -> tuple[int, ...]:
-                    ids = ind.get("rbacGroupIds") or []
-                    try:
-                        return tuple(sorted(int(x) for x in ids))
-                    except (ValueError, TypeError):
-                        return tuple()
-
-                def _key_from_def(ind: dict[str, Any]) -> ScopeKey:
-                    return (
-                        ind.get("indicatorType", ""),
-                        ind.get("indicatorValue", ""),
-                        _normalize_scope_ids_from_def(ind),
-                    )
-
-                def _key_from_candidate(
-                    indicator_type: str,
-                    indicator_value: str,
-                    rbac_scope_pair: RBACScope | None,
-                ) -> ScopeKey:
-                    scope_ids = [] if not rbac_scope_pair else rbac_scope_pair[1]
-                    try:
-                        return (
-                            indicator_type,
-                            indicator_value,
-                            tuple(sorted(int(x) for x in scope_ids)),
-                        )
-                    except (ValueError, TypeError):
-                        return (indicator_type, indicator_value, tuple())
+                # ``key_from_def`` / ``key_from_candidate`` live at module
+                # scope so the dedup contract (hash-value case folding,
+                # scope-id normalisation) is unit-tested in
+                # ``tests/test_key_normalization.py``. Aliasing them here
+                # keeps the call-site shape unchanged.
+                _key_from_def = key_from_def
+                _key_from_candidate = key_from_candidate
 
                 all_by_key: dict[ScopeKey, dict[str, Any]] = {}
                 owned_by_key: dict[ScopeKey, dict[str, Any]] = {}

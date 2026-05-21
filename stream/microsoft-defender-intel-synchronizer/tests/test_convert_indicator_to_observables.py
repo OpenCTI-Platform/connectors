@@ -133,6 +133,34 @@ def test_observable_node_ipv4():
     assert any(r["type"] == "ipv4-addr" and r["value"] == "8.8.8.8" for r in result)
 
 
+@pytest.mark.parametrize(
+    "entity_type,observable_value,expected_type",
+    [
+        # Hyphenated STIX form returned by some OpenCTI GraphQL entry points.
+        # Without the ``replace("-", "")`` normalisation in ``type_map`` these
+        # observable nodes were silently dropped, costing the connector every
+        # IPv4 / IPv6 / certificate observable imported from a feed that
+        # surfaced its ``entity_type`` in the hyphenated shape.
+        ("ipv4-addr", "8.8.8.8", "ipv4-addr"),
+        ("ipv6-addr", "2001:db8::1", "ipv6-addr"),
+        ("domain-name", "example.com", "domain-name"),
+    ],
+)
+def test_observable_node_hyphenated_entity_type_is_normalised(
+    entity_type, observable_value, expected_type
+):
+    connector = make_connector()
+    node = {
+        "entity_type": entity_type,
+        "observable_value": observable_value,
+    }
+    result = connector._convert_indicator_to_observables(node)
+    assert result, f"Expected {entity_type!r} to produce an observable, got {result!r}"
+    assert any(
+        r["type"] == expected_type and r["value"] == observable_value for r in result
+    )
+
+
 def test_missing_type_returns_empty_list():
     connector = make_connector()
     node = {
