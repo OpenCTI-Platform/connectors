@@ -16,6 +16,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_FEED_SOURCE_TYPE | `string` |  | `url` `s3` | `"url"` | Source type for the MISP feed (`url` or `s3`). |
 | MISP_FEED_URL | `string` |  | string | `null` | The URL of the MISP feed (required if `source_type` is `url`). |
 | MISP_FEED_SSL_VERIFY | `boolean` |  | boolean | `true` | Whether to verify SSL certificates for the feed URL. |
+| MISP_FEED_HTTP_AUTHORIZATION_HEADER | `string` |  | string | `null` | Optional value of the HTTP `Authorization` header sent on every request to the feed URL (e.g. `Basic <base64(user:password)>` or `Bearer <token>`). |
 | MISP_FEED_BUCKET_NAME | `string` |  | string | `null` | Bucket Name where the MISP's files are stored |
 | MISP_FEED_BUCKET_PREFIX | `string` |  | string | `null` | Used to filter imports |
 | MISP_FEED_IMPORT_FROM_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | Start date for importing data from the MISP feed. |

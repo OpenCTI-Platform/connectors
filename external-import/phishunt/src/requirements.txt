@@ -1,5 +1,5 @@
-pycti==7.260423.0
-urllib3==2.6.3
+pycti==7.260521.0
+urllib3==2.7.0
 requests==2.33.0
 stix2==3.0.1
 pyyaml==6.0.3

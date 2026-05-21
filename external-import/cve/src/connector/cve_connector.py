@@ -1,11 +1,12 @@
+import asyncio
 import sys
 import time
 from datetime import datetime, timedelta, timezone
 
-from pycti import OpenCTIConnectorHelper  # type: ignore
+from pycti import OpenCTIConnectorHelper
 from src import ConfigLoader
-from src.services import CVEConverter  # type: ignore
-from src.services.utils import (  # type: ignore
+from src.services import CVEConverter
+from src.services.utils import (
     MAX_AUTHORIZED,
     convert_hours_to_seconds,
 )
@@ -16,7 +17,6 @@ class CVEConnector:
         """
         Initialize the CVEConnector with necessary configurations
         """
-
         # Load configuration file and connection helper
         # Instantiate the connector helper from config
         self.config = ConfigLoader()
@@ -39,56 +39,51 @@ class CVEConnector:
                 self.process_data()
                 time.sleep(60)
 
-    def _initiate_work(self, timestamp: int) -> str:
-        """
-        Initialize a work
-        :param timestamp: Timestamp in integer
-        :return: Work id in string
-        """
-        now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-        friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-        work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
-        )
-
-        info_msg = f"[CONNECTOR] New work '{work_id}' initiated..."
-        self.helper.connector_logger.info(info_msg)
-
-        return work_id
-
-    def update_connector_state(self, current_time: int, work_id: str) -> None:
+    def update_connector_state(self, current_time: int) -> None:
         """
         Update the connector state
         :param current_time: Time in int
-        :param work_id: Work id in string
         """
+        last_run_dt = datetime.fromtimestamp(current_time, tz=timezone.utc).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
         msg = (
-            f"[CONNECTOR] Connector successfully run, storing last_run as "
-            f"{datetime.fromtimestamp(current_time, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')}"
+            f"[CONNECTOR] Connector successfully run, storing last_run as {last_run_dt}"
         )
         self.helper.connector_logger.info(msg)
-        self.helper.api.work.to_processed(work_id, msg)
+        if self.converter.work_id is not None:
+            self.helper.api.work.to_processed(self.converter.work_id, msg)
         self.helper.set_state({"last_run": current_time})
 
         interval_in_hours = round(self.interval / 60 / 60, 2)
         self.helper.connector_logger.info(
-            "[CONNECTOR] Last_run stored, next run in: "
-            + str(interval_in_hours)
-            + " hours"
+            f"[CONNECTOR] Last_run stored, next run in: {interval_in_hours} hours"
         )
 
-    def _import_recent(self, now: datetime, work_id: str) -> None:
+    async def _async_ingest(self, cve_params: dict) -> None:
+        """Run the streaming async ingestion pipeline.
+
+        CVE bundles are sent as pages arrive from the NVD API.
+        CPE resolution starts immediately and runs concurrently
+        with further CVE fetching (bounded by cpe_max_concurrency).
+        """
+        # Reset rate limiter state to avoid stale asyncio.Lock across runs
+        self.converter._rate_limiter.reset()
+        try:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Starting CVE+CPE streaming pipeline"
+            )
+            await self.converter.ingest(cve_params)
+        finally:
+            await self.converter.close()
+
+    def _import_recent(self, now: datetime) -> None:
         """
         Import the most recent CVEs depending on date range chosen
         :param now: Current date in datetime
-        :param work_id: Work id in string
         """
         if self.config.cve.max_date_range > MAX_AUTHORIZED:
-            error_msg = "The max_date_range cannot exceed {} days".format(
-                MAX_AUTHORIZED
-            )
+            error_msg = f"The max_date_range cannot exceed {MAX_AUTHORIZED} days"
             raise Exception(error_msg)
 
         date_range = timedelta(days=self.config.cve.max_date_range)
@@ -96,23 +91,20 @@ class CVEConnector:
 
         cve_params = self._update_cve_params(start_date, now)
 
-        self.converter.send_bundle(cve_params, work_id)
+        asyncio.run(self._async_ingest(cve_params))
 
-    def _import_history(
-        self, start_date: datetime, end_date: datetime, work_id: str
-    ) -> None:
+    def _import_history(self, start_date: datetime, end_date: datetime) -> None:
         """
         Import CVEs history if pull_history config is True
         :param start_date: Start date in datetime
         :param end_date: End date in datetime
-        :param work_id: Work id in string
         """
         years = range(start_date.year, end_date.year + 1)
         start, end = start_date, end_date + timedelta(1)
 
         for year in years:
-            year_start = datetime(year, 1, 1, 0, 0)
-            year_end = datetime(year + 1, 1, 1, 0, 0)
+            year_start = datetime(year, 1, 1, 0, 0, tzinfo=timezone.utc)
+            year_end = datetime(year + 1, 1, 1, 0, 0, tzinfo=timezone.utc)
 
             date_range = min(end, year_end) - max(start, year_start)
             days_in_year = date_range.days
@@ -142,12 +134,11 @@ class CVEConnector:
                     end_date_current_year = start_date_current_year + timedelta(
                         days=days_in_year
                     )
-                    # Update date range
                     cve_params = self._update_cve_params(
                         start_date_current_year, end_date_current_year
                     )
 
-                    self.converter.send_bundle(cve_params, work_id)
+                    asyncio.run(self._async_ingest(cve_params))
                     days_in_year = 0
 
                 """
@@ -155,34 +146,31 @@ class CVEConnector:
                 1 year % 120 days => 5 or 6 (depends if it is a leap year or not)
                 """
                 if days_in_year > 6:
-                    # Update date range
                     cve_params = self._update_cve_params(
                         start_date_current_year, end_date_current_year
                     )
 
-                    self.converter.send_bundle(cve_params, work_id)
+                    asyncio.run(self._async_ingest(cve_params))
                     start_date_current_year += timedelta(days=MAX_AUTHORIZED)
                     days_in_year -= MAX_AUTHORIZED
                 else:
                     end_date_current_year = start_date_current_year + timedelta(
                         days=days_in_year
                     )
-                    # Update date range
                     cve_params = self._update_cve_params(
                         start_date_current_year, end_date_current_year
                     )
-                    self.converter.send_bundle(cve_params, work_id)
+                    asyncio.run(self._async_ingest(cve_params))
                     days_in_year = 0
 
             info_msg = f"[CONNECTOR] Importing CVE history for year {year} finished"
             self.helper.connector_logger.info(info_msg)
 
-    def _maintain_data(self, now: datetime, last_run: float, work_id: str) -> None:
+    def _maintain_data(self, now: datetime, last_run: float) -> None:
         """
         Maintain data updated if maintain_data config is True
         :param now: Current date in datetime
         :param last_run: Last run date in float
-        :param work_id: Work id in str
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Getting the last CVEs since the last run..."
@@ -190,9 +178,8 @@ class CVEConnector:
 
         last_run_ts = datetime.fromtimestamp(last_run, tz=timezone.utc)
 
-        # Update date range
         cve_params = self._update_cve_params(last_run_ts, now)
-        self.converter.send_bundle(cve_params, work_id)
+        asyncio.run(self._async_ingest(cve_params))
 
     @staticmethod
     def _update_cve_params(start_date: datetime, end_date: datetime) -> dict:
@@ -212,16 +199,17 @@ class CVEConnector:
             """
             Get the current state and check if connector already runs
             """
-            now = datetime.now()
+            now = datetime.now(tz=timezone.utc)
             current_time = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
             if current_state is not None and "last_run" in current_state:
                 last_run = current_state["last_run"]
 
-                msg = "[CONNECTOR] Connector last run: " + datetime.fromtimestamp(
+                last_run_dt = datetime.fromtimestamp(
                     last_run, tz=timezone.utc
                 ).strftime("%Y-%m-%d %H:%M:%S")
+                msg = f"[CONNECTOR] Connector last run: {last_run_dt}"
                 self.helper.connector_logger.info(msg)
             else:
                 last_run = None
@@ -241,21 +229,21 @@ class CVEConnector:
             ================================================================
             """
             if last_run is None:
-                # Initiate work_id to track the job
-                work_id = self._initiate_work(current_time)
                 """
                 =================================================================
                 If the connector never runs and user wants to pull CVE history
                 =================================================================
                 """
                 if self.config.cve.pull_history:
-                    start_date = datetime(self.config.cve.history_start_year, 1, 1)
+                    start_date = datetime(
+                        self.config.cve.history_start_year, 1, 1, tzinfo=timezone.utc
+                    )
                     end_date = now
-                    self._import_history(start_date, end_date, work_id)
+                    self._import_history(start_date, end_date)
                 else:
-                    self._import_recent(now, work_id)
+                    self._import_recent(now)
 
-                self.update_connector_state(current_time, work_id)
+                self.update_connector_state(current_time)
 
                 """
                 ===================================================================
@@ -268,18 +256,15 @@ class CVEConnector:
                 and self.config.cve.maintain_data
                 and (current_time - last_run) >= int(self.interval)
             ):
-                # Initiate work_id to track the job
-                work_id = self._initiate_work(current_time)
-                self._maintain_data(now, last_run, work_id)
-                self.update_connector_state(current_time, work_id)
+                self._maintain_data(now, last_run)
+                self.update_connector_state(current_time)
 
             else:
                 new_interval = self.interval - (current_time - last_run)
                 new_interval_in_hours = round(new_interval / 60 / 60, 2)
                 self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector will not run, next run in: "
-                    + str(new_interval_in_hours)
-                    + " hours"
+                    f"[CONNECTOR] Connector will not run, next run in: "
+                    f"{new_interval_in_hours} hours"
                 )
 
             time.sleep(5)
@@ -289,5 +274,5 @@ class CVEConnector:
             self.helper.connector_logger.info(msg)
             sys.exit(0)
         except Exception as e:
-            error_msg = f"[CONNECTOR] Error while processing data: {str(e)}"
+            error_msg = f"[CONNECTOR] Error while processing data: {e}"
             self.helper.connector_logger.error(error_msg, meta={"error": str(e)})

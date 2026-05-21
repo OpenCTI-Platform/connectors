@@ -63,6 +63,16 @@
       ],
       "type": "string",
       "default": "clear"
+    },
+    "YARA_PROPAGATE_MALWARE_RELATIONSHIP": {
+      "default": false,
+      "description": "When ``true``, for every YARA Indicator that matches the enriched Artifact, the connector follows the indicator's ``indicates`` relationships to Malware entities and emits an additional ``related-to`` STIX relationship from the Artifact to each of those Malware entities. Defaults to ``false`` to preserve the connector's previous behaviour.",
+      "type": "boolean"
+    },
+    "YARA_PROPAGATE_LABELS": {
+      "default": false,
+      "description": "When ``true``, every OpenCTI label carried by a YARA Indicator that matches the enriched Artifact is added to the Artifact (via the ``stix_cyber_observable.add_label`` mutation). Defaults to ``false`` to preserve the connector's previous behaviour.",
+      "type": "boolean"
     }
   },
   "required": [

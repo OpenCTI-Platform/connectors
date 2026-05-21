@@ -1,6 +1,6 @@
 """OpenCTI CrowdStrike indicator importer module."""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
 from crowdstrike_feeds_connector.related_actors.importer import RelatedActorImporter
@@ -43,9 +43,11 @@ class IndicatorImporterConfig(NamedTuple):
     indicator_high_score: int
     indicator_high_score_labels: Set[str]
     indicator_unwanted_labels: Set[str]
+    indicator_max_age_by_type: Dict[str, Optional[timedelta]]
     no_file_trigger_import: bool
     scopes: set[str]
     attack_lookup: Optional[AttackTechniqueLookup]
+    max_records_per_run: Optional[int] = None
 
 
 class IndicatorImporter(BaseImporter):
@@ -84,11 +86,16 @@ class IndicatorImporter(BaseImporter):
         self.indicator_high_score = config.indicator_high_score
         self.indicator_high_score_labels = config.indicator_high_score_labels
         self.indicator_unwanted_labels = config.indicator_unwanted_labels
-        self.next_page: Optional[str] = None
+        self.indicator_max_age_by_type = config.indicator_max_age_by_type
         self.no_file_trigger_import = config.no_file_trigger_import
         self.scopes = config.scopes
         # Preloaded at connector startup; used to resolve MITRE technique IDs for ATT&CK labels.
         self.attack_lookup = config.attack_lookup
+        self.max_records_per_run = (
+            config.max_records_per_run
+            if config.max_records_per_run and config.max_records_per_run > 0
+            else None
+        )
         if not (self.create_observables or self.create_indicators):
             msg = "'create_observables' and 'create_indicators' false at the same time"
             raise ValueError(msg)
@@ -136,7 +143,15 @@ class IndicatorImporter(BaseImporter):
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict] | None:
+    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict]:
+        """Fetch all indicators updated since ``fetch_timestamp``.
+
+        Walks every page exposed by the CrowdStrike API (``Next-Page`` HTTP
+        header) up to the configured ``max_records_per_run`` cap (when set).
+        Returns the full list of resources in a single batch so the downstream
+        ``_process_indicators`` step can compute the latest ``last_updated``
+        timestamp across the whole run.
+        """
         limit = 1000
         sort = "last_updated|asc"
         fql_filter = f"last_updated:>{fetch_timestamp}"
@@ -144,45 +159,101 @@ class IndicatorImporter(BaseImporter):
         if self.exclude_types:
             fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
 
-        return self._query_indicators(limit, sort, fql_filter)
+        return self._paginated_query_indicators(limit, sort, fql_filter)
 
-    def _query_indicators(self, limit: int, sort: str, fql_filter: str) -> List[dict]:
-        _limit = limit
-        _sort = sort
-        _fql_filter = fql_filter
+    def _paginated_query_indicators(
+        self, limit: int, sort: str, fql_filter: str
+    ) -> List[dict]:
+        """Walk every page of the indicator API and return the aggregated list.
 
-        response = self.indicators_api_cs.get_combined_indicator_entities(
-            limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
-        )
+        The continuation token is the ``next_page`` string returned by the
+        upstream API and forwarded as-is by :class:`IndicatorsAPI`. When
+        ``max_records_per_run`` is set, pagination stops as soon as that many
+        indicators have been collected; the cap is enforced at the resource
+        level by slicing the *last* page to exactly the remaining quota, so
+        the aggregated batch contains at most ``max_records_per_run`` records
+        and we never yield a record beyond the cap.
+        """
+        resources: List[dict] = []
+        next_page_token: Optional[str] = None
+        meta_total: Optional[int] = None
 
-        # Add info to know how much data needs to be retrieved until now
-        meta = response["meta"]
-        _meta_total = None
-
-        if meta["pagination"] is not None:
-            pagination = meta["pagination"]
-
-            _meta_total = pagination["total"]
-
-            self.helper.connector_logger.info(
-                "Indicator total resources to query until now", {"total": _meta_total}
+        while True:
+            response = self.indicators_api_cs.get_combined_indicator_entities(
+                limit=limit,
+                sort=sort,
+                fql_filter=fql_filter,
+                deep_pagination=True,
+                next_page=next_page_token,
             )
 
-        resources = response["resources"]
-        resources_count = len(resources)
-        remaining_resources = None
-        if _meta_total is not None:
-            remaining_resources = _meta_total - resources_count
+            page_resources = response.get("resources") or []
+            if not page_resources:
+                break
 
-        self.helper.connector_logger.info(
-            "Indicators fetched to be processed (Crowdstrike max limit = 10000)",
-            {
-                "resources_count": resources_count,
-                "remaining_resources": remaining_resources,
-            },
-        )
+            # ``meta.pagination`` can legitimately be missing or null - guard
+            # against both so we don't AttributeError on the .get() below.
+            meta = response.get("meta") or {}
+            pagination = meta.get("pagination") or {}
+            page_total = pagination.get("total")
+            if page_total is not None:
+                meta_total = page_total
+
+            remaining_cap = self._remaining_cap(len(resources))
+            if remaining_cap is not None and remaining_cap <= 0:
+                self._log_run_cap_reached(len(resources))
+                break
+
+            if remaining_cap is not None and len(page_resources) > remaining_cap:
+                page_resources = page_resources[:remaining_cap]
+
+            resources.extend(page_resources)
+
+            self.helper.connector_logger.info(
+                "Fetched indicator batch",
+                {
+                    "batch_size": len(page_resources),
+                    "total_fetched": len(resources),
+                    "total_available": meta_total,
+                    "remaining": (
+                        max(0, meta_total - len(resources))
+                        if meta_total is not None
+                        else None
+                    ),
+                    "max_records_per_run": self.max_records_per_run,
+                },
+            )
+
+            if (
+                self.max_records_per_run is not None
+                and len(resources) >= self.max_records_per_run
+            ):
+                self._log_run_cap_reached(len(resources))
+                break
+
+            # ``next_page`` is a single continuation token (string) returned by
+            # ``IndicatorsAPI.get_combined_indicator_entities``. An empty / None
+            # value marks the end of the iteration.
+            next_page_token = response.get("next_page")
+            if not next_page_token:
+                break
 
         return resources
+
+    def _remaining_cap(self, already_fetched: int) -> Optional[int]:
+        """Return how many more records can still be fetched in this run."""
+        if self.max_records_per_run is None:
+            return None
+        return self.max_records_per_run - already_fetched
+
+    def _log_run_cap_reached(self, total_fetched: int) -> None:
+        self.helper.connector_logger.info(
+            "Reached per-run indicator cap, stopping pagination for this run",
+            {
+                "total_fetched": total_fetched,
+                "max_records_per_run": self.max_records_per_run,
+            },
+        )
 
     def _process_indicators(self, indicators: List[dict]) -> datetime | None:
         indicator_count = len(indicators)
@@ -219,6 +290,9 @@ class IndicatorImporter(BaseImporter):
     def _process_indicator(self, indicator: dict) -> bool:
         self._info("Processing indicator {0}...", indicator["id"])
 
+        if self._is_indicator_too_old(indicator):
+            return True
+
         indicator_bundle = self._create_indicator_bundle(indicator)
         if indicator_bundle is None:
             self._warning("Discarding indicator {0} bundle", indicator["id"])
@@ -230,6 +304,45 @@ class IndicatorImporter(BaseImporter):
         self._send_bundle(indicator_bundle)
 
         return True
+
+    def _is_indicator_too_old(self, indicator: dict) -> bool:
+        indicator_type = indicator.get("type", "")
+        published_date_timestamp = indicator.get("published_date")
+
+        if published_date_timestamp is None:
+            return False
+
+        published_date = timestamp_to_datetime(published_date_timestamp)
+        now = datetime.now(timezone.utc)
+
+        threshold_key = "default"
+        if indicator_type in ["ip_address", "ip_address_block"]:
+            threshold_key = "ip"
+        elif indicator_type == "domain":
+            threshold_key = "domain"
+        elif indicator_type == "url":
+            threshold_key = "url"
+        elif indicator_type in ["hash_md5", "hash_sha1", "hash_sha256"]:
+            threshold_key = "hash"
+
+        threshold = self.indicator_max_age_by_type.get(threshold_key)
+
+        # Fallback to default if type-specific threshold is not defined
+        if threshold is None and threshold_key != "default":
+            threshold = self.indicator_max_age_by_type.get("default")
+
+        if threshold is not None:
+            if published_date < (now - threshold):
+                self._info(
+                    "Indicator {0} (type: {1}, published: {2}) is older than the threshold ({3}), skipping...",
+                    indicator["id"],
+                    indicator_type,
+                    published_date,
+                    threshold,
+                )
+                return True
+
+        return False
 
     def _get_reports_by_code(self, codes: List[str]) -> List[FetchedReport]:
         return self.report_fetcher.get_by_codes(codes)

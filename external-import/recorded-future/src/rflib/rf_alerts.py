@@ -1,6 +1,6 @@
 import base64
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from re import search
 
 import pycti
@@ -30,9 +30,11 @@ class RecordedFutureAlertConnector(threading.Thread):
         rf_alerts_api: RecordedFutureApiClient,
         opencti_default_severity: str,
         tlp: str,
+        rf_initial_lookback: int,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
+        self.rf_initial_lookback = rf_initial_lookback
 
         self.helper.connector_logger.info(
             "Starting Recorded Future Alert connector module initialization"
@@ -202,13 +204,19 @@ class RecordedFutureAlertConnector(threading.Thread):
                 "last_processed_alert_date"
             )
             if state_last_processed_alert_date is None:
-                last_processed_alert_date = None
+                last_processed_alert_date = now - timedelta(
+                    hours=self.rf_initial_lookback
+                )
+                self.helper.connector_logger.info(
+                    "[ALERTS] First run, looking back",
+                    {"initial_lookback_hours": self.rf_initial_lookback},
+                )
             else:
                 last_processed_alert_date = datetime.fromisoformat(
                     state_last_processed_alert_date
                 ).replace(tzinfo=timezone.utc)
 
-            alerts = self.collect_alerts(since=last_processed_alert_date or now)
+            alerts = self.collect_alerts(since=last_processed_alert_date)
             alerts.sort(key=lambda a: a.alert_date or "")
             for alert in alerts:
                 try:

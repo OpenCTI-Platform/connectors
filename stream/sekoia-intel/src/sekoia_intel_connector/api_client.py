@@ -21,7 +21,7 @@ class SekoiaClient:
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
-        self.api_base_url = self.config.sekoia_url
+        self.api_base_url = str(self.config.sekoia_url).rstrip("/")
         self.collection_id = self.config.sekoia_ioc_collection_uuid
 
     def check_ioc_collection_exist(self) -> bool:

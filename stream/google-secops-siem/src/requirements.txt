@@ -1,2 +1,4 @@
-pycti==7.260423.0
-google-auth==2.49.1
+pycti==7.260521.0
+google-auth==2.53.0
+pydantic >=2.8.2, <3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

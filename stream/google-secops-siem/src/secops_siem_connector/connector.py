@@ -3,20 +3,21 @@ import sys
 from json import JSONDecodeError
 
 from pycti import OpenCTIConnectorHelper
-from secops_siem_services import ConfigConnector, CTIConverter, SecOpsEntitiesClient
+from secops_siem_connector.settings import ConnectorSettings
+from secops_siem_services import CTIConverter, SecOpsEntitiesClient
 
 
 class SecOpsSIEMConnector:
-
-    def __init__(self):
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
         """
         Initialize the Connector with necessary configurations
         """
-
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.converter = CTIConverter(self.helper, self.config)
-        self.api_client = SecOpsEntitiesClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        self.converter = CTIConverter(helper)
+        self.api_client = SecOpsEntitiesClient(helper, config.secops_siem)
 
     def check_stream_id(self) -> None:
         """
@@ -32,12 +33,12 @@ class SecOpsSIEMConnector:
             self.check_stream_id()  # Ensures the stream ID is properly configured.
         """
         if (
-            not self.helper.connect_live_stream_id
-            or self.helper.connect_live_stream_id.lower() == "changeme"
+            not self.config.connector.live_stream_id
+            or self.config.connector.live_stream_id.lower() == "changeme"
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
-    def handle_logger_info(self, data: dict, event_context: dict = None) -> None:
+    def handle_logger_info(self, data: dict, event_context: dict | None = None) -> None:
         """
         Updates the connector logger with information about the current action being processed.
 
@@ -72,7 +73,7 @@ class SecOpsSIEMConnector:
             {"indicator_id": data["id"]},
         )
 
-    def validate_json(self, msg) -> dict | JSONDecodeError:
+    def validate_json(self, msg) -> dict:
         """
         Validate the JSON data from the stream
         :param msg: Message event from stream
@@ -146,7 +147,7 @@ class SecOpsSIEMConnector:
             data = parsed_msg["data"]
 
             # When an IOC is updated, get the context of the update event
-            event_context = parsed_msg["context"] if "context" in parsed_msg else None
+            event_context = parsed_msg.get("context")
 
             # Extract data and handle only entity type 'Indicator' from stream
             if data["type"] == "indicator" and data["pattern_type"] in ["stix"]:
@@ -161,7 +162,7 @@ class SecOpsSIEMConnector:
                     self._upsert_ioc_rule(data)
 
                 # Handle update
-                if msg.event == "update":
+                elif msg.event == "update":
                     self.handle_logger_info(data, event_context)
                     self._upsert_ioc_rule(data)
 
