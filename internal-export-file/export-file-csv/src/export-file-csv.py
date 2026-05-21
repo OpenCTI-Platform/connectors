@@ -31,10 +31,10 @@ class ExportFileCsv:
         )  # error holder to be reset before each new process
 
     def export_dict_list_to_csv(self, data):
-        headers = set()
+        header_set = set()
         for row in data:
-            headers.update(row.keys())
-        headers = sorted(headers)
+            header_set.update(row.keys())
+        headers = sorted(header_set)
         if "hashes" in headers:
             headers = headers + [
                 "hashes.MD5",
@@ -43,13 +43,11 @@ class ExportFileCsv:
                 "hashes_SHA-512",
                 "hashes_SSDEEP",
             ]
-        tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
-        os.makedirs(tmp_dir, exist_ok=True)
-        fd, tmp_path = tempfile.mkstemp(suffix=".csv", dir=tmp_dir)
-        os.close(fd)
-
-        try:
-            with open(tmp_path, "w", newline="", encoding="utf-8") as output:
+        with tempfile.NamedTemporaryFile(
+            mode="w", newline="", encoding="utf-8", suffix=".csv", delete=False
+        ) as output:
+            tmp_path = output.name
+            try:
                 writer = csv.writer(
                     output,
                     delimiter=self.export_file_csv_delimiter,
@@ -120,19 +118,26 @@ class ExportFileCsv:
                         writer.writerow(row)
                     except Exception as err:
                         self.helper.connector_logger.warning(
-                            "Error with csv input data, one line cannot be exported."
-                            + str(err)
+                            f"Error with csv input data, one line cannot be exported. {err}"
                         )
                         self.errors.append(err)
-            with open(tmp_path, "rb") as output:
-                return output.read()
-        finally:
-            try:
-                os.remove(tmp_path)
-            except OSError:
+            except Exception as err:
                 self.helper.connector_logger.warning(
-                    f"Could not remove temporary file: {tmp_path}"
+                    f"Error while generating CSV temporary file: {err}"
                 )
+                self._remove_tmp_file(tmp_path)
+                raise
+        return tmp_path
+
+    def _remove_tmp_file(self, file_path):
+        try:
+            os.remove(file_path)
+        except FileNotFoundError:
+            pass
+        except OSError as err:
+            self.helper.connector_logger.warning(
+                f"Could not remove temporary file: {file_path}. Error: {err}"
+            )
 
     def _export_list(self, data, entities_list, list_filters):
         file_name = data["file_name"]
@@ -140,37 +145,41 @@ class ExportFileCsv:
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
-        csv_data = self.export_dict_list_to_csv(entities_list)
-        self.helper.log_info(
-            "Uploading: " + entity_type + "/" + export_type + " to " + file_name
-        )
-        if entity_type == "Stix-Cyber-Observable":
-            self.helper.api.stix_cyber_observable.push_list_export(
-                entity_id,
-                entity_type,
-                file_name,
-                file_markings,
-                csv_data,
-                list_filters,
+        csv_file_path = self.export_dict_list_to_csv(entities_list)
+        try:
+            self.helper.log_info(
+                "Uploading: " + entity_type + "/" + export_type + " to " + file_name
             )
-        elif entity_type == "Stix-Core-Object":
-            self.helper.api.stix_core_object.push_list_export(
-                entity_id,
-                entity_type,
-                file_name,
-                file_markings,
-                csv_data,
-                list_filters,
-            )
-        else:
-            self.helper.api.stix_domain_object.push_list_export(
-                entity_id,
-                entity_type,
-                file_name,
-                file_markings,
-                csv_data,
-                list_filters,
-            )
+            with open(csv_file_path, "rb") as csv_file:
+                if entity_type == "Stix-Cyber-Observable":
+                    self.helper.api.stix_cyber_observable.push_list_export(
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        file_markings,
+                        csv_file,
+                        list_filters,
+                    )
+                elif entity_type == "Stix-Core-Object":
+                    self.helper.api.stix_core_object.push_list_export(
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        file_markings,
+                        csv_file,
+                        list_filters,
+                    )
+                else:
+                    self.helper.api.stix_domain_object.push_list_export(
+                        entity_id,
+                        entity_type,
+                        file_name,
+                        file_markings,
+                        csv_file,
+                        list_filters,
+                    )
+        finally:
+            self._remove_tmp_file(csv_file_path)
         self.helper.connector_logger.info(
             "Export done",
             {
@@ -254,22 +263,26 @@ class ExportFileCsv:
                 del entity_data["objectLabelIds"]
 
             entities_list.append(entity_data)
-            csv_data = self.export_dict_list_to_csv(entities_list)
-            self.helper.connector_logger.info(
-                "Uploading",
-                {
-                    "entity_id": entity_id,
-                    "export_type": export_type,
-                    "file_name": file_name,
-                    "file_markings": file_markings,
-                },
-            )
-            self.helper.api.stix_domain_object.push_entity_export(
-                entity_id=entity_id,
-                file_name=file_name,
-                data=csv_data,
-                file_markings=file_markings,
-            )
+            csv_file_path = self.export_dict_list_to_csv(entities_list)
+            try:
+                self.helper.connector_logger.info(
+                    "Uploading",
+                    {
+                        "entity_id": entity_id,
+                        "export_type": export_type,
+                        "file_name": file_name,
+                        "file_markings": file_markings,
+                    },
+                )
+                with open(csv_file_path, "rb") as csv_file:
+                    self.helper.api.stix_domain_object.push_entity_export(
+                        entity_id=entity_id,
+                        file_name=file_name,
+                        data=csv_file,
+                        file_markings=file_markings,
+                    )
+            finally:
+                self._remove_tmp_file(csv_file_path)
             self.helper.connector_logger.info(
                 "Export done",
                 {
