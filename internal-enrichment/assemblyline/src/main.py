@@ -570,15 +570,19 @@ class AssemblyLineConnector:
                 except Exception as exc:
                     self.helper.log_warning(f"Error refreshing observable: {exc}")
 
-        # No file content recovered - try hash lookup
-        file_hash = self._select_any_hash(observable.get("hashes", []))
-        if file_hash:
+        # No file content recovered — try a hash-only AssemblyLine lookup.
+        # ``_check_existing_analysis`` searches ``files.sha256:<hash>``,
+        # so only attempting it for SHA-256 (consistent with the
+        # ``_get_stixfile_content`` branch and with the dedup contract
+        # documented in ``_process_file``).
+        sha256 = self._select_sha256(observable.get("hashes", []))
+        if sha256:
             self.helper.log_info(
-                f"No file content available, checking AssemblyLine for hash: {file_hash}"
+                f"No file content available, checking AssemblyLine for SHA-256: {sha256}"
             )
-            if self._check_existing_analysis(file_hash):
+            if self._check_existing_analysis(sha256):
                 self.helper.log_info("Existing AssemblyLine analysis found for hash")
-                return None, None, file_hash
+                return None, None, sha256
         raise Exception(
             "Artifact has no file content for analysis. File may still be uploading "
             "or artifact contains only hashes."
@@ -757,15 +761,29 @@ class AssemblyLineConnector:
 
         file_content, file_name, file_hash = self._get_file_content(observable)
 
-        if file_content is None and file_hash:
-            self.helper.log_info(
-                f"Using existing AssemblyLine results for hash: {file_hash}"
-            )
-            existing_results = self._check_existing_analysis(file_hash)
-            if existing_results:
-                return existing_results
+        # ``_check_existing_analysis`` searches AssemblyLine submissions
+        # by ``files.sha256:<hash>`` — passing an MD5 / SHA-1 there always
+        # misses, generates noise in the AL audit log, and may even hit
+        # an unrelated submission if the non-SHA-256 hash collides. Pick
+        # the SHA-256 explicitly here and only attempt deduplication when
+        # one is available; ``file_hash`` (first available hash, possibly
+        # MD5 / SHA-1 / ``"unknown"``) is kept only for logging where it
+        # is honestly labelled "hash" rather than "SHA-256".
+        sha256_for_lookup = self._select_sha256(observable.get("hashes", []))
+
+        if file_content is None:
+            if sha256_for_lookup:
+                self.helper.log_info(
+                    f"Using existing AssemblyLine results for SHA-256: {sha256_for_lookup}"
+                )
+                existing_results = self._check_existing_analysis(sha256_for_lookup)
+                if existing_results:
+                    return existing_results
+                raise Exception(
+                    f"No file content and no existing analysis found for SHA-256: {sha256_for_lookup}"
+                )
             raise Exception(
-                f"No file content and no existing analysis found for hash: {file_hash}"
+                f"No file content available and no SHA-256 hash to look up (hash: {file_hash})"
             )
 
         file_size_mb = len(file_content) / (1024 * 1024)
@@ -776,11 +794,11 @@ class AssemblyLineConnector:
             )
 
         self.helper.log_info(
-            f"Processing file: {file_name} ({file_size_mb:.2f} MB, SHA-256: {file_hash})"
+            f"Processing file: {file_name} ({file_size_mb:.2f} MB, hash: {file_hash})"
         )
 
-        if not self.assemblyline_force_resubmit and file_hash:
-            existing_results = self._check_existing_analysis(file_hash)
+        if not self.assemblyline_force_resubmit and sha256_for_lookup:
+            existing_results = self._check_existing_analysis(sha256_for_lookup)
             if existing_results:
                 self.helper.log_info("Using existing AssemblyLine results")
                 return existing_results
@@ -1255,9 +1273,17 @@ class AssemblyLineConnector:
             # standard STIX ``created_by_ref`` (which is reserved for
             # SDOs/SROs). Setting the standard field on a SCO would
             # silently leave the platform's author column unset.
-            sco_author_properties = {
-                "x_opencti_created_by_ref": self.assemblyline_identity_standard_id,
-            }
+            # ``self.assemblyline_identity_standard_id`` is ``None`` when
+            # the upfront identity lookup / creation failed (see
+            # ``_get_assemblyline_identity``) — omit the key entirely in
+            # that case so the SCOs serialise without a ``null`` author
+            # (some stix2 validators reject the explicit-``null`` form
+            # and OpenCTI ingest would otherwise drop the property).
+            sco_author_properties: Dict[str, Any] = {}
+            if self.assemblyline_identity_standard_id:
+                sco_author_properties["x_opencti_created_by_ref"] = (
+                    self.assemblyline_identity_standard_id
+                )
 
             for domain in malicious_iocs.get("domains", []):
                 try:
@@ -1306,20 +1332,33 @@ class AssemblyLineConnector:
                 except Exception as exc:
                     self.helper.log_warning(f"Could not create STIX URL {url}: {exc}")
 
-            malware_analysis = stix2.MalwareAnalysis(
-                id=malware_analysis_id,
-                product="AssemblyLine",
-                result_name=result_name,
-                result=result_value,
-                analysis_started=analysis_started,
-                analysis_ended=analysis_ended,
-                submitted=analysis_started,
-                sample_ref=stix_entity_id,
-                created_by_ref=self.assemblyline_identity_standard_id,
-                analysis_sco_refs=analysis_sco_refs or None,
-                external_references=[external_reference],
-                object_marking_refs=source_marking_refs,
-            )
+            # ``self.assemblyline_identity_standard_id`` is ``None`` when
+            # the upfront identity lookup / creation failed (see
+            # ``_get_assemblyline_identity``). ``stix2.MalwareAnalysis``
+            # validates ``created_by_ref`` as an ``identifier-type``
+            # string and raises ``InvalidValueError`` on ``None``, which
+            # would short-circuit the bundle and skip emitting the
+            # Malware-Analysis altogether. Omit the field entirely when
+            # the identity is unavailable so the rest of the enrichment
+            # still lands in OpenCTI.
+            malware_analysis_kwargs: Dict[str, Any] = {
+                "id": malware_analysis_id,
+                "product": "AssemblyLine",
+                "result_name": result_name,
+                "result": result_value,
+                "analysis_started": analysis_started,
+                "analysis_ended": analysis_ended,
+                "submitted": analysis_started,
+                "sample_ref": stix_entity_id,
+                "analysis_sco_refs": analysis_sco_refs or None,
+                "external_references": [external_reference],
+                "object_marking_refs": source_marking_refs,
+            }
+            if self.assemblyline_identity_standard_id:
+                malware_analysis_kwargs["created_by_ref"] = (
+                    self.assemblyline_identity_standard_id
+                )
+            malware_analysis = stix2.MalwareAnalysis(**malware_analysis_kwargs)
             stix_objects.append(malware_analysis)
 
             serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -1844,6 +1883,25 @@ class AssemblyLineConnector:
             else ""
         )
 
+        # When ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS=true`` the rest of the
+        # enrichment emits a separate batch of ``suspicious``-labelled
+        # indicators (and may even flip the verdict to ``SUSPICIOUS``)
+        # — surface that batch in the Note as well so the user-facing
+        # summary cannot contradict what the connector actually sent.
+        # The block is rendered only when there is at least one
+        # suspicious IOC, so the malicious-only path keeps its
+        # original short format.
+        suspicious_block = ""
+        if has_suspicious_iocs:
+            sus = suspicious_iocs or {}
+            suspicious_block = (
+                "\n## Suspicious IOCs Created as Indicators\n"
+                f"- **Suspicious Domains:** {len(sus.get('domains', []))}\n"
+                f"- **Suspicious IP Addresses:** {len(sus.get('ips', []))}\n"
+                f"- **Suspicious URLs:** {len(sus.get('urls', []))}\n"
+                f"- **Suspicious Malware Families:** {len(sus.get('families', []))}\n"
+            )
+
         note_content = f"""# AssemblyLine Analysis Results
 
 **Verdict:** {verdict}
@@ -1855,7 +1913,7 @@ class AssemblyLineConnector:
 - **Malicious IP Addresses:** {len(malicious_iocs['ips'])}
 - **Malicious URLs:** {len(malicious_iocs['urls'])}
 - **Malware Families:** {len(malicious_iocs['families'])}{observables_note}
-
+{suspicious_block}
 ## MITRE ATT&CK Analysis
 - **Attack Techniques Identified:** {attack_patterns_count}
 

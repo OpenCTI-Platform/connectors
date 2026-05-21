@@ -1226,5 +1226,240 @@ class TestTerminalAssemblyLineStates:
         assert AssemblyLineTerminalError is not Exception
 
 
+class TestMissingIdentityDoesNotEmitNoneAuthor:
+    """Identity-lookup failure must not crash the Malware-Analysis bundle.
+
+    ``_get_assemblyline_identity`` swallows ``Exception`` and sets
+    ``assemblyline_identity_standard_id = None`` when the lookup /
+    create call fails (transient OpenCTI errors, RBAC, etc.). The
+    downstream STIX-construction paths must therefore tolerate a
+    ``None`` author:
+
+    * ``stix2.MalwareAnalysis(..., created_by_ref=None)`` raises
+      ``InvalidValueError`` (the spec requires an ``identifier-type``
+      string), which would short-circuit the entire Malware-Analysis
+      bundle. The kwarg must be omitted instead.
+    * Derived SCOs carry the author via the ``x_opencti_created_by_ref``
+      custom property; passing ``None`` there serialises a ``null`` in
+      the bundle that OpenCTI ingest does not unwrap into the author
+      column. The key must be omitted instead.
+    """
+
+    _SOURCE_ID = "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f"
+
+    @classmethod
+    def _observable(cls) -> Dict[str, Any]:
+        return {
+            "id": cls._SOURCE_ID,
+            "entity_type": "Artifact",
+            "standard_id": cls._SOURCE_ID,
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": stix2.TLP_AMBER["id"],
+                }
+            ],
+        }
+
+    def _run(self) -> Dict[str, Any]:
+        # ``assemblyline_identity_standard_id=None`` simulates the
+        # identity-lookup failure.
+        connector = _make_connector(
+            assemblyline_identity_standard_id=None,
+            assemblyline_author=None,
+        )
+        sent_bundles: list = []
+        connector.helper.stix2_create_bundle = MagicMock(
+            side_effect=lambda objects: sent_bundles.append(objects) or "{}"
+        )
+        connector.helper.send_stix2_bundle = MagicMock()
+        connector._create_malware_analysis(
+            observable_id=self._SOURCE_ID,
+            observable=self._observable(),
+            results={
+                "sid": "sid-1",
+                "max_score": 1500,
+                "times": {
+                    "submitted": "2024-05-04T10:11:12.345Z",
+                    "completed": "2024-05-04T10:12:00Z",
+                },
+            },
+            malicious_iocs={
+                "domains": ["evil.example.org"],
+                "ips": [],
+                "urls": [],
+                "families": [],
+            },
+        )
+        assert len(sent_bundles) == 1, (
+            "Bundle should still be sent even with no identity; "
+            f"log_error calls were: {connector.helper.log_error.call_args_list}"
+        )
+        return {obj.id: obj for obj in sent_bundles[0]}
+
+    def test_malware_analysis_emitted_without_author(self) -> None:
+        bundle = self._run()
+        malware_analysis = next(
+            o for o in bundle.values() if getattr(o, "type", None) == "malware-analysis"
+        )
+        # ``created_by_ref`` must be absent rather than ``None`` —
+        # ``stix2`` would reject the latter.
+        serialized = malware_analysis.serialize()
+        assert '"created_by_ref"' not in serialized
+        assert "null" not in serialized.lower() or '"created_by_ref": null' not in (
+            serialized.lower()
+        )
+
+    def test_derived_scos_omit_author_when_identity_missing(self) -> None:
+        bundle = self._run()
+        domain = next(
+            o for o in bundle.values() if getattr(o, "type", None) == "domain-name"
+        )
+        serialized = domain.serialize()
+        assert "x_opencti_created_by_ref" not in serialized, (
+            "Derived SCO should omit x_opencti_created_by_ref when no identity is "
+            f"available, got: {serialized}"
+        )
+
+
+class TestProcessFileShaDedup:
+    """``_process_file`` must only dedup on SHA-256, never MD5 / SHA-1.
+
+    ``_check_existing_analysis`` searches AssemblyLine submissions by
+    the literal Lucene query ``files.sha256:<hash>``. Passing an MD5
+    or SHA-1 there always misses (so the connector pays a round-trip
+    for nothing and pollutes the AssemblyLine audit log) and — far
+    worse — could in principle hit an unrelated submission whose
+    SHA-256 happens to share a prefix with the MD5 / SHA-1 wildcard
+    match. The dedup path must therefore pick the SHA-256 explicitly
+    via ``_select_sha256`` and only fire when one is present.
+    """
+
+    @staticmethod
+    def _make_observable(hashes: list) -> Dict[str, Any]:
+        return {
+            "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+            "entity_type": "Artifact",
+            "hashes": hashes,
+        }
+
+    def _run(self, observable: Dict[str, Any], existing_results: Any) -> MagicMock:
+        connector = _make_connector(assemblyline_force_resubmit=False)
+        # Force ``_get_file_content`` to return a non-empty payload so
+        # ``_process_file`` reaches the dedup branch instead of taking
+        # the no-content / hash-lookup branch above it.
+        connector._get_file_content = MagicMock(
+            return_value=(b"abc", "sample.bin", "any-hash-value")
+        )
+        check_existing = MagicMock(return_value=existing_results)
+        connector._check_existing_analysis = check_existing
+        # Block the actual submission path so the test does not need to
+        # mock the full AssemblyLine REST flow — we only care about the
+        # call-shape of ``_check_existing_analysis`` here.
+        connector._wait_for_al_ready = MagicMock()
+        connector._resolve_submission_classification = MagicMock(return_value="TLP:C")
+        connector._source_tlp = MagicMock(return_value="TLP:C")
+        try:
+            connector._process_file(observable)
+        except Exception:
+            # ``_process_file`` will try to submit and fail (we did not
+            # mock ``requests.post``); that is fine — the dedup branch
+            # runs first.
+            pass
+        return check_existing
+
+    def test_dedup_uses_sha256_only(self) -> None:
+        sha256 = "a" * 64
+        observable = self._make_observable(
+            [
+                {"algorithm": "MD5", "hash": "b" * 32},
+                {"algorithm": "SHA-1", "hash": "c" * 40},
+                {"algorithm": "SHA-256", "hash": sha256},
+            ]
+        )
+        check_existing = self._run(observable, existing_results=None)
+        assert check_existing.call_count == 1
+        called_arg = check_existing.call_args.args[0]
+        assert called_arg == sha256, (
+            "Dedup must call _check_existing_analysis with the SHA-256, not the first "
+            f"available hash; got: {called_arg!r}"
+        )
+
+    def test_dedup_skipped_when_no_sha256(self) -> None:
+        observable = self._make_observable(
+            [
+                {"algorithm": "MD5", "hash": "b" * 32},
+                {"algorithm": "SHA-1", "hash": "c" * 40},
+            ]
+        )
+        check_existing = self._run(observable, existing_results=None)
+        check_existing.assert_not_called()
+
+
+class TestSummaryNoteSuspiciousSection:
+    """``_create_summary_note`` surfaces suspicious IOCs when emitted.
+
+    When ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS=true`` the rest of the
+    enrichment emits ``suspicious``-labelled indicators with
+    ``x_opencti_score=50`` and may set the verdict to ``SUSPICIOUS`` —
+    a Note that only listed "Malicious IOCs" would be inconsistent
+    with what the connector actually sent. The Note must therefore
+    render an additional "Suspicious IOCs" section whenever the
+    suspicious bucket is non-empty, and *must not* render it
+    otherwise (so the malicious-only path keeps its original short
+    format).
+    """
+
+    @staticmethod
+    def _empty_iocs() -> Dict[str, list]:
+        return {"domains": [], "ips": [], "urls": [], "families": []}
+
+    @classmethod
+    def _captured_note(
+        cls,
+        suspicious_iocs: Dict[str, list] | None = None,
+    ) -> str:
+        connector = _make_connector()
+        note_create = MagicMock()
+        connector.helper.api = MagicMock(note=MagicMock(create=note_create))
+        connector._create_summary_note(
+            observable={
+                "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+                "objectMarking": [],
+            },
+            results={"sid": "sid-1", "max_score": 1500, "file_info": {}},
+            malicious_iocs=cls._empty_iocs(),
+            counts={"observables": 0, "indicators": 0},
+            malware_analysis_id="malware-analysis--abc",
+            attack_patterns_count=0,
+            suspicious_iocs=suspicious_iocs,
+        )
+        assert note_create.called
+        return note_create.call_args.kwargs.get("content", "")
+
+    def test_suspicious_section_rendered_when_non_empty(self) -> None:
+        sus = {
+            "domains": ["sketchy.example.org", "another.sketchy.example.org"],
+            "ips": ["10.0.0.1"],
+            "urls": [],
+            "families": ["AdwareXYZ"],
+        }
+        content = self._captured_note(suspicious_iocs=sus)
+        assert "## Suspicious IOCs Created as Indicators" in content
+        assert "**Suspicious Domains:** 2" in content
+        assert "**Suspicious IP Addresses:** 1" in content
+        assert "**Suspicious URLs:** 0" in content
+        assert "**Suspicious Malware Families:** 1" in content
+
+    def test_suspicious_section_omitted_when_empty(self) -> None:
+        content = self._captured_note(suspicious_iocs=None)
+        assert "Suspicious IOCs" not in content
+
+    def test_suspicious_section_omitted_when_all_buckets_empty(self) -> None:
+        content = self._captured_note(suspicious_iocs=self._empty_iocs())
+        assert "Suspicious IOCs" not in content
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
