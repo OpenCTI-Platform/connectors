@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost:4000'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'DataDog'
+  scope: 'stix2'
+  auto: true
+  log_level: 'info'
+  update_existing_data: false
+
+datadog:
+  token: 'ChangeMe'
+  app_key: 'ChangeMe'
+  api_base_url: 'https://api.datadoghq.com'
+  app_base_url: 'https://app.datadoghq.com'
+  import_interval: 60
+  # import_start_date: '2024-01-01T00:00:00Z'
+  max_tlp: 'TLP:AMBER'
+  batch_size: 100
+  import_alerts: true
+  create_incident_response_cases: false
+  # alert_priorities: ['P1', 'P2', 'P3', 'P4']
+  # alert_tags_filter: []
+  extract_observables_from_alerts: true
+  include_alert_context: true
