@@ -380,7 +380,17 @@ class DataImporter:
 
     def _extract_alert_context(self, alert: dict[str, Any]) -> dict[str, Any]:
         """
-        Extract context information from alert
+        Extract context information from alert.
+
+        ``assignee`` is propagated alongside ``creator`` because
+        :meth:`StixConverter._create_context_note` reads
+        ``context.get("assignee")`` when rendering the context Note.
+        ``DataDogClient._convert_signal_to_alert`` already populates
+        ``alert["assignee"]`` (a dict with a ``name`` key) from the
+        upstream ``workflow.triage.assignee`` field, but the importer
+        used to drop it on the floor — so the Note rendered ``Creator:
+        …`` while always omitting the ``Assignee:`` line, even on
+        signals that explicitly carried one.
 
         Args:
             alert: Raw alert data
@@ -394,6 +404,7 @@ class DataImporter:
             "query": alert.get("query", ""),
             "options": alert.get("options", {}),
             "creator": alert.get("creator", {}),
+            "assignee": alert.get("assignee", {}),
             "org_id": alert.get("org_id"),
         }
 

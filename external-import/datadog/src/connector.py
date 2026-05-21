@@ -324,7 +324,25 @@ class DataDogConnector:
             # Fetch data from DataDog based on configuration
             all_import_data = []
 
-            # Import alerts if enabled
+            # Import alerts if enabled.
+            #
+            # ``get_alerts`` returns ``None`` when the underlying API
+            # call failed in a way the client could not recover from
+            # (paginating the Security Monitoring v2 endpoint blew
+            # through the bounded 429 retry, a 5xx survived the
+            # adapter retries, the JSON parse failed). Distinguishing
+            # ``None`` (API failure) from ``{"success": True, "alerts": []}``
+            # (genuinely no new signals in the configured window) is
+            # critical: lumping them together used to mark the Work as
+            # ``processed`` (success) and emit a "No data available
+            # for import" warning, hiding API outages in the work
+            # summary and metrics. The state cursor is *not* advanced
+            # in either branch (the timestamp-advance gate later in
+            # this method only fires after a successful bundle send),
+            # so an API failure correctly lets the next cycle retry
+            # the same window — but the operator now sees the failure
+            # surface as an in-error Work and ``errors: 1`` in the
+            # run summary instead of a silent "0 errors" success.
             if self.import_alerts:
                 self.helper.log_info("Fetching DataDog alerts...")
                 alerts_data = self.client.get_alerts(
@@ -332,7 +350,15 @@ class DataDogConnector:
                     priorities=self.alert_priorities,
                     tags_filter=self.alert_tags_filter,
                 )
-                if alerts_data and alerts_data.get("success"):
+                if alerts_data is None:
+                    self.helper.log_error(
+                        "Aborting cycle: DataDog Security Monitoring API "
+                        "fetch failed; the state cursor will NOT be "
+                        "advanced so the same time window is retried on "
+                        "the next cycle."
+                    )
+                    return {"imported": 0, "errors": 1}
+                if alerts_data.get("success"):
                     all_import_data.append(
                         {
                             "type": "alerts",
@@ -343,6 +369,17 @@ class DataDogConnector:
                     self.helper.log_info(
                         f"Fetched {alerts_data.get('total', 0)} alerts"
                     )
+                else:
+                    # Defensive: ``get_alerts`` currently only returns
+                    # ``None`` or ``{"success": True, ...}``, but a future
+                    # change that introduces an explicit
+                    # ``{"success": False, "error": ...}`` shape must not
+                    # silently fall through to the "no data" path either.
+                    self.helper.log_error(
+                        "Aborting cycle: DataDog alerts response missing "
+                        "``success`` flag; treating as API failure."
+                    )
+                    return {"imported": 0, "errors": 1}
 
             if not all_import_data:
                 self.helper.log_warning("No data available for import")
@@ -496,9 +533,25 @@ class DataDogConnector:
                         )
                     self.helper.log_info(message)
 
-                    # Mark work as completed
+                    # Mark work as completed.
+                    #
+                    # ``in_error=True`` when the cycle reported ANY
+                    # error: either a failed API fetch
+                    # (``imported == 0`` AND ``errors > 0`` — the
+                    # ``alerts_data is None`` branch in
+                    # ``_import_data``) or a partial conversion
+                    # failure (``imported > 0`` AND
+                    # ``errors > 0`` — some alerts converted, some
+                    # didn't). Without this, the OpenCTI UI shows the
+                    # Work as a clean success even when the run
+                    # silently dropped data — which masked recurring
+                    # API outages and conversion regressions in
+                    # production.
                     if work_id:
-                        self.helper.api.work.to_processed(work_id, message)
+                        cycle_in_error = results.get("errors", 0) > 0
+                        self.helper.api.work.to_processed(
+                            work_id, message, in_error=cycle_in_error
+                        )
 
                 except Exception as e:
                     error_message = f"Import cycle failed: {str(e)}"

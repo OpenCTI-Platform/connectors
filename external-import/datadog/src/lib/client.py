@@ -47,12 +47,28 @@ class DataDogClient:
         # never send a ``page[limit]`` that DataDog will reject.
         self.batch_size = max(1, min(int(batch_size), 1000))
 
-        # Setup HTTP session with retry strategy
+        # Setup HTTP session with retry strategy.
+        #
+        # 429 (Too Many Requests) is intentionally NOT in the
+        # ``status_forcelist``: ``_make_request`` already runs its own
+        # 429 handler that respects the server-supplied
+        # ``Retry-After`` header (capped at ``_MAX_RATE_LIMIT_SLEEP``)
+        # and bounds the retry count via
+        # ``_MAX_RATE_LIMIT_RETRIES``. Letting the adapter ALSO retry
+        # on 429 used to multiply the two budgets (3 adapter retries
+        # ×  5 manual retries = up to 15 attempts per request, with
+        # cumulative delays from both layers' backoff) — which both
+        # made rate-limit windows much slower than intended and
+        # triggered DataDog's longer-window throttle on top of the
+        # short-window one. Keep the adapter focused on transient
+        # 5xx-class server failures (where requests' default Retry
+        # policy is appropriate) and leave 429 to the explicit
+        # rate-limit handler downstream.
         self.session = requests.Session()
         retry_strategy = Retry(
             total=3,
             backoff_factor=1,
-            status_forcelist=[429, 500, 502, 503, 504],
+            status_forcelist=[500, 502, 503, 504],
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
@@ -141,8 +157,8 @@ class DataDogClient:
     def get_alerts(
         self,
         since: datetime,
-        priorities: list[str] = None,
-        tags_filter: list[str] = None,
+        priorities: list[str] | None = None,
+        tags_filter: list[str] | None = None,
     ) -> dict[str, Any] | None:
         """
         Get DataDog security signals

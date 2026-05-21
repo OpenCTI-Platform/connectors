@@ -99,17 +99,40 @@ class StixConverter:
 
     def _create_identity(self) -> stix2.Identity:
         """
-        Create identity object for the connector
+        Create identity object for the connector.
 
-        Returns:
-            STIX Identity object
+        The Identity is keyed on the configured ``CONNECTOR_NAME`` (via
+        ``self.helper.connect_name``), with a stable fallback when the
+        helper does not expose one. Two reasons:
+
+        * **Per-deployment identities.** Earlier the seed was hardcoded
+          to ``"DataDog Connector"``, so two tenants pointing this
+          connector at different DataDog organisations both emitted the
+          same Identity SDO id and OpenCTI merged their alerts under a
+          single author. Threading ``CONNECTOR_NAME`` through gives
+          each deployment its own deterministic identity.
+
+        * **Stable timestamps.** ``Identity.generate_id`` is
+          deterministic in the name + class, but the SDO body used to
+          carry ``created=datetime.now(UTC)`` / ``modified=datetime.now(UTC)``
+          — the resulting SDO had a stable id but a fresh timestamp
+          on every run. Dropping the explicit timestamps lets STIX
+          fall back to its default (set once at object construction)
+          and OpenCTI's ingestion-side dedup keeps the first-seen
+          values. The author SDO is also brought into the same
+          ``object_marking_refs`` shape as every other SDO in the
+          bundle so the Identity is no longer the only unmarked
+          object — keeping marking propagation consistent across
+          the whole bundle.
         """
+        identity_name = (
+            getattr(self.helper, "connect_name", None) or "DataDog Connector"
+        )
         return stix2.Identity(
-            id=Identity.generate_id("DataDog Connector", "system"),
-            name="DataDog Connector",
+            id=Identity.generate_id(identity_name, "system"),
+            name=identity_name,
             identity_class="system",
-            created=datetime.now(UTC),
-            modified=datetime.now(UTC),
+            object_marking_refs=[self.tlp_marking.id],
         )
 
     def _get_tlp_marking(self) -> stix2.MarkingDefinition:
@@ -394,7 +417,7 @@ class StixConverter:
             return None
 
     def _create_custom_case_object(
-        self, case_data: dict[str, Any], observables: list[Any] = None
+        self, case_data: dict[str, Any], observables: list[Any] | None = None
     ) -> CustomObjectCaseIncident | None:
         """
         Create custom incident response case object
