@@ -5,11 +5,22 @@ opencti:
 connector:
   id: '511a18bb-03b6-50e3-888a-08a8e656bf99'
   type: 'INTERNAL_ENRICHMENT'
-  name: 'Splunk Search'
+  name: 'SplunkSearch'
   scope: 'Indicator'
   log_level: 'info'
-  auto: false # Enable/disable auto-enrichment of observables
+  auto: false
 
 splunk-search:
-  api_base_url: 'ChangeMe'
-  api_key: 'ChangeMe'
+  host: 'splunk.example.com'
+  port: 8089
+  token: 'ChangeMe'
+  app: 'search'
+  scheme: 'https'
+  verify_ssl: true
+  earliest_time: '-30d@d'
+  latest_time: 'now'
+  timeout: 60
+  wait_seconds: 2
+  max_results: 1000
+  sighting_tlp: 'TLP:AMBER'
+  observable_tlp: 'TLP:AMBER'

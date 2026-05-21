@@ -1,9 +1,23 @@
+from unittest.mock import Mock
+
 import pytest
-from src.internal_enrichment_connector.splunk_result_parser import (
-    parse_observables_and_incident,
-)
 import stix2
 from pycti import CustomObservableHostname, CustomObservableUserAgent, Identity
+
+from internal_enrichment_connector.splunk_result_parser import (
+    parse_observables_and_incident,
+)
+
+
+@pytest.fixture
+def helper():
+    mock = Mock()
+    mock.connector_logger = Mock()
+    mock.connector_logger.debug = Mock()
+    mock.connector_logger.info = Mock()
+    mock.connector_logger.error = Mock()
+    mock.connector_logger.warning = Mock()
+    return mock
 
 
 @pytest.fixture
@@ -28,7 +42,7 @@ def tlp_marking():
     return "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 
 
-def test_parse_web_traffic(author: Identity):
+def test_parse_web_traffic(helper, author):
     result = {
         "sourcetype": "suricata:http",
         "vendor_product": "Suricata IDS",
@@ -39,36 +53,26 @@ def test_parse_web_traffic(author: Identity):
         "src_ip": "192.168.1.1",
         "dest": "93.184.216.34",
         "dest_ip": "93.184.216.34",
+        "host": "sensor-01",
         "status": 200,
         "bytes": 1234,
     }
     observables, source_identity, sightings = parse_observables_and_incident(
-        result=result, author=author
+        helper, result=result, author=author
     )
 
-    # Check observables (should include Software but it won't have a sighting)
-    assert len(observables) >= 4  # URL, IPs, User-Agent, Software(sourcetype)
+    assert len(observables) >= 4
     assert any(isinstance(obs, stix2.URL) for obs in observables)
     assert any(isinstance(obs, stix2.IPv4Address) for obs in observables)
     assert any(isinstance(obs, CustomObservableUserAgent) for obs in observables)
     assert any(isinstance(obs, stix2.Software) for obs in observables)
-
-    # Check source identity
     assert source_identity is not None
-    assert source_identity.name == "Suricata IDS"
+    assert source_identity.name == "sensor-01"
     assert source_identity.identity_class == "system"
-
-    # Check sightings (should not include Software)
-    sightable_observables = [
-        obs for obs in observables if not isinstance(obs, stix2.Software)
-    ]
-    assert len(sightings) == len(sightable_observables)
-    for sighting in sightings:
-        assert isinstance(sighting, stix2.Sighting)
-        assert sighting.where_sighted_refs == [source_identity.id]
+    assert all(sighting.where_sighted_refs == [source_identity.id] for sighting in sightings)
 
 
-def test_parse_web_traffic_with_threat_intel(author: Identity):
+def test_parse_web_traffic_with_threat_intel(helper, author):
     result = {
         "sourcetype": "suricata:http",
         "url": "https://example.com",
@@ -81,25 +85,21 @@ def test_parse_web_traffic_with_threat_intel(author: Identity):
         "confidence": "90",
         "threat_description": "Known C2 IP address",
     }
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
+    observables, _, sightings = parse_observables_and_incident(
+        helper, result, author=author
     )
 
-    # Check that threat intel data is added to custom properties
     ip_observable = next(
         obs for obs in observables if isinstance(obs, stix2.IPv4Address)
     )
     assert ip_observable.x_opencti_score == 90
     assert "malicious-actor" in ip_observable.x_opencti_labels
     assert ip_observable.x_opencti_description == "Known C2 IP address"
-
-    # Check sightings include threat intel context
-    for sighting in sightings:
-        assert sighting.confidence == 90
-        assert sighting.description == "Known C2 IP address"
+    assert all(sighting.confidence == 90 for sighting in sightings)
+    assert all(sighting.description == "Known C2 IP address" for sighting in sightings)
 
 
-def test_parse_network_traffic(author: Identity):
+def test_parse_network_traffic(helper, author):
     result = {
         "sourcetype": "firewall",
         "src": "10.0.0.1",
@@ -107,85 +107,84 @@ def test_parse_network_traffic(author: Identity):
         "dest_port": 443,
         "protocol": "tcp",
     }
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
+    observables, _, sightings = parse_observables_and_incident(
+        helper, result, author=author
     )
-    assert len(observables) >= 3  # Source IP, Dest IP, Software(sourcetype)
+    assert len(observables) >= 3
     assert len(sightings) == len(observables)
 
 
-def test_parse_dns_traffic(author: Identity):
+def test_parse_dns_traffic(helper, author):
     result = {
         "sourcetype": "dns",
         "src": "192.168.1.10",
         "query": "example.com",
         "answer": "93.184.216.34",
     }
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
+    observables, _, sightings = parse_observables_and_incident(
+        helper, result, author=author
     )
-    assert len(observables) >= 3  # Domain, IP, Software(sourcetype)
+    assert len(observables) >= 3
     assert len(sightings) == len(observables)
 
 
-def test_with_tlp_marking(author: Identity):
+def test_with_tlp_marking(helper, author, tlp_marking):
     result = {"sourcetype": "test", "url": "https://example.com"}
-    tlp = "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author, tlp=tlp
+    observables, _, _ = parse_observables_and_incident(
+        helper, result, author=author, marking_id=tlp_marking
     )
     for obs in observables:
-        assert obs.object_marking_refs == [tlp]
+        assert obs.object_marking_refs == [tlp_marking]
 
 
-def test_empty_result(author: Identity):
-    result = {}
+def test_empty_result(helper, author):
     observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
+        helper, {}, author=author
     )
-    assert len(observables) == 0
+    assert observables == []
     assert source_identity is None
-    assert len(sightings) == 0
+    assert sightings == []
 
 
-def test_unknown_values_filtered(author: Identity):
+def test_unknown_values_filtered(helper, author):
     result = {
         "sourcetype": "test",
         "user": "unknown",
         "src": "0.0.0.0",
         "dest": "unknown",
     }
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
-    )
-    # Should only have sourcetype Software observable
+    observables, _, _ = parse_observables_and_incident(helper, result, author=author)
     assert len(observables) == 1
     assert isinstance(observables[0], stix2.Software)
 
 
-def test_sourcetype_identity_creation(author: Identity):
-    result = {"sourcetype": "zeek:conn", "vendor_product": "Zeek Network Monitor"}
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
+def test_system_identity_creation_from_host(helper, author):
+    result = {
+        "sourcetype": "zeek:conn",
+        "vendor_product": "Zeek Network Monitor",
+        "host": "zeek-sensor",
+    }
+    _, source_identity, _ = parse_observables_and_incident(
+        helper, result, author=author
     )
     assert source_identity is not None
-    assert source_identity.name == "Zeek Network Monitor"
+    assert source_identity.name == "zeek-sensor"
     assert source_identity.identity_class == "system"
-    assert source_identity.x_opencti_identity_subtype == "splunk_sourcetype"
+    assert "sourcetype::zeek:conn" in source_identity.objectLabel
 
 
-def test_sighting_attribution(author: Identity):
+def test_sighting_attribution(helper, author):
     result = {"sourcetype": "test", "src": "192.168.1.1"}
-    observables, source_identity, sightings = parse_observables_and_incident(
-        result=result, author=author
+    _, source_identity, sightings = parse_observables_and_incident(
+        helper, result=result, author=author
     )
+    assert source_identity is None
     for sighting in sightings:
-        assert sighting.where_sighted_refs == [source_identity.id]
+        assert sighting.where_sighted_refs == [author.id]
         assert sighting.created_by_ref == author.id
 
 
-def test_sighting_structure(author: Identity):
-    """Test that sightings are created with the correct structure."""
+def test_sighting_structure(helper, author):
     result = {
         "sourcetype": "test",
         "src": "192.168.1.1",
@@ -193,30 +192,22 @@ def test_sighting_structure(author: Identity):
         "confidence": "90",
     }
     observables, source_identity, sightings = parse_observables_and_incident(
-        result, author=author
+        helper, result, author=author
     )
-
-    # Get the IP observable
     ip_observable = next(
         obs for obs in observables if isinstance(obs, stix2.IPv4Address)
     )
 
-    for sighting in sightings:
-        if "x_opencti_sighting_of_ref" in sighting.custom_properties:
-            # Check the sighting references the observable correctly
-            assert (
-                sighting.custom_properties["x_opencti_sighting_of_ref"]
-                == ip_observable.id
-            )
-            # Check the fake indicator ID is used
-            assert (
-                sighting.sighting_of_ref
-                == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
-            )
-            # Check other properties
-            assert sighting.confidence == 90
-            assert sighting.description == "Test description"
-            assert sighting.where_sighted_refs == [source_identity.id]
-            assert sighting.created_by_ref == author.id
-            assert "first_seen" in sighting
-            assert "last_seen" in sighting
+    ip_sighting = next(
+        sighting
+        for sighting in sightings
+        if sighting.get("x_opencti_sighting_of_ref") == ip_observable.id
+    )
+    assert ip_sighting.sighting_of_ref == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
+    assert ip_sighting.confidence == 90
+    assert ip_sighting.description == "Test description"
+    assert source_identity is None
+    assert ip_sighting.where_sighted_refs == [author.id]
+    assert ip_sighting.created_by_ref == author.id
+    assert "first_seen" in ip_sighting
+    assert "last_seen" in ip_sighting

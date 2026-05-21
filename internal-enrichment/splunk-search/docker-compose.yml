@@ -13,10 +13,19 @@ services:
       - CONNECTOR_SCOPE=Indicator
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=false
-      - CONNECTOR_RUN_AND_TERMINATE=false
-      - SPLUNK_API_BASE_URL=splunk.testing.filigran.io
-      - SPLUNK_API_KEY=${SPLUNK_API_KEY}
-      - SPLUNK_VERIFY_SSL=false
+      - SPLUNK_HOST=splunk.example.com
+      - SPLUNK_PORT=8089
+      - SPLUNK_TOKEN=${SPLUNK_TOKEN}
+      - SPLUNK_APP=search
+      - SPLUNK_SCHEME=https
+      - SPLUNK_VERIFY_SSL=true
+      - SPLUNK_SEARCH_EARLIEST=-30d@d
+      - SPLUNK_SEARCH_LATEST=now
+      - SPLUNK_SEARCH_TIMEOUT=60
+      - SPLUNK_WAIT_SECONDS=2
+      - SPLUNK_MAX_RESULTS=1000
+      - SPLUNK_SIGHTING_TLP=TLP:AMBER
+      - SPLUNK_OBSERVABLE_TLP=TLP:AMBER
     depends_on:
       opencti:
         condition: service_healthy

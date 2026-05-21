@@ -1,7 +1,4 @@
 #!/bin/sh
+set -e
 
-# Go to the right directory
-cd /opt/opencti-connector-template
-
-# Launch the worker
-python3 main.py
+exec "$@"

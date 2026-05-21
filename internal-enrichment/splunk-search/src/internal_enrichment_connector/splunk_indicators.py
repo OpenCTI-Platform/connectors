@@ -128,6 +128,10 @@ class SplunkIndicator:
             "OBS_VALUE": value_str,
             "OBS_LIST": values_csv,
             "INDICATOR_ID": self.id,
+            "DOMAIN_LIST": values_csv,
+            "IP_LIST": values_csv,
+            "HOSTNAME_LIST": values_csv,
+            "FILE_HASH_LIST": values_csv,
         }
         for k, v in angle_map.items():
             q = q.replace(f"<{k}>", v)

@@ -398,3 +398,11 @@ spl_indicators = [
         "abstract": "Last 24 hours",
     },
 ]
+
+
+def get_full_bundle():
+    return {"type": "bundle", "objects": spl_indicators}
+
+
+def get_default_indicators():
+    return [obj for obj in spl_indicators if obj.get("type") == "indicator"]

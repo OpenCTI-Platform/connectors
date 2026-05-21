@@ -1,3 +1,3 @@
-from .connector import ConnectorTemplate
+from .connector import SplunkSearchConnector
 
-__all__ = ["ConnectorTemplate"]
+__all__ = ["SplunkSearchConnector"]

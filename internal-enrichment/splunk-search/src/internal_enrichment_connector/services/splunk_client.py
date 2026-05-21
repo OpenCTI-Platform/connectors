@@ -1,30 +1,68 @@
+import time
+
+import splunklib.client as client
+import splunklib.results as results
+
+
 class SplunkClient:
-    def __init__(self, url, token, verify_ssl=True):
-        self.url = url
-        self.token = token
-        self.verify_ssl = verify_ssl
+    def __init__(self, host, port, token, app="search", scheme="https", verify=True):
+        if not verify:
+            import ssl
 
-    def health_check(self):
-        """Perform a simple Splunk search to verify connectivity and token."""
-        import requests
-        headers = {'Authorization': f'Splunk {self.token}'}
-        params = {'search': '_index=_internal limit 1', 'count': 1}
-        try:
-            resp = requests.get(f"{self.url}/services/search/jobs", headers=headers, params=params, verify=self.verify_ssl, timeout=10)
-            resp.raise_for_status()
-            return resp.json().get('entry', [])
-        except Exception as e:
-            raise RuntimeError(f"Splunk health check failed: {e}")
+            ssl._create_default_https_context = ssl._create_unverified_context
 
-    def send_event(self, event):
-        """Send a single event to Splunk via HTTP Event Collector."""
-        import requests
-        import json
-        hec_url = f"{self.url}/services/collector"
-        headers = {'Authorization': f'Splunk {self.token}'}
-        payload = json.dumps({"event": event})
+        self.service = client.connect(
+            host=host,
+            port=int(port),
+            token=token,
+            app=app,
+            scheme=scheme,
+        )
+
+    def run_search(
+        self,
+        query,
+        earliest_time="-30d@d",
+        latest_time="now",
+        timeout=60,
+        wait_seconds=2,
+        max_results=1000,
+    ) -> list:
+        stripped = (query or "").strip()
+        if not stripped.startswith(("|", "search ")):
+            query = f"search {stripped}"
+        else:
+            query = stripped
+
+        job = self.service.jobs.create(
+            query,
+            earliest_time=earliest_time,
+            latest_time=latest_time,
+            exec_mode="normal",
+            max_count=max_results,
+        )
+
+        elapsed = 0
+        while not job.is_done():
+            time.sleep(wait_seconds)
+            elapsed += wait_seconds
+            if elapsed >= timeout:
+                job.cancel()
+                raise TimeoutError(f"Splunk search timed out after {timeout}s")
+            job.refresh()
+
+        reader = results.JSONResultsReader(
+            job.results(output_mode="json", count=max_results)
+        )
+        rows = []
+        for item in reader:
+            if isinstance(item, dict):
+                rows.append(item)
+        return rows
+
+    def health_check(self) -> bool:
         try:
-            resp = requests.post(hec_url, headers=headers, data=payload, verify=self.verify_ssl, timeout=10)
-            resp.raise_for_status()
-        except Exception as e:
-            raise RuntimeError(f"Failed to send event to Splunk: {e}")
+            self.service.apps.list()
+            return True
+        except Exception:
+            return False
