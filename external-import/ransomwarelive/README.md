@@ -12,7 +12,7 @@ The bundle the connector produces for each disclosed victim always includes the 
 
 ### Requirements
 
-- OpenCTI Platform >= 6.7.7
+- OpenCTI Platform >= 7.260521.0 (matches the `pycti==7.260521.0` pin in `requirements.txt`)
 
 ### Configuration
 

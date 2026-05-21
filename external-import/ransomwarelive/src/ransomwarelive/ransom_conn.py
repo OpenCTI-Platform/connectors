@@ -636,22 +636,29 @@ class RansomwareAPIConnector:
             if created.tzinfo is None:
                 created = created.replace(tzinfo=timezone.utc)
 
-            # ``timedelta.seconds`` returns only the 0..86399
-            # seconds-of-day component and silently wraps negative
-            # deltas (items disclosed older than ``last_run - 1 day``)
-            # back into the in-window range, defeating the 24h filter
+            # The recent-victims filter accepts items disclosed in the
+            # 24h window centred on ``last_run``: from ``last_run - 1
+            # day`` (covering disclosures the previous run might have
+            # missed because the upstream stream had not flushed them
+            # yet) to ``last_run`` (excluded — anything more recent is
+            # picked up on the next cycle). The previous shape used
+            # ``timedelta.seconds`` which only returns the 0..86399
+            # seconds-of-day component and silently wrapped negative
+            # deltas (items disclosed *older* than ``last_run - 1 day``)
+            # back into the in-window range — defeating the 24h filter
             # and re-importing every old victim on every cycle.
-            # ``total_seconds()`` preserves the day component (and the
-            # sign) so the comparison behaves correctly across day
-            # boundaries.
+            # Bounded ``0 <= time_diff < ONE_DAY_IN_SECONDS`` now
+            # respects both ends of the window so neither sign of
+            # drift slips through.
             if not last_run_datetime:
-                time_diff = 0
+                is_recent = True
             else:
                 time_diff = (
                     created - (last_run_datetime - timedelta(days=1))
                 ).total_seconds()
+                is_recent = 0 <= time_diff < ONE_DAY_IN_SECONDS
 
-            if time_diff < ONE_DAY_IN_SECONDS:
+            if is_recent:
                 try:
                     bundle_list = self.create_bundle_list(
                         item=item,
@@ -791,8 +798,9 @@ class RansomwareAPIConnector:
             self.helper.connector_logger.error("Connector error on run", {"error": e})
 
         finally:
-            message = "Connector successfully run, storing last_run as" + now.isoformat(
-                timespec="seconds"
+            message = (
+                f"Connector successfully run, storing last_run as "
+                f"{now.isoformat(timespec='seconds')}"
             )
             if self.work_id:
                 self.helper.api.work.to_processed(self.work_id, message)
