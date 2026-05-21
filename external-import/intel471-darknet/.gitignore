@@ -1,0 +1,9 @@
+# Cover both the legacy root-level location and the canonical
+# ``src/config.yml`` location documented in the README's manual
+# deployment, so an operator running ``python3 src/main.py`` with a
+# real credentials file cannot commit it by mistake.
+config.yml
+src/config.yml
+__pycache__
+logs
+*.gql

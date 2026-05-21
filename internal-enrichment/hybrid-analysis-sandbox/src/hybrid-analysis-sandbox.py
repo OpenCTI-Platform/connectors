@@ -316,7 +316,7 @@ class HybridAnalysis:
         file_name = opencti_entity["importFiles"][0]["name"]
         file_uri = opencti_entity["importFiles"][0]["id"]
         file_content = self.helper.api.fetch_opencti_file(
-            self.helper.opencti_url + "/storage/get/" + file_uri, True
+            self.helper.opencti_url.rstrip("/") + "/storage/get/" + file_uri, True
         )
         # Write the file
         f = open(file_name, "wb")
