@@ -236,6 +236,16 @@ The connector performs incremental ingestion using `modified_at` and maps each c
 > The connector now automatically migrates: on first run after upgrade, if no `indicators_last_modified` state exists, it falls back to the legacy `misp_last_run` value to avoid re-importing all indicators from `import_start_date`.
 > Legacy state keys are cleaned up after the first successful run.
 
+#### Indicators Score Mapping
+
+Flashpoint Indicators are ingested into OpenCTI with the following score mapping applied to the `x_opencti_score` field:
+
+| Flashpoint Score | OpenCTI Score |
+|------------------|---------------|
+| Informational    | `60`          |
+| Suspicious       | `80`          |
+| Malicious        | `100`         |
+
 #### Relevant documentation:
 
 - https://docs.flashpoint.io/flashpoint/reference/list_indicators_technical_intelligence_v2_indicators_get
