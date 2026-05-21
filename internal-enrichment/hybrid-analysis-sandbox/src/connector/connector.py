@@ -1,9 +1,7 @@
-import os
 import time
 from datetime import datetime
-from typing import Dict
+from urllib.parse import urljoin
 
-import requests
 import stix2
 from connector.settings import ConnectorSettings
 from pycti import (
@@ -28,16 +26,17 @@ class HybridAnalysis:
         self.config = config
         self.helper = helper
 
-        self.api_key = self.config.hybrid_analysis.token.get_secret_value()
-        self.environment_id = self.config.hybrid_analysis.environment_id
-        self.max_tlp = self.config.hybrid_analysis.max_tlp
+        self.api_key = self.config.hybrid_analysis_sandbox.token.get_secret_value()
+        self.environment_id = self.config.hybrid_analysis_sandbox.environment_id
 
-        self.api_url = "https://hybrid-analysis.com/api/v2"
-        self.headers = {
-            "api-key": self.api_key,
-            "user-agent": "OpenCTI Hybrid Analysis Connector - Version 6.0.5",
-            "accept": "application/json",
-        }
+        self.client = HybridAnalysisClient(
+            helper,
+            token=self.config.hybrid_analysis_sandbox.token.get_secret_value(),
+            environment_id=self.config.hybrid_analysis_sandbox.environment_id,
+        )
+
+        self.max_tlp = self.config.hybrid_analysis_sandbox.max_tlp
+
         self.identity = stix2.Identity(
             id=Identity.generate_id(
                 name="Hybrid Analysis", identity_class="organization"
@@ -242,135 +241,134 @@ class HybridAnalysis:
         else:
             return "Nothing to attach"
 
-    def _submit_url(self, stix_objects, stix_entity, opencti_entity):
+    def _get_report(self, report_id: str) -> dict:
+        """Poll the Hybrid Analysis API until the report of submitted file is ready and return the report summary.
+        :param report_id: The ID of the report to retrieve.
+        :return: The report summary as a dictionary.
+        :raises HybridAnalysisReportError: If the report processing resulted in an error.
+        """
+        state = None
+
+        processing = True
+        while processing:
+            result = self.client.get_report_state(report_id)
+            state = result["state"]
+            if state in ["IN_QUEUE", "IN_PROGRESS"]:
+                self.helper.connector_logger.debug(
+                    "Report is still being processed, waiting 30 seconds before checking again.",
+                    {"report_id": report_id, "state": state},
+                )
+                time.sleep(30)
+            else:
+                processing = False
+
+        if state == "ERROR":
+            raise HybridAnalysisReportError(result["error"])
+
+        return self.client.get_report_summary(report_id)
+
+    def _search_hash(self, opencti_entity: dict) -> dict | None:
+        """
+        Search for a file hash in the Hybrid Analysis database.
+        :param opencti_entity: The OpenCTI representation of the entity being enriched.
+        :return: The analysis report if found, else None.
+        """
+        hash_value = None
+        for hash in opencti_entity["hashes"]:
+            if hash["algorithm"] in ("SHA-256", "SHA-1", "MD5"):
+                hash_value = hash["hash"]
+
+        if hash_value is not None:
+            result = self.client.search_hash(hash_value)
+            if not result:
+                self.helper.connector_logger.info(
+                    "Hash not found in Hybrid Analysis database.",
+                    {"hash": hash_value},
+                )
+                return None
+
+            if len(result.get("reports", [])) > 0:
+                self.helper.connector_logger.info(
+                    "Hash analysis already exists in Hybrid Analysis, attaching knowledge..."
+                )
+                report = self.client.get_report_summary(result["reports"][0]["id"])
+                return report
+
+    def _submit_url(self, opencti_entity: dict) -> dict:
+        """Submit a URL to the Hybrid Analysis sandbox for analysis.
+        :param opencti_entity: The OpenCTI representation of the entity being enriched.
+        :return: The analysis report.
+        """
+
         self.helper.connector_logger.info(
             "Observable is a URL, triggering the sandbox..."
         )
-        values = {
-            "url": opencti_entity["observable_value"],
-            "environment_id": self.environment_id,
-        }
-        r = requests.post(
-            self.api_url + "/submit/url", headers=self.headers, data=values
-        )
-        if r.status_code > 299:
-            raise ValueError(r.text)
-        result = r.json()
-        job_id = result["job_id"]
-        state = "IN_QUEUE"
-        self.helper.connector_logger.info("Analysis in progress...")
-        while state == "IN_QUEUE" or state == "IN_PROGRESS":
-            r = requests.get(
-                self.api_url + "/report/" + job_id + "/state", headers=self.headers
-            )
-            if r.status_code > 299:
-                raise ValueError(r.text)
-            result = r.json()
-            state = result["state"]
-            time.sleep(30)
-        if state == "ERROR":
-            raise ValueError(result["error"])
-        r = requests.get(
-            self.api_url + "/report/" + job_id + "/summary", headers=self.headers
-        )
-        if r.status_code > 299:
-            raise ValueError(r.text)
-        result = r.json()
-        self.helper.connector_logger.info("Analysis done, attaching knowledge...")
-        return self._send_knowledge(stix_objects, stix_entity, opencti_entity, result)
 
-    def _trigger_sandbox(self, stix_objects, stix_entity, opencti_entity):
+        result = self.client.submit_url(opencti_entity["observable_value"])
+
+        self.helper.connector_logger.info("Analysis in progress...")
+        report = self._get_report(result["job_id"])
+        self.helper.connector_logger.info("Analysis done, attaching knowledge...")
+        return report
+
+    def _trigger_sandbox(self, opencti_entity: dict) -> dict:
+        """Submit a file to the Hybrid Analysis sandbox for analysis.
+        :param opencti_entity: The OpenCTI representation of the entity being enriched.
+        :return: The analysis report.
+        """
+
         self.helper.connector_logger.info(
-            "File not found in HA, triggering the sandbox..."
+            "File not found in Hybrid Analysis, triggering the sandbox..."
         )
+
         file_name = opencti_entity["importFiles"][0]["name"]
         file_uri = opencti_entity["importFiles"][0]["id"]
-        file_content = self.helper.api.fetch_opencti_file(
-            self.helper.opencti_url.rstrip("/") + "/storage/get/" + file_uri, True
-        )
-        f = open(file_name, "wb")
-        f.write(file_content)
-        f.close()
-        with open(file_name, "rb") as f:
-            values = {"environment_id": self.environment_id}
-            r = requests.post(
-                self.api_url + "/submit/file",
-                headers=self.headers,
-                files={"file": (file_name, f)},
-                data=values,
-            )
-            f.close()
-        os.remove(file_name)
-        if r.status_code > 299:
-            raise ValueError(r.text)
-        result = r.json()
-        job_id = result["job_id"]
-        state = "IN_QUEUE"
+        file_url = urljoin(str(self.config.opencti.url), f"storage/get/{file_uri}")
+        file_content: bytes = self.helper.api.fetch_opencti_file(file_url, True)  # type: ignore[union-attr]
+
+        result = self.client.submit_file(file_name, file_content)
+
         self.helper.connector_logger.info("Analysis in progress...")
-        while state == "IN_QUEUE" or state == "IN_PROGRESS":
-            r = requests.get(
-                self.api_url + "/report/" + job_id + "/state", headers=self.headers
-            )
-            if r.status_code > 299:
-                raise ValueError(r.text)
-            result = r.json()
-            state = result["state"]
-            time.sleep(30)
-        if state == "ERROR":
-            raise ValueError(result["error"])
-        r = requests.get(
-            self.api_url + "/report/" + job_id + "/summary", headers=self.headers
-        )
-        if r.status_code > 299:
-            raise ValueError(r.text)
-        result = r.json()
+        report = self._get_report(result["job_id"])
         self.helper.connector_logger.info("Analysis done, attaching knowledge...")
-        return self._send_knowledge(stix_objects, stix_entity, opencti_entity, result)
+        return report
 
-    def _process_observable(self, stix_objects, stix_entity, opencti_entity):
+    def _process_observable(self, stix_entity: dict, opencti_entity: dict) -> str:
+        """Process the observable based on its type and available data.
+        :param stix_entity: The original STIX entity being enriched.
+        :param opencti_entity: The OpenCTI representation of the entity being enriched.
+        :return: A message indicating the result of the operation."""
+
         self.helper.connector_logger.info(
-            "Processing the observable " + opencti_entity["observable_value"]
+            "Processing the observable ",
+            {
+                "observable_type": opencti_entity["entity_type"],
+                "observable_value": opencti_entity["observable_value"],
+            },
         )
-        result = []
-        if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
-            values = None
-            for hash in opencti_entity["hashes"]:
-                if hash["algorithm"] == "SHA-256":
-                    values = {"hash": hash["hash"]}
-                elif hash["algorithm"] == "SHA-1":
-                    values = {"hash": hash["hash"]}
-                elif hash["algorithm"] == "MD5":
-                    values = {"hash": hash["hash"]}
-            if values is not None:
-                r = requests.get(
-                    self.api_url + "/search/hash", headers=self.headers, params=values
-                )
-                if r.status_code > 299:
-                    raise ValueError(r.text)
-                result = r.json()
 
-            if len(result["reports"]) > 0:
-                self.helper.connector_logger.info(
-                    "Already found in HA, attaching knowledge..."
-                )
-                r = requests.get(
-                    self.api_url + f"/report/{result['reports'][0]['id']}/summary",
-                    headers=self.headers,
-                )
-                if r.status_code > 299:
-                    raise ValueError(r.text)
-                report = r.json()
-                return self._send_knowledge(
-                    stix_objects, stix_entity, opencti_entity, report
-                )
+        report = None
+        trigger_sandbox = False
+
         if opencti_entity["entity_type"] in ["Url", "Domain-Name", "Hostname"]:
-            return self._submit_url(stix_objects, stix_entity, opencti_entity)
-        if (
-            "importFiles" not in opencti_entity
-            or len(opencti_entity["importFiles"]) == 0
-        ):
-            return "Observable not found and no file to upload in the sandbox"
-        return self._trigger_sandbox(stix_objects, stix_entity, opencti_entity)
+            report = self._submit_url(opencti_entity)
+
+        if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
+            report = self._search_hash(opencti_entity)
+            if report is None:
+                trigger_sandbox = True
+
+        if opencti_entity.get("importFiles"):
+            trigger_sandbox = True
+
+        if trigger_sandbox:
+            report = self._trigger_sandbox(opencti_entity)
+
+        if report is None:
+            message = "Observable not found and no file to upload in the sandbox"
+            self.helper.connector_logger.info(message)
+            return message
+
 
     def _process_message(self, data: Dict):
         stix_objects = data["stix_objects"]
