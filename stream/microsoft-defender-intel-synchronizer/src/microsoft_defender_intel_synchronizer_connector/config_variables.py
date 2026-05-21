@@ -68,7 +68,7 @@ class ConfigConnector:
             ["microsoft_defender_intel_synchronizer", "base_url"],
             self.load,
             default="https://api.securitycenter.microsoft.com",
-        )
+        ).rstrip("/")
         self.resource_path = get_config_variable(
             "MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_RESOURCE_PATH",
             ["microsoft_defender_intel_synchronizer", "resource_path"],

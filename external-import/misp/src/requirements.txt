@@ -1,6 +1,8 @@
-pycti==6.9.11
-urllib3==2.6.3
+datasize==1.0.0
+pycti==7.260521.0
+pympler==1.1
+urllib3==2.7.0
 pymisp~=2.5.17
 pydantic==2.11.6
 pydantic-settings==2.10.1
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.11#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

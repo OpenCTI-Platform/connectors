@@ -68,7 +68,8 @@ There are a number of configuration options, which are set either in `docker-com
 | Import from Date      | thehive.import_from_date     | `THEHIVE_IMPORT_FROM_DATE`        |                      | No        | Start date for importing (ISO format).                                      |
 | Import Only TLP       | thehive.import_only_tlp      | `THEHIVE_IMPORT_ONLY_TLP`         | 0,1,2,3,4            | No        | TLP levels to import (comma-separated).                                     |
 | Import Alerts         | thehive.import_alerts        | `THEHIVE_IMPORT_ALERTS`           | true                 | No        | Import alerts in addition to cases.                                         |
-| Severity Mapping      | thehive.severity_mapping     | `THEHIVE_SEVERITY_MAPPING`        | 1:low,2:medium,3:high,4:critical | No | Map TheHive severity to OpenCTI.                                            |
+| Import Attachments    | thehive.import_attachments   | `THEHIVE_IMPORT_ATTACHMENTS`      | false                | No        | Enable or disable the import of case attachments.                           |
+| Severity Mapping      | thehive.severity_mapping     | `THEHIVE_SEVERITY_MAPPING`        | 1:low,2:medium,3:high,4:critical | No | Map TheHive severity to OpenCTI.                                       |
 | Case Status Mapping   | thehive.case_status_mapping  | `THEHIVE_CASE_STATUS_MAPPING`     |                      | No        | Map TheHive case status to OpenCTI status ID.                               |
 | Task Status Mapping   | thehive.task_status_mapping  | `THEHIVE_TASK_STATUS_MAPPING`     |                      | No        | Map TheHive task status to OpenCTI status ID.                               |
 | Alert Status Mapping  | thehive.alert_status_mapping | `THEHIVE_ALERT_STATUS_MAPPING`    |                      | No        | Map TheHive alert status to OpenCTI status ID.                              |
@@ -143,6 +144,29 @@ Find the connector and click the refresh button to reset the state and trigger a
 ## Behavior
 
 The connector fetches cases and alerts from TheHive and converts them to STIX 2.1 incidents and observables.
+
+## Attachments import
+
+By default, attachments from TheHive cases are **not imported**.
+This behavior is intentional to prevent issues with large files and message size limits in the messaging system.
+
+### How to enable attachments import
+
+Attachments import can be enabled using one of the following options:
+
+**Environment variable**
+```bash
+THEHIVE_IMPORT_ATTACHMENTS=true
+```
+
+### RabbitMQ message size limitation
+
+OpenCTI relies on RabbitMQ for message transport.  
+By default, RabbitMQ has a maximum message size limit of **512 MB**.
+
+When importing large attachments, this limit may be exceeded and result in errors such as:
+
+PRECONDITION_FAILED - message size is larger than configured max size
 
 ### Data Flow
 

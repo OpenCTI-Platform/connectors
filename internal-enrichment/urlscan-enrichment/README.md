@@ -55,13 +55,13 @@ This connector enriches URLs and IP addresses by submitting them to URLScan for 
 
 ### Base Connector Configuration
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `url`, `ipv4-addr`, `ipv6-addr` |
-| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+| Parameter | Docker envvar | Mandatory | Description                                                                                                                         |
+|-----------|---------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector                                                                                 |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance                                                                                               |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `url` (submission), `domain-name` (submission), `hostname` (submission), `ipv4-addr` (search), `ipv6-addr` (search) |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment                                                                                                   |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`)                                                                           |
 
 ### URLScan Configuration
 
@@ -105,10 +105,11 @@ services:
 
 ## Usage
 
-The connector enriches URLs and IP addresses by:
-1. Submitting URLs to URLScan for analysis
+The connector enriches URLs, Domains, Hostnames and IP addresses (ipv4 and ipv6) by:
+1. Submitting observables to URLScan for analysis
 2. Waiting for analysis completion
 3. Importing results including screenshots and indicators
+
 
 Trigger enrichment:
 - Manually via the OpenCTI UI
@@ -118,6 +119,10 @@ Trigger enrichment:
 ---
 
 ## Behavior
+
+When enriching observables of type `url`, `hostname`, or `domain-name`, the connector will query the Submission API (https://urlscan.io/docs/api/#submission).
+
+When enriching observables of type `ipv4-addr` or `ipv6-addr`, the connector will query the Search API (https://urlscan.io/docs/api/#search).
 
 ### Data Flow
 

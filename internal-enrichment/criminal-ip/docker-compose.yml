@@ -1,0 +1,15 @@
+version: '3'
+services:
+  connector-criminal-ip:
+    image: opencti/connector-criminal-ip:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      #- CONNECTOR_NAME=Criminal IP # Optional (default: 'Criminal IP')
+      #- CONNECTOR_SCOPE=IPv4-Addr,Domain-Name # Optional (default: 'IPv4-Addr,Domain-Name')
+      #- CONNECTOR_AUTO=false # Optional (default: false)
+      #- CONNECTOR_LOG_LEVEL=error # Optional (default: 'error')
+      - CRIMINAL_IP_TOKEN=ChangeMe
+      #- CRIMINAL_IP_MAX_TLP=TLP:AMBER # Optional (default: 'TLP:AMBER')
+    restart: always

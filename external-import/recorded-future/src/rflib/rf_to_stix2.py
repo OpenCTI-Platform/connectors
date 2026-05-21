@@ -66,7 +66,7 @@ class RFStixEntity:
         """Returns a list of STIX objects"""
         if not self.stix_obj:
             self.create_stix_objects()
-        return [self.stix_obj]
+        return [self.author, self.stix_obj]
 
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
@@ -197,34 +197,44 @@ class Indicator(RFStixEntity):
             allow_custom=True,
         )
 
-    def map_data(self, rf_indicator, tlp, risklist_related_entities):
+    def map_data(
+        self, rf_indicator, tlp, risklist_related_entities, ta_to_intrusion_set=False
+    ):
         handled_related_entities_types = risklist_related_entities
         try:
             self.risk_score = int(rf_indicator["Risk"])
         except ValueError:
             self.risk_score = 0
-        related_entities_hits = json.loads(rf_indicator["Links"])["hits"]
-        if (
-            related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
-        ):  # Sometimes, hits is not empty but sections is
-            rf_related_entities = []
-            rf_related_entities_sections = related_entities_hits[0]["sections"]
 
-            for section in rf_related_entities_sections:
-                # Handle indicators and TTP & Tools
-                if "Indicators" or "TTP" in section["section_id"]["name"]:
-                    rf_related_entities += section["lists"]
+        # Get related entities
+        related_entities_links = json.loads(rf_indicator["Links"])
 
-                for element in rf_related_entities:
-                    if element["type"]["name"] in handled_related_entities_types:
-                        for rf_related_element in element["entities"]:
-                            type_ = element["type"]["name"]
-                            name_ = rf_related_element["name"]
-                            related_element = ENTITY_TYPE_MAPPER[type_](
-                                name_, type_, self.author, tlp
-                            )
-                            stix_objs = related_element.to_stix_objects()
-                            self.related_entities.extend(stix_objs)
+        # If there are related entities
+        if related_entities_links and len(related_entities_links) > 0:
+            related_entities_hits = related_entities_links["hits"]
+            if (
+                related_entities_hits and len(related_entities_hits[0]["sections"]) > 0
+            ):  # Sometimes, hits is not empty but sections is
+                rf_related_entities = []
+                rf_related_entities_sections = related_entities_hits[0]["sections"]
+
+                for section in rf_related_entities_sections:
+                    # Handle indicators and TTP & Tools
+                    if "Indicators" or "TTP" in section["section_id"]["name"]:
+                        rf_related_entities += section["lists"]
+
+                    for element in rf_related_entities:
+                        if element["type"]["name"] in handled_related_entities_types:
+                            for rf_related_element in element["entities"]:
+                                type_ = element["type"]["name"]
+                                name_ = rf_related_element["name"]
+                                cls = _resolve_entity_class(
+                                    type_,
+                                    enabled=ta_to_intrusion_set,
+                                )
+                                related_element = cls(name_, type_, self.author, tlp)
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
 
     def build_bundle(self, stix_name):
         """
@@ -239,7 +249,7 @@ class Indicator(RFStixEntity):
         for entity in self.related_entities:
             if entity["type"] in ["indicator"]:
                 relationships.append(self._create_rel("related-to", entity.id))
-            if entity["type"] in ["attack-pattern", "malware", "threat-actor"]:
+            if entity["type"] in _STIX_DIRECTIONAL_REL_TYPES:
                 relationships.append(self._create_rel("indicates", entity.id))
         self.objects.extend(relationships)
 
@@ -768,18 +778,136 @@ class Malware(RFStixEntity):
 class Vulnerability(RFStixEntity):
     """Converts a CyberVulnerability to a Vulnerability SDO"""
 
-    def __init__(self, name, _type, author=None, tlp=None, display_name=None):
-        super().__init__(name, _type, author, tlp)
-        self.display_name = display_name
+    def __init__(
+        self,
+        name,
+        _type,
+        author=None,
+        tlp=None,
+        first_seen=None,
+        last_seen=None,
+    ):
+        super().__init__(
+            name=name,
+            _type=_type,
+            author=author,
+            tlp=tlp,
+            first_seen=first_seen,
+            last_seen=last_seen,
+        )
+        self.description = None
+        self.labels = []
+        self.risk_score = None
+        self.objects = []
+        self.related_entities = []
+        self.stix_vulnerability = None
 
-    # TODO: add vuln descriptions
+    def to_stix_objects(self):
+        """Returns a list of STIX objects"""
+        if not self.stix_vulnerability:
+            self.create_stix_objects()
+        return [self.stix_vulnerability]
+
     def create_stix_objects(self):
         """Creates STIX objects from object attributes"""
-        self.stix_obj = stix2.Vulnerability(
+        self.stix_vulnerability = self._create_vulnerability()
+
+    def _create_vulnerability(self):
+        """Creates and returns STIX2 vulnerability object"""
+        return stix2.Vulnerability(
             id=pycti.Vulnerability.generate_id(self.name),
             name=self.name,
             created_by_ref=self.author.id,
             object_marking_refs=self.tlp,
+            description=self.description,
+            labels=self.labels,
+            created=self.first_seen,
+            modified=self.last_seen,
+            custom_properties={
+                "x_opencti_score": self.risk_score or None,
+            },
+        )
+
+    def add_description(self, description):
+        self.description = description
+
+    def add_labels(self, labels):
+        self.labels = labels
+
+    def map_data(
+        self, rf_vuln, tlp, risklist_related_entities, ta_to_intrusion_set=False
+    ):
+        handled_related_entities_types = risklist_related_entities
+        try:
+            self.risk_score = int(rf_vuln["Risk"])
+        except ValueError:
+            self.risk_score = 0
+
+        # Get related entities
+        related_entities_links = json.loads(rf_vuln["Links"])
+
+        # If there are related entities
+        if related_entities_links and len(related_entities_links) > 0:
+            if (
+                related_entities_links
+                and len(related_entities_links[0]["sections"]) > 0
+            ):  # Sometimes, hits is not empty but sections is
+                rf_related_entities = []
+                rf_related_entities_sections = related_entities_links[0]["sections"]
+
+                for section in rf_related_entities_sections:
+                    # Handle indicators and TTP & Tools
+                    if "Indicators" or "TTP" in section["section_id"]["name"]:
+                        rf_related_entities += section["lists"]
+
+                    for element in rf_related_entities:
+                        if element["type"]["name"] in handled_related_entities_types:
+                            for rf_related_element in element["entities"]:
+                                type_ = element["type"]["name"]
+                                name_ = rf_related_element["name"]
+                                cls = _resolve_entity_class(
+                                    type_,
+                                    enabled=ta_to_intrusion_set,
+                                )
+                                related_element = cls(name_, type_, self.author, tlp)
+                                stix_objs = related_element.to_stix_objects()
+                                self.related_entities.extend(stix_objs)
+
+    def build_bundle(self, stix_name):
+        """
+        Adds self and all related entities (indicators, observables, malware, threat-actors, relationships) to objects
+        """
+        # Put the vulnerability first
+        self.objects.extend(stix_name.to_stix_objects())
+        # Then related entities
+        self.objects.extend(self.related_entities)
+        relationships = []
+        # Then add 'related-to' relationship with all related entities
+        for entity in self.related_entities:
+            if entity["type"] in ["indicator"]:
+                relationships.append(self._create_rel("related-to", entity.id))
+            if entity["type"] in _STIX_DIRECTIONAL_REL_TYPES:
+                relationships.append(self._create_rel("targets", entity.id))
+        self.objects.extend(relationships)
+
+    def _create_rel(self, relationship_type, source_id):
+        """Creates Relationship object linking indicator and observable"""
+        return stix2.Relationship(
+            id=pycti.StixCoreRelationship.generate_id(
+                relationship_type, source_id, self.stix_vulnerability.id
+            ),
+            relationship_type=relationship_type,
+            source_ref=source_id,
+            target_ref=self.stix_vulnerability.id,
+            created_by_ref=self.author.id,
+            object_marking_refs=self.tlp,
+        )
+
+    def to_stix_bundle(self):
+        """Returns STIX objects as a Bundle"""
+        return stix2.Bundle(
+            objects=self.objects if self.objects else self.to_stix_objects(),
+            allow_custom=True,
         )
 
 
@@ -901,6 +1029,20 @@ ENTITY_TYPE_MAPPER = {
     "Operation": Campaign,
     "Threat Actor": ThreatActor,
 }
+
+
+def _resolve_entity_class(type_: str, enabled: bool = False):
+    if enabled and type_ == "Threat Actor":
+        return IntrusionSet
+    return ENTITY_TYPE_MAPPER[type_]
+
+
+# STIX types that justify a directional relationship (indicates / targets)
+# rather than the generic "related-to" used for other indicators.
+_STIX_DIRECTIONAL_REL_TYPES = frozenset(
+    ["attack-pattern", "malware", "threat-actor", "intrusion-set"]
+)
+
 
 # maps RF types to the corresponding url to get the risk score
 INDICATOR_TYPE_URL_MAPPER = {

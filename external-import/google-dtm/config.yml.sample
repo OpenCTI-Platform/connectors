@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+# connector:
+#   id: '92483abc-27f1-46b4-afcb-d9a0a405754a'
+#   name: 'Google DTM'
+#   scope: 'google-dtm'
+#   log_level: 'error'
+#   duration_period: 'PT1H'
+
+google_dtm:
+  api_key: 'ChangeMe'
+#  tlp: 'amber+strict'
+#  import_start_date: 'P10D'
+#  alert_type: ''
+#  alert_severity: ''
+  

@@ -90,7 +90,7 @@ class ShadowserverAPI:
         date: Optional[str] = None,
         limit: int = 1000,
         reports: Optional[List[str]] = None,
-        type: Optional[str] = None,
+        type: Optional[str | List[str]] = None,
     ) -> Optional[Dict]:
         """
         Submit API request to retrieve a list of reports.
@@ -99,7 +99,7 @@ class ShadowserverAPI:
             date (str, optional): The date for which to retrieve reports. Defaults to None.
             limit (int, optional): The maximum number of reports to retrieve. Defaults to 1000.
             reports (list, optional): A list of report names to retrieve. Defaults to None.
-            type (str, optional): The type of reports to retrieve. Defaults to None.
+            type (str or list, optional): The type(s) of reports to retrieve. Defaults to None.
 
         Returns:
             dict or None: The JSON response from the request, or None if an error occurred.

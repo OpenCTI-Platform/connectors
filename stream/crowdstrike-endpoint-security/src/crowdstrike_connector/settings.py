@@ -1,4 +1,5 @@
 from ipaddress import IPv4Address
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -51,6 +52,18 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
     falcon_for_mobile_active: bool = Field(
         description="Enable Android and iOS platform support.",
         default=False,
+    )
+    action_on_ip: Literal["no_action", "detect"] = Field(
+        description="Action to apply on IP indicators pushed to CrowdStrike.",
+        default="detect",
+    )
+    action_on_domain: Literal["no_action", "detect"] = Field(
+        description="Action to apply on domain indicators pushed to CrowdStrike.",
+        default="detect",
+    )
+    action_on_hash: Literal["no_action", "allow", "detect", "prevent"] = Field(
+        description="Action to apply on hash indicators pushed to CrowdStrike.",
+        default="detect",
     )
 
 

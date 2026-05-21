@@ -292,7 +292,7 @@ CONVERTER_CONFIGS["{entity_type}"] = GTI_{ENTITY_TYPE}_CONVERTER_CONFIG
 
 ```python
 # File: src/custom/client_api.py
-# Add to fetch_subentities_ids method
+# Add to fetch_subentities method
 subentity_types = [
     "malware_families",
     "threat_actors",

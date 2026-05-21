@@ -20,8 +20,21 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "default": [],
-      "description": "The scope of the connector.",
+      "default": [
+        "marking-definition",
+        "identity",
+        "attack-pattern",
+        "course-of-action",
+        "intrusion-set",
+        "campaign",
+        "malware",
+        "tool",
+        "report",
+        "narrative",
+        "event",
+        "channel"
+      ],
+      "description": "The scope of the connector. Only these object types will be imported on OpenCTI.",
       "items": {
         "type": "string"
       },

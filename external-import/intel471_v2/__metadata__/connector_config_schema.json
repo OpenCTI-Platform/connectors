@@ -110,6 +110,15 @@
       "default": 70,
       "description": "Indicator score. Defaults to `70`.",
       "type": "integer"
+    },
+    "INTEL471_BACKEND": {
+      "default": "titan",
+      "description": "Backend to use for Intel471 API calls. Defaults to `titan`.",
+      "enum": [
+        "titan",
+        "verity471"
+      ],
+      "type": "string"
     }
   },
   "required": [

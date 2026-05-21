@@ -6,7 +6,7 @@ from collections import namedtuple
 import pika
 from minio import Minio
 from minio.commonconfig import CopySource
-from pika.exceptions import NackError, UnroutableError
+from pika.exceptions import ChannelClosedByBroker, NackError, UnroutableError
 
 from .lib.external_import import ExternalImportConnector
 from .metrics import Metrics
@@ -232,9 +232,27 @@ class StreamImporterConnector(ExternalImportConnector):
             )
             self.helper.connector_logger.debug("Event has been sent")
             self.helper.metric.inc("bundle_send")
-        except (UnroutableError, NackError):
+        except ChannelClosedByBroker as err:
+            # ``ChannelClosedByBroker`` is raised when the RabbitMQ broker
+            # closes the channel itself (most commonly because the message
+            # exceeds the broker-side ``max_message_size``). The channel
+            # is now permanently closed, so the previous catch-and-recurse
+            # pattern used for ``UnroutableError`` / ``NackError`` would
+            # have looped forever on the very same closed channel — every
+            # subsequent ``basic_publish`` would re-raise the same
+            # exception. Just record the metric, log the error, and drop
+            # this event so the outer per-file loop in :meth:`send_event`
+            # can open a fresh channel for the next file.
             self.metrics.send_error()
-            self.helper.connector_logger.error("Unable to send bundle, retry...")
+            self.helper.connector_logger.error(
+                f"Unable to send bundle ({type(err).__name__}): {err}; "
+                "channel is closed, skipping retry."
+            )
+        except (NackError, UnroutableError) as err:
+            self.metrics.send_error()
+            self.helper.connector_logger.error(
+                f"Unable to send bundle ({type(err).__name__}): {err}, retrying..."
+            )
             self._send_event(channel, event)
 
 

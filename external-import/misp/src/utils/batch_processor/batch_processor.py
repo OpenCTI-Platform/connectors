@@ -1,13 +1,14 @@
 """Batch processor for any data type with configurable work management.
 
 This module provides a flexible processor that can work with any data type,
-handle configurable sizes, and provide consistent work management and state updates.
+handle configurable sizes and provide consistent work management.
 """
 
-from datetime import UTC, datetime
+from collections.abc import Generator
 from typing import TYPE_CHECKING, Any
 
 import stix2
+from datasize import DataSize
 from exceptions import MispWorkProcessingError
 
 if TYPE_CHECKING:
@@ -49,7 +50,6 @@ class BatchProcessor:
 
         self.batch_size = batch_size
         self.work_name_template = "MISP - Batch #{batch_num}"
-        self.state_key = "last_event_date"
         self.entity_type = "stix_objects"
         self.display_name = "STIX objects"
         self.exception_class = MispWorkProcessingError
@@ -143,7 +143,11 @@ class BatchProcessor:
 
         """
         if not self._current_batch:
-            return self._handle_empty_batch()
+            self._logger.debug(
+                "No items in batch to process",
+                {"prefix": LOG_PREFIX, "display_name": self.display_name},
+            )
+            return None
 
         batch_items = self._current_batch.copy()
         self._current_batch.clear()
@@ -187,44 +191,6 @@ class BatchProcessor:
         self._logger.debug("No items to flush", {"prefix": LOG_PREFIX})
         return None
 
-    def update_final_state(self) -> None:
-        """Update the state with the final latest date after all processing is complete."""
-        if self._latest_date:
-            self._logger.debug(
-                "State update: Setting next_cursor_date",
-                {"prefix": LOG_PREFIX, "latest_date": self._latest_date},
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.state_key,
-                    date_str=self._latest_date,
-                )
-            except Exception as state_err:
-                self._logger.error(
-                    "Failed to update final state",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
-        else:
-            current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-            self._logger.debug(
-                "State update: Setting to current time",
-                {
-                    "prefix": LOG_PREFIX,
-                    "state_key": self.state_key,
-                    "current_time": current_time,
-                },
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.state_key,
-                    date_str=current_time,
-                )
-            except Exception as state_err:
-                self._logger.error(
-                    "Failed to update final state with current time",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
-
     def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics.
 
@@ -242,7 +208,15 @@ class BatchProcessor:
             "batch_size_limit": self.batch_size,
         }
 
-    def get_current_batch_size(self) -> int:
+    def clear_current_batch(self) -> None:
+        """Discard all items currently in the batch without sending them.
+
+        Use this when the connector is buffering and the queued items must be
+        re-processed on the next scheduler run instead of being sent now.
+        """
+        self._current_batch.clear()
+
+    def get_current_batch_length(self) -> int:
         """Get the number of items in the current batch.
 
         Returns:
@@ -250,6 +224,184 @@ class BatchProcessor:
 
         """
         return len(self._current_batch)
+
+    def get_current_batch_size(self) -> DataSize:
+        """Get the total size of the current batch in bytes.
+
+        Returns:
+            Total size of current batch in bytes
+
+        """
+        return self._get_serialized_size_bytes(self._current_batch)
+
+    def should_flush_before_adding(
+        self,
+        incoming_items: list[stix2.v21._STIXBase21],
+        *,
+        batch_size_limit: DataSize | None = None,
+        max_batch_length: int | None = None,
+    ) -> bool:
+        """Determine whether current batch should be flushed before adding items.
+
+        Args:
+            incoming_items: Items planned to be added to the current batch
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            max_batch_length: Optional max number of items in current + incoming
+
+        Returns:
+            True when the current batch should be flushed first
+        """
+        current_batch_length = self.get_current_batch_length()
+        if current_batch_length == 0:
+            return False
+
+        if batch_size_limit:
+            current_batch_size = self.get_current_batch_size()
+            incoming_size = self._get_serialized_size_bytes(incoming_items)
+            projected_batch_size = DataSize(current_batch_size + incoming_size)
+
+            self._logger.debug(
+                "Projected batch size and batch size limit",
+                {
+                    "prefix": LOG_PREFIX,
+                    "projected_batch_size": f"{projected_batch_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+
+            if projected_batch_size >= int(batch_size_limit):
+                self._logger.debug(
+                    "Current and incoming batch size exceed the configured batch size limit, flushing batch",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "current_batch_size": f"{current_batch_size:.2a}",
+                        "incoming_batch_size": f"{incoming_size:.2a}",
+                        "projected_batch_size": f"{projected_batch_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                return True
+
+        if (
+            max_batch_length is not None
+            and (current_batch_length + len(incoming_items)) >= max_batch_length
+        ):
+            self._logger.debug(
+                "Need to flush before adding next items to preserve bundle consistency",
+                {"prefix": LOG_PREFIX},
+            )
+            return True
+
+        return False
+
+    def split_items_to_fit_size_limit(
+        self,
+        items: list[stix2.v21._STIXBase21],
+        *,
+        additional_overhead_items: list[stix2.v21._STIXBase21],
+        batch_size_limit: DataSize | None = None,
+    ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
+        """Yield item chunks that fit in the configured serialized size limit.
+
+        Args:
+            items: Items to split into size-safe chunks
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            additional_overhead_items: Optional items always present with each chunk
+
+        Yields:
+            Chunks of items whose serialized size respects the configured limit
+        """
+        if not items:
+            return
+
+        if not batch_size_limit:
+            yield items
+            return
+
+        overhead_size = self._get_serialized_size_bytes(additional_overhead_items)
+        candidate_size = overhead_size
+        current_chunk: list[stix2.v21._STIXBase21] = []
+
+        items_size = self._get_serialized_size_bytes(items)
+        if overhead_size + items_size <= int(batch_size_limit):
+            self._logger.debug(
+                "All entities fit in the batch size limit, no need to split",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entities_size": f"{items_size:.2a}",
+                    "metadata_size": f"{overhead_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+            yield items
+            return
+
+        for item in items:
+            item_size = self._get_serialized_size_bytes(item)
+            candidate_size += item_size
+
+            if int(candidate_size) <= int(batch_size_limit):
+                current_chunk.append(item)
+                continue
+
+            if current_chunk:
+                self._logger.debug(
+                    "Current chunk reached batch size limit, yielding chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "chunk_size": f"{self._get_serialized_size_bytes(current_chunk):.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield current_chunk
+                current_chunk = []
+                candidate_size = overhead_size
+
+            single_item_size = overhead_size + item_size
+            if int(single_item_size) > int(batch_size_limit):
+                self._logger.warning(
+                    "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_size": f"{item_size:.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield [item]
+            else:
+                current_chunk = [item]
+
+        if current_chunk:
+            self._logger.debug(
+                "Yielding last chunk",
+                {
+                    "prefix": LOG_PREFIX,
+                },
+            )
+            yield current_chunk
+
+    @staticmethod
+    def _get_serialized_size_bytes(value: Any) -> DataSize:
+        """Estimate payload size from serialized UTF-8 JSON bytes."""
+        if isinstance(value, list):
+            if not value:
+                return DataSize(2)  # []
+            # Account for commas and brackets without materializing the full list JSON.
+            return DataSize(
+                2
+                + (len(value) - 1)
+                + sum(BatchProcessor._get_serialized_size_bytes(item) for item in value)
+            )
+
+        serialize = getattr(value, "serialize", None)
+        if callable(serialize):
+            return DataSize(len(serialize().encode("utf-8")))
+
+        # Invalid entity that cannot be serialized, return 0 as it will not contribute
+        # to the batch size
+        return DataSize(0)
 
     def get_failed_items(self) -> list[Any]:
         """Get list of items that failed processing.
@@ -263,50 +415,6 @@ class BatchProcessor:
     def clear_failed_items(self) -> None:
         """Clear the list of failed items."""
         self._failed_items.clear()
-
-    def set_latest_date(self, date_str: str) -> None:
-        """Set the latest date manually.
-
-        Args:
-            date_str: The date string in ISO format
-
-        """
-        if date_str and (not self._latest_date or date_str > self._latest_date):
-            self._latest_date = date_str
-
-    def _handle_empty_batch(self) -> str | None:
-        """Handle processing of empty batches based on configuration.
-
-        Returns:
-            None (empty batches don't create work)
-
-        Raises:
-            Configured exception class: If empty_batch_behavior is 'error'
-
-        """
-
-        current_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-        self._logger.debug(
-            "Updating state with current time for empty batch",
-            {"prefix": LOG_PREFIX, "current_time": current_time},
-        )
-        try:
-            self._work_manager.update_state(
-                state_key=self.state_key,
-                date_str=current_time,
-            )
-            self._latest_date = current_time
-        except Exception as state_err:
-            self._logger.warning(
-                "Failed to update state for empty batch",
-                {"prefix": LOG_PREFIX, "error": str(state_err)},
-            )
-
-        self._logger.debug(
-            "No items in batch to process",
-            {"prefix": LOG_PREFIX, "display_name": self.display_name},
-        )
-        return None
 
     def _process_batch_with_retries(
         self,
@@ -374,8 +482,6 @@ class BatchProcessor:
 
         self._total_items_processed += len(batch_items)
         self._total_items_sent += len(batch_items)
-
-        self._update_batch_state()
 
         self.postprocess_batch(batch_items, work_id)
 
@@ -551,24 +657,6 @@ class BatchProcessor:
             {"prefix": LOG_PREFIX, "item_type": type(item).__name__},
         )
         return item
-
-    def _update_batch_state(self) -> None:
-        """Update state with the latest date after successful batch processing."""
-        if self._latest_date:
-            self._logger.debug(
-                "Updating state with latest date",
-                {"prefix": LOG_PREFIX, "latest_date": self._latest_date},
-            )
-            try:
-                self._work_manager.update_state(
-                    state_key=self.state_key,
-                    date_str=self._latest_date,
-                )
-            except Exception as state_err:
-                self._logger.warning(
-                    "Failed to update state after batch processing",
-                    {"prefix": LOG_PREFIX, "error": str(state_err)},
-                )
 
     def format_work_name(self, batch_num: int, **kwargs: Any) -> str:
         """Format the work name with batch number and optional parameters.

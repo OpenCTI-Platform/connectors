@@ -1,7 +1,15 @@
 import stix2
 from pycti import MarkingDefinition
 
-from .rf_to_stix2 import URL, Domain, FileHash, IntrusionSet, IPAddress, Malware
+from .rf_to_stix2 import (
+    URL,
+    Domain,
+    FileHash,
+    IntrusionSet,
+    IPAddress,
+    Malware,
+    Vulnerability,
+)
 
 RISK_LIST_TYPE_MAPPER = {
     "IpAddress": {"class": IPAddress, "path": "/public/opencti/default_ip.csv"},
@@ -11,6 +19,10 @@ RISK_LIST_TYPE_MAPPER = {
     },
     "URL": {"class": URL, "path": "/public/opencti/default_url.csv"},
     "Hash": {"class": FileHash, "path": "/public/opencti/default_hash.csv"},
+    "Vuln": {
+        "class": Vulnerability,
+        "path": "/public/opencti/opencti_default_vulnerability_v2.csv",
+    },
 }
 
 THREAT_MAP_TYPE_MAPPER = {
@@ -24,6 +36,7 @@ RISK_RULES_MAPPER = [
     {"rule_score": 2, "severity": "Suspicious", "risk_score": "25-64"},
     {"rule_score": 3, "severity": "Malicious", "risk_score": "65-89"},
     {"rule_score": 4, "severity": "Very Malicious", "risk_score": "90-99"},
+    {"rule_score": 5, "severity": "Very Critical", "risk_score": "100"},
 ]
 
 TLP_MAP = {

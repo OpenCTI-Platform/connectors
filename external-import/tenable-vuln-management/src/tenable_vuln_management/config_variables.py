@@ -56,7 +56,7 @@ class ConfigConnector:
             yaml_path=["tenable_vuln_management", "api_base_url"],
             config=self.load,
             required=True,
-        )
+        ).rstrip("/")
         self.tio_api_access_key = get_config_variable(
             env_var="TIO_API_ACCESS_KEY",
             yaml_path=["tenable_vuln_management", "api_access_key"],

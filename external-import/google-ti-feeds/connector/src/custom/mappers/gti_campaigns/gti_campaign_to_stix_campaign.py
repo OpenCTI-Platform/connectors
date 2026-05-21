@@ -61,12 +61,17 @@ class GTICampaignToSTIXCampaign(BaseMapper):
         modified = datetime.fromtimestamp(
             attributes.last_modification_date, tz=timezone.utc
         )
+
+        aliases = self._extract_aliases(attributes)
+
         first_seen, last_seen = self._get_activity_timestamps(attributes)
         labels = self._extract_labels(attributes)
         external_references = self._build_external_references(attributes)
+        objective = self._extract_objective(attributes)
 
         campaign_model = OctiCampaignModel.create(
             name=name,
+            aliases=aliases,
             organization_id=self.organization.id,
             marking_ids=[self.tlp_marking.id],
             description=attributes.description,
@@ -74,6 +79,7 @@ class GTICampaignToSTIXCampaign(BaseMapper):
             modified=modified,
             first_seen=first_seen,
             last_seen=last_seen,
+            objective=objective,
             labels=labels,
             external_references=[
                 ref.model_dump(exclude_none=True) for ref in external_references
@@ -81,6 +87,31 @@ class GTICampaignToSTIXCampaign(BaseMapper):
         )
 
         return campaign_model
+
+    @staticmethod
+    def _extract_aliases(attributes: CampaignModel) -> list[str] | None:
+        """Extract aliases from campaign attributes.
+
+        Args:
+            attributes: The campaign attributes
+
+        Returns:
+            list[str] | None: Extracted aliases or None if no aliases exist
+
+        """
+        if (
+            not hasattr(attributes, "alt_names_details")
+            or not attributes.alt_names_details
+        ):
+            return None
+
+        aliases = []
+        for alt_name in attributes.alt_names_details:
+            if hasattr(alt_name, "value") and alt_name.value:
+                alt_name = alt_name.value
+                aliases.append(alt_name)
+
+        return aliases if aliases else None
 
     @staticmethod
     def _get_activity_timestamps(
@@ -123,6 +154,32 @@ class GTICampaignToSTIXCampaign(BaseMapper):
                         continue
 
         return first_seen, last_seen
+
+    @staticmethod
+    def _extract_objective(attributes: CampaignModel) -> str | None:
+        """Extract objective from campaign motivations.
+
+        Each motivation's value is joined with ", " to produce a single
+        free-text string that maps to the STIX 2.1 Campaign ``objective``
+        property.
+
+        Args:
+            attributes: The campaign attributes
+
+        Returns:
+            str | None: Comma-separated motivation values, or None when no
+                motivations are present.
+
+        """
+        if attributes.motivations is None:
+            return None
+
+        values = [
+            motivation.value
+            for motivation in attributes.motivations
+            if motivation is not None and motivation.value is not None
+        ]
+        return ", ".join(values) if values else None
 
     @staticmethod
     def _extract_labels(attributes: CampaignModel) -> list[str]:
@@ -196,5 +253,4 @@ class GTICampaignToSTIXCampaign(BaseMapper):
             marking_ids=src_entity.object_marking_refs,
             created=datetime.now(tz=timezone.utc),
             modified=datetime.now(tz=timezone.utc),
-            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )

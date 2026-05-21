@@ -2,33 +2,35 @@
 
 | Status | Date | Comment |
 |--------|------|---------|
-| Partner | -    | -       |
+| Filigran Verified | 2026-02-05    | -       |
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Installation](#installation)
-  - [Requirements](#requirements)
-- [Configuration](#configuration)
-  - [OpenCTI Configuration](#opencti-configuration)
-  - [Base Connector Configuration](#base-connector-configuration)
-  - [Scout API Configuration](#scout-api-configuration)
-- [Deployment](#deployment)
-  - [Docker Deployment](#docker-deployment)
-  - [Manual Deployment](#manual-deployment)
-- [Usage](#usage)
-- [Behavior](#behavior)
-  - [Data Flow](#data-flow)
-  - [API Endpoints](#api-endpoints)
-  - [Generated STIX Objects](#generated-stix-objects)
-- [Debugging](#debugging)
-- [Additional Information](#additional-information)
+- [OpenCTI Team Cymru Scout Search Connector](#opencti-team-cymru-scout-search-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration](#configuration)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+    - [Data Flow](#data-flow)
+    - [API Endpoints](#api-endpoints)
+    - [Processing Details](#processing-details)
+    - [Generated STIX Objects](#generated-stix-objects)
+  - [Debugging](#debugging)
+  - [Additional Information](#additional-information)
+    - [Early Access](#early-access)
+    - [Use Case](#use-case-playbook-based-scout-query-enrichment)
 
 ---
 
 ## Introduction
 
-**Scout Search Connector** is a powerful cyber threat intelligence tool that uniquely provides real-time visibility of external threats at speeds others cannot match. This internal enrichment connector allows OpenCTI users to query the Team Cymru Scout API using Text observables for playbook-based queries.
+**Scout Search Connector** is a powerful cyber threat intelligence tool that uniquely provides real-time visibility of external threats at speeds others cannot match. This internal enrichment connector allows OpenCTI users to query the Team Cymru Scout API using Indicator observables for playbook-based queries.
 
 This connector queries the Scout API endpoints in real-time and transforms the response into standardized STIX 2.1 bundles compatible with the OpenCTI platform.
 
@@ -49,31 +51,10 @@ This connector queries the Scout API endpoints in real-time and transforms the r
 
 ## Configuration
 
-### OpenCTI Configuration
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
-| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
-
-### Base Connector Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
-| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `Text` |
-| `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
-| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
-
-### Scout API Configuration
-
-| Parameter | Docker envvar | Mandatory | Description |
-|-----------|---------------|-----------|-------------|
-| `pure_signal_scout_api_url` | `PURE_SIGNAL_SCOUT_API_URL` | Yes | Base URL of the Scout API |
-| `pure_signal_scout_api_token` | `PURE_SIGNAL_SCOUT_API_TOKEN` | Yes | Bearer token for the Scout API |
-| `pure_signal_scout_max_tlp` | `PURE_SIGNAL_SCOUT_MAX_TLP` | Yes | Max TLP level for enrichment (default: TLP:AMBER) |
-| `pure_signal_scout_search_interval` | `PURE_SIGNAL_SCOUT_SEARCH_INTERVAL` | Yes | Search interval in days (default: 1) |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ---
 
@@ -95,13 +76,14 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=scout-search-connector
       - CONNECTOR_NAME=Scout Search Connector
-      - CONNECTOR_SCOPE=Text
-      - CONNECTOR_CONFIDENCE_LEVEL=100
+      - CONNECTOR_SCOPE=Indicator
       - CONNECTOR_LOG_LEVEL=error
       - PURE_SIGNAL_SCOUT_API_URL=https://taxii.cymru.com/api/scout
       - PURE_SIGNAL_SCOUT_API_TOKEN=ChangeMe
       - PURE_SIGNAL_SCOUT_MAX_TLP=TLP:AMBER
       - PURE_SIGNAL_SCOUT_SEARCH_INTERVAL=1
+      - PURE_SIGNAL_SCOUT_INDICATOR_PATTERN_TYPE=pure-signal-scout
+      - PURE_SIGNAL_SCOUT_PATTERN_DESCRIPTION=Scout Search Query Pattern
     restart: always
 ```
 
@@ -109,7 +91,7 @@ services:
 
 1. Clone the repository
 2. Copy `.env.sample` to `.env` and configure
-3. Install dependencies: `pip install -r requirements.txt`
+3. Install dependencies: `pip install -r src/requirements.txt`
 4. Run the connector
 
 ---
@@ -117,11 +99,11 @@ services:
 ## Usage
 
 The connector performs searches by:
-1. Receiving Text observable enrichment requests (typically from playbooks)
+1. Receiving Indicator observable enrichment requests (typically from playbooks)
 2. Querying the Scout API with the search query
 3. Returning STIX 2.1 bundles with search results
 
-This connector is designed for playbook integration where Text observables contain search queries.
+This connector is designed for playbook integration where Indicator observables contain search queries.
 
 ---
 
@@ -131,7 +113,7 @@ This connector is designed for playbook integration where Text observables conta
 
 ```mermaid
 flowchart LR
-    A[Text Observable] --> B[Scout Search Connector]
+    A[Indicator Observable] --> B[Scout Search Connector]
     B --> C{Scout API}
     C --> D[Search Results]
     D --> E[STIX 2.1 Bundle]
@@ -142,7 +124,7 @@ flowchart LR
 
 | Observable Type | API Endpoint | Description |
 |-----------------|--------------|-------------|
-| Text | `/search?query={query}&days={days}` | Text-based search |
+| Indicator | `/search?query={query}&days={days}` | Indicator-based search |
 
 ### Processing Details
 
@@ -175,6 +157,46 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 
 ---
 
+### Use Case: Playbook-Based Scout Query Enrichment
+
+This connector is designed for playbook-based searches where Scout query patterns are used to enrich indicators with threat intelligence data. Below is a step-by-step guide to set up automated enrichment.
+
+#### Step 1: Verify Connector Installation
+
+1. Navigate to **Data > Ingestion > Monitoring** in OpenCTI.
+2. Confirm the **Scout Search Connector** appears in the list and is running.
+
+#### Step 2: Create and Configure a Playbook
+
+1. Navigate to **Data > Processing > Automation**.
+2. Click **Create Playbook**, enter a name and description, then confirm.
+3. In the playbook editor, click the empty run step and select a trigger type:
+   - **Manual execution:** Select _"Available for manual enrollment / trigger"_.
+   - **Scheduled execution:** Select _"Query knowledge on a regular basis"_.
+4. Add a **Pattern type** filter and set the value to `pure-signal-scout`.
+5. Add the **"Enrich through connector"** component and select **Scout Search Connector**.
+6. Add the **"Send for ingestion"** component to store enriched data.
+7. Start the playbook via the three-dot menu and verify it shows _"Playbook is running"_.
+
+#### Step 3: Create an Indicator
+
+1. Navigate to **Observations > Indicators**.
+2. Click **Create Indicator** and configure:
+   - **Pattern type:** `pure-signal-scout`
+   - **Pattern:** A Scout query (e.g., `ip = 45.169.110.205` or `asn = "131279, 20485, 134544" comms.tag2 = "astrill-vpn, anydesk, pikvm"`)
+   - **Main observable type:** Text
+   - **Marking:** TLP:GREEN (or appropriate level within the configured max TLP)
+3. Click **Create** to save.
+
+#### Step 4: Run and Verify Enrichment
+
+1. Open the indicator detail page.
+2. Click **"Enroll in playbook"** and start the playbook, or use **manual enrichment** via the three-dot menu > Enrichment.
+3. Wait for the enrichment and ingestion processes to complete.
+4. Verify the **Knowledge** tab shows enriched relationships (IP addresses, indicators, autonomous systems, locations, etc.).
+
+---
+
 ## Additional Information
 
 - [Team Cymru](https://www.team-cymru.com/)
@@ -183,7 +205,3 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 ### Early Access
 
 This connector is currently in early access. Please report any issues or feedback to help improve the connector.
-
-### Use Case
-
-This connector is primarily designed for playbook-based searches where complex queries need to be executed against the Scout API. Create a Text observable with your search query and trigger enrichment.

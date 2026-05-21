@@ -18,6 +18,9 @@ crowdstrike:
   client_secret: 'ChangeMe'
 #   permanent_delete: false
 #   falcon_for_mobile_active: false
+#   action_on_ip: 'detect' # optional (no_action, detect)
+#   action_on_domain: 'detect' # optional (no_action, detect)
+#   action_on_hash: 'detect' # optional (no_action, allow, detect, prevent)
 
 # metrics:
 #   enable: false # set to true to expose prometheus metrics

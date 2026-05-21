@@ -9,33 +9,36 @@ from connectors_sdk import (
     DatetimeFromIsoString,
     ListFromString,
 )
+from datasize import DataSize
 from pydantic import (
+    AfterValidator,
     BeforeValidator,
     Field,
     HttpUrl,
     PlainSerializer,
     SecretStr,
     SerializationInfo,
+    WithJsonSchema,
     field_validator,
     model_validator,
 )
 
 
-def comma_separated_dict_validator(value: str | dict[str, str]) -> dict[str, str]:
+def comma_separated_dict(value: str | dict[str, str]) -> dict[str, str]:
     """
     Convert comma-separated string into a dict.
 
     Example:
-        > values = comma_separated_dict_validator("key_1=value_1,key_2=value_2")
+        > values = comma_separated_dict("key_1=value_1,key_2=value_2")
         > print(values) # { "key_1": "value_1", "key_2"="value_2" }
     """
     if isinstance(value, str):
         parsed_dict = {}
         if len(value):
-            entries = [string.strip() for string in value.split(",")]
-            for entry in entries:
-                entry_key, entry_value = entry.split("=")
-                parsed_dict[entry_key] = entry_value
+            parsed_dict = {
+                x.split("=")[0].lower(): str(x.split("=")[1])
+                for x in value.replace(" ", "").split(",")
+            }
         return parsed_dict
     return value
 
@@ -62,9 +65,127 @@ def pycti_dict_serializer(value: list[str], info: SerializationInfo) -> str | li
 
 
 DictFromString = Annotated[
-    dict[str, str],
-    BeforeValidator(comma_separated_dict_validator),
+    str,
+    AfterValidator(comma_separated_dict),
     PlainSerializer(pycti_dict_serializer, when_used="json"),
+]
+
+# Allow to use custom types from third-party libs, like `DataSize` from `datasize` lib
+BaseConfigModel.model_config["arbitrary_types_allowed"] = True
+
+
+def parse_batch_datasize(value: Any) -> DataSize | None:
+    """Validate that batch_size_limit is a human-readable file size (e.g. '10MB', '500KB')."""
+    if isinstance(value, str):
+        if not value.strip().upper().endswith(("B", "KB", "MB", "GB", "TB")):
+            raise ValueError(
+                f"Invalid batch_size_limit '{value}'. "
+                "Expected a human-readable file size like '10MB', '500KB', '1.5GB'."
+            )
+
+        return DataSize(value)
+
+    return value
+
+
+DataSizeFromString = Annotated[
+    DataSize,
+    BeforeValidator(parse_batch_datasize),
+    PlainSerializer(lambda x: f"{x:.2a}", return_type=str),
+    WithJsonSchema(
+        {"type": "string"}
+    ),  # input type must be str (human-readable file size)
+]
+
+
+# MISP defines four threat-level values (1=High, 2=Medium, 3=Low, 4=Undefined).
+# Level "4" is required in the mapping because it is also used as the
+# fall-back score for events whose ``threat_level_id`` is not one of 1/2/3/4
+# (e.g. legacy values such as "0" or "5" returned by older MISP instances).
+_MISP_THREAT_LEVELS = ("1", "2", "3", "4")
+
+
+def parse_threat_level_score_mapping(value: Any) -> dict[str, int]:
+    """Parse a MISP threat-level -> OpenCTI score mapping.
+
+    Accepts either:
+
+    * a dict (e.g. coming from ``config.yml`` or a JSON document), or
+    * a string of the form ``"<level>:<score>;<level>:<score>"`` (typically
+      used when the value is passed via an environment variable).
+
+    Each level must be one of ``"1"`` (High), ``"2"`` (Medium), ``"3"``
+    (Low) or ``"4"`` (Undefined), and each score must be an integer in the
+    closed interval ``[0, 100]``. The mapping must explicitly cover level
+    ``"4"`` so that events with an unrecognized threat level always resolve
+    to a well-defined score.
+
+    Raises ``ValueError`` for any malformed input. Returning a strict error
+    here (rather than silently falling back to defaults) lets the connector
+    fail fast at startup instead of producing surprising scores at runtime.
+    """
+    if isinstance(value, dict):
+        pairs = [(str(level), score) for level, score in value.items()]
+    elif isinstance(value, str):
+        pairs = []
+        for raw_pair in value.split(";"):
+            pair = raw_pair.strip()
+            if not pair:
+                continue
+            if ":" not in pair:
+                raise ValueError(
+                    f"Invalid threat_level_score_mapping entry '{pair}': "
+                    "expected '<level>:<score>'."
+                )
+            raw_level, raw_score = pair.split(":", 1)
+            pairs.append((raw_level.strip(), raw_score.strip()))
+    else:
+        raise ValueError(
+            "threat_level_score_mapping must be a string like "
+            "'1:90;2:60;3:30;4:50' or an equivalent mapping."
+        )
+
+    mapping: dict[str, int] = {}
+    for level, raw_score in pairs:
+        if level not in _MISP_THREAT_LEVELS:
+            raise ValueError(
+                f"Invalid threat_level_score_mapping entry '{level}:{raw_score}': "
+                "level must be one of '1' (High), '2' (Medium), '3' (Low) "
+                "or '4' (Undefined)."
+            )
+        try:
+            score = int(raw_score)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Invalid threat_level_score_mapping entry '{level}:{raw_score}': "
+                "score must be an integer."
+            ) from exc
+        if not 0 <= score <= 100:
+            raise ValueError(
+                f"Invalid threat_level_score_mapping entry '{level}:{raw_score}': "
+                "score must be between 0 and 100."
+            )
+        mapping[level] = score
+
+    if "4" not in mapping:
+        raise ValueError(
+            "threat_level_score_mapping must define a score for level '4' "
+            "(Undefined), which is used as the fallback for events whose "
+            "threat level is unrecognized."
+        )
+
+    return mapping
+
+
+ThreatLevelScoreMappingFromString = Annotated[
+    dict[str, int],
+    BeforeValidator(parse_threat_level_score_mapping),
+    PlainSerializer(
+        lambda value: ";".join(f"{level}:{score}" for level, score in value.items()),
+        return_type=str,
+        when_used="json",
+    ),
+    WithJsonSchema({"type": "string"}),
 ]
 
 
@@ -150,7 +271,7 @@ class MispConfig(BaseConfigModel):
     )
     report_description_attribute_filters: DictFromString = Field(
         description="Filter to use to find the attribute that will be used for report description (example: 'type=comment,category=Internal reference')",
-        default={},
+        default="",
         alias="report_description_attribute_filter",  # backward compatibility with mispelled env var
     )
     create_tags_as_labels: bool = Field(
@@ -222,6 +343,17 @@ class MispConfig(BaseConfigModel):
         description="List of threat levels to filter MISP events to import, **including** only events with these threat levels.",
         default=[],
     )
+    threat_level_score_mapping: ThreatLevelScoreMappingFromString = Field(
+        description=(
+            "Mapping of MISP threat levels (1=High, 2=Medium, 3=Low, "
+            "4=Undefined) to OpenCTI scores. Format: "
+            "'<level>:<score>;<level>:<score>'. Each score must be an "
+            "integer between 0 and 100; level '4' must be defined and is "
+            "also used as the fallback score for events with an unrecognized "
+            "threat level."
+        ),
+        default="1:90;2:60;3:30;4:50",
+    )
     import_only_published: bool = Field(
         description="Whether to only import published MISP events or not.",
         default=False,
@@ -249,6 +381,23 @@ class MispConfig(BaseConfigModel):
     batch_count: int = Field(
         description="The max number of items per batch when splitting STIX bundles.",
         default=9999,
+    )
+    batch_size_limit: DataSizeFromString | None = Field(
+        description=(
+            "Max size of batches (in human-readable file size, e.g., '10MB', "
+            "'500KB', '1.5GB') when splitting STIX bundles. `None` means no limit."
+        ),
+        default=None,
+    )
+
+    request_timeout: float | None = Field(
+        description="The timeout for the requests to the MISP API in seconds. None means no timeout.",
+        default=None,
+    )
+
+    search_limit: int = Field(
+        description="Limit the number of results returned per page request to MISP server.",
+        default=10,
     )
 
     @field_validator("reference_url", mode="before")

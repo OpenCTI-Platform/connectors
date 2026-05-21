@@ -1,6 +1,6 @@
 import base64
 import threading
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from re import search
 
 import pycti
@@ -30,9 +30,11 @@ class RecordedFutureAlertConnector(threading.Thread):
         rf_alerts_api: RecordedFutureApiClient,
         opencti_default_severity: str,
         tlp: str,
+        rf_initial_lookback: int,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
+        self.rf_initial_lookback = rf_initial_lookback
 
         self.helper.connector_logger.info(
             "Starting Recorded Future Alert connector module initialization"
@@ -188,15 +190,34 @@ class RecordedFutureAlertConnector(threading.Thread):
             self.update_rules()
 
             current_state = self.helper.get_state() or {}
-            last_alerts_run = (
-                datetime.fromisoformat(
-                    current_state.get("last_alerts_run", "")
-                ).replace(tzinfo=timezone.utc)
-                if current_state.get("last_alerts_run")
-                else None
-            )
 
-            alerts = self.collect_alerts(since=last_alerts_run or now)
+            # Migrate old state key to new name
+            if "last_alerts_run" in current_state:
+                if "last_processed_alert_date" not in current_state:
+                    current_state["last_processed_alert_date"] = current_state[
+                        "last_alerts_run"
+                    ]
+                del current_state["last_alerts_run"]
+                self.helper.set_state(current_state)
+
+            state_last_processed_alert_date = current_state.get(
+                "last_processed_alert_date"
+            )
+            if state_last_processed_alert_date is None:
+                last_processed_alert_date = now - timedelta(
+                    hours=self.rf_initial_lookback
+                )
+                self.helper.connector_logger.info(
+                    "[ALERTS] First run, looking back",
+                    {"initial_lookback_hours": self.rf_initial_lookback},
+                )
+            else:
+                last_processed_alert_date = datetime.fromisoformat(
+                    state_last_processed_alert_date
+                ).replace(tzinfo=timezone.utc)
+
+            alerts = self.collect_alerts(since=last_processed_alert_date)
+            alerts.sort(key=lambda a: a.alert_date or "")
             for alert in alerts:
                 try:
                     self.alert_to_incident(alert)
@@ -207,9 +228,16 @@ class RecordedFutureAlertConnector(threading.Thread):
                     )
                     continue
 
-            current_state = self.helper.get_state() or {}
-            current_state["last_alerts_run"] = now.isoformat()
-            self.helper.set_state(current_state)
+                current_state = self.helper.get_state() or {}
+                checkpoint = (
+                    datetime.fromisoformat(alert.alert_date)
+                    if alert.alert_date
+                    else now
+                )
+                current_state["last_processed_alert_date"] = checkpoint.isoformat(
+                    timespec="milliseconds"
+                )
+                self.helper.set_state(current_state)
 
             message = f"{self.helper.connect_name} connector successfully run for Recorded Future Alerts"
             self.helper.api.work.to_processed(self.work_id, message)
@@ -509,8 +537,8 @@ class RecordedFutureAlertConnector(threading.Thread):
                     bundle_objects.append(stix_relationship)
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
-                    hit_note,
-                    datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+                    created=None,
+                    content=hit_note,
                 ),
                 object_marking_refs=self.tlp,
                 abstract=str(

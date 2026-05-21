@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/anyrun-task_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ANY.RUN task",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "StixFile",
+        "Url"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "ANYRUN_API_KEY": {
+      "description": "ANY.RUN Sandbox API-KEY. See 'Generate API KEY' section in the README file.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ANYRUN_OPT_TIMEOUT": {
+      "default": null,
+      "type": "integer",
+      "description": "Select analysis completion time. Size range: 10-660 seconds."
+    },
+    "ANYRUN_OPT_NETWORK_CONNECT": {
+      "default": true,
+      "description": "Enable network connection.",
+      "type": "boolean"
+    },
+    "ANYRUN_OPT_NETWORK_FAKENET": {
+      "default": false,
+      "description": "Enable FakeNet feature.",
+      "type": "boolean"
+    },
+    "ANYRUN_TOR": {
+      "default": false,
+      "description": "Enable TOR using.",
+      "type": "boolean"
+    },
+    "ANYRUN_GEO": {
+      "default": "fastest",
+      "description": "TOR geolocation option. Example: US, AU",
+      "type": "string"
+    },
+    "ANYRUN_MITM": {
+      "default": false,
+      "description": "Enable HTTPS MITM Proxy using.",
+      "type": "boolean"
+    },
+    "ANYRUN_RESIDENTIAL_PROXY": {
+      "default": false,
+      "description": "Residential proxy using.",
+      "type": "boolean"
+    },
+    "ANYRUN_RESIDENTIAL_PROXY_GEO": {
+      "default": "fastest",
+      "description": "Residential proxy geolocation option. Example: US, AU.",
+      "type": "string"
+    },
+    "ANYRUN_PRIVACY_TYPE": {
+      "default": "bylink",
+      "description": "Privacy settings.",
+      "enum": [
+        "public",
+        "bylink",
+        "owner",
+        "team"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_OBJ_EXT_EXTENSION": {
+      "default": true,
+      "description": "Automatically change file extension to valid.",
+      "type": "boolean"
+    },
+    "ANYRUN_ENV_LOCALE": {
+      "default": "en-US",
+      "description": "Operation system's language. Use locale identifier or country name (Ex: en-US or Brazil). Case-insensitive.",
+      "type": "string"
+    },
+    "ANYRUN_OS_TYPE": {
+      "default": "windows",
+      "description": "Operating system.",
+      "enum": [
+        "windows",
+        "linux",
+        "android"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_ENV_VERSION": {
+      "default": "10",
+      "description": "Windows environment version.",
+      "enum": [
+        "7",
+        "10",
+        "11"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_ENV_BITNESS": {
+      "default": "64",
+      "description": "Operating system bitness: 32 or 64 for Windows, 64 for Linux and Android.",
+      "enum": [
+        "32",
+        "64"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_ENV_TYPE": {
+      "default": "complete",
+      "description": "Windows environment type. You can select development env for OS Windows 10 x64. For all other cases, complete env is required.",
+      "enum": [
+        "complete",
+        "development"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_OBJ_EXT_STARTFOLDER": {
+      "default": "temp",
+      "description": "Start object from.",
+      "enum": [
+        "desktop",
+        "home",
+        "downloads",
+        "appdata",
+        "temp",
+        "windows",
+        "root"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_OBJ_EXT_CMD": {
+      "default": "",
+      "description": "Optional command-line arguments for the analyzed object. Use an empty string '' to apply the default behavior.",
+      "type": "string"
+    },
+    "ANYRUN_OBJ_FORCE_ELEVATION": {
+      "default": true,
+      "description": "Forces the file to execute with elevated privileges and an elevated token (for PE32, PE32+, PE64 files only).",
+      "type": "boolean"
+    },
+    "ANYRUN_OBJ_EXT_BROWSER": {
+      "default": "Google Chrome",
+      "description": "Browser name.",
+      "enum": [
+        "Google Chrome",
+        "Mozilla Firefox",
+        "Internet Explorer",
+        "Microsoft Edge"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_RUN_AS_ROOT": {
+      "default": true,
+      "description": "Run file with superuser privileges.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ANYRUN_API_KEY"
+  ],
+  "additionalProperties": true
+}

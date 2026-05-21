@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CrowdSec helper module."""
+
 import datetime
 import ipaddress
 import re

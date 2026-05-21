@@ -20,6 +20,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CROWDSTRIKE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://api.crowdstrike.com"` | Crowdstrike base url. |
 | CROWDSTRIKE_PERMANENT_DELETE | `boolean` |  | boolean | `false` | Select whether or not to permanently delete data in Crowdstrike when data is deleted in OpenCTI. If set to `True`, `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` must be set to `True`. |
 | CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE | `boolean` |  | boolean | `false` | Enable Android and iOS platform support. |
+| CROWDSTRIKE_ACTION_ON_IP | `string` |  | `no_action` `detect` | `"detect"` | Action to apply on IP indicators pushed to CrowdStrike. |
+| CROWDSTRIKE_ACTION_ON_DOMAIN | `string` |  | `no_action` `detect` | `"detect"` | Action to apply on domain indicators pushed to CrowdStrike. |
+| CROWDSTRIKE_ACTION_ON_HASH | `string` |  | `no_action` `allow` `detect` `prevent` | `"detect"` | Action to apply on hash indicators pushed to CrowdStrike. |
 | METRICS_ENABLE | `boolean` |  | boolean | `false` | Whether or not Prometheus metrics should be enabled. |
 | METRICS_PORT | `integer` or `string` |  | integer and/or string | `9113` | Port to use for metrics endpoint. |
 | METRICS_ADDR | `string` |  | string | `"0.0.0.0"` | Bind IP address to use for metrics endpoint. |
