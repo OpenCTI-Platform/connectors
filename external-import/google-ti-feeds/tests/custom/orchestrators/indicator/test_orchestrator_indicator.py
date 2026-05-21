@@ -11,6 +11,7 @@ from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaGTIAssessment,
     IOCDeltaRelationshipData,
     IOCDeltaRelationshipItem,
+    IOCDeltaRelationshipItemAttributes,
     IOCDeltaRelationships,
     IOCDeltaSeverity,
     IOCDeltaThreatScore,
@@ -122,6 +123,10 @@ SAMPLE_FILE_ENTRY = IOCDeltaEntry(
                 IOCDeltaRelationshipItem(
                     type="collection",
                     id="malware--00000000-0000-0000-0000-000000000001",
+                    attributes=IOCDeltaRelationshipItemAttributes(
+                        name="TestMalware",
+                        collection_type="malware-family",
+                    ),
                 )
             ]
         )
@@ -185,7 +190,6 @@ def expected_indicator_log_messages() -> list[str]:
         "Flushing remaining items - {'prefix': '[GenericBatchProcessor]'",
         "Processing batch - {'prefix': '[GenericBatchProcessor]'",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]'",
-        "Batch completed successfully - {'prefix': '[GenericBatchProcessor]'",
         "Successfully processed batch #1",
     ]
 
