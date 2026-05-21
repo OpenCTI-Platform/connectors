@@ -1,4 +1,9 @@
 def normalize_connector_log_level(connector_log_level: str) -> str:
+    """Normalize connector log level strings read from environment variables.
+
+    Removes surrounding whitespace and strips matching single or double quotes
+    around the whole value.
+    """
     normalized_connector_log_level = connector_log_level.strip()
     if (
         len(normalized_connector_log_level) >= 2
