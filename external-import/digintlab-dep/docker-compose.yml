@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-digintlab-dep:
     image: opencti/connector-digintlab-dep:latest
@@ -17,6 +17,7 @@ services:
       - DEP_CLIENT_ID=ChangeMe
       # Connector's optional execution parameters
       - DEP_LOOKBACK_DAYS=7
+      - DEP_OVERLAP_HOURS=72
       - DEP_CONFIDENCE=70
       - DEP_LOGIN_ENDPOINT=https://cognito-idp.eu-west-1.amazonaws.com/
       - DEP_API_ENDPOINT=https://api.eu-ep1.doubleextortion.com/v1/dbtr/privlist
@@ -24,4 +25,8 @@ services:
       - DEP_EXTENDED_RESULTS=true
       - DEP_ENABLE_SITE_INDICATOR=true
       - DEP_ENABLE_HASH_INDICATOR=true
+      - DEP_SKIP_EMPTY_VICTIM=true
+      - DEP_CREATE_SECTOR_IDENTITIES=true
+      - DEP_CREATE_INTRUSION_SETS=true
+      - DEP_CREATE_COUNTRY_LOCATIONS=true
     restart: always

@@ -13,6 +13,7 @@ connector:
 
 virustotal_livehunt_notifications:
   api_key: 'ChangeMe' # Private API Key
+  # tlp_level: clear # TLP Marking
   create_alert: True # If True, create alerts (incident) from the notification
   extensions: 'exe,dll' # (Optional) Comma separated filter to only download files matching these extensions
   min_file_size: 1000 # (Optional) Don't download files smaller than this many bytes

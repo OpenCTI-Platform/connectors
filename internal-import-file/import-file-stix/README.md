@@ -54,15 +54,15 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Base connector environment variables
 
-| Parameter                | config.yml            | Docker environment variable      | Default                     | Mandatory | Description                                                                  |
-|--------------------------|-----------------------|----------------------------------|-----------------------------|-----------|------------------------------------------------------------------------------|
-| Connector ID             | id                    | `CONNECTOR_ID`                   |                             | Yes       | A unique `UUIDv4` identifier for this connector instance.                    |
-| Connector Name           | name                  | `CONNECTOR_NAME`                 | ImportFileStix              | No        | Name of the connector.                                                       |
-| Connector Scope          | scope                 | `CONNECTOR_SCOPE`                | application/json,text/xml   | Yes       | Supported MIME types (JSON for STIX 2.1, XML for STIX 1.2).                  |
-| Validate Before Import   | validate_before_import| `CONNECTOR_VALIDATE_BEFORE_IMPORT` | true                     | No        | Validate STIX bundles before importing.                                      |
-| Auto Import              | auto                  | `CONNECTOR_AUTO`                 | false                       | No        | Enable automatic import of uploaded STIX files.                              |
-| Confidence Level         | confidence_level      | `CONNECTOR_CONFIDENCE_LEVEL`     | 15                          | No        | Default confidence level for imported entities.                              |
-| Log Level                | log_level             | `CONNECTOR_LOG_LEVEL`            | info                        | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.   |
+| Parameter                | config.yml            | Docker environment variable        | Default                     | Mandatory | Description                                                                  |
+|--------------------------|-----------------------|------------------------------------|-----------------------------|-----------|------------------------------------------------------------------------------|
+| Connector ID             | id                    | `CONNECTOR_ID`                     |                             | Yes       | A unique `UUIDv4` identifier for this connector instance.                    |
+| Connector Name           | name                  | `CONNECTOR_NAME`                   | ImportFileStix              | No        | Name of the connector.                                                       |
+| Connector Scope          | scope                 | `CONNECTOR_SCOPE`                  | application/json,text/xml   | Yes       | Supported MIME types (JSON for STIX 2.1, XML for STIX 1.2).                  |
+| Validate Before Import   | validate_before_import| `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                       | No        | Validate STIX bundles before importing.                                      |
+| Auto Import              | auto                  | `CONNECTOR_AUTO`                   | false                       | No        | Enable automatic import of uploaded STIX files.                              |
+| Confidence Level         | confidence_level      | `CONNECTOR_CONFIDENCE_LEVEL`       | 15                          | No        | Default confidence level for imported entities.                              |
+| Log Level                | log_level             | `CONNECTOR_LOG_LEVEL`              | info                        | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.   |
 
 ## Deployment
 

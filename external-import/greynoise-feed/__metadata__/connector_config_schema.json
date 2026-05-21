@@ -35,7 +35,7 @@
       "type": "array"
     },
     "CONNECTOR_DURATION_PERIOD": {
-      "default": "P1D",
+      "default": "PT6H",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
@@ -76,16 +76,6 @@
       "default": 10000,
       "description": "Max number of indicators to ingest.",
       "type": "integer"
-    },
-    "GREYNOISE_FEED_IMPORT_METADATA": {
-      "default": false,
-      "description": "Import metadata (cities, sightings, etc.). \u26a0\ufe0f Can generate a lot of data.",
-      "type": "boolean"
-    },
-    "GREYNOISE_FEED_IMPORT_DESTINATION_SIGHTINGS": {
-      "default": false,
-      "description": "Import indicator's countries (from metadata) as a Sighting.",
-      "type": "boolean"
     },
     "GREYNOISE_FEED_INDICATOR_SCORE_MALICIOUS": {
       "default": 75,

@@ -473,10 +473,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                         )
         stix_note = stix2.Note(
             id=pycti.Note.generate_id(
-                summary_content,
-                datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                ),
+                created=None,
+                content=summary_content,
             ),
             object_marking_refs=self.tlp,
             abstract="# Evidence summary panel",
@@ -699,10 +697,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
         )
         stix_note = stix2.Note(
             id=pycti.Note.generate_id(
-                summary_content,
-                datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                ),
+                created=None,
+                content=summary_content,
             ),
             object_marking_refs=self.tlp,
             abstract="# Evidence summary panel",
@@ -786,10 +782,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 )
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
-                    evidence_whois_content,
-                    datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    ),
+                    created=None,
+                    content=evidence_whois_content,
                 ),
                 object_marking_refs=self.tlp,
                 abstract="# Evidence WhoIs panel",
@@ -867,10 +861,8 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 bundle_objects.append(stix_relationship)
             stix_note = stix2.Note(
                 id=pycti.Note.generate_id(
-                    evidence_dns_content,
-                    datetime.datetime.now(pytz.timezone("UTC")).strftime(
-                        "%Y-%m-%dT%H:%M:%S"
-                    ),
+                    created=None,
+                    content=evidence_dns_content,
                 ),
                 object_marking_refs=self.tlp,
                 abstract="# Evidence DNS panel",
@@ -879,31 +871,25 @@ class RecordedFuturePlaybookAlertConnector(threading.Thread):
                 created_by_ref=self.author["id"],
             )
             bundle_objects.append(stix_note)
-        evidence_summary_content = ""
-        if len(playbook_alert["data"]["panel_evidence_summary"]) > 0 and (
-            len(
-                playbook_alert["data"]["panel_evidence_summary"]["resolved_record_list"]
-            )
-            > 0
-            or len(playbook_alert["data"]["panel_evidence_summary"]["screenshots"]) > 0
+
+        panel_evidence_summary = playbook_alert["data"]["panel_evidence_summary"]
+        if len(panel_evidence_summary) > 0 and (
+            len(panel_evidence_summary["resolved_record_list"]) > 0
+            or len(panel_evidence_summary["screenshots"]) > 0
         ):
             evidence_summary_content = "### Resolved records"
-            for record in playbook_alert["data"]["panel_evidence_summary"][
-                "resolved_record_list"
-            ]:
-                evidence_summary_content = (
-                    evidence_summary_content
-                    + "\n"
-                    + make_markdown_table(
-                        [
-                            ["Key", "Value"],
-                            ["entity", str(record["entity"])],
-                            ["risk_score", str(record["risk_score"])],
-                            ["criticality", str(record["criticality"])],
-                            ["record_type", str(record["record_type"])],
-                            ["context_list", str(record["context_list"])],
-                        ]
-                    )
-                )
+            for record in panel_evidence_summary["resolved_record_list"]:
+                markdown_table = [["Key", "Value"]]
+                for key in [
+                    "entity",
+                    "risk_score",
+                    "criticality",
+                    "record_type",
+                    "context_list",
+                ]:
+                    # Set value to N/A if key is not present in the record
+                    markdown_table.append([key, str(record.get(key, "N/A"))])
+                evidence_summary_content += f"\n{make_markdown_table(markdown_table)}"
+
         bundle = stix2.Bundle(objects=bundle_objects, allow_custom=True).serialize()
         self.helper.send_stix2_bundle(bundle, update=True, work_id=self.work_id)

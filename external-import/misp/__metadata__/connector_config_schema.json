@@ -242,6 +242,11 @@
       },
       "type": "array"
     },
+    "MISP_THREAT_LEVEL_SCORE_MAPPING": {
+      "default": "1:90;2:60;3:30;4:50",
+      "description": "Mapping of MISP threat levels (1=High, 2=Medium, 3=Low, 4=Undefined) to OpenCTI scores. Format: '<level>:<score>;<level>:<score>'. Each score must be an integer between 0 and 100; level '4' must be defined and is also used as the fallback score for events with an unrecognized threat level.",
+      "type": "string"
+    },
     "MISP_IMPORT_ONLY_PUBLISHED": {
       "default": false,
       "description": "Whether to only import published MISP events or not.",
@@ -275,6 +280,21 @@
     "MISP_BATCH_COUNT": {
       "default": 9999,
       "description": "The max number of items per batch when splitting STIX bundles.",
+      "type": "integer"
+    },
+    "MISP_BATCH_SIZE_LIMIT": {
+      "default": null,
+      "description": "Max size of batches (in human-readable file size, e.g., '10MB', '500KB', '1.5GB') when splitting STIX bundles. `None` means no limit.",
+      "type": "string"
+    },
+    "MISP_REQUEST_TIMEOUT": {
+      "default": null,
+      "description": "The timeout for the requests to the MISP API in seconds. None means no timeout.",
+      "type": "number"
+    },
+    "MISP_SEARCH_LIMIT": {
+      "default": 10,
+      "description": "Limit the number of results returned per page request to MISP server.",
       "type": "integer"
     }
   },

@@ -24,17 +24,28 @@ if TYPE_CHECKING:
 LOG_PREFIX = "[EventConverter]"
 
 
-def event_threat_level_to_opencti_score(threat_level: str) -> int:
-    """Convert MISP Event's threat level into OpenCTI score."""
-    if threat_level == "1":
-        score = 90
-    elif threat_level == "2":
-        score = 60
-    elif threat_level == "3":
-        score = 30
-    else:
-        score = 50
-    return score
+# Used when no explicit mapping is provided. Matches the legacy behavior so
+# upgrading users who do not set ``MISP_THREAT_LEVEL_SCORE_MAPPING`` keep
+# getting identical scores.
+DEFAULT_THREAT_LEVEL_SCORE_MAPPING: dict[str, int] = {
+    "1": 90,
+    "2": 60,
+    "3": 30,
+    "4": 50,
+}
+
+
+def event_threat_level_to_opencti_score(
+    threat_level: str, mapping: dict[str, int] | None = None
+) -> int:
+    """Convert a MISP Event's threat level into an OpenCTI score.
+
+    The MISP API documents four threat-level values (1/2/3/4); any other
+    value coming from the wire falls back to the score associated with
+    level ``"4"`` (Undefined).
+    """
+    score_by_level = mapping or DEFAULT_THREAT_LEVEL_SCORE_MAPPING
+    return score_by_level.get(str(threat_level), score_by_level["4"])
 
 
 def find_event_attribute(
@@ -84,6 +95,7 @@ class EventConverter:
         default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
         threats_guesser: "ThreatsGuesser | None" = None,
+        threat_level_score_mapping: dict[str, int] | None = None,
     ):
         self.logger = logger
         self.config = ConverterConfig(
@@ -104,6 +116,7 @@ class EventConverter:
             original_tags_to_keep_as_labels=original_tags_to_keep_as_labels,
             default_attribute_score=default_attribute_score,
             guess_threats_from_tags=guess_threats_from_tags,
+            threat_level_score_mapping=threat_level_score_mapping,
         )
 
         # Reminder for (future) developpers
@@ -279,7 +292,10 @@ class EventConverter:
 
         # Extract report's object refs from Event's attributes and objects
         score = (
-            event_threat_level_to_opencti_score(event.Event.threat_level_id)
+            event_threat_level_to_opencti_score(
+                event.Event.threat_level_id,
+                self.config.threat_level_score_mapping,
+            )
             if event.Event.threat_level_id
             else None
         )
@@ -317,7 +333,7 @@ class EventConverter:
             event_intrusion_sets: list[stix2.IntrusionSet] = []
             event_malwares: list[stix2.Malware] = []
             event_tools: list[stix2.Tool] = []
-            event_countries: list[stix2.Location] = []
+            event_locations: list[stix2.Location] = []
             event_sectors: list[stix2.Identity] = []
             event_attack_patterns: list[stix2.AttackPattern] = []
 
@@ -330,8 +346,10 @@ class EventConverter:
                     case stix2.Tool():
                         event_tools.append(event_stix_object)
                     case stix2.Location():
-                        if event_stix_object.get("country"):
-                            event_countries.append(event_stix_object)
+                        if event_stix_object.get("country") or event_stix_object.get(
+                            "region"
+                        ):
+                            event_locations.append(event_stix_object)
                     case stix2.Identity():
                         if event_stix_object["identity_class"] == "class":
                             event_sectors.append(event_stix_object)
@@ -372,7 +390,7 @@ class EventConverter:
                     event_intrusion_sets
                     + event_malwares
                     + event_tools
-                    + event_countries
+                    + event_locations
                     + event_sectors
                 ):
                     stix_objects.append(
@@ -410,7 +428,7 @@ class EventConverter:
                             allow_custom=True,
                         )
                     )
-                for event_entity in event_countries + event_sectors:
+                for event_entity in event_locations + event_sectors:
                     stix_objects.append(
                         stix2.Relationship(
                             id=pycti.StixCoreRelationship.generate_id(

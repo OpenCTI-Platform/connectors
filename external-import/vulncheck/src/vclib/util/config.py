@@ -9,6 +9,9 @@ SCOPE_LOCATION = "location"
 SCOPE_IP = "ip-addr"
 SCOPE_INDICATOR = "indicator"
 SCOPE_EXTERNAL_REF = "external-reference"
+SCOPE_ATTACK_PATTERN = "attack-pattern"
+SCOPE_COURSE_OF_ACTION = "course-of-action"
+SCOPE_DATA_SOURCE = "x-mitre-data-source"
 
 
 def compare_config_to_target_scope(
@@ -44,8 +47,8 @@ def get_intersection_of_string_lists(a: list[str], b: list[str]) -> list[str]:
     return list(set(a) & set(b))
 
 
-def get_configured_sources(config) -> list[str]:
-    return config.data_sources.split(",")
+def get_configured_sources(data_sources: str) -> list[str]:
+    return data_sources.split(",")
 
 
 def _get_configured_scope(config) -> list[str]:

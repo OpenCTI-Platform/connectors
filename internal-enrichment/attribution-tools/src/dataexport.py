@@ -680,7 +680,7 @@ class DataExport:
                             entity_object["entity_type"] = "Stix-Cyber-Observable"
                         if "relationship_type" in entity_object:
                             entity_object["entity_type"] = "stix_core_relationship"
-                        (do_read, query_attributes) = reader.get(
+                        do_read, query_attributes = reader.get(
                             entity_object["entity_type"],
                             lambda **kwargs: self.unknown_type(
                                 {"type": entity_object["entity_type"]}

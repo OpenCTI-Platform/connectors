@@ -136,7 +136,6 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
                 modified=modified,
                 start_time=location_with_timing.first_seen,
                 stop_time=location_with_timing.last_seen,
-                description=f"Threat actor '{attributes.name}' targets location '{location.name}'",
             )
             relationships.append(relationship)
 
@@ -155,7 +154,6 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
                 modified=modified,
                 start_time=location_with_timing.first_seen,
                 stop_time=location_with_timing.last_seen,
-                description=f"Threat actor '{attributes.name}' originates from location '{location.name}'",
             )
             relationships.append(relationship)
 
@@ -171,7 +169,6 @@ class GTIThreatActorToSTIXComposite(BaseMapper):
                 modified=modified,
                 start_time=sector_with_timing.first_seen,
                 stop_time=sector_with_timing.last_seen,
-                description=f"Threat actor '{attributes.name}' targets sector '{sector.name}'",
             )
             relationships.append(relationship)
 

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from enum import Enum, auto
 from typing import TYPE_CHECKING
 
 from api_client.client import MISPClient, MISPClientError
@@ -17,6 +18,13 @@ if TYPE_CHECKING:
 LOG_PREFIX = "[Connector]"
 
 
+class ProcessingOutcome(Enum):
+    """Outcome of processing a STIX bundle within a batch."""
+
+    COMPLETED = auto()
+    BUFFERING = auto()
+
+
 class Misp:
     def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
         self.config = config
@@ -28,6 +36,7 @@ class Misp:
             key=self.config.misp.key.get_secret_value(),
             verify_ssl=self.config.misp.ssl_verify,
             certificate=self.config.misp.client_cert,
+            timeout=self.config.misp.request_timeout,
         )
 
         self.converter = EventConverter(
@@ -55,6 +64,7 @@ class Misp:
                 if self.config.misp.guess_threats_from_tags
                 else None
             ),
+            threat_level_score_mapping=self.config.misp.threat_level_score_mapping,
         )
 
         self.work_manager = WorkManager(self.config, self.helper, self.logger)
@@ -63,6 +73,8 @@ class Misp:
             logger=self.logger,
             batch_size=self.config.misp.batch_count,
         )
+
+        self._current_bundle = None
 
     def _check_batch_size_and_flush(
         self,
@@ -74,13 +86,11 @@ class Misp:
             all_entities: list of entities to be added
 
         """
-        if (
-            self.batch_processor.get_current_batch_size() + len(all_entities)
-        ) >= self.config.misp.batch_count * 2:
-            self.logger.debug(
-                "Need to Flush before adding next items to preserve consistency of the bundle",
-                {"prefix": LOG_PREFIX},
-            )
+        if self.batch_processor.should_flush_before_adding(
+            incoming_items=all_entities,
+            batch_size_limit=self.config.misp.batch_size_limit,
+            max_batch_length=self.config.misp.batch_count * 2,
+        ):
             self.batch_processor.flush()
 
     def _check_and_add_entities_to_batch(
@@ -97,8 +107,12 @@ class Misp:
             markings: Markings of the entities
         """
         self._check_batch_size_and_flush(all_entities)
-        self.batch_processor.add_item(author)
-        self.batch_processor.add_items(markings)
+        if self.batch_processor.get_current_batch_length() == 0:
+            # Add author and markings only at the beginning of a batch
+            # to avoid duplicates in case of batch flush during the process.
+            self.batch_processor.add_item(author)
+            self.batch_processor.add_items(markings)
+
         self.batch_processor.add_items(all_entities)
 
     def _flush_batch_processor(self) -> None:
@@ -263,20 +277,44 @@ class Misp:
 
         return event_datetime
 
+    @staticmethod
+    def _compute_completion_percentage(
+        bundle_size: int, remaining_objects_count: int
+    ) -> int:
+        """Compute event processing completion percentage.
+
+        Args:
+            bundle_size: Total number of objects in the event bundle
+            remaining_objects_count: Number of objects left to process
+
+        Returns:
+            Integer completion percentage capped at 100.
+        """
+        return min(
+            100,
+            int(((bundle_size - remaining_objects_count) / max(1, bundle_size)) * 100),
+        )
+
     def _process_bundle_in_batch(
         self,
         event: "EventRestSearchListItem",
         bundle_objects: "list[stix2.v21._STIXBase21]",
         author: "stix2.Identity",
         markings: "list[stix2.MarkingDefinition]",
-    ) -> None:
+    ) -> ProcessingOutcome:
         """Process a bundle of STIX objects in a batch.
 
         Args:
-            event_id: ID of the event
+            event: The MISP event being processed
             bundle_objects: list of STIX objects to process
             author: Author of the event
             markings: Markings of the event
+
+        Returns:
+            ProcessingOutcome.BUFFERING if the connector queue is full and
+            processing was interrupted mid-event (caller should stop the event
+            loop and resume on the next scheduler run).
+            ProcessingOutcome.COMPLETED when all chunks were sent successfully.
         """
         bundle_size = len(bundle_objects)
         current_state = self.work_manager.get_state()
@@ -285,37 +323,102 @@ class Misp:
         )
         object_index = bundle_size - remaining_objects_count
         batch_chunk_size = self.config.misp.batch_count
+
         for i in range(
             object_index,
             bundle_size,
             batch_chunk_size,
         ):
-            now = datetime.now(tz=timezone.utc)
-            self.batch_processor.work_name_template = (
-                f"MISP run @ {now.isoformat(timespec='seconds')}"
-                f" - Event # {event.Event.id}"
-                f" - Batch # {max(1, i // batch_chunk_size)}"
-                f" / {max(1, bundle_size // batch_chunk_size)}"
-            )
-
             bundle_objects_chunk = bundle_objects[i : i + batch_chunk_size]
-            self._check_and_add_entities_to_batch(
-                bundle_objects_chunk, author, markings
+            sized_subchunks = self.batch_processor.split_items_to_fit_size_limit(
+                items=bundle_objects_chunk,
+                batch_size_limit=self.config.misp.batch_size_limit,
+                additional_overhead_items=[author, *markings],
             )
 
-            new_state = {"last_event_date": self._get_event_datetime(event).isoformat()}
-            if self.config.misp.datetime_attribute == "date":
-                new_state["current_event_id"] = event.Event.id
+            for subchunk in sized_subchunks:
+                if (
+                    not self.work_manager.check_connector_run_and_terminate()
+                    and self.work_manager.check_connector_buffering()
+                ):
+                    buffered_entities = 0
+                    current_batch_length = (
+                        self.batch_processor.get_current_batch_length()
+                    )
+                    if current_batch_length > 0:
+                        metadata_count = 1 + len(markings)
+                        buffered_entities = max(
+                            0, current_batch_length - metadata_count
+                        )
 
-            remaining_objects_count = max(
-                0, remaining_objects_count - len(bundle_objects_chunk)
-            )
-            new_state["remaining_objects_count"] = remaining_objects_count
-            self.work_manager.update_state(state_update=new_state)
+                    remaining_objects_count = min(
+                        bundle_size,
+                        max(0, remaining_objects_count + buffered_entities),
+                    )
+                    # Clear the current batch to avoid processing duplicated items
+                    # during the next run.
+                    self.batch_processor.clear_current_batch()
+                    self.logger.info(
+                        "Connector is buffering, this event will be processed in "
+                        "the next scheduler process",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "event_id": event.Event.id,
+                            "event_uuid": event.Event.uuid,
+                        },
+                    )
+                    # Save the event date to restart from the current one in the
+                    # next process.
+                    new_state = {
+                        "last_event_date": self._get_event_datetime(event).isoformat(),
+                        "remaining_objects_count": remaining_objects_count,
+                    }
+                    if self.config.misp.datetime_attribute == "date":
+                        new_state["current_event_id"] = event.Event.id
+                    self.work_manager.update_state(state_update=new_state)
+
+                    return ProcessingOutcome.BUFFERING
+
+                # Compute completion before this subchunk so the work name
+                # matches any flush triggered while adding this subchunk.
+                completion_before_subchunk = self._compute_completion_percentage(
+                    bundle_size, remaining_objects_count
+                )
+
+                now = datetime.now(tz=timezone.utc)
+                self.batch_processor.work_name_template = (
+                    f"MISP run @ {now.isoformat(timespec='seconds')}"
+                    f" - Event # {event.Event.id}"
+                    f" - Completion {completion_before_subchunk}%"
+                )
+
+                self._check_and_add_entities_to_batch(subchunk, author, markings)
+
+                new_state: dict[str, str | int] = {
+                    "last_event_date": self._get_event_datetime(event).isoformat()
+                }
+                if self.config.misp.datetime_attribute == "date":
+                    new_state["current_event_id"] = str(event.Event.id)
+
+                remaining_objects_count = max(
+                    0, remaining_objects_count - len(subchunk)
+                )
+                new_state["remaining_objects_count"] = remaining_objects_count
+                self.work_manager.update_state(state_update=new_state)
+
+        # Ensure final flush displays completion at 100% for this event.
+        now = datetime.now(tz=timezone.utc)
+        self.batch_processor.work_name_template = (
+            f"MISP run @ {now.isoformat(timespec='seconds')}"
+            f" - Event # {event.Event.id}"
+            " - Completion 100%"
+        )
 
         # Flush any remaining items and Update the final state
         self._flush_batch_processor()
         self.work_manager.update_state(state_update={"remaining_objects_count": 0})
+
+        return ProcessingOutcome.COMPLETED
 
     def process_events(self) -> str | None:
         """Fetch, convert and send MISP events."""
@@ -357,6 +460,7 @@ class Misp:
                 "excluded_org_creators": self.config.misp.import_creator_orgs_not,
                 "enforce_warning_list": self.config.misp.enforce_warning_list,
                 "with_attachments": self.config.misp.import_with_attachments,
+                "limit": self.config.misp.search_limit,
             }
 
             self.logger.info(
@@ -364,7 +468,7 @@ class Misp:
                 {"prefix": LOG_PREFIX, **filter_params},
             )
 
-            event_processed = False
+            curr_event_date = None
             try:
                 for event in self.client_api.search_events(**filter_params):
                     event_log_data = {
@@ -372,33 +476,41 @@ class Misp:
                         "event_id": event.Event.id,
                         "event_uuid": event.Event.uuid,
                     }
-                    if self.work_manager.check_connector_buffering():
-                        self.logger.info(
-                            "Connector is buffering, this event will be processed in the next scheduler process",
-                            event_log_data,
-                        )
-                        break
 
                     if not self._validate_event(event):
                         continue
 
-                    self.logger.info("MISP event found - Processing...", event_log_data)
-                    try:
-                        author, markings, bundle_objects = self.converter.process(
-                            event=event,
-                            include_relationships=(
-                                len(event.Event.Attribute or [])
-                                + len(event.Event.Object or [])
-                            )
-                            # TODO: Add a configuration for the maximum number of attributes and objects
-                            < 10000,
+                    curr_event_date = self._get_event_datetime(event).isoformat()
+
+                    if self._current_bundle is None:
+                        self.logger.info(
+                            "MISP event found - Processing...", event_log_data
                         )
-                    except ConverterError as err:
-                        self.logger.error(
-                            f"Error while converting MISP event, skipping it. {err}",
+                        try:
+                            self._current_bundle = author, markings, bundle_objects = (
+                                self.converter.process(
+                                    event=event,
+                                    include_relationships=(
+                                        len(event.Event.Attribute or [])
+                                        + len(event.Event.Object or [])
+                                    )
+                                    # TODO: Add a configuration for the maximum number of attributes and objects
+                                    < 10000,
+                                )
+                            )
+                        except ConverterError as err:
+                            self.logger.error(
+                                f"Error while converting MISP event, skipping it. {err}",
+                                event_log_data,
+                            )
+                            self._current_bundle = None
+                            continue
+                    else:
+                        self.logger.info(
+                            "Resuming processing of MISP event...",
                             event_log_data,
                         )
-                        continue
+                        author, markings, bundle_objects = self._current_bundle
 
                     self.logger.debug(
                         "Converted to STIX entities",
@@ -408,26 +520,36 @@ class Misp:
                         },
                     )
 
-                    self._process_bundle_in_batch(
+                    outcome = self._process_bundle_in_batch(
                         event=event,
                         bundle_objects=bundle_objects,
                         author=author,
                         markings=markings,
                     )
-                    event_processed = True
+                    if outcome is ProcessingOutcome.BUFFERING:
+                        break
+
+                    self._current_bundle = None
 
                 else:
-                    if (
-                        event_processed
-                        and self.config.misp.datetime_attribute != "date"
-                    ):
+                    # FOR-ELSE: The else block executes only if the loop is not
+                    # broken, meaning all events have been processed. We then
+                    # add 1 second to the last event date to avoid processing
+                    # the same event again during the next run.
+                    if self.config.misp.datetime_attribute != "date":
                         # If the datetime attribute is not date, we need to update
                         # the last event date to avoid processing the same event again
-                        current_state = self.work_manager.get_state()
-                        last_event_date = current_state.get("last_event_date")
-                        if last_event_date is None:
+
+                        if curr_event_date is None:
+                            self.logger.debug(
+                                "No event date found, skipping update of last event date",
+                                {
+                                    "prefix": LOG_PREFIX,
+                                },
+                            )
                             return None
 
+                        last_event_date = curr_event_date
                         last_event_datetime = datetime.fromisoformat(last_event_date)
                         # Check if the last event date is not the same as the current time
                         if last_event_datetime != now:
@@ -444,6 +566,22 @@ class Misp:
                                 "last_event_date": last_event_datetime.isoformat()
                             }
                             self.work_manager.update_state(state_update=new_state)
+
+                        else:
+                            self.logger.debug(
+                                "Last event date is the same as the current time, skipping update of last event date",
+                                {
+                                    "prefix": LOG_PREFIX,
+                                    "last_event_date": last_event_datetime.isoformat(),
+                                },
+                            )
+
+            except Exception as e:
+                self.logger.error(
+                    "Error while processing MISP events",
+                    {"prefix": LOG_PREFIX, "error": str(e)},
+                )
+                self._current_bundle = None
 
             finally:
                 self._flush_batch_processor()

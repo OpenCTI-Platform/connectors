@@ -16,6 +16,7 @@ class RiskList(threading.Thread):
         risk_list_threshold,
         risklist_related_entities,
         riskrules_as_label,
+        ta_to_intrusion_set=False,
     ):
         threading.Thread.__init__(self)
         self.helper = helper
@@ -24,6 +25,7 @@ class RiskList(threading.Thread):
         self.risk_list_threshold = risk_list_threshold
         self.risklist_related_entities = risklist_related_entities
         self.riskrules_as_label = riskrules_as_label
+        self.ta_to_intrusion_set = ta_to_intrusion_set
 
     def run(self):
         try:
@@ -131,11 +133,13 @@ class RiskList(threading.Thread):
                                 evidence_string = evidence.get("evidenceString", "")
                                 mitigation = evidence.get("mitigationString", "")
 
+                                matched = False
                                 for corresponding_rule in RISK_RULES_MAPPER:
                                     if (
                                         rule_criticality
                                         == corresponding_rule["rule_score"]
                                     ):
+                                        matched = True
                                         description += (
                                             "|"
                                             + risk_rule_name
@@ -149,6 +153,15 @@ class RiskList(threading.Thread):
                                             + "\n"
                                         )
                                         labels.append(risk_rule_name)
+                                        break
+
+                                if not matched:
+                                    self.helper.connector_logger.warning(
+                                        "[RISK LIST] Unknown criticality level: "
+                                        f"{rule_criticality} for rule: {risk_rule_name}. "
+                                        "Please update RISK_RULES_MAPPER in constants.py."
+                                    )
+                                    labels.append(risk_rule_name)
 
                     else:
                         rule_criticality_list = (
@@ -175,11 +188,13 @@ class RiskList(threading.Thread):
 
                             criticality_score = int(criticality)
 
+                            matched = False
                             for corresponding_rule in RISK_RULES_MAPPER:
                                 if (
                                     criticality_score
                                     == corresponding_rule["rule_score"]
                                 ):
+                                    matched = True
                                     description += (
                                         "|"
                                         + risk_rules_list[index]
@@ -191,6 +206,15 @@ class RiskList(threading.Thread):
                                         + "\n"
                                     )
                                     labels.append(risk_rules_list[index])
+                                    break
+
+                            if not matched:
+                                self.helper.connector_logger.warning(
+                                    "[RISK LIST] Unknown criticality level: "
+                                    f"{criticality_score} for rule: {risk_rules_list[index]}. "
+                                    "Please update RISK_RULES_MAPPER in constants.py."
+                                )
+                                labels.append(risk_rules_list[index])
 
                     # Convert into stix object
                     stix_obj = risk_list_type["class"](
@@ -201,7 +225,12 @@ class RiskList(threading.Thread):
                         last_seen=last_seen,
                     )
 
-                    stix_obj.map_data(row, self.tlp, self.risklist_related_entities)
+                    stix_obj.map_data(
+                        row,
+                        self.tlp,
+                        self.risklist_related_entities,
+                        ta_to_intrusion_set=self.ta_to_intrusion_set,
+                    )
 
                     stix_obj.add_description(description)
                     if self.riskrules_as_label:

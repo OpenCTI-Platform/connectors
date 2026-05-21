@@ -1,7 +1,7 @@
 #all the dependencies
-pycti==6.9.15
-requests~=2.32.2
-python-dotenv==1.1.1
+pycti==7.260521.0
+requests~=2.33.0
+python-dotenv==1.2.2
 pyyaml==6.0.3
 validators==0.35.0
 tenacity==9.1.2

@@ -6,7 +6,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   #id: "496df155-c2f0-43b3-ab46-4352e68989d8" # Optional (default: '496df155-c2f0-43b3-ab46-4352e68989d8')
   #name: "UrlScan" # Optional (default: 'Urlscan Enrichment')
-  #scope: "url,ipv4-addr,ipv6-addr" # Optional (default: 'url,ipv4-addr,ipv6-addr')
+  #scope: "url,ipv4-addr,ipv6-addr" # Available => scope-submission: url or hostname or domain-name / scope-search: ipv4-addr,ipv6-addr
   #auto: false # Optional (default: false)
   #log_level: "error" # Optional (default: 'error')
 

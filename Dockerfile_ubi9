@@ -1,0 +1,31 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal
+
+ARG EXTRA_PACKAGES=""
+
+RUN set -eux; \
+    microdnf -y --setopt=install_weak_deps=0 install python3.12 ${EXTRA_PACKAGES}; \
+    microdnf clean all;
+
+ENV PYTHONDONTWRITEBYTECODE=1
+
+ARG CONNECTOR_TYPE
+ENV CONNECTOR_TYPE=${CONNECTOR_TYPE}
+
+ARG CONNECTOR_CMD="main.py"
+ARG CONNECTOR_WORKDIR="/opt/connector/src"
+ARG POST_INSTALL=""
+
+ENV CONNECTOR_CMD=${CONNECTOR_CMD}
+
+COPY src /opt/connector/src
+
+RUN set -eux; \
+    microdnf -y --setopt=install_weak_deps=0 install python3.12-pip git-core; \
+    pip3.12 install --no-cache-dir -r /opt/connector/src/requirements.txt; \
+    if [ -n "${POST_INSTALL}" ]; then ${POST_INSTALL}; fi; \
+    microdnf -y remove python3.12-pip git-core ; \
+    microdnf clean all;
+
+WORKDIR ${CONNECTOR_WORKDIR}
+
+CMD python3.12 ${CONNECTOR_CMD}

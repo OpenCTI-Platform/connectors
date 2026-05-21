@@ -20,4 +20,18 @@ services:
       - ONYPHE_CREATE_NOTE=false
       - ONYPHE_IMPORT_FULL_DATA=false
       - ONYPHE_PIVOT_THRESHOLD=10
+      # Comma-separated list of OpenCTI types to create during enrichment.
+      # Leave empty (default) to create all types.
+      # Valid values: Domain-Name,Hostname,IPv4-Address,IPv6-Address,
+      #               Autonomous-System,X509-Certificate,Text,Vulnerability
+      #- ONYPHE_ENRICHMENT_TYPES=
+      # Comma-separated list of fingerprint pivot labels to use when creating
+      # Text observables.  Leave empty to use the default sha256-preferred set.
+      # Valid values: hhhash-sha256,hhhash-md5,ja4t-md5,ja3s-md5,ja4s-md5,
+      #   hassh-md5,favicon-sha256,favicon-md5,favicon-mmh3,tcp-fingerprint-md5,
+      #   app-data-sha256,app-data-md5,app-data-mmh3,
+      #   http-header-data-sha256,http-header-data-md5,http-header-data-mmh3,
+      #   http-body-data-sha256,http-body-data-md5,http-body-data-mmh3,
+      #   ssh-fingerprint-sha256,ssh-fingerprint-md5
+      #- ONYPHE_TEXT_FINGERPRINTS=
     restart: always

@@ -140,7 +140,9 @@ class Plugin(FrozenBaseModelWithWarnedExtra):
     Represents plugin details that provide information about the detected vulnerability.
     """
 
-    bid: list[int] = Field(..., description="Bugtraq IDs related to the vulnerability.")
+    bid: Optional[list[int]] = Field(
+        None, description="Bugtraq IDs related to the vulnerability."
+    )
     checks_for_default_account: bool = Field(
         ..., description="Indicates if the plugin checks for default accounts."
     )
@@ -260,8 +262,8 @@ class Asset(FrozenBaseModelWithWarnedExtra):
     """
 
     bios_uuid: Optional[str] = Field(None, description="The BIOS UUID of the asset.")
-    device_type: str = Field(
-        ..., description="The type of device (e.g., hypervisor, general-purpose)."
+    device_type: Optional[str] = Field(
+        None, description="The type of device (e.g., hypervisor, general-purpose)."
     )
     fqdn: Optional[str] = Field(
         None, description="The fully qualified domain name of the asset."

@@ -33,7 +33,7 @@ The SentinelOne Intel Stream Connector is a standalone Python process that monit
 The SentinelOne Intel Stream Connector enables real-time synchronization of threat intelligence indicators from OpenCTI to SentinelOne's threat intelligence platform as Indicators of compromise. Upon the creation of Indicators within the OpenCTI platform, the connector automatically evaluates their STIX patterns and pushes compatible indicators to a SentinelOne Instance. 
 
 SentinelOne supports the following Indicator of Compromise (IOC) types:
-- **File Hashes**: SHA256, SHA1, MD5
+- **File Hashes**: SHA-256, SHA-1, MD5
 - **Network Indicators**: URLs, Domain names, IPv4 addresses
 
 As such, the connector supports Indicators with **single-element** patterns corresponding to the above STIX SCOs. 
@@ -191,7 +191,7 @@ It is best practice to create a new user under the `Connectors` group and to use
 The connector simply consumes the assigned stream, filtering for events where Indicators that use STIX patterns are found. The connector will determine if the Indicator's pattern is of a format SentinelOne can accept and will enact the required processing in order to push it to a SentinelOne instance as such. 
 
 Based on the IOC types SentinelOne supports, the connector can only process Indicators from OpenCTI whose pattern references the following STIX Cyber Observable Objects (SCOs):
-- **File Hashes**: SHA256, SHA1, MD5
+- **File Hashes**: SHA-256, SHA-1, MD5
 - **Network Indicators**: URLs, Domain names, IPv4 addresses
 
 Alongside this, the connector is only able to consume basic **single-expression** STIX patterns (e.g., file:hashes.'SHA-256' = '<hash>').

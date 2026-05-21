@@ -1,0 +1,9 @@
+
+[project]
+name = "cve"
+version = "0.1.0"
+description = ""
+requires-python = "~=3.12.0"
+
+[tool.pytest]
+asyncio_mode = "auto"

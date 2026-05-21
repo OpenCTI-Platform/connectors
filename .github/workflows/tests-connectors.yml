@@ -1,0 +1,176 @@
+name: Tests Connectors
+
+on:
+  push:
+    branches:
+      - master
+      - 'release/6.9.x'
+      - 'lts/*'  # Match any branch starting with 'lts/'
+    paths:
+      - 'connectors-sdk/**'
+      - 'external-import/**'
+      - 'internal-enrichment/**'
+      - 'internal-export-file/**'
+      - 'internal-import-file/**'
+      - 'stream/**'
+      - 'shared/**'
+      - 'templates/**'
+      - 'run_test.sh'
+      - '.github/workflows/tests-connectors.yml'
+      - '.github/scripts/**'
+  pull_request:
+    paths:
+      - 'connectors-sdk/**'
+      - 'external-import/**'
+      - 'internal-enrichment/**'
+      - 'internal-export-file/**'
+      - 'internal-import-file/**'
+      - 'stream/**'
+      - 'shared/**'
+      - 'templates/**'
+      - 'run_test.sh'
+      - '.github/workflows/tests-connectors.yml'
+      - '.github/scripts/**'
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect-test-files:
+    name: Detect test files
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_tests: ${{ steps.set-matrix.outputs.has_tests }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # needed for git merge-base in build_test_matrix.py
+
+      - name: Resolve RELEASE_REF
+        run: |
+          PR_BASE_REF="${{ github.base_ref }}"
+
+          if [ -n "${PR_BASE_REF:-}" ]; then
+            case "${PR_BASE_REF}" in
+              master|release/6.9.x|lts/*)
+                RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+                echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+              *)
+                RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+                echo "PR base '${PR_BASE_REF}' is outside allowed refs, using fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+            esac
+          else
+            RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+            echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+          fi
+          echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$GITHUB_ENV"
+
+      - id: set-matrix
+        name: Build test matrix from test-requirements.txt files
+        run: python .github/scripts/build_test_matrix.py
+
+  test:
+    name: Test ${{ matrix.name }}
+    needs:
+      - detect-test-files
+    if: needs.detect-test-files.outputs.has_tests == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.detect-test-files.outputs.matrix) }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Resolve RELEASE_REF
+        run: |
+          PR_BASE_REF="${{ github.base_ref }}"
+
+          if [ -n "${PR_BASE_REF:-}" ]; then
+            case "${PR_BASE_REF}" in
+              master|release/6.9.x|lts/*)
+                RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+                echo "Using PR base branch for RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+              *)
+                RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+                echo "PR base '${PR_BASE_REF}' is outside allowed refs, using fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+                ;;
+            esac
+          else
+            RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+            echo "Using detected fallback RELEASE_REF: ${RESOLVED_RELEASE_REF}"
+          fi
+          echo "RELEASE_REF=${RESOLVED_RELEASE_REF}" >> "$GITHUB_ENV"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v8.0.0
+        with:
+          enable-cache: false
+          python-version: "3.12"
+
+      - name: Run tests via run_test.sh
+        env:
+          CIRCLE_BRANCH: ${{ github.ref_name }}
+        run: |
+          while IFS= read -r req_file; do
+            [ -z "$req_file" ] && continue
+            bash run_test.sh "$req_file"
+          done <<< "${{ matrix.test_requirements }}"
+
+      - name: Upload coverage to Codecov
+        if: ${{ !cancelled() && hashFiles('coverage.xml') != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: connectors
+          fail_ci_if_error: false
+          verbose: true
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+
+  baseline-coverage:
+    name: Baseline coverage (untested connectors)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: false
+          python-version: "3.12"
+      - name: Generate 0% coverage for all connector source files
+        run: |
+          pip install coverage
+          coverage erase
+          echo "pass" > /tmp/noop.py
+          coverage run --rcfile=.coveragerc /tmp/noop.py
+          python .github/scripts/coverage_inject_unexecuted_files.py
+          coverage xml --rcfile=.coveragerc -o base-coverage.xml --ignore-errors
+          echo "Total source files in report:"
+          grep -c '<class ' base-coverage.xml || true
+
+      - name: Upload baseline coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./base-coverage.xml
+          flags: baseline
+          fail_ci_if_error: false

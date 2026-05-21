@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/promptintel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "PromptIntel",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "promptintel"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "PROMPTINTEL_API_URL": {
+      "default": "https://api.promptintel.novahunting.ai/api/v1",
+      "description": "Base URL for the PromptIntel API.",
+      "type": "string"
+    },
+    "PROMPTINTEL_API_KEY": {
+      "description": "API key for authenticating with PromptIntel.",
+      "type": "string"
+    },
+    "PROMPTINTEL_TLP_LEVEL": {
+      "default": "clear",
+      "description": "TLP marking level: clear, green, amber, amber+strict, red.",
+      "type": "string"
+    },
+    "PROMPTINTEL_SEVERITY_FILTER": {
+      "default": "",
+      "description": "Filter prompts by severity: critical, high, medium, low. Empty for all.",
+      "type": "string"
+    },
+    "PROMPTINTEL_CATEGORY_FILTER": {
+      "default": "",
+      "description": "Filter prompts by category: manipulation, abuse, patterns, outputs. Empty for all.",
+      "type": "string"
+    },
+    "PROMPTINTEL_IMPORT_START_LIMIT": {
+      "default": 5000,
+      "description": "Maximum number of prompts to fetch on the first run (historical backfill).",
+      "type": "integer"
+    },
+    "PROMPTINTEL_IMPORT_LIMIT": {
+      "default": 1000,
+      "description": "Maximum number of prompts to fetch on subsequent runs.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "PROMPTINTEL_API_KEY"
+  ],
+  "additionalProperties": true
+}

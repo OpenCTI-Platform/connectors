@@ -1,11 +1,15 @@
-from typing import Any, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from .base_api import BaseCrowdstrikeClient
 
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class ActorsAPI(BaseCrowdstrikeClient):
-    def __init__(self, helper):
-        super().__init__(helper)
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        super().__init__(config, helper)
 
     def get_combined_actor_entities(
         self,

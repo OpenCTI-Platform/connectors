@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, cast
+from typing import TYPE_CHECKING, Any, Dict, List, cast
 
 from .base_api import BaseCrowdstrikeClient
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class ReportsAPI(BaseCrowdstrikeClient):
 
-    def __init__(self, helper):
-        super().__init__(helper)
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        super().__init__(config, helper)
 
     def get_combined_report_entities(
         self,

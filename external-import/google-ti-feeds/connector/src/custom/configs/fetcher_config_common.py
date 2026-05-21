@@ -43,7 +43,7 @@ GTI_ATTACK_TECHNIQUE_FETCHER_CONFIG = GenericFetcherConfig(
 
 GTI_RELATIONSHIP_FETCHER_CONFIG = GenericFetcherConfig(
     entity_type="relationships",
-    endpoint="/collections/{entity_id}/relationships/{entity_type}",
+    endpoint="/collections/{entity_id}/{entity_type}",
     display_name="relationships",
     exception_class=GTIRelationshipFetchError,
     response_model=None,

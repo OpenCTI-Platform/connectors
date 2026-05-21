@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """OpenCTI CrowdStrike YARA master importer module."""
 
 import itertools
 import zipfile
 from datetime import datetime
 from io import BytesIO
-from typing import Any, Dict, Mapping, NamedTuple, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, Mapping, NamedTuple, Optional, Tuple, cast
 
 from crowdstrike_feeds_services.client.actors import ActorsAPI
 from crowdstrike_feeds_services.client.rules import RulesAPI
@@ -15,15 +14,16 @@ from crowdstrike_feeds_services.utils import (
 )
 from crowdstrike_feeds_services.utils.report_fetcher import FetchedReport, ReportFetcher
 from crowdstrike_feeds_services.utils.yara_parser import YaraParser, YaraRule
-from pycti.connector.opencti_connector_helper import (  # noqa: E501
-    OpenCTIConnectorHelper,
-)
 from requests import RequestException
 from stix2 import Bundle, Identity, MarkingDefinition
 from stix2.exceptions import STIXError
 
 from ..importer import BaseImporter
 from .yara_master_builder import YaraRuleBundleBuilder
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
 
 
 class YaraMaster(NamedTuple):
@@ -47,7 +47,8 @@ class YaraMasterImporter(BaseImporter):
 
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        config: "ConnectorSettings",
+        helper: "OpenCTIConnectorHelper",
         author: Identity,
         tlp_marking: MarkingDefinition,
         report_status: int,
@@ -56,17 +57,18 @@ class YaraMasterImporter(BaseImporter):
         scopes: list[str],
     ) -> None:
         """Initialize CrowdStrike YARA master importer."""
-        super().__init__(helper, author, tlp_marking)
+        super().__init__(config, helper, author, tlp_marking)
 
-        self.rules_api_cs = RulesAPI(helper)
-        self.actors_api_cs = ActorsAPI(helper)
+        self.rules_api_cs = RulesAPI(config, helper)
+        self.actors_api_cs = ActorsAPI(config, helper)
 
         self.report_status = report_status
         self.report_type = report_type
         self.no_file_trigger_import = no_file_trigger_import
         self.scopes = scopes
+        self.include_reports = "report" in scopes
 
-        self.report_fetcher = ReportFetcher(helper, self.no_file_trigger_import)
+        self.report_fetcher = ReportFetcher(config, helper, self.no_file_trigger_import)
 
     def run(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Run importer."""
@@ -272,7 +274,9 @@ class YaraMasterImporter(BaseImporter):
         failed_count = 0
 
         for yara_rule in yara_rules:
-            fetched_reports = self._get_reports_by_code(yara_rule.reports)
+            fetched_reports: list[FetchedReport] = []
+            if self.include_reports:
+                fetched_reports = self._get_reports_by_code(yara_rule.reports)
 
             yara_rule_bundle = self._create_yara_rule_bundle(yara_rule, fetched_reports)
             if yara_rule_bundle is None:
@@ -397,6 +401,7 @@ class YaraMasterImporter(BaseImporter):
         report_type = self.report_type
 
         bundle_builder = YaraRuleBundleBuilder(
+            self.config,
             self.helper,
             rule,
             author,

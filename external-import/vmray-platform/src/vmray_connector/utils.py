@@ -78,17 +78,3 @@ def is_ipv4(ip_str: str) -> bool:
 def is_ipv6(ip_str: str) -> bool:
     """Determine whether the provided string is an IPv6 address or valid IPv6 CIDR."""
     return validate_ip_or_network(IPv6Address, IPv6Network, ip_str)
-
-
-def check_hash_type(value: str) -> str:
-    """
-    Check hash type based on length.
-    """
-    hash_length_map = {
-        32: "MD5",
-        40: "SHA-1",
-        64: "SHA-256",
-        128: "SHA-512",
-    }
-
-    return hash_length_map.get(len(value), "unknown-hash")

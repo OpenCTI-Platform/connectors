@@ -238,6 +238,52 @@ class ConnectorAccenture:
         )
         return modified_description, results
 
+    @staticmethod
+    def _convert_threat_actors_to_intrusion_sets(
+        stix_objects: List[Dict[str, Any]],
+    ) -> None:
+        """Convert all threat-actor objects to intrusion-set in-place.
+
+        Handles type/id replacement, relationship ref updates, report object_refs,
+        and removes properties that are valid on threat-actor but not on intrusion-set
+        per STIX 2.1 specification.
+        """
+        ta_only_properties = {
+            "threat_actor_types",
+            "roles",
+            "sophistication",
+            "personal_motivations",
+        }
+
+        for obj in stix_objects:
+            obj_type = obj.get("type")
+
+            if obj_type == "threat-actor":
+                obj["type"] = "intrusion-set"
+                obj["id"] = obj["id"].replace("threat-actor", "intrusion-set")
+                for prop in ta_only_properties:
+                    obj.pop(prop, None)
+
+            elif obj_type == "relationship":
+                obj["source_ref"] = obj["source_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+                obj["target_ref"] = obj["target_ref"].replace(
+                    "threat-actor", "intrusion-set"
+                )
+                if (
+                    obj.get("relationship_type") == "located-at"
+                    and obj["source_ref"].startswith("intrusion-set")
+                    and obj["target_ref"].startswith("location")
+                ):
+                    obj["relationship_type"] = "originates-from"
+
+            elif obj_type == "report":
+                obj["object_refs"] = [
+                    ref.replace("threat-actor", "intrusion-set")
+                    for ref in obj.get("object_refs", [])
+                ]
+
     def _process_bundle(self, stix_bundle: Dict[str, Any]) -> Dict[str, Any]:
         # stix bundle rework to align with openCTI
         stix_objects = stix_bundle.get("objects")
@@ -326,6 +372,13 @@ class ConnectorAccenture:
                 for item in items_to_remove:
                     stix_objects.remove(item)
         stix_objects.extend(new_entities_for_bundle)
+
+        if self.config.threat_actor_as_intrusion_set:
+            self.helper.connector_logger.info(
+                "[PROCESS] Converting threat-actor objects to intrusion-set"
+            )
+            self._convert_threat_actors_to_intrusion_sets(stix_objects)
+
         return stix_bundle
 
     def _send_bundle(

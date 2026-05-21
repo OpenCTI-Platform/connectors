@@ -79,7 +79,7 @@ services:
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name,Url,StixFile,Vulnerability
       - CONNECTOR_AUTO=false
       - CONNECTOR_LOG_LEVEL=error
-      - RECORDED_FUTURE_API_TOKEN=ChangeMe
+      - RECORDED_FUTURE_TOKEN=ChangeMe
       - RECORDED_FUTURE_MAX_TLP=TLP:AMBER
       - RECORDED_FUTURE_INDICATOR_THRESHOLD=65
     restart: always

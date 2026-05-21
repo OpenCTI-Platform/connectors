@@ -1,0 +1,21 @@
+{
+  "title": "PromptIntel",
+  "slug": "promptintel",
+  "description": "This connector imports adversarial AI prompt intelligence from PromptIntel (https://promptintel.novahunting.ai). PromptIntel is a collaborative threat intelligence platform for tracking and defending against adversarial AI prompts — Indicators of Prompt Compromise (IoPC).\n\nFor each prompt the connector creates:\n- An AI-Prompt observable with the raw prompt text\n- A STIX Indicator with pattern [ai-prompt:value = '...']\n- A based-on relationship between the indicator and the observable\n- When a Nova rule is present: a Nova indicator (pattern_type=nova) and a sighting\n\nLabels are derived from PromptIntel categories (manipulation, abuse, patterns, outputs), threat types, and tags. Scores are computed from severity level and community ratings.",
+  "short_description": "Imports adversarial AI prompt intelligence (IoPC) from PromptIntel as AI-Prompt observables and indicators.",
+  "logo": "external-import/promptintel/__metadata__/logo.png",
+  "use_cases": [
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.6.2",
+  "subscription_link": "https://promptintel.novahunting.ai",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/promptintel",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-promptintel",
+  "container_type": "EXTERNAL_IMPORT"
+}

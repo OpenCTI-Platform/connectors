@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 """OpenCTI Valhalla connector module."""
 
-from .core import Valhalla
+from valhalla.connector import Valhalla
+from valhalla.settings import ConnectorSettings
 
-__all__ = ["Valhalla"]
+__all__ = ["Valhalla", "ConnectorSettings"]

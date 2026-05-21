@@ -14,9 +14,6 @@ The MISP connector imports threat intelligence events and attributes from a MISP
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -79,6 +76,7 @@ connector-misp:
     - MISP_IMPORT_FROM_DATE=2010-01-01
     - MISP_IMPORT_DISTRIBUTION_LEVELS=0,1,2,3
     - MISP_IMPORT_THREAT_LEVELS=1,2,3,4
+    - MISP_THREAT_LEVEL_SCORE_MAPPING=1:90;2:60;3:30;4:50
   restart: always
 ```
 
@@ -188,6 +186,23 @@ The connector supports extensive filtering:
 - **By Distribution**: Filter by MISP distribution level (0-3)
 - **By Threat Level**: Filter by threat level (1-4)
 - **By Publication Status**: Only published events
+
+### Threat Level Score Mapping
+
+MISP exposes four threat levels (`1=High`, `2=Medium`, `3=Low`, `4=Undefined`) which the connector converts into an OpenCTI score on the generated report, indicators and observables. The mapping is configurable through `MISP_THREAT_LEVEL_SCORE_MAPPING` and defaults to `1:90;2:60;3:30;4:50`, which preserves the historical behavior.
+
+Format and rules:
+
+- Pairs are separated by `;` and each pair uses `<level>:<score>`.
+- `<level>` must be one of `1`, `2`, `3`, `4` and `<score>` must be an integer between `0` and `100`.
+- Level `4` must always be defined: it is also used as the fallback score for events that report an unrecognized threat level.
+- Invalid input (missing `4`, score out of range, malformed pair, etc.) causes the connector to fail fast at startup with a clear error message.
+
+Example - importing High-severity MISP events with the platform's "high" score:
+
+```yaml
+- MISP_THREAT_LEVEL_SCORE_MAPPING=1:100;2:70;3:40;4:50
+```
 
 ## Debugging
 

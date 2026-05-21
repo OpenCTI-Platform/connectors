@@ -51,8 +51,6 @@ class GenericBatchProcessorConfig:
 
     validation_function: Callable[[Any], bool] | None = None
     """Function to validate individual items before adding to batch"""
-    empty_batch_behavior: str = "update_state"
-    """Behavior when processing empty batches: 'skip', 'update_state', or 'error'"""
 
     max_retries: int = 0
     """Maximum number of retries for failed batch processing"""
@@ -73,11 +71,6 @@ class GenericBatchProcessorConfig:
                 self.display_name_singular = self.display_name[:-1]
             else:
                 self.display_name_singular = self.display_name
-
-        if self.empty_batch_behavior not in ("skip", "update_state", "error"):
-            raise ValueError(
-                "empty_batch_behavior must be 'skip', 'update_state', or 'error'"
-            )
 
     def format_work_name(self, batch_num: int, **kwargs: Any) -> str:
         """Format the work name with batch number and optional parameters.

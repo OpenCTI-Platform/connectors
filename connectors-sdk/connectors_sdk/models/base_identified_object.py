@@ -1,11 +1,9 @@
 """BaseIdentifiedObject."""
 
-from __future__ import annotations
-
 import warnings
 from abc import ABC
-from typing import Any
 
+import stix2
 from connectors_sdk.models.base_object import BaseObject
 from pydantic import (
     PrivateAttr,
@@ -19,37 +17,34 @@ class BaseIdentifiedObject(BaseObject, ABC):
 
     _stix2_id: str | None = PrivateAttr(default=None)
 
-    def model_post_init(self, context__: Any) -> None:
-        """Define the post initialization method, automatically called after __init__ in a pydantic model initialization.
-
-        Notes:
-            This allows a last modification of the pydantic Model before it is validated.
-
-        Args:
-            context__(Any): The pydantic context used by pydantic framework.
-
-        References:
-            https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_parametrized_name [consulted on
-                October 4th, 2024]
-
-        """
-        _ = context__  # Unused parameter, but required by pydantic
-        if self._stix2_id is None:
-            self._stix2_id = self.id
-
     @computed_field  # type: ignore[prop-decorator]
-    # known issue : see https://docs.pydantic.dev/2.3/usage/computed_fields/ (consulted on 2025-06-06)
+    # Typing known issue : see https://docs.pydantic.dev/2.3/usage/computed_fields/ (consulted on 2025-06-06)
     @property
     def id(self) -> str:
-        """Return the unique identifier of the entity."""
-        stix_id: str = self.to_stix2_object().get("id", "")
-        self._stix2_id = stix_id
-        return stix_id
+        """Return the unique identifier of the entity.
+        The value is computed from the STIX2 object representation of the entity, and then cached for future use.
+
+        Notes:
+            The decorator `@computed_field` is used to indicate that this property
+            must be considered as a field by pydantic, and then included in the model **serialization** processes.
+            This field is **not** validated by pydantic, neither during the model initialization, nor during the model update.
+        """
+        if self._stix2_id is None:
+            stix_object: stix2.v21._STIXBase21 = self.to_stix2_object()
+            stix_id = stix_object.get("id")
+
+            # The 'id' property is required and must be a non-empty string for model validation
+            if not (isinstance(stix_id, str) and stix_id.strip()):
+                raise ValueError("The 'id' property can't be set.")
+
+            self._stix2_id = stix_id
+
+        return self._stix2_id
 
     # https://github.com/pydantic/pydantic/discussions/10098
     @model_validator(mode="after")
-    def _check_id(self) -> BaseIdentifiedObject:
-        """Ensure the id is correctly set and alert if it has changed.
+    def _compute_stix_id(self) -> "BaseIdentifiedObject":
+        """Compute STIX ID on validation (instance creation or re-assignments).
 
         Raises:
             ValueError: If the id is not set.
@@ -73,19 +68,23 @@ class BaseIdentifiedObject(BaseObject, ABC):
             'identity--011fe1ae-7b92-4779-9eb5-7be2aeffb9e1'
 
         """
-        if self._stix2_id is None or self._stix2_id == "":
-            raise ValueError("The 'id' property must be set.")
+        previous_stix2_id = self._stix2_id
+        self._stix2_id = None  # Reset cached id
+        current_stix2_id = self.id  # Compute and cache the new id
 
-        if self._stix2_id != self.id:
-            # define message before the warning to avoid self._stix2_id has already changed in the main thread
-            message = (
-                f"The 'id' property has changed from to {self.id}. "
-                "This may lead to unexpected behavior in the OpenCTI platform."
-            )
+        if previous_stix2_id is None:
+            # If the previous id was not set, just set it without warning
+            return self
+
+        if previous_stix2_id != current_stix2_id:
+            # Warn on `_stix2_id` change after fields re-assignment
             warnings.warn(
-                message=message,
+                message=(
+                    f"The 'id' property has changed from {previous_stix2_id} to {current_stix2_id}. "
+                    "This may lead to unexpected behavior in the connector or the OpenCTI platform."
+                ),
                 category=UserWarning,
                 stacklevel=2,
             )
-        self._stix2_id = self.id  # Update the internal id to the current one
+
         return self

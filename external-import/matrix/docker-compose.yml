@@ -1,0 +1,36 @@
+services:
+  connector-matrix:
+    image: opencti/connector-matrix:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Matrix
+      - CONNECTOR_SCOPE=matrix
+      - CONNECTOR_LOG_LEVEL=error
+      # Matrix server connection
+      - MATRIX_SERVER=https://matrix.example.org
+      - MATRIX_USER_ID=@octi-bot:matrix.example.org
+      - MATRIX_PASSWORD=ChangeMe
+      - MATRIX_DEVICE_NAME=octi_bot
+      # TLP marking applied to created entities. Supported values:
+      #   CLEAR             — modern OpenCTI marking
+      #                       (``x_opencti_definition='TLP:CLEAR'``)
+      #   WHITE             — legacy ``stix2.TLP_WHITE`` constant
+      #                       (distinct marking-definition object from CLEAR,
+      #                       kept for backwards compatibility)
+      #   GREEN, AMBER, RED — built-in stix2 markings
+      #   AMBER_STRICT      — also accepted as AMBER+STRICT /
+      #                       AMBER STRICT / AMBER-STRICT
+      # Case-insensitive.
+      - MATRIX_TLP=AMBER
+      - MATRIX_DEBUG=false
+    restart: always
+    # ``matrix-nio[e2e]`` stores its sync token, room state and device keys
+    # in a SQLite database; persist it on a volume so the bot does not
+    # re-download history (and re-fetch device keys) on every restart.
+    volumes:
+      - matrix-store:/opt/opencti-connector-matrix/store
+
+volumes:
+  matrix-store:

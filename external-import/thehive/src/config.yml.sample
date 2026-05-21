@@ -18,6 +18,7 @@ thehive:
   import_from_date: '2021-01-01T00:00:00' # Optional
   import_only_tlp: '0,1,2,3,4'
   import_alerts: true
+  import_attachments: false
   severity_mapping: '1:low,2:medium,3:high,4:critical'
   case_status_mapping: '' # TheHive_ExtStatus_Text1:OpenCTI_Status_ID1,TheHive_ExtStatus_Text2:OpenCTI_Status_ID2
   task_status_mapping: '' # Waiting:OpenCTI_Status_ID1,InProgress:OpenCTI_Status_ID2,Completed:OpenCTI_Status_ID2
