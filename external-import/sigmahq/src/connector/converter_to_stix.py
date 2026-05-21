@@ -184,6 +184,14 @@ class ConverterToStix:
         stix_objects.append(indicator)
 
         for related_technique in related_techniques:
+            # ``created_by_ref`` + ``object_marking_refs`` mirror the
+            # Indicator / AttackPattern / Vulnerability SDOs so the
+            # ``indicates`` edge carries the same author and TLP
+            # marking as the rest of the bundle. Without
+            # ``created_by_ref`` the platform ingests an
+            # unattributed relationship — the source / target SDOs
+            # are attributed but the edge is not, which breaks
+            # author-scoped queries on the relationship layer.
             relation = stix2.Relationship(
                 id=pycti.StixCoreRelationship.generate_id(
                     relationship_type="indicates",
@@ -193,11 +201,16 @@ class ConverterToStix:
                 source_ref=indicator.id,
                 target_ref=related_technique.id,
                 relationship_type="indicates",
+                created_by_ref=self.author.id,
                 object_marking_refs=[self.tlp_marking.id],
             )
             stix_objects.append(relation)
 
         for related_vulnerability in related_vulnerabilities:
+            # Same rationale as the AttackPattern ``indicates`` edge
+            # above — author attribution propagates on the
+            # relationship as well, so the Vulnerability edge does
+            # not silently drop out of author-scoped filters.
             relation = stix2.Relationship(
                 id=pycti.StixCoreRelationship.generate_id(
                     relationship_type="indicates",
@@ -207,6 +220,7 @@ class ConverterToStix:
                 source_ref=indicator.id,
                 target_ref=related_vulnerability.id,
                 relationship_type="indicates",
+                created_by_ref=self.author.id,
                 object_marking_refs=[self.tlp_marking.id],
             )
             stix_objects.append(relation)

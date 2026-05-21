@@ -166,21 +166,43 @@ class TestAuthorAndMarkings:
         converter = _make_converter("clear")
         assert converter.tlp_marking.id in converter.author.object_marking_refs
 
+    def test_indicates_relationships_are_attributed_to_author(self):
+        """Both the AttackPattern and Vulnerability ``indicates`` edges
+        must carry ``created_by_ref=self.author.id``.
+
+        Pins the contract independently of the broader
+        ``test_attack_pattern_and_indicator_share_author_and_marking``
+        sweep so a regression on the relationship layer surfaces as a
+        single, unambiguous failure (the previous version of the
+        sweep only asserted author attribution on SDOs, which silently
+        let an unattributed relationship pass through).
+        """
+        converter = _make_converter("clear")
+        stix_objects = converter.convert_sigma_rule(_build_rule(_RULE_WITH_BOTH))
+        relationships = [o for o in stix_objects if o.type == "relationship"]
+        assert len(relationships) == 2
+        for rel in relationships:
+            assert rel.created_by_ref == converter.author.id
+            assert converter.tlp_marking.id in rel.object_marking_refs
+
     def test_attack_pattern_and_indicator_share_author_and_marking(self):
         converter = _make_converter("clear")
         stix_objects = converter.convert_sigma_rule(_build_rule(_RULE_WITH_TECHNIQUE))
         kinds = {obj.type for obj in stix_objects}
         assert {"attack-pattern", "indicator", "relationship"}.issubset(kinds)
         for obj in stix_objects:
-            if obj.type in {"attack-pattern", "indicator", "vulnerability"}:
-                # Author + marking propagate consistently — without
-                # this the bundle would mix marked and unmarked
-                # entities and silently break access-control
-                # propagation in OpenCTI.
-                assert obj.created_by_ref == converter.author.id
-                assert converter.tlp_marking.id in obj.object_marking_refs
-            if obj.type == "relationship":
-                assert converter.tlp_marking.id in obj.object_marking_refs
+            # Author + marking propagate consistently across every
+            # SDO *and* every relationship in the bundle. Without
+            # ``created_by_ref`` on the ``indicates`` edges the
+            # source / target SDOs would be attributed to the
+            # connector author but the relationship itself would
+            # not — which silently drops the edge from
+            # author-scoped filters on the platform side. Without
+            # ``object_marking_refs`` the bundle would mix marked
+            # and unmarked entities and break marking-based
+            # access-control propagation.
+            assert obj.created_by_ref == converter.author.id
+            assert converter.tlp_marking.id in obj.object_marking_refs
 
 
 class TestRuleConversion:
