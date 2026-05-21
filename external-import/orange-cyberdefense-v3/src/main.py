@@ -1091,7 +1091,21 @@ class OrangeCyberdefense:
             "Authorization": self.ocd_worldwatch_api_key,
         }
         response = requests.get(url, headers=headers, timeout=30)
-        return response.json()["items"]
+        response.raise_for_status()
+        try:
+            response_json = response.json()
+        except ValueError:
+            self.helper.log_warning(
+                "[WORLDWATCH IMPORT] Failed to decode API response as JSON."
+            )
+            return []
+        if "items" not in response_json:
+            self.helper.log_warning(
+                "[WORLDWATCH IMPORT] Unexpected API response format:"
+                " 'items' key not found."
+            )
+            return []
+        return response_json["items"]
 
     def _import_worldwatch(self):
         prefix = "[WORLDWATCH IMPORT]"
