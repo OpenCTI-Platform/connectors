@@ -370,14 +370,17 @@ class ReportImporter:
         if object_markings is None:
             object_markings = []
         if match[RESULT_FORMAT_CATEGORY] == "Vulnerability.name":
-            entity = self.helper.api.vulnerability.read(
+            entity = self._read_entity_with_fallback(
+                self.helper.api.vulnerability,
                 filters={
                     "mode": "and",
                     "filters": [
                         {"key": "name", "values": [match[RESULT_FORMAT_MATCH]]}
                     ],
                     "filterGroups": [],
-                }
+                },
+                entity_label="Vulnerability",
+                lookup_value=match[RESULT_FORMAT_MATCH],
             )
             if entity is None:
                 self.helper.log_info(
@@ -401,7 +404,8 @@ class ReportImporter:
                 entities.append(entity_stix)
             return entity_stix
         elif match[RESULT_FORMAT_CATEGORY] == "Attack-Pattern.x_mitre_id":
-            entity = self.helper.api.attack_pattern.read(
+            entity = self._read_entity_with_fallback(
+                self.helper.api.attack_pattern,
                 filters={
                     "mode": "and",
                     "filters": [
@@ -411,7 +415,9 @@ class ReportImporter:
                         }
                     ],
                     "filterGroups": [],
-                }
+                },
+                entity_label="AttackPattern",
+                lookup_value=match[RESULT_FORMAT_MATCH],
             )
             if entity is None:
                 self.helper.log_info(
@@ -549,6 +555,24 @@ class ReportImporter:
             if observable is not None and observables is not None:
                 observables.append(observable)
             return observable
+
+    def _read_entity_with_fallback(
+        self, api_entity, filters: Dict, entity_label: str, lookup_value: str
+    ):
+        try:
+            return api_entity.read(filters=filters)
+        except Exception as e:
+            self.helper.log_warning(
+                f"{entity_label} lookup for '{lookup_value}' failed with read(). "
+                f"Retrying with list(): {e}"
+            )
+            entities = api_entity.list(getAll=True, filters=filters)
+            if len(entities) > 1:
+                self.helper.log_warning(
+                    f"{entity_label} lookup for '{lookup_value}' returned multiple entities "
+                    f"({len(entities)}). Using the first one."
+                )
+            return entities[0] if entities else None
 
     def _convert_id(self, type, standard_id):
         if type == "Case-Incident":
