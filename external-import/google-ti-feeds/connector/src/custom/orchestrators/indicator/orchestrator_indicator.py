@@ -106,6 +106,7 @@ class OrchestratorIndicator(BaseOrchestrator):
                 )
 
                 current_dt += timedelta(hours=1)
+                self.batch_processor.flush()
 
         finally:
             self.logger.info(
