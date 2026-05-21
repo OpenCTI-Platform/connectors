@@ -1240,9 +1240,11 @@ class ElasticApiHandler:
         """
         try:
             error_body = response.json()
-            reason = error_body.get("error", {}).get("reason") or error_body.get(
-                "message"
-            )
+            error_field = error_body.get("error")
+            if isinstance(error_field, dict):
+                reason = error_field.get("reason") or error_body.get("message")
+            else:
+                reason = error_body.get("message")
             if reason:
                 return str(reason)
         except json.JSONDecodeError as exc:
@@ -1334,9 +1336,10 @@ class ElasticApiHandler:
                 timeout=10,
             )
 
-            # Elasticsearch 8 returns 200 for a successful PUT /_data_stream request.
-            # 201 is accepted defensively in case of intermediary proxies that rewrite
-            # the response code.
+            # Elasticsearch 8 returns HTTP 200 for a successful PUT /_data_stream
+            # request (the response body contains {"acknowledged": true}).
+            # HTTP 201 is also accepted since some intermediary proxies or future
+            # ES versions may return a Created status for this operation.
             if create_response.status_code in [200, 201]:
                 self.helper.connector_logger.info(
                     "Data stream created successfully",
