@@ -2,7 +2,7 @@
 
 import re
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping
 from urllib.parse import urlparse
 
 import pycti
@@ -24,6 +24,7 @@ class KnowledgeImporter:
     _ENTERPRISE_ATTACK_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
     _ATTACK_MAPPING = {}
     _KNOWLEDGE_IMPORTER_STATE = "knowledge_importer_state"
+    _KNOWLEDGE_IMPORTER_RULE_HASHES = "knowledge_importer_rule_hashes"
 
     def __init__(
         self,
@@ -45,13 +46,15 @@ class KnowledgeImporter:
         )
         self.bundle_objects = []
 
-    def run(self, work_id: int) -> Mapping[str, Any]:
+    def run(
+        self, work_id: int, previous_rule_hashes: Iterable[str] | None = None
+    ) -> Mapping[str, Any]:
         """Run importer."""
-
-        self.bundle_objects.append(self.organization)
+        known_rule_hashes = {rule_hash for rule_hash in (previous_rule_hashes or [])}
+        self.bundle_objects = [self.organization]
 
         self._build_attack_group_mapping()
-        self.process_yara_rules()
+        rule_hashes = self.process_yara_rules(known_rule_hashes)
 
         bundle = Bundle(objects=self.bundle_objects, allow_custom=True).serialize()
         self.helper.metric.inc("record_send", len(self.bundle_objects))
@@ -67,18 +70,36 @@ class KnowledgeImporter:
         state_timestamp = int(current_time_utc.timestamp())
 
         self.helper.log_info("knowledge importer completed")
-        return {self._KNOWLEDGE_IMPORTER_STATE: state_timestamp}
+        return {
+            self._KNOWLEDGE_IMPORTER_STATE: state_timestamp,
+            self._KNOWLEDGE_IMPORTER_RULE_HASHES: sorted(rule_hashes),
+        }
 
-    def process_yara_rules(self) -> None:
+    def process_yara_rules(self, previous_rule_hashes: set[str]) -> set[str]:
+        current_rule_hashes = set(previous_rule_hashes)
         try:
             rules_json = self.valhalla_client.get_rules_json()
             response = ApiResponse.parse_obj(rules_json)
         except Exception as err:
             self.helper.log_error(f"error downloading rules: {err}")
             self.helper.metric.inc("client_error_count")
-            return None
+            return current_rule_hashes
 
         for yr in response.rules:
+            rule_content = self._normalize_yara_rule(yr.content)
+            if rule_content is None:
+                self.helper.metric.inc("error_count")
+                self.helper.log_error(f"empty yara rule content for rule: {yr.name}")
+                continue
+
+            rule_hash = yr.rule_hash.strip() if yr.rule_hash else ""
+            if not rule_hash:
+                rule_hash = pycti.Indicator.generate_id(rule_content)
+
+            current_rule_hashes.add(rule_hash)
+            if rule_hash in previous_rule_hashes:
+                continue
+
             # Handle reference URLs supplied by the Valhalla API
             refs = []
             if yr.reference is not None and yr.reference not in {"", "-"}:
@@ -96,11 +117,11 @@ class KnowledgeImporter:
                     continue
 
             indicator = Indicator(
-                id=pycti.Indicator.generate_id(yr.content),
+                id=pycti.Indicator.generate_id(rule_content),
                 name=yr.name,
                 description=yr.cti_description,
                 pattern_type="yara",
-                pattern=yr.content,
+                pattern=rule_content,
                 labels=yr.tags,
                 valid_from=yr.cti_date,
                 object_marking_refs=[self.default_marking],
@@ -158,6 +179,16 @@ class KnowledgeImporter:
                         object_marking_refs=[self.default_marking],
                     )
                     self.bundle_objects.append(is_rel)
+
+        return current_rule_hashes
+
+    @staticmethod
+    def _normalize_yara_rule(content: str) -> str | None:
+        normalized_content = content.replace("\r\n", "\n").replace("\r", "\n")
+        normalized_content = normalized_content.lstrip("\ufeff").strip()
+        if normalized_content == "":
+            return None
+        return normalized_content
 
     def _build_attack_group_mapping(self) -> None:
         try:

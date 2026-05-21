@@ -75,6 +75,11 @@ class Valhalla:
                 self.helper.log_info("running valhalla importer")
                 self.helper.metric.inc("run_count")
                 self.helper.metric.state("running")
+                previous_rule_hashes = self._get_state_value(
+                    current_state,
+                    self.knowledge_importer._KNOWLEDGE_IMPORTER_RULE_HASHES,
+                    [],
+                )
                 now = datetime.now(timezone.utc)
                 friendly_name = (
                     f"Valhalla run @ {now.strftime('%Y-%m-%d %H:%M:%S')} "
@@ -83,7 +88,9 @@ class Valhalla:
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
                 )
-                knowledge_importer_state = self.knowledge_importer.run(work_id)
+                knowledge_importer_state = self.knowledge_importer.run(
+                    work_id, previous_rule_hashes=previous_rule_hashes
+                )
                 self.helper.log_info("done with running valhalla importer")
                 new_state = current_state.copy()
                 new_state.update(knowledge_importer_state)

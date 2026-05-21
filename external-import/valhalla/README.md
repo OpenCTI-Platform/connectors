@@ -101,6 +101,7 @@ Find the connector and click the refresh button to reset the state and trigger a
 ## Behavior
 
 The connector fetches YARA rules from the Valhalla API and imports them as YARA pattern indicators.
+It stores imported rule hashes in connector state, so unchanged rules are skipped on later runs.
 
 ### Data Flow
 
@@ -137,7 +138,7 @@ For each YARA rule from Valhalla:
 
 1. **YARA Indicator**: Created with:
    - Pattern type: `yara`
-   - Pattern: Full YARA rule content
+   - Pattern: Full YARA rule content (normalized line endings, BOM removed)
    - Name and description
    - Labels from rule tags
 
