@@ -342,3 +342,38 @@ def test_handle_api_error_does_not_crash_on_non_list_errors():
     )
 
     client.helper.connector_logger.warning.assert_called_once()
+
+
+def test_handle_api_error_normalises_missing_body_in_place():
+    """``response["body"]`` must be a dict after the call, even if missing.
+
+    Several API wrappers (``IndicatorsAPI.get_combined_indicator_entities``,
+    ``MalwareAPI.query_malware_entities``) call ``handle_api_error`` and
+    then immediately index ``response["body"]``. If FalconPy ever
+    returns an error envelope without a ``body`` key, those callers
+    would crash with ``KeyError: 'body'`` — exactly the secondary
+    crash class this PR is supposed to prevent. The handler now
+    normalises ``response["body"]`` in place so the downstream read
+    is safe under any upstream shape.
+    """
+    client = _make_base_client()
+    response: dict = {"status_code": 403}
+    client.handle_api_error(response)
+    assert response["body"] == {}
+
+
+def test_handle_api_error_normalises_none_body_in_place():
+    """``response["body"] = None`` must also be normalised to ``{}``."""
+    client = _make_base_client()
+    response: dict = {"status_code": 403, "body": None}
+    client.handle_api_error(response)
+    assert response["body"] == {}
+
+
+def test_handle_api_error_preserves_present_body():
+    """A non-empty ``body`` must be preserved unchanged."""
+    client = _make_base_client()
+    body = {"errors": [{"code": 403, "message": "denied"}], "resources": []}
+    response: dict = {"status_code": 403, "body": body}
+    client.handle_api_error(response)
+    assert response["body"] is body

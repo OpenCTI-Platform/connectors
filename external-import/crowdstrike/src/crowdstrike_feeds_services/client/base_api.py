@@ -48,6 +48,15 @@ class BaseCrowdstrikeClient:
         # ``_get_related_iocs``) gets a chance to handle the failure
         # gracefully.
         body = response.get("body") or {}
+        # Normalise ``response["body"]`` in-place so downstream callers
+        # that index it directly (``IndicatorsAPI.get_combined_indicator_entities``,
+        # ``MalwareAPI.query_malware_entities``) cannot crash with
+        # ``KeyError: 'body'`` when FalconPy returns an error envelope
+        # without a ``body`` key. The mutation is intentional: the
+        # callers wrap ``handle_api_error`` + ``response["body"]`` as a
+        # single "validate then read" step, so guaranteeing the key is
+        # present here keeps both halves safe under any upstream shape.
+        response["body"] = body
         raw_errors = body.get("errors")
         errors = raw_errors if isinstance(raw_errors, (list, tuple)) else []
         first_error = errors[0] if errors else {}
