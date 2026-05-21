@@ -102,16 +102,22 @@ class AssemblyLineConnector:
             config = {}
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.opencti_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config
-        )
+        # Strip any trailing slash so the connector never builds a URL
+        # with a double slash (e.g. ``http://opencti//storage/get/X``).
+        # ``requests`` >= 2.34 no longer normalises double slashes, and
+        # the repo's ``tests/test_url_construction.py`` guard enforces
+        # this convention.
+        self.opencti_url = (
+            get_config_variable("OPENCTI_URL", ["opencti", "url"], config) or ""
+        ).rstrip("/")
         self.opencti_token = get_config_variable(
             "OPENCTI_TOKEN", ["opencti", "token"], config
         )
 
-        self.assemblyline_url = get_config_variable(
-            "ASSEMBLYLINE_URL", ["assemblyline", "url"], config
-        )
+        self.assemblyline_url = (
+            get_config_variable("ASSEMBLYLINE_URL", ["assemblyline", "url"], config)
+            or ""
+        ).rstrip("/")
         self.assemblyline_user = get_config_variable(
             "ASSEMBLYLINE_USER", ["assemblyline", "user"], config
         )
