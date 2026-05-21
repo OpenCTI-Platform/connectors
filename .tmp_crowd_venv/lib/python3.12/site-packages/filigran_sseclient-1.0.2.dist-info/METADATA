@@ -1,0 +1,44 @@
+Metadata-Version: 2.1
+Name: filigran_sseclient
+Version: 1.0.2
+Summary: Python API client for OpenCTI.
+Home-page: https://github.com/FiligranHQ/filigran-sseclient
+Author: Filigran
+Author-email: contact@filigran.io
+Maintainer: Filigran
+License: Copyright (c) 2015 Brent Tubbs
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: requests>=2.9
+Requires-Dist: six
+Provides-Extra: dev
+Requires-Dist: black~=23.1.0; extra == "dev"
+Requires-Dist: build~=0.8.0; extra == "dev"
+Requires-Dist: isort~=5.10.1; extra == "dev"
+Requires-Dist: types-pytz~=2022.2.1.0; extra == "dev"
+Requires-Dist: pre-commit~=2.20.0; extra == "dev"
+Requires-Dist: pytest-cases~=3.6.13; extra == "dev"
+Requires-Dist: pytest-cov~=3.0.0; extra == "dev"
+Requires-Dist: pytest_randomly~=3.12.0; extra == "dev"
+Requires-Dist: pytest~=7.1.2; extra == "dev"
+Requires-Dist: types-python-dateutil~=2.8.19; extra == "dev"
+Requires-Dist: wheel~=0.37.1; extra == "dev"
+Provides-Extra: doc
+Requires-Dist: autoapi~=2.0.1; extra == "doc"
+Requires-Dist: sphinx-autodoc-typehints~=1.19.2; extra == "doc"
+Requires-Dist: sphinx-rtd-theme~=1.0.0; extra == "doc"
+
+# Filigran Python SSE Client
+
+This is a Python client library for iterating over http Server Sent Event (SSE)
+streams (also known as EventSource, after the name of the Javascript interface
+inside browsers).  The SSEClient class accepts a url on init, and is then an
+iterator over messages coming from the server.
+
+Forked from btubbs/sseclient to mainly support chunk stream messages, thanks to @ristowee

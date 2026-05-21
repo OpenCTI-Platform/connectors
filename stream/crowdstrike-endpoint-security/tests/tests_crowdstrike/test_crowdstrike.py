@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import pytest
 
 from .common_fixtures import (  # noqa: F401 # pylint:disable=unused-import
@@ -11,6 +13,7 @@ from .common_fixtures import (  # noqa: F401 # pylint:disable=unused-import
 class TestCrowdstrikeConnector(object):
 
     domain_pattern = "[domain-name:value = 'siestakeying.com']"
+    idn_domain_pattern = "[domain-name:value = 'sanatfilmleriarşivi.xyz']"
     ipv4_pattern = "[ipv4-addr:value = '188.143.233.116']"
     ipv6_pattern = "[ipv6-addr:value = '2a02:2f01:7504:5000:0:0:7429:4782']"
     sha256_pattern = "[file:hashes.'SHA-256' = '37c09c95f77e5677332de338b7e972cff67347ed2c807c15b415c41b0d4a9ac4']"
@@ -153,3 +156,29 @@ class TestCrowdstrikeConnector(object):
         indicator = body["indicators"][0]
         assert indicator["action"] == "detect"
         assert indicator["mobile_action"] == "detect"
+
+    def test_normalize_indicator_value_convert_idn_to_punycode(self) -> None:
+        """
+        Check IDN domains are converted to punycode.
+        """
+        ioc_value = self.mock_client._normalize_indicator_value(self.idn_domain_pattern)
+        expected_value = "sanatfilmleriarşivi.xyz".encode("idna").decode("ascii")
+
+        assert ioc_value == expected_value
+
+    def test_create_indicator_uses_punycode_domain_value(self) -> None:
+        """
+        Check create_indicator sends punycode value for domain indicators.
+        """
+        self.mock_client._search_indicator = Mock(return_value=[])
+        self.mock_client.cs.indicator_create = Mock(
+            return_value={"status_code": 201, "body": {}}
+        )
+        self.mock_helper.get_attribute_in_extension.return_value = 50
+        self.mock_helper.get_attribute_in_mitre_extension.return_value = None
+
+        self.mock_client.create_indicator({"pattern": self.idn_domain_pattern})
+
+        indicator_body = self.mock_client.cs.indicator_create.call_args.kwargs["body"]
+        expected_value = "sanatfilmleriarşivi.xyz".encode("idna").decode("ascii")
+        assert indicator_body["indicators"][0]["value"] == expected_value

@@ -84,6 +84,32 @@ class CrowdstrikeClient:
         """
         return pattern.strip("[]").split(" ")[2].replace("'", "")
 
+    @staticmethod
+    def _convert_domain_to_punycode(domain: str) -> str:
+        """
+        Convert a domain to punycode when it contains non-ascii characters.
+        """
+        try:
+            domain.encode("ascii")
+            return domain
+        except UnicodeEncodeError:
+            try:
+                return domain.encode("idna").decode("ascii")
+            except UnicodeError:
+                return domain
+
+    def _normalize_indicator_value(self, pattern: str) -> str:
+        """
+        Normalize the indicator value before interacting with Crowdstrike APIs.
+        """
+        ioc_value = self._extract_indicator_value(pattern)
+        ioc_type = self._map_indicator_type(pattern)
+
+        if ioc_type == "domain":
+            return self._convert_domain_to_punycode(ioc_value)
+
+        return ioc_value
+
     def _map_indicator_type(self, pattern: str) -> str | None:
         """
         Map the indicator main observable type in OpenCTI with Crowdstrike IOC type
@@ -253,7 +279,7 @@ class CrowdstrikeClient:
         :param event: Event in string or None
         :return: None
         """
-        ioc_value = self._extract_indicator_value(data["pattern"])
+        ioc_value = self._normalize_indicator_value(data["pattern"])
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC doesn't exist, create the IOC into Crowdstrike
@@ -295,7 +321,7 @@ class CrowdstrikeClient:
         :param event: Event in string or None
         :return: None
         """
-        ioc_value = self._extract_indicator_value(data["pattern"])
+        ioc_value = self._normalize_indicator_value(data["pattern"])
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists, update the IOC into Crowdstrike
@@ -335,7 +361,7 @@ class CrowdstrikeClient:
         :param data: Data of IOC in dict
         :return: None
         """
-        ioc_value = self._extract_indicator_value(data["pattern"])
+        ioc_value = self._normalize_indicator_value(data["pattern"])
         ioc_cs = self._search_indicator(ioc_value)
 
         # If IOC exists and permanent_delete is True, delete the IOC into Crowdstrike
