@@ -50,9 +50,9 @@ def _make_tlp_marking(definition: str) -> stix2.MarkingDefinition:
 # ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` are OpenCTI-specific markings
 # and are not exposed as ``stix2`` constants. We materialise them as
 # real ``stix2.MarkingDefinition`` objects (mirroring the convention in
-# ``connectors-sdk.models.tlp_marking``) so the connector can ship the
-# marking object itself in every emitted bundle and the platform can
-# register the right UI label for each one.
+# the OpenCTI Connectors SDK's TLP-marking model) so the connector can
+# ship the marking object itself in every emitted bundle and the
+# platform can register the right UI label for each one.
 _TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
     "TLP:CLEAR": _make_tlp_marking("TLP:CLEAR"),
     "TLP:WHITE": stix2.TLP_WHITE,
