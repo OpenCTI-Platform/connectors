@@ -29,8 +29,10 @@ RABBITMQ_URL=amqp://portspoof:password@localhost:5672/
 
 ### Manual Installation
 
+The connector's dependencies live in `src/requirements.txt` (matching the Dockerfile's `cd src && pip install -r requirements.txt` build step). Either install from there directly or `cd src` first:
+
 ```bash
-pip install -r requirements.txt
+pip install -r src/requirements.txt
 python src/main.py
 ```
 

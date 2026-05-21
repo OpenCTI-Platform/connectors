@@ -590,7 +590,6 @@ class IpObservableManager:
         target_ips: List[str],
         max_targets: int,
         session_id: str,
-        state: dict,
         created_by_ref: str,
         marking_refs: List[str],
     ):
@@ -670,10 +669,29 @@ class IpObservableManager:
                 f"intelligence including port details and techniques."
             )
 
-            # Generate deterministic ID for NetworkTraffic based on src/dst
+            # Generate a session-scoped deterministic ID. The
+            # NetworkTraffic SDO carries per-session ``description`` /
+            # ``labels`` (``target:{idx}``, ``session:{session_id[:8]}``,
+            # the "one of {total_targets} target(s) probed in this
+            # session" prose, the per-session ``risk_score``-derived
+            # ``x_opencti_score``), so two distinct sessions from the
+            # same attacker → target pair MUST produce two distinct
+            # ``network-traffic--…`` ids — otherwise the later ingest
+            # silently overwrites the earlier session's fields under
+            # the shared id and the data becomes non-deterministic
+            # across reruns. Fold ``session_id`` (and the upstream
+            # ``sensor_id`` when present) into the id seed so the per
+            # session SDO is stable on rerun within the same session
+            # but never collides across sessions.
+            sensor_id = state.get("sensor_id") or "unknown"
             nt_id = generate_deterministic_stix_id(
                 "network-traffic",
-                {"src_ref": source_ip_observable.id, "dst_ref": target_ip_obs.id},
+                {
+                    "src_ref": source_ip_observable.id,
+                    "dst_ref": target_ip_obs.id,
+                    "session_id": session_id,
+                    "sensor_id": sensor_id,
+                },
             )
 
             # ``NetworkTraffic`` is a STIX 2.1 SCO too: author and
@@ -736,11 +754,22 @@ class ObservedDataManager:
         )
 
         try:
-            object_refs = [source_ip_observable.id]
+            # ``object_refs`` is built across two iterables that come
+            # from upstream lists with no guaranteed stable order
+            # (and the 3-target sample is a slice of ``target_ips``).
+            # Since the ObservedData SDO id is deterministic per
+            # session, an unstable ``object_refs`` order across reruns
+            # of the same session would otherwise trigger spurious
+            # ingestion diffs on the platform side. ``sorted(set(...))``
+            # gives us a stable, deduplicated reference list that only
+            # changes when the underlying set of referenced ids
+            # actually changes.
+            object_refs_set = {source_ip_observable.id}
             for target_ip in target_ip_observables:
-                object_refs.append(target_ip.id)
+                object_refs_set.add(target_ip.id)
             for nt in network_traffic_objects:
-                object_refs.append(nt.id)
+                object_refs_set.add(nt.id)
+            object_refs = sorted(object_refs_set)
 
             risk_score = state.get("risk_score", 0)
             alert_level = state.get("alert_level", 0)
@@ -1224,7 +1253,6 @@ class StixSynchronizer:
             target_ips=target_ips_for_observables,
             max_targets=len(target_ips_for_observables),
             session_id=session_id,
-            state=state,
             created_by_ref=self.author_standard_id,
             marking_refs=[self.tlp_clear_stix_id],
         )

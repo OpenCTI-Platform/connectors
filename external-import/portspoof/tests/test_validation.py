@@ -153,7 +153,15 @@ class TestFullSessionStateTimestamps:
 
 
 class TestFullSessionStateEventType:
-    """``last_event_type`` must match the AssemblyLine state machine."""
+    """``last_event_type`` must match the PortSpoofPro session-event contract.
+
+    The sensor aggregator only ever emits three lifecycle events for a
+    session — ``scanner_detected``, ``scanner_update``,
+    ``scanner_session_ended``. Anything else (empty string, unknown
+    value, wrong casing) must be rejected at the pydantic boundary so
+    a malformed message hits the DLQ instead of producing a partial
+    STIX bundle downstream.
+    """
 
     @pytest.mark.parametrize(
         "ev",
