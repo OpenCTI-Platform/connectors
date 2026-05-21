@@ -35,22 +35,39 @@ def safe_confidence(item):
 
 
 def parse_modified(item):
-    """Parse an ISO modified timestamp to datetime (UTC)."""
-    value = item.get("modified")
+    """Parse a modified-style ISO timestamp to a UTC ``datetime``.
 
-    if not value:
-        return EPOCH_UTC
+    The connector's ``INDICATOR_QUERY`` aliases ``updated_at`` to
+    ``modified`` on the ``... on Indicator`` selection set, but the
+    other GraphQL fragments (``DomainName`` / ``Hostname`` / ``Url`` /
+    ``IPv4Addr`` / ``IPv6Addr`` / ``HashedObservable`` /
+    ``X509Certificate``) only expose ``updated_at`` / ``created_at``.
+    ``_convert_indicator_to_observables`` copies ``updated_at`` into
+    ``modified`` on each node, but that happens *after*
+    ``opencti_all_indicators.sort(key=sort_key)`` and the
+    ``[:effective_global_limit]`` cut — so if this helper only read
+    ``modified``, every non-Indicator node would collapse to
+    ``EPOCH_UTC`` at sort time and be the first thing the cap evicts,
+    silently dropping valid Defender candidates well under the 15 000
+    quota. Falling back to ``updated_at`` (and ``created_at`` as a
+    final fallback) keeps sort ordering meaningful for those node
+    shapes too. ``EPOCH_UTC`` stays as the final fallback so a node
+    with none of the three fields still sorts deterministically.
+    """
+    for key in ("modified", "updated_at", "created_at"):
+        value = item.get(key)
+        if not value:
+            continue
+        try:
+            # normalize trailing Z to +00:00 so fromisoformat works
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except (ValueError, TypeError, AttributeError):
+            continue
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt if dt >= EPOCH_UTC else EPOCH_UTC
 
-    try:
-        # normalize trailing Z to +00:00 so fromisoformat works
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except (ValueError, TypeError, AttributeError):
-        return EPOCH_UTC
-
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-
-    return dt if dt >= EPOCH_UTC else EPOCH_UTC
+    return EPOCH_UTC
 
 
 # Hash-based Defender indicator types are keyed on hex fingerprints.
