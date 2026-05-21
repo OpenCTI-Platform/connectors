@@ -1240,10 +1240,8 @@ class ElasticApiHandler:
         """
         try:
             error_body = response.json()
-            reason = (
-                error_body.get("error", {}).get("reason")
-                or error_body.get("message")
-                or error_body.get("error")
+            reason = error_body.get("error", {}).get("reason") or error_body.get(
+                "message"
             )
             if reason:
                 return str(reason)
@@ -1290,8 +1288,9 @@ class ElasticApiHandler:
 
             if check_response.status_code in (401, 403):
                 self.helper.connector_logger.warning(
-                    f"Authentication/authorization error checking data stream existence: {check_response.status_code}",
+                    "Authentication/authorization error checking data stream existence",
                     {
+                        "status_code": check_response.status_code,
                         "data_stream": self.index_name,
                         "response": self._truncate_response(check_response),
                         "hint": "Check that the API key has the 'monitor' cluster privilege.",
@@ -1301,8 +1300,9 @@ class ElasticApiHandler:
 
             if check_response.status_code >= 500:
                 self.helper.connector_logger.warning(
-                    f"Server error checking data stream existence: {check_response.status_code}",
+                    "Server error checking data stream existence",
                     {
+                        "status_code": check_response.status_code,
                         "data_stream": self.index_name,
                         "response": self._truncate_response(check_response),
                     },
@@ -1313,8 +1313,9 @@ class ElasticApiHandler:
                 # Some other unexpected status – warn but still attempt creation
                 # so that transient proxy/redirect responses do not block startup.
                 self.helper.connector_logger.warning(
-                    f"Unexpected status checking data stream existence: {check_response.status_code}",
+                    "Unexpected status checking data stream existence",
                     {
+                        "status_code": check_response.status_code,
                         "data_stream": self.index_name,
                         "response": self._truncate_response(check_response),
                     },
@@ -1341,8 +1342,9 @@ class ElasticApiHandler:
                 return True
             else:
                 self.helper.connector_logger.warning(
-                    f"Failed to create data stream: {create_response.status_code}",
+                    "Failed to create data stream",
                     {
+                        "status_code": create_response.status_code,
                         "data_stream": self.index_name,
                         "response": self._truncate_response(create_response),
                         "hint": (
@@ -1651,6 +1653,10 @@ class ElasticApiHandler:
                         "be auto-created. Check the logs above for details.",
                         {"data_stream": self.index_name},
                     )
+                # Return True even when data stream initialisation failed: the index
+                # template was successfully created, and Elasticsearch may still be
+                # able to auto-create the data stream on the first document write
+                # (e.g. when the connector has write but not manage permissions).
                 return True
             else:
                 self.helper.connector_logger.error(
