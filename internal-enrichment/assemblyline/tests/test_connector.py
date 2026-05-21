@@ -129,10 +129,10 @@ class TestMaliciousIOCExtraction:
     ) -> None:
         """``_extract_malicious_iocs`` returns ONLY malicious IOCs.
 
-        Pins the contract change from PR #6429: suspicious IOCs are no
-        longer silently mixed into the ``malicious_iocs`` bucket (and
-        thus no longer trigger the "label observable malicious" /
-        ``score=80`` / ``result=malicious`` paths downstream), even
+        Pins the connector's classification contract: suspicious IOCs
+        must never be silently mixed into the ``malicious_iocs`` bucket
+        (and thus must never trigger the "label observable malicious"
+        / ``score=80`` / ``result=malicious`` paths downstream), even
         when ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS`` is enabled.
         """
         connector = _make_connector(assemblyline_include_suspicious=True)
@@ -600,13 +600,13 @@ class TestParseAlTimestamp:
 class TestIocClassificationLabelsAndScores:
     """Indicators / Observables carry honest classification labels and scores.
 
-    Pins the contract change from PR #6429: when
+    Pins the per-classification label + score contract: when
     ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS=true``, suspicious-only IOCs are
     emitted as ``suspicious`` indicators with a moderate score (50)
-    rather than being indistinguishable from genuinely-malicious ones
-    in OpenCTI (which were labelled ``malicious`` with the
-    high-confidence score of 80 regardless of AssemblyLine's actual
-    classification).
+    instead of being indistinguishable from genuinely-malicious ones
+    in OpenCTI (which would otherwise land labelled ``malicious`` with
+    the high-confidence score of 80 regardless of AssemblyLine's
+    actual classification).
     """
 
     @staticmethod
@@ -754,8 +754,11 @@ class TestResolveSubmissionClassification:
 class TestConfigYamlSafeLoad:
     """Config parsing rejects YAML tags that could instantiate Python objects.
 
-    ``yaml.safe_load`` was adopted in PR #6429 — verify the connector
-    can never instantiate arbitrary types from a tampered ``config.yml``.
+    Pins the config-loading security contract: parsing the
+    ``config.yml`` must go through ``yaml.safe_load`` so a tampered
+    file cannot instantiate arbitrary Python objects (the loader the
+    connector previously used — ``yaml.FullLoader`` — would happily
+    execute ``!!python/object/apply:os.system`` tags at load time).
     """
 
     def test_safe_load_rejects_python_object_tag(self, tmp_path) -> None:
@@ -1450,7 +1453,49 @@ class TestSummaryNoteSuspiciousSection:
         assert "**Suspicious Domains:** 2" in content
         assert "**Suspicious IP Addresses:** 1" in content
         assert "**Suspicious URLs:** 0" in content
-        assert "**Suspicious Malware Families:** 1" in content
+        # Malware families are emitted as Malware SDOs (NOT Indicators)
+        # and only from the malicious bucket, so the "Suspicious IOCs"
+        # section must NOT carry a "Suspicious Malware Families" line
+        # — that would imply the connector creates Malware SDOs from
+        # the suspicious bucket, which it does not.
+        assert "Suspicious Malware Families" not in content
+
+    def test_malware_families_section_rendered_when_count_non_zero(self) -> None:
+        connector = _make_connector()
+        note_create = MagicMock()
+        connector.helper.api = MagicMock(note=MagicMock(create=note_create))
+        connector._create_summary_note(
+            observable={
+                "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+                "objectMarking": [],
+            },
+            results={"sid": "sid-1", "max_score": 1500, "file_info": {}},
+            malicious_iocs=self._empty_iocs(),
+            counts={"observables": 0, "indicators": 0, "malware_families": 3},
+            malware_analysis_id="malware-analysis--abc",
+            attack_patterns_count=0,
+            suspicious_iocs=None,
+        )
+        assert note_create.called
+        content = note_create.call_args.kwargs.get("content", "")
+        # Malware families have their own section — never folded under
+        # the "Created as Indicators" headers.
+        assert "## Malware Families" in content
+        assert "**Malware Families Created:** 3" in content
+        assert "## Malicious IOCs Created as Indicators" in content
+        # The malicious-IOC section must NOT mention malware families
+        # (the previous shape rendered a "**Malware Families:** N"
+        # bullet under that header, which implied the families were
+        # created as Indicators rather than as Malware SDOs).
+        malicious_section = content.split("## Malicious IOCs Created as Indicators", 1)[
+            1
+        ]
+        malicious_section = malicious_section.split("##", 1)[0]
+        assert "Malware Families" not in malicious_section
+
+    def test_malware_families_section_omitted_when_zero(self) -> None:
+        content = self._captured_note(suspicious_iocs=None)
+        assert "## Malware Families" not in content
 
     def test_suspicious_section_omitted_when_empty(self) -> None:
         content = self._captured_note(suspicious_iocs=None)

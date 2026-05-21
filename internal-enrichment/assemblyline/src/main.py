@@ -466,10 +466,17 @@ class AssemblyLineConnector:
 
         Wraps :func:`pycti.OpenCTIApiClient.fetch_opencti_file` with the
         canonical ``/storage/get/{id}`` URL pattern used across the
-        other sandbox connectors in this monorepo.
+        other sandbox connectors in this monorepo. Both this helper and
+        :meth:`_download_import_file` cache the fetched payload size
+        into ``self._current_file_size`` so :meth:`_create_summary_note`
+        can fall back to it when neither the observable nor the
+        AssemblyLine ``file_info`` carry a size.
         """
         file_uri = f"{self.opencti_url}/storage/get/{file_id}"
-        return self.helper.api.fetch_opencti_file(file_uri, binary=True)
+        content = self.helper.api.fetch_opencti_file(file_uri, binary=True)
+        if isinstance(content, (bytes, bytearray)):
+            self._current_file_size = len(content)
+        return content
 
     def _get_file_content(
         self, observable: Dict[str, Any]
@@ -1421,7 +1428,7 @@ class AssemblyLineConnector:
         description: str,
         source_marking_refs: Optional[List[str]] = None,
         classification: str = "malicious",
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], bool]:
         """Create one Indicator (+ optional matching Observable) for an IOC.
 
         ``source_marking_refs`` is the list of marking ids that should
@@ -1438,7 +1445,16 @@ class AssemblyLineConnector:
         labelled ``malicious`` with the high-confidence score (was
         the previous behaviour when ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS``
         was on).
+
+        Returns a ``(indicator_id, observable_created)`` tuple. The
+        ``observable_created`` flag is ``True`` when the matching
+        Observable AND its ``based-on`` relationship were created
+        successfully; the caller increments the observable / extra
+        relationship counters off this flag only — without it the
+        summary Note used to over-report observables every time the
+        nested observable-creation block swallowed an exception.
         """
+        observable_created = False
         try:
             indicator_score = self._IOC_CLASSIFICATION_SCORES.get(classification, 80)
             escaped = self._escape_stix_string(ioc_value)
@@ -1491,16 +1507,17 @@ class AssemblyLineConnector:
                             "from AssemblyLine analysis"
                         ),
                     )
+                    observable_created = True
                 except Exception as obs_exc:
                     self.helper.log_warning(
                         f"Could not create observable for IOC {ioc_value}: {obs_exc}"
                     )
-            return indicator["id"]
+            return indicator["id"], observable_created
         except Exception as exc:
             self.helper.log_warning(
                 f"Could not create indicator for IOC {ioc_value}: {exc}"
             )
-            return None
+            return None, False
 
     def _create_indicators(
         self,
@@ -1532,12 +1549,27 @@ class AssemblyLineConnector:
         """
         observable_id = observable["id"]
         source_marking_refs = self._source_marking_refs(observable)
-        counts = {"indicators": 0, "observables": 0, "relationships": 0}
+        # ``malicious_indicators`` / ``suspicious_indicators`` track the
+        # per-classification indicator counts so the summary Note and
+        # the run's success-message can report ``N malicious indicators``
+        # vs ``N suspicious indicators`` without conflating the two —
+        # the previous shape lumped them under a single ``indicators``
+        # key, which the success message then mixed with the
+        # ``families`` extraction bucket (Malware SDOs, not indicators)
+        # and over-reported the count.
+        counts = {
+            "indicators": 0,
+            "malicious_indicators": 0,
+            "suspicious_indicators": 0,
+            "observables": 0,
+            "relationships": 0,
+            "malware_families": 0,
+        }
         indicator_ids: List[str] = []
 
         def _process_bucket(bucket: Dict[str, List[str]], classification: str) -> None:
             for domain in bucket["domains"][:20]:
-                ind_id = self._create_indicator_observable(
+                ind_id, obs_created = self._create_indicator_observable(
                     observable_id,
                     domain,
                     "domain-name",
@@ -1550,15 +1582,16 @@ class AssemblyLineConnector:
                 if ind_id:
                     indicator_ids.append(ind_id)
                     counts["indicators"] += 1
+                    counts[f"{classification}_indicators"] += 1
                     counts["relationships"] += 1
-                    if self.assemblyline_create_observables:
+                    if obs_created:
                         counts["observables"] += 1
                         counts["relationships"] += 1
 
             for ip in bucket["ips"][:20]:
                 stix_type = "ipv6-addr" if self._is_ipv6(ip) else "ipv4-addr"
                 octi_type = "IPv6-Addr" if self._is_ipv6(ip) else "IPv4-Addr"
-                ind_id = self._create_indicator_observable(
+                ind_id, obs_created = self._create_indicator_observable(
                     observable_id,
                     ip,
                     stix_type,
@@ -1571,13 +1604,14 @@ class AssemblyLineConnector:
                 if ind_id:
                     indicator_ids.append(ind_id)
                     counts["indicators"] += 1
+                    counts[f"{classification}_indicators"] += 1
                     counts["relationships"] += 1
-                    if self.assemblyline_create_observables:
+                    if obs_created:
                         counts["observables"] += 1
                         counts["relationships"] += 1
 
             for url in bucket["urls"][:20]:
-                ind_id = self._create_indicator_observable(
+                ind_id, obs_created = self._create_indicator_observable(
                     observable_id,
                     url,
                     "url",
@@ -1590,8 +1624,9 @@ class AssemblyLineConnector:
                 if ind_id:
                     indicator_ids.append(ind_id)
                     counts["indicators"] += 1
+                    counts[f"{classification}_indicators"] += 1
                     counts["relationships"] += 1
-                    if self.assemblyline_create_observables:
+                    if obs_created:
                         counts["observables"] += 1
                         counts["relationships"] += 1
 
@@ -1599,6 +1634,13 @@ class AssemblyLineConnector:
         if suspicious_iocs is not None:
             _process_bucket(suspicious_iocs, "suspicious")
 
+        # Malware families flagged by AssemblyLine are emitted as
+        # ``Malware`` SDOs (NOT as STIX Indicators), so they are
+        # counted into ``malware_families`` rather than
+        # ``malicious_indicators`` — the summary Note and the run's
+        # success-message report the two separately so an analyst can
+        # tell at a glance how many indicators vs how many malware
+        # SDOs the enrichment produced.
         for family in malicious_iocs["families"][:10]:
             try:
                 malware_data: Dict[str, Any] = {
@@ -1615,6 +1657,8 @@ class AssemblyLineConnector:
                     relationship_type="related-to",
                     description=f"File attributed to {family} by AssemblyLine",
                 )
+                counts["malware_families"] += 1
+                counts["relationships"] += 1
             except Exception as exc:
                 self.helper.log_warning(
                     f"Could not create malware family {family}: {exc}"
@@ -1772,27 +1816,47 @@ class AssemblyLineConnector:
             )
 
             # Return a success message that reflects what was actually
-            # created — the previous shape always said "malicious
-            # indicators created" even when the analysis produced only
-            # suspicious IOCs (or none at all), which made the OpenCTI
-            # connector log misleading.
-            malicious_count = sum(len(values) for values in malicious_iocs.values())
-            suspicious_count = sum(len(values) for values in suspicious_iocs.values())
-            if malicious_count and suspicious_count:
+            # created — drive the numbers off ``counts`` (the indicator
+            # creation path's own bookkeeping), not the raw IOC
+            # extraction buckets. The previous shape summed
+            # ``malicious_iocs.values()`` / ``suspicious_iocs.values()``
+            # which included the ``families`` bucket — but families
+            # are emitted as ``Malware`` SDOs, not ``Indicator`` SDOs,
+            # so the message ended up over-reporting "indicators
+            # created" by the number of malware families. Use the
+            # per-classification indicator counters that
+            # ``_create_indicators`` increments only on a successful
+            # ``indicator.create``.
+            malicious_indicators = counts.get("malicious_indicators", 0)
+            suspicious_indicators = counts.get("suspicious_indicators", 0)
+            malware_families = counts.get("malware_families", 0)
+            family_suffix = (
+                f" and {malware_families} malware families" if malware_families else ""
+            )
+            if malicious_indicators and suspicious_indicators:
                 return (
                     "File successfully analyzed by AssemblyLine "
-                    f"({malicious_count} malicious + {suspicious_count} "
-                    "suspicious indicators created)"
+                    f"({malicious_indicators} malicious + "
+                    f"{suspicious_indicators} suspicious indicators"
+                    f"{family_suffix} created)"
                 )
-            if malicious_count:
+            if malicious_indicators:
                 return (
                     "File successfully analyzed by AssemblyLine "
-                    f"({malicious_count} malicious indicators created)"
+                    f"({malicious_indicators} malicious indicators"
+                    f"{family_suffix} created)"
                 )
-            if suspicious_count:
+            if suspicious_indicators:
                 return (
                     "File successfully analyzed by AssemblyLine "
-                    f"({suspicious_count} suspicious indicators created)"
+                    f"({suspicious_indicators} suspicious indicators"
+                    f"{family_suffix} created)"
+                )
+            if malware_families:
+                return (
+                    "File successfully analyzed by AssemblyLine "
+                    f"({malware_families} malware families created, "
+                    "no IOC indicators)"
                 )
             return "File successfully analyzed by AssemblyLine (no IOCs extracted)"
         except Exception as exc:
@@ -1894,7 +1958,14 @@ class AssemblyLineConnector:
         # summary cannot contradict what the connector actually sent.
         # The block is rendered only when there is at least one
         # suspicious IOC, so the malicious-only path keeps its
-        # original short format.
+        # original short format. The block reports *only* the IOC
+        # buckets that are actually emitted as ``Indicator`` SDOs
+        # (domains / IPs / URLs) — the ``families`` bucket of the
+        # suspicious tags is intentionally NOT rendered here because
+        # the connector only creates ``Malware`` SDOs from the
+        # *malicious* families bucket (``_create_indicators``), and
+        # mentioning it under an "Indicators" header would imply
+        # those were created as indicators.
         suspicious_block = ""
         if has_suspicious_iocs:
             sus = suspicious_iocs or {}
@@ -1903,7 +1974,23 @@ class AssemblyLineConnector:
                 f"- **Suspicious Domains:** {len(sus.get('domains', []))}\n"
                 f"- **Suspicious IP Addresses:** {len(sus.get('ips', []))}\n"
                 f"- **Suspicious URLs:** {len(sus.get('urls', []))}\n"
-                f"- **Suspicious Malware Families:** {len(sus.get('families', []))}\n"
+            )
+
+        # ``Malware Families`` is its own section because the family
+        # entries are emitted as ``Malware`` SDOs, *not* STIX
+        # ``Indicator`` SDOs — putting their count under the
+        # "Created as Indicators" header is misleading and was the
+        # subject of two separate review threads. The section is
+        # rendered only when ``_create_indicators`` actually produced
+        # at least one Malware SDO so the malicious-IOCs-only path
+        # keeps its short format.
+        malware_families_count = (counts or {}).get("malware_families", 0)
+        malware_families_block = ""
+        if malware_families_count:
+            malware_families_block = (
+                "\n## Malware Families\n"
+                f"- **Malware Families Created:** {malware_families_count} "
+                "(emitted as Malware SDOs, related to the source observable)\n"
             )
 
         note_content = f"""# AssemblyLine Analysis Results
@@ -1915,9 +2002,8 @@ class AssemblyLineConnector:
 ## Malicious IOCs Created as Indicators
 - **Malicious Domains:** {len(malicious_iocs['domains'])}
 - **Malicious IP Addresses:** {len(malicious_iocs['ips'])}
-- **Malicious URLs:** {len(malicious_iocs['urls'])}
-- **Malware Families:** {len(malicious_iocs['families'])}{observables_note}
-{suspicious_block}
+- **Malicious URLs:** {len(malicious_iocs['urls'])}{observables_note}
+{suspicious_block}{malware_families_block}
 ## MITRE ATT&CK Analysis
 - **Attack Techniques Identified:** {attack_patterns_count}
 
