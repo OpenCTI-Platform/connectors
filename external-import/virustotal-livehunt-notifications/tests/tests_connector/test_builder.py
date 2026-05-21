@@ -49,8 +49,19 @@ class TestIsValidDomainName:
         [
             "evil.example.com",
             "a.b.example.org",
-            "xn--bcher-kva.example",  # IDN-encoded
+            "xn--bcher-kva.example",  # IDN-encoded SLD
             "1.example.com",
+            # Punycode TLDs (RFC 1123 allows alphanumeric + hyphen in
+            # every label, TLD included). A previous revision pinned
+            # the TLD to ``[a-zA-Z]{2,63}`` and silently dropped
+            # IOCs that pointed at these.
+            "example.xn--p1ai",
+            "example.xn--80akhbyknj4f",
+            "c2.example.xn--p1ai",
+            # ccTLDs containing digits in their label are still rare
+            # in practice but are not forbidden by RFC 1123 — the
+            # validator no longer rejects them outright.
+            "host.a1.example",
         ],
     )
     def test_valid_domains(self, domain: str) -> None:

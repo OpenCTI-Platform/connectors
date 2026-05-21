@@ -47,10 +47,18 @@ def _escape_stix_pattern_value(value: str) -> str:
 # The previous regex only had a ``(?!-)`` lookahead on the first label,
 # so values like ``a.-b.com`` / ``a.b-.com`` slipped through despite
 # the comment claiming RFC-style validation.
+#
+# The same ``_LABEL`` rule is reused for the TLD position too. A
+# previous revision pinned the TLD to ``[a-zA-Z]{2,63}``, which
+# rejected RFC-1123-valid TLDs that contain digits and/or hyphens —
+# crucially punycode TLDs like ``xn--p1ai`` (`.рф`) /
+# ``xn--80akhbyknj4f`` (`.испытание`) — so legitimate C2 domain
+# IOCs targeting non-latin TLDs were silently dropped. Per RFC 1123
+# §2.1, any label (TLD included) may start/end with a letter or
+# digit and contain hyphens in between, so the same building block
+# applies everywhere.
 _LABEL = r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
-_DOMAIN_REGEX = re.compile(
-    rf"^(?=.{{1,253}}$){_LABEL}(?:\.{_LABEL})*\.[a-zA-Z]{{2,63}}$"
-)
+_DOMAIN_REGEX = re.compile(rf"^(?=.{{1,253}}$){_LABEL}(?:\.{_LABEL})+$")
 
 
 class LivehuntBuilder:
@@ -143,15 +151,27 @@ class LivehuntBuilder:
         )
 
         files_iterator = self.client.iterator(url, params=params)
+        # ``seen`` counts every notification the iterator hands us (before
+        # any client-side filter), while ``processed`` counts only the
+        # notifications that survived every filter and made it into a
+        # bundle. The per-run cap is enforced against ``seen``: the VT
+        # ``limit`` query param SHOULD make the server stop after that
+        # many notifications, but if the upstream stream ever drifts —
+        # API ignores the param, a future API version renames it, the
+        # iterator paginates past it — the client-side stop still bounds
+        # the work-per-run. ``processed`` stays the right number for the
+        # final "Processing done for N notifications" log message.
+        seen = 0
         processed = 0
 
         for vtobj in files_iterator:
-            if self.limit is not None and processed >= self.limit:
+            if self.limit is not None and seen >= self.limit:
                 self.helper.connector_logger.info(
                     f"Reached configured notifications limit ({self.limit}); "
                     "stopping early."
                 )
                 break
+            seen += 1
 
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
@@ -539,9 +559,7 @@ class LivehuntBuilder:
                 allow_custom=True,
             )
             self.bundle.append(observable)
-            self._link_malware_config_object(
-                observable, incident_id, file_id, "domain-name"
-            )
+            self._link_malware_config_object(observable, incident_id, file_id)
             if self.create_domain_name_indicators:
                 self._create_malware_config_indicator(
                     observable, "domain-name", "Domain-Name", incident_id
@@ -565,9 +583,7 @@ class LivehuntBuilder:
                 allow_custom=True,
             )
             self.bundle.append(observable)
-            self._link_malware_config_object(
-                observable, incident_id, file_id, observable_type
-            )
+            self._link_malware_config_object(observable, incident_id, file_id)
             if self.create_ip_indicators:
                 octi_type = "IPv6-Addr" if ip_version == 6 else "IPv4-Addr"
                 self._create_malware_config_indicator(
@@ -584,7 +600,7 @@ class LivehuntBuilder:
                 allow_custom=True,
             )
             self.bundle.append(observable)
-            self._link_malware_config_object(observable, incident_id, file_id, "url")
+            self._link_malware_config_object(observable, incident_id, file_id)
             if self.create_url_indicators:
                 self._create_malware_config_indicator(
                     observable, "url", "Url", incident_id
@@ -595,7 +611,6 @@ class LivehuntBuilder:
         observable,
         incident_id: Optional[str],
         file_id: str,
-        observable_type: str,
     ) -> None:
         # The observable was contacted by the file => related-to the file,
         # and (when present) to the incident that surfaced the file.
