@@ -1340,25 +1340,29 @@ class AssemblyLineConnector:
             # would short-circuit the bundle and skip emitting the
             # Malware-Analysis altogether. Omit the field entirely when
             # the identity is unavailable so the rest of the enrichment
-            # still lands in OpenCTI.
-            malware_analysis_kwargs: Dict[str, Any] = {
-                "id": malware_analysis_id,
-                "product": "AssemblyLine",
-                "result_name": result_name,
-                "result": result_value,
-                "analysis_started": analysis_started,
-                "analysis_ended": analysis_ended,
-                "submitted": analysis_started,
-                "sample_ref": stix_entity_id,
-                "analysis_sco_refs": analysis_sco_refs or None,
-                "external_references": [external_reference],
-                "object_marking_refs": source_marking_refs,
-            }
+            # still lands in OpenCTI. ``id=`` is kept as an explicit
+            # keyword (not unpacked through ``**``) so the repo's
+            # ``no_generated_id_stix`` pylint plugin can statically see
+            # the deterministic id and not fire its W9101 false positive.
+            optional_malware_analysis_kwargs: Dict[str, Any] = {}
             if self.assemblyline_identity_standard_id:
-                malware_analysis_kwargs["created_by_ref"] = (
+                optional_malware_analysis_kwargs["created_by_ref"] = (
                     self.assemblyline_identity_standard_id
                 )
-            malware_analysis = stix2.MalwareAnalysis(**malware_analysis_kwargs)
+            malware_analysis = stix2.MalwareAnalysis(
+                id=malware_analysis_id,
+                product="AssemblyLine",
+                result_name=result_name,
+                result=result_value,
+                analysis_started=analysis_started,
+                analysis_ended=analysis_ended,
+                submitted=analysis_started,
+                sample_ref=stix_entity_id,
+                analysis_sco_refs=analysis_sco_refs or None,
+                external_references=[external_reference],
+                object_marking_refs=source_marking_refs,
+                **optional_malware_analysis_kwargs,
+            )
             stix_objects.append(malware_analysis)
 
             serialized_bundle = self.helper.stix2_create_bundle(stix_objects)
