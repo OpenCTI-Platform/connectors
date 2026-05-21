@@ -47,7 +47,8 @@ The connector can operate in two modes:
 
 ### Requirements
 
-- OpenCTI Platform >= 5.6.1
+- OpenCTI Platform >= 6.8.0
+- For the Phone Number, IMEI, ICCID and IMSI observable types: a pycti / OpenCTI release that ships the matching `CustomObservable*` classes (pycti >= 7.260224.0, OpenCTI server-side support added in [opencti/#14237](https://github.com/OpenCTI-Platform/opencti/pull/14237))
 
 ## Configuration variables
 
@@ -245,20 +246,24 @@ Entities are matched against the OpenCTI knowledge base using name and aliases:
 
 Observables are extracted using regex patterns and the `ioc_finder` library:
 
-| Observable Type | STIX Field | Supported | Notes |
-|-----------------|------------|-----------|-------|
-| Autonomous System | `AutonomousSystem.number` | ✅ | |
-| Domain Name | `DomainName.value` | ✅ | |
-| Email Address | `Email-Addr.value` | ✅ | |
+| Observable Type | STIX Field | Supported | Notes   |
+|-----------------|------------|-----------|---------|
+| Autonomous System | `Autonomous-System.number` | ✅ |         |
+| Domain Name | `Domain-Name.value` | ✅ |         |
+| Email Address | `Email-Addr.value` | ✅ |         |
+| Phone Number | `Phone-Number.value` | ✅ | Requires pycti >= 7.260224.0 |
+| IMEI | `IMEI.value` | ✅ | Requires pycti >= 7.260224.0. A bare 15-digit number is reported as IMSI by default (IMEI is 14-16 digits, IMSI is 14-15) — see [Known issues](#known-issues). |
+| ICCID | `ICCID.value` | ✅ | Requires pycti >= 7.260224.0 |
+| IMSI | `IMSI.value` | ✅ | Requires pycti >= 7.260224.0 |
 | File (name) | `File.name` | ⚠️ | Partial |
-| File (MD5) | `File.hashes.MD5` | ✅ | |
-| File (SHA-1) | `File.hashes.SHA-1` | ✅ | |
-| File (SHA-256) | `File.hashes.SHA-256` | ✅ | |
-| IPv4 Address | `IPv4-Addr.value` | ✅ | |
-| IPv6 Address | `IPv6-Addr.value` | ✅ | |
-| MAC Address | `Mac-Addr.value` | ✅ | |
-| URL | `Url.value` | ✅ | |
-| Windows Registry Key | `WindowsRegistryKey.key` | ⚠️ | Partial |
+| File (MD5) | `File.hashes.MD5` | ✅ |         |
+| File (SHA-1) | `File.hashes.SHA-1` | ✅ |         |
+| File (SHA-256) | `File.hashes.SHA-256` | ✅ |         |
+| IPv4 Address | `IPv4-Addr.value` | ✅ |         |
+| IPv6 Address | `IPv6-Addr.value` | ✅ |         |
+| MAC Address | `Mac-Addr.value` | ✅ |         |
+| URL | `Url.value` | ✅ |         |
+| Windows Registry Key | `Windows-Registry-Key.key` | ⚠️ | Partial |
 
 ✅ = Fully implemented | ⚠️ = Partially implemented
 
@@ -351,6 +356,10 @@ The connector can have issues parsing a PDF created from a webpage using "Micros
 
 - **Attack Patterns**: Requires the MITRE connector to be activated for matching ATT&CK technique IDs
 - **Vulnerabilities**: Requires the CVE connector to be activated for matching CVE identifiers
+
+### IMEI vs IMSI overlap (15-digit numbers)
+
+The IMEI regex matches 15-16 digit numbers and the IMSI regex matches 14-15 digit numbers, so a bare 15-digit number could legitimately be either. The current ruleset declares the IMSI entry after IMEI in `observable_config.ini`, so a 15-digit number is reported as an IMSI. Operators who need to correct a specific extraction can edit the observable type from the OpenCTI workbench / draft before validation.
 
 ## Additional information
 

@@ -9,6 +9,10 @@ from typing import Callable, Dict, List
 import stix2
 import yaml
 from pycti import (
+    CustomObservableICCID,
+    CustomObservableIMEI,
+    CustomObservableIMSI,
+    CustomObservablePhoneNumber,
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
@@ -430,104 +434,82 @@ class ReportImporter:
             return entity_stix
         else:
             observable = None
+            # STIX 2.1 only defines ``created_by_ref`` on SDOs/SROs. For cyber
+            # observables (SCOs) OpenCTI exposes the same concept via the
+            # ``x_opencti_created_by_ref`` custom property; setting the standard
+            # ``created_by_ref`` on an SCO would land in the bundle as an
+            # arbitrary custom field and the platform would not pick up the
+            # observable's author. Apply the OpenCTI convention to every SCO
+            # the connector emits.
+            custom_properties = {
+                "x_opencti_create_indicator": self.create_indicator,
+                "x_opencti_created_by_ref": author,
+            }
             if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
                 observable = stix2.AutonomousSystem(
                     number=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
                 observable = stix2.DomainName(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
                 observable = stix2.EmailAddress(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.name":
                 observable = stix2.File(
                     name=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
                 observable = stix2.IPv4Address(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
                 observable = stix2.IPv6Address(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
                 observable = stix2.MACAddress(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
                 observable = stix2.File(
                     hashes={"MD5": match[RESULT_FORMAT_MATCH]},
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
                 observable = stix2.File(
                     hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
                 observable = stix2.File(
                     hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
                 observable = stix2.WindowsRegistryKey(
                     key=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
                 value = match[RESULT_FORMAT_MATCH]
@@ -536,10 +518,31 @@ class ReportImporter:
                 observable = stix2.URL(
                     value=value,
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Phone-Number.value":
+                observable = CustomObservablePhoneNumber(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IMEI.value":
+                observable = CustomObservableIMEI(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "ICCID.value":
+                observable = CustomObservableICCID(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IMSI.value":
+                observable = CustomObservableIMSI(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
                 )
             if observable is not None and observables is not None:
                 observables.append(observable)
