@@ -533,3 +533,82 @@ def test_process_message_returns_early_when_connector_is_only_contextual_and_ent
     )
     connector.import_doc_ia_client.get_bundle.assert_not_called()
     mock_connector_helper.send_stix2_bundle.assert_not_called()
+
+
+def test_process_message_with_triggering_entity_does_not_propagate_author_to_imported_objects(
+    monkeypatch: pytest.MonkeyPatch,
+    fastapi_test_client: TestClient,
+    mock_connector_helper: Mock,
+    mock_config: Mock,
+    imported_file: OpenCTIFileObject,
+) -> None:
+    """Pin the OpenCTI-Platform/opencti#14105 contract: imported objects MUST
+    NOT inherit the triggering entity's author, even when one is set on the
+    triggering entity mock.
+
+    Before #14105, the connector called ``bulk_update_authors(triggering_entity.author_id, ai_bundle)``
+    after assembling the triggering-entity-driven enrichment, which silently
+    overwrote ``created_by_ref`` (and ``x_opencti_created_by_ref`` for SCOs)
+    on every imported object. In draft mode this meant a list of IPs imported
+    from a Report inherited the Report's author — wrong attribution and a
+    privacy / access-control surprise. The propagation call has been removed
+    and so has the helper itself; this test asserts the new contract end-to-end
+    by sending a triggering entity that DOES carry an ``author_id`` and
+    checking that none of the imported objects in the resulting bundle
+    references it.
+    """
+    triggering_author_id = "identity--00000000-0000-4000-8000-000000000099"
+    triggering_entity_stix = stix2.Identity(
+        id=pycti.Identity.generate_id(
+            "Author Propagation Triggering Identity", "organization"
+        ),
+        name="Author Propagation Triggering Identity",
+        identity_class="organization",
+    )
+    triggering_entity = build_triggering_entity_mock(
+        triggering_entity_stix=triggering_entity_stix,
+        author_id=triggering_author_id,
+    )
+    connector = build_connector_for_smoke_test(
+        monkeypatch=monkeypatch,
+        mock_connector_helper=mock_connector_helper,
+        mock_config=mock_config,
+        imported_file=imported_file,
+        triggering_entity=triggering_entity,
+        fastapi_test_client=fastapi_test_client,
+    )
+
+    connector.process_message(data={})
+
+    sent_bundle = extract_sent_bundle(mock_connector_helper)
+    sent_objects = sent_bundle["objects"]
+
+    # No object in the sent bundle carries ``created_by_ref`` /
+    # ``x_opencti_created_by_ref`` pointing at the triggering entity's
+    # author. The triggering entity itself is in the bundle (it's the
+    # source for the related-to relationships) but it must not have
+    # been re-attributed to its own ``author_id``.
+    offending_objects = [
+        obj
+        for obj in sent_objects
+        if obj.get("created_by_ref") == triggering_author_id
+        or obj.get("x_opencti_created_by_ref") == triggering_author_id
+    ]
+    assert offending_objects == [], (
+        "OpenCTI-Platform/opencti#14105 regression: imported objects must "
+        "not inherit the triggering entity's author. "
+        f"Offending objects: {[obj.get('id') for obj in offending_objects]}"
+    )
+
+    # Sanity: the bundle does carry imported objects (so the assertion
+    # above is meaningful — we did exercise the triggering-entity branch
+    # of ``process_message`` rather than the empty-bundle short-circuit).
+    imported_non_relationship_objects = [
+        obj
+        for obj in sent_objects
+        if obj.get("id") != triggering_entity.id and obj.get("type") != "relationship"
+    ]
+    assert imported_non_relationship_objects, (
+        "Test fixture is no longer exercising the triggering-entity branch — "
+        "no imported objects landed in the sent bundle."
+    )
