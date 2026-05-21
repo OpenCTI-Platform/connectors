@@ -1334,6 +1334,9 @@ class ElasticApiHandler:
                 timeout=10,
             )
 
+            # Elasticsearch 8 returns 200 for a successful PUT /_data_stream request.
+            # 201 is accepted defensively in case of intermediary proxies that rewrite
+            # the response code.
             if create_response.status_code in [200, 201]:
                 self.helper.connector_logger.info(
                     "Data stream created successfully",
@@ -1653,7 +1656,7 @@ class ElasticApiHandler:
                         "be auto-created. Check the logs above for details.",
                         {"data_stream": self.index_name},
                     )
-                # Return True even when data stream initialisation failed: the index
+                # Return True even when data stream initialization failed: the index
                 # template was successfully created, and Elasticsearch may still be
                 # able to auto-create the data stream on the first document write
                 # (e.g. when the connector has write but not manage permissions).
