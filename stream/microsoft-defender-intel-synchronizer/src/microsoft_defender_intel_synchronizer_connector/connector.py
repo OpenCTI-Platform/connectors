@@ -694,9 +694,25 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                                     "modified"
                                 ) or first_node.get("updated_at")
                             except (IndexError, TypeError, AttributeError) as e:
+                                # ``connector_logger`` serialises the
+                                # meta dict (typically as JSON), and a
+                                # raw exception object is not JSON-
+                                # serialisable: depending on the
+                                # backend it either gets dropped
+                                # silently or surfaces as an opaque
+                                # ``"<IndexError object at 0x…>"``.
+                                # Stringify the exception and surface
+                                # its concrete type so triage logs
+                                # carry both a printable message and a
+                                # discriminator, matching the shape
+                                # used by the unexpected-error branch
+                                # in ``api_handler.preflight``.
                                 self.helper.connector_logger.warning(
                                     "[STATE] Could not extract timestamp from first node",
-                                    {"error": e},
+                                    {
+                                        "error": str(e),
+                                        "error_type": type(e).__name__,
+                                    },
                                 )
                         state[collection]["last_count"] = len(opencti_indicators)
                         opencti_indicators = [
