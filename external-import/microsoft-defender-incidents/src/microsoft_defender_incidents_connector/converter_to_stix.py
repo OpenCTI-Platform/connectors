@@ -15,7 +15,9 @@ from pycti import (
 
 from .utils import CASE_INCIDENT_PRIORITIES, format_datetime
 
-MITRE_TECHNIQUE_ID_PATTERN = re.compile(r"(T\d{4}(?:\.\d{3})?)", re.IGNORECASE)
+MITRE_TECHNIQUE_ID_PATTERN = re.compile(
+    r"(?<![A-Z0-9])(T\d{4}(?:\.\d{3})?)(?![A-Z0-9.])", re.IGNORECASE
+)
 
 
 def handle_stix2_error(decorated_function):
