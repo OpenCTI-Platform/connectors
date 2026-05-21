@@ -1011,12 +1011,28 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             # same hash), so relying on ``externalId``
                             # alone would create duplicate Defender
                             # indicators and burn through the 15k tenant
-                            # quota. When no usable hash is present we
-                            # fall back to the externalId fast-path the
-                            # planner already ran above.
+                            # quota.
+                            #
+                            # ``None`` here means the file observable
+                            # carries no Defender-supported hash (MD5
+                            # only, or no ``hashes`` at all). Such an
+                            # observable can never produce a creatable
+                            # Defender payload — ``_build_request_body``
+                            # drops MD5-only file observables and
+                            # rejects ones with no hash entirely — so
+                            # we MUST skip staging it. Otherwise the
+                            # planner would re-stage the same
+                            # uncreatable observable every cycle,
+                            # consuming part of the 15k candidate
+                            # budget and producing zero-result create
+                            # attempts on every sync.
                             file_key = defender_file_dedup_key(observable_data)
                             if file_key is None:
-                                opencti_indicators_to_create.append(observable_data)
+                                self.helper.connector_logger.debug(
+                                    "[Plan] Skipping file observable: no "
+                                    "Defender-supported hash (SHA-256 / SHA-1).",
+                                    {"observable_id": observable_id},
+                                )
                                 continue
                             key_type, clean_value = file_key
                         elif obs_type == "x509-certificate":
@@ -1029,9 +1045,21 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                             # indicators were silently dropped from the
                             # planning pass before this fix). Mirror
                             # ``defender_file_dedup_key`` for files.
+                            #
+                            # ``None`` here means the certificate has
+                            # no usable thumbprint hash —
+                            # ``_build_request_body`` requires a
+                            # thumbprint and would drop the observable,
+                            # so staging it would waste planner budget
+                            # on a no-op every cycle (same reasoning as
+                            # the file branch above).
                             cert_key = defender_certificate_dedup_key(observable_data)
                             if cert_key is None:
-                                opencti_indicators_to_create.append(observable_data)
+                                self.helper.connector_logger.debug(
+                                    "[Plan] Skipping x509-certificate observable: "
+                                    "no usable thumbprint hash (SHA-1 / SHA-256 / MD5).",
+                                    {"observable_id": observable_id},
+                                )
                                 continue
                             key_type, clean_value = cert_key
                         else:
