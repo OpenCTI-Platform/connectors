@@ -88,11 +88,18 @@ class AssemblyLineConnector:
 
     def __init__(self) -> None:
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        # Use ``yaml.safe_load`` instead of ``yaml.load(..., Loader=FullLoader)``:
+        # ``FullLoader`` can instantiate arbitrary Python objects from YAML tags,
+        # which means a tampered ``config.yml`` could execute code at startup.
+        # ``safe_load`` restricts parsing to the YAML safe subset (plain
+        # mappings / lists / scalars), and the ``with open(...)`` context
+        # manager guarantees the file handle is released even if YAML parsing
+        # raises.
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as fh:
+                config = yaml.safe_load(fh) or {}
+        else:
+            config = {}
         self.helper = OpenCTIConnectorHelper(config)
 
         self.opencti_url = get_config_variable(
@@ -307,17 +314,66 @@ class AssemblyLineConnector:
             self.assemblyline_author = None
             self.assemblyline_identity_standard_id = None
 
-    def _check_tlp(self, observable: Dict[str, Any]) -> None:
-        """Raise ``ValueError`` when the observable's TLP exceeds the max."""
+    # Map OpenCTI / STIX TLP values to AssemblyLine's compact
+    # classification strings (``TLP:C`` / ``TLP:G`` / ``TLP:A`` /
+    # ``TLP:R``) — the default labels of the stock AssemblyLine
+    # classification engine. ``+STRICT`` variants collapse to the
+    # plain colour since stock AssemblyLine does not model strict /
+    # non-strict distinctions; deployments that customise their
+    # classification engine can still override the connector-wide
+    # default via ``ASSEMBLYLINE_CLASSIFICATION``.
+    _TLP_TO_AL_CLASSIFICATION: Dict[str, str] = {
+        "TLP:CLEAR": "TLP:C",
+        "TLP:WHITE": "TLP:C",
+        "TLP:GREEN": "TLP:G",
+        "TLP:AMBER": "TLP:A",
+        "TLP:AMBER+STRICT": "TLP:A",
+        "TLP:RED": "TLP:R",
+    }
+
+    @staticmethod
+    def _source_tlp(observable: Dict[str, Any]) -> str:
+        """Return the source observable's TLP marking (``TLP:CLEAR`` default)."""
         tlp = "TLP:CLEAR"
         for marking in observable.get("objectMarking", []) or []:
             if marking.get("definition_type") == "TLP":
                 tlp = marking.get("definition", tlp)
+        return tlp
+
+    def _check_tlp(self, observable: Dict[str, Any]) -> None:
+        """Raise ``ValueError`` when the observable's TLP exceeds the max."""
+        tlp = self._source_tlp(observable)
         if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.assemblyline_max_tlp):
             raise ValueError(
                 f"Do not send any data, TLP of the observable ({tlp}) is greater than "
                 f"max TLP ({self.assemblyline_max_tlp})"
             )
+
+    def _resolve_submission_classification(self, observable: Dict[str, Any]) -> str:
+        """Return the AssemblyLine classification string to submit with.
+
+        Maps the source observable's TLP to AssemblyLine's compact
+        form (``TLP:C`` / ``TLP:G`` / ``TLP:A`` / ``TLP:R``) when the
+        observable actually carries a TLP marking. When there is no
+        TLP marking on the source (or the marking value is not one
+        of the known TLP labels), falls back to the
+        operator-configured ``ASSEMBLYLINE_CLASSIFICATION`` so
+        deployments with a customised AssemblyLine classification
+        engine keep working unchanged.
+
+        The previous behaviour always submitted with
+        ``self.assemblyline_classification`` (default ``TLP:C``) —
+        that silently downgraded the classification of every sample
+        once it left OpenCTI, even when the source was ``TLP:AMBER``
+        (which the max-TLP gate allows by default).
+        """
+        for marking in observable.get("objectMarking", []) or []:
+            if marking.get("definition_type") != "TLP":
+                continue
+            tlp_definition = marking.get("definition")
+            if tlp_definition in self._TLP_TO_AL_CLASSIFICATION:
+                return self._TLP_TO_AL_CLASSIFICATION[tlp_definition]
+        return self.assemblyline_classification
 
     @staticmethod
     def _source_marking_refs(observable: Dict[str, Any]) -> List[str]:
@@ -348,23 +404,29 @@ class AssemblyLineConnector:
     # ------------------------------------------------------------------ #
 
     def _download_import_file(self, file_id: str) -> bytes:
-        """Download a file from OpenCTI's storage via the REST API."""
+        """Download a file from OpenCTI's storage via ``pycti``'s helper.
+
+        Going through ``helper.api.fetch_opencti_file`` (rather than a raw
+        ``requests.get`` with a manually-set ``Authorization`` header)
+        means the connector inherits the pycti HTTP session's
+        configuration — timeouts, retries, custom CA bundles, the
+        ``OpenCTIApiClient`` proxy / SSL settings — and stays consistent
+        with :meth:`_fetch_attached_file`. The previous split between
+        ``importFiles`` (raw HTTP) and ``x_opencti_files`` (helper) made
+        the importFiles path silently miss any of those policies.
+        """
         try:
             file_url = f"{self.opencti_url}/storage/get/{file_id}"
             self.helper.log_info(f"Downloading file from: {file_url}")
-
-            headers = {
-                "Authorization": f"Bearer {self.opencti_token}",
-                "Accept": "application/octet-stream",
-            }
-            response = requests.get(file_url, headers=headers, timeout=120)
-            if response.status_code != 200:
-                raise Exception(f"Failed to download file: HTTP {response.status_code}")
-            self.helper.log_info(
-                f"Successfully downloaded {len(response.content)} bytes"
-            )
-            self._current_file_size = len(response.content)
-            return response.content
+            content = self.helper.api.fetch_opencti_file(file_url, binary=True)
+            if not isinstance(content, (bytes, bytearray)):
+                raise Exception(
+                    "fetch_opencti_file returned a non-binary payload "
+                    f"({type(content).__name__})"
+                )
+            self.helper.log_info(f"Successfully downloaded {len(content)} bytes")
+            self._current_file_size = len(content)
+            return bytes(content)
         except Exception as exc:
             raise Exception(f"Error downloading import file: {exc}") from exc
 
@@ -719,12 +781,21 @@ class AssemblyLineConnector:
 
         self._wait_for_al_ready(deadline)
 
+        # Submission classification mirrors the source observable's TLP
+        # so AssemblyLine never sees a marking lower than the file
+        # actually carries in OpenCTI. Falls back to the configured
+        # default when the source has no recognisable TLP marking.
+        submission_classification = self._resolve_submission_classification(observable)
+        self.helper.log_info(
+            f"Submission classification: {submission_classification} "
+            f"(source TLP: {self._source_tlp(observable)})"
+        )
         json_data = {
             "name": file_name,
             "submission_profile": self.assemblyline_submission_profile,
             "metadata": {"submitter": "opencti-connector", "source": "OpenCTI"},
             "params": {
-                "classification": self.assemblyline_classification,
+                "classification": submission_classification,
                 "description": f'Submitted from OpenCTI - {observable["id"]}',
                 "deep_scan": False,
                 "priority": 1000,
@@ -823,26 +894,29 @@ class AssemblyLineConnector:
     # IOC / ATT&CK extraction                                            #
     # ------------------------------------------------------------------ #
 
-    def _extract_malicious_iocs(
-        self, tags: Optional[Dict[str, Any]]
+    def _extract_iocs_by_classification(
+        self,
+        tags: Optional[Dict[str, Any]],
+        classifications: Tuple[str, ...],
     ) -> Dict[str, List[str]]:
-        """Extract malicious (and optionally suspicious) IOCs from tags."""
-        malicious_iocs: Dict[str, List[str]] = {
+        """Return IOCs matching one of ``classifications`` (private).
+
+        Used by :meth:`_extract_malicious_iocs` and
+        :meth:`_extract_suspicious_iocs` so the two share the same
+        de-duplication and category-routing logic. ``classifications``
+        is a tuple of the AssemblyLine tag classifications to include
+        (e.g. ``("malicious",)`` or ``("suspicious",)``).
+        """
+        bucket: Dict[str, List[str]] = {
             "domains": [],
             "ips": [],
             "urls": [],
             "families": [],
         }
         if not tags:
-            return malicious_iocs
+            return bucket
 
-        classification_types = ["malicious"]
-        if self.assemblyline_include_suspicious:
-            classification_types.append("suspicious")
-        self.helper.log_info(
-            f"Extracting IOCs from tags (including: {', '.join(classification_types)})..."
-        )
-
+        classification_set = set(classifications)
         for main_category, category_data in tags.items():
             if not isinstance(category_data, dict):
                 continue
@@ -854,44 +928,78 @@ class AssemblyLineConnector:
                         continue
                     value = tag_entry[0]
                     classification = tag_entry[1]
-                    if classification == "malicious":
-                        pass
-                    elif (
-                        classification == "suspicious"
-                        and self.assemblyline_include_suspicious
-                    ):
-                        pass
-                    else:
+                    if classification not in classification_set:
                         continue
 
                     lowered = tag_type.lower()
                     if "domain" in lowered:
-                        if value not in malicious_iocs["domains"]:
-                            malicious_iocs["domains"].append(value)
+                        if value not in bucket["domains"]:
+                            bucket["domains"].append(value)
                     elif "ip" in lowered:
-                        if value not in malicious_iocs["ips"]:
-                            malicious_iocs["ips"].append(value)
+                        if value not in bucket["ips"]:
+                            bucket["ips"].append(value)
                     elif "uri" in lowered or "url" in lowered:
-                        if value not in malicious_iocs["urls"]:
-                            malicious_iocs["urls"].append(value)
+                        if value not in bucket["urls"]:
+                            bucket["urls"].append(value)
 
             if main_category == "attribution":
                 for family_entry in category_data.get("attribution.family", []) or []:
                     if (
                         isinstance(family_entry, list)
-                        and family_entry
-                        and family_entry[0] not in malicious_iocs["families"]
+                        and len(family_entry) >= 2
+                        and family_entry[1] in classification_set
+                        and family_entry[0] not in bucket["families"]
                     ):
-                        malicious_iocs["families"].append(family_entry[0])
+                        bucket["families"].append(family_entry[0])
 
+        return bucket
+
+    def _extract_malicious_iocs(
+        self, tags: Optional[Dict[str, Any]]
+    ) -> Dict[str, List[str]]:
+        """Return only the IOCs AssemblyLine tagged as ``malicious``.
+
+        Suspicious-only IOCs are deliberately *not* mixed into this
+        dict any more — they are returned separately by
+        :meth:`_extract_suspicious_iocs` so the downstream "label the
+        source observable malicious", "set ``x_opencti_score=80``" and
+        "force ``malware-analysis.result=malicious``" paths only fire
+        on truly-malicious IOCs. With ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS``
+        on, suspicious IOCs are still turned into indicators (see
+        :meth:`_create_indicators`), just with a ``suspicious`` label
+        and a lower score rather than being indistinguishable from
+        malicious ones in OpenCTI.
+        """
+        malicious_iocs = self._extract_iocs_by_classification(tags, ("malicious",))
         self.helper.log_info(
-            f"Extracted IOCs ({', '.join(classification_types)}) - "
+            "Extracted malicious IOCs - "
             f"Domains: {len(malicious_iocs['domains'])}, "
             f"IPs: {len(malicious_iocs['ips'])}, "
             f"URLs: {len(malicious_iocs['urls'])}, "
             f"Families: {len(malicious_iocs['families'])}"
         )
         return malicious_iocs
+
+    def _extract_suspicious_iocs(
+        self, tags: Optional[Dict[str, Any]]
+    ) -> Dict[str, List[str]]:
+        """Return the IOCs AssemblyLine tagged as ``suspicious``.
+
+        Returns an empty bucket when ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS``
+        is disabled so the caller can unconditionally iterate the
+        result without an extra feature-flag branch.
+        """
+        if not self.assemblyline_include_suspicious:
+            return {"domains": [], "ips": [], "urls": [], "families": []}
+        suspicious_iocs = self._extract_iocs_by_classification(tags, ("suspicious",))
+        self.helper.log_info(
+            "Extracted suspicious IOCs - "
+            f"Domains: {len(suspicious_iocs['domains'])}, "
+            f"IPs: {len(suspicious_iocs['ips'])}, "
+            f"URLs: {len(suspicious_iocs['urls'])}, "
+            f"Families: {len(suspicious_iocs['families'])}"
+        )
+        return suspicious_iocs
 
     def _extract_attack_patterns(
         self, results: Optional[Dict[str, Any]]
@@ -1049,17 +1157,30 @@ class AssemblyLineConnector:
         return f"{observable.get('entity_type', '?')}:{observable.get('id', 'unknown')}"
 
     def _parse_al_timestamp(self, value: Any, fallback: datetime) -> datetime:
-        """Parse an AssemblyLine timestamp string (best effort)."""
+        """Parse an AssemblyLine timestamp string (best effort).
+
+        Uses :func:`datetime.fromisoformat` after normalising the ``Z``
+        suffix so we correctly handle every ISO-8601 offset shape
+        AssemblyLine produces, including negative offsets like
+        ``-04:00`` (the earlier split-on-``+`` approach dropped the
+        timezone entirely for ``+`` offsets and would mis-parse
+        negative offsets). The result is normalised to a naive UTC
+        datetime so the rest of the connector keeps using a single
+        timezone-naive representation across STIX SDO ``created`` /
+        ``modified`` fields (matching the pre-existing call sites).
+        """
         if not isinstance(value, str):
             return fallback
-        cleaned = value.replace("Z", "+00:00").split("+", 1)[0]
+        normalized = value.strip()
+        if normalized.endswith("Z"):
+            normalized = normalized[:-1] + "+00:00"
         try:
-            return datetime.strptime(cleaned, "%Y-%m-%dT%H:%M:%S.%f")
+            parsed = datetime.fromisoformat(normalized)
         except ValueError:
-            try:
-                return datetime.strptime(cleaned, "%Y-%m-%dT%H:%M:%S")
-            except ValueError:
-                return fallback
+            return fallback
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        return parsed
 
     def _create_malware_analysis(
         self,
@@ -1219,6 +1340,19 @@ class AssemblyLineConnector:
                 f"Could not attach AssemblyLine external reference: {exc}"
             )
 
+    # AssemblyLine IOC classifications map to distinct OpenCTI scores and
+    # labels: malicious IOCs are emitted as ``malicious`` indicators with
+    # the standard high-confidence score (80), while suspicious IOCs are
+    # emitted as ``suspicious`` indicators with a moderate score (50).
+    # Keeping this mapping in one place means downstream consumers in
+    # OpenCTI see honest classification labels matching what AssemblyLine
+    # actually returned, instead of suspicious IOCs being indistinguishable
+    # from malicious ones.
+    _IOC_CLASSIFICATION_SCORES: Dict[str, int] = {
+        "malicious": 80,
+        "suspicious": 50,
+    }
+
     def _create_indicator_observable(
         self,
         observable_id: str,
@@ -1228,6 +1362,7 @@ class AssemblyLineConnector:
         max_score: int,
         description: str,
         source_marking_refs: Optional[List[str]] = None,
+        classification: str = "malicious",
     ) -> Optional[str]:
         """Create one Indicator (+ optional matching Observable) for an IOC.
 
@@ -1237,8 +1372,17 @@ class AssemblyLineConnector:
         observable's ``objectMarking`` so derived OpenCTI objects
         cannot be exposed more broadly than the source — a TLP:AMBER
         file produces TLP:AMBER indicators and observables.
+
+        ``classification`` is the AssemblyLine IOC classification
+        (``"malicious"`` or ``"suspicious"``). It drives the label
+        applied to the Indicator / Observable and its
+        ``x_opencti_score`` — suspicious-only IOCs no longer end up
+        labelled ``malicious`` with the high-confidence score (was
+        the previous behaviour when ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS``
+        was on).
         """
         try:
+            indicator_score = self._IOC_CLASSIFICATION_SCORES.get(classification, 80)
             escaped = self._escape_stix_string(ioc_value)
             indicator_data: Dict[str, Any] = {
                 "name": ioc_value,
@@ -1247,8 +1391,8 @@ class AssemblyLineConnector:
                 "pattern_type": "stix",
                 "x_opencti_main_observable_type": opencti_observable_type,
                 "valid_from": self.helper.api.stix2.format_date(),
-                "labels": ["malicious", "assemblyline"],
-                "x_opencti_score": 80,
+                "labels": [classification, "assemblyline"],
+                "x_opencti_score": indicator_score,
             }
             if self.assemblyline_author:
                 indicator_data["createdBy"] = self.assemblyline_author
@@ -1268,7 +1412,7 @@ class AssemblyLineConnector:
                             "type": stix_observable_type,
                             "value": ioc_value,
                         },
-                        "x_opencti_score": 80,
+                        "x_opencti_score": indicator_score,
                     }
                     if self.assemblyline_author:
                         obs_data["createdBy"] = self.assemblyline_author
@@ -1278,15 +1422,15 @@ class AssemblyLineConnector:
                         **obs_data
                     )
                     self.helper.api.stix_cyber_observable.add_label(
-                        id=new_observable["id"], label="malicious"
+                        id=new_observable["id"], label=classification
                     )
                     self.helper.api.stix_core_relationship.create(
                         fromId=indicator["id"],
                         toId=new_observable["id"],
                         relationship_type="based-on",
                         description=(
-                            "Indicator based on observed malicious IOC from "
-                            "AssemblyLine analysis"
+                            f"Indicator based on observed {classification} IOC "
+                            "from AssemblyLine analysis"
                         ),
                     )
                 except Exception as obs_exc:
@@ -1305,12 +1449,22 @@ class AssemblyLineConnector:
         observable: Dict[str, Any],
         max_score: int,
         malicious_iocs: Dict[str, List[str]],
+        suspicious_iocs: Optional[Dict[str, List[str]]] = None,
     ) -> Tuple[Dict[str, int], List[str]]:
-        """Create indicators (and optional observables) for every malicious IOC.
+        """Create indicators (and optional observables) for every IOC.
+
+        ``malicious_iocs`` and ``suspicious_iocs`` are processed in
+        sequence so each indicator is created with a label and score
+        matching its AssemblyLine classification — ``malicious`` IOCs
+        get the ``malicious`` label and the high-confidence score
+        (80); ``suspicious`` IOCs (only emitted when
+        ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS=true``) get the
+        ``suspicious`` label and a moderate score (50).
 
         Returns ``(counts, indicator_ids)`` where ``indicator_ids`` is
-        the list of created Indicator standard ids, used downstream to
-        link MITRE ATT&CK techniques to them with ``related-to``.
+        the list of *all* created Indicator standard ids (malicious +
+        suspicious), used downstream to link MITRE ATT&CK techniques
+        to them with ``related-to``.
 
         The full source observable is taken (rather than only its id)
         so each derived Indicator / Observable can inherit the source
@@ -1323,61 +1477,69 @@ class AssemblyLineConnector:
         counts = {"indicators": 0, "observables": 0, "relationships": 0}
         indicator_ids: List[str] = []
 
-        for domain in malicious_iocs["domains"][:20]:
-            ind_id = self._create_indicator_observable(
-                observable_id,
-                domain,
-                "domain-name",
-                "Domain-Name",
-                max_score,
-                "Domain contacted during malware analysis",
-                source_marking_refs=source_marking_refs,
-            )
-            if ind_id:
-                indicator_ids.append(ind_id)
-                counts["indicators"] += 1
-                counts["relationships"] += 1
-                if self.assemblyline_create_observables:
-                    counts["observables"] += 1
+        def _process_bucket(bucket: Dict[str, List[str]], classification: str) -> None:
+            for domain in bucket["domains"][:20]:
+                ind_id = self._create_indicator_observable(
+                    observable_id,
+                    domain,
+                    "domain-name",
+                    "Domain-Name",
+                    max_score,
+                    "Domain contacted during malware analysis",
+                    source_marking_refs=source_marking_refs,
+                    classification=classification,
+                )
+                if ind_id:
+                    indicator_ids.append(ind_id)
+                    counts["indicators"] += 1
                     counts["relationships"] += 1
+                    if self.assemblyline_create_observables:
+                        counts["observables"] += 1
+                        counts["relationships"] += 1
 
-        for ip in malicious_iocs["ips"][:20]:
-            stix_type = "ipv6-addr" if self._is_ipv6(ip) else "ipv4-addr"
-            octi_type = "IPv6-Addr" if self._is_ipv6(ip) else "IPv4-Addr"
-            ind_id = self._create_indicator_observable(
-                observable_id,
-                ip,
-                stix_type,
-                octi_type,
-                max_score,
-                "IP address contacted during malware analysis",
-                source_marking_refs=source_marking_refs,
-            )
-            if ind_id:
-                indicator_ids.append(ind_id)
-                counts["indicators"] += 1
-                counts["relationships"] += 1
-                if self.assemblyline_create_observables:
-                    counts["observables"] += 1
+            for ip in bucket["ips"][:20]:
+                stix_type = "ipv6-addr" if self._is_ipv6(ip) else "ipv4-addr"
+                octi_type = "IPv6-Addr" if self._is_ipv6(ip) else "IPv4-Addr"
+                ind_id = self._create_indicator_observable(
+                    observable_id,
+                    ip,
+                    stix_type,
+                    octi_type,
+                    max_score,
+                    "IP address contacted during malware analysis",
+                    source_marking_refs=source_marking_refs,
+                    classification=classification,
+                )
+                if ind_id:
+                    indicator_ids.append(ind_id)
+                    counts["indicators"] += 1
                     counts["relationships"] += 1
+                    if self.assemblyline_create_observables:
+                        counts["observables"] += 1
+                        counts["relationships"] += 1
 
-        for url in malicious_iocs["urls"][:20]:
-            ind_id = self._create_indicator_observable(
-                observable_id,
-                url,
-                "url",
-                "Url",
-                max_score,
-                "URL contacted during malware analysis",
-                source_marking_refs=source_marking_refs,
-            )
-            if ind_id:
-                indicator_ids.append(ind_id)
-                counts["indicators"] += 1
-                counts["relationships"] += 1
-                if self.assemblyline_create_observables:
-                    counts["observables"] += 1
+            for url in bucket["urls"][:20]:
+                ind_id = self._create_indicator_observable(
+                    observable_id,
+                    url,
+                    "url",
+                    "Url",
+                    max_score,
+                    "URL contacted during malware analysis",
+                    source_marking_refs=source_marking_refs,
+                    classification=classification,
+                )
+                if ind_id:
+                    indicator_ids.append(ind_id)
+                    counts["indicators"] += 1
                     counts["relationships"] += 1
+                    if self.assemblyline_create_observables:
+                        counts["observables"] += 1
+                        counts["relationships"] += 1
+
+        _process_bucket(malicious_iocs, "malicious")
+        if suspicious_iocs is not None:
+            _process_bucket(suspicious_iocs, "suspicious")
 
         for family in malicious_iocs["families"][:10]:
             try:
@@ -1431,7 +1593,16 @@ class AssemblyLineConnector:
             sid = results.get("sid", "N/A")
 
             malicious_iocs = self._extract_malicious_iocs(tags)
+            suspicious_iocs = self._extract_suspicious_iocs(tags)
+            # ``has_malicious_iocs`` is intentionally scoped to the
+            # truly-malicious bucket — the "label source observable as
+            # malicious", "set ``x_opencti_score=80``" and
+            # "force ``malware-analysis.result=malicious``" paths must
+            # not fire on suspicious-only analyses (those get their
+            # own ``suspicious`` indicators with a moderate score
+            # below).
             has_malicious_iocs = any(malicious_iocs.values())
+            has_suspicious_iocs = any(suspicious_iocs.values())
             is_malicious = max_score >= 500 or has_malicious_iocs
 
             if is_malicious:
@@ -1441,12 +1612,24 @@ class AssemblyLineConnector:
                     )
                 except Exception as exc:
                     self.helper.log_warning(f"Could not add malicious label: {exc}")
+            elif has_suspicious_iocs:
+                # Surface "suspicious-only" verdicts honestly in the
+                # OpenCTI UI rather than leaving the source observable
+                # unlabelled (and indistinguishable from a benign one).
+                try:
+                    self.helper.api.stix_cyber_observable.add_label(
+                        id=observable["id"], label="suspicious"
+                    )
+                except Exception as exc:
+                    self.helper.log_warning(f"Could not add suspicious label: {exc}")
 
             try:
                 if max_score > 0:
                     opencti_score = min(100, int((max_score / 2000) * 100))
                 elif has_malicious_iocs:
                     opencti_score = 80
+                elif has_suspicious_iocs:
+                    opencti_score = 50
                 else:
                     opencti_score = 0
                 self.helper.api.stix_cyber_observable.update_field(
@@ -1457,7 +1640,10 @@ class AssemblyLineConnector:
                 self.helper.log_warning(f"Could not update score: {exc}")
 
             counts, indicator_ids = self._create_indicators(
-                observable, max_score, malicious_iocs
+                observable,
+                max_score,
+                malicious_iocs,
+                suspicious_iocs=suspicious_iocs,
             )
 
             malware_analysis_id: Optional[str] = None

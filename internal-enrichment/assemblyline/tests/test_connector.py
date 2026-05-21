@@ -124,10 +124,42 @@ class TestMaliciousIOCExtraction:
         assert iocs["urls"] == ["http://evil.com/malware.exe"]
         assert iocs["families"] == ["EMOTET"]
 
-    def test_include_suspicious(self, sample_tags: Dict[str, Any]) -> None:
+    def test_malicious_extraction_never_mixes_in_suspicious(
+        self, sample_tags: Dict[str, Any]
+    ) -> None:
+        """``_extract_malicious_iocs`` returns ONLY malicious IOCs.
+
+        Pins the contract change from PR #6429: suspicious IOCs are no
+        longer silently mixed into the ``malicious_iocs`` bucket (and
+        thus no longer trigger the "label observable malicious" /
+        ``score=80`` / ``result=malicious`` paths downstream), even
+        when ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS`` is enabled.
+        """
         connector = _make_connector(assemblyline_include_suspicious=True)
         iocs = connector._extract_malicious_iocs(sample_tags)
-        assert iocs["domains"] == ["malware.com", "suspicious.net"]
+        assert iocs["domains"] == ["malware.com"]
+        assert "suspicious.net" not in iocs["domains"]
+
+    def test_extract_suspicious_iocs_returns_suspicious_when_enabled(
+        self, sample_tags: Dict[str, Any]
+    ) -> None:
+        connector = _make_connector(assemblyline_include_suspicious=True)
+        iocs = connector._extract_suspicious_iocs(sample_tags)
+        assert iocs["domains"] == ["suspicious.net"]
+        # Suspicious bucket carries only suspicious IOCs.
+        assert "malware.com" not in iocs["domains"]
+
+    def test_extract_suspicious_iocs_empty_when_disabled(
+        self, sample_tags: Dict[str, Any]
+    ) -> None:
+        """With the feature flag off, the suspicious bucket is empty.
+
+        Lets callers iterate ``_extract_suspicious_iocs(...)``
+        unconditionally without an extra feature-flag branch.
+        """
+        connector = _make_connector(assemblyline_include_suspicious=False)
+        iocs = connector._extract_suspicious_iocs(sample_tags)
+        assert iocs == {"domains": [], "ips": [], "urls": [], "families": []}
 
     def test_empty_tags(self) -> None:
         connector = _make_connector()
@@ -530,6 +562,214 @@ class TestParseAlTimestamp:
         assert connector._parse_al_timestamp(None, fallback) == fallback
         assert connector._parse_al_timestamp(12345, fallback) == fallback
 
+    def test_parse_positive_offset_normalised_to_utc(self) -> None:
+        """Positive offsets are converted to UTC, not silently dropped.
+
+        The earlier implementation split on ``+`` and discarded the
+        offset entirely, so ``...10:11:12+02:00`` was treated as
+        local-time 10:11:12 instead of 08:11:12 UTC. The new
+        ``fromisoformat`` path normalises through ``astimezone(UTC)``
+        so callers see the actual UTC wall-clock time.
+        """
+        connector = _make_connector()
+        import datetime as _dt
+
+        fallback = _dt.datetime(1970, 1, 1)
+        parsed = connector._parse_al_timestamp("2024-05-04T10:11:12+02:00", fallback)
+        assert parsed == _dt.datetime(2024, 5, 4, 8, 11, 12)
+
+    def test_parse_negative_offset_normalised_to_utc(self) -> None:
+        """Negative offsets parse correctly (used to fall back to default).
+
+        The previous ``split("+", 1)[0]`` logic returned the original
+        string unchanged for ``-04:00`` offsets because there was no
+        ``+`` to split on, and the ``-04:00`` suffix is not valid
+        ``strptime`` input for the bundled format strings — so the
+        function silently dropped to ``fallback``. The new
+        ``fromisoformat`` path handles negative offsets the same way
+        as positive ones.
+        """
+        connector = _make_connector()
+        import datetime as _dt
+
+        fallback = _dt.datetime(1970, 1, 1)
+        parsed = connector._parse_al_timestamp("2024-05-04T10:11:12-04:00", fallback)
+        assert parsed == _dt.datetime(2024, 5, 4, 14, 11, 12)
+
+
+class TestIocClassificationLabelsAndScores:
+    """Indicators / Observables carry honest classification labels and scores.
+
+    Pins the contract change from PR #6429: when
+    ``ASSEMBLYLINE_INCLUDE_SUSPICIOUS=true``, suspicious-only IOCs are
+    emitted as ``suspicious`` indicators with a moderate score (50)
+    rather than being indistinguishable from genuinely-malicious ones
+    in OpenCTI (which were labelled ``malicious`` with the
+    high-confidence score of 80 regardless of AssemblyLine's actual
+    classification).
+    """
+
+    @staticmethod
+    def _setup(create_observables: bool) -> AssemblyLineConnector:
+        connector = _make_connector(
+            assemblyline_create_observables=create_observables,
+            assemblyline_include_suspicious=True,
+        )
+        connector.helper.api.indicator.create = MagicMock(
+            side_effect=lambda **kwargs: {"id": f"ind-{kwargs['name']}"}
+        )
+        connector.helper.api.stix_cyber_observable.create = MagicMock(
+            side_effect=lambda **kwargs: {
+                "id": f"obs-{kwargs['observableData']['value']}"
+            }
+        )
+        connector.helper.api.stix_cyber_observable.add_label = MagicMock()
+        connector.helper.api.stix_core_relationship.create = MagicMock()
+        connector.helper.api.stix2.format_date = MagicMock(return_value="2024-01-01")
+        connector.helper.api.malware.create = MagicMock(return_value={"id": "mal-1"})
+        return connector
+
+    def test_malicious_indicator_score_and_label(self) -> None:
+        connector = self._setup(create_observables=False)
+        connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            {"domains": ["evil.com"], "ips": [], "urls": [], "families": []},
+            suspicious_iocs={"domains": [], "ips": [], "urls": [], "families": []},
+        )
+        call = connector.helper.api.indicator.create.call_args.kwargs
+        assert call["x_opencti_score"] == 80
+        assert "malicious" in call["labels"]
+        assert "suspicious" not in call["labels"]
+
+    def test_suspicious_indicator_score_and_label(self) -> None:
+        connector = self._setup(create_observables=False)
+        connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            120,
+            {"domains": [], "ips": [], "urls": [], "families": []},
+            suspicious_iocs={
+                "domains": ["sus.example.com"],
+                "ips": [],
+                "urls": [],
+                "families": [],
+            },
+        )
+        call = connector.helper.api.indicator.create.call_args.kwargs
+        assert call["x_opencti_score"] == 50
+        assert "suspicious" in call["labels"]
+        assert "malicious" not in call["labels"]
+
+    def test_suspicious_observable_carries_suspicious_label(self) -> None:
+        connector = self._setup(create_observables=True)
+        connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            120,
+            {"domains": [], "ips": [], "urls": [], "families": []},
+            suspicious_iocs={
+                "domains": ["sus.example.com"],
+                "ips": [],
+                "urls": [],
+                "families": [],
+            },
+        )
+        obs_call = connector.helper.api.stix_cyber_observable.create.call_args.kwargs
+        assert obs_call["x_opencti_score"] == 50
+        label_call = (
+            connector.helper.api.stix_cyber_observable.add_label.call_args.kwargs
+        )
+        assert label_call["label"] == "suspicious"
+
+    def test_mixed_classifications_emit_distinct_indicators(self) -> None:
+        connector = self._setup(create_observables=False)
+        connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            {"domains": ["evil.com"], "ips": [], "urls": [], "families": []},
+            suspicious_iocs={
+                "domains": ["sus.example.com"],
+                "ips": [],
+                "urls": [],
+                "families": [],
+            },
+        )
+        calls = connector.helper.api.indicator.create.call_args_list
+        labels_by_name = {c.kwargs["name"]: c.kwargs["labels"] for c in calls}
+        scores_by_name = {c.kwargs["name"]: c.kwargs["x_opencti_score"] for c in calls}
+        assert "malicious" in labels_by_name["evil.com"]
+        assert "suspicious" in labels_by_name["sus.example.com"]
+        assert scores_by_name["evil.com"] == 80
+        assert scores_by_name["sus.example.com"] == 50
+
+
+class TestResolveSubmissionClassification:
+    """Source TLP must propagate to the AssemblyLine submission classification.
+
+    The previous code always submitted with the connector-wide default
+    (``TLP:C``), silently downgrading every sample's classification
+    once it left OpenCTI. The new mapping mirrors the source
+    observable's TLP in the AssemblyLine compact form.
+    """
+
+    @pytest.mark.parametrize(
+        "source_tlp, expected",
+        [
+            ("TLP:CLEAR", "TLP:C"),
+            ("TLP:WHITE", "TLP:C"),
+            ("TLP:GREEN", "TLP:G"),
+            ("TLP:AMBER", "TLP:A"),
+            ("TLP:AMBER+STRICT", "TLP:A"),
+            ("TLP:RED", "TLP:R"),
+        ],
+    )
+    def test_known_tlp_maps_to_al_form(self, source_tlp: str, expected: str) -> None:
+        connector = _make_connector()
+        observable = {
+            "objectMarking": [{"definition_type": "TLP", "definition": source_tlp}]
+        }
+        assert connector._resolve_submission_classification(observable) == expected
+
+    def test_unmarked_falls_back_to_configured_default(self) -> None:
+        connector = _make_connector(assemblyline_classification="CUSTOM:LEVEL")
+        assert (
+            connector._resolve_submission_classification({"objectMarking": []})
+            == "CUSTOM:LEVEL"
+        )
+
+    def test_unknown_tlp_falls_back_to_configured_default(self) -> None:
+        """Custom TLP-like markings flow through the operator override.
+
+        Deployments that ship a non-standard TLP marking
+        (e.g. a corporate ``TLP:GAMMA`` extension) keep working — the
+        connector falls back to ``ASSEMBLYLINE_CLASSIFICATION`` rather
+        than synthesising a bogus AL classification string.
+        """
+        connector = _make_connector(assemblyline_classification="TLP:C")
+        observable = {
+            "objectMarking": [{"definition_type": "TLP", "definition": "TLP:GAMMA"}]
+        }
+        assert connector._resolve_submission_classification(observable) == "TLP:C"
+
+
+class TestConfigYamlSafeLoad:
+    """Config parsing rejects YAML tags that could instantiate Python objects.
+
+    ``yaml.safe_load`` was adopted in PR #6429 — verify the connector
+    can never instantiate arbitrary types from a tampered ``config.yml``.
+    """
+
+    def test_safe_load_rejects_python_object_tag(self, tmp_path) -> None:
+        import yaml
+
+        config_path = tmp_path / "config.yml"
+        config_path.write_text(
+            "key: !!python/object/apply:os.system ['echo pwned']\n",
+            encoding="utf-8",
+        )
+        with config_path.open(encoding="utf-8") as fh:
+            with pytest.raises(yaml.YAMLError):
+                yaml.safe_load(fh)
+
 
 class TestUnsupportedEntityType:
     """``_process_message`` short-circuits unsupported entity types."""
@@ -543,12 +783,35 @@ class TestUnsupportedEntityType:
 
 
 class TestUnpinnedFileFetch:
-    """``_fetch_attached_file`` must hit the canonical ``/storage/get/`` URL."""
+    """File-fetch helpers must hit the canonical ``/storage/get/`` URL via pycti.
 
-    def test_uses_storage_url(self) -> None:
+    Both ``_fetch_attached_file`` and ``_download_import_file`` route
+    through ``helper.api.fetch_opencti_file`` so they inherit the
+    pycti session's timeouts, retries, custom CA bundles and proxy /
+    SSL settings rather than re-implementing HTTP with a raw
+    ``requests.get`` and a manually-constructed ``Authorization``
+    header.
+    """
+
+    def test_attached_file_uses_storage_url(self) -> None:
         connector = _make_connector()
         connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"data")
         connector._fetch_attached_file("file-123")
+        connector.helper.api.fetch_opencti_file.assert_called_once_with(
+            "https://opencti.example.com/storage/get/file-123", binary=True
+        )
+
+    def test_import_file_uses_helper_not_raw_requests(self) -> None:
+        """Pins the consistency fix between ``_download_import_file`` and ``_fetch_attached_file``.
+
+        Both should call ``fetch_opencti_file`` so the importFiles
+        download path inherits pycti's HTTP session config exactly
+        like the ``x_opencti_files`` path already did.
+        """
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"data")
+        content = connector._download_import_file("file-123")
+        assert content == b"data"
         connector.helper.api.fetch_opencti_file.assert_called_once_with(
             "https://opencti.example.com/storage/get/file-123", binary=True
         )

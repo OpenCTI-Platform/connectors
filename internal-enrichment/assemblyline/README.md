@@ -148,25 +148,19 @@ or `Artifact` observable.
 
 ## Behavior
 
-1. The connector downloads the observable's file content via the
-   OpenCTI storage API.
-2. The file is submitted to AssemblyLine through `assemblyline-client`
-   with the configured profile and classification.
-3. The connector polls until the submission reaches a terminal
-   state, or until `ASSEMBLYLINE_TIMEOUT` seconds have elapsed.
+1. The connector downloads the observable's file content from OpenCTI's storage API through `pycti`'s `helper.api.fetch_opencti_file`, inheriting the platform's session timeouts, retries, custom CA bundles and proxy / SSL settings.
+2. The file is submitted to AssemblyLine via a multipart `POST` to `/api/v4/submit/` with the configured submission profile. The submission classification mirrors the source observable's TLP marking — `TLP:CLEAR` → `TLP:C`, `TLP:GREEN` → `TLP:G`, `TLP:AMBER` → `TLP:A`, `TLP:RED` → `TLP:R` — so AssemblyLine never receives a classification lower than the source carries in OpenCTI. Operators with a customised AssemblyLine classification engine can still pin a fallback default via `ASSEMBLYLINE_CLASSIFICATION` (used when the source observable has no recognisable TLP marking). The `assemblyline-client` Python SDK is used for polling, summary retrieval and the SHA-256 deduplication lookup.
+3. The connector polls until the submission reaches a terminal state, or until `ASSEMBLYLINE_TIMEOUT` seconds have elapsed. Terminal AssemblyLine states (`failed` / `error` / `cancelled`) are surfaced immediately as an `AssemblyLineTerminalError` rather than waiting for the global timeout.
 4. AssemblyLine results are converted into OpenCTI STIX objects:
    - `Malware-Analysis` SDO for the *Malware Analysis* section.
-   - `Indicator` SDOs for every malicious IOC (domains, IPs,
-     URLs), plus matching `Observable` objects linked via
-     `based-on` when `ASSEMBLYLINE_CREATE_OBSERVABLES=true`.
-   - `Malware` SDOs for every malware family attributed by
-     AssemblyLine.
-   - `Attack-Pattern` SDOs for every MITRE ATT&CK technique
-     observed, linked to the generated indicators with
-     `related-to` relationships.
+   - `Indicator` SDOs for every malicious IOC (domains, IPs, URLs), labelled `malicious` with `x_opencti_score=80`. When `ASSEMBLYLINE_INCLUDE_SUSPICIOUS=true`, suspicious-only IOCs are also emitted as separate `Indicator` SDOs labelled `suspicious` with `x_opencti_score=50`, so the OpenCTI UI keeps the two classifications distinct.
+   - Matching `Observable` objects linked via `based-on` when `ASSEMBLYLINE_CREATE_OBSERVABLES=true` (one per indicator, sharing its label and score).
+   - `Malware` SDOs for every malware family attributed by AssemblyLine.
+   - `Attack-Pattern` SDOs for every MITRE ATT&CK technique observed, linked to the generated indicators with `related-to` relationships.
    - A `Note` summarising the verdict + counts.
-   - An `External-Reference` attached to the enriched observable
-     pointing back to the AssemblyLine submission.
+   - An `External-Reference` attached to the enriched observable pointing back to the AssemblyLine submission.
+
+All derived analysis SCOs and Indicators inherit the source observable's `object_marking_refs` — a `TLP:AMBER` source produces `TLP:AMBER` analysis objects, never silently downgraded to `TLP:CLEAR`.
 
 ## Debugging
 
