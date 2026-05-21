@@ -22,6 +22,9 @@ class ElasticApiHandler:
     Handler for Elastic Security API operations including threat intel and SIEM rules
     """
 
+    # Default timeout (in seconds) for data-stream management API calls.
+    _DATA_STREAM_TIMEOUT: int = 10
+
     def __init__(self, helper: OpenCTIConnectorHelper, config):
         self.helper = helper
         self.config = config
@@ -1224,15 +1227,16 @@ class ElasticApiHandler:
             )
             return False
 
-    def _truncate_response(
+    def _format_error_response(
         self, response: "requests.Response", max_length: int = 500
     ) -> str:
         """
-        Return a concise representation of an HTTP response body for logging.
+        Return a concise, human-readable description of an HTTP error response.
 
-        Attempts to extract the ``error.reason`` field from a JSON Elasticsearch
-        error response.  Falls back to the raw text, truncated to *max_length*
-        characters with a trailing ``...`` indicator when the text is cut.
+        First attempts to extract a structured reason from the JSON body returned
+        by Elasticsearch (``error.reason`` or ``message``).  Falls back to the raw
+        response text, truncated to *max_length* characters with a trailing ``...``
+        indicator when truncation occurs.
 
         :param response: The :class:`requests.Response` to summarise.
         :param max_length: Maximum number of characters for the raw-text fallback.
@@ -1241,10 +1245,9 @@ class ElasticApiHandler:
         try:
             error_body = response.json()
             error_field = error_body.get("error")
-            if isinstance(error_field, dict):
-                reason = error_field.get("reason") or error_body.get("message")
-            else:
-                reason = error_body.get("message")
+            reason = (
+                error_field.get("reason") if isinstance(error_field, dict) else None
+            ) or error_body.get("message")
             if reason:
                 return str(reason)
         except json.JSONDecodeError as exc:
@@ -1278,7 +1281,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 verify=self._get_verify_config(),
                 cert=self.cert,
-                timeout=10,
+                timeout=self._DATA_STREAM_TIMEOUT,
             )
 
             if check_response.status_code == 200:
@@ -1294,7 +1297,7 @@ class ElasticApiHandler:
                     {
                         "status_code": check_response.status_code,
                         "data_stream": self.index_name,
-                        "response": self._truncate_response(check_response),
+                        "response": self._format_error_response(check_response),
                         "hint": "Check that the API key has the 'monitor' cluster privilege.",
                     },
                 )
@@ -1306,7 +1309,7 @@ class ElasticApiHandler:
                     {
                         "status_code": check_response.status_code,
                         "data_stream": self.index_name,
-                        "response": self._truncate_response(check_response),
+                        "response": self._format_error_response(check_response),
                     },
                 )
                 return False
@@ -1319,7 +1322,7 @@ class ElasticApiHandler:
                     {
                         "status_code": check_response.status_code,
                         "data_stream": self.index_name,
-                        "response": self._truncate_response(check_response),
+                        "response": self._format_error_response(check_response),
                     },
                 )
 
@@ -1333,7 +1336,7 @@ class ElasticApiHandler:
                 headers=self.headers,
                 verify=self._get_verify_config(),
                 cert=self.cert,
-                timeout=10,
+                timeout=self._DATA_STREAM_TIMEOUT,
             )
 
             # Elasticsearch 8 returns HTTP 200 for a successful PUT /_data_stream
@@ -1352,7 +1355,7 @@ class ElasticApiHandler:
                     {
                         "status_code": create_response.status_code,
                         "data_stream": self.index_name,
-                        "response": self._truncate_response(create_response),
+                        "response": self._format_error_response(create_response),
                         "hint": (
                             "Ensure the index template was created successfully "
                             "and that the API key has the 'manage_index_templates' "
