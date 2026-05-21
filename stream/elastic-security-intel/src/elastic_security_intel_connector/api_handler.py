@@ -519,8 +519,11 @@ class ElasticApiHandler:
                 import re
 
                 # Pattern to extract IPv4 addresses
+                regex_flags = re.IGNORECASE
                 ipv4_match = re.search(
-                    r"\[ipv4-addr:value\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                    r"\[ipv4-addr:value\s*=\s*['\"]([^'\"]+)['\"]",
+                    pattern,
+                    regex_flags,
                 )
                 if ipv4_match:
                     ip_value = ipv4_match.group(1)
@@ -532,9 +535,11 @@ class ElasticApiHandler:
                     ecs_doc["related"] = {"ip": [ip_value]}
 
                 # Pattern to extract IPv6 addresses
-                elif re.search(r"\[ipv6-addr:value\s*=\s*['\"]", pattern):
+                elif re.search(r"\[ipv6-addr:value\s*=\s*['\"]", pattern, regex_flags):
                     ipv6_match = re.search(
-                        r"\[ipv6-addr:value\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                        r"\[ipv6-addr:value\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
                     )
                     if ipv6_match:
                         ip_value = ipv6_match.group(1)
@@ -546,10 +551,15 @@ class ElasticApiHandler:
                         ecs_doc["related"] = {"ip": [ip_value]}
 
                 # Pattern to extract domains
-                elif re.search(r"\[(domain-name|domain):value\s*=\s*['\"]", pattern):
+                elif re.search(
+                    r"\[(domain-name|domain):value\s*=\s*['\"]",
+                    pattern,
+                    regex_flags,
+                ):
                     domain_match = re.search(
                         r"\[(domain-name|domain):value\s*=\s*['\"]([^'\"]+)['\"]",
                         pattern,
+                        regex_flags,
                     )
                     if domain_match:
                         domain_value = domain_match.group(2)
@@ -560,9 +570,11 @@ class ElasticApiHandler:
                         ecs_doc.setdefault("related", {})["hosts"] = [domain_value]
 
                 # Pattern to extract URLs
-                elif re.search(r"\[url:value\s*=\s*['\"]", pattern):
+                elif re.search(r"\[url:value\s*=\s*['\"]", pattern, regex_flags):
                     url_match = re.search(
-                        r"\[url:value\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                        r"\[url:value\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
                     )
                     if url_match:
                         url_value = url_match.group(1)
@@ -605,9 +617,11 @@ class ElasticApiHandler:
                             }
 
                 # Pattern to extract email addresses
-                elif re.search(r"\[email-addr:value\s*=\s*['\"]", pattern):
+                elif re.search(r"\[email-addr:value\s*=\s*['\"]", pattern, regex_flags):
                     email_match = re.search(
-                        r"\[email-addr:value\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                        r"\[email-addr:value\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
                     )
                     if email_match:
                         email_value = email_match.group(1)
@@ -619,27 +633,33 @@ class ElasticApiHandler:
                         ecs_doc.setdefault("related", {})["user"] = [email_value]
 
                 # Pattern to extract file hashes
-                elif re.search(r"\[file:hashes\.", pattern):
+                elif re.search(r"\[file:hashes\.", pattern, regex_flags):
                     threat_indicator["type"] = "file"
                     file_hashes = {}
 
                     # Extract MD5
                     md5_match = re.search(
-                        r"hashes\.MD5\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                        r"hashes\.MD5\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
                     )
                     if md5_match:
                         file_hashes["md5"] = md5_match.group(1)
 
                     # Extract SHA1
                     sha1_match = re.search(
-                        r"hashes\.(SHA1|'SHA-1')\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                        r"hashes\.(SHA1|'SHA-1')\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
                     )
                     if sha1_match:
                         file_hashes["sha1"] = sha1_match.group(2)
 
                     # Extract SHA256
                     sha256_match = re.search(
-                        r"hashes\.(SHA256|'SHA-256')\s*=\s*['\"]([^'\"]+)['\"]", pattern
+                        r"hashes\.(SHA256|'SHA-256')\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
                     )
                     if sha256_match:
                         file_hashes["sha256"] = sha256_match.group(2)
@@ -661,6 +681,31 @@ class ElasticApiHandler:
                                 related_hashes.append(hash_value)
                         if related_hashes:
                             ecs_doc.setdefault("related", {})["hash"] = related_hashes
+
+                # Pattern to extract user accounts
+                elif re.search(
+                    r"\[user-account:(user_id|account_login|display_name)\s*=\s*['\"]",
+                    pattern,
+                    regex_flags,
+                ):
+                    user_match = re.search(
+                        r"\[user-account:(user_id|account_login|display_name)\s*=\s*['\"]([^'\"]+)['\"]",
+                        pattern,
+                        regex_flags,
+                    )
+                    if user_match:
+                        user_attribute = user_match.group(1).lower()
+                        user_value = user_match.group(2)
+                        threat_indicator["type"] = "user-account"
+                        if user_attribute == "user_id":
+                            threat_indicator["user"] = {"id": user_value}
+                        elif user_attribute == "account_login":
+                            threat_indicator["user"] = {"name": user_value}
+                        else:
+                            threat_indicator["user"] = {"full_name": user_value}
+                        if not threat_indicator.get("name"):
+                            threat_indicator["name"] = user_value
+                        ecs_doc.setdefault("related", {})["user"] = [user_value]
             elif pattern_type in ["kql", "lucene", "eql", "esql"]:
                 # For Elastic-native pattern types, store as query
                 threat_indicator["type"] = "query"
