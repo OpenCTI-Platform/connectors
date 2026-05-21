@@ -27,7 +27,16 @@ def map_threat_level(alert_level: int) -> str:
 
 
 def parse_iso_datetime(iso_string: Optional[str]) -> datetime:
-    """Parse ISO 8601 datetime string to timezone-aware datetime in UTC."""
+    """Parse ISO 8601 datetime string to timezone-aware datetime in UTC.
+
+    The pydantic boundary explicitly accepts offset-bearing timestamps
+    (``+02:00`` / ``-04:00``), so the docstring contract is "always
+    return UTC" — naive inputs are assumed UTC, ``Z`` is treated as
+    UTC, and any explicit offset is normalised through
+    ``astimezone(timezone.utc)`` so downstream STIX timestamps and
+    deterministic ID seeds (which hash this value) do not silently
+    depend on the source-system timezone.
+    """
     if not iso_string:
         return datetime.now(timezone.utc)
 
@@ -36,8 +45,8 @@ def parse_iso_datetime(iso_string: Optional[str]) -> datetime:
     try:
         dt = datetime.fromisoformat(normalized)
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
     except ValueError as e:
         logging.warning(
             f"Failed to parse datetime '{iso_string}': {e}. Using current time."

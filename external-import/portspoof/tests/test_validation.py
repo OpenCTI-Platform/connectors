@@ -249,3 +249,52 @@ class TestRedactRabbitmqUrl:
         # Any non-URL still produces a sane (non-crashing) log line.
         result = _redact_rabbitmq_url("not a url at all")
         assert isinstance(result, str)
+
+
+class TestParseIsoDatetimeNormalisesToUtc:
+    """``parse_iso_datetime`` must return a UTC datetime regardless of input offset.
+
+    Downstream STIX timestamps and deterministic ID seeds hash this
+    value — silently honouring the source-system timezone (the
+    pre-fix behaviour, which only normalised naive timestamps) would
+    produce different STIX IDs depending on whether the publisher
+    emitted ``+02:00`` vs ``Z`` for the same wall-clock moment, and
+    would let UI tooling render the same event twice in different
+    timezones. The boundary now asserts UTC end-to-end.
+    """
+
+    @staticmethod
+    def _parse(value):
+        from helpers import parse_iso_datetime
+
+        return parse_iso_datetime(value)
+
+    def test_zulu_returns_utc(self) -> None:
+        from datetime import timezone
+
+        dt = self._parse("2026-05-21T10:00:00Z")
+        assert dt.tzinfo is not None
+        assert dt.utcoffset() == timezone.utc.utcoffset(dt)
+        assert dt.isoformat() == "2026-05-21T10:00:00+00:00"
+
+    def test_positive_offset_normalised_to_utc(self) -> None:
+        # ``12:00+02:00`` is ``10:00`` in UTC. The pre-fix code
+        # returned a ``+02:00`` datetime, which then leaked into
+        # ``created`` / ``modified`` on the STIX side; now it's UTC.
+        dt = self._parse("2026-05-21T12:00:00+02:00")
+        assert dt.utcoffset().total_seconds() == 0
+        assert dt.isoformat() == "2026-05-21T10:00:00+00:00"
+
+    def test_negative_offset_normalised_to_utc(self) -> None:
+        # ``06:00-04:00`` is ``10:00`` in UTC.
+        dt = self._parse("2026-05-21T06:00:00-04:00")
+        assert dt.utcoffset().total_seconds() == 0
+        assert dt.isoformat() == "2026-05-21T10:00:00+00:00"
+
+    def test_naive_input_assumed_utc(self) -> None:
+        # No tzinfo on the wire is treated as UTC (matches the docstring
+        # contract and what the connector did before — pinned so a
+        # later refactor cannot silently re-introduce drift).
+        dt = self._parse("2026-05-21T10:00:00")
+        assert dt.utcoffset().total_seconds() == 0
+        assert dt.isoformat() == "2026-05-21T10:00:00+00:00"

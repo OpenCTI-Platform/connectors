@@ -1628,10 +1628,17 @@ This indicator represents confirmed malicious activity observed through direct i
 
         bundle = Bundle(objects=bundle_objects_with_refs, allow_custom=True)
         bundle_json = bundle.serialize()
+        # ``bundle.serialize()`` returns a Python ``str``; ``len(str)``
+        # counts characters, not bytes. Compute the UTF-8 byte length so
+        # the diagnostic actually reflects what we ship over the wire
+        # (matters for multi-byte values in observable descriptions /
+        # labels, where the character count understates the on-wire
+        # size).
+        bundle_size_bytes = len(bundle_json.encode("utf-8"))
 
         logging.debug(
             f"Created STIX Bundle with {len(bundle_objects_with_refs)} objects "
-            f"(+2 for Identity and Marking, {len(bundle_json)} bytes)"
+            f"(+2 for Identity and Marking, {bundle_size_bytes} bytes)"
         )
 
         self.helper.send_stix2_bundle(

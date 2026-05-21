@@ -18,7 +18,12 @@ services:
       # editing the code.
       - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-Threat-Actor,Observed-Data,IPv4-Addr,IPv6-Addr,Tool,Attack-Pattern,Report,Relationship,Sighting}
       - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
-      - RABBITMQ_URL=${RABBITMQ_URL}
+      # Default mirrors the connector-side default in ``build_config_from_env``
+      # so leaving ``RABBITMQ_URL`` unset in the operator's ``.env`` does not
+      # blank the value through ``${RABBITMQ_URL}`` (which would override the
+      # application default with an empty string and the connector would try
+      # to connect with no URL at all).
+      - RABBITMQ_URL=${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
       - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME:-opencti-connector-queue}
       - PS_LOG_FILE=${PS_LOG_FILE:-}
       - PS_DEBUG_FULL_DUMPS=${PS_DEBUG_FULL_DUMPS:-0}
