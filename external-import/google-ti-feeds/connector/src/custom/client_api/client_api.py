@@ -105,6 +105,18 @@ class ClientAPI:
         async for report_data in self.report_client.fetch_reports(initial_state):
             yield report_data
 
+    async def download_report_pdf(self, report_id: str) -> bytes | None:
+        """Download a report PDF from the GTI API.
+
+        Args:
+            report_id: The ID of the report to download the PDF for.
+
+        Returns:
+            The PDF content as bytes, or None if the download failed.
+
+        """
+        return await self.report_client.download_report_pdf(report_id)
+
     async def fetch_threat_actors(
         self, initial_state: dict[str, Any] | None
     ) -> AsyncGenerator[dict[Any, Any], None]:
