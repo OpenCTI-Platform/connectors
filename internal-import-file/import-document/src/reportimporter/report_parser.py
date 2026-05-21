@@ -150,6 +150,7 @@ class ReportParser(object):
         self.helper.log_info(f"Parsing report {file_type}")
 
         try:
+            file_data.seek(0)
             parsing_results = file_parser(file_data)
         except Exception as e:
             logging.exception(f"Parsing Error: {e}")
