@@ -41,6 +41,46 @@ from .utils import (
 
 DEFAULT_TIMEOUT: Final = (10, 180)  # connect, read
 
+# Keys that may carry secrets in OAuth / Microsoft identity responses.
+# Stripped from any response payload before it lands in connector logs:
+# the OAuth token endpoint returns ``access_token`` (and on some
+# tenants ``refresh_token`` / ``id_token``) inside a 2xx response, so
+# a downstream ``KeyError`` on a missing companion field
+# (e.g. ``expires_in``) used to surface the full payload — including
+# the bearer — through the error log. We always copy the dict before
+# redacting so the live response object the caller is still using is
+# untouched.
+_SENSITIVE_RESPONSE_KEYS: Final = frozenset(
+    {
+        "access_token",
+        "refresh_token",
+        "id_token",
+        "client_secret",
+        "client_assertion",
+        "assertion",
+    }
+)
+
+
+def _redact_sensitive(payload: Any) -> Any:
+    """Return a shallow copy of ``payload`` with sensitive keys masked.
+
+    Only redacts top-level keys named in :data:`_SENSITIVE_RESPONSE_KEYS`
+    (Microsoft's OAuth responses are flat) and leaves any other shape
+    (lists, strings, ``None``) untouched. The mask preserves the key
+    so operators can still tell *which* field was present — useful
+    when triaging why a parse failed — without exposing the value.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    redacted: dict[str, Any] = {}
+    for k, v in payload.items():
+        if k in _SENSITIVE_RESPONSE_KEYS and v not in (None, ""):
+            redacted[k] = "***redacted***"
+        else:
+            redacted[k] = v
+    return redacted
+
 
 class DefenderApiHandlerError(Exception):
     def __init__(self, message: str, metadata: Mapping[str, Any] | None = None):
@@ -129,7 +169,12 @@ class DefenderApiHandler:
         except (requests.exceptions.RequestException, KeyError) as e:
             error_description = response_json.get("error_description", "Unknown error")
             error_message = f"Failed generating oauth token: {error_description}"
-            meta: dict[str, Any] = {"response": response_json}
+            # The token endpoint can return a 2xx body that already
+            # contains ``access_token`` even when a companion field
+            # (e.g. ``expires_in``) is missing — without the redaction
+            # the ``KeyError`` branch would log the bearer through
+            # ``meta["response"]``. See ``_redact_sensitive``.
+            meta: dict[str, Any] = {"response": _redact_sensitive(response_json)}
             if isinstance(e, requests.exceptions.HTTPError) and e.response is not None:
                 try:
                     meta["details"] = {
