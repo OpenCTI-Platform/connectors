@@ -31,6 +31,8 @@ from reportimporter.models import Entity, EntityConfig, Observable
 from reportimporter.report_parser import ReportParser
 from reportimporter.util import MyConfigParser
 
+DUPLICATE_ID_ERROR_MESSAGE = "Id loading expect only one response"
+
 
 class ReportImporter:
     def __init__(self) -> None:
@@ -559,23 +561,56 @@ class ReportImporter:
     def _read_entity_with_fallback(
         self, api_entity, filters: Dict, entity_label: str, lookup_value: str
     ):
+        """Read a single entity and fallback to list() for known duplicate-id backend errors."""
         try:
             return api_entity.read(filters=filters)
         except Exception as e:
+            # pycti currently does not expose a dedicated exception type for this backend
+            # uniqueness failure and surfaces it as a generic Exception. Restrict fallback
+            # handling to this known message to avoid masking unrelated failures.
             error_message = str(e)
-            if "Id loading expect only one response" not in error_message:
+            if DUPLICATE_ID_ERROR_MESSAGE not in error_message:
+                self.helper.log_warning(
+                    f"{entity_label} lookup for '{lookup_value}' failed with unexpected "
+                    f"{type(e).__name__}: {error_message}"
+                )
                 raise
             self.helper.log_warning(
                 f"{entity_label} lookup for '{lookup_value}' failed with read(). "
                 f"Retrying with list(): {error_message}"
             )
-            entities = api_entity.list(getAll=True, filters=filters) or []
-            if len(entities) > 1:
+            entities = api_entity.list(getAll=True, filters=filters)
+            if entities is None:
+                self.helper.log_warning(
+                    f"{entity_label} lookup for '{lookup_value}' returned None with list()."
+                )
+                return None
+            entities_with_id = []
+            dropped_entities_without_id = 0
+            for entity in entities:
+                if entity.get("id"):
+                    entities_with_id.append(entity)
+                else:
+                    dropped_entities_without_id += 1
+            if dropped_entities_without_id:
+                self.helper.log_warning(
+                    f"{entity_label} lookup for '{lookup_value}' returned "
+                    f"{dropped_entities_without_id} invalid result(s) without id. "
+                    "Skipping invalid results."
+                )
+            # Keep fallback selection deterministic across retries.
+            sorted_entities = sorted(entities_with_id, key=lambda entity: entity["id"])
+            if len(sorted_entities) > 1:
                 self.helper.log_warning(
                     f"{entity_label} lookup for '{lookup_value}' returned multiple entities "
-                    f"({len(entities)}). Using the first one."
+                    f"({len(sorted_entities)}). Using the first one sorted by id."
                 )
-            return entities[0] if entities else None
+            if not sorted_entities:
+                self.helper.log_warning(
+                    f"{entity_label} lookup for '{lookup_value}' returned no usable entity "
+                    "after filtering list() results. No fallback entity will be used."
+                )
+            return sorted_entities[0] if sorted_entities else None
 
     def _convert_id(self, type, standard_id):
         if type == "Case-Incident":
