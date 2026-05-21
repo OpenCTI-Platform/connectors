@@ -189,10 +189,18 @@ def get_action(data: dict, default_action: str | None = None) -> str:
     """
     Determine the effective action for this observable.
 
-    Precedence:
-      1) Per-observable override (``__policy_action``) if present.
-      2) Connector-level ``default_action`` (if provided).
-      3) Score-based mapping.
+    Precedence (first match wins):
+      1) Per-observable override (``__policy_action``) — typically
+         applied by a per-collection policy in
+         ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS``.
+      2) Connector-level ``default_action`` — when an operator pins a
+         single global action (the connector ships with
+         ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION="Audit"`` by
+         default, so the score-based mapping below is opt-in: set
+         ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION=""`` to disable
+         the global pin and fall through to the score-based mapping).
+      3) Score-based mapping — only reached when both (1) and (2) are
+         empty / unset.
 
     Score-based mapping (defensive, defaults to ``Audit``):
       * ``score >= 60``         -> ``Block``

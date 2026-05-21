@@ -253,6 +253,8 @@ graph LR
 | BlockAndRemediate| Block and remediate                                      |
 | Warn             | Generate warning without blocking                        |
 
+When `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION` is set to one of the values above (default: `Audit`), every imported observable inherits that fixed action and the per-indicator score is ignored. To enable score-based action mapping (`score >= 60` → `Block`, `30 < score < 60` → `Warn`, `0 < score < 30` → `Audit`, missing / zero score → `Audit`), set the env var to the empty string `""`. Per-collection policy in `MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS` always takes precedence over both the global action and the score-based mapping.
+
 ## Debugging
 
 Enable verbose logging by setting:

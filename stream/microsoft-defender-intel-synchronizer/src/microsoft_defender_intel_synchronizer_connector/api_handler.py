@@ -324,7 +324,15 @@ class DefenderApiHandler:
             )
             return None
 
-        # Build body
+        # Build body. ``get_action`` honours a per-observable override
+        # (``__policy_action`` set by per-collection policy) first, then
+        # the connector-level ``self.config.action`` if it is truthy,
+        # then falls through to the score-based mapping. The connector
+        # ships with ``action="Audit"`` by default so the global pin
+        # short-circuits the score mapping — operators who want score
+        # -based actions must set ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION=""``
+        # to unlock the third branch. See ``utils.get_action`` for the
+        # full precedence contract.
         body: dict[str, Any] = {
             "indicatorType": indicator_type,
             "indicatorValue": cleaned_value,

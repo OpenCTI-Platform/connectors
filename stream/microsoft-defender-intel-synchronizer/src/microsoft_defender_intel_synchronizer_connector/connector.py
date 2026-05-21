@@ -543,7 +543,7 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                 if not edges:
                     self.helper.connector_logger.debug(
                         "No more edges returned for batch, stopping.",
-                        {"batch_num": batch_num, "collection_str": collection_name},
+                        {"batch_num": batch_num, "collection": collection_name},
                     )
                     break
                 for edge in edges:
@@ -558,8 +558,8 @@ query GetFeedElements($filters: FilterGroup, $count: Int, $cursor: ID) {
                     "Batch retrieved",
                     {
                         "batch_num": batch_num,
-                        "collection_str": collection_name,
-                        "indicators count": len(edges),
+                        "collection": collection_name,
+                        "indicators_count": len(edges),
                         "cursor": cursor,
                         "has_next_page": has_next_page,
                     },
