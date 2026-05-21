@@ -12,7 +12,7 @@ from pydantic import ValidationError
 def external_import_state(mock_opencti_connector_helper):
     """An attached `ExternalImportConnectorState` instance for tests."""
     state = ExternalImportConnectorState()
-    state.attach_opencti_connector_helper(mock_opencti_connector_helper)
+    state.inject_dependencies(mock_opencti_connector_helper)
     return state
 
 
