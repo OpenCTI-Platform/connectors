@@ -317,6 +317,9 @@ class QRadarConnector:
         try:
             data = json.loads(msg.data)["data"]
             if data["type"] in self.qradar_ignore_types:
+                self.helper.connector_logger.debug(
+                    "[Processing] Ignoring entity type { " + data["type"] + " }"
+                )
                 return None
             if data["type"] == "indicator" and data["pattern_type"].startswith("stix"):
                 indicator_data = self._process_indicator(data)
