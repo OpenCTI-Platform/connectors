@@ -155,11 +155,17 @@ class ConverterToStix:
         Return:
             IPv4 Address in STIX 2.1 format
         """
+        # STIX 2.1 only defines ``created_by_ref`` on SDOs/SROs. For cyber
+        # observables (SCOs) like ``ipv4-addr`` OpenCTI carries the author
+        # via the custom property ``x_opencti_created_by_ref``; setting
+        # the standard ``created_by_ref`` on the SCO would land in the
+        # bundle as an arbitrary custom field and the platform would not
+        # pick up the observable's author.
         return stix2.IPv4Address(
             value=ip,
             type="ipv4-addr",
             object_marking_refs=[self.marking.id] if self.marking else [],
-            created_by_ref=self.author.get("id"),
+            custom_properties={"x_opencti_created_by_ref": self.author.get("id")},
             allow_custom=True,
         )
 
@@ -172,11 +178,13 @@ class ConverterToStix:
         Return:
             IPv6 Address in STIX 2.1 format
         """
+        # See ``create_ipv4`` for the rationale — SCO author propagation
+        # goes through ``x_opencti_created_by_ref``, not ``created_by_ref``.
         return stix2.IPv6Address(
             value=ip,
             type="ipv6-addr",
             object_marking_refs=[self.marking.id] if self.marking else [],
-            created_by_ref=self.author.get("id"),
+            custom_properties={"x_opencti_created_by_ref": self.author.get("id")},
             allow_custom=True,
         )
 

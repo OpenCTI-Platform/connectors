@@ -138,7 +138,6 @@ class RansomwareAPIConnector:
         Return:
             bundle_objects: list of stix2 objects
         """
-        """Retrieve STIX objects and add them to bundle list"""
         bundle_objects = []
 
         # 1. Creating Victim object
@@ -194,6 +193,15 @@ class RansomwareAPIConnector:
                 victim=victim,
                 description=item.get("description"),
                 attack_date_iso=attack_date_iso,  # first_seen
+                # ``discovered_iso`` becomes the ``created`` timestamp on
+                # the Campaign -> Victim ``targets`` relationship emitted
+                # by ``process_campaign``. Without it the relationship
+                # would be timestamp-less while the parallel
+                # ThreatActor -> Victim / IntrusionSet -> Victim
+                # relationships emitted below correctly carry the same
+                # discovery time — leaving the Campaign relationship
+                # subtly out of sync.
+                discovered_iso=discovered_iso,
                 external_references=external_references,
             )
             bundle_objects.append(campaign)
@@ -534,8 +542,22 @@ class RansomwareAPIConnector:
                         )
 
                         if bundle_list:
-                            # Add author, deduplicate, and bundle
-                            bundle_list = [self.converter_to_stix.author] + bundle_list
+                            # Prepend BOTH the marking definition and the
+                            # author. ``send_stix2_bundle`` below is called
+                            # with ``cleanup_inconsistent_bundle=True``, so
+                            # any ``object_marking_refs`` pointing at a
+                            # marking SDO that is not also in the bundle
+                            # would be stripped — that is exactly the
+                            # empty-marking regression #6419 reported, and
+                            # the live ``collect_intelligence`` path
+                            # already prepends ``[marking, author]`` here.
+                            # The historic backfill must mirror that or it
+                            # silently reintroduces the bug for the
+                            # backfill bundles only.
+                            bundle_list = [
+                                self.converter_to_stix.marking,
+                                self.converter_to_stix.author,
+                            ] + bundle_list
                             nb_stix_objects += len(bundle_list)
                             # Deduplicate the objects
                             bundle_list = self.helper.stix2_deduplicate_objects(
