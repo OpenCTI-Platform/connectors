@@ -485,7 +485,20 @@ class YaraConnector:
 
         out: list = []
         for rel in relationships or []:
-            target = (rel.get("to") or {}) if isinstance(rel, dict) else {}
+            # ``rel`` itself must be a dict (the GraphQL layer can in
+            # theory surface an unexpected shape — be defensive). And
+            # even when ``rel`` is a dict, ``rel["to"]`` is not
+            # guaranteed to be a dict either: a non-empty list / string
+            # value would slip past the ``or {}`` fallback (only falsy
+            # values trigger it) and crash on ``target.get(...)`` with
+            # ``AttributeError``, aborting the whole scan. Guard both
+            # layers explicitly so a malformed payload just gets
+            # skipped (``continue``) instead of breaking the run.
+            if not isinstance(rel, dict):
+                continue
+            target = rel.get("to")
+            if not isinstance(target, dict):
+                continue
             malware_standard_id = target.get("standard_id")
             if not malware_standard_id:
                 continue

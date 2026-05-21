@@ -591,14 +591,26 @@ class TestPropagateMalwareRelationships:
         connector.helper.api.stix_core_relationship.list.assert_not_called()
 
     def test_skips_relationships_without_target_standard_id(self):
+        # Every malformed relationship payload below must be silently
+        # skipped — none of them must raise. In particular the
+        # truthy-but-not-a-dict shapes (``"to": ["..."]`` and
+        # ``"to": "..."``) would slip past ``rel.get("to") or {}`` (only
+        # falsy values trigger that fallback), and the subsequent
+        # ``target.get("standard_id")`` would raise ``AttributeError``
+        # and abort the whole scan — the very crash the
+        # ``isinstance(target, dict)`` guard in
+        # ``_build_malware_relationships`` is meant to prevent.
         connector = _make_connector(yara={"propagate_malware_relationship": True})
         connector.helper.api.fetch_opencti_file = MagicMock(
             return_value=b"This is test data"
         )
         connector.helper.api.stix_core_relationship.list = MagicMock(
             return_value=[
-                {"to": None},  # malformed payload
+                {"to": None},  # falsy non-dict (caught by ``or {}``)
                 {"to": {}},  # missing standard_id
+                {"to": ["something"]},  # truthy non-dict (list)
+                {"to": "some-id"},  # truthy non-dict (string)
+                "not-a-relationship-dict",  # top-level non-dict
                 {
                     "to": {
                         "standard_id": (
