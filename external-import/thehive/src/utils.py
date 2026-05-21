@@ -1,10 +1,10 @@
 import ipaddress
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def format_datetime(timestamp, time_format):
     """formatting the date based on the provided timestamp and time_format."""
-    return datetime.utcfromtimestamp(int(timestamp)).strftime(time_format)
+    return datetime.fromtimestamp(int(timestamp), tz=timezone.utc).strftime(time_format)
 
 
 def is_ipv6(ip_str):
