@@ -23,3 +23,4 @@ external-import/loaderinsightagency
 .coverage
 **/*coverage.xml
 **/junit.xml
+dynamic.yml
