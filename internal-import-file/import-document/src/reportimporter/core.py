@@ -562,11 +562,14 @@ class ReportImporter:
         try:
             return api_entity.read(filters=filters)
         except Exception as e:
+            error_message = str(e)
+            if "Id loading expect only one response" not in error_message:
+                raise
             self.helper.log_warning(
                 f"{entity_label} lookup for '{lookup_value}' failed with read(). "
-                f"Retrying with list(): {e}"
+                f"Retrying with list(): {error_message}"
             )
-            entities = api_entity.list(getAll=True, filters=filters)
+            entities = api_entity.list(getAll=True, filters=filters) or []
             if len(entities) > 1:
                 self.helper.log_warning(
                     f"{entity_label} lookup for '{lookup_value}' returned multiple entities "
