@@ -171,7 +171,16 @@ class IntelManager:
         )
         intel_id = self.cache.get("intel", indicator_opencti_id)
         if intel_id is None:
-            self.helper.log_info("[UPDATE] Indicator does not exist, doing nothing")
+            if indicator.get("pattern_type") == "yara":
+                self.helper.connector_logger.info(
+                    "[UPDATE] YARA indicator not found in cache, creating intel",
+                    {"id": indicator_opencti_id},
+                )
+                return self.create_intel_from_indicator(indicator)
+            self.helper.connector_logger.info(
+                "[UPDATE] Indicator does not exist, doing nothing",
+                {"id": indicator_opencti_id},
+            )
             return None
 
         self._add_intel_labels(indicator, intel_id)
