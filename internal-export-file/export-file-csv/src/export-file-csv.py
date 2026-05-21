@@ -1,8 +1,8 @@
 import csv
-import io
 import json
 import os
 import sys
+import tempfile
 import time
 
 import yaml
@@ -31,8 +31,10 @@ class ExportFileCsv:
         )  # error holder to be reset before each new process
 
     def export_dict_list_to_csv(self, data):
-        output = io.StringIO()
-        headers = sorted(set().union(*(d.keys() for d in data)))
+        headers = set()
+        for row in data:
+            headers.update(row.keys())
+        headers = sorted(headers)
         if "hashes" in headers:
             headers = headers + [
                 "hashes.MD5",
@@ -41,81 +43,96 @@ class ExportFileCsv:
                 "hashes_SHA-512",
                 "hashes_SSDEEP",
             ]
-        csv_data = [headers]
-        for d in data:
-            try:
-                row = []
-                for h in headers:
-                    if h.startswith("hashes_") and "hashes" in d:
-                        hashes = {}
-                        for hash in d["hashes"]:
-                            hashes[hash["algorithm"]] = hash["hash"]
-                        if h.split("_")[1] in hashes:
-                            row.append(hashes[h.split("_")[1]])
-                        else:
-                            row.append("")
-                    elif h not in d:
-                        row.append("")
-                    elif isinstance(d[h], str):
-                        row.append(d[h])
-                    elif isinstance(d[h], int):
-                        row.append(str(d[h]))
-                    elif isinstance(d[h], float):
-                        row.append(str(d[h]))
-                    elif isinstance(d[h], list):
-                        if len(d[h]) > 0 and isinstance(d[h][0], str):
-                            row.append(",".join(d[h]))
-                        elif len(d[h]) > 0 and isinstance(d[h][0], dict):
-                            rrow = []
-                            for r in d[h]:
-                                if "name" in r:
-                                    if r["name"] is not None:
-                                        rrow.append(r["name"])
-                                    else:
-                                        rrow.append("")
-                                elif "definition" in r:
-                                    if r["definition"] is not None:
-                                        rrow.append(r["definition"])
-                                    else:
-                                        rrow.append("")
-                                elif "value" in r:
-                                    if r["value"] is not None:
-                                        rrow.append(r["value"])
-                                    else:
-                                        rrow.append("")
-                                elif "observable_value" in r:
-                                    if r["observable_value"] is not None:
-                                        rrow.append(r["observable_value"])
-                                    else:
-                                        rrow.append("")
-                            row.append(",".join(rrow))
-                        else:
-                            row.append("")
-                    elif isinstance(d[h], dict):
-                        if "name" in d[h]:
-                            row.append(d[h]["name"])
-                        elif "value" in d[h]:
-                            row.append(d[h]["value"])
-                        elif "observable_value" in d[h]:
-                            row.append(d[h]["observable_value"])
-                        else:
-                            row.append("")
-                    else:
-                        row.append("")
-                csv_data.append(row)
-            except Exception as err:
-                self.helper.connector_logger.warning(
-                    "Error with csv input data, one line cannot be exported." + str(err)
+        tmp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tmp")
+        os.makedirs(tmp_dir, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(suffix=".csv", dir=tmp_dir)
+        os.close(fd)
+
+        try:
+            with open(tmp_path, "w", newline="", encoding="utf-8") as output:
+                writer = csv.writer(
+                    output,
+                    delimiter=self.export_file_csv_delimiter,
+                    quotechar='"',
+                    quoting=csv.QUOTE_ALL,
                 )
-                self.errors.append(err)
-        writer = csv.writer(
-            output,
-            delimiter=self.export_file_csv_delimiter,
-            quotechar='"',
-            quoting=csv.QUOTE_ALL,
-        )
-        writer.writerows(csv_data)
-        return output.getvalue()
+                writer.writerow(headers)
+                for d in data:
+                    try:
+                        row = []
+                        for h in headers:
+                            if h.startswith("hashes_") and "hashes" in d:
+                                hashes = {}
+                                for hash in d["hashes"]:
+                                    hashes[hash["algorithm"]] = hash["hash"]
+                                if h.split("_")[1] in hashes:
+                                    row.append(hashes[h.split("_")[1]])
+                                else:
+                                    row.append("")
+                            elif h not in d:
+                                row.append("")
+                            elif isinstance(d[h], str):
+                                row.append(d[h])
+                            elif isinstance(d[h], int):
+                                row.append(str(d[h]))
+                            elif isinstance(d[h], float):
+                                row.append(str(d[h]))
+                            elif isinstance(d[h], list):
+                                if len(d[h]) > 0 and isinstance(d[h][0], str):
+                                    row.append(",".join(d[h]))
+                                elif len(d[h]) > 0 and isinstance(d[h][0], dict):
+                                    rrow = []
+                                    for r in d[h]:
+                                        if "name" in r:
+                                            if r["name"] is not None:
+                                                rrow.append(r["name"])
+                                            else:
+                                                rrow.append("")
+                                        elif "definition" in r:
+                                            if r["definition"] is not None:
+                                                rrow.append(r["definition"])
+                                            else:
+                                                rrow.append("")
+                                        elif "value" in r:
+                                            if r["value"] is not None:
+                                                rrow.append(r["value"])
+                                            else:
+                                                rrow.append("")
+                                        elif "observable_value" in r:
+                                            if r["observable_value"] is not None:
+                                                rrow.append(r["observable_value"])
+                                            else:
+                                                rrow.append("")
+                                    row.append(",".join(rrow))
+                                else:
+                                    row.append("")
+                            elif isinstance(d[h], dict):
+                                if "name" in d[h]:
+                                    row.append(d[h]["name"])
+                                elif "value" in d[h]:
+                                    row.append(d[h]["value"])
+                                elif "observable_value" in d[h]:
+                                    row.append(d[h]["observable_value"])
+                                else:
+                                    row.append("")
+                            else:
+                                row.append("")
+                        writer.writerow(row)
+                    except Exception as err:
+                        self.helper.connector_logger.warning(
+                            "Error with csv input data, one line cannot be exported."
+                            + str(err)
+                        )
+                        self.errors.append(err)
+            with open(tmp_path, "rb") as output:
+                return output.read()
+        finally:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                self.helper.connector_logger.warning(
+                    f"Could not remove temporary file: {tmp_path}"
+                )
 
     def _export_list(self, data, entities_list, list_filters):
         file_name = data["file_name"]
