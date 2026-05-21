@@ -1,6 +1,13 @@
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
+
+import pycti
 import pytest
+import stix2
+from api_client.models import EventRestSearchListItem
 from connector.use_cases.convert_event import (
     DEFAULT_THREAT_LEVEL_SCORE_MAPPING,
+    EventConverter,
     event_threat_level_to_opencti_score,
 )
 
@@ -56,3 +63,92 @@ def test_default_threat_level_score_mapping_matches_legacy_behavior():
         "3": 30,
         "4": 50,
     }
+
+
+def _make_author() -> stix2.Identity:
+    return stix2.Identity(
+        id=pycti.Identity.generate_id(
+            name="Test Author", identity_class="organization"
+        ),
+        name="Test Author",
+        identity_class="organization",
+    )
+
+
+def test_create_report_uses_publish_timestamp_for_created_and_published():
+    converter = EventConverter(
+        logger=MagicMock(),
+        external_reference_base_url="https://misp.test",
+    )
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "info": "Test Event",
+                "date": "2024-11-27",
+                "timestamp": str(
+                    int(
+                        datetime(
+                            2024, 12, 5, 6, 31, 34, tzinfo=timezone.utc
+                        ).timestamp()
+                    )
+                ),
+                "publish_timestamp": str(
+                    int(
+                        datetime(2024, 12, 5, 6, 30, 0, tzinfo=timezone.utc).timestamp()
+                    )
+                ),
+            }
+        }
+    )
+
+    author = _make_author()
+    report = converter.create_report(
+        event=event,
+        labels=[],
+        object_refs=[author.id],
+        author=author,
+        markings=[],
+        external_references=[],
+        associated_files=[],
+    )
+
+    assert report.created == datetime(2024, 12, 5, 6, 30, 0, tzinfo=timezone.utc)
+    assert report.published == datetime(2024, 12, 5, 6, 30, 0, tzinfo=timezone.utc)
+    assert report.modified == datetime(2024, 12, 5, 6, 31, 34, tzinfo=timezone.utc)
+
+
+def test_create_report_falls_back_to_event_date_when_publish_timestamp_missing():
+    converter = EventConverter(
+        logger=MagicMock(),
+        external_reference_base_url="https://misp.test",
+    )
+    event = EventRestSearchListItem.model_validate(
+        {
+            "Event": {
+                "info": "Test Event",
+                "date": "2024-11-27",
+                "timestamp": str(
+                    int(
+                        datetime(
+                            2024, 12, 5, 6, 31, 34, tzinfo=timezone.utc
+                        ).timestamp()
+                    )
+                ),
+                "publish_timestamp": "0",
+            }
+        }
+    )
+
+    author = _make_author()
+    report = converter.create_report(
+        event=event,
+        labels=[],
+        object_refs=[author.id],
+        author=author,
+        markings=[],
+        external_references=[],
+        associated_files=[],
+    )
+
+    assert report.created == datetime(2024, 11, 27, 0, 0, 0, tzinfo=timezone.utc)
+    assert report.published == datetime(2024, 11, 27, 0, 0, 0, tzinfo=timezone.utc)

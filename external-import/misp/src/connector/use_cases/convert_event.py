@@ -160,9 +160,14 @@ class EventConverter:
         else:
             description = event.Event.info
 
-        created_at = datetime.fromisoformat(event.Event.date).astimezone(
-            tz=timezone.utc
-        )
+        if event.Event.publish_timestamp and int(event.Event.publish_timestamp) > 0:
+            created_at = datetime.fromtimestamp(
+                int(event.Event.publish_timestamp), tz=timezone.utc
+            )
+        else:
+            created_at = datetime.fromisoformat(event.Event.date).replace(
+                tzinfo=timezone.utc
+            )
         modified_at = datetime.fromtimestamp(
             int(event.Event.timestamp), tz=timezone.utc
         )
