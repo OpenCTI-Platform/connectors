@@ -362,16 +362,18 @@ class MWDB:
                         "filterGroups": [],
                     }
                 )
-                relationship = Relationship(
-                    id=StixCoreRelationship.generate_id(
-                        "related-to", sample["observable"]["id"], cve["id"]
-                    ),
-                    source_ref=sample["observable"]["id"],
-                    target_ref=cve["id"],
-                    relationship_type="related-to",
-                    created_by_ref=self.identity["standard_id"],
-                )
-                relations.append(relationship)
+                cve_id = cve.get("id") if isinstance(cve, dict) else None
+                if cve_id:
+                    relationship = Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "related-to", sample["observable"]["id"], cve_id
+                        ),
+                        source_ref=sample["observable"]["id"],
+                        target_ref=cve_id,
+                        relationship_type="related-to",
+                        created_by_ref=self.identity["standard_id"],
+                    )
+                    relations.append(relationship)
 
             # first search in unstructured tag malware
             fullsearch = self.helper.api.malware.read(
@@ -382,21 +384,29 @@ class MWDB:
                 }
             )
             if fullsearch:
+                if isinstance(fullsearch, dict):
+                    fullsearch = [fullsearch]
                 for malwsearc in fullsearch:
+                    if not isinstance(malwsearc, dict):
+                        continue
+                    malwsearc_name = malwsearc.get("name")
+                    malwsearc_id = malwsearc.get("id")
+                    if not malwsearc_name or not malwsearc_id:
+                        continue
                     if (
-                        malwsearc["name"].lower().strip()
+                        malwsearc_name.lower().strip()
                         == taglabel.lower().strip().replace(" ", "")
-                        or malwsearc["name"].lower().strip() == taglabel.lower()
+                        or malwsearc_name.lower().strip() == taglabel.lower()
                     ):
                         # create relation and continue indicates
                         relationship = Relationship(
                             id=StixCoreRelationship.generate_id(
                                 "related-to",
                                 sample["observable"]["id"],
-                                malwsearc["id"],
+                                malwsearc_id,
                             ),
                             source_ref=sample["observable"]["id"],
-                            target_ref=malwsearc["id"],
+                            target_ref=malwsearc_id,
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
@@ -411,22 +421,27 @@ class MWDB:
                 }
             )
             if fullsearch:
+                if isinstance(fullsearch, dict):
+                    fullsearch = [fullsearch]
                 for intrusion in fullsearch:
-                    if intrusion[
-                        "name"
-                    ].lower().strip() == taglabel.lower().strip() or intrusion[
-                        "name"
-                    ].lower().strip() == taglabel.lower().strip().replace(
-                        " ", ""
+                    if not isinstance(intrusion, dict):
+                        continue
+                    intrusion_name = intrusion.get("name")
+                    intrusion_id = intrusion.get("id")
+                    if not intrusion_name or not intrusion_id:
+                        continue
+                    if intrusion_name.lower().strip() == taglabel.lower().strip() or (
+                        intrusion_name.lower().strip()
+                        == taglabel.lower().strip().replace(" ", "")
                     ):
                         relationship = Relationship(
                             id=StixCoreRelationship.generate_id(
                                 "related-to",
                                 sample["observable"]["id"],
-                                intrusion["id"],
+                                intrusion_id,
                             ),
                             source_ref=sample["observable"]["id"],
-                            target_ref=intrusion["id"],
+                            target_ref=intrusion_id,
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
@@ -555,13 +570,14 @@ class MWDB:
 
             try:
                 # Check if "mal_tag" and "extra" exist and process extra tags
+                extra_values = []
+                if isinstance(virus.get("mal_tag"), dict):
+                    extra_values = virus["mal_tag"].get("extra") or []
                 if (
-                    "mal_tag" in virus
-                    and "extra" in virus["mal_tag"]
-                    and len(virus["mal_tag"]["extra"]) > 0
+                    len(extra_values) > 0
                     and str(self.create_observables).capitalize() == "True"
                 ):
-                    extra_tag = self.process_extratag(virus["mal_tag"]["extra"], virus)
+                    extra_tag = self.process_extratag(extra_values, virus)
                     if extra_tag:
                         for relationextra in extra_tag:
                             if relationextra:
