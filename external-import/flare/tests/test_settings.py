@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 import yaml
 from _pytest.monkeypatch import MonkeyPatch
-
 from connector.settings import ConnectorSettings
 
 

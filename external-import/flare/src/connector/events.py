@@ -95,6 +95,7 @@ def lookalike_domain_from_event(event: dict[str, Any]) -> LookalikeDomainEvent:
 @dataclass
 class LeakedCredentialEvent(BaseEvent):
     username: str
+    identity_name: str
 
 
 def leaked_credentials_from_event(event: dict[str, Any]) -> LeakedCredentialEvent:
@@ -103,6 +104,7 @@ def leaked_credentials_from_event(event: dict[str, Any]) -> LeakedCredentialEven
     return LeakedCredentialEvent(
         **asdict(base),
         username=data.get("id", ""),
+        identity_name=data.get("identity_name", ""),
     )
 
 
@@ -110,7 +112,7 @@ def get_event_from_event_json(
     event: dict[str, Any],
 ) -> LeakedCredentialEvent | LookalikeDomainEvent | StealerLogEvent | RansomleakEvent:
     match event["data"]["index"]:
-        case EventTypes.LEAK:
+        case EventTypes.LEAK | EventTypes.LEAKED_CREDENTIAL:
             return leaked_credentials_from_event(event)
         case EventTypes.STEALER_LOG | EventTypes.BOT:
             return stealer_log_from_event(event)
@@ -119,7 +121,7 @@ def get_event_from_event_json(
         case EventTypes.RANSOMLEAK | EventTypes.DOCUMENT:
             return ransomleak_from_event(event)
         case _:
-            raise ValueError("Unsupported event type")
+            raise ValueError(f"Unsupported event type: {event['data']['index']!r}")
 
 
 class EventTypes(StrEnum):

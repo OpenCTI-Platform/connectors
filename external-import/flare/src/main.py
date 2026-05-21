@@ -2,12 +2,11 @@ import sys
 import traceback
 
 import stix2
-from pycti import Identity as PyctiIdentity
-from pycti import OpenCTIConnectorHelper
-
 from connector import ConnectorSettings, FlareConnector
 from connector.converter_to_stix import FlareToStixMapper
 from flare_client import FlareClient
+from pycti import Identity as PyctiIdentity
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:

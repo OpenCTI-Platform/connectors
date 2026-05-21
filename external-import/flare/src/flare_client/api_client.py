@@ -77,7 +77,10 @@ class FlareClient:  # pylint: disable=too-few-public-methods
                         if event_actions:
                             known_actions = {"ignored", "remediated"}
                             configured_actions = set(event_actions)
-                            if not configured_actions & known_actions:
+                            if (
+                                len(configured_actions) > 0
+                                and not configured_actions & known_actions
+                            ):
                                 self.helper.connector_logger.info(
                                     "Only 'ignored' and 'remediated' are supported "
                                     "as event actions, "

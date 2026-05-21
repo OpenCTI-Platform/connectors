@@ -3,11 +3,6 @@ from datetime import datetime, timezone
 from typing import Any, TypeAlias
 
 import stix2
-from pycti import Incident as PyctiIncident
-from pycti import Malware as PyctiMalware
-from pycti import MarkingDefinition
-from pycti import StixCoreRelationship
-
 from connector.events import (
     LeakedCredentialEvent,
     LookalikeDomainEvent,
@@ -18,6 +13,9 @@ from connector.events import (
     get_incident_type_from_event_type,
 )
 from connector.settings import ConnectorSettings
+from pycti import Incident as PyctiIncident
+from pycti import Malware as PyctiMalware
+from pycti import MarkingDefinition, StixCoreRelationship
 
 Observable: TypeAlias = (
     stix2.EmailAddress
@@ -68,7 +66,9 @@ class FlareToStixMapper:
         created_time = self.parse_timestamp(parsed_event.created_at)
         last_seen = self.parse_timestamp(parsed_event.matched_at)
 
-        incident_name = f"{get_event_title_from_event_type(parsed_event.type)} - {parsed_event.uid}"
+        incident_name = (
+            f"{get_event_title_from_event_type(parsed_event.type)} - {parsed_event.uid}"
+        )
         base_incident = stix2.Incident(
             id=PyctiIncident.generate_id(incident_name, created_time),
             name=incident_name,
@@ -165,10 +165,12 @@ class FlareToStixMapper:
 
             case LeakedCredentialEvent():
                 email_re = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-                if re.match(email_re, parsed_event.username) and parsed_event.username:
-                    observables.append(stix2.EmailAddress(value=parsed_event.username))
-                elif parsed_event.username:
-                    observables.append(stix2.UserAccount(user_id=parsed_event.username))
+                identity_value = parsed_event.username or parsed_event.identity_name
+                if identity_value:
+                    if re.match(email_re, identity_value):
+                        observables.append(stix2.EmailAddress(value=identity_value))
+                    else:
+                        observables.append(stix2.UserAccount(user_id=identity_value))
 
             case LookalikeDomainEvent():
                 if parsed_event.original_domain:
@@ -188,7 +190,9 @@ class FlareToStixMapper:
 
         for observable in observables:
             relation = stix2.Relationship(
-                id=StixCoreRelationship.generate_id("related-to", observable.id, incident.id),
+                id=StixCoreRelationship.generate_id(
+                    "related-to", observable.id, incident.id
+                ),
                 created=created_time,
                 modified=created_time,
                 relationship_type="related-to",

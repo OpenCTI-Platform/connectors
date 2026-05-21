@@ -2,12 +2,11 @@ from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from pycti import OpenCTIConnectorHelper
-from pydantic import TypeAdapter
-
 from connector.converter_to_stix import FlareToStixMapper
 from connector.settings import ConnectorSettings
 from flare_client.api_client import FlareClient
+from pycti import OpenCTIConnectorHelper
+from pydantic import TypeAdapter
 
 _td_adapter: TypeAdapter[timedelta] = TypeAdapter(timedelta)
 
@@ -40,8 +39,8 @@ class FlareConnector:
         work_id = None
         try:
             current_state = self.helper.get_state()
-
-            if current_state is None or "last_run" not in current_state:
+            last_run_raw = (current_state or {}).get("last_run")
+            if not isinstance(last_run_raw, str):
                 from_date = datetime.now(timezone.utc) - timedelta(
                     days=self.config.flare_lookback_days
                 )
@@ -49,7 +48,7 @@ class FlareConnector:
                     f"First run - syncing events from last {self.config.flare_lookback_days} days"
                 )
             else:
-                last_run = datetime.fromisoformat(current_state["last_run"])
+                last_run = datetime.fromisoformat(last_run_raw)
                 from_date = last_run
                 self.helper.connector_logger.info(f"Incremental sync from {from_date}")
 
@@ -64,7 +63,6 @@ class FlareConnector:
                 event_actions=self.config.flare_event_actions,
             )
             imported_count = self.process_events(events, work_id)
-
             self.helper.set_state({"last_run": datetime.now(timezone.utc).isoformat()})
 
             message = f"Sync completed. Imported {imported_count} events."
@@ -84,8 +82,9 @@ class FlareConnector:
 
         for event in events:
             try:
+                uid = event.get("data", {}).get("uid")
                 self.helper.connector_logger.debug(
-                    f"Processing event {processed_count}: {event.get('id')}"
+                    f"Processing event {processed_count}: {uid}"
                 )
 
                 incident, related_indicators = self.mapper.map_event_to_incident(event)
@@ -122,8 +121,7 @@ class FlareConnector:
                 )
 
             except Exception as e:
-                self.helper.connector_logger.error(
-                    f"Error importing event {event.get('id')}: {e}"
-                )
+                uid = event.get("data", {}).get("uid")
+                self.helper.connector_logger.error(f"Error importing event {uid}: {e}")
 
         return processed_count

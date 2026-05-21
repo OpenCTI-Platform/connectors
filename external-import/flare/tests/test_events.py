@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from connector.events import (
     LeakedCredentialEvent,
     LookalikeDomainEvent,
