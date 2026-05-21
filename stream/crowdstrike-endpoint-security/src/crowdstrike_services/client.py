@@ -89,7 +89,8 @@ class CrowdstrikeClient:
         """
         Convert a domain to punycode when it contains non-ascii characters.
         Return the domain unchanged when it is already ASCII.
-        If IDNA conversion fails, return the original domain value unchanged.
+        If IDNA conversion fails (for malformed/unsupported Unicode input),
+        return the original domain value unchanged.
         """
         if domain.isascii():
             return domain
@@ -100,7 +101,8 @@ class CrowdstrikeClient:
 
     def _normalize_indicator_value(self, pattern: str) -> str:
         """
-        Normalize the indicator value before interacting with Crowdstrike APIs.
+        Normalize indicator values before Crowdstrike API calls:
+        convert domain indicators to punycode and keep other indicator values unchanged.
         """
         ioc_value = self._extract_indicator_value(pattern)
         ioc_type = self._map_indicator_type(pattern)
