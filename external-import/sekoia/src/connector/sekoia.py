@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from functools import cached_property
@@ -24,6 +25,8 @@ gbl_scriptDir: str = os.path.dirname(os.path.realpath(__file__))
 
 
 class SekoiaConnector(object):
+    NETWORK_TRAFFIC_NAME_PREFIX = "network traffic to "
+
     def __init__(self, config: ConfigLoader, helper: OpenCTIConnectorHelper):
         # Instantiate the connector helper from config
 
@@ -291,21 +294,110 @@ class SekoiaConnector(object):
         items: List[Dict], confidence_score: int | None
     ):
         for item in items:
-            if (
-                item.get("type") == "indicator"
-                and item.get("x_ic_observable_types") is not None
-                and len(item.get("x_ic_observable_types")) > 0
-            ):
-                stix_type = item.get("x_ic_observable_types")[0]
+            if item.get("type") != "indicator":
+                continue
+
+            observable_types = item.get("x_ic_observable_types") or []
+            pattern = item.get("pattern")
+            indicator_name = item.get("name")
+            should_set_indicator_extensions = False
+            is_network_traffic_indicator = (
+                "network-traffic" in observable_types
+                or (
+                    isinstance(pattern, str)
+                    and "network-traffic:dst_ref.value" in pattern
+                )
+                or (
+                    isinstance(indicator_name, str)
+                    and indicator_name.lower().startswith(
+                        SekoiaConnector.NETWORK_TRAFFIC_NAME_PREFIX
+                    )
+                )
+            )
+
+            if is_network_traffic_indicator:
+                should_set_indicator_extensions = True
+                item["x_opencti_main_observable_type"] = "Network-Traffic"
+                dst_type, dst_value = (
+                    SekoiaConnector._extract_network_traffic_destination(
+                        pattern=pattern,
+                        name=indicator_name,
+                        observable_types=observable_types,
+                    )
+                )
+                if dst_value:
+                    item["name"] = (
+                        f"{SekoiaConnector.NETWORK_TRAFFIC_NAME_PREFIX}{dst_value}"
+                    )
+                    escaped_dst_value = SekoiaConnector._escape_pattern_value(dst_value)
+                    if dst_type:
+                        item["pattern"] = (
+                            "[network-traffic:dst_ref.type = "
+                            f"'{dst_type}' AND network-traffic:dst_ref.value = "
+                            f"'{escaped_dst_value}']"
+                        )
+                    else:
+                        item["pattern"] = (
+                            "[network-traffic:dst_ref.value = "
+                            f"'{escaped_dst_value}']"
+                        )
+            elif len(observable_types) > 0:
+                should_set_indicator_extensions = True
+                stix_type = observable_types[0]
                 item["x_opencti_main_observable_type"] = (
                     OpenCTIStix2Utils.stix_observable_opencti_type(stix_type)
                 )
+
+            if should_set_indicator_extensions:
                 if item.get("revoked") is not None and item.get("revoked") is True:
                     item["valid_until"] = item.get("modified")
                 if confidence_score:
                     item["x_opencti_score"] = confidence_score
                 else:
                     item["x_opencti_score"] = item.get("confidence", None)
+
+    @staticmethod
+    def _escape_pattern_value(value: str) -> str:
+        return value.replace("\\", "\\\\").replace("'", "\\'")
+
+    @staticmethod
+    def _extract_network_traffic_destination(
+        pattern: str | None, name: str | None, observable_types: List[str]
+    ) -> tuple[str | None, str | None]:
+        destination_type = None
+        destination_value = None
+        if isinstance(pattern, str):
+            destination_value_match = re.search(
+                r"network-traffic:dst_ref\.value\s*=\s*'([^']+)'", pattern
+            )
+            destination_type_match = re.search(
+                r"network-traffic:dst_ref\.type\s*=\s*'([^']+)'", pattern
+            )
+            if destination_value_match:
+                destination_value = destination_value_match.group(1)
+                if destination_type_match:
+                    destination_type = destination_type_match.group(1)
+            else:
+                basic_pattern_match = re.match(
+                    r"^\[\s*([a-z0-9-]+):value\s*=\s*'([^']+)'\s*\]$", pattern
+                )
+                if basic_pattern_match:
+                    destination_type = basic_pattern_match.group(1)
+                    destination_value = basic_pattern_match.group(2)
+
+        if not destination_type:
+            destination_type = next(
+                (value for value in observable_types if value != "network-traffic"),
+                None,
+            )
+        if not destination_value and isinstance(name, str):
+            lower_name = name.lower()
+            if lower_name.startswith(SekoiaConnector.NETWORK_TRAFFIC_NAME_PREFIX):
+                destination_value = name[
+                    len(SekoiaConnector.NETWORK_TRAFFIC_NAME_PREFIX) :
+                ].strip()
+
+        return destination_type, destination_value
 
     def _retrieve_references(
         self, items: List[Dict], current_depth: int = 0
