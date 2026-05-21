@@ -3,6 +3,7 @@
 import datetime
 import io
 import ipaddress
+import itertools
 import logging
 import re
 from typing import List, Optional
@@ -151,28 +152,33 @@ class LivehuntBuilder:
         )
 
         files_iterator = self.client.iterator(url, params=params)
-        # ``seen`` counts every notification the iterator hands us (before
-        # any client-side filter), while ``processed`` counts only the
-        # notifications that survived every filter and made it into a
-        # bundle. The per-run cap is enforced against ``seen``: the VT
-        # ``limit`` query param SHOULD make the server stop after that
-        # many notifications, but if the upstream stream ever drifts —
-        # API ignores the param, a future API version renames it, the
-        # iterator paginates past it — the client-side stop still bounds
-        # the work-per-run. ``processed`` stays the right number for the
-        # final "Processing done for N notifications" log message.
-        seen = 0
+        if self.limit is not None:
+            # Belt-and-braces client-side cap: ``itertools.islice`` stops
+            # the iterator after exactly ``self.limit`` items, so no extra
+            # ``vtobj`` (and crucially no extra paginated page fetch from
+            # the VT API) lands past the configured cap even if the
+            # server-side ``params["limit"]`` above silently drifts — the
+            # API renames the param in a future version, the server
+            # enforces a soft rather than hard limit, the iterator
+            # paginates past it. The previous shape broke out of the
+            # ``for`` loop AFTER the iterator had already yielded (and
+            # paginated for) one extra notification, so the client kept
+            # consuming API quota past the cap in that drift scenario.
+            files_iterator = itertools.islice(files_iterator, self.limit)
+
+        # ``processed`` counts notifications that survived every
+        # client-side filter AND produced at least one new entity in the
+        # bundle — i.e. the notifications for which the connector
+        # actually opened a Work and emitted STIX. Notifications that
+        # pass the filter chain but contribute nothing (e.g.
+        # ``create_alert`` returned ``None`` because the alert already
+        # exists, or ``create_alert`` / ``create_file`` /
+        # ``create_yara_rule`` are all disabled) are NOT counted, so the
+        # "Processing done for N notifications" log line below reflects
+        # work the connector actually did this run.
         processed = 0
 
         for vtobj in files_iterator:
-            if self.limit is not None and seen >= self.limit:
-                self.helper.connector_logger.info(
-                    f"Reached configured notifications limit ({self.limit}); "
-                    "stopping early."
-                )
-                break
-            seen += 1
-
             if self.delete_notification:
                 self.delete_livehunt_notification(vtobj.id)
 
@@ -261,8 +267,7 @@ class LivehuntBuilder:
                 if work_id is None:
                     work_id = self.initiate_work(timestamp)
                 self.send_bundle(work_id)
-
-            processed += 1
+                processed += 1
 
         self.helper.connector_logger.info(
             f"Processing done for {processed} VirusTotal Livehunt notifications."

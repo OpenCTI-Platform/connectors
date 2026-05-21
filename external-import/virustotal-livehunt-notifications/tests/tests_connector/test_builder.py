@@ -257,6 +257,7 @@ class TestCreateFileIndicator:
         assert related_to.source_ref == incident_id
         assert related_to.target_ref == objs[0]["id"]
 
+
 class TestCreateMalwareConfigIndicator:
     """``_create_malware_config_indicator`` mirrors the file-indicator shape.
 
