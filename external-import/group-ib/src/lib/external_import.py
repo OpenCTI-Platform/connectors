@@ -8,6 +8,7 @@ from typing import Any
 from config import ConfigConnector
 from cyberintegrations.adapters.openCTI_adapter import TIAdapter
 from cyberintegrations.decorators import cache_data
+from lib.log_level import normalize_connector_log_level
 from pycti import OpenCTIConnectorHelper
 from utils import ExternalImportHelper
 
@@ -69,16 +70,9 @@ class ExternalImportConnector:
     def __init__(self):
         connector_log_level = os.getenv("CONNECTOR_LOG_LEVEL")
         if connector_log_level:
-            normalized_connector_log_level = connector_log_level.strip()
-            if (
-                len(normalized_connector_log_level) >= 2
-                and normalized_connector_log_level[0]
-                == normalized_connector_log_level[-1]
-                and normalized_connector_log_level[0] in {"'", '"'}
-            ):
-                normalized_connector_log_level = normalized_connector_log_level[
-                    1:-1
-                ].strip()
+            normalized_connector_log_level = normalize_connector_log_level(
+                connector_log_level
+            )
             if normalized_connector_log_level != connector_log_level:
                 os.environ["CONNECTOR_LOG_LEVEL"] = normalized_connector_log_level
 
