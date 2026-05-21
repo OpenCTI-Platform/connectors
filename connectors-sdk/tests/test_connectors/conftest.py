@@ -33,10 +33,10 @@ def mock_logger(mock_helper: MagicMock) -> ConnectorLogger:
 
 
 @pytest.fixture
-def mock_config() -> MagicMock:
+def mock_settings() -> MagicMock:
     """Mock BaseConnectorSettings with required attributes."""
-    config = MagicMock()
-    config.connector.name = "Test Connector"
-    config.connector.duration_period = timedelta(hours=1)
-    config.to_helper_config.return_value = {}
-    return config
+    settings = MagicMock()
+    settings.connector.name = "Test Connector"
+    settings.connector.duration_period = timedelta(hours=1)
+    settings.to_helper_config.return_value = {}
+    return settings
