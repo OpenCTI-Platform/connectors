@@ -181,3 +181,40 @@ class TestCrowdstrikeConnector(object):
 
         indicator_body = self.mock_client.cs.indicator_create.call_args.kwargs["body"]
         assert indicator_body["indicators"][0]["value"] == self.idn_domain_punycode
+
+    def test_update_indicator_uses_punycode_domain_value(self) -> None:
+        """
+        Check update_indicator sends punycode value for domain indicators.
+        """
+        self.mock_client._search_indicator = Mock(return_value=["crowdstrike-ioc-id"])
+        self.mock_client.cs.indicator_update = Mock(
+            return_value={"status_code": 200, "body": {}}
+        )
+        self.mock_helper.get_attribute_in_extension.return_value = 50
+        self.mock_helper.get_attribute_in_mitre_extension.return_value = None
+
+        self.mock_client.update_indicator({"pattern": self.idn_domain_pattern})
+
+        self.mock_client._search_indicator.assert_called_once_with(
+            self.idn_domain_punycode
+        )
+        indicator_body = self.mock_client.cs.indicator_update.call_args.kwargs["body"]
+        assert indicator_body["indicators"][0]["value"] == self.idn_domain_punycode
+
+    def test_delete_indicator_uses_punycode_domain_value(self) -> None:
+        """
+        Check delete_indicator searches and deletes using punycode value.
+        """
+        self.mock_client._search_indicator = Mock(return_value=["crowdstrike-ioc-id"])
+        self.mock_client.cs.indicator_delete = Mock(
+            return_value={"status_code": 200, "body": {}}
+        )
+
+        self.mock_client.delete_indicator({"pattern": self.idn_domain_pattern})
+
+        self.mock_client._search_indicator.assert_called_once_with(
+            self.idn_domain_punycode
+        )
+        self.mock_client.cs.indicator_delete.assert_called_once_with(
+            "crowdstrike-ioc-id"
+        )
