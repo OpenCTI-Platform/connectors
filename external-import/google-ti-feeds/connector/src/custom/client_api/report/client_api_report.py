@@ -168,7 +168,7 @@ class ClientAPIReport(BaseClientAPI):
             The PDF content as bytes, or None if the download failed.
 
         """
-        url = f"{self.config.api_url.unicode_string()}/collections/{report_id}/download_report"
+        url = f"{self.config.api_url.unicode_string().rstrip('/')}/collections/{report_id}/download_report"
         headers = {
             "X-Apikey": self.config.api_key.get_secret_value(),
             "accept": "application/json",
