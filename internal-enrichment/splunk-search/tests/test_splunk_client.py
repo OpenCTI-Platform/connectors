@@ -1,7 +1,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-
 from internal_enrichment_connector.services.splunk_client import SplunkClient
 
 

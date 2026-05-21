@@ -2,11 +2,10 @@ from unittest.mock import Mock
 
 import pytest
 import stix2
-from pycti import CustomObservableHostname, CustomObservableUserAgent, Identity
-
 from internal_enrichment_connector.splunk_result_parser import (
     parse_observables_and_incident,
 )
+from pycti import CustomObservableHostname, CustomObservableUserAgent, Identity
 
 
 @pytest.fixture
@@ -69,7 +68,9 @@ def test_parse_web_traffic(helper, author):
     assert source_identity is not None
     assert source_identity.name == "sensor-01"
     assert source_identity.identity_class == "system"
-    assert all(sighting.where_sighted_refs == [source_identity.id] for sighting in sightings)
+    assert all(
+        sighting.where_sighted_refs == [source_identity.id] for sighting in sightings
+    )
 
 
 def test_parse_web_traffic_with_threat_intel(helper, author):
@@ -203,7 +204,9 @@ def test_sighting_structure(helper, author):
         for sighting in sightings
         if sighting.get("x_opencti_sighting_of_ref") == ip_observable.id
     )
-    assert ip_sighting.sighting_of_ref == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
+    assert (
+        ip_sighting.sighting_of_ref == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
+    )
     assert ip_sighting.confidence == 90
     assert ip_sighting.description == "Test description"
     assert source_identity is None

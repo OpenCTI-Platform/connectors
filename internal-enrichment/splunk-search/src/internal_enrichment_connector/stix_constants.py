@@ -7,7 +7,6 @@ from stix2.properties import (
     StringProperty,
 )
 
-
 # Custom objects
 
 

@@ -1,6 +1,6 @@
 #  Utilities: helper functions, classes, or modules that provide common, reusable functionality across a codebase
-import re
 import ipaddress
+import re
 
 
 def get_hash_type(value: str) -> str:

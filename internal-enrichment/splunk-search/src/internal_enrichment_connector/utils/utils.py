@@ -19,10 +19,7 @@ def is_ipv6(value: str) -> bool:
 
 
 def is_domain_name(value: str) -> bool:
-    pattern = (
-        r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+"
-        r"[a-zA-Z]{2,}$"
-    )
+    pattern = r"^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+" r"[a-zA-Z]{2,}$"
     return bool(re.match(pattern, value or ""))
 
 

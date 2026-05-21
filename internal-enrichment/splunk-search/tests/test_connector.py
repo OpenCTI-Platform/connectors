@@ -2,7 +2,6 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import stix2
-
 from internal_enrichment_connector.connector import (
     SPLUNK_TEMPLATE_LABEL,
     SplunkSearchConnector,
@@ -161,9 +160,7 @@ def test_enrich_stix_indicator_runs_templates_and_sends_bundle():
 def test_note_search_params_override_config_defaults():
     helper = _helper()
     helper.api.note.list.return_value = [
-        {
-            "content": '{"earliest_time": "-90d@d", "timeout": 120, "max_results": 50}'
-        }
+        {"content": '{"earliest_time": "-90d@d", "timeout": 120, "max_results": 50}'}
     ]
     connector = _connector(helper)
     template = {

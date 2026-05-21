@@ -1,8 +1,9 @@
 import ipaddress
 
 import stix2
-from .utils import is_domain_name
 from pycti import Identity, StixCoreRelationship, StixSightingRelationship
+
+from .utils import is_domain_name
 
 
 class ConverterToStix:

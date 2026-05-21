@@ -1,8 +1,9 @@
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-from pycti import OpenCTIConnectorHelper
 import json
 import re
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
+
+from pycti import OpenCTIConnectorHelper
 
 
 @dataclass(frozen=True)

@@ -1,8 +1,7 @@
 from unittest.mock import patch
 
 import pytest
-
-from internal_enrichment_connector.config_loader import ConfigConnector, TLP_MARKING_IDS
+from internal_enrichment_connector.config_loader import TLP_MARKING_IDS, ConfigConnector
 
 
 @pytest.fixture(autouse=True)

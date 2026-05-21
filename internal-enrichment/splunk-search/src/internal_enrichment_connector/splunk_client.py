@@ -1,6 +1,7 @@
 # splunk_client.py
 
 import time
+
 from splunklib.client import connect
 from splunklib.results import ResultsReader
 
