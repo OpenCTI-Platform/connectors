@@ -8,13 +8,12 @@ ActorEntityType = Literal[
 
 
 def infer_actor_entity_type(actor: Mapping[str, Any]) -> ActorEntityType:
-    name_candidate = actor.get("handle")
-    if name_candidate in (None, ""):
-        name_candidate = actor.get("name")
-    if name_candidate in (None, ""):
-        name_candidate = actor.get("uid")
-    if name_candidate in (None, ""):
-        name_candidate = ""
+    name_candidate = ""
+    for field in ("handle", "name", "uid"):
+        value = actor.get(field)
+        if value not in (None, ""):
+            name_candidate = value
+            break
     name = str(name_candidate)
     normalized_name = name.lower().strip()
 
@@ -36,7 +35,7 @@ def infer_actor_entity_type(actor: Mapping[str, Any]) -> ActorEntityType:
     if (
         "intrusion-set" in hints_blob
         or "intrusion set" in hints_blob
-        or bool(re.search(r"\bapt(?:\d+)?\b", hints_blob))
+        or re.search(r"\bapt(?:\d+)?\b", hints_blob)
         or normalized_name.startswith("apt")
     ):
         return "Intrusion-Set"
