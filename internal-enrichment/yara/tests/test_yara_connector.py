@@ -351,6 +351,83 @@ class TestMarkingDefinitionInBundle:
         assert indicator_marking_id in refs
 
 
+class TestPropagationTogglesDefaultOff:
+    """Pin the no-config-override default for both propagation toggles.
+
+    The ``propagate_labels=False`` / ``propagate_malware_relationship=False``
+    cases below exercise the *explicit* off shape (operator setting the
+    flag to ``False`` in config). This class covers the harder
+    regression: a fresh deployment with **no** ``yara`` overrides in
+    config (the shape every existing deployment has) must keep both
+    side-channel APIs (``stix_cyber_observable.add_label``,
+    ``stix_core_relationship.list``) silent, so the change to add the
+    two opt-in fields cannot have an accidental backward-compat
+    impact.
+    """
+
+    def _matching_artifact_and_indicator(self):
+        artifact = {
+            "id": "artifact-uuid",
+            "standard_id": "artifact--a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+            "importFiles": [{"name": "test.bin", "id": "file-123"}],
+        }
+        indicator = {
+            "id": "indicator-uuid",
+            "name": "test_rule",
+            "standard_id": "indicator--b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+            "pattern": ('rule test_rule { strings: $a = "test data" condition: $a }'),
+            "pattern_type": "yara",
+            "valid_from": "2025-01-01T00:00:00Z",
+            # Labels are populated to prove the default behaviour is
+            # "do not propagate" rather than "no labels to propagate".
+            "objectLabel": [
+                {"id": "label-1", "value": "apt", "color": "#ff0000"},
+            ],
+        }
+        return artifact, indicator
+
+    def test_default_settings_do_not_call_side_channel_apis(self):
+        # No ``yara`` overrides at all — pydantic defaults take effect.
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact, indicator = self._matching_artifact_and_indicator()
+
+        connector._scan_artifact(artifact, [indicator])
+
+        # Both side-channel APIs must be silent in the default config.
+        connector.helper.api.stix_cyber_observable.add_label.assert_not_called()
+        connector.helper.api.stix_core_relationship.list.assert_not_called()
+
+    def test_default_settings_still_emit_basic_relationship(self):
+        """Default config must still emit the Artifact -> Indicator relationship.
+
+        The two toggles are opt-in *additions* on top of the basic
+        Artifact -> Indicator ``related-to`` relationship — disabling
+        them must not silently kill the connector's primary output.
+        """
+        connector = _make_connector()
+        connector.helper.api.fetch_opencti_file = MagicMock(
+            return_value=b"This is test data"
+        )
+        artifact, indicator = self._matching_artifact_and_indicator()
+
+        result, _ = connector._scan_artifact(artifact, [indicator])
+
+        relationships = [obj for obj in result if obj["type"] == "relationship"]
+        # Exactly one Artifact -> Indicator ``related-to`` relationship,
+        # and zero Artifact -> Malware relationships (propagation is off).
+        artifact_to_indicator = [
+            rel for rel in relationships if rel["target_ref"].startswith("indicator--")
+        ]
+        artifact_to_malware = [
+            rel for rel in relationships if rel["target_ref"].startswith("malware--")
+        ]
+        assert len(artifact_to_indicator) == 1
+        assert artifact_to_malware == []
+
+
 class TestPropagateLabels:
     """Tests for the optional label-propagation path."""
 
