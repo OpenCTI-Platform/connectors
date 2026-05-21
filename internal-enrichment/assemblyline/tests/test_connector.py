@@ -1422,6 +1422,7 @@ class TestSummaryNoteSuspiciousSection:
     def _captured_note(
         cls,
         suspicious_iocs: Dict[str, list] | None = None,
+        counts: Dict[str, int] | None = None,
     ) -> str:
         connector = _make_connector()
         note_create = MagicMock()
@@ -1433,7 +1434,9 @@ class TestSummaryNoteSuspiciousSection:
             },
             results={"sid": "sid-1", "max_score": 1500, "file_info": {}},
             malicious_iocs=cls._empty_iocs(),
-            counts={"observables": 0, "indicators": 0},
+            counts=(
+                counts if counts is not None else {"observables": 0, "indicators": 0}
+            ),
             malware_analysis_id="malware-analysis--abc",
             attack_patterns_count=0,
             suspicious_iocs=suspicious_iocs,
@@ -1448,7 +1451,20 @@ class TestSummaryNoteSuspiciousSection:
             "urls": [],
             "families": ["AdwareXYZ"],
         }
-        content = self._captured_note(suspicious_iocs=sus)
+        # The Note must report the *created* counts from ``counts``,
+        # not ``len(suspicious_iocs[...])`` — ``_create_indicators``
+        # caps creation at 20 per bucket, so on large analyses the
+        # extracted-list lengths over-stated the count and
+        # contradicted the run's success-message. Two suspicious
+        # domains were extracted *and* successfully created here.
+        counts = {
+            "observables": 0,
+            "indicators": 0,
+            "suspicious_domains": 2,
+            "suspicious_ips": 1,
+            "suspicious_urls": 0,
+        }
+        content = self._captured_note(suspicious_iocs=sus, counts=counts)
         assert "## Suspicious IOCs Created as Indicators" in content
         assert "**Suspicious Domains:** 2" in content
         assert "**Suspicious IP Addresses:** 1" in content
@@ -1504,6 +1520,365 @@ class TestSummaryNoteSuspiciousSection:
     def test_suspicious_section_omitted_when_all_buckets_empty(self) -> None:
         content = self._captured_note(suspicious_iocs=self._empty_iocs())
         assert "Suspicious IOCs" not in content
+
+
+class TestSummaryNoteUsesCreatedCountsNotExtractedLengths:
+    """Note reports indicators *created*, not IOCs *extracted*.
+
+    ``_create_indicators`` caps creation at 20 indicators per
+    category (domains / IPs / URLs) for both the malicious and the
+    suspicious bucket. The Note's "Created as Indicators" sections
+    must therefore reflect the per-category counters maintained by
+    ``_create_indicators`` (``counts['malicious_domains']`` etc.)
+    instead of ``len(malicious_iocs['domains'])`` — otherwise on a
+    large analysis (e.g. 50 malicious domains extracted, only 20
+    created) the Note would contradict both the actual OpenCTI
+    state and the connector's own success-message ("Created N
+    malicious indicators").
+    """
+
+    @staticmethod
+    def _captured_note_content(
+        malicious_iocs: Dict[str, list],
+        counts: Dict[str, int],
+        suspicious_iocs: Dict[str, list] | None = None,
+    ) -> str:
+        connector = _make_connector()
+        note_create = MagicMock()
+        connector.helper.api = MagicMock(note=MagicMock(create=note_create))
+        connector._create_summary_note(
+            observable={
+                "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+                "objectMarking": [],
+            },
+            results={"sid": "sid-1", "max_score": 1500, "file_info": {}},
+            malicious_iocs=malicious_iocs,
+            counts=counts,
+            malware_analysis_id="malware-analysis--abc",
+            attack_patterns_count=0,
+            suspicious_iocs=suspicious_iocs,
+        )
+        assert note_create.called
+        return note_create.call_args.kwargs.get("content", "")
+
+    def test_malicious_counts_use_created_not_extracted(self) -> None:
+        # 50 domains / 30 ips / 25 urls extracted; ``_create_indicators``
+        # capped creation at 20 per bucket — the Note must say 20, not
+        # 50/30/25.
+        malicious_iocs = {
+            "domains": [f"d{i}.example.com" for i in range(50)],
+            "ips": [f"10.0.0.{i}" for i in range(30)],
+            "urls": [f"http://example.com/{i}" for i in range(25)],
+            "families": [],
+        }
+        counts = {
+            "observables": 0,
+            "indicators": 60,
+            "malicious_indicators": 60,
+            "malicious_domains": 20,
+            "malicious_ips": 20,
+            "malicious_urls": 20,
+        }
+        content = self._captured_note_content(malicious_iocs, counts)
+        assert "**Malicious Domains:** 20" in content
+        assert "**Malicious IP Addresses:** 20" in content
+        assert "**Malicious URLs:** 20" in content
+        # And explicitly NOT the extracted-list lengths.
+        assert "**Malicious Domains:** 50" not in content
+        assert "**Malicious IP Addresses:** 30" not in content
+        assert "**Malicious URLs:** 25" not in content
+
+    def test_suspicious_counts_use_created_not_extracted(self) -> None:
+        # Suspicious bucket is also capped at 20 per category by
+        # ``_create_indicators``.
+        suspicious_iocs = {
+            "domains": [f"s{i}.example.org" for i in range(40)],
+            "ips": [],
+            "urls": [f"http://sketchy.example.org/{i}" for i in range(35)],
+            "families": [],
+        }
+        counts = {
+            "observables": 0,
+            "indicators": 40,
+            "suspicious_indicators": 40,
+            "suspicious_domains": 20,
+            "suspicious_ips": 0,
+            "suspicious_urls": 20,
+        }
+        content = self._captured_note_content(
+            {"domains": [], "ips": [], "urls": [], "families": []},
+            counts,
+            suspicious_iocs=suspicious_iocs,
+        )
+        assert "## Suspicious IOCs Created as Indicators" in content
+        assert "**Suspicious Domains:** 20" in content
+        assert "**Suspicious IP Addresses:** 0" in content
+        assert "**Suspicious URLs:** 20" in content
+        assert "**Suspicious Domains:** 40" not in content
+        assert "**Suspicious URLs:** 35" not in content
+
+
+class TestCreateIndicatorsTracksPerCategoryCreatedCounts:
+    """``_create_indicators`` exposes per-category created-indicator counts.
+
+    ``counts`` carries both the rolled-up totals
+    (``malicious_indicators`` / ``suspicious_indicators``) and the
+    per-category created counts (``malicious_domains`` /
+    ``malicious_ips`` / ``malicious_urls`` / ``suspicious_domains`` /
+    ``suspicious_ips`` / ``suspicious_urls``). The Note relies on
+    these per-category counters to report what was *actually
+    created* in OpenCTI (capped at 20 per bucket), not what was
+    extracted from AssemblyLine.
+    """
+
+    def _connector(self) -> AssemblyLineConnector:
+        connector = _make_connector(
+            assemblyline_create_observables=False,
+            assemblyline_include_suspicious=True,
+        )
+        connector.helper.api.indicator.create = MagicMock(return_value={"id": "ind-1"})
+        connector.helper.api.stix_core_relationship.create = MagicMock()
+        connector.helper.api.malware.create = MagicMock(return_value={"id": "mal-1"})
+        connector.helper.api.stix2.format_date = MagicMock(return_value="2024-01-01")
+        return connector
+
+    def test_per_category_created_counts_are_capped_at_twenty(self) -> None:
+        connector = self._connector()
+        # 25 domains / 22 ips / 21 urls all "succeed" (helper returns
+        # an indicator id) — the per-category counter should still
+        # only report 20 per bucket because ``_create_indicators``
+        # slices ``[:20]``.
+        malicious_iocs = {
+            "domains": [f"d{i}.example.com" for i in range(25)],
+            "ips": [f"10.0.0.{i}" for i in range(22)],
+            "urls": [f"http://example.com/{i}" for i in range(21)],
+            "families": [],
+        }
+        counts, _ = connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            malicious_iocs,
+        )
+        assert counts["malicious_domains"] == 20
+        assert counts["malicious_ips"] == 20
+        assert counts["malicious_urls"] == 20
+        assert counts["malicious_indicators"] == 60
+
+    def test_failed_indicator_creation_does_not_increment_per_category_count(
+        self,
+    ) -> None:
+        connector = self._connector()
+        # First two indicator creates succeed, the third raises — the
+        # per-category counter must reflect what was actually created
+        # (2), not what was extracted (3).
+        connector.helper.api.indicator.create = MagicMock(
+            side_effect=[
+                {"id": "ind-1"},
+                {"id": "ind-2"},
+                Exception("indicator create failed"),
+            ]
+        )
+        counts, _ = connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            {
+                "domains": ["a.example.com", "b.example.com", "c.example.com"],
+                "ips": [],
+                "urls": [],
+                "families": [],
+            },
+        )
+        assert counts["malicious_domains"] == 2
+        assert counts["malicious_indicators"] == 2
+
+    def test_suspicious_bucket_counters_track_per_category(self) -> None:
+        connector = self._connector()
+        suspicious_iocs = {
+            "domains": ["sketchy1.example.org", "sketchy2.example.org"],
+            "ips": ["10.0.0.1"],
+            "urls": [],
+            "families": [],
+        }
+        counts, _ = connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            120,
+            {"domains": [], "ips": [], "urls": [], "families": []},
+            suspicious_iocs=suspicious_iocs,
+        )
+        assert counts["suspicious_domains"] == 2
+        assert counts["suspicious_ips"] == 1
+        assert counts["suspicious_urls"] == 0
+        assert counts["suspicious_indicators"] == 3
+
+
+class TestMalwareFamilyInheritsSourceMarkings:
+    """Malware family SDOs inherit the source observable's markings.
+
+    A TLP:AMBER file passing the max-TLP gate must produce TLP:AMBER
+    Malware family SDOs — not unmarked / TLP:CLEAR — so OpenCTI's
+    access-control gates apply consistently across the whole
+    derived sub-graph (Indicators, Observables, Malware-Analysis,
+    Attack-Patterns, Note, and Malware family SDOs all carry the
+    same markings as the source).
+    """
+
+    @staticmethod
+    def _amber_observable() -> Dict[str, Any]:
+        return {
+            "id": "observable-amber",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": stix2.TLP_AMBER["id"],
+                }
+            ],
+        }
+
+    def _connector(self) -> AssemblyLineConnector:
+        connector = _make_connector()
+        connector.helper.api.indicator.create = MagicMock(return_value={"id": "ind-1"})
+        connector.helper.api.stix_core_relationship.create = MagicMock()
+        connector.helper.api.malware.create = MagicMock(return_value={"id": "mal-1"})
+        connector.helper.api.stix2.format_date = MagicMock(return_value="2024-01-01")
+        return connector
+
+    def test_malware_sdo_carries_source_object_marking(self) -> None:
+        connector = self._connector()
+        connector._create_indicators(
+            self._amber_observable(),
+            900,
+            {
+                "domains": [],
+                "ips": [],
+                "urls": [],
+                "families": ["EMOTET"],
+            },
+        )
+        malware_kwargs = connector.helper.api.malware.create.call_args.kwargs
+        assert malware_kwargs.get("objectMarking") == [stix2.TLP_AMBER["id"]]
+
+    def test_observable_to_malware_relationship_carries_source_object_marking(
+        self,
+    ) -> None:
+        connector = self._connector()
+        connector._create_indicators(
+            self._amber_observable(),
+            900,
+            {
+                "domains": [],
+                "ips": [],
+                "urls": [],
+                "families": ["EMOTET"],
+            },
+        )
+        # The relationship from the source observable to the Malware
+        # SDO must carry the source markings too — leaving an
+        # unmarked SRO on a marked sub-graph leaves the relationship
+        # itself visible to a broader audience than its endpoints.
+        rel_calls = connector.helper.api.stix_core_relationship.create.call_args_list
+        assert rel_calls, "Expected at least one stix_core_relationship.create call"
+        # The malware ``related-to`` relationship is the one targeting
+        # ``mal-1``; pick it explicitly so the test cannot drift if
+        # additional SROs are added later.
+        malware_rel_kwargs = next(
+            (c.kwargs for c in rel_calls if c.kwargs.get("toId") == "mal-1"),
+            None,
+        )
+        assert malware_rel_kwargs is not None
+        assert malware_rel_kwargs.get("objectMarking") == [stix2.TLP_AMBER["id"]]
+
+    def test_unmarked_source_falls_back_to_tlp_clear(self) -> None:
+        from main import _TLP_CLEAR_MARKING_ID
+
+        connector = self._connector()
+        connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            {
+                "domains": [],
+                "ips": [],
+                "urls": [],
+                "families": ["EMOTET"],
+            },
+        )
+        malware_kwargs = connector.helper.api.malware.create.call_args.kwargs
+        assert malware_kwargs.get("objectMarking") == [_TLP_CLEAR_MARKING_ID]
+
+
+class TestAttackPatternInheritsSourceMarkings:
+    """ATT&CK Attack-Pattern SDOs inherit the source observable's markings.
+
+    Attack-Patterns observed during analysis of a marked source
+    (e.g. TLP:AMBER) must be created with the same ``objectMarking``
+    as the source so OpenCTI does not expose them more broadly than
+    the observable that triggered the analysis. Pre-existing Attack-
+    Patterns (returned by the fallback list query) are intentionally
+    *not* re-marked: they may already carry markings from previous
+    enrichments and the connector should not silently downgrade or
+    overwrite those.
+    """
+
+    @staticmethod
+    def _amber_observable() -> Dict[str, Any]:
+        return {
+            "id": "observable-amber",
+            "objectMarking": [
+                {
+                    "definition_type": "TLP",
+                    "definition": "TLP:AMBER",
+                    "standard_id": stix2.TLP_AMBER["id"],
+                }
+            ],
+        }
+
+    def _connector(self) -> AssemblyLineConnector:
+        connector = _make_connector()
+        connector.helper.api.attack_pattern.create = MagicMock(
+            return_value={"id": "attack-pattern-1"}
+        )
+        return connector
+
+    def test_attack_pattern_sdo_carries_source_object_marking(self) -> None:
+        connector = self._connector()
+        connector._create_attack_patterns(
+            [
+                {
+                    "technique_id": "T1059",
+                    "technique_name": "Command and Scripting Interpreter",
+                    "tactic": "execution",
+                    "confidence": "high",
+                    "kill_chain_phase": "execution",
+                }
+            ],
+            source_marking_refs=[stix2.TLP_AMBER["id"]],
+        )
+        attack_pattern_kwargs = (
+            connector.helper.api.attack_pattern.create.call_args.kwargs
+        )
+        assert attack_pattern_kwargs.get("objectMarking") == [stix2.TLP_AMBER["id"]]
+
+    def test_attack_pattern_sdo_omits_marking_when_none_provided(self) -> None:
+        connector = self._connector()
+        connector._create_attack_patterns(
+            [
+                {
+                    "technique_id": "T1059",
+                    "technique_name": "Command and Scripting Interpreter",
+                    "tactic": "execution",
+                    "confidence": "high",
+                    "kill_chain_phase": "execution",
+                }
+            ]
+        )
+        # Backwards compatibility: when the caller doesn't pass
+        # marking refs (legacy / unmarked source), the create call
+        # must not carry an ``objectMarking=None`` that the OpenCTI
+        # API would reject.
+        attack_pattern_kwargs = (
+            connector.helper.api.attack_pattern.create.call_args.kwargs
+        )
+        assert "objectMarking" not in attack_pattern_kwargs
 
 
 if __name__ == "__main__":

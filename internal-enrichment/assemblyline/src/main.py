@@ -1084,16 +1084,30 @@ class AssemblyLineConnector:
         return attack_patterns
 
     def _create_attack_patterns(
-        self, attack_patterns: List[Dict[str, str]]
+        self,
+        attack_patterns: List[Dict[str, str]],
+        source_marking_refs: Optional[List[str]] = None,
     ) -> List[str]:
-        """Create / lookup ATT&CK Attack-Pattern SDOs in OpenCTI."""
+        """Create / lookup ATT&CK Attack-Pattern SDOs in OpenCTI.
+
+        ``source_marking_refs`` is the list of marking ids derived
+        from the enriched observable (via :meth:`_source_marking_refs`).
+        It is applied to newly-created Attack-Pattern SDOs so a
+        TLP:AMBER source does not produce unmarked / TLP:CLEAR
+        Attack-Patterns visible to a broader audience than the
+        observable that triggered the analysis. Existing Attack-
+        Patterns picked up via the fallback list query are
+        intentionally left untouched: they may already carry
+        markings from previous enrichments and the connector
+        should not silently downgrade or overwrite those.
+        """
         created_patterns: List[str] = []
         if not attack_patterns:
             return created_patterns
 
         for pattern in attack_patterns:
             try:
-                attack_pattern_data = {
+                attack_pattern_data: Dict[str, Any] = {
                     "name": f"{pattern['technique_id']} - {pattern['technique_name']}",
                     "description": (
                         f"MITRE ATT&CK technique {pattern['technique_id']} "
@@ -1125,6 +1139,8 @@ class AssemblyLineConnector:
                 }
                 if self.assemblyline_author:
                     attack_pattern_data["createdBy"] = self.assemblyline_author
+                if source_marking_refs:
+                    attack_pattern_data["objectMarking"] = source_marking_refs
                 attack_pattern = self.helper.api.attack_pattern.create(
                     **attack_pattern_data
                 )
@@ -1557,10 +1573,26 @@ class AssemblyLineConnector:
         # key, which the success message then mixed with the
         # ``families`` extraction bucket (Malware SDOs, not indicators)
         # and over-reported the count.
-        counts = {
+        #
+        # The per-category ``{classification}_{kind}`` counters
+        # (``malicious_domains`` / ``malicious_ips`` / ``malicious_urls`` /
+        # ``suspicious_domains`` / ``suspicious_ips`` / ``suspicious_urls``)
+        # track how many indicators were *actually created* for each
+        # bucket, distinct from the IOC-extraction bucket sizes (the
+        # ``len(malicious_iocs['domains'])`` etc. used to flow straight
+        # into the Note even though ``_process_bucket`` caps creation
+        # at 20 per category, so the Note over-reported what ended up
+        # in OpenCTI on large analyses).
+        counts: Dict[str, int] = {
             "indicators": 0,
             "malicious_indicators": 0,
             "suspicious_indicators": 0,
+            "malicious_domains": 0,
+            "malicious_ips": 0,
+            "malicious_urls": 0,
+            "suspicious_domains": 0,
+            "suspicious_ips": 0,
+            "suspicious_urls": 0,
             "observables": 0,
             "relationships": 0,
             "malware_families": 0,
@@ -1583,6 +1615,7 @@ class AssemblyLineConnector:
                     indicator_ids.append(ind_id)
                     counts["indicators"] += 1
                     counts[f"{classification}_indicators"] += 1
+                    counts[f"{classification}_domains"] += 1
                     counts["relationships"] += 1
                     if obs_created:
                         counts["observables"] += 1
@@ -1605,6 +1638,7 @@ class AssemblyLineConnector:
                     indicator_ids.append(ind_id)
                     counts["indicators"] += 1
                     counts[f"{classification}_indicators"] += 1
+                    counts[f"{classification}_ips"] += 1
                     counts["relationships"] += 1
                     if obs_created:
                         counts["observables"] += 1
@@ -1625,6 +1659,7 @@ class AssemblyLineConnector:
                     indicator_ids.append(ind_id)
                     counts["indicators"] += 1
                     counts[f"{classification}_indicators"] += 1
+                    counts[f"{classification}_urls"] += 1
                     counts["relationships"] += 1
                     if obs_created:
                         counts["observables"] += 1
@@ -1643,6 +1678,14 @@ class AssemblyLineConnector:
         # SDOs the enrichment produced.
         for family in malicious_iocs["families"][:10]:
             try:
+                # Malware family SDOs derived from a marked source must
+                # inherit the same ``objectMarking`` as the enriched
+                # observable so a TLP:AMBER file does not produce a
+                # TLP:CLEAR (or unmarked) Malware SDO that OpenCTI
+                # exposes more broadly than the source. The
+                # ``related-to`` relationship is also marked so the
+                # whole derived sub-graph stays in the same access-
+                # control bucket as the source.
                 malware_data: Dict[str, Any] = {
                     "name": family,
                     "description": "Malware family identified by AssemblyLine analysis",
@@ -1650,13 +1693,18 @@ class AssemblyLineConnector:
                 }
                 if self.assemblyline_author:
                     malware_data["createdBy"] = self.assemblyline_author
+                if source_marking_refs:
+                    malware_data["objectMarking"] = source_marking_refs
                 malware = self.helper.api.malware.create(**malware_data)
-                self.helper.api.stix_core_relationship.create(
-                    fromId=observable_id,
-                    toId=malware["id"],
-                    relationship_type="related-to",
-                    description=f"File attributed to {family} by AssemblyLine",
-                )
+                relationship_data: Dict[str, Any] = {
+                    "fromId": observable_id,
+                    "toId": malware["id"],
+                    "relationship_type": "related-to",
+                    "description": f"File attributed to {family} by AssemblyLine",
+                }
+                if source_marking_refs:
+                    relationship_data["objectMarking"] = source_marking_refs
+                self.helper.api.stix_core_relationship.create(**relationship_data)
                 counts["malware_families"] += 1
                 counts["relationships"] += 1
             except Exception as exc:
@@ -1781,21 +1829,37 @@ class AssemblyLineConnector:
             if self.assemblyline_create_attack_patterns:
                 attack_patterns = self._extract_attack_patterns(results)
                 if attack_patterns:
+                    # Reuse the same marking refs the indicators /
+                    # malware-analysis bundle / summary Note inherit
+                    # so the whole derived sub-graph stays within the
+                    # source observable's access-control bucket. A
+                    # TLP:AMBER file thus produces TLP:AMBER Attack-
+                    # Pattern SDOs and TLP:AMBER ``related-to``
+                    # relationships, never silently downgraded.
+                    attack_pattern_marking_refs = self._source_marking_refs(observable)
                     created_attack_patterns = self._create_attack_patterns(
-                        attack_patterns
+                        attack_patterns,
+                        source_marking_refs=attack_pattern_marking_refs,
                     )
                     attack_patterns_count = len(created_attack_patterns)
                     for indicator_id in indicator_ids:
                         for pattern_id in created_attack_patterns:
                             try:
-                                self.helper.api.stix_core_relationship.create(
-                                    fromId=indicator_id,
-                                    toId=pattern_id,
-                                    relationship_type="related-to",
-                                    description=(
+                                relationship_data: Dict[str, Any] = {
+                                    "fromId": indicator_id,
+                                    "toId": pattern_id,
+                                    "relationship_type": "related-to",
+                                    "description": (
                                         "Indicator related to ATT&CK technique "
                                         "observed during AssemblyLine analysis"
                                     ),
+                                }
+                                if attack_pattern_marking_refs:
+                                    relationship_data["objectMarking"] = (
+                                        attack_pattern_marking_refs
+                                    )
+                                self.helper.api.stix_core_relationship.create(
+                                    **relationship_data
                                 )
                             except Exception as exc:
                                 self.helper.log_warning(
@@ -1966,14 +2030,21 @@ class AssemblyLineConnector:
         # *malicious* families bucket (``_create_indicators``), and
         # mentioning it under an "Indicators" header would imply
         # those were created as indicators.
+        #
+        # The per-category counts come from ``counts`` (populated by
+        # ``_create_indicators``) rather than ``len(suspicious_iocs[...])``
+        # so the Note reports what was *actually created in OpenCTI*,
+        # not what was *extracted from AssemblyLine* —
+        # ``_create_indicators`` caps creation at 20 indicators per
+        # bucket, so on large analyses ``len(...)`` would over-state
+        # the count and contradict the run's success-message.
         suspicious_block = ""
         if has_suspicious_iocs:
-            sus = suspicious_iocs or {}
             suspicious_block = (
                 "\n## Suspicious IOCs Created as Indicators\n"
-                f"- **Suspicious Domains:** {len(sus.get('domains', []))}\n"
-                f"- **Suspicious IP Addresses:** {len(sus.get('ips', []))}\n"
-                f"- **Suspicious URLs:** {len(sus.get('urls', []))}\n"
+                f"- **Suspicious Domains:** {counts.get('suspicious_domains', 0)}\n"
+                f"- **Suspicious IP Addresses:** {counts.get('suspicious_ips', 0)}\n"
+                f"- **Suspicious URLs:** {counts.get('suspicious_urls', 0)}\n"
             )
 
         # ``Malware Families`` is its own section because the family
@@ -1993,6 +2064,18 @@ class AssemblyLineConnector:
                 "(emitted as Malware SDOs, related to the source observable)\n"
             )
 
+        # ``Malicious IOCs Created as Indicators`` reports the per-
+        # category indicator counts from ``counts`` (populated by
+        # ``_create_indicators``) rather than ``len(malicious_iocs[...])``
+        # so the Note matches what was actually written to OpenCTI:
+        # ``_create_indicators`` caps creation at 20 per category, so
+        # on large analyses ``len(...)`` over-stated the counts and
+        # contradicted the run's success-message ("Created N malicious
+        # indicators") and the per-category numbers reported by the
+        # ``Observables Created`` line.
+        malicious_domains_created = counts.get("malicious_domains", 0)
+        malicious_ips_created = counts.get("malicious_ips", 0)
+        malicious_urls_created = counts.get("malicious_urls", 0)
         note_content = f"""# AssemblyLine Analysis Results
 
 **Verdict:** {verdict}
@@ -2000,9 +2083,9 @@ class AssemblyLineConnector:
 **Submission ID:** {sid}{malware_analysis_note}
 
 ## Malicious IOCs Created as Indicators
-- **Malicious Domains:** {len(malicious_iocs['domains'])}
-- **Malicious IP Addresses:** {len(malicious_iocs['ips'])}
-- **Malicious URLs:** {len(malicious_iocs['urls'])}{observables_note}
+- **Malicious Domains:** {malicious_domains_created}
+- **Malicious IP Addresses:** {malicious_ips_created}
+- **Malicious URLs:** {malicious_urls_created}{observables_note}
 {suspicious_block}{malware_families_block}
 ## MITRE ATT&CK Analysis
 - **Attack Techniques Identified:** {attack_patterns_count}
