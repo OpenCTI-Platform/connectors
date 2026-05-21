@@ -187,16 +187,15 @@ class SentinelApiHandler:
             "get", f"{self.config.base_url}{self.config.resource_path}", params=params
         )
         if len(data["value"]) == 0:
+            observable_value = observable.get("value", None)
             if (
                 observable["type"] in NETWORK_ATTRIBUTES_LIST
                 and observable["type"] == "email-addr"
             ):
-                params = (
-                    f"$filter=emailSenderAddress eq '{observable.get("value", None)}'"
-                )
+                params = f"$filter=emailSenderAddress eq '{observable_value}'"
             elif observable["type"] in NETWORK_ATTRIBUTES_LIST:
                 ioc_type = get_ioc_type(observable)
-                params = f"$filter={ioc_type} eq '{observable.get("value", None)}'"
+                params = f"$filter={ioc_type} eq '{observable_value}'"
             elif observable["type"] == "file":
                 params = f"$filter=fileHashValue eq '{get_hash_value(observable)}'"
             else:
