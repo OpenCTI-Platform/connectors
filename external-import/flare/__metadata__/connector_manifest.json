@@ -1,0 +1,13 @@
+{
+  "title": "Flare Connector",
+  "slug": "flare",
+  "description": "Fetches threat intelligence events from the Flare platform and imports them as STIX Incidents into OpenCTI.",
+  "short_description": "Import Flare threat events into OpenCTI as STIX Incidents.",
+  "verified": true,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "container_type": "EXTERNAL_IMPORT",
+  "container_image": "opencti/connector-flare",
+  "container_version": "rolling"
+}
