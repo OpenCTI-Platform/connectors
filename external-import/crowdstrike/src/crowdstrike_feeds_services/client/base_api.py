@@ -39,14 +39,17 @@ class BaseCrowdstrikeClient:
         # ``response["body"]["errors"][0]["message"]`` is not guaranteed:
         # a 403 can return an empty body, ``errors`` can be missing /
         # ``None`` / ``[]`` (the upstream sometimes reports a generic
-        # failure without a specific item), and the first entry can be
-        # a non-dict. Unpack defensively here so a secondary
+        # failure without a specific item), a malformed payload can
+        # surface ``errors`` as a non-list (e.g. a bare dict the SDK
+        # forgot to wrap), and the first entry itself can be a
+        # non-dict. Unpack defensively at every step so a secondary
         # ``IndexError`` / ``KeyError`` / ``TypeError`` cannot mask the
         # real status-code diagnostic before the caller (e.g.
         # ``_get_related_iocs``) gets a chance to handle the failure
         # gracefully.
         body = response.get("body") or {}
-        errors = body.get("errors") or []
+        raw_errors = body.get("errors")
+        errors = raw_errors if isinstance(raw_errors, (list, tuple)) else []
         first_error = errors[0] if errors else {}
         error_message = (
             first_error.get("message") if isinstance(first_error, dict) else None

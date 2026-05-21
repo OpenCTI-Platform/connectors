@@ -312,11 +312,15 @@ class ReportImporter(BaseImporter):
                 related_indicators.extend(resources)
             elif "errors" in response:
                 # API returned an error (e.g., 403 permission denied).
-                # ``errors`` can legitimately be an empty list (or ``None``)
-                # when the upstream reports a generic failure without a
-                # specific item, so unpack defensively to avoid an
-                # ``IndexError`` swallowing the real diagnostic.
-                errors = response.get("errors") or []
+                # ``errors`` can legitimately be an empty list / ``None``
+                # (the upstream sometimes reports a generic failure
+                # without a specific item) or, on a malformed payload,
+                # a non-list value the SDK forgot to wrap. Normalise to
+                # an actual list before indexing so this defensive path
+                # cannot re-introduce the original ``IndexError`` /
+                # ``KeyError`` it was supposed to prevent.
+                raw_errors = response.get("errors")
+                errors = raw_errors if isinstance(raw_errors, (list, tuple)) else []
                 first_error = errors[0] if errors else {}
                 error_code = (
                     first_error.get("code") if isinstance(first_error, dict) else None

@@ -201,6 +201,29 @@ def test_resources_empty_list_returns_empty(report_importer):
     assert report_importer._missing_indicator_scope is False
 
 
+def test_errors_non_list_does_not_crash(report_importer):
+    """A non-list ``errors`` value (e.g. a bare dict) must not crash.
+
+    The CrowdStrike SDK normally wraps each error in a list, but a
+    malformed payload could surface ``errors`` as a single dict the
+    SDK forgot to wrap. Without the ``isinstance(errors, (list, tuple))``
+    normalisation step, ``errors[0]`` would index the dict by the
+    integer ``0`` and raise ``KeyError`` — defeating the whole point
+    of this defensive branch. ``_get_related_iocs`` must treat the
+    case like a malformed-shape response: return ``[]`` and leave
+    ``_missing_indicator_scope`` alone so other reports in the same
+    run can still attempt the call.
+    """
+    report_importer.indicators_api_cs.get_combined_indicator_entities.return_value = {
+        "errors": {"code": 403, "message": "access denied"}
+    }
+
+    result = report_importer._get_related_iocs("report-A")
+
+    assert result == []
+    assert report_importer._missing_indicator_scope is False
+
+
 # ---------------------------------------------------------------------------
 # ``BaseCrowdstrikeClient.handle_api_error`` — defensive ``errors`` unpacking
 # ---------------------------------------------------------------------------
@@ -298,3 +321,24 @@ def test_handle_api_error_does_not_crash_on_non_dict_first_error():
     client.handle_api_error({"status_code": 500, "body": {"errors": ["string-error"]}})
 
     client.helper.connector_logger.error.assert_called_once()
+
+
+def test_handle_api_error_does_not_crash_on_non_list_errors():
+    """A bare-dict ``errors`` value (the SDK forgot to wrap) must not crash.
+
+    Without the ``isinstance(raw_errors, (list, tuple))`` normalisation
+    step, ``errors[0]`` would index the dict by the integer ``0`` and
+    raise ``KeyError``, defeating the whole point of this defensive
+    block. The normalisation falls back to ``[]`` so the warning is
+    still emitted with a clean ``"no error message returned"`` fallback
+    string and the real status code is still surfaced.
+    """
+    client = _make_base_client()
+    client.handle_api_error(
+        {
+            "status_code": 403,
+            "body": {"errors": {"code": 403, "message": "access denied"}},
+        }
+    )
+
+    client.helper.connector_logger.warning.assert_called_once()
