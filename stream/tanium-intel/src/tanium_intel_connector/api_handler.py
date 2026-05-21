@@ -432,7 +432,9 @@ class TaniumApiHandler:
     def deploy_intel(self):
         if self.config.tanium_deploy_intel:
             self._request_data(
-                "POST", "/plugin/products/threat-response/api/v1/intel/deploy"
+                "POST",
+                "/plugin/products/threat-response/api/v1/intel/deploy",
+                json={},
             )
 
     def trigger_quickscan(self, intel_document_id):
