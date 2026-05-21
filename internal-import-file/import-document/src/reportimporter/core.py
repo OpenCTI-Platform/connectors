@@ -16,6 +16,7 @@ from pycti import (
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
+    Vulnerability,
     get_config_variable,
 )
 from pydantic.v1 import BaseModel
@@ -382,9 +383,17 @@ class ReportImporter:
             if entity is None:
                 self.helper.log_info(
                     f"Vulnerability with name '{match[RESULT_FORMAT_MATCH]}' could not be "
-                    f"found. Is the CVE Connector activated?"
+                    f"found in the platform, creating it."
                 )
-                return
+                vulnerability = stix2.Vulnerability(
+                    id=Vulnerability.generate_id(match[RESULT_FORMAT_MATCH]),
+                    name=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    allow_custom=True,
+                )
+                if entities is not None:
+                    entities.append(vulnerability)
+                return vulnerability
             entity_stix_bundle = (
                 self.helper.api.stix2.get_stix_bundle_or_object_from_entity_id(
                     entity_type=entity["entity_type"], entity_id=entity["id"]
