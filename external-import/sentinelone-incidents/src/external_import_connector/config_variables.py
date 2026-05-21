@@ -105,5 +105,7 @@ class ConfigConnector:
             "SENTINELONE_INCIDENTS_SIGN", ["SentinelOne", "sign"], self.load
         )
         if not configured_sign:
-            raise ConnectorConfigurationError("SIGN is not configured")
+            raise ConnectorConfigurationError(
+                "SENTINELONE_INCIDENTS_SIGN is not configured"
+            )
         self.sign = configured_sign
