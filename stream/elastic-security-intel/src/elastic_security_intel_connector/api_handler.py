@@ -1245,7 +1245,7 @@ class ElasticApiHandler:
             )
             if reason:
                 return str(reason)
-        except ValueError as exc:
+        except json.JSONDecodeError as exc:
             self.helper.connector_logger.debug(
                 "Could not parse error response as JSON",
                 {"error": str(exc)},
@@ -1359,13 +1359,13 @@ class ElasticApiHandler:
                 )
                 return False
 
-        except requests.exceptions.RequestException as e:
+        except requests.exceptions.RequestException as exc:
             self.helper.connector_logger.warning(
                 "Network error while setting up data stream",
                 {
                     "data_stream": self.index_name,
-                    "error_type": type(e).__name__,
-                    "error": str(e),
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
                 },
             )
             return False
@@ -1631,12 +1631,7 @@ class ElasticApiHandler:
                         "Index template created successfully",
                         {"template_name": "logs-ti_custom_opencti"},
                     )
-                # Explicitly initialise the data stream now that the template is in
-                # place.  This prevents Elasticsearch 8 from raising errors such as
-                # "[_data_stream_timestamp] meta field has been disabled" or
-                # "data_stream [...] must not contain the following characters"
-                # that can occur when the first document write attempts to implicitly
-                # create the data stream before it is properly configured.
+                # Explicitly initialise the data stream now that the template is in place.
                 if not self.setup_data_stream():
                     self.helper.connector_logger.warning(
                         "Data stream initialization failed; Elasticsearch 8 may raise "
