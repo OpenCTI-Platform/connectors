@@ -15,7 +15,15 @@ import stix2
 import yaml
 from dateutil import parser
 from github import Github
-from pycti import OpenCTIConnectorHelper, Report, get_config_variable
+from pycti import (
+    Identity,
+)
+from pycti import MarkingDefinition as PyctiMarkingDefinition
+from pycti import (
+    OpenCTIConnectorHelper,
+    Report,
+    get_config_variable,
+)
 from requests import RequestException
 
 
@@ -92,11 +100,8 @@ class CyberMonitor:
             config,
         )
 
-        self.dummy_organization = self.helper.api.identity.create(
-            type="Organization",
-            name="DUMMY",
-            description="Dummy organization which can be used in various unknown contexts.",
-        )
+        self.author = self._create_author()
+        self.tlp_marking = self._create_tlp_marking()
 
     # Default OpenCTI report-workflow positions, kept here so the connector
     # does not have to depend on the API to resolve status names.
@@ -106,6 +111,34 @@ class CyberMonitor:
         "analyzed": 2,
         "closed": 3,
     }
+
+    @staticmethod
+    def _create_author() -> stix2.Identity:
+        """Create the CyberMonitor author Identity object."""
+        return stix2.Identity(
+            id=Identity.generate_id("CyberMonitor", "organization"),
+            name="CyberMonitor",
+            identity_class="organization",
+            description="CyberMonitor is a community-maintained aggregator of publicly available APT and cybercriminal campaign reports.",
+            external_references=[
+                stix2.ExternalReference(
+                    source_name="CyberMonitor",
+                    url="https://github.com/CyberMonitor/APT_CyberCriminal_Campagin_Collections",
+                )
+            ],
+        )
+
+    @staticmethod
+    def _create_tlp_marking() -> stix2.MarkingDefinition:
+        """Create a TLP:CLEAR marking definition."""
+        return stix2.MarkingDefinition(
+            id=PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+            definition_type="statement",
+            definition={"statement": "custom"},
+            allow_custom=True,
+            x_opencti_definition_type="TLP",
+            x_opencti_definition="TLP:CLEAR",
+        )
 
     @staticmethod
     def _normalize_report_type(raw):
@@ -198,6 +231,9 @@ class CyberMonitor:
         """
         Sends the HTTP request and handle the errors
         """
+        if url is None:
+            self.helper.log_warning("Skipping request: URL is None")
+            return None
         try:
             res = requests.get(url, params=params)
             res.raise_for_status()
@@ -212,7 +248,7 @@ class CyberMonitor:
                 self.helper.log_error(str(ex))
             return None
 
-    def _import_year(self, year, work_id):
+    def _import_year(self, year, work_id, since_date: Optional[date] = None):
         g = Github(self.cyber_monitor_github_token)
         repo = g.get_repo("CyberMonitor/APT_CyberCriminal_Campagin_Collections")
         contents = repo.get_contents("")
@@ -237,6 +273,14 @@ class CyberMonitor:
                     report_name = (
                         report_dir.name[11:].replace("_", " ").replace("-", " ")
                     )
+
+                    # Skip reports already imported in a previous run
+                    if since_date is not None and report_date.date() < since_date:
+                        self.helper.log_info(
+                            f"Skipping already-imported report (date={report_date.date()}, name={report_name})"
+                        )
+                        continue
+
                     self.helper.log_info(
                         "Import report (date="
                         + str(report_date)
@@ -280,15 +324,20 @@ class CyberMonitor:
                         id=Report.generate_id(report_name, report_date),
                         name=report_name,
                         published=report_date,
+                        created_by_ref=self.author.id,
+                        object_marking_refs=[self.tlp_marking.id],
                         external_references=[external_reference],
-                        object_refs=[self.dummy_organization["id"]],
+                        object_refs=[self.author.id],
                         allow_custom=True,
                         custom_properties=custom_properties,
                         **optional_fields,
                     )
                     self.send_bundle(
                         work_id,
-                        stix2.Bundle(objects=[report], allow_custom=True).serialize(),
+                        stix2.Bundle(
+                            objects=[self.author, self.tlp_marking, report],
+                            allow_custom=True,
+                        ).serialize(),
                     )
 
     def import_history(self, work_id):
@@ -298,8 +347,8 @@ class CyberMonitor:
             year = self.cyber_monitor_from_year + x
             self._import_year(year, work_id)
 
-    def import_current_year(self, work_id):
-        self._import_year(date.today().year, work_id)
+    def import_current_year(self, work_id, since_date: Optional[date] = None):
+        self._import_year(date.today().year, work_id, since_date)
 
     def process_data(self):
         try:
@@ -336,8 +385,13 @@ class CyberMonitor:
                     # Import history data
                     self.import_history(work_id)
 
-                # Import current year
-                self.import_current_year(work_id)
+                # Import current year (only reports since the last run)
+                since_date = (
+                    datetime.fromtimestamp(last_run, tz=timezone.utc).date()
+                    if last_run is not None
+                    else None
+                )
+                self.import_current_year(work_id, since_date)
 
                 # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
