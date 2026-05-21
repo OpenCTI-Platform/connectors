@@ -37,6 +37,8 @@ class ConfigConnector:
         self.tanium_url = get_config_variable(
             "TANIUM_INTEL_URL", ["tanium_intel", "url"], self.load
         )
+        if isinstance(self.tanium_url, str):
+            self.tanium_url = self.tanium_url.rstrip("/")
         self.tanium_url_console = get_config_variable(
             "TANIUM_INTEL_URL_CONSOLE", ["tanium_intel", "url_console"], self.load
         )

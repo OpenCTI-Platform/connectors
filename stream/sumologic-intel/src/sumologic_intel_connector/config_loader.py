@@ -43,7 +43,7 @@ class ConfigConnector:
             ["sumologic_intel", "api_base_url"],
             self.load,
             required=True,
-        )
+        ).rstrip("/")
 
         self.access_id = get_config_variable(
             "SUMOLOGIC_INTEL_ACCESS_ID",
