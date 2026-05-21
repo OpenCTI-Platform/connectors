@@ -1224,9 +1224,146 @@ class ElasticApiHandler:
             )
             return False
 
+    def _truncate_response(
+        self, response: "requests.Response", max_length: int = 500
+    ) -> str:
+        """
+        Return a concise representation of an HTTP response body for logging.
+
+        Attempts to extract the ``error.reason`` field from a JSON Elasticsearch
+        error response.  Falls back to the raw text, truncated to *max_length*
+        characters with a trailing ``...`` indicator when the text is cut.
+
+        :param response: The :class:`requests.Response` to summarise.
+        :param max_length: Maximum number of characters for the raw-text fallback.
+        :return: A string suitable for inclusion in a log context dictionary.
+        """
+        try:
+            error_body = response.json()
+            reason = (
+                error_body.get("error", {}).get("reason")
+                or error_body.get("message")
+                or error_body.get("error")
+            )
+            if reason:
+                return str(reason)
+        except Exception:
+            pass
+        text = response.text
+        if len(text) > max_length:
+            return text[:max_length] + "..."
+        return text
+
+    def setup_data_stream(self) -> bool:
+        """
+        Ensure the data stream exists, creating it if necessary.
+
+        In Elasticsearch 8, data streams must be backed by an index template that has
+        ``"data_stream": {}`` set.  Auto-creation happens on the first document write,
+        but explicitly creating the data stream up-front gives clearer error messages
+        and ensures the stream is ready before any indexing begins.
+
+        :return: True if the data stream already exists or was created successfully,
+                 False if the operation failed (the caller may choose to continue
+                 without explicit data-stream initialisation).
+        """
+        try:
+            # Check whether the data stream already exists.
+            check_url = f"{self.elastic_url}/_data_stream/{self.index_name}"
+            check_response = requests.get(
+                check_url,
+                headers=self.headers,
+                verify=self._get_verify_config(),
+                cert=self.cert,
+                timeout=10,
+            )
+
+            if check_response.status_code == 200:
+                self.helper.connector_logger.debug(
+                    "Data stream already exists",
+                    {"data_stream": self.index_name},
+                )
+                return True
+
+            if check_response.status_code != 404:
+                # Unexpected status: warn but still attempt creation so that
+                # transient errors (e.g. proxy 502) do not block startup.
+                self.helper.connector_logger.warning(
+                    f"Unexpected status checking data stream existence: {check_response.status_code}",
+                    {
+                        "data_stream": self.index_name,
+                        "response": self._truncate_response(check_response),
+                    },
+                )
+
+            # Data stream does not exist yet (or check was inconclusive) –
+            # create it explicitly.  This requires an index template with
+            # "data_stream": {} to already be in place (created by
+            # setup_index_template).
+            create_url = f"{self.elastic_url}/_data_stream/{self.index_name}"
+            create_response = requests.put(
+                create_url,
+                headers=self.headers,
+                verify=self._get_verify_config(),
+                cert=self.cert,
+                timeout=10,
+            )
+
+            if create_response.status_code in [200, 201]:
+                self.helper.connector_logger.info(
+                    "Data stream created successfully",
+                    {"data_stream": self.index_name},
+                )
+                return True
+            else:
+                self.helper.connector_logger.warning(
+                    f"Failed to create data stream: {create_response.status_code}",
+                    {
+                        "data_stream": self.index_name,
+                        "response": self._truncate_response(create_response),
+                        "hint": (
+                            "Ensure the index template was created successfully "
+                            "and that the API key has the 'manage_index_templates' "
+                            "and 'manage' cluster/index privileges."
+                        ),
+                    },
+                )
+                return False
+
+        except requests.exceptions.ConnectionError as e:
+            self.helper.connector_logger.warning(
+                "Connection error while setting up data stream",
+                {"data_stream": self.index_name, "error": str(e)},
+            )
+            return False
+        except requests.exceptions.Timeout as e:
+            self.helper.connector_logger.warning(
+                "Timeout while setting up data stream",
+                {"data_stream": self.index_name, "error": str(e)},
+            )
+            return False
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "Unexpected error setting up data stream",
+                {
+                    "data_stream": self.index_name,
+                    "error_type": type(e).__name__,
+                    "error": str(e),
+                },
+            )
+            return False
+
     def setup_index_template(self) -> bool:
         """
-        Create or update the index template for threat intelligence data
+        Create or update the index template for threat intelligence data.
+
+        After successfully creating or updating the template this method also calls
+        :meth:`setup_data_stream` to ensure the target data stream is initialised
+        before the connector starts indexing documents.  Explicit initialisation
+        avoids the ambiguous errors that Elasticsearch 8 raises when a document
+        is written to a name that cannot be resolved to a valid data stream
+        (e.g. ``[_data_stream_timestamp] meta field has been disabled`` or
+        ``data_stream [...] must not contain the following characters``).
 
         :return: True if successful, False otherwise
         """
@@ -1477,6 +1614,13 @@ class ElasticApiHandler:
                         "Index template created successfully",
                         {"template_name": "logs-ti_custom_opencti"},
                     )
+                # Explicitly initialise the data stream now that the template is in
+                # place.  This prevents Elasticsearch 8 from raising errors such as
+                # "[_data_stream_timestamp] meta field has been disabled" or
+                # "data_stream [...] must not contain the following characters"
+                # that can occur when the first document write attempts to implicitly
+                # create the data stream before it is properly configured.
+                self.setup_data_stream()
                 return True
             else:
                 self.helper.connector_logger.error(
