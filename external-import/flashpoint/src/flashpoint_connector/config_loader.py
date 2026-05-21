@@ -220,7 +220,7 @@ class FlashpointConfig(ConfigBaseModel):
         "TLP:RED",
     ] = Field(
         description="TLP marking applied to imported indicators.",
-        default="TLP:CLEAR",
+        default="TLP:GREEN",
     )
 
 

@@ -40,7 +40,7 @@ class IndicatorConverterToStix:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        tlp_definition: str = "TLP:CLEAR",
+        tlp_definition: str = "TLP:GREEN",
     ):
         """Initialize converter dependencies and default marking.
 
@@ -189,9 +189,9 @@ class IndicatorConverterToStix:
             int: Score in range 0-100.
         """
         score_tiers = {
-            "informational": 20,
-            "suspicious": 50,
-            "malicious": 80,
+            "informational": 60,
+            "suspicious": 80,
+            "malicious": 100,
         }
 
         nested_score = indicator.get("score")
@@ -808,20 +808,6 @@ class IndicatorConverterToStix:
     def _build_external_references(self, indicator: dict) -> list[ExternalReference]:
         """Build external references from indicator payload."""
         external_references = []
-        reference_url = indicator.get("href")
-        if reference_url:
-            external_references.append(
-                ExternalReference(source_name="Flashpoint", url=reference_url)
-            )
-
-        flashpoint_indicator_id = indicator.get("id")
-        if flashpoint_indicator_id:
-            external_references.append(
-                ExternalReference(
-                    source_name="Flashpoint",
-                    external_id=str(flashpoint_indicator_id),
-                )
-            )
 
         ignite_url = self._extract_ignite_url(indicator)
         if ignite_url:
@@ -846,12 +832,15 @@ class IndicatorConverterToStix:
                 labels=labels,
             )
         )
-        octi_objects.extend(
-            self._build_sighting_objects(
-                indicator=indicator,
-                octi_indicator=octi_indicator,
-            )
-        )
+        # Sightings are disabled: the sighting sources from Flashpoint
+        # (e.g. "flashpoint_extraction") are not real organizations.
+        # Uncomment to enable later if needed.
+        # octi_objects.extend(
+        #     self._build_sighting_objects(
+        #         indicator=indicator,
+        #         octi_indicator=octi_indicator,
+        #     )
+        # )
         octi_objects.extend(
             self._build_tag_entities_objects(
                 indicator=indicator,
@@ -928,6 +917,7 @@ class IndicatorConverterToStix:
             pattern_type="stix",
             pattern=pattern,
             valid_from=valid_from,
+            created=created,
             labels=labels,
             author=self.author,
             markings=[self.marking],

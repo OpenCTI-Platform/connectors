@@ -192,7 +192,8 @@ def test_convert_indicator_to_stix_should_create_attack_pattern_and_uses():
     )
 
 
-def test_convert_indicator_to_stix_should_create_sighting_and_source_identity():
+def test_convert_indicator_to_stix_should_not_create_sighting():
+    """Sightings are disabled because sighting sources are not real organizations."""
     converter = _build_converter()
     indicator = {
         "id": "ind-sighting-001",
@@ -211,9 +212,8 @@ def test_convert_indicator_to_stix_should_create_sighting_and_source_identity():
     octi_objects = converter.convert_indicator_to_stix(indicator)
 
     sighting_objects = [obj for obj in octi_objects if isinstance(obj, Sighting)]
-    assert len(sighting_objects) == 1
-    assert isinstance(sighting_objects[0].sighting_of, Indicator)
-    assert any(
+    assert len(sighting_objects) == 0
+    assert not any(
         isinstance(obj, Organization) and obj.name == "flashpoint_detection"
         for obj in octi_objects
     )
@@ -977,9 +977,8 @@ def test_build_external_references_with_href_and_id():
             "id": "fp-123",
         }
     )
-    assert len(refs) == 2
-    assert refs[0].url == "https://fp.example.com/ind/1"
-    assert refs[1].external_id == "fp-123"
+    # Only Ignite URL is kept; href and external_id are no longer included
+    assert len(refs) == 0
 
 
 def test_extract_ignite_url_returns_none_when_missing():
@@ -994,12 +993,12 @@ def test_resolve_score_informational():
     score = IndicatorConverterToStix._resolve_score(
         {"score": {"value": "informational"}}
     )
-    assert score == 20
+    assert score == 60
 
 
 def test_resolve_score_suspicious():
     score = IndicatorConverterToStix._resolve_score({"score": {"value": "Suspicious"}})
-    assert score == 50
+    assert score == 80
 
 
 def test_resolve_score_unknown_value():
