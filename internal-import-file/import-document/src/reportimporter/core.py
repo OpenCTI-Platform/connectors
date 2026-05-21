@@ -3,7 +3,7 @@ import json
 import os
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Dict, List
 
 import stix2
@@ -726,7 +726,7 @@ class ReportImporter:
             observables.append(entity_stix)
         else:
             timestamp = int(time.time())
-            now = datetime.utcfromtimestamp(timestamp)
+            now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
             report = stix2.Report(
                 id=Report.generate_id(file_name, now),
                 name=file_name,

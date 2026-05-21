@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 import stix2
 from dateutil.parser import parse
@@ -44,7 +44,12 @@ def format_datetime(date_str: str | None) -> str:
         )
         return iso_date_str
     else:
-        now = datetime.utcnow().replace(microsecond=0).isoformat() + "Z"
+        now = (
+            datetime.now(timezone.utc)
+            .replace(microsecond=0)
+            .isoformat()
+            .replace("+00:00", "Z")
+        )
         return now
 
 

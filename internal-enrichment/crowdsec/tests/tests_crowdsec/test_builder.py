@@ -39,16 +39,18 @@ class CrowdSecBuilderTest(unittest.TestCase):
         cls.helper.api.location.generate_id.return_value = (
             "location--76cc9e78-e842-55fb-a0a0-8dbe3618cadd"
         )
-        cls.helper.api.stix2.format_date.return_value = datetime.datetime.utcnow()
+        cls.helper.api.stix2.format_date.return_value = datetime.datetime.now(
+            datetime.timezone.utc
+        )
         cls.cti_data = load_file("malicious_ip.json")
         cls.indicator = stix2.Indicator(
             id="indicator--94c598e8-9174-58e0-9731-316e18f26916",
             pattern="[ipv4-addr:value = '1.2.3.4']",
             pattern_type="stix",
             pattern_version="2.1",
-            valid_from=datetime.datetime.utcnow(),
-            created=datetime.datetime.utcnow(),
-            modified=datetime.datetime.utcnow(),
+            valid_from=datetime.datetime.now(datetime.timezone.utc),
+            created=datetime.datetime.now(datetime.timezone.utc),
+            modified=datetime.datetime.now(datetime.timezone.utc),
             labels=["malicious-activity"],
             confidence=90,
             external_references=[
@@ -308,14 +310,14 @@ class CrowdSecBuilderTest(unittest.TestCase):
         first_seen = self.cti_data.get("history", {}).get("first_seen", "")
         last_seen = self.cti_data.get("history", {}).get("last_seen", "")
         self.assertEqual(
-            datetime.datetime.utcfromtimestamp(
-                sighting_2.get("first_seen").timestamp()
+            datetime.datetime.fromtimestamp(
+                sighting_2.get("first_seen").timestamp(), tz=datetime.timezone.utc
             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
             parse(first_seen).strftime("%Y-%m-%dT%H:%M:%SZ"),
         )
         self.assertEqual(
-            datetime.datetime.utcfromtimestamp(
-                sighting_2.get("last_seen").timestamp()
+            datetime.datetime.fromtimestamp(
+                sighting_2.get("last_seen").timestamp(), tz=datetime.timezone.utc
             ).strftime("%Y-%m-%dT%H:%M:%SZ"),
             parse(last_seen).strftime("%Y-%m-%dT%H:%M:%SZ"),
         )

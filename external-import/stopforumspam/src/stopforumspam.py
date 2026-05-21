@@ -4,7 +4,7 @@ import ssl
 import sys
 import time
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -63,7 +63,7 @@ class Stopforumspam:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -76,7 +76,7 @@ class Stopforumspam:
                     > ((int(self.stopforumspam_interval) - 1) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = "Stopforumspam run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )

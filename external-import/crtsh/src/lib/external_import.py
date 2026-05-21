@@ -100,7 +100,7 @@ class ExternalImportConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -119,7 +119,7 @@ class ExternalImportConnector:
                     )
 
                     self.helper.log_info(f"{self.helper.connect_name} will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = f"{self.helper.connect_name} run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )

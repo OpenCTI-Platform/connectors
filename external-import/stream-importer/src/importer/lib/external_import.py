@@ -1,7 +1,7 @@
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -107,7 +107,7 @@ class ExternalImportConnector:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         f"{self.helper.connect_name} connector last run: "
-                        f'{datetime.utcfromtimestamp(last_run).strftime("%Y-%m-%d %H:%M:%S")}'
+                        f'{datetime.fromtimestamp(last_run, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S")}'
                     )
                 else:
                     last_run = None
@@ -120,7 +120,7 @@ class ExternalImportConnector:
                     self.helper.metric.inc("run_count")
                     self.helper.metric.state("running")
                     self.helper.log_info(f"{self.helper.connect_name} will run!")
-                    now = datetime.utcfromtimestamp(timestamp)
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = f'{self.helper.connect_name} run @ {now.strftime("%Y-%m-%d %H:%M:%S")}'
                     work_id = self.helper.api.work.initiate_work(
                         self.helper.connect_id, friendly_name

@@ -135,9 +135,9 @@ class Connector:
             )
             current_state = self.helper.get_state()
             current_state_datetime = int(now.timestamp())
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S.%f"
-            )
+            last_run_datetime = datetime.fromtimestamp(
+                current_timestamp, tz=timezone.utc
+            ).strftime("%Y-%m-%d %H:%M:%S.%f")
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:

@@ -4,7 +4,7 @@ Elastic Security API Handler for threat intelligence and SIEM rules management
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -419,8 +419,10 @@ class ElasticApiHandler:
         opencti_id = OpenCTIConnectorHelper.get_attribute_in_extension(
             "id", observable_data
         )
-        created = observable_data.get("created", datetime.utcnow().isoformat())
-        modified = observable_data.get("modified", datetime.utcnow().isoformat())
+        created = observable_data.get("created", datetime.now(timezone.utc).isoformat())
+        modified = observable_data.get(
+            "modified", datetime.now(timezone.utc).isoformat()
+        )
 
         # Check if this is a pattern-based indicator
         is_pattern_indicator = "pattern" in observable_data
@@ -443,7 +445,7 @@ class ElasticApiHandler:
 
         # Strictly ECS-compliant document structure with Fleet metadata
         ecs_doc = {
-            "@timestamp": datetime.utcnow().isoformat(),
+            "@timestamp": datetime.now(timezone.utc).isoformat(),
             "event": {
                 "kind": "enrichment",
                 "category": ["threat"],
@@ -451,7 +453,7 @@ class ElasticApiHandler:
                 "created": created,
                 "module": "ti_opencti",
                 "dataset": "ti_opencti.indicator",
-                "ingested": datetime.utcnow().isoformat(),
+                "ingested": datetime.now(timezone.utc).isoformat(),
             },
             "threat": {"indicator": {}},
             # Add data_stream metadata required by Threat Intelligence UI

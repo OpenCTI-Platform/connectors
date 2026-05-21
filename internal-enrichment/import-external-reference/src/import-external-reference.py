@@ -275,7 +275,8 @@ class ImportExternalReferenceConnector:
         # Fallback: try to hide/remove banners/popups via JS if nothing was clicked
         if not found:
             try:
-                await page.evaluate("""
+                await page.evaluate(
+                    """
                     const keywords = ["cookie", "consent", "banner", "popup", "gdpr", "privacy", "notice", "modal", "alert", "dialog"];
                     let removed = false;
                     for (const kw of keywords) {
@@ -290,7 +291,8 @@ class ImportExternalReferenceConnector:
                         }
                     }
                     return removed;
-                    """)
+                    """
+                )
                 self.helper.log_debug("Ran JS fallback to hide banners/popups.")
             except Exception as e:
                 self.helper.log_debug(f"JS fallback for hiding banners failed: {e}")
@@ -310,13 +312,15 @@ class ImportExternalReferenceConnector:
                         viewport={"width": 1280, "height": 800},
                         extra_http_headers=self.headers,
                     )
-                    await ctx.add_init_script("""
+                    await ctx.add_init_script(
+                        """
                         Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
                         Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
                         Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
                         Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
                         window.chrome = { runtime: {}, loadTimes: () =>  { return null; }, csi: () => { return {}; } };
-                        """)
+                        """
+                    )
                     page = await ctx.new_page()
 
                     status_code = None
@@ -800,7 +804,7 @@ class ImportExternalReferenceConnector:
         base = base.encode("ascii", "ignore").decode("ascii")
 
         if self.timestamp_files:
-            ts = datetime.datetime.utcnow().strftime("_%Y%m%d_%H%M%S")
+            ts = datetime.datetime.now(datetime.timezone.utc).strftime("_%Y%m%d_%H%M%S")
             if suffix and base.endswith(suffix):
                 base = base[: -len(suffix)]
             base += ts

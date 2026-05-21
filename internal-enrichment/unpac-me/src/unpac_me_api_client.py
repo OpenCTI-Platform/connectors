@@ -286,7 +286,9 @@ class UnpacMeApi:
                 UnpacMeUpload(
                     result["id"],
                     UnpacMeStatus.from_string(result["status"]),
-                    datetime.datetime.utcfromtimestamp(result["created"]),
+                    datetime.datetime.fromtimestamp(
+                        result["created"], tz=datetime.timezone.utc
+                    ),
                     Sha256(result["sha256"]),
                 )
                 for result in j["results"]
@@ -306,12 +308,16 @@ class UnpacMeApi:
                 UnpacMeUpload(
                     result["submission_id"],
                     UnpacMeStatus.from_string(result["status"]),
-                    datetime.datetime.utcfromtimestamp(result["created"]),
+                    datetime.datetime.fromtimestamp(
+                        result["created"], tz=datetime.timezone.utc
+                    ),
                     Sha256(result["sha256"]),
                 ),
                 Sha256(result["sha256"]),
                 [],
-                datetime.datetime.utcfromtimestamp(result["created"]),
+                datetime.datetime.fromtimestamp(
+                    result["created"], tz=datetime.timezone.utc
+                ),
                 [Sha256(sha256) for sha256 in result["children"]],
             )
 
@@ -340,12 +346,16 @@ class UnpacMeApi:
                 UnpacMeUpload(
                     result["id"],
                     UnpacMeStatus.from_string(result["status"]),
-                    datetime.datetime.utcfromtimestamp(result["created"]),
+                    datetime.datetime.fromtimestamp(
+                        result["created"], tz=datetime.timezone.utc
+                    ),
                     result["sha256"],
                 ),
                 Sha256(result["sha256"]),
                 [malware["match"] for malware in result["malwareid"]],
-                datetime.datetime.utcfromtimestamp(result["created"]),
+                datetime.datetime.fromtimestamp(
+                    result["created"], tz=datetime.timezone.utc
+                ),
                 (
                     [Sha256(sha256) for sha256 in result["children"]]
                     if isinstance(result["children"], list)

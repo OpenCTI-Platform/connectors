@@ -3,7 +3,7 @@ import random
 import re
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Mapping, Optional
 
 import requests
@@ -86,7 +86,7 @@ class TweetFeed:
 
     @staticmethod
     def _get_state_value(
-            state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
     ) -> Any:
         if state is not None:
             return state.get(key, default)
@@ -199,7 +199,7 @@ class TweetFeed:
         while True:
             try:
                 timestamp = int(time.time())
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "TWEETFEED run @ " + now.strftime(
                     "%Y-%m-%dT%H:%M:%S.000Z"
                 )
@@ -209,7 +209,9 @@ class TweetFeed:
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
-                    last_run_datetime = datetime.utcfromtimestamp(last_run)
+                    last_run_datetime = datetime.fromtimestamp(
+                        last_run, tz=timezone.utc
+                    )
                     self.helper.log_info(
                         "Connector last run: "
                         + last_run_datetime.strftime("%Y-%m-%d %H:%M:%S")
@@ -224,13 +226,13 @@ class TweetFeed:
                 last_run_datetime = last_run_datetime + timedelta(days=-1)
 
                 if last_run is None or (
-                        (timestamp - last_run)
-                        > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
+                    (timestamp - last_run)
+                    > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
-                    datetimex = datetime.utcfromtimestamp(timestamp).strftime(
-                        "%Y-%m-%dT%H:%M:%S.000Z"
-                    )
+                    datetimex = datetime.fromtimestamp(
+                        timestamp, tz=timezone.utc
+                    ).strftime("%Y-%m-%dT%H:%M:%S.000Z")
                     self.data = {
                         "Date": datetimex,
                     }
@@ -389,15 +391,17 @@ class TweetFeed:
                     malwsearc = self.helper.api.malware.read(
                         filters={
                             "mode": "and",
-                            "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                            "filters": [
+                                {"key": "name", "values": [taglabel.lower().strip()]}
+                            ],
                             "filterGroups": [],
                         }
                     )
                     if malwsearc:
                         if (
-                                malwsearc["name"].lower().strip()
-                                == taglabel.lower().strip().replace(" ", "")
-                                or malwsearc["name"].lower().strip() == taglabel.lower()
+                            malwsearc["name"].lower().strip()
+                            == taglabel.lower().strip().replace(" ", "")
+                            or malwsearc["name"].lower().strip() == taglabel.lower()
                         ):
                             # Create relation and continue indicates
                             self.helper.api.stix_core_relationship.create(
@@ -411,7 +415,9 @@ class TweetFeed:
                     intrusion = self.helper.api.intrusion_set.read(
                         filters={
                             "mode": "and",
-                            "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                            "filters": [
+                                {"key": "name", "values": [taglabel.lower().strip()]}
+                            ],
                             "filterGroups": [],
                         }
                     )

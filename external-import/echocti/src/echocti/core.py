@@ -7,7 +7,7 @@ the Echo CTI API and sends them to OpenCTI.
 
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 import yaml
@@ -252,7 +252,7 @@ class EchoCTI:
         while True:
             try:
                 # Create work ID
-                timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+                timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
                 friendly_name = f"Echo CTI run @ {timestamp}"
                 work_id = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
