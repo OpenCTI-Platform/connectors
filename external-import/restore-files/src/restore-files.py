@@ -63,9 +63,15 @@ class RestoreFilesConnector:
         name = id + ".json"
         existing_path = backup_files.get(name)
         if existing_path is None:
-            # self.helper.log_error("Missing file: " + name)
+            # Missing references are expected — the backup-files connector
+            # only writes entities that existed at the time of the snapshot,
+            # so an `_ref` pointing at an entity outside the backup window
+            # (created later, deleted before the backup ran, scoped out by
+            # the upstream stream filter, …) is a normal occurrence. Skip
+            # the missing reference silently and let `resolve_missing` move
+            # on: callers always check for `None` and a noisy log here
+            # would flood the connector logs on every restore.
             return None
-            # raise ValueError("Missing file: " + name)
         if date_convert(existing_path) > dir_date:
             path = self.backup_path + "/opencti_data/" + existing_path
             return fetch_stix_data(os.path.join(path, name))[0]
@@ -129,10 +135,16 @@ class RestoreFilesConnector:
         for entry in dirs:
             with os.scandir(entry) as it:
                 for file in it:
-                    # Filter to files: subdirectories or symlinks-to-dirs
-                    # would otherwise pollute the cache and fail in
-                    # ``fetch_stix_data`` further down.
-                    if file.is_file():
+                    # Filter to ``*.json`` files: ``find_element`` only ever
+                    # looks up ``<id>.json`` keys, so caching anything else
+                    # (subdirectories, symlinks-to-dirs, sidecar files like
+                    # ``manifest.txt`` / ``.gitkeep`` / temporary writes) is
+                    # pure waste — it inflates memory and slows the cache
+                    # build on large backups without ever producing a hit.
+                    # ``file.is_file()`` also guards against symlinks-to-dirs
+                    # that would otherwise crash ``fetch_stix_data`` further
+                    # down if a non-JSON entry somehow matched a lookup.
+                    if file.is_file() and file.name.endswith(".json"):
                         backup_files[file.name] = entry.name
         cache_duration = (datetime.datetime.now() - cache_start_time).total_seconds()
         self.helper.log_info(
