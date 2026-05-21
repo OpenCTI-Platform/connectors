@@ -36,9 +36,17 @@ class ImportFileStix:
         entity_id = data.get("entity_id", None)
         if entity_id:
             self.helper.log_info("Contextual import.")
-            bundle = json.loads(file_content)["objects"]
-            bundle = self._update_container(bundle, entity_id)
-            file_content = self.helper.stix2_create_bundle(bundle)
+            parsed_bundle = json.loads(file_content)
+            bundle_objects = parsed_bundle.get("objects")
+            if bundle_objects is None:
+                self.helper.log_warning(
+                    "The imported file does not contain a STIX 'objects' key. "
+                    "Proceeding with import using original file content without "
+                    "contextual container update."
+                )
+            else:
+                bundle_objects = self._update_container(bundle_objects, entity_id)
+                file_content = self.helper.stix2_create_bundle(bundle_objects)
         bundles_sent = self.helper.send_stix2_bundle(
             file_content,
             bypass_validation=bypass_validation,
