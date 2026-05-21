@@ -1,10 +1,11 @@
 import base64
+import io
 import json
 import os
 import re
 import time
 from datetime import datetime
-from typing import Callable, Dict, List
+from typing import Callable, Dict, List, Tuple
 
 import stix2
 import yaml
@@ -88,7 +89,7 @@ class ReportImporter:
             return self._process_import(data)
 
     def _process_file_analysis(self, data: Dict) -> str:
-        file_name = self._download_import_file(data)
+        file_content, file_name = self._download_import_file(data)
 
         # Retrieve entity set from OpenCTI
         entity_indicators = self._collect_stix_objects(self.entity_config)
@@ -97,16 +98,14 @@ class ReportImporter:
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
         # If the file ID contains "import/global", attach it as x_opencti_files in the bundle
         if "import/global" in data["file_id"]:
-            file_data = open(file_name, "rb").read()
-            file_data_encoded = base64.b64encode(file_data)
+            file_data_encoded = base64.b64encode(file_content)
             self.file = {
                 "name": data["file_id"].replace("import/global/", ""),
                 "data": file_data_encoded,
                 "mime_type": "application/pdf",
                 "no_trigger_import": True,
             }
-        parsed_data = parser.run_raw_parser(file_name, data["file_mime"])
-        os.remove(file_name)
+        parsed_data = parser.run_raw_parser(io.BytesIO(file_content), data["file_mime"])
 
         parsed_result = self._extract_elements_id(parsed_data)
         self._push_analysis_results(data, parsed_result)
@@ -195,7 +194,7 @@ class ReportImporter:
         return fields_dict
 
     def _process_import(self, data: Dict) -> str:
-        file_name = self._download_import_file(data)
+        file_content, file_name = self._download_import_file(data)
         entity_id = data.get("entity_id", None)
         file_markings = data.get("file_markings", [])
         bypass_validation = data.get("bypass_validation", False)
@@ -214,16 +213,14 @@ class ReportImporter:
         parser = ReportParser(self.helper, entity_indicators, self.observable_config)
 
         if "import/global" in data["file_id"]:
-            file_data = open(file_name, "rb").read()
-            file_data_encoded = base64.b64encode(file_data)
+            file_data_encoded = base64.b64encode(file_content)
             self.file = {
                 "name": data["file_id"].replace("import/global/", ""),
                 "data": file_data_encoded,
                 "mime_type": "application/pdf",
                 "no_trigger_import": True,
             }
-        parsed = parser.run_parser(file_name, data["file_mime"])
-        os.remove(file_name)
+        parsed = parser.run_parser(io.BytesIO(file_content), data["file_mime"])
 
         if not parsed:
             return "No information extracted from report"
@@ -248,11 +245,11 @@ class ReportImporter:
     def start(self) -> None:
         self.helper.listen(self._process_message)
 
-    def _download_import_file(self, data: Dict) -> str:
+    def _download_import_file(self, data: Dict) -> Tuple[bytes, str]:
         file_fetch = data["file_fetch"]
         file_uri = self.helper.opencti_url + file_fetch
 
-        # Downloading and saving file to connector
+        # Downloading file content into memory
         self.helper.log_info("Importing the file " + file_uri)
         file_name = os.path.basename(file_fetch)
         file_content = self.helper.api.fetch_opencti_file(file_uri, True)
@@ -267,10 +264,7 @@ class ReportImporter:
         if os_system == "nt":
             file_name = re.sub(r'[\\/:*?"<>|]', "_", file_name)
 
-        with open(file_name, "wb") as f:
-            f.write(file_content)
-
-        return file_name
+        return file_content, file_name
 
     def _collect_stix_objects(
         self, entity_config_list: List[EntityConfig]

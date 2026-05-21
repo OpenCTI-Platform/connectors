@@ -16,4 +16,5 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh && chmod -R 0777 /opt/opencti-connector-import-document
 WORKDIR /opt/opencti-connector-import-document
 ENV HOME=/opt/opencti-connector-import-document
+VOLUME /tmp
 ENTRYPOINT ["/entrypoint.sh"]
