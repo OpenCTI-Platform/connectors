@@ -13,6 +13,7 @@ from typing import Any, Dict
 import pytest
 import stix2
 from ipqs.ipqs import (
+    _MARKING_ID_TO_TLP,
     _TLP_MAP,
     IPQSConnector,
     _make_tlp_marking,
@@ -159,3 +160,118 @@ class TestObservableMarkingRefs:
     )
     def test_missing_or_malformed_returns_empty_list(self, observable):
         assert IPQSConnector._observable_marking_refs(observable) == []
+
+
+class TestMarkingIdToTLP:
+    """Reverse lookup ``marking.id -> canonical TLP string``.
+
+    The lookup powers the ``_check_max_tlp`` fallback path for the
+    alternate ``object_marking_refs`` shape (a flat list of marking
+    ids). Every distinct TLP id in ``_TLP_MAP`` must resolve back to
+    a TLP string at the SAME level — otherwise the max-TLP gate
+    would silently fall back to ``IPQS_DEFAULT_TLP`` for observables
+    carrying their TLP in the flat-id shape, slipping observables
+    above ``IPQS_MAX_TLP`` past the gate.
+    """
+
+    # ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")``
+    # collides with the legacy ``stix2.TLP_WHITE`` id by design — both
+    # represent the least-restrictive level. We accept either string
+    # as a valid resolution for that shared id; both resolve to the
+    # same ``check_max_tlp`` level so the gate behaviour is identical.
+    _SHARED_LEVELS = {
+        # least-restrictive: CLEAR and WHITE collapse onto the same id
+        # in pycti's namespace UUID generation.
+        ("TLP:CLEAR", "TLP:WHITE"),
+    }
+
+    @pytest.mark.parametrize("tlp_string", sorted(_TLP_MAP))
+    def test_every_tlp_id_resolves_to_same_level(self, tlp_string):
+        marking = _TLP_MAP[tlp_string]
+        resolved = _MARKING_ID_TO_TLP[marking.id]
+        # Either the same string, or another string from the
+        # documented shared-level alias set.
+        if resolved == tlp_string:
+            return
+        for alias_group in self._SHARED_LEVELS:
+            if tlp_string in alias_group and resolved in alias_group:
+                return
+        pytest.fail(
+            f"{tlp_string!r} resolved to unexpected {resolved!r} "
+            f"(not in any shared-level alias group)"
+        )
+
+    def test_reverse_lookup_covers_every_marking_id(self):
+        # Every marking-definition id in ``_TLP_MAP`` (deduplicated
+        # for the CLEAR/WHITE collision) must be present in the
+        # reverse lookup so the alternate ``object_marking_refs``
+        # shape never falls through silently.
+        for marking in _TLP_MAP.values():
+            assert marking.id in _MARKING_ID_TO_TLP
+
+
+class TestCheckMaxTLPAlternateShape:
+    """``_check_max_tlp`` accepts both marking-shape variants.
+
+    The connector resolves marking refs from EITHER the GraphQL
+    ``objectMarking`` list of dicts (primary) OR the alternate
+    ``object_marking_refs`` flat list of ids (fallback). The
+    max-TLP gate must check both — otherwise an observable carrying
+    a ``TLP:RED`` marking in the alternate shape would silently fall
+    back to ``IPQS_DEFAULT_TLP`` (defaults to ``TLP:CLEAR``) and slip
+    past a ``IPQS_MAX_TLP=TLP:AMBER`` gate it should fail.
+    """
+
+    @staticmethod
+    def _make_connector(
+        max_tlp: str = "TLP:AMBER", default_tlp: str = "TLP:CLEAR"
+    ) -> IPQSConnector:
+        # Build a bare connector instance with just the attributes
+        # ``_check_max_tlp`` actually reads — sidesteps the full
+        # ``__init__`` config / network surface.
+        connector = IPQSConnector.__new__(IPQSConnector)
+        connector.max_tlp = max_tlp
+        connector.default_tlp_string = default_tlp
+        return connector
+
+    def test_object_marking_dicts_blocks_when_above_max(self):
+        connector = self._make_connector(max_tlp="TLP:AMBER")
+        observable = {
+            "objectMarking": [
+                {"definition_type": "TLP", "definition": "TLP:RED"},
+            ]
+        }
+        assert connector._check_max_tlp(observable) is False
+
+    def test_object_marking_refs_blocks_when_above_max(self):
+        """Plain ``object_marking_refs`` (list of ids) must be honoured."""
+        connector = self._make_connector(max_tlp="TLP:AMBER")
+        observable = {"object_marking_refs": [stix2.TLP_RED.id]}
+        assert connector._check_max_tlp(observable) is False
+
+    def test_object_marking_refs_allows_when_at_or_below_max(self):
+        connector = self._make_connector(max_tlp="TLP:AMBER")
+        observable = {"object_marking_refs": [stix2.TLP_GREEN.id]}
+        assert connector._check_max_tlp(observable) is True
+
+    def test_unknown_marking_id_falls_back_to_default(self):
+        # An unknown id (e.g. a PAP marking) must not match the TLP
+        # lookup; the gate falls back to ``IPQS_DEFAULT_TLP``.
+        connector = self._make_connector(max_tlp="TLP:AMBER", default_tlp="TLP:CLEAR")
+        observable = {"object_marking_refs": ["marking-definition--unknown"]}
+        assert connector._check_max_tlp(observable) is True
+
+    def test_no_marking_uses_default_tlp(self):
+        connector = self._make_connector(max_tlp="TLP:AMBER", default_tlp="TLP:CLEAR")
+        assert connector._check_max_tlp({}) is True
+
+    def test_object_marking_dicts_take_precedence_over_refs(self):
+        """When both shapes are present, the dict form is used first."""
+        connector = self._make_connector(max_tlp="TLP:AMBER")
+        observable = {
+            "objectMarking": [
+                {"definition_type": "TLP", "definition": "TLP:GREEN"},
+            ],
+            "object_marking_refs": [stix2.TLP_RED.id],
+        }
+        assert connector._check_max_tlp(observable) is True

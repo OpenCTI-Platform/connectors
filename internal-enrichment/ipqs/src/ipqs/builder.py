@@ -79,19 +79,36 @@ class IPQSBuilder:
         OpenCTI exposes markings through the GraphQL ``objectMarking``
         list (objects with a ``standard_id``) but some representations
         may already provide plain marking ids. Both shapes are
-        supported. When the observable carries no markings, the
-        connector's default marking is used as a fallback.
+        supported. Falsy / non-string entries (``None``, empty strings,
+        partially-populated marking dicts with a ``"standard_id"`` key
+        whose value is ``None`` / ``""``) are skipped so the returned
+        list cannot poison ``stix2``'s serialiser with falsy refs, and
+        duplicates are collapsed in-order. When the observable carries
+        no usable markings, the connector's default marking is used
+        as a fallback.
         """
-        object_marking_refs: List[str] = []
+        candidates: List[str] = []
         raw_markings = self.observable.get("objectMarking")
         if raw_markings is None:
             raw_markings = self.observable.get("object_marking_refs")
         if isinstance(raw_markings, list):
             for marking in raw_markings:
-                if isinstance(marking, dict) and "standard_id" in marking:
-                    object_marking_refs.append(marking["standard_id"])
-                elif isinstance(marking, str):
-                    object_marking_refs.append(marking)
+                if isinstance(marking, dict):
+                    standard_id = marking.get("standard_id")
+                    if isinstance(standard_id, str) and standard_id:
+                        candidates.append(standard_id)
+                elif isinstance(marking, str) and marking:
+                    candidates.append(marking)
+        # Deduplicate while preserving order — mirrors what
+        # ``IPQSConnector._observable_marking_refs`` does for the
+        # failure-Note path so the two callers cannot diverge on the
+        # marking-list shape we hand to ``stix2``.
+        seen: set = set()
+        object_marking_refs: List[str] = []
+        for ref in candidates:
+            if ref not in seen:
+                seen.add(ref)
+                object_marking_refs.append(ref)
         if not object_marking_refs:
             object_marking_refs = list(self.default_object_marking_refs)
         return object_marking_refs

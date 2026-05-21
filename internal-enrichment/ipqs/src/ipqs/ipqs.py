@@ -62,6 +62,29 @@ _TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
     "TLP:RED": stix2.TLP_RED,
 }
 
+# Reverse lookup ``marking.id -> canonical TLP string``. Used by
+# ``_check_max_tlp`` to recover the TLP level when an observable is
+# provided in the alternate ``object_marking_refs`` shape (a flat list
+# of marking-definition ids rather than the GraphQL ``objectMarking``
+# list of dicts). Without this the max-TLP gate would silently fall
+# back to ``IPQS_DEFAULT_TLP`` on the alternate shape and could submit
+# data for an observable that is actually above ``IPQS_MAX_TLP``.
+# ``_observable_marking_refs`` (used downstream for the failure-Note
+# marking) already supports both shapes, so the two enforcement
+# points are consistent now.
+#
+# Note: ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")``
+# collides with the legacy ``stix2.TLP_WHITE`` id by design — both
+# represent the least-restrictive TLP level (the "white"/"clear"
+# rename is purely a UI label change in OpenCTI). The reverse lookup
+# only needs to return *some* valid TLP string that resolves to the
+# correct level for the gate; whichever entry wins the dict-build
+# collision is fine because ``check_max_tlp`` treats them as
+# equivalent.
+_MARKING_ID_TO_TLP: Dict[str, str] = {
+    marking.id: tlp_string for tlp_string, marking in _TLP_MAP.items()
+}
+
 
 def _normalize_tlp(value: Optional[str], fallback: str = "TLP:CLEAR") -> str:
     """Normalize a TLP marking string to OpenCTI's ``TLP:LEVEL`` format."""
@@ -677,11 +700,28 @@ class IPQSConnector:
     def _check_max_tlp(self, observable: Dict[str, Any]) -> bool:
         """Return ``True`` when the observable's TLP is at or below ``max_tlp``.
 
-        Uses ``IPQS_DEFAULT_TLP`` as a fallback when the observable carries
-        no explicit marking — same behaviour as the standalone IPQS
-        Analyzer proposed in PR #5970.
+        Inspects BOTH marking shapes the connector accepts elsewhere:
+
+        * the GraphQL ``objectMarking`` list (dicts with
+          ``definition_type`` / ``definition`` — preferred), and
+        * the alternate ``object_marking_refs`` flat list of
+          marking-definition ids (resolved back to a canonical
+          TLP string via ``_MARKING_ID_TO_TLP``).
+
+        ``_observable_marking_refs`` already accepts both shapes for the
+        failure-Note marking-inheritance path; the max-TLP gate must
+        check both as well — otherwise an observable carrying its TLP
+        in the alternate flat-id shape would silently fall back to
+        ``IPQS_DEFAULT_TLP`` and slip past the gate even when the
+        actual TLP is above ``IPQS_MAX_TLP``.
+
+        Uses ``IPQS_DEFAULT_TLP`` as a fallback when the observable
+        carries no TLP marking in either shape — same behaviour as the
+        standalone IPQS Analyzer proposed in PR #5970.
         """
         tlp = self.default_tlp_string
+        # Primary: GraphQL ``objectMarking`` (list of dicts with
+        # ``definition_type`` + ``definition``).
         for marking_definition in observable.get("objectMarking", []) or []:
             if marking_definition.get("definition_type") == "TLP":
                 tlp = _normalize_tlp(
@@ -689,6 +729,17 @@ class IPQSConnector:
                     fallback=self.default_tlp_string,
                 )
                 break
+        else:
+            # Fallback: alternate ``object_marking_refs`` shape (a flat
+            # list of marking ids). Resolve known TLP ids back to their
+            # canonical TLP string; unknown ids are ignored (they may be
+            # PAP or another non-TLP marking definition).
+            for ref in observable.get("object_marking_refs", []) or []:
+                if isinstance(ref, str):
+                    resolved = _MARKING_ID_TO_TLP.get(ref)
+                    if resolved is not None:
+                        tlp = resolved
+                        break
         return OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
 
     def _process_message(self, data: Dict):
