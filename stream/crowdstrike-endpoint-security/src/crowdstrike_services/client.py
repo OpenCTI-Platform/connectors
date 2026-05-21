@@ -88,6 +88,7 @@ class CrowdstrikeClient:
     def _convert_domain_to_punycode(domain: str) -> str:
         """
         Convert a domain to punycode when it contains non-ascii characters.
+        If IDNA conversion fails, return the original domain value unchanged.
         """
         if domain.isascii():
             return domain
