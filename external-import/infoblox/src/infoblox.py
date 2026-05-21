@@ -111,6 +111,16 @@ class Infoblox:
                 response = requests.get(
                     url, headers=headers, verify=True, timeout=(80000, 80000)
                 )
+                response.raise_for_status()
+                if not response.content:
+                    self.helper.connector_logger.warning(
+                        f"Empty response from Infoblox API for type '{ioc_type}' "
+                        f"(HTTP {response.status_code})"
+                    )
+                    # Append an empty object to keep index alignment with
+                    # info[0]/info[1]/info[2] access in opencti_bundle().
+                    infoblox_result.append(json.dumps({}))
+                    continue
                 r_json = response.json()
                 r_json1 = json.dumps(r_json, indent=4)
                 infoblox_result.append(r_json1)
@@ -119,6 +129,7 @@ class Infoblox:
             self.helper.connector_logger.error(
                 f"Error while getting intelligence from Infoblox: {e}"
             )
+            return None
 
     def create_stix_object(self, threat, identity_id):
         object_type = threat["type"]
@@ -227,12 +238,12 @@ class Infoblox:
         urls = []
         ips = []
         domains = []
-        if var_url != "":
-            urls = var_url["threat"]
-        if var_ip != "":
-            ips = var_ip["threat"]
-        if var_domain != "":
-            domains = var_domain["threat"]
+        if var_url:
+            urls = var_url.get("threat", [])
+        if var_ip:
+            ips = var_ip.get("threat", [])
+        if var_domain:
+            domains = var_domain.get("threat", [])
         identity_id = "identity--2998978f-8336-5dfc-93a2-2f3d2f79d0e3"
         identity = stix2.Identity(
             id=identity_id,
@@ -261,6 +272,11 @@ class Infoblox:
 
     def opencti_bundle(self, work_id):
         info = self.infoblox_api_get()
+        if info is None:
+            self.helper.connector_logger.error(
+                "Failed to retrieve data from Infoblox API, skipping bundle creation"
+            )
+            return
         try:
             var_ip = json.loads(info[0])
             var_url = json.loads(info[1])
