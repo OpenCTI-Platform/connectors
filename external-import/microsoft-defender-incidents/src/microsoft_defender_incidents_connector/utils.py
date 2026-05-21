@@ -47,8 +47,7 @@ def format_datetime(date_str: str | None) -> str:
         now = (
             datetime.now(timezone.utc)
             .replace(microsecond=0)
-            .isoformat()
-            .replace("+00:00", "Z")
+            .strftime("%Y-%m-%dT%H:%M:%SZ")
         )
         return now
 
