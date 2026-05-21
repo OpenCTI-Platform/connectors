@@ -473,4 +473,20 @@ __all__ = [
     "get_severity",
     "get_expiration_datetime",
     "get_hash_type",
+    # ``defender_file_dedup_key`` / ``defender_certificate_dedup_key``
+    # are the file- and certificate-observable dedup-key helpers the
+    # connector uses on both sides of the planner (Defender-side
+    # ``GET /indicators`` rows and OpenCTI-side candidate
+    # observables) so the SHA-256 / SHA-1 collapsing stays symmetric;
+    # ``is_defender_supported_domain`` is the regex-only domain
+    # validator that gates Hostname → Domain-Name normalisation.
+    # All three are imported by ``connector.py`` and exercised
+    # directly by ``tests/test_get_action_and_file_dedup.py`` and
+    # ``tests/test_key_normalization.py``, so they are part of the
+    # module's public surface — explicitly listed in ``__all__`` so
+    # ``from utils import *`` and static-analysis exports stay in
+    # sync with the call sites.
+    "defender_file_dedup_key",
+    "defender_certificate_dedup_key",
+    "is_defender_supported_domain",
 ]
