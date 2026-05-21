@@ -41,6 +41,22 @@ class ConverterToStix:
         self.helper = helper
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
         self.author = self.create_author()
+        # Cross-rule SDO dedup. The same MITRE technique id (and the
+        # same CVE) commonly appears on many Sigma rules — without these
+        # caller-owned sets every ``convert_sigma_rule`` call would
+        # re-emit the same ``AttackPattern`` / ``Vulnerability`` SDO
+        # under its deterministic ``pycti.AttackPattern.generate_id`` /
+        # ``pycti.Vulnerability.generate_id`` id. OpenCTI's ingestion
+        # path would still merge them on the platform side, but the
+        # wire payload would carry hundreds of duplicate SDOs for the
+        # common techniques (T1059, T1027, …) and significantly inflate
+        # the bundle size. Dedup by ``id`` so each unique
+        # AttackPattern / Vulnerability is emitted exactly once per
+        # converter lifetime; the per-rule ``indicates`` relationships
+        # are intentionally NOT deduped (each rule owns its own
+        # Indicator → AttackPattern / Vulnerability edge).
+        self._seen_attack_pattern_ids: set[str] = set()
+        self._seen_vulnerability_ids: set[str] = set()
 
     def create_author(self) -> stix2.Identity:
         """
@@ -122,7 +138,14 @@ class ConverterToStix:
                         object_marking_refs=[self.tlp_marking.id],
                     )
                     related_techniques.append(technique)
-                    stix_objects.append(technique)
+                    # Only emit each unique AttackPattern once per
+                    # converter lifetime (see ``__init__``); the
+                    # ``related_techniques`` list is still populated so
+                    # the per-rule ``indicates`` relationship below
+                    # references the same STIX id.
+                    if technique.id not in self._seen_attack_pattern_ids:
+                        self._seen_attack_pattern_ids.add(technique.id)
+                        stix_objects.append(technique)
             if tag.namespace == "cve":
                 name = "CVE-" + tag.name
                 # Same rationale as the AttackPattern above — the
@@ -136,7 +159,10 @@ class ConverterToStix:
                     object_marking_refs=[self.tlp_marking.id],
                 )
                 related_vulnerabilities.append(vulnerability)
-                stix_objects.append(vulnerability)
+                # Same dedup contract as AttackPattern above.
+                if vulnerability.id not in self._seen_vulnerability_ids:
+                    self._seen_vulnerability_ids.add(vulnerability.id)
+                    stix_objects.append(vulnerability)
 
         indicator = stix2.Indicator(
             id=pycti.Indicator.generate_id(pattern=rule["rule_content"]),
