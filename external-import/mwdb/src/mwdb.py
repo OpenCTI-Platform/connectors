@@ -573,6 +573,8 @@ class MWDB:
                 extra_values = []
                 if isinstance(virus.get("mal_tag"), dict):
                     extra_values = virus["mal_tag"].get("extra") or []
+                if not isinstance(extra_values, list):
+                    extra_values = []
                 if (
                     len(extra_values) > 0
                     and str(self.create_observables).capitalize() == "True"
