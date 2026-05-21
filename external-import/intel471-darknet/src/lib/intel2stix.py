@@ -3,8 +3,11 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from urllib.parse import urlparse
 
 import stix2
+from lib.actor_typing import infer_actor_entity_type
 from pycti import CustomObservableCryptographicKey as CryptoKey
 from pycti import CustomObservablePhoneNumber as PhoneNumber
+from pycti import IntrusionSet as PyctiIntrusionSet
+from pycti import ThreatActorGroup as PyctiTAG
 from pycti.entities.opencti_identity import Identity as PyctiIdentity
 from pycti.entities.opencti_indicator import Indicator as PyctiIndicator
 from pycti.entities.opencti_location import Location as PyctiLocation
@@ -152,22 +155,67 @@ def getAdmiralty(code) -> ():
     return (r, c)
 
 
-def getThreatActorContent(actor: dict, markings, creator) -> stix2.ThreatActor:
+def getThreatActorContent(
+    actor: dict,
+    markings,
+    creator,
+    description: str = "",
+    external_references: list[dict] | None = None,
+):
     """
-    Transforms an Intel471 threat actor dictionnary into a STIX Threat Actor object (default is Individual Threat Actor).
+    Transforms an Intel471 actor dictionnary into a STIX SDO using inferred
+    OpenCTI entity typing.
     """
     result = None
     # in case of a report alert
     if "handle" in actor:
         x_aliases = actor["aliases"] if "aliases" in actor else []
-        result = stix2.ThreatActor(
-            id=PyctiTAI.generate_id(actor["handle"]),
-            name=actor["handle"],
-            aliases=x_aliases,
-            created_by_ref=creator,
-            custom_properties={"x_opencti_type": "Threat-Actor-Individual"},
-            object_marking_refs=markings,
-        )
+        x_name = actor["handle"]
+        x_ext_refs = external_references or []
+        entity_type = infer_actor_entity_type(actor)
+        if entity_type == "Intrusion-Set":
+            result = stix2.IntrusionSet(
+                id=PyctiIntrusionSet.generate_id(x_name),
+                name=x_name,
+                description=description,
+                aliases=x_aliases,
+                created_by_ref=creator,
+                external_references=x_ext_refs,
+                object_marking_refs=markings,
+            )
+        elif entity_type == "Threat-Actor-Group":
+            result = stix2.ThreatActor(
+                id=PyctiTAG.generate_id(x_name),
+                name=x_name,
+                description=description,
+                aliases=x_aliases,
+                created_by_ref=creator,
+                external_references=x_ext_refs,
+                custom_properties={"x_opencti_type": "Threat-Actor-Group"},
+                object_marking_refs=markings,
+            )
+        elif entity_type == "Malware":
+            result = stix2.Malware(
+                id=PyctiMalware.generate_id(x_name),
+                name=x_name,
+                is_family=True,
+                description=description,
+                aliases=x_aliases,
+                created_by_ref=creator,
+                external_references=x_ext_refs,
+                object_marking_refs=markings,
+            )
+        else:
+            result = stix2.ThreatActor(
+                id=PyctiTAI.generate_id(x_name),
+                name=x_name,
+                description=description,
+                aliases=x_aliases,
+                created_by_ref=creator,
+                external_references=x_ext_refs,
+                custom_properties={"x_opencti_type": "Threat-Actor-Individual"},
+                object_marking_refs=markings,
+            )
     return result
 
 

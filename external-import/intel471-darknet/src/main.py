@@ -24,7 +24,6 @@ from pycti import Incident as PyctiIncident
 from pycti import MarkingDefinition as PyctiMarkingDefinition
 from pycti import Report as PyctiReport
 from pycti import StixCoreRelationship as PyctiSCR
-from pycti import ThreatActorIndividual as PyctiTAI
 from pycti import get_config_variable
 from stix2 import Identity, Incident, Relationship, Report
 
@@ -1556,16 +1555,16 @@ class Intel471AlertsConnector(ExternalImportConnector):
                 {"source_name": r["subject"], "url": r["portalReportUrl"]}
             )
 
-        # create threat actor
-        x_actor = stix2.ThreatActor(
-            id=PyctiTAI.generate_id(x_name),
-            name=x_name,
+        # create actor-like entity using inferred Intel 471 type mapping
+        actor_with_identity = actor.copy()
+        actor_with_identity["handle"] = x_name
+        actor_with_identity["aliases"] = x_aliases
+        x_actor = lib.intel2stix.getThreatActorContent(
+            actor_with_identity,
+            self.intel471_darknet_tlp,
+            self.intel471_id,
             description=x_actor_description,
-            aliases=x_aliases,
-            created_by_ref=self.intel471_id,
             external_references=x_ext_refs,
-            custom_properties={"x_opencti_type": "Threat-Actor-Individual"},
-            object_marking_refs=self.intel471_darknet_tlp,
         )
         objects.insert(0, x_actor)
 
