@@ -61,15 +61,16 @@ PortSpoofPro Host:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `CONNECTOR_ID` | Yes | - | Unique UUIDv4 identifier |
+| `CONNECTOR_ID` | Yes | - | Stable UUIDv4 identifier (must NOT change across restarts — OpenCTI uses it as the connector's identity for work tracking) |
 | `CONNECTOR_NAME` | No | `PortSpoofPro` | Connector display name |
+| `CONNECTOR_SCOPE` | No | `Threat-Actor,Observed-Data,IPv4-Addr,IPv6-Addr,Tool,Attack-Pattern,Report,Relationship,Sighting` | Comma-separated list of STIX types this connector ingests |
 | `CONNECTOR_LOG_LEVEL` | No | `info` | Log level: `debug`, `info`, `warn`, `error` |
 
 ### PortSpoofPro Settings
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `RABBITMQ_URL` | Yes | `amqp://guest:guest@localhost:5672/` | RabbitMQ connection URL |
+| `RABBITMQ_URL` | No | `amqp://guest:guest@rabbitmq:5672/` | RabbitMQ connection URL — defaults to the standard guest-credentials URL pointing at a sidecar container named `rabbitmq`; override when RabbitMQ runs elsewhere |
 | `RABBITMQ_QUEUE_NAME` | No | `opencti-connector-queue` | Queue name for state updates |
 | `PS_LOG_FILE` | No | - | Log file path (stderr if not set) |
 | `PS_DEBUG_FULL_DUMPS` | No | `0` | Enable full telemetry logs (set to `1`) |

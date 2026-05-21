@@ -128,8 +128,8 @@ class FullSessionState(BaseModel):
 
     session_id: str = Field(min_length=1)
     source_ip: str = Field(min_length=1)
-    session_start_time: str
-    last_activity_time: str
+    session_start_time: str = Field(min_length=1)
+    last_activity_time: str = Field(min_length=1)
     last_event_type: str = Field(
         pattern=r"^(scanner_detected|scanner_update|scanner_session_ended)$"
     )
@@ -161,6 +161,28 @@ class FullSessionState(BaseModel):
             validate_ip_address(value)
         except ValidationError as exc:
             raise ValueError(str(exc)) from exc
+        return value
+
+    @field_validator("session_start_time", "last_activity_time", "session_end_time")
+    @classmethod
+    def _validate_iso_timestamp(cls, value: Optional[str]) -> Optional[str]:
+        # ``parse_iso_datetime`` silently falls back to ``datetime.now()`` for
+        # unparseable values (so the connector never crashes on bad payloads),
+        # but that meant empty / malformed timestamps used to produce STIX
+        # SDOs whose ``first_observed`` / ``last_observed`` were the wall
+        # clock at ingest rather than the real attack times. Validating at
+        # the pydantic boundary surfaces the bad input as a structured
+        # validation error and lets the upstream retry / DLQ logic act on it.
+        if value is None:
+            return value
+        if not value:
+            raise ValueError("timestamp must not be empty")
+        from datetime import datetime
+
+        try:
+            datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"Invalid ISO 8601 timestamp: {value!r}") from exc
         return value
 
 
@@ -240,9 +262,6 @@ class OpenCTIConsumer:
         )
         logging.info(
             f"  Threat Actors updated:     {sync_stats['threat_actors_updated']:,}"
-        )
-        logging.info(
-            f"  Infrastructures created:   {sync_stats['infrastructures_created']:,}"
         )
         logging.info(
             f"  Observed Data created:     {sync_stats['observed_data_created']:,}"

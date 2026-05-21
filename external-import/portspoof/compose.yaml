@@ -10,7 +10,13 @@ services:
       # as the same instance and preserve work tracking continuity.
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_NAME=${CONNECTOR_NAME:-PortSpoofPro}
-      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-portspoof-pro}
+      # ``CONNECTOR_SCOPE`` declares the STIX types this connector
+      # ingests. Default kept aligned with ``build_config_from_env``
+      # (``synchronizer.py``) so the compose-with-defaults path
+      # registers the connector with the same scope the code expects;
+      # operators can override the env var to narrow the scope without
+      # editing the code.
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-Threat-Actor,Observed-Data,IPv4-Addr,IPv6-Addr,Tool,Attack-Pattern,Report,Relationship,Sighting}
       - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
       - RABBITMQ_URL=${RABBITMQ_URL}
       - RABBITMQ_QUEUE_NAME=${RABBITMQ_QUEUE_NAME:-opencti-connector-queue}

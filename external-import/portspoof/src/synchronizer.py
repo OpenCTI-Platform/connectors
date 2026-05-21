@@ -849,9 +849,16 @@ class ObservedDataManager:
             )
             return observed_data
 
-        except Exception as e:
-            logging.error(f"Failed to create Observed-Data: {e}")
-            return None
+        except Exception:
+            # Surface the failure so the surrounding ``sync_session`` /
+            # consumer wrapper can fail the message and route it through
+            # the configured retry / DLQ path. Silently returning ``None``
+            # used to ACK the message even though the Observed-Data SDO
+            # (and the dependent Sighting) had failed to materialise —
+            # leaking partial ingestions and making operator debugging
+            # painful.
+            logging.exception("Failed to create Observed-Data")
+            raise
 
     @staticmethod
     def _build_description_summary(
@@ -965,31 +972,28 @@ class StixSynchronizer:
         # the references to it so OpenCTI's bundle consistency check is
         # satisfied and the platform never has to look up an unknown
         # marking ID when ``cleanup_inconsistent_bundle=True`` is set.
+        # The platform-side ``marking_definition.read`` round-trip was
+        # removed because the resulting ``tlp_clear_opencti_id`` was
+        # never read anywhere — every bundling site uses
+        # ``tlp_clear_stix_id`` directly — so the extra API call only
+        # added startup latency and a noisy failure mode on first ingest.
         self.tlp_clear_marking = _build_tlp_clear_marking()
         self.tlp_clear_stix_id = self.tlp_clear_marking.id
-        try:
-            existing = self.api.marking_definition.read(id=self.tlp_clear_stix_id)
-            self.tlp_clear_opencti_id = (
-                existing["id"] if existing else self.tlp_clear_stix_id
-            )
-            logging.info(
-                f"Using TLP:CLEAR marking definition: STIX ID={self.tlp_clear_stix_id}"
-            )
-        except Exception as e:
-            logging.warning(
-                f"Failed to read TLP:CLEAR marking from platform: {e}. "
-                "It will be created automatically on first ingest."
-            )
-            self.tlp_clear_opencti_id = self.tlp_clear_stix_id
+        logging.info(
+            f"Using TLP:CLEAR marking definition: STIX ID={self.tlp_clear_stix_id}"
+        )
 
         self.extractor = IntelligenceExtractor()
         self._seen_threat_actor_ips = set()
 
+        # ``infrastructures_created`` used to live here but no
+        # ``Infrastructure`` SDO is emitted anywhere in this connector
+        # (and the README's data model doesn't claim one), so the
+        # counter was permanently 0 and just confused operators.
         self.stats = {
             "sessions_synced": 0,
             "threat_actors_created": 0,
             "threat_actors_updated": 0,
-            "infrastructures_created": 0,
             "observed_data_created": 0,
             "tools_created": 0,
             "attack_patterns_created": 0,
@@ -1561,9 +1565,15 @@ This indicator represents confirmed malicious activity observed through direct i
         self, state: dict, intelligence: dict, bundle_objects: List, session_id: str
     ) -> Optional[Report]:
         """Create Report for ended session."""
+        # ``sorted(set(...))`` keeps ``object_refs`` deterministic across
+        # runs — ``list(set(...))`` produced a hash-derived ordering that
+        # changed between runs and made the generated Report look like it
+        # had been updated even when the referenced objects were
+        # identical, which polluted the audit log and triggered spurious
+        # downstream ingestion updates.
         object_refs = [obj.id for obj in bundle_objects if hasattr(obj, "id")]
         report = self._create_report_stix2(
-            state, intelligence, list(set(object_refs)), session_id
+            state, intelligence, sorted(set(object_refs)), session_id
         )
         if report:
             self.stats["reports_created"] += 1
