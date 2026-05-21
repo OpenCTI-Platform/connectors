@@ -40,6 +40,17 @@ class SigmaHQConfig(BaseConfigModel):
         description="Rule package to import",
         default="sigma_all_rules",
     )
+    tlp_level: Literal[
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red",
+    ] = Field(
+        description="Default TLP level of the imported entities.",
+        default="clear",
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

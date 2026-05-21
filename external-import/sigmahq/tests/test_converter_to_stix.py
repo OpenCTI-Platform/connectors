@@ -266,7 +266,16 @@ class TestRuleConversion:
 
 
 class TestCrossRuleDedup:
-    """The same technique/CVE across rules emits one SDO + N edges."""
+    """The same technique/CVE across rules emits one SDO + N edges.
+
+    The dedup is *per bundle* (i.e. across the rules processed within
+    a single ``_collect_intelligence`` call), not per converter
+    lifetime — see :class:`TestPerBundleDedupReset` below for the
+    multi-bundle contract. The tests here exercise the within-bundle
+    behaviour by calling ``convert_sigma_rule`` twice in a row on
+    the same converter without an intervening
+    :meth:`ConverterToStix.reset_dedup_state` call.
+    """
 
     def test_shared_technique_emits_one_attack_pattern_and_two_relationships(self):
         converter = _make_converter("clear")
@@ -313,6 +322,87 @@ class TestCrossRuleDedup:
         assert len(vulns) == 1
         assert len(relationships) == 2
         assert {r.target_ref for r in relationships} == {vulns[0].id}
+
+
+class TestPerBundleDedupReset:
+    """Dedup state is per-bundle, not per-converter-lifetime.
+
+    The connector reuses a single ``ConverterToStix`` across scheduled
+    runs. Without an explicit reset between bundles, the second bundle
+    would emit ``Relationship`` objects targeting AttackPattern /
+    Vulnerability SDOs that were "seen" in the first run but are not
+    included in the second bundle — leaving an inconsistent payload
+    even with ``cleanup_inconsistent_bundle=True``.
+    :meth:`ConverterToStix.reset_dedup_state` clears the dedup sets
+    so each bundle is self-contained.
+    """
+
+    def test_reset_dedup_state_makes_attack_pattern_re_emit(self):
+        converter = _make_converter("clear")
+        # First bundle: emits the AttackPattern + Indicator + edge.
+        first = converter.convert_sigma_rule(_build_rule(_RULE_WITH_TECHNIQUE))
+        first_patterns = [o for o in first if o.type == "attack-pattern"]
+        assert len(first_patterns) == 1
+
+        # Second bundle WITHOUT a reset: the AttackPattern is *not*
+        # re-emitted because the dedup set still holds its id from
+        # the first bundle.
+        rule_b_yaml = _RULE_WITH_TECHNIQUE.replace(
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000005",
+        )
+        without_reset = converter.convert_sigma_rule(_build_rule(rule_b_yaml))
+        without_reset_patterns = [
+            o for o in without_reset if o.type == "attack-pattern"
+        ]
+        without_reset_relationships = [
+            o for o in without_reset if o.type == "relationship"
+        ]
+        # Pin the broken-without-reset behaviour explicitly: bundle is
+        # inconsistent (relationship has no target SDO in this bundle).
+        assert without_reset_patterns == []
+        assert len(without_reset_relationships) == 1
+
+        # Third bundle WITH a reset: the AttackPattern is re-emitted,
+        # so the bundle is self-contained.
+        converter.reset_dedup_state()
+        rule_c_yaml = _RULE_WITH_TECHNIQUE.replace(
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000007",
+        )
+        with_reset = converter.convert_sigma_rule(_build_rule(rule_c_yaml))
+        with_reset_patterns = [o for o in with_reset if o.type == "attack-pattern"]
+        with_reset_relationships = [o for o in with_reset if o.type == "relationship"]
+        assert len(with_reset_patterns) == 1
+        assert len(with_reset_relationships) == 1
+        # The relationship's target is in the same bundle as the SDO.
+        assert with_reset_relationships[0].target_ref == with_reset_patterns[0].id
+
+    def test_reset_dedup_state_makes_vulnerability_re_emit(self):
+        converter = _make_converter("clear")
+        first = converter.convert_sigma_rule(_build_rule(_RULE_WITH_CVE))
+        assert any(o.type == "vulnerability" for o in first)
+
+        # Without reset: Vulnerability is suppressed.
+        rule_b_yaml = _RULE_WITH_CVE.replace(
+            "00000000-0000-0000-0000-000000000002",
+            "00000000-0000-0000-0000-000000000006",
+        )
+        without_reset = converter.convert_sigma_rule(_build_rule(rule_b_yaml))
+        assert not any(o.type == "vulnerability" for o in without_reset)
+
+        # After reset: Vulnerability is re-emitted in its own bundle.
+        converter.reset_dedup_state()
+        rule_c_yaml = _RULE_WITH_CVE.replace(
+            "00000000-0000-0000-0000-000000000002",
+            "00000000-0000-0000-0000-000000000008",
+        )
+        with_reset = converter.convert_sigma_rule(_build_rule(rule_c_yaml))
+        with_reset_vulns = [o for o in with_reset if o.type == "vulnerability"]
+        with_reset_relationships = [o for o in with_reset if o.type == "relationship"]
+        assert len(with_reset_vulns) == 1
+        assert len(with_reset_relationships) == 1
+        assert with_reset_relationships[0].target_ref == with_reset_vulns[0].id
 
 
 @pytest.mark.parametrize("tlp_level", ["clear", "white", "green", "amber", "red"])

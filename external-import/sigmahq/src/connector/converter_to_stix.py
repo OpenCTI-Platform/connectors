@@ -41,22 +41,48 @@ class ConverterToStix:
         self.helper = helper
         self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
         self.author = self.create_author()
-        # Cross-rule SDO dedup. The same MITRE technique id (and the
+        # Per-bundle SDO dedup. The same MITRE technique id (and the
         # same CVE) commonly appears on many Sigma rules — without these
-        # caller-owned sets every ``convert_sigma_rule`` call would
-        # re-emit the same ``AttackPattern`` / ``Vulnerability`` SDO
-        # under its deterministic ``pycti.AttackPattern.generate_id`` /
+        # sets every ``convert_sigma_rule`` call would re-emit the same
+        # ``AttackPattern`` / ``Vulnerability`` SDO under its
+        # deterministic ``pycti.AttackPattern.generate_id`` /
         # ``pycti.Vulnerability.generate_id`` id. OpenCTI's ingestion
         # path would still merge them on the platform side, but the
         # wire payload would carry hundreds of duplicate SDOs for the
         # common techniques (T1059, T1027, …) and significantly inflate
-        # the bundle size. Dedup by ``id`` so each unique
-        # AttackPattern / Vulnerability is emitted exactly once per
-        # converter lifetime; the per-rule ``indicates`` relationships
-        # are intentionally NOT deduped (each rule owns its own
-        # Indicator → AttackPattern / Vulnerability edge).
+        # the bundle size. Dedup by ``id`` so each unique AttackPattern /
+        # Vulnerability is emitted exactly once per *bundle*; the per-
+        # rule ``indicates`` relationships are intentionally NOT deduped
+        # (each rule owns its own Indicator → AttackPattern /
+        # Vulnerability edge).
+        #
+        # Scope is per-bundle (not per converter lifetime): the connector
+        # reuses a single ``ConverterToStix`` across scheduled runs, so
+        # if these sets accumulated across runs, every later bundle
+        # would emit ``Relationship`` objects targeting AttackPatterns /
+        # Vulnerabilities that are *not* included in the bundle (because
+        # they were "seen" in an earlier run). Even with
+        # ``cleanup_inconsistent_bundle=True`` this leaves a window
+        # where a relationship can be ingested without its target if
+        # the target was deleted or never landed on the platform side.
+        # ``SigmaHQConnector._collect_intelligence`` calls
+        # :meth:`reset_dedup_state` before every run so each bundle is
+        # self-contained.
         self._seen_attack_pattern_ids: set[str] = set()
         self._seen_vulnerability_ids: set[str] = set()
+
+    def reset_dedup_state(self) -> None:
+        """Clear the per-bundle SDO dedup sets.
+
+        Called by ``SigmaHQConnector._collect_intelligence`` at the
+        start of every scheduled run so the bundle it emits is
+        self-contained: every ``Relationship`` it carries references
+        an SDO that is also in the bundle, regardless of what was
+        emitted in earlier runs that share the same converter
+        instance.
+        """
+        self._seen_attack_pattern_ids.clear()
+        self._seen_vulnerability_ids.clear()
 
     def create_author(self) -> stix2.Identity:
         """

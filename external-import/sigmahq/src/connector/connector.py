@@ -20,9 +20,16 @@ class SigmaHQConnector:
         self.client = SigmaHQClient(
             self.helper,
         )
+        # Pull the TLP level from the connector-specific settings
+        # (``sigmahq.tlp_level`` / ``SIGMAHQ_TLP_LEVEL``) instead of
+        # hardcoding ``"clear"``. The Pydantic ``Literal`` constraint on
+        # ``SigmaHQConfig.tlp_level`` already restricts the value to
+        # the canonical TLP labels accepted by
+        # ``ConverterToStix._create_tlp_marking``, so an invalid value
+        # is rejected at config load instead of crashing the first run.
         self.converter_to_stix = ConverterToStix(
             self.helper,
-            tlp_level="clear",
+            tlp_level=self.config.sigmahq.tlp_level,
         )
 
     def _collect_intelligence(
@@ -34,6 +41,17 @@ class SigmaHQConnector:
         Collect intelligence from the source and convert into STIX object
         :return: List of STIX objects
         """
+        # The connector keeps a single ``ConverterToStix`` instance for
+        # its lifetime (see ``__init__``), so the converter's per-bundle
+        # SDO dedup state would otherwise carry across scheduled runs:
+        # later bundles would emit ``Relationship`` objects targeting
+        # AttackPattern / Vulnerability SDOs that were "seen" in an
+        # earlier run but are not included in the current bundle.
+        # Resetting up front guarantees every emitted bundle is self-
+        # contained — every ``indicates`` edge references an SDO that
+        # is also in the bundle.
+        self.converter_to_stix.reset_dedup_state()
+
         stix_objects = []
         # ``download_and_convert_package`` may return an empty list when the
         # download or zip extraction fails; iterating over the empty default
