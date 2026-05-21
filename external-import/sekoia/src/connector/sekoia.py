@@ -361,6 +361,10 @@ class SekoiaConnector(object):
         return value.replace("\\", "\\\\").replace("'", "\\'")
 
     @staticmethod
+    def _unescape_pattern_value(value: str) -> str:
+        return re.sub(r"\\(.)", r"\1", value)
+
+    @staticmethod
     def _extract_network_traffic_destination(
         pattern: str | None, name: str | None, observable_types: List[str]
     ) -> tuple[str | None, str | None]:
@@ -368,22 +372,27 @@ class SekoiaConnector(object):
         destination_value = None
         if isinstance(pattern, str):
             destination_value_match = re.search(
-                r"network-traffic:dst_ref\.value\s*=\s*'([^']+)'", pattern
+                r"network-traffic:dst_ref\.value\s*=\s*'((?:[^'\\]|\\.)*)'", pattern
             )
             destination_type_match = re.search(
                 r"network-traffic:dst_ref\.type\s*=\s*'([^']+)'", pattern
             )
             if destination_value_match:
-                destination_value = destination_value_match.group(1)
+                destination_value = SekoiaConnector._unescape_pattern_value(
+                    destination_value_match.group(1)
+                )
                 if destination_type_match:
                     destination_type = destination_type_match.group(1)
             else:
                 basic_pattern_match = re.match(
-                    r"^\[\s*([a-z0-9-]+):value\s*=\s*'([^']+)'\s*\]$", pattern
+                    r"^\[\s*([a-z0-9-]+):value\s*=\s*'((?:[^'\\]|\\.)*)'\s*\]$",
+                    pattern,
                 )
                 if basic_pattern_match:
                     destination_type = basic_pattern_match.group(1)
-                    destination_value = basic_pattern_match.group(2)
+                    destination_value = SekoiaConnector._unescape_pattern_value(
+                        basic_pattern_match.group(2)
+                    )
 
         if not destination_type:
             destination_type = next(
