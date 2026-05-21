@@ -483,15 +483,31 @@ class HatchingTriageSandboxConnector:
                 observable_with_files = self.helper.api.stix_cyber_observable.read(
                     id=entity_id, withFiles=True
                 )
-                if observable_with_files:
+                if isinstance(observable_with_files, dict):
                     import_files = observable_with_files.get("importFiles", [])
+                else:
+                    self.helper.log_warning(
+                        f"Artifact {entity_id} reload returned unexpected type: {type(observable_with_files).__name__}. Expected dict."
+                    )
+                if not import_files:
+                    self.helper.log_warning(
+                        f"Artifact {entity_id} reload returned empty or missing importFiles."
+                    )
+            elif not import_files:
+                self.helper.log_warning(
+                    "Artifact enrichment payload missing entity_id; cannot reload observable with files. Enrichment will fail."
+                )
 
             if not import_files:
                 raise ValueError(f"No files found for {observable_value}")
 
             # Build the URI to download the file
-            file_name = import_files[0]["name"]
-            file_id = import_files[0]["id"]
+            file_id = import_files[0].get("id")
+            if not file_id:
+                raise ValueError(
+                    f"Missing file id in importFiles[0] for artifact {observable_value}"
+                )
+            file_name = import_files[0].get("name", f"artifact_{file_id}")
             file_uri = f"{self.octi_api_url}/storage/get/{file_id}"
             file_content = self.helper.api.fetch_opencti_file(file_uri, True)
             sha256 = self._get_sha256(file_content)
