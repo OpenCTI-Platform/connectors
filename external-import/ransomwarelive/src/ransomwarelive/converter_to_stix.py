@@ -227,8 +227,10 @@ class ConverterToStix:
         Create STIX 2.1 IntrusionSet object
 
         Params:
-            name: name of the intrusion in string
-                If the name length is less than 2 characters, an extra space will be add to ensure a valid STIX ID can be generated.
+            name: name of the intrusion in string.
+                If the name length is less than 2 characters, an extra
+                space is appended to ensure a valid STIX ID can be
+                generated.
             intrusion_description: description in string
         Return:
             IntrusionSet in STIX 2.1 format

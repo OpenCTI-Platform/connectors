@@ -769,18 +769,38 @@ class RansomwareAPIConnector:
                     },
                 )
 
+                # ``self.last_run_datetime_with_ingested_data`` is a
+                # ``datetime`` on cycles that *loaded* it from prior
+                # state (``datetime.fromisoformat`` at the top of
+                # ``process_message``) and an ISO ``str`` on cycles
+                # that *just set* it via the collectors. Either way the
+                # value persisted to ``helper.set_state(...)`` must be
+                # JSON-serialisable — storing a raw ``datetime`` makes
+                # the platform's state writer either reject the payload
+                # or stringify it in a non-round-trippable shape.
+                # Coerce to an ISO string with the same precision used
+                # for ``last_run`` so both fields round-trip
+                # symmetrically across ``set_state`` /
+                # ``datetime.fromisoformat``.
+                last_run_datetime_with_ingested_data_iso = (
+                    self.last_run_datetime_with_ingested_data.isoformat(
+                        timespec="seconds"
+                    )
+                    if isinstance(self.last_run_datetime_with_ingested_data, datetime)
+                    else self.last_run_datetime_with_ingested_data
+                )
                 if current_state:
                     current_state["last_run"] = now.isoformat(timespec="seconds")
-                    if self.last_run_datetime_with_ingested_data:
+                    if last_run_datetime_with_ingested_data_iso:
                         current_state["last_run_datetime_with_ingested_data"] = (
-                            self.last_run_datetime_with_ingested_data
+                            last_run_datetime_with_ingested_data_iso
                         )
                     self.helper.set_state(current_state)
                 else:
                     state = {"last_run": now.isoformat(timespec="seconds")}
-                    if self.last_run_datetime_with_ingested_data:
+                    if last_run_datetime_with_ingested_data_iso:
                         state["last_run_datetime_with_ingested_data"] = (
-                            self.last_run_datetime_with_ingested_data
+                            last_run_datetime_with_ingested_data_iso
                         )
                     self.helper.set_state(state)
 
