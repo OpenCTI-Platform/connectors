@@ -5,6 +5,7 @@ ENV CONNECTOR_TYPE=INTERNAL_IMPORT_FILE
 COPY src /opt/opencti-connector-import-file-stix
 
 # Install Python modules
+# Keep bzip2 at runtime to provide libbz2.so.1 required by Python's _bz2 module.
 # hadolint ignore=DL3003
 RUN apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev gfortran musl-dev g++ openblas openblas-dev bzip2 && \
     cd /opt/opencti-connector-import-file-stix && \
