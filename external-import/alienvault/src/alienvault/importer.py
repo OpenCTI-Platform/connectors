@@ -357,4 +357,8 @@ class PulseImporter:
 
     def _send_bundle(self, bundle: stix2.Bundle) -> None:
         serialized_bundle = bundle.serialize()
-        self.helper.send_stix2_bundle(serialized_bundle, work_id=self.work_id)
+        self.helper.send_stix2_bundle(
+            serialized_bundle,
+            work_id=self.work_id,
+            cleanup_inconsistent_bundle=True,
+        )
