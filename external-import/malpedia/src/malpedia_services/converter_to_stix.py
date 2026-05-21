@@ -151,7 +151,6 @@ class MalpediaConverter:
             created_by_ref=self.malpedia_identity["id"],
             name=prepared_data.name,
             description=prepared_data.description,
-            aliases=prepared_data.aliases,
             primary_motivation=prepared_data.primary_motivation,
             secondary_motivations=prepared_data.secondary_motivations,
             external_references=prepared_data.external_references,

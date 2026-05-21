@@ -516,15 +516,9 @@ class MalpediaConnector:
                             actor_external_references
                         )
                     )
-                    aliases = (
-                        actor_json["meta"]["synonyms"]
-                        if "synonyms" in actor_json["meta"]
-                        else []
-                    )
                     prepared_intrusion_set = self.models.create_intrusion_set_model()(
                         name=actor_json["value"],
                         description=description,
-                        aliases=aliases,
                         primary_motivation=primary_motivation,
                         secondary_motivations=secondary_motivations,
                         external_references=stix_external_references,

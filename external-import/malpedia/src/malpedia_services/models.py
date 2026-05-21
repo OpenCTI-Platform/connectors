@@ -102,7 +102,6 @@ class MalpediaModels:
 
             name: str
             description: str
-            aliases: list
             primary_motivation: str
             secondary_motivations: list
             external_references: list
