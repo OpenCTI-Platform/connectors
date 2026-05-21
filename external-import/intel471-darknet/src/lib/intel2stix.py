@@ -163,7 +163,7 @@ def getThreatActorContent(
     external_references: list[dict] | None = None,
 ):
     """
-    Transforms an Intel471 actor dictionnary into a STIX SDO using inferred
+    Transforms an Intel471 actor dictionary into a STIX SDO using inferred
     OpenCTI entity typing.
     """
     result = None
@@ -221,7 +221,7 @@ def getThreatActorContent(
 
 def getVictimContent(victim: dict, markings, creator) -> stix2.Identity:
     """
-    Transforms an Intel471 victim dictionnary into a STIX Identity object.
+    Transforms an Intel471 victim dictionary into a STIX Identity object.
     """
     x_ext_refs = []
     if "urls" in victim:
@@ -306,9 +306,9 @@ def getLocationContent(location: dict, markings, creator):
 
 def getTypeValueContent(entity: dict, markings, creator) -> ():
     """
-    Transforms an Intel471 entity or contact information dictionnary into a tuple containing:
+    Transforms an Intel471 entity or contact information dictionary into a tuple containing:
     - a string describing the type of content: Object, ExtRef or Label
-    - the OpenCTI STIX content: a list of Objects OR an external referencei dictionnary OR a label string
+    - the OpenCTI STIX content: a list of Objects OR an external reference dictionary OR a label string
     """
     result = ()
     match entity["type"]:

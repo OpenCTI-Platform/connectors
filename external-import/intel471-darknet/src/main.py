@@ -1556,9 +1556,7 @@ class Intel471AlertsConnector(ExternalImportConnector):
             )
 
         # create actor-like entity using inferred Intel 471 type mapping
-        actor_with_identity = actor.copy()
-        actor_with_identity["handle"] = x_name
-        actor_with_identity["aliases"] = x_aliases
+        actor_with_identity = {"handle": x_name, "aliases": x_aliases, **actor}
         x_actor = lib.intel2stix.getThreatActorContent(
             actor_with_identity,
             self.intel471_darknet_tlp,

@@ -1,3 +1,4 @@
+import re
 from collections.abc import Mapping
 from typing import Any, Literal
 
@@ -7,7 +8,14 @@ ActorEntityType = Literal[
 
 
 def infer_actor_entity_type(actor: Mapping[str, Any]) -> ActorEntityType:
-    name = str(actor.get("handle") or actor.get("name") or actor.get("uid") or "")
+    name_candidate = actor.get("handle")
+    if name_candidate in (None, ""):
+        name_candidate = actor.get("name")
+    if name_candidate in (None, ""):
+        name_candidate = actor.get("uid")
+    if name_candidate in (None, ""):
+        name_candidate = ""
+    name = str(name_candidate)
     normalized_name = name.lower().strip()
 
     hint_values: list[str] = []
@@ -28,7 +36,7 @@ def infer_actor_entity_type(actor: Mapping[str, Any]) -> ActorEntityType:
     if (
         "intrusion-set" in hints_blob
         or "intrusion set" in hints_blob
-        or "apt" in hints_blob
+        or bool(re.search(r"\bapt(?:\d+)?\b", hints_blob))
         or normalized_name.startswith("apt")
     ):
         return "Intrusion-Set"
