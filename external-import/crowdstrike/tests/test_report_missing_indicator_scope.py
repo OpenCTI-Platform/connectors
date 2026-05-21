@@ -164,6 +164,43 @@ def test_response_without_resources_or_errors_returns_empty(report_importer):
     assert report_importer._missing_indicator_scope is False
 
 
+def test_resources_none_does_not_crash(report_importer):
+    """``{"resources": None}`` must not re-introduce a ``TypeError``.
+
+    The defensive ``resources = response.get("resources") or []``
+    extraction in the ``resources`` branch guards against the case
+    where CrowdStrike returns the key but with a ``None`` (or another
+    non-iterable) value — the previous shape ``related_indicators.extend(
+    response["resources"])`` would have raised
+    ``TypeError: 'NoneType' object is not iterable`` and the
+    surrounding ``try/except`` would have swallowed the real
+    diagnostic.
+    """
+    report_importer.indicators_api_cs.get_combined_indicator_entities.return_value = {
+        "resources": None
+    }
+
+    result = report_importer._get_related_iocs("report-A")
+
+    assert result == []
+    # ``_missing_indicator_scope`` is only set on a 403, not on a
+    # malformed-shape response, so other reports in the same run can
+    # still attempt the call.
+    assert report_importer._missing_indicator_scope is False
+
+
+def test_resources_empty_list_returns_empty(report_importer):
+    """``{"resources": []}`` is the happy-path no-IOC shape."""
+    report_importer.indicators_api_cs.get_combined_indicator_entities.return_value = {
+        "resources": []
+    }
+
+    result = report_importer._get_related_iocs("report-A")
+
+    assert result == []
+    assert report_importer._missing_indicator_scope is False
+
+
 # ---------------------------------------------------------------------------
 # ``BaseCrowdstrikeClient.handle_api_error`` — defensive ``errors`` unpacking
 # ---------------------------------------------------------------------------

@@ -297,9 +297,19 @@ class ReportImporter(BaseImporter):
                 limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
             )
 
-            # Check if response has resources or if it's an error response
+            # Check if response has resources or if it's an error response.
+            # ``resources`` can legitimately be ``None`` (or another
+            # non-iterable) when the upstream returned a degenerate body —
+            # extracting via ``response.get("resources") or []`` keeps the
+            # ``extend`` call crash-free and matches the defensive pattern
+            # already used elsewhere in this connector (see the indicator
+            # importer). Without this guard a ``{"resources": None}``
+            # response re-introduces the ``TypeError: ... is not iterable``
+            # secondary crash that the surrounding ``try/except`` would
+            # swallow, masking the real diagnostic.
             if "resources" in response:
-                related_indicators.extend(response["resources"])
+                resources = response.get("resources") or []
+                related_indicators.extend(resources)
             elif "errors" in response:
                 # API returned an error (e.g., 403 permission denied).
                 # ``errors`` can legitimately be an empty list (or ``None``)
