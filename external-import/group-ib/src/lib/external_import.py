@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -66,6 +67,10 @@ class ExternalImportConnector:
     """
 
     def __init__(self):
+        connector_log_level = os.getenv("CONNECTOR_LOG_LEVEL")
+        if connector_log_level:
+            os.environ["CONNECTOR_LOG_LEVEL"] = connector_log_level.strip().strip("'\"")
+
         self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper({})
         self.helper.connector_logger.info("Initializing ExternalImportConnector")
