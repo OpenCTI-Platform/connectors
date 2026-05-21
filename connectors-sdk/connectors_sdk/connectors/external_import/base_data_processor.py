@@ -65,36 +65,36 @@ class BaseDataProcessor(ABC):
             Changing ``work_name`` between calls to ``send()`` (or between iterations
             in a generator-based ``transform()``) will close the current work and
             open a new one with the updated name.
-        config: The connector settings, injected via ``inject_dependencies()``.
+        settings: The connector settings, injected via ``inject_dependencies()``.
         work_manager: The ``WorkManager`` instance, created in ``inject_dependencies()``.
         logger: The ``ConnectorLogger`` instance, injected via ``inject_dependencies()``.
         state: The ``ExternalImportConnectorState`` instance, injected via ``inject_dependencies()``.
     """
 
     work_name: str
-    config: BaseConnectorSettings
+    settings: BaseConnectorSettings
     work_manager: WorkManager
     logger: ConnectorLogger
     state: ExternalImportConnectorState
 
     def inject_dependencies(
         self,
-        config: BaseConnectorSettings,
+        settings: BaseConnectorSettings,
         helper: OpenCTIConnectorHelper,
         state: ExternalImportConnectorState,
     ) -> None:
         """Inject dependencies from the base connector and create the WorkManager.
 
         Called by ``ExternalImportConnector`` after helper initialization.
-        Sets ``config``, ``logger`` and ``state``, and creates the ``WorkManager``
+        Sets ``settings``, ``logger`` and ``state``, and creates the ``WorkManager``
         for this processor.
 
         Args:
-            config: The connector configuration settings.
+            settings: The connector configuration settings.
             helper: The ``OpenCTIConnectorHelper`` instance.
             state: The ``ExternalImportConnectorState`` instance.
         """
-        self.config = config
+        self.settings = settings
         self.work_manager = WorkManager(helper)
         self.logger = ConnectorLogger(helper)
         self.state = state
@@ -103,7 +103,7 @@ class BaseDataProcessor(ABC):
         """Hook called after ``inject_dependencies()`` wires up dependencies.
 
         Override this method to perform initialization that requires
-        the injected dependencies (logger, state, config, etc.).
+        the injected dependencies (logger, state, settings, etc.).
         Called by ``ExternalImportConnector._init_dependencies()``.
 
         By default, does nothing.
