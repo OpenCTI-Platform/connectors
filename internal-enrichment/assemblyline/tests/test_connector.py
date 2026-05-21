@@ -1022,6 +1022,103 @@ class TestMalwareAnalysisPropagatesSourceMarkings:
         )
 
 
+class TestSummaryNoteVerdict:
+    """The summary Note verdict must reflect every score / IOC bucket.
+
+    The original implementation collapsed everything that was not
+    ``MALICIOUS`` into ``SAFE``, so a suspicious-only AssemblyLine
+    analysis (score 100-499, or only suspicious-tagged IOCs) ended up
+    in the Note as ``Verdict: SAFE`` even while the rest of the
+    connector labelled the source observable ``suspicious`` and
+    emitted suspicious indicators — visibly contradictory in the
+    OpenCTI UI. The new buckets line up with
+    ``_score_to_result_name``:
+
+    * ``score >= 500`` OR any malicious IOC tag → ``MALICIOUS``
+    * ``score >= 100`` OR any suspicious IOC tag → ``SUSPICIOUS``
+    * ``score > 0`` → ``UNKNOWN``
+    * ``score == 0`` AND no IOCs → ``SAFE``
+    """
+
+    @staticmethod
+    def _empty_iocs() -> Dict[str, list]:
+        # ``_create_summary_note`` indexes ``malicious_iocs`` by the IOC
+        # category names (``domains`` / ``ips`` / ``urls`` /
+        # ``families``) directly, so every fixture must carry the full
+        # shape even when individual buckets are empty.
+        return {"domains": [], "ips": [], "urls": [], "families": []}
+
+    @classmethod
+    def _verdict_for(
+        cls,
+        results: Dict[str, Any],
+        malicious_iocs: Dict[str, list] | None = None,
+        suspicious_iocs: Dict[str, list] | None = None,
+    ) -> str:
+        connector = _make_connector()
+        note_create = MagicMock()
+        connector.helper.api = MagicMock(note=MagicMock(create=note_create))
+        connector._create_summary_note(
+            observable={
+                "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+                "objectMarking": [],
+            },
+            results=results,
+            malicious_iocs=(
+                malicious_iocs if malicious_iocs is not None else cls._empty_iocs()
+            ),
+            counts={"observables": 0, "indicators": 0},
+            malware_analysis_id=None,
+            attack_patterns_count=0,
+            suspicious_iocs=suspicious_iocs,
+        )
+        assert note_create.called
+        content = note_create.call_args.kwargs.get("content", "")
+        # The Note content carries a ``**Verdict:** <BUCKET>`` line —
+        # pull the bucket name back out for a clean assertion.
+        for line in content.splitlines():
+            stripped = line.strip().lstrip("*").strip()
+            if stripped.startswith("Verdict"):
+                return stripped.split(":", 1)[1].strip().strip("*").strip()
+        raise AssertionError(f"No Verdict line found in note content: {content!r}")
+
+    def test_malicious_score_produces_malicious_verdict(self) -> None:
+        assert self._verdict_for({"sid": "s", "max_score": 1500}) == "MALICIOUS"
+
+    def test_malicious_ioc_without_high_score_produces_malicious_verdict(
+        self,
+    ) -> None:
+        # A low max_score but malicious-tagged IOC must still bubble up
+        # as MALICIOUS — matching the rest of the enrichment.
+        iocs = self._empty_iocs()
+        iocs["domains"] = ["malware.example.com"]
+        assert self._verdict_for({"sid": "s", "max_score": 50}, iocs) == "MALICIOUS"
+
+    def test_suspicious_score_produces_suspicious_verdict(self) -> None:
+        # Score 120 used to land on ``Verdict: SAFE`` even though the
+        # connector simultaneously emits suspicious indicators with
+        # ``x_opencti_score=50``.
+        assert self._verdict_for({"sid": "s", "max_score": 120}) == "SUSPICIOUS"
+
+    def test_suspicious_ioc_without_score_produces_suspicious_verdict(
+        self,
+    ) -> None:
+        assert (
+            self._verdict_for(
+                {"sid": "s", "max_score": 0},
+                suspicious_iocs={"domains": ["sketchy.example.org"]},
+            )
+            == "SUSPICIOUS"
+        )
+
+    def test_low_nonzero_score_produces_unknown_verdict(self) -> None:
+        # ``_score_to_result_name`` says ``unknown`` for 1-99; mirror it.
+        assert self._verdict_for({"sid": "s", "max_score": 50}) == "UNKNOWN"
+
+    def test_zero_score_with_no_iocs_produces_safe_verdict(self) -> None:
+        assert self._verdict_for({"sid": "s", "max_score": 0}) == "SAFE"
+
+
 class TestSummaryNoteInheritsSourceMarking:
     """``_create_summary_note`` propagates the source observable's TLP.
 

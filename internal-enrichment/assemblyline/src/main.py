@@ -226,14 +226,23 @@ class AssemblyLineConnector:
             ),
             default=True,
         )
-        self.assemblyline_poll_interval = int(
-            get_config_variable(
-                "ASSEMBLYLINE_POLL_INTERVAL",
-                ["assemblyline", "poll_interval"],
-                config,
-                False,
-                30,
-            )
+        # Clamp the configured value to a minimum of 1 second. The JSON
+        # schema already advertises ``minimum: 1`` but a stale / hand-rolled
+        # ``config.yml`` or ``ASSEMBLYLINE_POLL_INTERVAL=0`` env var would
+        # turn the sequential-mode wait loop into a busy loop that burns
+        # CPU and floods the connector logs with retry messages, so apply
+        # the floor here in code too.
+        self.assemblyline_poll_interval = max(
+            1,
+            int(
+                get_config_variable(
+                    "ASSEMBLYLINE_POLL_INTERVAL",
+                    ["assemblyline", "poll_interval"],
+                    config,
+                    False,
+                    30,
+                )
+            ),
         )
         self.assemblyline_max_tlp = get_config_variable(
             "ASSEMBLYLINE_MAX_TLP",
@@ -1580,6 +1589,15 @@ class AssemblyLineConnector:
             f"Received observable: {self._safe_observable_ref(observable)}"
         )
 
+        # Reset the file-size cache that ``_download_import_file`` /
+        # ``_fetch_attached_file`` populate. The connector instance is
+        # reused across enrichment messages, so a stale value from the
+        # previous observable would otherwise leak into the current
+        # summary note (``_create_summary_note`` falls back to
+        # ``self._current_file_size`` when the observable + AL
+        # ``file_info`` don't carry a size).
+        self._current_file_size = None
+
         if observable["entity_type"] not in ("Artifact", "StixFile"):
             msg = f"Observable type {observable['entity_type']} not supported"
             self.helper.log_info(msg)
@@ -1630,11 +1648,25 @@ class AssemblyLineConnector:
                     self.helper.log_warning(f"Could not add suspicious label: {exc}")
 
             try:
-                if max_score > 0:
-                    opencti_score = min(100, int((max_score / 2000) * 100))
-                elif has_malicious_iocs:
+                # Align ``x_opencti_score`` with the verdict bucket that
+                # drives the rest of the enrichment (labels, indicators,
+                # malware-analysis result) rather than mapping the raw
+                # AssemblyLine score linearly. A "suspicious" AL score of
+                # 120 used to land on ``x_opencti_score=6`` even though
+                # the indicator emission path applies 50, and a 500-score
+                # malicious sample used to land on 25 even though the
+                # indicators are emitted with 80 — the OpenCTI UI badges
+                # are tied to score buckets, so the mismatch was very
+                # visible in practice. Bucket the observable's score by
+                # the same rule the indicators use:
+                #   * truly malicious (max_score >= 500 OR any malicious
+                #     IOC tag) -> 80
+                #   * suspicious (max_score >= 100 OR any suspicious IOC
+                #     tag, after the malicious branch ruled it out) -> 50
+                #   * everything else -> 0
+                if is_malicious:
                     opencti_score = 80
-                elif has_suspicious_iocs:
+                elif has_suspicious_iocs or max_score >= 100:
                     opencti_score = 50
                 else:
                     opencti_score = 0
@@ -1693,12 +1725,33 @@ class AssemblyLineConnector:
                 counts,
                 malware_analysis_id,
                 attack_patterns_count,
+                suspicious_iocs=suspicious_iocs,
             )
 
-            return (
-                "File successfully analyzed by AssemblyLine and malicious indicators "
-                "created"
-            )
+            # Return a success message that reflects what was actually
+            # created — the previous shape always said "malicious
+            # indicators created" even when the analysis produced only
+            # suspicious IOCs (or none at all), which made the OpenCTI
+            # connector log misleading.
+            malicious_count = sum(len(values) for values in malicious_iocs.values())
+            suspicious_count = sum(len(values) for values in suspicious_iocs.values())
+            if malicious_count and suspicious_count:
+                return (
+                    "File successfully analyzed by AssemblyLine "
+                    f"({malicious_count} malicious + {suspicious_count} "
+                    "suspicious indicators created)"
+                )
+            if malicious_count:
+                return (
+                    "File successfully analyzed by AssemblyLine "
+                    f"({malicious_count} malicious indicators created)"
+                )
+            if suspicious_count:
+                return (
+                    "File successfully analyzed by AssemblyLine "
+                    f"({suspicious_count} suspicious indicators created)"
+                )
+            return "File successfully analyzed by AssemblyLine (no IOCs extracted)"
         except Exception as exc:
             error_msg = f"Error processing file: {exc}"
             self.helper.log_error(error_msg)
@@ -1716,6 +1769,7 @@ class AssemblyLineConnector:
         counts: Dict[str, int],
         malware_analysis_id: Optional[str],
         attack_patterns_count: int,
+        suspicious_iocs: Optional[Dict[str, List[str]]] = None,
     ) -> None:
         max_score = int(results.get("max_score", 0) or 0)
         sid = results.get("sid", "N/A")
@@ -1762,9 +1816,22 @@ class AssemblyLineConnector:
         else:
             size_str = "N/A bytes"
 
-        verdict = (
-            "MALICIOUS" if max_score >= 500 or any(malicious_iocs.values()) else "SAFE"
-        )
+        # Derive the verdict from the same buckets the rest of the
+        # enrichment uses, so the note never reports ``SAFE`` for an
+        # observable that the connector simultaneously labels
+        # ``suspicious`` / emits suspicious indicators for. The previous
+        # ``MALICIOUS`` / ``SAFE`` binary collapsed every non-malicious
+        # bucket — including the suspicious one — into ``SAFE``.
+        has_malicious_iocs = any(malicious_iocs.values())
+        has_suspicious_iocs = any((suspicious_iocs or {}).values())
+        if max_score >= 500 or has_malicious_iocs:
+            verdict = "MALICIOUS"
+        elif max_score >= 100 or has_suspicious_iocs:
+            verdict = "SUSPICIOUS"
+        elif max_score > 0:
+            verdict = "UNKNOWN"
+        else:
+            verdict = "SAFE"
         malware_analysis_note = (
             "\n**Malware Analysis Created:** Yes (visible in Malware Analysis section)"
             if malware_analysis_id
