@@ -184,6 +184,12 @@ class KnowledgeImporter:
 
     @staticmethod
     def _normalize_yara_rule(content: str) -> str | None:
+        """Normalize YARA content and reject empty rules.
+
+        The connector receives rules with different newline styles and sometimes
+        with a UTF-8 BOM prefix. OpenCTI YARA validation is stricter, so we
+        normalize CRLF/CR to LF, strip BOM/outer whitespace, and skip empty rules.
+        """
         normalized_content = content.replace("\r\n", "\n").replace("\r", "\n")
         normalized_content = normalized_content.lstrip("\ufeff").strip()
         if normalized_content == "":
