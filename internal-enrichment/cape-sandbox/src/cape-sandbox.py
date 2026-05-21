@@ -174,12 +174,37 @@ class CapeSandboxConnector:
 
         # Create label if family was detected
         if "detections" in report and report["detections"]:
-            label = self.helper.api.label.create(
-                value=report["detections"], color="#0059f7"
-            )
-            self.helper.api.stix_cyber_observable.add_label(
-                id=final_observable["id"], label_id=label["id"]
-            )
+            detections = report["detections"]
+            # detections may be a plain string or a list of dicts
+            # e.g. [{"family": "Formbook", "details": [...]}]
+            if isinstance(detections, list):
+                detection_values = []
+                for detection in detections:
+                    if isinstance(detection, dict):
+                        family = detection.get("family")
+                        if family:
+                            detection_values.append(family)
+                        else:
+                            self.helper.log_info(
+                                f"Skipping detection entry with missing 'family' key: {detection}"
+                            )
+                    else:
+                        detection_values.append(str(detection))
+            elif isinstance(detections, str):
+                detection_values = [detections]
+            else:
+                self.helper.log_info(
+                    f"Unexpected type for detections field: {type(detections)}"
+                )
+                detection_values = []
+            for detection_value in detection_values:
+                if detection_value:
+                    label = self.helper.api.label.create(
+                        value=detection_value, color="#0059f7"
+                    )
+                    self.helper.api.stix_cyber_observable.add_label(
+                        id=final_observable["id"], label_id=label["id"]
+                    )
 
         # Create a Note containing the TrID results
 
@@ -201,9 +226,14 @@ class CapeSandboxConnector:
             bundle_objects.append(note)
 
         # Attach the TTPs
-        for tactic_dict in report["ttps"]:
-            attack_id = tactic_dict["ttp"]
-            signature = tactic_dict["signature"]
+        for tactic_dict in report.get("ttps", []):
+            attack_id = tactic_dict.get("ttp")
+            signature = tactic_dict.get("signature")
+            if not attack_id or not signature:
+                self.helper.log_info(
+                    f"Skipping TTP entry with missing required fields: {tactic_dict}"
+                )
+                continue
 
             attack_pattern = stix2.AttackPattern(
                 id=AttackPattern.generate_id(signature, attack_id),
