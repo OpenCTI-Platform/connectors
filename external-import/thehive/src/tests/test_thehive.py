@@ -97,7 +97,7 @@ class TheHiveTest(unittest.TestCase):
     def test_process_main_case_assignee_mapping(
         self, m_custom_case, m_os, m_yaml, m_helper, m_thehiveapi
     ):
-        """testing process_main_case user mapping against case assignee"""
+        """Testing process_main_case user mapping against case assignee."""
         _now = int(time.time() * 1000)
         _case = MagicMock()
         _case_values = {
@@ -127,7 +127,7 @@ class TheHiveTest(unittest.TestCase):
     def test_process_main_case_owner_mapping_fallback(
         self, m_custom_case, m_os, m_yaml, m_helper, m_thehiveapi
     ):
-        """testing process_main_case keeps backward compatibility with owner mapping"""
+        """Testing process_main_case keeps backward compatibility with owner mapping."""
         _now = int(time.time() * 1000)
         _case = MagicMock()
         _case_values = {

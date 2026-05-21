@@ -149,7 +149,7 @@ class TheHive:
 
     def map_thehive_user_to_opencti(self, *thehive_users):
         """Map one of the TheHive usernames/emails to an OpenCTI user id."""
-        if len(self.thehive_user_mapping) == 0:
+        if not self.thehive_user_mapping:
             return None
 
         normalized_users = {
@@ -157,7 +157,7 @@ class TheHive:
             for thehive_user in thehive_users
             if thehive_user is not None and str(thehive_user).strip()
         }
-        if len(normalized_users) == 0:
+        if not normalized_users:
             return None
 
         for user_mapping in self.thehive_user_mapping:
