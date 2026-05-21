@@ -125,7 +125,7 @@ class AlienVault:
             timestamp = self._current_unix_timestamp()
             current_state = self._load_state()
             self._info("Loaded state: {0}", current_state)
-            now = datetime.datetime.utcfromtimestamp(timestamp)
+            now = datetime.datetime.fromtimestamp(timestamp, tz=datetime.timezone.utc)
             friendly_name = "AlienVault run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name

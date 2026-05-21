@@ -1,13 +1,18 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
   id: 'ChangeMe'
   name: 'GreyNoise Feed'
   scope: 'greynoisefeed'
+  duration_period: PT6H
   log_level: 'error'
 
 greynoise_feed:
   api_key: 'ChangeMe'
   feed_type: 'malicious' # set to benign, malicious, suspicious, benign+malicious, malicious+suspicious, benign+suspicious+malicious, or all
+  limit: 10000
+  indicator_score_malicious: 75
+  indicator_score_suspicious: 50
+  indicator_score_benign: 20

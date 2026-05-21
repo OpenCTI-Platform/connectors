@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:PORT'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 #connector:
+#  type: 'EXTERNAL_IMPORT'
 #  id: 'email-intel-microsoft--5d44401f-0b96-4169-a657-61b49176fc62'
 #  name: 'Email Intel Microsoft'
 #  scope: 'email-intel-microsoft'

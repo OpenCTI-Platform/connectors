@@ -4,11 +4,10 @@ services:
     image: opencti/connector-crowdsec-import:latest
     environment:
       # Connector's generic execution parameters
-      - OPENCTI_URL=http://opencti:8080 # OpenCTI API URL
+      - OPENCTI_URL=http://localhost # OpenCTI API URL
       - OPENCTI_TOKEN=ChangeMe # Add OpenCTI API token here
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe # Add CrowdSec connector ID (any valid UUID v4)
-      - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_NAME=CrowdSec Import
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr # MIME type or Stix Object
@@ -21,7 +20,7 @@ services:
       # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
       # - CONNECTOR_SEND_TO_QUEUE=True # Default True
       # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False
-      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=CHANGEME # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
+      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
       # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
 
       # CrowdSec Connector's custom execution parameters REQUIRED
@@ -59,19 +58,4 @@ services:
       # - CROWDSEC_LABELS_REPUTATION_SUSPICIOUS_COLOR=#FFA500 # Color of suspicious reputation label
       # - CROWDSEC_LABELS_REPUTATION_KNOWN_COLOR=#808080 # Color of known reputation label
       # - CROWDSEC_LABELS_REPUTATION_SAFE_COLOR=#00BFFF # Color of safe reputation label
-
-      # Add proxy parameters below if needed
-      # - HTTP_PROXY=CHANGEME
-      # - HTTPS_PROXY=CHANGEME
-      # - NO_PROXY=CHANGEME
     restart: always
-    # networks:
-    #   - docker_default
-
-# If you add it to your OpenCTI docker-compose, add depends_on: - opencti
-
-
-# networks:
-#   default:
-#     external: true
-#     name: docker_default

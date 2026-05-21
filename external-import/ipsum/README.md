@@ -1,17 +1,15 @@
-# OpenCTI External Ingestion Connector IPSUM
+# OpenCTI IPsum Connector
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
-Table of Contents
+The IPsum connector imports malicious IP addresses from the IPsum threat intelligence feed into OpenCTI.
 
-- [OpenCTI External Ingestion Connector IPSUM](#opencti-external-ingestion-connector-ipsum)
+## Table of Contents
+
+- [OpenCTI IPsum Connector](#opencti-ipsum-connector)
+  - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -28,25 +26,23 @@ Table of Contents
   - [Additional information](#additional-information)
 
 ## Introduction
-IPsum is a threat intelligence feed based on 30+ different publicly available lists of suspicious and/or malicious IP addresses. All lists are automatically retrieved and parsed on a daily (24h) basis and the final result is pushed to this repository. List is made of IP addresses together with a total number of (black)list occurrence (for each). Greater the number, lesser the chance of false positive detection and/or dropping in (inbound) monitored traffic. Also, list is sorted from most (problematic) to least occurent IP addresses.
 
-https://github.com/stamparm/ipsum/tree/master
+[IPsum](https://github.com/stamparm/ipsum) is a threat intelligence feed based on 30+ different publicly available lists of suspicious and/or malicious IP addresses. All lists are automatically retrieved and parsed on a daily (24h) basis.
 
+The feed provides IP addresses together with a total number of blacklist occurrences. Greater the number, lesser the chance of false positive detection. The list is sorted from most problematic to least occurring IP addresses.
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6...
+- OpenCTI Platform >= 6.x
+- Internet access to GitHub raw content
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
 
 ### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 |---------------|------------|-----------------------------|-----------|------------------------------------------------------|
@@ -55,104 +51,141 @@ Below are the parameters you'll need to set for OpenCTI:
 
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | ipsum           | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error           | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter       | config.yml | Docker environment variable | Default | Mandatory | Description                                                              |
+|-----------------|------------|-----------------------------|---------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id         | `CONNECTOR_ID`              |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name       | `CONNECTOR_NAME`            | IPsum   | No        | Name of the connector.                                                   |
+| Connector Scope | scope      | `CONNECTOR_SCOPE`           | ipsum   | No        | The scope or type of data the connector is importing.                    |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error   | No        | Determines the verbosity of logs: `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
-
-| Parameter    | config.yml              | Docker environment variable               | Default                                                                           | Mandatory | Description                                                                                                                                                                                                             |
-|--------------|-------------------------|-------------------------------------------|-----------------------------------------------------------------------------------|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| API base URL | api_base_url            | `CONNECTOR_IPSUM_API_BASE_URL`            | `https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt` | Yes       | You can choose between level 1 to level 8. 1 can have a lot of false positives, 8 has no false positive (Example: https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/8.txt - No false positive ) |
-| API key      | api_key                 | `CONNECTOR_IPSUM_API_KEY`                 |                                                                                   | No        | Github API Key                                                                                                                                                                                                          |
-| Score        | default_x_opencti_score | `CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE` | 60                                                                                | No        |                                                                                                                                                                                                                         |
-| TLP Level | tlp_level | `CONNECTOR_IPSUM_TLP_LEVEL` | 'white' | No | Traffic Light Protocol Marking definition level for ingested objects should be in 'white', 'green', 'amber', 'amber+strict', 'red' |
+| Parameter    | config.yml              | Docker environment variable               | Default                                                                           | Mandatory | Description                                                    |
+|--------------|-------------------------|-------------------------------------------|-----------------------------------------------------------------------------------|-----------|----------------------------------------------------------------|
+| API Base URL | api_base_url            | `CONNECTOR_IPSUM_API_BASE_URL`            | https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt   | Yes       | IPsum feed URL (levels 1-8 available).                         |
+| API Key      | api_key                 | `CONNECTOR_IPSUM_API_KEY`                 |                                                                                   | No        | GitHub API key (optional, for rate limiting).                  |
+| Score        | default_x_opencti_score | `CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE` | 60                                                                                | No        | Default x_opencti_score for indicators.                        |
+| TLP Level    | tlp_level               | `CONNECTOR_IPSUM_TLP_LEVEL`               | white                                                                             | No        | TLP marking: `white`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-ipsum:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-ipsum:
+    image: opencti/connector-ipsum:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=IPsum
+      - CONNECTOR_SCOPE=ipsum
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_IPSUM_API_BASE_URL=https://raw.githubusercontent.com/stamparm/ipsum/refs/heads/master/levels/5.txt
+      - CONNECTOR_IPSUM_DEFAULT_X_OPENCTI_SCORE=60
+      - CONNECTOR_IPSUM_TLP_LEVEL=white
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from recorded-future/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the configured interval. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+The connector fetches malicious IP addresses from the IPsum feed and imports them as indicators and observables into OpenCTI.
+
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph IPsum GitHub
+        direction TB
+        Feed[levels/X.txt]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Identity[Identity - IPsum]
+        IP[IPv4-Addr Observable]
+        Indicator[Indicator]
+    end
+
+    Feed --> IP
+    Feed --> Indicator
+    Indicator -- based-on --> IP
+```
+
+### Entity Mapping
+
+| IPsum Data       | OpenCTI Entity      | Description                                      |
+|------------------|---------------------|--------------------------------------------------|
+| IP Address       | IPv4-Addr           | Malicious IP observable                          |
+| IP Address       | Indicator           | STIX pattern `[ipv4-addr:value = '...']`         |
+| Occurrence Count | x_opencti_score     | Higher count = higher confidence                 |
+
+### Feed Levels
+
+IPsum provides different confidence levels:
+
+| Level | Description                                      | False Positive Risk |
+|-------|--------------------------------------------------|---------------------|
+| 1     | Appeared in 1+ blacklists                        | High                |
+| 2     | Appeared in 2+ blacklists                        | Medium-High         |
+| 3     | Appeared in 3+ blacklists                        | Medium              |
+| 4     | Appeared in 4+ blacklists                        | Medium-Low          |
+| 5     | Appeared in 5+ blacklists (recommended)          | Low                 |
+| 6     | Appeared in 6+ blacklists                        | Very Low            |
+| 7     | Appeared in 7+ blacklists                        | Minimal             |
+| 8     | Appeared in 8+ blacklists                        | None                |
+
+> **Recommendation**: Use level 5 or higher for production to minimize false positives.
 
 ## Debugging
 
-The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **Public Feed**: IPsum data is publicly available without authentication
+- **Update Frequency**: Feed is updated daily
+- **Source Lists**: Aggregates from 30+ public blacklists
+- **Reference**: [IPsum GitHub Repository](https://github.com/stamparm/ipsum)

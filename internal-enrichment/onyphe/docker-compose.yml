@@ -1,28 +1,37 @@
 version: '3'
 services:
   connector-onyphe:
-    image: onyphe/connector-onyphe:latest
+    image: opencti/connector-onyphe:latest
     environment:
-      - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_ONYPHE_ID} # Valid UUIDv4
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=ONYPHE
       - CONNECTOR_SCOPE=ipv4-addr,ipv6-addr,indicator,hostname,x509-certificate,text
-      - CONNECTOR_AUTO=false # Enable/disable auto-enrichment of observables. WARNING: potential impact on API quota
-      - CONNECTOR_ONLY_CONTEXTUAL=false # Only extract data related to an entity (a report, a threat actor, etc.)
-      - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_CONFIDENCE_LEVEL=15
       - CONNECTOR_LOG_LEVEL=info
       - ONYPHE_API_KEY=ChangeMe
       - ONYPHE_BASE_URL=https://www.onyphe.io/api/v2/
       - ONYPHE_MAX_TLP=TLP:AMBER
       - ONYPHE_TIME_SINCE=1w
       - ONYPHE_DEFAULT_SCORE=50
-      - ONYPHE_IMPORT_SEARCH_RESULTS=true #Create observables from data when enriching an indicator
-      - ONYPHE_CREATE_NOTE=false #Create a Note with ONYPHE search results each time an observable is enriched
-      - ONYPHE_IMPORT_FULL_DATA=false #Import full app.data.text field per result into OpenCTI (false: truncated to 2KB)
-      - ONYPHE_PIVOT_THRESHOLD=10 #Max results limit for enriching an observable. 
+      - ONYPHE_IMPORT_SEARCH_RESULTS=true
+      - ONYPHE_CREATE_NOTE=false
+      - ONYPHE_IMPORT_FULL_DATA=false
+      - ONYPHE_PIVOT_THRESHOLD=10
+      # Comma-separated list of OpenCTI types to create during enrichment.
+      # Leave empty (default) to create all types.
+      # Valid values: Domain-Name,Hostname,IPv4-Address,IPv6-Address,
+      #               Autonomous-System,X509-Certificate,Text,Vulnerability
+      #- ONYPHE_ENRICHMENT_TYPES=
+      # Comma-separated list of fingerprint pivot labels to use when creating
+      # Text observables.  Leave empty to use the default sha256-preferred set.
+      # Valid values: hhhash-sha256,hhhash-md5,ja4t-md5,ja3s-md5,ja4s-md5,
+      #   hassh-md5,favicon-sha256,favicon-md5,favicon-mmh3,tcp-fingerprint-md5,
+      #   app-data-sha256,app-data-md5,app-data-mmh3,
+      #   http-header-data-sha256,http-header-data-md5,http-header-data-mmh3,
+      #   http-body-data-sha256,http-body-data-md5,http-body-data-mmh3,
+      #   ssh-fingerprint-sha256,ssh-fingerprint-md5
+      #- ONYPHE_TEXT_FINGERPRINTS=
     restart: always
-    depends_on:
-      opencti:
-        condition: service_healthy

@@ -8,12 +8,12 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
+| URLSCAN_ENRICHMENT_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | URLScan API Key |
 | CONNECTOR_NAME | `string` |  | string | `"Urlscan Enrichment"` | The name of the connector. |
 | CONNECTOR_SCOPE | `array` |  | string | `["url", "ipv4-addr", "ipv6-addr"]` | The scope of the connector. Availables: `url or hostname or domain-name` (scope-submission), `ipv4-addr` and `ipv6-addr` (scope-search) |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
-| URLSCAN_ENRICHMENT_API_KEY | `string` |  | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `null` | URLScan API Key |
 | URLSCAN_ENRICHMENT_IMPORT_SCREENSHOT | `boolean` |  | boolean | `true` | Allows or not the import of the screenshot of the scan submitted in URLScan to OpenCTI. |
 | URLSCAN_ENRICHMENT_VISIBILITY | `string` |  | `public` `unlisted` `private` | `"public"` | URLScan offers several levels of visibility for submitted scans: `public`, `unlisted`, `private` |
 | URLSCAN_ENRICHMENT_SEARCH_FILTERED_BY_DATE | `string` |  | string | `">now-1y"` | Allows you to filter by date available: `>now-1h`, `>now-1d`, `>now-1y`, `[2022 TO 2023]`, `[2022/01/01 TO 2023/12/01]` |

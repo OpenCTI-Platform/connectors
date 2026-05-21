@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """OpenCTI Malpedia client module."""
+
 import json
 import time
 from typing import Any

@@ -32,7 +32,7 @@ class ConnectorClient:
         except requests.RequestException as err:
             error_msg = "[API] Error while fetching data: "
             self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
+                error_msg, {"url_path": api_url, "error": str(err)}
             )
             return None
 
@@ -73,7 +73,6 @@ class ConnectorClient:
             # === Add your code above ===
             # ===========================
 
-            raise NotImplementedError
-
         except Exception as err:
-            self.helper.connector_logger.error(err)
+            self.helper.connector_logger.error(str(err))
+            return None

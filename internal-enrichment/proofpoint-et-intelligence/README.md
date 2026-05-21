@@ -1,184 +1,211 @@
-# ProofPoint ET Enrichment Connector
+# OpenCTI ProofPoint ET Intelligence Connector
 
-> **Note**
-> Documentation and tests are still in progress.
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
-- [OpenCTI Internal Enrichment Connector Template](#opencti-internal-enrichment-connector-proofpoint-et-intelligence)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
-    - [Docker Deployment](#docker-deployment)
-    - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [ProofPoint ET Intelligence Configuration](#proofpoint-et-intelligence-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
 
 ## Introduction
 
-The connector enriches individual OpenCTI Observables by collecting intelligence data from the ProofPoint ET Intelligence API. 
+The [ProofPoint Emerging Threats Intelligence](https://www.proofpoint.com/us/products/et-intelligence) connector enriches IP addresses, domain names, and file hashes with threat intelligence data. It provides comprehensive context including related samples, geolocation, and ASN information.
 
-It processes 
+Key features:
+- IP address reputation and context
+- Domain name intelligence
+- File hash sample analysis
+- Geolocation enrichment
+- ASN relationship mapping
+- Related sample discovery
 
-- IP addresses, 
-- domain names, 
-- files. 
-
-The enriched data is then sent back to the OpenCTI platform for further analysis and integration. The connector supports both manual and automatic enrichment.
+---
 
 ## Installation
 
 ### Requirements
 
-- OpenCTI Platform >= 6..3
+- OpenCTI Platform >= 6.0.0
+- ProofPoint ET Intelligence API key
+- Network access to ProofPoint ET Intelligence API
 
-## Configuration variables
+---
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+## Configuration
 
-### OpenCTI environment variables
+### OpenCTI Configuration
 
-Below are the parameters you'll need to set for OpenCTI:
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
 
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+### Base Connector Configuration
 
-### Base connector environment variables
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `IPv4-Addr,Domain-Name,StixFile` |
+| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
 
-Below are the parameters you'll need to set for running the connector properly:
+### ProofPoint ET Intelligence Configuration
 
-| Parameter       | config.yml      | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | id              | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type            | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name  | name            | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope           | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto  | connector_auto	 | `CONNECTOR_AUTO`            | True            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `proofpoint_et_api_base_url` | `PROOFPOINT_ET_API_BASE_URL` | No | API base URL |
+| `proofpoint_et_api_key` | `PROOFPOINT_ET_API_KEY` | Yes | ET Intelligence API key |
+| `proofpoint_et_max_tlp` | `PROOFPOINT_ET_MAX_TLP` | No | Maximum TLP for enrichment |
 
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter                        | config.yml                                   | Docker environment variable                                 | Default                           | Mandatory | Description                                                                                  |
-|----------------------------------|---------------------------------------------|-------------------------------------------------------------|-----------------------------------|-----------|------------------------------------------------------------------------------------------------|
-| API base URL                     | api_base_url                                | `PROOFPOINT_ET_INTELLIGENCE_API_BASE_URL`                   | https://api.emergingthreats.net/v1/ | Yes       | The base URL for the ProofPoint ET Intelligence API.                                          |
-| API key                          | api_key                                     | `PROOFPOINT_ET_INTELLIGENCE_API_KEY`                        |                                   | Yes       | The API key for authenticating with the ProofPoint ET Intelligence API.                       |
-| Max TLP                          | max_tlp                                     | `PROOFPOINT_ET_INTELLIGENCE_MAX_TLP`                        | TLP:AMBER+STRICT                  | No        | The maximum TLP marking level for data to be imported.                       |
-| Import last seen time window     | import_last_seen_time_window                | `PROOFPOINT_ET_INTELLIGENCE_IMPORT_LAST_SEEN_TIME_WINDOW`   | P30D                              | No        | The time window for importing data based on the last seen timestamp, in ISO 8601 duration format. |
+---
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
-
 Build a Docker Image using the provided `Dockerfile`.
 
-Example:
+Example `docker-compose.yml`:
 
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
-```
-
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
-
-```shell
-docker compose up -d
-# -d for detached
+```yaml
+version: '3'
+services:
+  connector-proofpoint-et-intelligence:
+    image: opencti/connector-proofpoint-et-intelligence:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ProofPoint ET Intelligence
+      - CONNECTOR_SCOPE=IPv4-Addr,Domain-Name,StixFile
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=error
+      - PROOFPOINT_ET_API_KEY=ChangeMe
+      - PROOFPOINT_ET_MAX_TLP=TLP:AMBER
+    restart: always
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Clone the repository
+2. Copy `config.yml.sample` to `config.yml` and configure
+3. Install dependencies: `pip install -r requirements.txt`
+4. Run the connector
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
-```
-
-Then, start the connector from recorded-future/src:
-
-```shell
-python3 main.py
-```
+---
 
 ## Usage
 
-To enrich an observable, first click on it in the Observations->Observables tab of the OpenCTI platform (or navigate to an observable another way). Click on the cloud in the upper right, and under "Enrichment Connectors", select the Proofpoint ET enrichment connector. Depending on your configuraiton, the connector may have already run automatically.
+The connector enriches observables by:
+1. Querying ProofPoint ET Intelligence API
+2. Retrieving threat context and related data
+3. Creating relationships to related entities
+
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
+
+---
 
 ## Behavior
 
+### Data Flow
 
 ```mermaid
-graph LR
-    subgraph P_ET["Proofpoint ET Intelligence"]
-    direction TB
-    ProofpointET_IP["IP"]
-    ProofpointET_Domain["Domain"]
-    ProofpointET_Sample["Samples"]
-    ProofpointET_Geoloc["Geoloc"]
-    ProofpointET_ASN["ASN"]
-
-    end  
-
-    subgraph OCTI
-        direction TB
-        subgraph Observables
-            direction TB
-            OCTI_IP[IP Address]
-            OCTI_Domain[Domain Name]
-            OCTI_File[File]
-            OCTI_Location[Location]
-            OCTI_AS[Autonomous System]
-        end
-        OCTI_Domain -.->|"resolve-to"| OCTI_IP
-        OCTI_File -.->|"communicates-with"| OCTI_IP
-        OCTI_IP -.->|"located-at"| OCTI_Location
-        OCTI_IP -.->|"belongs-to"| OCTI_AS
+flowchart LR
+    subgraph "ProofPoint ET Intelligence"
+        A1[IP Data]
+        A2[Domain Data]
+        A3[Sample Data]
+        A4[Geoloc]
+        A5[ASN]
     end
-
-    P_ET~~~OCTI
-
-    ProofpointET_Domain ==> OCTI_Domain
-    ProofpointET_IP ==> OCTI_IP
-    ProofpointET_Sample ==> OCTI_File
-    ProofpointET_Geoloc ==> OCTI_Location
-    ProofpointET_ASN ==> OCTI_AS
-
+    
+    subgraph "OpenCTI STIX Objects"
+        B1[IPv4-Addr]
+        B2[Domain-Name]
+        B3[StixFile]
+        B4[Location]
+        B5[Autonomous-System]
+    end
+    
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+    A4 --> B4
+    A5 --> B5
+    
+    B1 ---|related-to| B3
+    B2 ---|related-to| B3
+    B1 ---|located-at| B4
+    B1 ---|belongs-to| B5
 ```
+
+### Enrichment Mapping
+
+| Observable Type | ET Intelligence Data | Description |
+|-----------------|---------------------|-------------|
+| IPv4-Addr | IP Reputation | Threat context for IP addresses |
+| Domain-Name | Domain Intelligence | Domain reputation and context |
+| StixFile | Sample Analysis | File hash related samples |
+
+### Relationships Created
+
+| Source | Relationship | Target |
+|--------|--------------|--------|
+| IPv4-Addr | related-to | StixFile (samples) |
+| Domain-Name | related-to | StixFile (samples) |
+| IPv4-Addr | located-at | Location |
+| IPv4-Addr | belongs-to | Autonomous-System |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| IPv4-Addr | Enriched IP addresses |
+| Domain-Name | Enriched domains |
+| StixFile | Related malware samples |
+| Location | Geographic information |
+| Autonomous-System | ASN data |
+| Relationship | Links between entities |
+
+---
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=error` to see:
+- API request/response details
+- Entity creation progress
+- Relationship mapping
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+---
 
-## Additional information
+## Additional Information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- [ProofPoint](https://www.proofpoint.com/)
+- [ET Intelligence](https://www.proofpoint.com/us/products/et-intelligence)
+
+### API Access
+
+Contact ProofPoint for API access to ET Intelligence. A subscription is required for API access.

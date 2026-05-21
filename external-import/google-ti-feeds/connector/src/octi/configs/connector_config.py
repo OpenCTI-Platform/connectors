@@ -12,7 +12,7 @@ class ConnectorConfig(BaseConfig):
     """Configuration for the connector."""
 
     yaml_section: ClassVar[str] = "connector"
-    model_config = SettingsConfigDict(env_prefix="connector_")
+    model_config = SettingsConfigDict(env_prefix="connector_", extra="allow")
 
     id: str = Field(
         ...,

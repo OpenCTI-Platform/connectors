@@ -4,7 +4,7 @@ import random
 import re
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Mapping, Optional
 
 import mwdblib
@@ -21,22 +21,6 @@ from pycti import (
 )
 from stix2 import URL, Bundle, File, IPv4Address, Relationship
 from stix2.v21.vocab import HASHING_ALGORITHM_SHA_256
-
-__version__ = "6.9.5"
-BANNER = f"""
-
- ██████   ██████ █████   ███   █████ ██████████   ███████████
-░░██████ ██████ ░░███   ░███  ░░███ ░░███░░░░███ ░░███░░░░░███
- ░███░█████░███  ░███   ░███   ░███  ░███   ░░███ ░███    ░███
- ░███░░███ ░███  ░███   ░███   ░███  ░███    ░███ ░██████████
- ░███ ░░░  ░███  ░░███  █████  ███   ░███    ░███ ░███░░░░░███
- ░███      ░███   ░░░█████░█████░    ░███    ███  ░███    ░███
- █████     █████    ░░███ ░░███      ██████████   ███████████
-░░░░░     ░░░░░      ░░░   ░░░      ░░░░░░░░░░   ░░░░░░░░░░░
-\n
-\n
-                              MWDB Connector, version {__version__}
-"""
 
 
 class MWDB:
@@ -123,7 +107,7 @@ class MWDB:
         )
 
         # Verify setting of the starting date in the config
-        # ELSE retrieve le last month.
+        # ELSE retrieve the last month.
         self.start_date = get_config_variable(
             "MWDB_START_DATE", ["mwdb", "start_date"], config, None
         )
@@ -203,22 +187,26 @@ class MWDB:
             pattern = "[ipv4-addr:value = '" + value + "']"
             relation_description = "Malware communicates with C2"
             tags = ["C2"]
+            observable_type = "IPv4-Addr"
         elif configtype == "c2-url-ref":
             description = "C2 URL containing a list of possible references"
             pattern = "[url:value = '" + value + "']"
             relation_description = "Malware communicates with this url"
             tags = ["C2 LIST"]
+            observable_type = "Url"
         else:
             description = "C2 - URL" + value
             pattern = "[url:value = '" + value + "']"
             relation_description = "Malware communicates with C2"
             tags = ["C2"]
+            observable_type = "Url"
 
         if str(self.create_indicators).capitalize() == "True":
             indicatorc2 = stix2.Indicator(
                 id=Indicator.generate_id(pattern),
                 name=value,
                 description=description,
+                indicator_types=["malicious-activity"],
                 pattern_type="stix",
                 pattern=pattern,
                 valid_from=parser.parse(virus["malware"]["upload_time"]),
@@ -230,6 +218,7 @@ class MWDB:
                 modified=parser.parse(virus["malware"]["upload_time"]),
                 custom_properties={
                     "x_opencti_score": self.score,
+                    "x_opencti_main_observable_type": observable_type,
                 },
             )
             objects.append(indicatorc2)
@@ -307,9 +296,12 @@ class MWDB:
         if "c2" in config.cfg:
             for c2 in config.cfg["c2"]:
                 try:
+                    if isinstance(c2, dict):
+                        c2 = c2.get("host", str(c2))
+                    c2 = str(c2)
                     if re.match("^https?://.*", c2):
                         c2obj.extend(self.process_c2(c2, virus, "c2-url"))
-                    if re.match(
+                    elif re.match(
                         r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d{1,5})?",
                         c2,
                     ):
@@ -355,7 +347,7 @@ class MWDB:
         return attributes
 
     def process_extratag(self, attributes_extra, sample):
-        relatsions = []
+        relations = []
         for taglabel in attributes_extra:
             if self.tag_filter:
                 if re.match(self.tag_filter, taglabel.lower()):
@@ -379,7 +371,7 @@ class MWDB:
                     relationship_type="related-to",
                     created_by_ref=self.identity["standard_id"],
                 )
-                relatsions.append(relationship)
+                relations.append(relationship)
 
             # first search in unstructured tag malware
             fullsearch = self.helper.api.malware.read(
@@ -408,7 +400,7 @@ class MWDB:
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
-                        relatsions.append(relationship)
+                        relations.append(relationship)
 
             # second search for intrusion set like APT
             fullsearch = self.helper.api.intrusion_set.read(
@@ -438,9 +430,9 @@ class MWDB:
                             relationship_type="related-to",
                             created_by_ref=self.identity["standard_id"],
                         )
-                        relatsions.append(relationship)
+                        relations.append(relationship)
                         # create relation and continue related-to
-        return relatsions
+        return relations
 
     def process_virus(self, malware):
         bundle_objects = []
@@ -480,13 +472,14 @@ class MWDB:
             description = "A potential harming artifact"
 
         if str(self.create_indicators).capitalize() == "True":
-            pattern = "[file:hashes.sha256 = '" + malware.sha256 + "']"
+            pattern = "[file:hashes.'SHA-256' = '" + malware.sha256 + "']"
 
             if str(self.create_indicators).capitalize() == "True":
                 virus["indicator"] = stix2.Indicator(
                     id=Indicator.generate_id(pattern),
                     name=str(malware.file_name).replace("-" + malware.sha256, ""),
                     description=description,
+                    indicator_types=["malicious-activity"],
                     pattern_type="stix",
                     pattern=pattern,
                     valid_from=malware.upload_time,
@@ -498,6 +491,7 @@ class MWDB:
                     modified=malware.upload_time,
                     custom_properties={
                         "x_opencti_score": self.score,
+                        "x_opencti_main_observable_type": "StixFile",
                     },
                 )
 
@@ -540,15 +534,15 @@ class MWDB:
             ):
                 relationshipmal = Relationship(
                     id=StixCoreRelationship.generate_id(
-                        "related-to",
+                        "indicates",
                         virus["indicator"]["id"],
                         virus["malware_entity"]["id"],
                     ),
                     source_ref=virus["indicator"]["id"],
                     target_ref=virus["malware_entity"]["id"],
-                    description="An hash associatated with a malware "
+                    description="A hash associated with malware "
                     + str(virus["mal_tag"]["family"][0]).capitalize(),
-                    relationship_type="based-on",
+                    relationship_type="indicates",
                     created_by_ref=self.identity["standard_id"],
                     confidence=self.score,
                 )
@@ -584,21 +578,19 @@ class MWDB:
                     work_id=self.workid,
                 )
             except KeyError as e:
-                print(f"KeyError encountered: {e}. Skipping this virus entry.")
                 self.helper.log_error(
                     f"KeyError encountered: {e}. Skipping this virus entry."
                 )
             except Exception as e:
-                print(f"An unexpected error occurred: {e}. Skipping this virus entry.")
                 self.helper.log_error(
-                    f"KeyError encountered: {e}. Skipping this virus entry."
+                    f"Unexpected error: {e}. Skipping this virus entry."
                 )
 
     def start_up(self):
         while True:
             try:
                 timestamp = int(time.time())
-                now = datetime.utcfromtimestamp(timestamp)
+                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "MWDB DEV run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
                 self.workid = self.helper.api.work.initiate_work(
                     self.helper.connect_id, friendly_name
@@ -608,7 +600,7 @@ class MWDB:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
                         "Connector last run: "
-                        + datetime.utcfromtimestamp(last_run).strftime(
+                        + datetime.fromtimestamp(last_run, tz=timezone.utc).strftime(
                             "%Y-%m-%d %H:%M:%S"
                         )
                     )
@@ -629,7 +621,9 @@ class MWDB:
                         current_date = last_run
 
                     querysearch = "upload_time:[{date} TO *]".format(
-                        date=datetime.fromtimestamp(current_date).strftime("%Y-%m-%d")
+                        date=datetime.fromtimestamp(
+                            current_date, tz=timezone.utc
+                        ).strftime("%Y-%m-%d")
                     )
                     try:
                         malware_files = self.mwdb.search_files(
@@ -637,7 +631,7 @@ class MWDB:
                         )
                         for malware_file in malware_files:
                             self.process_virus(malware_file)
-                        date = datetime.utcnow()
+                        date = datetime.now(timezone.utc)
                         utc_time = calendar.timegm(date.utctimetuple())
                         state = {"last_run": utc_time}
                         self.helper.set_state(state)
@@ -662,15 +656,14 @@ class MWDB:
         color = "%06x" % random.randint(0, 0xFFFFFF)
         self.helper.api.label.read_or_create_unchecked(value="C2 LIST", color=color)
         self.start_up()
-        exit(0)
 
 
 if __name__ == "__main__":
     try:
-        print(BANNER)
-        MWDBConnector = MWDB()
-        MWDBConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        exit(0)
+        mwdb_connector = MWDB()
+        mwdb_connector.run()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        sys.exit(1)

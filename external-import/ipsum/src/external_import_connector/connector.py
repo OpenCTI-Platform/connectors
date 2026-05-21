@@ -87,7 +87,7 @@ class ConnectorIPSUM:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 

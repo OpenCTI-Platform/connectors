@@ -42,7 +42,7 @@ class AssociatedFileStix(stix2.v21._STIXBase21):  # type: ignore[misc]
                 ),
             ),
             ("version", stix2.properties.StringProperty(default=None)),
-            ("no_import_flag", stix2.properties.BooleanProperty(default=False)),
+            ("no_trigger_import", stix2.properties.BooleanProperty(default=False)),
         ]
     )
 

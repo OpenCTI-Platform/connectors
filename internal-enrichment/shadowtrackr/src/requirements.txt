@@ -1,7 +1,7 @@
-pycti==6.8.15
+pycti==7.260520.0
 ipaddress~=1.0
 pydantic~=2.11
 validators~=0.35
-requests~=2.32
+requests>=2.32,<=2.33.0
 
-connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@6.9.5#subdirectory=connectors-sdk
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk

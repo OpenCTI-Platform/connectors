@@ -7,6 +7,8 @@ from connectors_sdk import (
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic.json_schema import SkipJsonSchema
 
+from .backend import BackendNameLiteral
+
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     """
@@ -46,7 +48,7 @@ class Intel471_V2Config(BaseConfigModel):
     )
     interval_indicators: int = Field(
         description="How often malware indicators should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=0,
+        default=60,
     )
     initial_history_indicators: int = Field(
         description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
@@ -56,7 +58,7 @@ class Intel471_V2Config(BaseConfigModel):
     )
     interval_yara: int = Field(
         description="How often YARA rules should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=0,
+        default=60,
     )
     initial_history_yara: int = Field(
         description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
@@ -66,7 +68,7 @@ class Intel471_V2Config(BaseConfigModel):
     )
     interval_cves: int = Field(
         description="How often CVE reports should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=0,
+        default=120,
     )
     initial_history_cves: int = Field(
         description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
@@ -76,7 +78,7 @@ class Intel471_V2Config(BaseConfigModel):
     )
     interval_reports: int = Field(
         description="How often reports should be fetched in minutes. If not set, the stream will not be enabled.",
-        default=0,
+        default=120,
     )
     initial_history_reports: int = Field(
         description="Initial date in epoch milliseconds UTC, such as `1643989649000`, "
@@ -91,6 +93,10 @@ class Intel471_V2Config(BaseConfigModel):
     ioc_score: int = Field(
         description="Indicator score. Defaults to `70`.",
         default=70,
+    )
+    backend: BackendNameLiteral = Field(
+        description="Backend to use for Intel471 API calls. Defaults to `titan`.",
+        default="titan",
     )
 
 

@@ -1,55 +1,193 @@
 # OpenCTI Shodan InternetDB Connector
 
-|       Status        |    Date    |  Comment  |
-|:-------------------:|:----------:|:---------:|
-|  Filigran Verified  | 2025-04-25 |     -     |
+| Status | Date | Comment |
+|--------|------|---------|
+| Community | -    | -       |
 
+## Table of Contents
 
-## Description
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [Shodan InternetDB Configuration](#shodan-internetdb-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
 
-The InternetDB API provides a lot less data than a regular Shodan IP lookup, however it's free for non-commercial use.
+---
 
-This connector enriches IPv4 observables with domains, CPEs, Vulns, and Tags reported by the Shodan InternetDB API.
+## Introduction
 
-* InternetDB Website: [https://internetdb.shodan.io/](https://internetdb.shodan.io/)
-* InternetDB Docs: [https://internetdb.shodan.io/docs](https://internetdb.shodan.io/docs)
+The Shodan InternetDB API provides free access to basic internet scan data for non-commercial use. While it provides less data than a regular Shodan IP lookup, it's completely free and requires no API key.
 
-## Configuration
+This connector enriches IPv4 observables with:
+- Associated domains
+- CPE (Common Platform Enumeration) identifiers
+- Vulnerabilities (CVEs)
+- Tags and classifications
 
-### Install
-
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
-
-| Docker Env variable      | config variable   | Default   | Description                                      |
-|--------------------------|-------------------|-----------|--------------------------------------------------|
-| SHODAN_MAX_TLP           | max_tlp           | TLP:CLEAR | The max TLP allowed to be sent to the Shodan API |
-| SHODAN_SSL_VERIFY        | ssl_verify        | true      | Verify SSL connections to the API endpoint       |
+---
 
 ## Installation
 
-Please refer to [this](https://filigran.notion.site/Connectors-4586c588462d4a1fb5e661f2d9837db8) in OpenCTI's documentation as the authoritative source on installing connectors.
+### Requirements
 
-### Docker
+- OpenCTI Platform >= 6.0.0
+- Network access to Shodan InternetDB API
+
+**Note**: No API key is required for this connector.
+
+---
+
+## Configuration
+
+### OpenCTI Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Must be `IPv4-Addr` |
+| `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
+
+### Shodan InternetDB Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `shodan_max_tlp` | `SHODAN_MAX_TLP` | No | Maximum TLP for processing (default: TLP:CLEAR) |
+| `shodan_ssl_verify` | `SHODAN_SSL_VERIFY` | No | Verify SSL connections (default: true) |
+
+---
+
+## Deployment
+
+### Docker Deployment
 
 Build a Docker Image using the provided `Dockerfile`.
-Example: `docker build . -t opencti-shodan-internetdb:latest`.
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your environment.
-Then, start the docker container with the provided `docker-compose.yml`
 
-### Manual/VM Deployment
+Example `docker-compose.yml`:
 
-Create a file `config.yml` based off the provided `config.yml.sample`. 
-Replace the configuration variables (especially the "ChangeMe" variables) with the appropriate configurations for you environment.
-The `id` attribute of the `connector` should be a freshly generated UUID. 
-Install the required python dependencies (preferably in a virtual environment) with `pip3 install -r requirements.txt` 
-Then, run the `python3 -m shodan_internetdb` command to start the connector
+```yaml
+version: '3'
+services:
+  connector-shodan-internetdb:
+    image: opencti/connector-shodan-internetdb:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Shodan InternetDB
+      - CONNECTOR_SCOPE=IPv4-Addr
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_LOG_LEVEL=error
+      - SHODAN_MAX_TLP=TLP:CLEAR
+      - SHODAN_SSL_VERIFY=true
+    restart: always
+```
 
+### Manual Deployment
+
+1. Clone the repository
+2. Create `config.yml` based on `config.yml.sample`
+3. Install dependencies: `pip3 install -r requirements.txt`
+4. Run: `python3 -m shodan_internetdb`
+
+---
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at the hourly interval specified in your `docker-compose.yml` or `config.yml`.
+The connector enriches IPv4 address observables by:
+1. Querying the Shodan InternetDB API
+2. Creating domain, vulnerability, and tag relationships
+3. Adding CPE information
 
-## Verification
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
 
-To verify the connector is working, you can navigate to Data->Data Curation in the OpenCTI platform and see the new imported data there.
-For troubleshooting or additional verification, please view the Connector logs.
+---
+
+## Behavior
+
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[IPv4-Addr] --> B[Shodan InternetDB Connector]
+    B --> C{InternetDB API}
+    C --> D[Domains]
+    C --> E[CPEs]
+    C --> F[Vulnerabilities]
+    C --> G[Tags]
+    D --> H[Domain-Name Observables]
+    E --> I[Software/CPE Data]
+    F --> J[Vulnerability Objects]
+    G --> K[Labels]
+    H --> L[OpenCTI]
+    I --> L
+    J --> L
+    K --> L
+```
+
+### Enrichment Mapping
+
+| InternetDB Field | OpenCTI Entity | Description |
+|------------------|----------------|-------------|
+| `hostnames` | Domain-Name | Associated domain names |
+| `cpes` | Software/CPE | Common Platform Enumeration |
+| `vulns` | Vulnerability | CVE identifiers |
+| `tags` | Labels | Classification tags |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| Domain-Name | Associated hostnames |
+| Vulnerability | CVEs found on the IP |
+| Labels | Shodan tags and classifications |
+
+---
+
+## Debugging
+
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug`.
+
+To verify the connector is working:
+1. Navigate to Data -> Data Curation in OpenCTI
+2. Check for new imported data
+3. View connector logs for troubleshooting
+
+---
+
+## Additional Information
+
+- [Shodan InternetDB](https://internetdb.shodan.io/)
+- [InternetDB Documentation](https://internetdb.shodan.io/docs)
+
+### Limitations
+
+The InternetDB API provides less data than a full Shodan subscription:
+- No port/service details
+- No banner information
+- Limited to basic metadata
+
+For comprehensive Shodan data, use the full Shodan connector with an API key.

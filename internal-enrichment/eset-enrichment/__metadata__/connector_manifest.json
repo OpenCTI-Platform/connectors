@@ -1,8 +1,8 @@
 {
-  "title": "ESET ETI Report",
+  "title": "ESET Threat Intelligence Reports",
   "slug": "eset",
-  "description": "The OpenCTI ESET ETI Report Enrichment Connector can be used to import knowledge from the ESET ETI Report API.",
-  "short_description": "The OpenCTI ESET ETI Report Enrichment Connector can be used to import knowledge from the ESET ETI Report API.",
+  "description": "The ESET Threat Intelligence Reports Connector enhances OpenCTI by automatically enriching ESET Threat Intelligence (ETI) report objects with high-value, analyst-ready data. Designed for teams that rely on ESET's advanced threat research, the connector seamlessly retrieves detailed PDF intelligence reports directly from the ESET portal and attaches them to corresponding ESET report entities inside OpenCTI.\n\nESET Threat Intelligence delivers deep insights into APT activity, eCrime and infostealer activity, malware behavior, and threat actor profiles, enabling security teams to understand adversary tactics and improve detection and response. The connector identifies ESET report objects containing external references to ETI and enriches them by downloading the associated PDF reports, ensuring analysts have direct access to the full intelligence package without leaving the OpenCTI interface.\n\nThis integration streamlines analysts' workflows by centralizing ESET content within OpenCTI, reducing portal switching, and improving data continuity across investigations. Once deployed, the connector runs reliably in background enrichment workflows, supporting automated, playbook-driven, or manual enrichment modes depending on operational needs.",
+  "short_description": "Enriches OpenCTI by automatically downloading and attaching detailed ESET threat reports to ESET report objects, giving analysts direct insight into APT groups, eCrime, infostealer activity, and malware intelligence.",
   "logo": "internal-enrichment/eset-enrichment/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis"

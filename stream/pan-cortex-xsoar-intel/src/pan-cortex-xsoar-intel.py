@@ -89,7 +89,9 @@ class XSoarAPI:
         xsoar_key: str,
         xsoar_ssl_verify: bool,
     ) -> None:
-        self.xsoar_url = xsoar_url
+        self.xsoar_url = (
+            xsoar_url.rstrip("/") if isinstance(xsoar_url, str) else xsoar_url
+        )
         self.xsoar_key_id = xsoar_key_id
         self.xsoar_key = xsoar_key
         self.xsoar_ssl_verify = xsoar_ssl_verify
@@ -194,6 +196,12 @@ class XSoarConnector:
         self.consumer_count = consumer_count
 
         self._org_name_cache = {}
+
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
 
     def is_filtered(self, data: dict):
         return "type" in data and data["type"] not in ["indicator"]

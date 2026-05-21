@@ -23,7 +23,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_INSIKT_ONLY | `boolean` |  | boolean | `true` | Whether to import only Insikt notes (Recorded Future's analyst reports). |
 | RECORDED_FUTURE_PULL_SIGNATURES | `boolean` |  | boolean | `false` | Whether to import detection signatures (Yara/Snort/Sigma rules) from analyst notes. |
 | RECORDED_FUTURE_PERSON_TO_TA | `boolean` |  | boolean | `false` | Whether to convert Person entities to Threat Actor entities. |
-| RECORDED_FUTURE_TA_TO_INTRUSION_SET | `boolean` |  | boolean | `false` | Whether to convert Threat Actor entities to Intrusion Set entities. |
+| RECORDED_FUTURE_TA_TO_INTRUSION_SET | `boolean` |  | boolean | `false` | Whether to map Threat Actor entities to Intrusion Set instead of Threat Actor. |
 | RECORDED_FUTURE_RISK_AS_SCORE | `boolean` |  | boolean | `true` | Whether to import risk scores as confidence scores in OpenCTI. |
 | RECORDED_FUTURE_RISK_THRESHOLD | `integer` |  | `0 < x ` | `60` | Minimum risk score threshold (0-100) for importing entities. |
 | RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS | `boolean` |  | boolean | `false` | Enable or disable the automatic guessing of relationships between entities when processing analyst notes. |
@@ -36,7 +36,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | ALERT_DEFAULT_OPENCTI_SEVERITY | `string` |  | `low` `medium` `high` `critical` | `"low"` | Default severity level for alerts imported into OpenCTI. |
 | ALERT_PRIORITY_ALERTS_ONLY | `boolean` |  | boolean | `false` | Whether to import only high-priority alerts. |
 | PLAYBOOK_ALERT_ENABLE | `boolean` |  | boolean | `false` | Whether to enable fetching Recorded Future playbook alerts. |
+| PLAYBOOK_ALERT_CATEGORIES | `array` |  | string | `["domain_abuse", "identity_novel_exposures", "code_repo_leakage"]` | Comma-separated list of Playbook Alert categories to import. Leave blank to fetch all categories available to your licence.Supported values: 'domain_abuse', 'identity_novel_exposures', 'code_repo_leakage'. |
 | PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for domain abuse playbook alerts. |
 | PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for identity novel exposures playbook alerts. |
 | PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for code repository leakage playbook alerts. |
+| PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CYBER_VULNERABILITY | `string` |  | `Informational` `Moderate` `High` | `"Informational"` | Minimum severity threshold for cyber vulnerabilities playbook alerts. |
 | PLAYBOOK_ALERT_DEBUG | `boolean` |  | boolean | `false` | Whether to enable debug logging for playbook alerts. |

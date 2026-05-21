@@ -112,7 +112,13 @@ class ConfigConnector:
                 self.mapping = json.load(f)
         else:
             self.mapping = {}
-        if type(self.relative_import_start_date) == str:
+        if isinstance(self.relative_import_start_date, str):
             self.relative_import_start_date = isodate.parse_duration(
                 self.relative_import_start_date
             )
+        self.threat_actor_as_intrusion_set = get_config_variable(
+            "ACCENTURE_ACTI_THREAT_ACTOR_AS_INTRUSION_SET",
+            ["accenture_acti", "threat_actor_as_intrusion_set"],
+            self.load,
+            default=True,
+        )

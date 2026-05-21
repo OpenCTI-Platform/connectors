@@ -4,11 +4,11 @@ services:
     image: opencti/connector-sparta:latest
     environment:
       # OpenCTI parameters - REQUIRED
-      - OPENCTI_URL=CHANGEME
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
 
       # Connector's definition parameters - REQUIRED
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
 
       # Connector's definition parameters - OPTIONAL
       # - CONNECTOR_NAME=Aerospace SPARTA

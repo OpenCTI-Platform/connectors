@@ -1,112 +1,178 @@
-# Silent Push - OpenCTI Internal Enrichment Connector
+# OpenCTI Silent Push Connector
 
-Table of Contents
+| Status | Date | Comment |
+|--------|------|---------|
+| Partner | -    | -       |
 
-- [Silent Push - OpenCTI Internal Enrichment Connector](#silent-push---opencti-internal-enrichment-connector)
-  - [Introduction](#introduction)
-  - [Installation](#installation)
-    - [Requirements](#requirements)
-  - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  - [Deployment](#deployment)
-    - [Docker Deployment](#docker-deployment)
-    - [Manual Deployment](#manual-deployment)
-  - [Usage](#usage)
-  - [Behavior](#behavior)
-  - [Debugging](#debugging)
-  - [Additional information](#additional-information)
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Installation](#installation)
+  - [Requirements](#requirements)
+- [Configuration](#configuration)
+  - [OpenCTI Configuration](#opencti-configuration)
+  - [Base Connector Configuration](#base-connector-configuration)
+  - [Silent Push Configuration](#silentpush-configuration)
+- [Deployment](#deployment)
+  - [Docker Deployment](#docker-deployment)
+  - [Manual Deployment](#manual-deployment)
+- [Usage](#usage)
+- [Behavior](#behavior)
+  - [Data Flow](#data-flow)
+  - [Enrichment Mapping](#enrichment-mapping)
+  - [Generated STIX Objects](#generated-stix-objects)
+- [Debugging](#debugging)
+- [Additional Information](#additional-information)
+
+---
 
 ## Introduction
-Silent Push takes a unique approach to identifying developing cyber threats by creating Indicators of Future Attacks (IOFA) that are more useful, and more valuable than industry-standard IOCs.
 
-We apply unique behavioral fingerprints to attacker activity and search across our proprietary DNS database – containing the most complete, accurate, and timely view of global internet-facing infrastructure anywhere in the world – to reveal adversary infrastructure and campaigns prior to launch.
+[Silent Push](https://www.silentpush.com/) takes a unique approach to identifying developing cyber threats by creating Indicators of Future Attacks (IOFA) that are more useful and valuable than industry-standard IOCs.
 
-***We know first!***
+Silent Push applies unique behavioral fingerprints to attacker activity and searches across their proprietary DNS database - containing the most complete, accurate, and timely view of global internet-facing infrastructure anywhere in the world - to reveal adversary infrastructure and campaigns prior to launch.
+
+This connector enriches observables and indicators with Silent Push intelligence data.
+
+---
+
 ## Installation
 
 ### Requirements
 
 - Python >= 3.11
 - OpenCTI Platform >= 6.8.13
-- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
-- [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
+- Silent Push API key
+- Network access to Silent Push API
 
-## Configuration variables
+---
 
-Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
+## Configuration
 
-_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
-For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
+### OpenCTI Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `opencti_url` | `OPENCTI_URL` | Yes | The URL of the OpenCTI platform |
+| `opencti_token` | `OPENCTI_TOKEN` | Yes | The default admin token configured in the OpenCTI platform |
+
+### Base Connector Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `connector_id` | `CONNECTOR_ID` | No | A valid arbitrary `UUIDv4` unique for this connector |
+| `connector_name` | `CONNECTOR_NAME` | No | The name of the connector instance |
+| `connector_scope` | `CONNECTOR_SCOPE` | No | Supported: `Indicator,URL,IPv4-Addr,IPv6-Addr,Domain-Name` |
+| `connector_auto` | `CONNECTOR_AUTO` | No | Enable/disable auto-enrichment |
+| `connector_log_level` | `CONNECTOR_LOG_LEVEL` | No | Log level (`debug`, `info`, `warn`, `error`) |
+
+### Silent Push Configuration
+
+| Parameter | Docker envvar | Mandatory | Description |
+|-----------|---------------|-----------|-------------|
+| `silentpush_api_key` | `SILENTPUSH_API_KEY` | Yes | Silent Push API key |
+| `silentpush_api_base_url` | `SILENTPUSH_API_BASE_URL` | No | API base URL (default: https://app.silentpush.com/api/v2/) |
+| `silentpush_max_tlp_level` | `SILENTPUSH_MAX_TLP_LEVEL` | No | Maximum TLP level for processing |
+| `silentpush_verify_cert` | `SILENTPUSH_VERIFY_CERT` | No | Verify SSL certificates (default: true) |
+
+---
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
-
 Build a Docker Image using the provided `Dockerfile`.
 
-Example:
+Example `docker-compose.yml`:
 
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
-```
-
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
-
-```shell
-docker compose up -d
-# -d for detached
+```yaml
+version: '3'
+services:
+  connector-silentpush:
+    image: opencti/connector-silentpush-enrichment:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - SILENTPUSH_API_KEY=ChangeMe
+      - SILENTPUSH_MAX_TLP_LEVEL=TLP:AMBER
+    restart: always
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Clone the repository
+2. Create `config.yml` based on `config.yml.sample`
+3. Install dependencies: `pip3 install -r requirements.txt`
+4. Run: `python3 main.py`
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
-```
-
-Then, start the connector from `src` directory:
-
-```shell
-python3 main.py
-```
+---
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector enriches observables and indicators by:
+1. Querying Silent Push API for threat intelligence
+2. Adding enrichment data from IOFA (Indicators of Future Attacks)
+3. Creating relationships and additional context
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+Trigger enrichment:
+- Manually via the OpenCTI UI
+- Automatically if `CONNECTOR_AUTO=true`
+- Via playbooks
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+---
 
 ## Behavior
 
-This connector enriches Domains, IPv4, IPv6 and URLs observables.
-Also enriches indicators containing those types of observables.
+### Data Flow
+
+```mermaid
+flowchart LR
+    A[Observable/Indicator] --> B[Silent Push Connector]
+    B --> C{Silent Push API}
+    C --> D[IOFA Data]
+    C --> E[DNS Intelligence]
+    C --> F[Infrastructure Data]
+    D --> G[Enrichment]
+    E --> G
+    F --> G
+    G --> H[OpenCTI]
+```
+
+### Enrichment Mapping
+
+| Observable Type | Silent Push Data | Description |
+|-----------------|------------------|-------------|
+| Domain-Name | DNS/Infrastructure | Domain intelligence and related infrastructure |
+| IPv4-Addr | IP Intelligence | IP address context and associations |
+| IPv6-Addr | IP Intelligence | IP address context and associations |
+| URL | URL Analysis | URL threat intelligence |
+| Indicator | Pattern Analysis | Related IOFA indicators |
+
+### Generated STIX Objects
+
+| Object Type | Description |
+|-------------|-------------|
+| External Reference | Links to Silent Push analysis |
+| Labels | Threat classification labels |
+| Notes | Additional intelligence context |
+| Relationships | Links to related entities |
+
+---
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
+- API request/response details
+- Enrichment processing steps
+- Error details
 
+---
 
-## Additional information
+## Additional Information
 
-Anything needed please talk to us at [info@silentpush.com](mailto:info@silentpush.com)
+- [Silent Push](https://www.silentpush.com/)
+- Contact: [info@silentpush.com](mailto:info@silentpush.com)
+
+### Key Differentiator
+
+Silent Push provides **Indicators of Future Attacks (IOFA)** - identifying adversary infrastructure before attacks launch, rather than after compromise.

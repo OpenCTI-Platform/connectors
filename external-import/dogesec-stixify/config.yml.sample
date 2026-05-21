@@ -1,19 +1,21 @@
 opencti:
-  url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  url: 'http://localhost'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'Stixify'
   scope: 'stixify'
   confidence_level: 70
   update_existing_data: false
   log_level: 'info'
   queue_protocol: 'api'
+  auto_create_service_account: true
+  auto_create_service_account_confidence_level: 75
 
 stixify:
   base_url: 'https://api.stixify.com/'
-  api_key: CHANGEME
+  api_key: ChangeMe
   dossier_ids: '' # comma separated dossier ids
   interval_hours: 1 # interval in hours

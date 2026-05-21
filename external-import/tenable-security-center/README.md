@@ -1,12 +1,15 @@
 # Tenable Security Center Connector
 
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
+
 The Tenable Security Center connector for OpenCTI allows for the ingestion of vulnerability data from Tenable Security Center 
 into the OpenCTI platform. 
 
 See : https://fr.tenable.com/products/security-center
 
-
-Table of Contents
+## Table of Contents
 
 - [Tenable Security Center Connector](#tenable-security-center-connector)
   - [Introduction](#introduction)
@@ -34,7 +37,6 @@ into OpenCTI for further analysis and correlation with other threat intelligence
 The connector should be configured via environment variables.
 
 For instance using `shell`
-
 
 directly
 ```shell
@@ -89,7 +91,6 @@ Below are the parameters you'll need to set for running the connector properly:
 | Directory Path | `CONNECTOR_SEND_TO_DIRECTORY_PATH` | CHANGEME | No | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is True. |
 | Directory Retention | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | 7 | No | The number of days to retain data in the directory. Default is 7 days. |
 
-
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
@@ -108,13 +109,11 @@ Below are the parameters you'll need to set for the connector:
 | Process Systems Without Vulnerabilities | `TSC_PROCESS_SYSTEMS_WITHOUT_VULNERABILITIES` |         | Yes       | Process systems without vulnerabilities (True/False). Activating this option might significantly increase the amount of ingested data.|
 | Marking definition                     | `TSC_MARKING_DEFINITION`          |         | No        | Marking definition for exported data (Should be TLP:WHITE, TLP:AMBER, etc)                                                           |
 
-
 ## Deployment
 
 Whether you are using the connector in a test or production environment, it is strongly advised to create a dedicated opencti user account.
 Indeed the Tenable Security Center connector will ingests Vulnerabilities that could overwrite the already existing info in OpenCTI.
 To choose your ground truth, you can use the connector account `confidence` score in the OpenCTI platform.
-
 
 ### Docker Deployment
 Build a Docker Image using the provided `Dockerfile`.
@@ -163,6 +162,7 @@ download of data by re-running the connector.
 Note: Once the connector run successfully, the `TSC_ACCES_KEY`and `TSC_SECRET_KEY` are not requireed anymore and can be removed from the environment variables.
 
 ## Behavior
+
 ### Mapping details
 The retrieved data are mapped as follows:
 ```mermaid

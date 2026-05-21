@@ -13,9 +13,10 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, helper, config):
+    def __init__(self, helper, config, threat_cache: dict):
         self.helper = helper
         self.config = config
+        self.threat_cache = threat_cache
         self.author = self.create_author()
 
     @staticmethod
@@ -82,8 +83,9 @@ class ConverterToStix:
             external_references=[external_reference],
             object_marking_refs=[stix2.TLP_WHITE],
             custom_properties={
-                "x_opencti_score": self.config.default_x_opencti_score,
+                "x_opencti_score": self.config.urlhaus.default_x_opencti_score,
                 "x_opencti_main_observable_type": "Url",
+                "labels": [x for x in row[6].split(",") if x],
             },
         )
         return stix_indicator
@@ -107,7 +109,7 @@ class ConverterToStix:
                 + row[8]
                 + " - Status: "
                 + row[3],
-                "x_opencti_score": self.config.default_x_opencti_score,
+                "x_opencti_score": self.config.urlhaus.default_x_opencti_score,
                 "labels": [x for x in row[6].split(",") if x],
                 "created_by_ref": self.author.id,
                 "external_references": [external_reference],
@@ -172,7 +174,7 @@ class ConverterToStix:
 
         if len(entities) > 0:
             threat = entities[0]
-            self.config.threat_cache[name] = threat
+            self.threat_cache[name] = threat
             return threat
 
     def create_threat_relationship(
@@ -191,8 +193,8 @@ class ConverterToStix:
             if label is None or label == "":
                 continue
 
-            if label in self.config.threat_cache:
-                threat = self.config.threat_cache[label]
+            if label in self.threat_cache:
+                threat = self.threat_cache[label]
             else:
                 threat = self._search_threat_by_name(label)
 

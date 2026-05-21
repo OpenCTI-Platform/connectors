@@ -62,6 +62,7 @@ class Note(BaseIdentifiedEntity):
             id=PyctiNote.generate_id(
                 content=self.content,
                 created=self.publication_date,
+                abstract=self.abstract,
             ),
             abstract=self.abstract,
             content=self.content,

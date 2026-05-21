@@ -1,7 +1,16 @@
+from typing import TYPE_CHECKING
+
 from falconpy import IOC as CrowdstrikeIOC
 
-from .config_variables import ConfigCrowdstrike
-from .constants import observable_type_mapper, platform_mapper, severity_mapper
+from .constants import (
+    observable_type_mapper,
+    platform_mapper,
+    severity_mapper,
+)
+
+if TYPE_CHECKING:
+    from crowdstrike_connector.settings import CrowdstrikeEndpointSecurityConfig
+    from pycti import OpenCTIConnectorHelper
 
 
 class CrowdstrikeClient:
@@ -9,13 +18,18 @@ class CrowdstrikeClient:
     Working with Falcon Py for Crowdstrike API call
     """
 
-    def __init__(self, helper):
-        self.config = ConfigCrowdstrike()
+    def __init__(
+        self,
+        config: "CrowdstrikeEndpointSecurityConfig",
+        helper: "OpenCTIConnectorHelper",
+    ):
         self.helper = helper
+        self.config = config
         self.cs = CrowdstrikeIOC(
             client_id=self.config.client_id,
-            client_secret=self.config.client_secret,
-            base_url=self.config.api_base_url,
+            client_secret=self.config.client_secret.get_secret_value(),
+            # Convert HttpUrl to string
+            base_url=str(self.config.api_base_url),
         )
 
     def _handle_api_error(self, response: dict) -> None:
@@ -39,7 +53,6 @@ class CrowdstrikeClient:
         :return: List of resources or None
         """
         try:
-
             cs_filter = f'value:"{ioc_value}"+created_by:"{self.config.client_id}"'
 
             response = self.cs.indicator_search(filter=cs_filter)
@@ -85,6 +98,21 @@ class CrowdstrikeClient:
 
         # If OpenCTI observable type is not in Crowdstrike
         return None
+
+    def _resolve_action(self, ioc_type: str) -> str:
+        """
+        Resolve the CrowdStrike action for a given IOC type based on config.
+        Falls back to 'detect' for unknown IOC types not covered by the config.
+        """
+        action_map = {
+            "ipv4": self.config.action_on_ip,
+            "ipv6": self.config.action_on_ip,
+            "domain": self.config.action_on_domain,
+            "sha256": self.config.action_on_hash,
+            "md5": self.config.action_on_hash,
+        }
+        action = action_map.get(ioc_type, "detect")
+        return action
 
     def _map_severity(self, data: dict) -> str:
         """
@@ -175,6 +203,7 @@ class CrowdstrikeClient:
 
         # IOC type is required, return None if no type
         if ioc_type is not None:
+            ioc_action = self._resolve_action(ioc_type)
             ioc_description = data.get("description", None)
             ioc_valid_until = data.get("valid_until", None)
             ioc_tags = data.get("labels", None)
@@ -182,8 +211,8 @@ class CrowdstrikeClient:
             ioc_platforms = self._map_platform(data)
 
             indicator = {
-                "action": "detect",  # "Detect only" on Falcon web UI
-                "mobile_action": "detect",  # "Detect only" on Falcon web UI
+                "action": ioc_action,
+                "mobile_action": ioc_action,
                 "type": ioc_type,
                 "value": ioc_value,
                 "severity": ioc_severity,
@@ -271,7 +300,6 @@ class CrowdstrikeClient:
 
         # If IOC exists, update the IOC into Crowdstrike
         if ioc_cs is not None and len(ioc_cs) != 0:
-
             # In case of permanent_delete is False
             # Update data with label TO_DELETE for Crowdstrike
             if self.config.permanent_delete is False:

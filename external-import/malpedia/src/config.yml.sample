@@ -1,8 +1,9 @@
 opencti:
-  url: 'http://localhost:8080'
+  url: 'http://localhost'
   token: 'ChangeMe'
 
 connector:
+  type: 'EXTERNAL_IMPORT'
   id: '8a277536-ca52-4d87-9f8e-4f77e3e6512c' # Optional (default: '8a277536-ca52-4d87-9f8e-4f77e3e6512c')
   name: 'Malpedia' # Optional (default: 'Malpedia')
   scope: 'malpedia' # Optional (default: ['malpedia'])

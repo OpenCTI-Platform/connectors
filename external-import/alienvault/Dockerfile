@@ -1,7 +1,8 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
-COPY requirements.txt /opt/opencti-connector-alienvault/
+# Copy the connector
+COPY src /opt/opencti-connector-alienvault
 
 RUN apk update && apk upgrade && \
     apk --no-cache add git build-base libmagic libffi-dev && \
@@ -10,8 +11,6 @@ RUN apk update && apk upgrade && \
     apk del git build-base && \
     rm -rf /var/cache/apk/*
 
-# Copy the connector
-COPY src /opt/opencti-connector-alienvault
 
 # Expose and entrypoint
 COPY entrypoint.sh /

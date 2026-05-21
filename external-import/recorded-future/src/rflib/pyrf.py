@@ -3,6 +3,8 @@ from datetime import datetime, timedelta, timezone
 import requests
 from pycti import OpenCTIConnectorHelper
 
+from .constants import SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+
 
 class RecordedFutureApiError(Exception):
     """Wrap exceptions emitted in RecordedFutureApiClient"""
@@ -166,9 +168,13 @@ class RecordedFutureApiClient:
         :return: Search alerts raw dictionary.
         """
         try:
-            triggered_since_iso = triggered_since.isoformat().replace("+00:00", "Z")
+            triggered_since_iso = triggered_since.isoformat(
+                timespec="milliseconds"
+            ).replace("+00:00", "Z")
             triggered_until_iso = (
-                triggered_until.isoformat().replace("+00:00", "Z")
+                triggered_until.isoformat(timespec="milliseconds").replace(
+                    "+00:00", "Z"
+                )
                 if triggered_until
                 else ""
             )
@@ -181,7 +187,9 @@ class RecordedFutureApiClient:
                 },
                 params={
                     "alertRule": rule.rule_id,
-                    "triggered": f"[{triggered_since_iso},{triggered_until_iso}]",
+                    "triggered": f"({triggered_since_iso},{triggered_until_iso}]",
+                    "orderby": "triggered",
+                    "direction": "asc",
                     "limit": limit,
                     "from": offset,
                 },
@@ -268,7 +276,10 @@ class RecordedFutureApiClient:
                 "Moderate": ["High", "Moderate"],
                 "Informational": ["High", "Moderate", "Informational"],
             }
-            for created_or_updated in ["created", "updated"]:
+            for created_or_updated, order_by in [
+                ("created", "created"),
+                ("updated", "modified"),
+            ]:
                 while int(from_api) < int(alert_count):
                     response = requests.post(
                         str(self.base_url + "playbook-alert/search"),
@@ -280,7 +291,7 @@ class RecordedFutureApiClient:
                         json={
                             "from": from_api,
                             "limit": 100,
-                            "order_by": created_or_updated,
+                            "order_by": order_by,
                             "direction": "asc",
                             "category": [str(category)],
                             str(created_or_updated + "_range"): {
@@ -290,7 +301,6 @@ class RecordedFutureApiClient:
                             "priority": priority_matrix[priority_threshold],
                         },
                     )
-
                     # If there is an error during the request, the method raise the error
                     response.raise_for_status()
 
@@ -334,7 +344,7 @@ class RecordedFutureApiClient:
 
         except requests.exceptions.RequestException as e:
             self.helper.connector_logger.error(
-                "Exception occured when trying to reach RecordedFuture's API : ",
+                "Exception occurred when trying to reach RecordedFuture's API : ",
                 {"error": str(e)},
             )
         except Exception as err:
@@ -349,31 +359,48 @@ class RecordedFutureApiClient:
                 )
 
             # If playbook_alert.category is not one of: domain_abuse, identity_novel_exposures, code_repo_leakage, log the error
-            playbook_alert_categories = [
-                "domain_abuse",
-                "identity_novel_exposures",
-                "code_repo_leakage",
-            ]
-            if playbook_alert_summary.category not in playbook_alert_categories:
+            if (
+                playbook_alert_summary.category
+                not in SUPPORTED_PLAYBOOK_ALERT_CATEGORIES
+            ):
                 self.helper.connector_logger.error(
-                    "You must provide an playbook alert whose category is among : domain_abuse, identity_novel_exposures, code_repo_leakage"
+                    f"You must provide an playbook alert whose category is among: {SUPPORTED_PLAYBOOK_ALERT_CATEGORIES}"
                 )
 
-            response = requests.post(
-                str(
-                    self.base_url
-                    + "playbook-alert/"
-                    + playbook_alert_summary.category
-                    + "/"
-                    + playbook_alert_summary.playbook_alert_id
-                ),
-                headers={
-                    "X-RFToken": self.x_rf_token,
-                    "Content-Type": "application/json",
-                    "accept": "application/json",
-                },
-                json={"panels": ["status", "action", "summary", "dns", "whois", "log"]},
-            )
+            # for vulnerability, the endpoint doesn't correspond to alert category
+            if playbook_alert_summary.category == "cyber_vulnerability":
+                response = requests.post(
+                    str(
+                        self.base_url
+                        + "playbook-alert/"
+                        + "vulnerability/"
+                        + playbook_alert_summary.playbook_alert_id
+                    ),
+                    headers={
+                        "X-RFToken": self.x_rf_token,
+                        "Content-Type": "application/json",
+                        "accept": "application/json",
+                    },
+                    json={"panels": ["status", "summary", "log"]},
+                )
+            else:
+                response = requests.post(
+                    str(
+                        self.base_url
+                        + "playbook-alert/"
+                        + playbook_alert_summary.category
+                        + "/"
+                        + playbook_alert_summary.playbook_alert_id
+                    ),
+                    headers={
+                        "X-RFToken": self.x_rf_token,
+                        "Content-Type": "application/json",
+                        "accept": "application/json",
+                    },
+                    json={
+                        "panels": ["status", "action", "summary", "dns", "whois", "log"]
+                    },
+                )
 
             # If there is an error during the request, the method raise the error
             response.raise_for_status()

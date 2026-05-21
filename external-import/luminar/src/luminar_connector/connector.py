@@ -101,8 +101,7 @@ class ConnectorLuminar:
         404: "Not Found. The server can not find the requested resource.",
         408: "Request Timeout. The server would like to shut down this unused connection.",
         429: "Too Many Requests. The user has sent too many requests in a given amount of time.",
-        500: "Internal Server Error. The server has encountered a situation it doesn't "
-        " know how to handle.",
+        500: "Internal Server Error. The server has encountered a situation it doesn't know how to handle.",
         502: "Bad Gateway. The server was acting as a gateway or proxy and received an invalid "
         "response from the upstream server.",
         503: "Service Unavailable. The server is not ready to handle the request.",
@@ -115,7 +114,7 @@ class ConnectorLuminar:
         self.helper = OpenCTIConnectorHelper(self.config.load)
 
         # Extra config
-        self.luminar_base_url = self.config.luminar_base_url
+        self.luminar_base_url = str(self.config.luminar_base_url).rstrip("/")
         self.luminar_account_id = self.config.luminar_account_id
         self.luminar_client_id = self.config.luminar_client_id
         self.luminar_client_secret = self.config.luminar_client_secret
@@ -139,6 +138,7 @@ class ConnectorLuminar:
             "scope": "externalAPI/stix.readonly",
         }
         self.req_headers = HEADERS
+        self._current_access_token: Optional[str] = None
 
     def access_token(self) -> Tuple[Union[bool, str], str]:
         """
@@ -170,10 +170,31 @@ class ConnectorLuminar:
         # Process successful response
         access_token = response.json().get("access_token")
         if access_token:
+            # FIX: Store the token at instance level so that _auth_headers()
+            # always returns the most recent valid token.
+            self._current_access_token = access_token
             return access_token, "Luminar API Connected successfully"
         return False, "Access token not found in response"
 
-    def get_taxi_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
+    def _auth_headers(self) -> Dict[str, str]:
+        """Return authorization headers using the current access token."""
+        return {"Authorization": f"Bearer {self._current_access_token}"}
+
+    def _refresh_access_token(self) -> bool:
+        """
+        Attempt to refresh the access token.
+
+        :return: True if a new valid token was obtained, False otherwise.
+        """
+        new_token, message = self.access_token()
+        if not new_token:
+            self.helper.connector_logger.error(
+                f"Failed to refresh access token: {message}"
+            )
+            return False
+        return True
+
+    def get_taxii_collections(self, headers: Dict[str, str]) -> Dict[str, str]:
         """
         Fetches TAXII collections from the Luminar API and returns a mapping of
         collection aliases to their IDs.
@@ -256,10 +277,11 @@ class ConnectorLuminar:
             refreshed_token = False
 
             while retry_count < max_retries:
+
                 resp = requests.get(
                     f"{self.luminar_base_url}/externalApi/taxii/collections/{collection}/objects/",
                     params=parameters,
-                    headers=headers,
+                    headers=self._auth_headers(),
                     timeout=TIMEOUT,
                 )
 
@@ -287,8 +309,12 @@ class ConnectorLuminar:
                     self.helper.connector_logger.info(
                         f"Access token expired. Status code: 401, response: {resp.text}. Refreshing token..."
                     )
-                    access_token, _ = self.access_token()
-                    headers = {"Authorization": f"Bearer {access_token}"}
+
+                    if not self._refresh_access_token():
+                        self.helper.connector_logger.error(
+                            "Token refresh failed. Aborting collection fetch."
+                        )
+                        return collection_objects
                     refreshed_token = True
                     retry_count += 1
 
@@ -929,8 +955,7 @@ class ConnectorLuminar:
                 )
                 return
 
-            headers = {"Authorization": f"Bearer {access_token}"}
-            taxii_collection = self.get_taxi_collections(headers)
+            taxii_collection = self.get_taxii_collections(self._auth_headers())
             if not taxii_collection:
                 return
 
@@ -951,21 +976,21 @@ class ConnectorLuminar:
             )
 
             ioc_records = self.get_collection_objects(
-                headers, taxii_collection["iocs"], params
+                self._auth_headers(), taxii_collection["iocs"], params
             )
             self.helper.connector_logger.info(
                 f"IOC records fetched: {len(ioc_records)}"
             )
 
             leaked_records = self.get_collection_objects(
-                headers, taxii_collection["leakedrecords"], params
+                self._auth_headers(), taxii_collection["leakedrecords"], params
             )
             self.helper.connector_logger.info(
                 f"Leaked records fetched: {len(leaked_records)}"
             )
 
             cyberfeeds_records = self.get_collection_objects(
-                headers, taxii_collection["cyberfeeds"], params
+                self._auth_headers(), taxii_collection["cyberfeeds"], params
             )
             self.helper.connector_logger.info(
                 f"cyberfeeds records fetched: {len(cyberfeeds_records)}"

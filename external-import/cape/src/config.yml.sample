@@ -1,16 +1,16 @@
 opencti:
-  url: 'http://opencti:8080'
-  token: 'CHANGEME'
+  url: 'http://localhost'
+  token: 'ChangeMe'
 
 connector:
-  id: 'CHANGEME'
   type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
   name: 'cuckoo_Import' # Required
   log_level: 'info'
 
 cape:
-  base_url: 'CHANGEME' # Required
-  api_url: CHANGEME
+  base_url: 'ChangeMe' # Required
+  api_url: ChangeMe
   enable_network_traffic: True
   enable_registry_keys: True
   create_indicators: True

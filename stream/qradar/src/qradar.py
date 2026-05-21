@@ -39,6 +39,8 @@ class QRadarConnector:
         # Configuration
         self.helper = OpenCTIConnectorHelper(config)
         self.qradar_url = get_config_variable("QRADAR_URL", ["qradar", "url"], config)
+        if isinstance(self.qradar_url, str):
+            self.qradar_url = self.qradar_url.rstrip("/")
         self.qradar_ssl_verify = get_config_variable(
             "QRADAR_SSL_VERIFY", ["qradar", "ssl_verify"], config, default=True
         )
@@ -67,6 +69,16 @@ class QRadarConnector:
                 + " }"
             )
             sys.exit(0)
+
+    def check_stream_id(self):
+        """
+        In case of stream_id configuration is missing, raise ValueError
+        """
+        if (
+            not self.helper.connect_live_stream_id
+            or self.helper.connect_live_stream_id.lower() == "changeme"
+        ):
+            raise ValueError("Missing stream ID, please check your configurations.")
 
     def _initialize_reference_sets(self):
         """
@@ -367,6 +379,7 @@ class QRadarConnector:
             return None
 
     def start(self):
+        self.check_stream_id()
         self.helper.listen_stream(self._process_message)
 
 

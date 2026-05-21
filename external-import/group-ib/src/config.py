@@ -126,7 +126,7 @@ class ConfigConnector:
     ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
     # Set basedirs
-    DOCS_DIR = os.path.join(ROOT_DIR, "docs")
+    DOCS_DIR = os.path.join(os.path.dirname(__file__), "docs")
     LOGS_DIR = os.path.join(ROOT_DIR, "log")
 
     # Set up logging

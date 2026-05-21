@@ -59,6 +59,7 @@
       "writeOnly": true
     },
     "FLASHPOINT_IMPORT_START_DATE": {
+      "default": "P30D",
       "description": "The date from which to start importing data.",
       "format": "date-time",
       "type": "string"
@@ -71,6 +72,11 @@
     "FLASHPOINT_INDICATORS_IN_REPORTS": {
       "default": false,
       "description": "Whether to include indicators in the reports imported from MispFeed or not.",
+      "type": "boolean"
+    },
+    "FLASHPOINT_CREATE_REPORTS": {
+      "default": false,
+      "description": "Whether to create reports or groupings from MispFeed events or not.",
       "type": "boolean"
     },
     "FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS": {

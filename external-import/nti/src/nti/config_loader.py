@@ -87,7 +87,7 @@ class ConfigConnector:
             self.tlp_level = get_config_variable(
                 "NTI_TLP", ["nti", "tlp"], self.load, default="white"
             ).lower()
-        except:
+        except Exception:
             helper.connector_logger.error(
                 f"[init config] init config error: {traceback.format_exc()}"
             )

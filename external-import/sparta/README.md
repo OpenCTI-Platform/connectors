@@ -1,122 +1,196 @@
-# OpenCTI External Ingestion Connector Aerospace SPARTA
+# OpenCTI Aerospace SPARTA Connector
 
-Table of Contents
+| Status | Date | Comment |
+|--------|------|---------|
+| Filigran Verified | -    | -       |
 
-* [OpenCTI External Ingestion Connector Cofense ThreatHQ](#opencti-external-ingestion-connector-aerospace-sparta)
-  * [Introduction](#introduction)
-  * [Configuration variables](#configuration-variables-environment)
-    * [OpenCTI environment variables](#opencti-environment-variables)
-    * [Base connector environment variables](#base-connector-environment-variables)
-    * [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
-  * [Deployment](#deployment)
-    * [Docker Deployment](#docker-deployment)
-    * [Manual Deployment](#manual-deployment)
-  * [Usage](#usage)
-  * [Behavior](#behavior)
-  * [Debugging](#debugging)
-  * [Additional information](#additional-information)
+The SPARTA connector imports Space Attack Research and Tactic Analysis (SPARTA) framework data from The Aerospace Corporation into OpenCTI.
 
-## Status Filigran
+## Table of Contents
 
-| Status            | Date       | Comment |
-|-------------------|------------|---------|
-| Filigran Verified | 2025-11-07 | -       |
+- [OpenCTI Aerospace SPARTA Connector](#opencti-aerospace-sparta-connector)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+    - [Requirements](#requirements)
+  - [Configuration variables](#configuration-variables)
+    - [OpenCTI environment variables](#opencti-environment-variables)
+    - [Base connector environment variables](#base-connector-environment-variables)
+    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+  - [Deployment](#deployment)
+    - [Docker Deployment](#docker-deployment)
+    - [Manual Deployment](#manual-deployment)
+  - [Usage](#usage)
+  - [Behavior](#behavior)
+  - [Debugging](#debugging)
+  - [Additional information](#additional-information)
 
 ## Introduction
 
-The Aerospace Corporation created the Space Attack Research and Tactic Analysis (SPARTA) matrix to address the information and communication barriers that hinder the identification and sharing of space-system Tactic, Techniques, and Procedures (TTP).
+The [Aerospace Corporation](https://aerospace.org/) created the Space Attack Research and Tactic Analysis ([SPARTA](https://sparta.aerospace.org/)) matrix to address information and communication barriers that hinder the identification and sharing of space-system Tactics, Techniques, and Procedures (TTPs).
 
-SPARTA is intended to provide unclassified information to space professionals about how spacecraft may be compromised via cyber and traditional counterspace means. The matrix defines and categorizes commonly identified activities that contribute to spacecraft compromises. Where applicable the SPARTA TTPs are cross referenced to other Aerospace related work like TOR 2021-01333 REV A and TOR-2023-02161 Rev A which is available in the Related Work menu of the SPARTA website.
+SPARTA provides unclassified information to space professionals about how spacecraft may be compromised via cyber and traditional counterspace means. The matrix defines and categorizes commonly identified activities that contribute to spacecraft compromises.
 
-## Configuration variables environment
+Where applicable, SPARTA TTPs are cross-referenced to other Aerospace related work like TOR 2021-01333 REV A and TOR-2023-02161 Rev A, available in the Related Work menu of the SPARTA website.
 
-A variety of configuration options are available, and the connector will load them from a single source, following a specific order of precedence:
+## Installation
 
-1. The `.env` file – This is the primary configuration source, if present. You can use the provided `.env.sample` as a reference.
-2. The `config.yml` file – If no `.env` file is found, the connector will look for a `config.yml` file instead (a `config.yml.sample` is also available as a starting point).
-3. System environment variables – If neither a `.env` nor a `config.yml` file is available, the connector will fall back to system environment variables.
+### Requirements
 
-A `docker-compose.yml` file is also available to simplify Docker-based deployments and supports passing environment variables through directly via the system environment.
+- OpenCTI Platform >= 6.x
+- Internet access to SPARTA API
 
-Find all the configuration variables available (default/required) here: [Connector Configurations](./__metadata__)
+## Configuration variables
+
+Configuration options can be provided from multiple sources with the following priority:
+
+1. **`.env` file** - Primary configuration source (use `.env.sample` as reference)
+2. **`config.yml` file** - If no `.env` file found (use `config.yml.sample` as reference)
+3. **System environment variables** - Fallback if neither file is available
+
+Find all configuration variables in: [Connector Configurations](./__metadata__)
+
+### OpenCTI environment variables
+
+| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
+|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
+| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
+| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
+
+### Base connector environment variables
+
+| Parameter       | config.yml      | Docker environment variable   | Default | Mandatory | Description                                                              |
+|-----------------|-----------------|-------------------------------|---------|-----------|--------------------------------------------------------------------------|
+| Connector ID    | id              | `CONNECTOR_ID`                |         | Yes       | A unique `UUIDv4` identifier for this connector instance.                |
+| Connector Name  | name            | `CONNECTOR_NAME`              | SPARTA  | No        | Name of the connector.                                                   |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`             |         | Yes       | The scope or type of data the connector is importing.                    |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`         | info    | No        | Determines the verbosity of logs: `debug`, `info`, `warning`, `error`.   |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD`   |         | Yes       | Interval between runs in ISO 8601 format.                                |
+
+### Connector extra parameters environment variables
+
+See configuration metadata in the `__metadata__` folder for additional connector-specific parameters.
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==6.8.6`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-sparta:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-sparta:
+    image: opencti/connector-sparta:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=SPARTA
+      - CONNECTOR_SCOPE=sparta
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=P7D
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+2. Install dependencies:
 
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
+```bash
 pip3 install -r requirements.txt
 ```
 
-Then, start the connector from sparta/src:
+3. Start the connector:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+The connector runs automatically at the interval defined by `CONNECTOR_DURATION_PERIOD`. To force an immediate run:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+**Data Management → Ingestion → Connectors**
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+Find the connector and click the refresh button to reset the state and trigger a new data fetch.
 
 ## Behavior
 
-Scope:
+The connector fetches the SPARTA framework from The Aerospace Corporation and imports it into OpenCTI.
 
-* Attack Pattern
-* Course of Action
-* Indicator
-* Identity
+### Data Flow
+
+```mermaid
+graph LR
+    subgraph SPARTA Framework
+        direction TB
+        API[SPARTA API]
+        TTPs[Techniques & Tactics]
+        Mitigations[Countermeasures]
+    end
+
+    subgraph OpenCTI
+        direction LR
+        Identity[Identity - Aerospace Corp]
+        AttackPattern[Attack Pattern]
+        CourseOfAction[Course of Action]
+        Indicator[Indicator]
+    end
+
+    API --> TTPs
+    API --> Mitigations
+    TTPs --> AttackPattern
+    TTPs --> Indicator
+    Mitigations --> CourseOfAction
+    AttackPattern -- mitigated-by --> CourseOfAction
+```
+
+### Entity Mapping
+
+| SPARTA Data          | OpenCTI Entity      | Description                                      |
+|----------------------|---------------------|--------------------------------------------------|
+| Technique            | Attack Pattern      | Space attack technique/TTP                       |
+| Countermeasure       | Course of Action    | Mitigation for attack technique                  |
+| Indicator            | Indicator           | Detection indicator for technique                |
+| Aerospace Corp       | Identity            | Author organization                              |
+
+### Scope
+
+The connector imports the following entity types:
+
+- **Attack Pattern**: Space attack techniques and tactics from the SPARTA matrix
+- **Course of Action**: Countermeasures and mitigations for space threats
+- **Indicator**: Detection indicators associated with techniques
+- **Identity**: The Aerospace Corporation as the author
+
+### TLP Marking
+
+All imported data is marked with **TLP:WHITE** as SPARTA is publicly available unclassified information.
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Enable verbose logging:
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+```env
+CONNECTOR_LOG_LEVEL=debug
+```
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+- **Public Data**: SPARTA framework is publicly available at https://sparta.aerospace.org/
+- **Framework Updates**: SPARTA is periodically updated by The Aerospace Corporation
+- **Cross-References**: TTPs reference related Aerospace publications
+- **Reference**: [SPARTA - Space Attack Research and Tactic Analysis](https://sparta.aerospace.org/)

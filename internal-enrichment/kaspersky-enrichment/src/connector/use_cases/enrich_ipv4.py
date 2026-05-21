@@ -1,26 +1,22 @@
-from datetime import datetime, timedelta
+import logging
 
-from connector.constants import DATETIME_FORMAT
 from connector.converter_to_stix import ConverterToStix
-from connector.utils import (
-    is_last_seen_equal_to_first_seen,
-    is_quota_exceeded,
-    string_to_datetime,
-)
+from connector.use_cases.common import BaseUseCases
+from connector.utils import get_first_and_last_seen_datetime
 from kaspersky_client import KasperskyClient
-from pycti import STIX_EXT_OCTI_SCO, OpenCTIConnectorHelper, OpenCTIStix2
 
 
-class Ipv4Enricher:
+class Ipv4Enricher(BaseUseCases):
     def __init__(
         self,
-        helper: OpenCTIConnectorHelper,
+        connector_logger: logging.Logger,
         client: KasperskyClient,
         sections: str,
         zone_octi_score_mapping: dict,
         converter_to_stix: ConverterToStix,
     ):
-        self.helper = helper
+        BaseUseCases.__init__(self, connector_logger, converter_to_stix)
+        self.connector_logger = connector_logger
         self.client = client
         self.sections = sections
         self.zone_octi_score_mapping = zone_octi_score_mapping
@@ -34,57 +30,38 @@ class Ipv4Enricher:
         observable_to_ref = self.converter_to_stix.create_reference(
             obs_id=observable["id"]
         )
-        self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+        self.connector_logger.info("[ENRICH FILE] Starting enrichment...")
 
         # Retrieve ipv4
         obs_ipv4 = observable["value"]
 
         # Get entity data from api client
-        entity_data = self.client.get_ipv4_info(obs_ipv4, self.sections)
+        entity_data = self.client.get_data("ip", obs_ipv4, self.sections)
 
         # Check Quota
-        if is_quota_exceeded(entity_data["LicenseInfo"]):
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] The daily quota has been exceeded",
-                {
-                    "day_requests": entity_data["LicenseInfo"]["DayRequests"],
-                    "day_quota": entity_data["LicenseInfo"]["DayQuota"],
-                },
-            )
+        self.check_quota(entity_data["LicenseInfo"])
 
-        # Prepare author object
-        author = self.converter_to_stix.create_author()
-        octi_objects.append(author.to_stix2_object())
-
-        # Prepare TLPMarkings
-        tlp_clear = self.converter_to_stix.create_tlp_marking("clear")
-        octi_objects.append(tlp_clear.to_stix2_object())
-        tlp_amber = self.converter_to_stix.create_tlp_marking("amber")
-        octi_objects.append(tlp_amber.to_stix2_object())
+        # Create and add author, TLP clear and TLP amber to octi_objects
+        octi_objects.extend(self.generate_author_and_tlp_markings())
 
         # Manage IpGeneralInfo data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
+        self.connector_logger.info(
+            "[ENRICH FILE] Process enrichment from IpGeneralInfo data...",
+            {"observable_id": observable["id"]},
         )
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpGeneralInfo data..."
-        )
-        entity_general_info = entity_data["IpGeneralInfo"]
 
         # Score
         if entity_data.get("Zone"):
-            score = self.zone_octi_score_mapping[entity_data["Zone"].lower()]
-            observable = OpenCTIStix2.put_attribute_in_extension(
-                observable, STIX_EXT_OCTI_SCO, "score", score
-            )
+            observable = self.update_observable_score(entity_data["Zone"], observable)
+
+        entity_general_info = entity_data["IpGeneralInfo"]
 
         # Labels
         if entity_general_info.get("Categories"):
             observable["labels"] = observable.get("x_opencti_labels", [])
             for label in entity_general_info["Categories"]:
-                pretty_label = label.replace("CATEGORY_", "").replace("_", "")
+                pretty_label = label.replace("CATEGORY_", "").replace("_", " ")
                 if pretty_label not in observable["labels"]:
                     observable["labels"].append(pretty_label)
 
@@ -105,15 +82,12 @@ class Ipv4Enricher:
 
         # Manage FilesDownloadedFromIp data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
-        )
-
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from FilesDownloadedFromIp data..."
-        )
-
         if entity_data.get("FilesDownloadedFromIp"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from FilesDownloadedFromIp data...",
+                {"observable_id": observable["id"]},
+            )
+
             for file in entity_data["FilesDownloadedFromIp"]:
                 obs_file = self.converter_to_stix.create_file(
                     hashes={"MD5": file["Md5"]},
@@ -123,7 +97,7 @@ class Ipv4Enricher:
                 if obs_file:
                     octi_objects.append(obs_file.to_stix2_object())
                     file_first_seen_datetime, file_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             file["FirstSeen"], file["LastSeen"]
                         )
                     )
@@ -138,23 +112,24 @@ class Ipv4Enricher:
 
         # Manage HostedUrls data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from HostedUrls data..."
-        )
-
         if entity_data.get("HostedUrls"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from HostedUrls data...",
+                {"observable_id": observable["id"]},
+            )
+
             for url_entity in entity_data["HostedUrls"]:
                 obs_url = self.converter_to_stix.create_url(
-                    url_info=url_entity,
                     obs_url_score=self.zone_octi_score_mapping[
                         url_entity["Zone"].lower()
                     ],
+                    url_info=url_entity["Url"],
                 )
 
                 if obs_url:
                     octi_objects.append(obs_url.to_stix2_object())
                     url_first_seen_datetime, url_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             url_entity["FirstSeen"], url_entity["LastSeen"]
                         )
                     )
@@ -169,11 +144,12 @@ class Ipv4Enricher:
 
         # Manage IpWhoIs data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpWhoIs data..."
-        )
-
         if entity_data.get("IpWhoIs") and entity_data["IpWhoIs"].get("Asn"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from IpWhoIs data...",
+                {"observable_id": observable["id"]},
+            )
+
             asn_entities = entity_data["IpWhoIs"]["Asn"]
             for asn_entity in asn_entities:
                 obs_asn = self.converter_to_stix.create_autonomous_system(
@@ -191,11 +167,12 @@ class Ipv4Enricher:
 
         # Manage IpDnsResolutions
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from IpDnsResolutions data..."
-        )
-
         if entity_data.get("IpDnsResolutions"):
+            self.connector_logger.info(
+                "[ENRICH FILE] Process enrichment from IpDnsResolutions data...",
+                {"observable_id": observable["id"]},
+            )
+
             for resolution in entity_data["IpDnsResolutions"]:
                 obs_domain = self.converter_to_stix.create_domain(
                     name=resolution["Domain"],
@@ -205,7 +182,7 @@ class Ipv4Enricher:
                 if obs_domain:
                     octi_objects.append(obs_domain.to_stix2_object())
                     domain_first_seen_datetime, domain_last_seen_datetime = (
-                        self.get_first_and_last_seen_datetime(
+                        get_first_and_last_seen_datetime(
                             resolution["FirstSeen"], resolution["LastSeen"]
                         )
                     )
@@ -220,35 +197,9 @@ class Ipv4Enricher:
 
         # Manage Industries data
 
-        self.helper.connector_logger.info(
-            "[CONNECTOR] Process enrichment from Industries data..."
-        )
-
         if entity_data.get("Industries"):
-            for industry in entity_data["Industries"]:
-                industry_object = self.converter_to_stix.create_sector(industry)
-
-                if industry_object:
-                    octi_objects.append(industry_object.to_stix2_object())
-                    industry_relation = self.converter_to_stix.create_relationship(
-                        relationship_type="related-to",
-                        source_obj=observable_to_ref,
-                        target_obj=industry_object,
-                    )
-                    octi_objects.append(industry_relation.to_stix2_object())
+            octi_objects.extend(
+                self.manage_industries(observable_to_ref, entity_data["Industries"])
+            )
 
         return octi_objects
-
-    def get_first_and_last_seen_datetime(
-        self, first_seen: str, last_seen: str
-    ) -> datetime:
-        """
-        Convert first and last seen string to datetime.
-        If last==first, add one minute to last seen value.
-        """
-        first_seen_datetime = string_to_datetime(first_seen, DATETIME_FORMAT)
-        last_seen_datetime = string_to_datetime(last_seen, DATETIME_FORMAT)
-        if is_last_seen_equal_to_first_seen(first_seen_datetime, last_seen_datetime):
-            last_seen_datetime = last_seen_datetime + timedelta(minutes=1)
-
-        return first_seen_datetime, last_seen_datetime

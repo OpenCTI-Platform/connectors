@@ -56,11 +56,12 @@ def sanitizer(key, object, default=None):
     return object[key]
 
 
-def cleanhtml(raw_html):
+def clean_html(raw_html):
+    """Remove HTML tags and entities from a string."""
     if raw_html:
-        CLEANR = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
-        cleantext = re.sub(CLEANR, "", raw_html)
-        return cleantext
+        html_tag_pattern = re.compile("<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});")
+        clean_text = re.sub(html_tag_pattern, "", raw_html)
+        return clean_text
     return ""
 
 

@@ -61,7 +61,6 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
             marking_ids=src_entity.object_marking_refs,
             created=datetime.now(tz=timezone.utc),
             modified=datetime.now(tz=timezone.utc),
-            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )
 
     def __init__(
@@ -101,19 +100,16 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
 
             name = technique_id
 
-            external_references = self._create_minimal_external_references(technique_id)
-
             attack_pattern_model = OctiAttackPatternModel.create(
                 name=name,
                 mitre_id=technique_id,
                 organization_id=self.organization.id,
                 marking_ids=[self.tlp_marking.id],
-                description=f"Attack technique {technique_id} (minimal representation)",
+                description=None,
                 aliases=None,
                 first_seen=None,
                 last_seen=None,
                 kill_chain_phases=None,
-                external_references=external_references,
                 created=current_time,
                 modified=current_time,
             )
@@ -121,26 +117,3 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
             attack_patterns.append(attack_pattern_model)
 
         return attack_patterns
-
-    def _create_minimal_external_references(
-        self, technique_id: str
-    ) -> list[dict[str, str]] | None:
-        """Create minimal external references with only MITRE reference.
-
-        Args:
-            technique_id: The attack technique ID
-
-        Returns:
-            list[dict[str, str]] | None: Minimal external references with MITRE reference
-
-        """
-        if not technique_id:
-            return None
-
-        mitre_reference = {
-            "source_name": "mitre-attack",
-            "external_id": technique_id,
-            "url": f"https://attack.mitre.org/techniques/{technique_id}/",
-        }
-
-        return [mitre_reference]

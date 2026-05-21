@@ -7,6 +7,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
     ConfigValidationError,
+    ListFromString,
 )
 from pydantic import (
     AliasChoices,
@@ -67,6 +68,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The period of time to await between two runs of the connector.",
         default=timedelta(minutes=5),
     )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["misp-feed"],
+    )
 
 
 class MispFeedConfig(BaseConfigModel):
@@ -78,13 +83,23 @@ class MispFeedConfig(BaseConfigModel):
         description="Source type for the MISP feed (`url` or `s3`).",
         default="url",
     )
-    url: str | None = Field(
+    url: Annotated[
+        str | None,
+        BeforeValidator(lambda v: v.rstrip("/") if isinstance(v, str) else v),
+    ] = Field(
         description="The URL of the MISP feed (required if `source_type` is `url`).",
         default=None,  # required only if `source_type` is `url`
     )
     ssl_verify: bool = Field(
         description="Whether to verify SSL certificates for the feed URL.",
         default=True,
+    )
+    http_authorization_header: str | None = Field(
+        description=(
+            "Optional value of the HTTP `Authorization` header sent on every request "
+            "to the feed URL (e.g. `Basic <base64(user:password)>` or `Bearer <token>`)."
+        ),
+        default=None,
     )
     bucket_name: str | None = Field(
         description="Bucket Name where the MISP's files are stored",

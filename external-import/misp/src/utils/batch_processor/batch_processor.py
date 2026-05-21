@@ -1,0 +1,796 @@
+"""Batch processor for any data type with configurable work management.
+
+This module provides a flexible processor that can work with any data type,
+handle configurable sizes and provide consistent work management.
+"""
+
+from collections.abc import Generator
+from typing import TYPE_CHECKING, Any
+
+import stix2
+from datasize import DataSize
+from exceptions import MispWorkProcessingError
+
+if TYPE_CHECKING:
+    from custom_typings.protocols import LoggerProtocol
+    from utils.work_manager import WorkManager
+
+
+LOG_PREFIX = "[BatchProcessor]"
+
+
+class BatchProcessor:
+    """Batch processor for any data type with flexible work management."""
+
+    def __init__(
+        self,
+        work_manager: "WorkManager",
+        logger: "LoggerProtocol",
+        batch_size: int,
+    ) -> None:
+        """Initialize the generic batch processor.
+
+        Args:
+            config: Configuration for the batch processor
+            work_manager: The work manager object for OpenCTI operations
+            logger: Logger for logging messages
+
+        """
+        self._work_manager = work_manager
+        self._logger = logger
+
+        self._current_batch: list[stix2.v21._STIXBase21] = []
+        self._latest_date: str | None = None
+
+        self._total_items_processed = 0
+        self._total_batches_processed = 0
+        self._total_items_sent = 0
+
+        self._failed_items: list[Any] = []
+
+        self.batch_size = batch_size
+        self.work_name_template = "MISP - Batch #{batch_num}"
+        self.entity_type = "stix_objects"
+        self.display_name = "STIX objects"
+        self.exception_class = MispWorkProcessingError
+
+    def add_item(self, item: stix2.v21._STIXBase21) -> bool:
+        """Add an item to the current batch.
+
+        Args:
+            item: The item to add to the batch
+
+        Returns:
+            True if item was added, False if validation failed
+
+        Raises:
+            Configured exception class: If auto-processing fails
+
+        """
+        processed_item = self._ensure_stix_format(item)
+        if processed_item is None:
+            self._logger.debug(
+                "Item processing failed, skipping item",
+                {"prefix": LOG_PREFIX},
+            )
+            return False
+
+        if not self.validate_item(processed_item):
+            self._logger.debug(
+                "Item validation failed, skipping item",
+                {"prefix": LOG_PREFIX},
+            )
+            return False
+
+        self._current_batch.append(processed_item)
+        self._logger.debug(
+            "Added item to batch",
+            {
+                "prefix": LOG_PREFIX,
+                "current_size": len(self._current_batch),
+                "batch_size": self.batch_size,
+            },
+        )
+
+        return True
+
+    def add_items(self, items: list[stix2.v21._STIXBase21]) -> int:
+        """Add multiple items to batches, processing full batches automatically.
+
+        Args:
+            items: list of items to add
+
+        Returns:
+            Number of items successfully added
+
+        Raises:
+            Configured exception class: If auto-processing fails
+
+        """
+        added_count = 0
+        self._logger.debug(
+            "Adding items to batch processor",
+            {
+                "prefix": LOG_PREFIX,
+                "count": len(items),
+                "display_name": self.display_name,
+            },
+        )
+
+        for item in items:
+            if self.add_item(item):
+                added_count += 1
+
+        self._logger.debug(
+            "Successfully added items",
+            {
+                "prefix": LOG_PREFIX,
+                "added_count": added_count,
+                "total_count": len(items),
+                "display_name": self.display_name,
+            },
+        )
+        return added_count
+
+    def process_current_batch(self) -> str | None:
+        """Process the current batch and reset for next batch.
+
+        Returns:
+            Work ID if batch was processed, None if batch was empty and skipped
+
+        Raises:
+            Configured exception class: If batch processing fails
+
+        """
+        if not self._current_batch:
+            self._logger.debug(
+                "No items in batch to process",
+                {"prefix": LOG_PREFIX, "display_name": self.display_name},
+            )
+            return None
+
+        batch_items = self._current_batch.copy()
+        self._current_batch.clear()
+
+        self._total_batches_processed += 1
+        batch_num = self._total_batches_processed
+
+        self._logger.debug(
+            "Processing batch",
+            {
+                "prefix": LOG_PREFIX,
+                "batch_num": batch_num,
+                "batch_size": len(batch_items),
+                "display_name": self.display_name,
+                "total_processed": self._total_items_processed + len(batch_items),
+            },
+        )
+
+        return self._process_batch_with_retries(batch_items, batch_num)
+
+    def flush(self) -> str | None:
+        """Process any remaining items in the current batch.
+
+        Returns:
+            Work ID if batch was processed, None if no items to process
+
+        Raises:
+            Configured exception class: If batch processing fails
+
+        """
+        if self._current_batch:
+            self._logger.debug(
+                "Flushing remaining items",
+                {
+                    "prefix": LOG_PREFIX,
+                    "count": len(self._current_batch),
+                    "display_name": self.display_name,
+                },
+            )
+            return self.process_current_batch()
+        self._logger.debug("No items to flush", {"prefix": LOG_PREFIX})
+        return None
+
+    def get_statistics(self) -> dict[str, Any]:
+        """Get processing statistics.
+
+        Returns:
+            dictionary containing processing statistics
+
+        """
+        return {
+            "total_items_processed": self._total_items_processed,
+            "total_batches_processed": self._total_batches_processed,
+            "total_items_sent": self._total_items_sent,
+            "current_batch_size": len(self._current_batch),
+            "failed_items_count": len(self._failed_items),
+            "latest_date": self._latest_date,
+            "batch_size_limit": self.batch_size,
+        }
+
+    def clear_current_batch(self) -> None:
+        """Discard all items currently in the batch without sending them.
+
+        Use this when the connector is buffering and the queued items must be
+        re-processed on the next scheduler run instead of being sent now.
+        """
+        self._current_batch.clear()
+
+    def get_current_batch_length(self) -> int:
+        """Get the number of items in the current batch.
+
+        Returns:
+            Number of items in current batch
+
+        """
+        return len(self._current_batch)
+
+    def get_current_batch_size(self) -> DataSize:
+        """Get the total size of the current batch in bytes.
+
+        Returns:
+            Total size of current batch in bytes
+
+        """
+        return self._get_serialized_size_bytes(self._current_batch)
+
+    def should_flush_before_adding(
+        self,
+        incoming_items: list[stix2.v21._STIXBase21],
+        *,
+        batch_size_limit: DataSize | None = None,
+        max_batch_length: int | None = None,
+    ) -> bool:
+        """Determine whether current batch should be flushed before adding items.
+
+        Args:
+            incoming_items: Items planned to be added to the current batch
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            max_batch_length: Optional max number of items in current + incoming
+
+        Returns:
+            True when the current batch should be flushed first
+        """
+        current_batch_length = self.get_current_batch_length()
+        if current_batch_length == 0:
+            return False
+
+        if batch_size_limit:
+            current_batch_size = self.get_current_batch_size()
+            incoming_size = self._get_serialized_size_bytes(incoming_items)
+            projected_batch_size = DataSize(current_batch_size + incoming_size)
+
+            self._logger.debug(
+                "Projected batch size and batch size limit",
+                {
+                    "prefix": LOG_PREFIX,
+                    "projected_batch_size": f"{projected_batch_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+
+            if projected_batch_size >= int(batch_size_limit):
+                self._logger.debug(
+                    "Current and incoming batch size exceed the configured batch size limit, flushing batch",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "current_batch_size": f"{current_batch_size:.2a}",
+                        "incoming_batch_size": f"{incoming_size:.2a}",
+                        "projected_batch_size": f"{projected_batch_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                return True
+
+        if (
+            max_batch_length is not None
+            and (current_batch_length + len(incoming_items)) >= max_batch_length
+        ):
+            self._logger.debug(
+                "Need to flush before adding next items to preserve bundle consistency",
+                {"prefix": LOG_PREFIX},
+            )
+            return True
+
+        return False
+
+    def split_items_to_fit_size_limit(
+        self,
+        items: list[stix2.v21._STIXBase21],
+        *,
+        additional_overhead_items: list[stix2.v21._STIXBase21],
+        batch_size_limit: DataSize | None = None,
+    ) -> Generator[list[stix2.v21._STIXBase21], None, None]:
+        """Yield item chunks that fit in the configured serialized size limit.
+
+        Args:
+            items: Items to split into size-safe chunks
+            batch_size_limit: Optional serialized size limit (for example "10MB")
+            additional_overhead_items: Optional items always present with each chunk
+
+        Yields:
+            Chunks of items whose serialized size respects the configured limit
+        """
+        if not items:
+            return
+
+        if not batch_size_limit:
+            yield items
+            return
+
+        overhead_size = self._get_serialized_size_bytes(additional_overhead_items)
+        candidate_size = overhead_size
+        current_chunk: list[stix2.v21._STIXBase21] = []
+
+        items_size = self._get_serialized_size_bytes(items)
+        if overhead_size + items_size <= int(batch_size_limit):
+            self._logger.debug(
+                "All entities fit in the batch size limit, no need to split",
+                {
+                    "prefix": LOG_PREFIX,
+                    "entities_size": f"{items_size:.2a}",
+                    "metadata_size": f"{overhead_size:.2a}",
+                    "batch_size_limit": f"{batch_size_limit:.2a}",
+                },
+            )
+            yield items
+            return
+
+        for item in items:
+            item_size = self._get_serialized_size_bytes(item)
+            candidate_size += item_size
+
+            if int(candidate_size) <= int(batch_size_limit):
+                current_chunk.append(item)
+                continue
+
+            if current_chunk:
+                self._logger.debug(
+                    "Current chunk reached batch size limit, yielding chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "chunk_size": f"{self._get_serialized_size_bytes(current_chunk):.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield current_chunk
+                current_chunk = []
+                candidate_size = overhead_size
+
+            single_item_size = overhead_size + item_size
+            if int(single_item_size) > int(batch_size_limit):
+                self._logger.warning(
+                    "Single entity exceeds batch size limit, yielding it as an oversize single-item chunk",
+                    {
+                        "prefix": LOG_PREFIX,
+                        "entity_size": f"{item_size:.2a}",
+                        "metadata_size": f"{overhead_size:.2a}",
+                        "batch_size_limit": f"{batch_size_limit:.2a}",
+                    },
+                )
+                yield [item]
+            else:
+                current_chunk = [item]
+
+        if current_chunk:
+            self._logger.debug(
+                "Yielding last chunk",
+                {
+                    "prefix": LOG_PREFIX,
+                },
+            )
+            yield current_chunk
+
+    @staticmethod
+    def _get_serialized_size_bytes(value: Any) -> DataSize:
+        """Estimate payload size from serialized UTF-8 JSON bytes."""
+        if isinstance(value, list):
+            if not value:
+                return DataSize(2)  # []
+            # Account for commas and brackets without materializing the full list JSON.
+            return DataSize(
+                2
+                + (len(value) - 1)
+                + sum(BatchProcessor._get_serialized_size_bytes(item) for item in value)
+            )
+
+        serialize = getattr(value, "serialize", None)
+        if callable(serialize):
+            return DataSize(len(serialize().encode("utf-8")))
+
+        # Invalid entity that cannot be serialized, return 0 as it will not contribute
+        # to the batch size
+        return DataSize(0)
+
+    def get_failed_items(self) -> list[Any]:
+        """Get list of items that failed processing.
+
+        Returns:
+            list of failed items
+
+        """
+        return self._failed_items.copy()
+
+    def clear_failed_items(self) -> None:
+        """Clear the list of failed items."""
+        self._failed_items.clear()
+
+    def _process_batch_with_retries(
+        self,
+        batch_items: list[Any],
+        batch_num: int,
+    ) -> str:
+        """Process a batch with retry logic.
+
+        Args:
+            batch_items: Items to process
+            batch_num: Batch number for logging
+
+        Returns:
+            Work ID of the processed batch
+
+        Raises:
+            Configured exception class: If all retries fail
+
+        """
+        last_exception = None
+
+        try:
+            return self._process_single_batch(batch_items, batch_num)
+
+        except Exception as e:
+            last_exception = e
+            self._logger.error(
+                "Batch failed after all retries",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "error": str(e),
+                },
+            )
+            self._failed_items.extend(batch_items)
+
+        msg = f"Batch #{batch_num} processing failed"
+        raise self.create_exception(msg) from last_exception
+
+    def _process_single_batch(self, batch_items: list[Any], batch_num: int) -> str:
+        """Process a single batch without retries.
+
+        Args:
+            batch_items: Items to process
+            batch_num: Batch number for logging
+
+        Returns:
+            Work ID of the processed batch
+
+        Raises:
+            Configured exception class: If batch processing fails
+
+        """
+
+        work_name = self.format_work_name(
+            batch_num=batch_num,
+            entity_type=self.entity_type,
+        )
+
+        work_id = self._initiate_work(work_name, batch_num, batch_items)
+
+        self._send_bundle(work_id, batch_items, batch_num)
+
+        self._mark_work_for_processing(work_id, batch_num)
+
+        self._total_items_processed += len(batch_items)
+        self._total_items_sent += len(batch_items)
+
+        self.postprocess_batch(batch_items, work_id)
+
+        self._logger.debug(
+            f"Successfully processed batch #{batch_num}. Total {self.display_name} sent: {self._total_items_sent}",
+            {
+                "prefix": LOG_PREFIX,
+                "batch_num": batch_num,
+                "total_items_sent": self._total_items_sent,
+            },
+        )
+
+        return work_id
+
+    def _initiate_work(self, work_name: str, batch_num: int, items: list[Any]) -> str:
+        """Initiate work in OpenCTI.
+
+        Args:
+            work_name: Name for the work
+            batch_num: Batch number for error context
+            items: Items being processed for error context
+
+        Returns:
+            Work ID
+
+        Raises:
+            Configured exception class: If work initiation fails
+
+        """
+        try:
+            work_id = self._work_manager.initiate_work(name=work_name)
+            self._logger.debug(
+                "Initiated work",
+                {
+                    "prefix": LOG_PREFIX,
+                    "work_name": work_name,
+                    "work_id": work_id,
+                },
+            )
+            return work_id
+        except Exception as work_init_err:
+            self._logger.warning(
+                "Failed to initiate work",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "error": str(work_init_err),
+                },
+            )
+            msg = f"Work initiation failed for batch #{batch_num}: {work_init_err!s}"
+            raise self.create_exception(
+                msg, batch_number=batch_num, items_count=len(items)
+            ) from work_init_err
+
+    def _send_bundle(self, work_id: str, items: list[Any], batch_num: int) -> None:
+        """Send bundle to OpenCTI.
+
+        Args:
+            work_id: Work ID
+            items: Items to send
+            batch_num: Batch number for error context
+
+        Raises:
+            Configured exception class: If bundle sending fails
+
+        """
+        try:
+            self._logger.debug(
+                "Sending bundle",
+                {
+                    "prefix": LOG_PREFIX,
+                    "items_count": len(items),
+                    "batch_num": batch_num,
+                },
+            )
+            self._work_manager.send_bundle(work_id=work_id, bundle=items)
+        except Exception as bundle_err:
+            self._logger.warning(
+                "Failed to send bundle",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "error": str(bundle_err),
+                },
+            )
+            msg = f"Bundle sending failed for batch #{batch_num}: {bundle_err!s}"
+            raise self.create_exception(
+                msg, work_id=work_id, items_count=len(items)
+            ) from bundle_err
+
+    def _mark_work_for_processing(self, work_id: str, batch_num: int) -> None:
+        """Mark work for processing in OpenCTI.
+
+        Args:
+            work_id: Work ID
+            batch_num: Batch number for error context
+
+        Raises:
+            Configured exception class: If marking work fails
+
+        """
+        try:
+            self._work_manager.work_to_process(work_id=work_id)
+            self._logger.debug(
+                "Work marked for processing",
+                {
+                    "prefix": LOG_PREFIX,
+                    "work_id": work_id,
+                    "batch_num": batch_num,
+                },
+            )
+        except Exception as process_err:
+            self._logger.warning(
+                "Failed to mark work for processing",
+                {
+                    "prefix": LOG_PREFIX,
+                    "batch_num": batch_num,
+                    "error": str(process_err),
+                },
+            )
+            msg = f"Failed to mark work for processing for batch #{batch_num}: {process_err}"
+            raise self.create_exception(msg, work_id=work_id) from process_err
+
+    def _ensure_stix_format(self, item: Any) -> Any | None:
+        """Ensure item is in STIX format by checking type and converting if needed.
+
+        Args:
+            item: The item to check/convert
+
+        Returns:
+            STIX object or None if conversion failed
+
+        """
+        if isinstance(item, stix2.v21._STIXBase21):
+            self._logger.debug(
+                "Item is already a STIX object",
+                {"prefix": LOG_PREFIX, "item_type": type(item).__name__},
+            )
+            return item
+
+        if hasattr(item, "to_stix") and callable(item.to_stix):
+            try:
+                stix_result = item.to_stix()
+                self._logger.debug(
+                    "Converted to STIX format using to_stix() method",
+                    {"prefix": LOG_PREFIX, "item_type": type(item).__name__},
+                )
+                return stix_result
+            except Exception as e:
+                self._logger.warning(
+                    "Failed to convert item to STIX using to_stix() method",
+                    {"prefix": LOG_PREFIX, "error": str(e)},
+                )
+                return None
+
+        if hasattr(item, "to_stix2_object") and callable(item.to_stix2_object):
+            try:
+                stix_result = item.to_stix2_object()
+                self._logger.debug(
+                    "Converted to STIX format using to_stix2_object() method",
+                    {"prefix": LOG_PREFIX, "item_type": type(item).__name__},
+                )
+                return stix_result
+            except Exception as e:
+                self._logger.warning(
+                    "Failed to convert item to STIX using to_stix2_object() method",
+                    {"prefix": LOG_PREFIX, "error": str(e)},
+                )
+                return None
+
+        self._logger.debug(
+            "Item passed through without conversion",
+            {"prefix": LOG_PREFIX, "item_type": type(item).__name__},
+        )
+        return item
+
+    def format_work_name(self, batch_num: int, **kwargs: Any) -> str:
+        """Format the work name with batch number and optional parameters.
+
+        Args:
+            batch_num: The current batch number
+            **kwargs: Additional parameters for work name formatting
+
+        Returns:
+            Formatted work name
+
+        """
+        try:
+            return self.work_name_template.format(batch_num=batch_num, **kwargs)
+        except KeyError as e:
+            missing_param = str(e).strip("'")
+            msg = f"Missing required parameter '{missing_param}' for work name template '{self.work_name_template}'"
+            raise ValueError(msg) from e
+
+    def validate_item(self, item: Any) -> bool:
+        """Validate an item using the configured validation function.
+
+        Args:
+            item: The item to validate
+
+        Returns:
+            True if valid, False otherwise
+
+        """
+        try:
+            return self._validate_stix_object(item)
+        except Exception:
+            return False
+
+    def postprocess_batch(self, items: list[Any], work_id: str) -> None:
+        """Run postprocessing after successful batch processing.
+
+        Args:
+            items: list of items that were processed
+            work_id: ID of the work that was created
+
+        """
+        try:
+            self._log_batch_completion(items, work_id)
+        except Exception as e:
+            msg = f"Batch postprocessing failed: {e!s}"
+            raise self.exception_class(msg) from e
+
+    def create_exception(self, message: str, **kwargs: Any) -> Any:
+        """Create an exception instance with the configured exception class.
+
+        Args:
+            message: Error message
+            **kwargs: Additional parameters to pass to exception constructor
+
+        Returns:
+            Exception instance
+
+        """
+        try:
+            return self.exception_class(message, **kwargs)
+        except TypeError:
+            try:
+                return self.exception_class(message)
+            except TypeError:
+                try:
+                    return self.exception_class()
+                except TypeError:
+                    return Exception(message)
+
+    @staticmethod
+    def _validate_stix_object(stix_obj: "stix2.v21._STIXBase21") -> bool:
+        """Validate STIX object before adding to batch.
+
+        Args:
+            stix_obj: STIX object to validate
+
+        Returns:
+            True if valid, False otherwise
+
+        """
+        return (
+            hasattr(stix_obj, "id")
+            and hasattr(stix_obj, "type")
+            and stix_obj.id is not None
+            and stix_obj.type is not None
+        )
+
+    def _log_batch_completion(
+        self, stix_objects: list["stix2.v21._STIXBase21"], work_id: str
+    ) -> None:
+        """Log successful batch completion with object type breakdown.
+
+        Args:
+            stix_objects: list of processed STIX objects
+            work_id: Work ID that was created
+
+        """
+        object_types: dict[str, int] = {}
+        total_count = 0
+
+        for obj in stix_objects:
+            total_count += 1
+
+            if total_count <= 2500:
+                if hasattr(obj, "type"):
+                    obj_type = obj.type
+                elif hasattr(obj, "get"):
+                    obj_type = obj.get("type", "unknown")
+                else:
+                    obj_type = "unknown"
+                object_types[obj_type] = object_types.get(obj_type, 0) + 1
+
+        if total_count > 2500:
+            type_summary = (
+                ", ".join(
+                    [
+                        f"{obj_type}: {count}"
+                        for obj_type, count in object_types.items()
+                    ],
+                )
+                + " (first 2500 objects)"
+            )
+        else:
+            type_summary = ", ".join(
+                [f"{obj_type}: {count}" for obj_type, count in object_types.items()],
+            )
+
+        self._logger.info(
+            "Batch completed successfully",
+            {
+                "prefix": LOG_PREFIX,
+                "work_id": work_id,
+                "total_count": total_count,
+                "type_summary": type_summary,
+            },
+        )
