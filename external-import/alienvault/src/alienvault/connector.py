@@ -13,6 +13,7 @@ from alienvault.utils import (
     create_organization,
     get_tlp_string_marking_definition,
 )
+from OTXv2 import InvalidAPIKey
 from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 
 
@@ -145,6 +146,13 @@ class AlienVault:
         except (KeyboardInterrupt, SystemExit):
             self._info("Connector stopping...")
             sys.exit(0)
+        except InvalidAPIKey:
+            self._error(
+                "AlienVault connector authentication failed: Invalid API key. "
+                "Please verify the value of ALIENVAULT_API_KEY. "
+                "You can find your OTX key at https://otx.alienvault.com/api"
+            )
+            sys.exit(1)
         except Exception as e:
             self._error("AlienVault connector internal error: {0}", str(e))
 

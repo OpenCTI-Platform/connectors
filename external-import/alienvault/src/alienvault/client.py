@@ -25,7 +25,7 @@ class AlienVaultClient:
         """
         server = str(base_url).strip("/")
 
-        self.otx = OTXv2(api_key, server=server)
+        self.otx = OTXv2(api_key.strip(), server=server)
 
     def get_pulses_subscribed(
         self,
