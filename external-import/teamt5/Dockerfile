@@ -14,14 +14,22 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-RUN apk add --no-cache libmagic git
+# ``libmagic`` is a runtime dep (used at request time, not build time)
+# and stays in the final image. ``git`` is only needed by ``pip`` to
+# resolve the ``git+https://…@master#subdirectory=connectors-sdk``
+# requirement, so it joins ``build-base`` / ``libffi-dev`` under
+# ``--virtual .build-deps`` and gets dropped together with them after
+# ``pip install`` — keeping the runtime layer free of the git binary
+# (smaller image, smaller attack surface, no accidental network shell
+# from inside the container).
+RUN apk add --no-cache libmagic
 
 # Install dependencies
 # Avoid an image layer for those files.
 RUN --mount=type=bind,source=src/requirements.txt,target=requirements.txt \
-    apk --no-cache add build-base libffi-dev && \
+    apk add --no-cache --virtual .build-deps build-base libffi-dev git && \
     python -m pip install --no-cache-dir -r requirements.txt && \
-    apk del build-base libffi-dev
+    apk del .build-deps
 
 # Copy the connector
 COPY src .

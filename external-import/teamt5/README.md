@@ -4,7 +4,7 @@
 |--------|------|---------|
 | Filigran Verified | -    | -       |
 
-Table of Contents
+## Table of Contents
 
 - [OpenCTI TeamT5 External Import Connector](#opencti-teamt5-external-import-connector)
   - [Introduction](#introduction)

@@ -1,3 +1,3 @@
-from .client import Teamt5Client
+from .client import Teamt5AuthError, Teamt5Client
 
-__all__ = ["Teamt5Client"]
+__all__ = ["Teamt5AuthError", "Teamt5Client"]

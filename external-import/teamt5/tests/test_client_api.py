@@ -17,8 +17,9 @@ instead of crashing.
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 import requests
-from teamt5_services.client import Teamt5Client
+from teamt5_services.client import Teamt5AuthError, Teamt5Client
 
 
 def _make_token_response(access_token="tok123", expires_in=3600):
@@ -101,6 +102,76 @@ class TestInitOAuth:
                 {"Authorization": "Bearer oauth-token"}
             )
             assert client._token == "oauth-token"
+
+
+class TestRefreshTokenFailures:
+    """Pin the OAuth token-exchange error contract.
+
+    ``_refresh_token`` MUST raise :class:`Teamt5AuthError` on every
+    failure mode of the token endpoint — transport errors
+    (``RequestException``), HTTP error responses, malformed JSON
+    bodies, and missing ``access_token`` in an otherwise-200 reply —
+    so the operator sees a clear auth-startup failure rather than
+    the underlying ``requests`` / ``ValueError`` traceback. Each
+    case also asserts the structured error log is emitted via
+    ``connector_logger.error`` with the token URL in the ``meta``
+    dict (matching the rest of this connector's logging shape).
+    """
+
+    def test_refresh_token_raises_on_request_exception(
+        self, mock_helper, mock_config_oauth
+    ):
+        with (
+            patch(
+                "teamt5_services.client.requests.post",
+                side_effect=requests.ConnectionError("dns down"),
+            ),
+            patch("teamt5_services.client.requests.Session"),
+        ):
+            with pytest.raises(Teamt5AuthError, match="Failed to obtain OAuth token"):
+                Teamt5Client(mock_helper, mock_config_oauth)
+
+        mock_helper.connector_logger.error.assert_called_once()
+
+    def test_refresh_token_raises_on_http_error(self, mock_helper, mock_config_oauth):
+        bad_resp = Mock()
+        bad_resp.raise_for_status.side_effect = requests.HTTPError("401")
+        with (
+            patch("teamt5_services.client.requests.post", return_value=bad_resp),
+            patch("teamt5_services.client.requests.Session"),
+        ):
+            with pytest.raises(Teamt5AuthError, match="401"):
+                Teamt5Client(mock_helper, mock_config_oauth)
+
+        mock_helper.connector_logger.error.assert_called_once()
+
+    def test_refresh_token_raises_on_invalid_json(self, mock_helper, mock_config_oauth):
+        bad_resp = Mock()
+        bad_resp.raise_for_status = Mock()
+        bad_resp.json.side_effect = ValueError("Expecting value")
+        with (
+            patch("teamt5_services.client.requests.post", return_value=bad_resp),
+            patch("teamt5_services.client.requests.Session"),
+        ):
+            with pytest.raises(Teamt5AuthError, match="Expecting value"):
+                Teamt5Client(mock_helper, mock_config_oauth)
+
+        mock_helper.connector_logger.error.assert_called_once()
+
+    def test_refresh_token_raises_on_missing_access_token(
+        self, mock_helper, mock_config_oauth
+    ):
+        bad_resp = Mock()
+        bad_resp.raise_for_status = Mock()
+        bad_resp.json.return_value = {"expires_in": 3600}  # no access_token
+        with (
+            patch("teamt5_services.client.requests.post", return_value=bad_resp),
+            patch("teamt5_services.client.requests.Session"),
+        ):
+            with pytest.raises(Teamt5AuthError, match="access_token"):
+                Teamt5Client(mock_helper, mock_config_oauth)
+
+        mock_helper.connector_logger.error.assert_called_once()
 
 
 class TestEnsureValidToken:
@@ -224,3 +295,35 @@ class TestRequestData:
             client.request_data("https://api.threatvision.org/test")
 
         mock_ensure.assert_called_once()
+
+    @pytest.mark.parametrize(
+        "exc",
+        [
+            requests.exceptions.SSLError("bad cert"),
+            requests.exceptions.TooManyRedirects("loop"),
+            requests.exceptions.ChunkedEncodingError("truncated"),
+            requests.exceptions.ProxyError("no proxy"),
+            requests.exceptions.ConnectionError("dns"),
+            requests.exceptions.ConnectTimeout("timeout"),
+            requests.exceptions.ReadTimeout("read"),
+            requests.exceptions.HTTPError("500"),
+        ],
+    )
+    def test_request_data_returns_none_on_any_request_exception(
+        self, mock_helper, mock_config_api_key, exc
+    ):
+        """Every concrete ``requests`` exception subclass collapses to ``None``.
+
+        Pins the broadened ``except requests.RequestException`` contract
+        so the "transport errors return ``None``" guarantee covers every
+        shape the previous narrow tuple let bubble up — including
+        ``SSLError`` / ``TooManyRedirects`` / ``ChunkedEncodingError`` /
+        ``ProxyError`` (which used to crash the run before the fix).
+        """
+        client = self._make_client(mock_helper, mock_config_api_key)
+        client.session.get.side_effect = exc
+
+        result = client.request_data("https://api.threatvision.org/test")
+
+        assert result is None
+        mock_helper.connector_logger.warning.assert_called_once()
