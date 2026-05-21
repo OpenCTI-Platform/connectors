@@ -82,6 +82,7 @@ class MandiantReport:
         self.update_identities()
         self.update_country()
         self.update_report()
+        self.add_indicator_observable_references()
         self.update_vulnerability()
         if not self.connector.mandiant_import_software_cpe:
             self.update_software()
@@ -213,6 +214,28 @@ class MandiantReport:
             )
         else:
             report["external_references"] = mandiant_refs
+
+    def add_indicator_observable_references(self):
+        report = utils.retrieve(self.bundle, "type", "report")
+        indicators_ids = {
+            indicator["id"]
+            for indicator in utils.retrieve_all(self.bundle, "type", "indicator")
+        }
+        if not indicators_ids:
+            return
+
+        observables_and_relationships_refs = []
+        for relationship in utils.retrieve_all(self.bundle, "type", "relationship"):
+            if relationship["relationship_type"] != "based-on":
+                continue
+            if relationship["source_ref"] not in indicators_ids:
+                continue
+            observables_and_relationships_refs.append(relationship["id"])
+            observables_and_relationships_refs.append(relationship["target_ref"])
+
+        report["object_refs"] = list(
+            dict.fromkeys(report["object_refs"] + observables_and_relationships_refs)
+        )
 
     def create_note(self):
         # Report Analysis Note
