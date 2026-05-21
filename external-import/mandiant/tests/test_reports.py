@@ -21,7 +21,7 @@ def _build_report(bundle):
     )
 
 
-def test_add_indicator_observable_references_adds_based_on_and_observable_refs():
+def test_adds_indicator_observables_and_based_on_relationships():
     bundle = {
         "objects": [
             {"type": "report", "id": "report--1", "object_refs": ["indicator--1"]},
@@ -47,7 +47,7 @@ def test_add_indicator_observable_references_adds_based_on_and_observable_refs()
     ]
 
 
-def test_add_indicator_observable_references_ignores_non_indicator_based_on():
+def test_excludes_non_indicator_based_on_relationships():
     bundle = {
         "objects": [
             {"type": "report", "id": "report--1", "object_refs": ["indicator--1"]},

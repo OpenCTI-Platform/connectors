@@ -217,24 +217,24 @@ class MandiantReport:
 
     def add_indicator_observable_references(self):
         report = utils.retrieve(self.bundle, "type", "report")
-        indicators_ids = {
+        indicator_ids = {
             indicator["id"]
             for indicator in utils.retrieve_all(self.bundle, "type", "indicator")
         }
-        if not indicators_ids:
+        if not indicator_ids:
             return
 
-        observables_and_relationships_refs = []
+        additional_refs = []
         for relationship in utils.retrieve_all(self.bundle, "type", "relationship"):
             if relationship["relationship_type"] != "based-on":
                 continue
-            if relationship["source_ref"] not in indicators_ids:
+            if relationship["source_ref"] not in indicator_ids:
                 continue
-            observables_and_relationships_refs.append(relationship["id"])
-            observables_and_relationships_refs.append(relationship["target_ref"])
+            additional_refs.append(relationship["id"])
+            additional_refs.append(relationship["target_ref"])
 
         report["object_refs"] = list(
-            dict.fromkeys(report["object_refs"] + observables_and_relationships_refs)
+            dict.fromkeys(report["object_refs"] + additional_refs)
         )
 
     def create_note(self):
