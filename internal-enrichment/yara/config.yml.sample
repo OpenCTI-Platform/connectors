@@ -11,3 +11,5 @@ connector:
 
 yara:
   tlp_level: 'clear'
+  # propagate_malware_relationship: false # Follow ``indicates`` from matching YARA Indicators to Malware
+  # propagate_labels: false               # Copy YARA Indicator labels onto the matching Artifact
