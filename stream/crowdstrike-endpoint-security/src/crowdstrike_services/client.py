@@ -89,14 +89,12 @@ class CrowdstrikeClient:
         """
         Convert a domain to punycode when it contains non-ascii characters.
         """
-        try:
-            domain.encode("ascii")
+        if domain.isascii():
             return domain
-        except UnicodeEncodeError:
-            try:
-                return domain.encode("idna").decode("ascii")
-            except UnicodeError:
-                return domain
+        try:
+            return domain.encode("idna").decode("ascii")
+        except UnicodeError:
+            return domain
 
     def _normalize_indicator_value(self, pattern: str) -> str:
         """

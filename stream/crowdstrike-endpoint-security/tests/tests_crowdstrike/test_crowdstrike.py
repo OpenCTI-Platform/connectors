@@ -14,6 +14,7 @@ class TestCrowdstrikeConnector(object):
 
     domain_pattern = "[domain-name:value = 'siestakeying.com']"
     idn_domain_pattern = "[domain-name:value = 'sanatfilmleriarşivi.xyz']"
+    idn_domain_punycode = "sanatfilmleriarşivi.xyz".encode("idna").decode("ascii")
     ipv4_pattern = "[ipv4-addr:value = '188.143.233.116']"
     ipv6_pattern = "[ipv6-addr:value = '2a02:2f01:7504:5000:0:0:7429:4782']"
     sha256_pattern = "[file:hashes.'SHA-256' = '37c09c95f77e5677332de338b7e972cff67347ed2c807c15b415c41b0d4a9ac4']"
@@ -162,9 +163,8 @@ class TestCrowdstrikeConnector(object):
         Check IDN domains are converted to punycode.
         """
         ioc_value = self.mock_client._normalize_indicator_value(self.idn_domain_pattern)
-        expected_value = "sanatfilmleriarşivi.xyz".encode("idna").decode("ascii")
 
-        assert ioc_value == expected_value
+        assert ioc_value == self.idn_domain_punycode
 
     def test_create_indicator_uses_punycode_domain_value(self) -> None:
         """
@@ -180,5 +180,4 @@ class TestCrowdstrikeConnector(object):
         self.mock_client.create_indicator({"pattern": self.idn_domain_pattern})
 
         indicator_body = self.mock_client.cs.indicator_create.call_args.kwargs["body"]
-        expected_value = "sanatfilmleriarşivi.xyz".encode("idna").decode("ascii")
-        assert indicator_body["indicators"][0]["value"] == expected_value
+        assert indicator_body["indicators"][0]["value"] == self.idn_domain_punycode
