@@ -1,5 +1,5 @@
 pycti==7.260521.0
-pyyaml==6.0.3
+PyYAML==6.0.3
 pydantic>=2.10, <3
 requests==2.33.0
 stix2==3.0.1

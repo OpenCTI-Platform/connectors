@@ -1,4 +1,5 @@
 from ipaddress import IPv4Address
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -6,7 +7,7 @@ from connectors_sdk import (
     BaseStreamConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic.networks import HttpUrl
 
 
@@ -52,6 +53,18 @@ class CrowdstrikeEndpointSecurityConfig(BaseConfigModel):
         description="Enable Android and iOS platform support.",
         default=False,
     )
+    action_on_ip: Literal["no_action", "detect"] = Field(
+        description="Action to apply on IP indicators pushed to CrowdStrike.",
+        default="detect",
+    )
+    action_on_domain: Literal["no_action", "detect"] = Field(
+        description="Action to apply on domain indicators pushed to CrowdStrike.",
+        default="detect",
+    )
+    action_on_hash: Literal["no_action", "allow", "detect", "prevent"] = Field(
+        description="Action to apply on hash indicators pushed to CrowdStrike.",
+        default="detect",
+    )
 
 
 class MetricsConfig(BaseConfigModel):
@@ -63,7 +76,7 @@ class MetricsConfig(BaseConfigModel):
         description="Whether or not Prometheus metrics should be enabled.",
         default=False,
     )
-    port: int = Field(
+    port: int | str = Field(
         description="Port to use for metrics endpoint.",
         default=9113,
     )
@@ -72,12 +85,27 @@ class MetricsConfig(BaseConfigModel):
         default="0.0.0.0",
     )
 
-    @field_validator("addr", mode="after")
+    @field_validator("port", mode="before")
     @classmethod
-    def validate_addr(cls, v: str) -> str:
-        # Will raise ValueError if invalid
-        IPv4Address(v)
-        return v
+    def normalize_port(cls, v) -> int | str:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return v
+
+    @model_validator(mode="after")
+    def validate_metrics_if_enabled(self) -> "MetricsConfig":
+        if not self.enable:
+            return self
+        try:
+            IPv4Address(self.addr)
+        except ValueError as e:
+            raise ValueError(
+                "Metrics address must be a valid IPv4 address when enabled."
+            ) from e
+        if not isinstance(self.port, int):
+            raise ValueError("Metrics port must be an integer when enabled.")
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):

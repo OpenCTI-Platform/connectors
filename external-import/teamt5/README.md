@@ -14,6 +14,7 @@ Table of Contents
     - [OpenCTI environment variables](#opencti-environment-variables)
     - [Base connector environment variables](#base-connector-environment-variables)
     - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
+    - [Authentication](#authentication)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -35,6 +36,7 @@ A connector enabling the automatic ingestion of Reports and Indicator Bundles fr
 - OpenCTI Platform >= 6.8.0
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors/tree/master/connectors-sdk) library matching your OpenCTI version
+- Access to TeamT5 API (OAuth 2.0 client credentials, or a legacy API key)
 
 ## Configuration variables
 
@@ -62,10 +64,25 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter    | config.yml         | Docker environment variable | Default | Description                                                                                      |
 |--------------|-------------------|-----------------------------|---------|--------------------------------------------------------------------------------------------------|
-| API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | The API key for authenticating with the TeamT5 API.                                              |
-| TLP Level    | teamt5.tlp_level    | `TEAMT5_TLP_LEVEL`      | clear   | The TLP marking to be set for for ingested entities. Options: clear, white, green, amber, amber+strict, red.           |
-| First Run Retrieval Timestamp | teamt5.first_run_retrieval_timestamp | `TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP` |         | Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data.|
+| API base URL | teamt5.api_base_url | `TEAMT5_API_BASE_URL`   | `https://api.threatvision.org/` | The base URL of the TeamT5 ThreatVision API. |
+| Client ID    | teamt5.client_id    | `TEAMT5_CLIENT_ID`      |         | OAuth 2.0 client ID. Requires `client_secret` to also be set. |
+| Client Secret | teamt5.client_secret | `TEAMT5_CLIENT_SECRET` |         | OAuth 2.0 client secret. Requires `client_id` to also be set. |
+| API key      | teamt5.api_key      | `TEAMT5_API_KEY`        |         | **Deprecated.** Pre-obtained Bearer token. Use `client_id`/`client_secret` instead. |
+| TLP Level    | teamt5.tlp_level    | `TEAMT5_TLP_LEVEL`      | clear   | The TLP marking to be set for ingested entities. Options: clear, white, green, amber, amber+strict, red. |
+| First Run Retrieval Timestamp | teamt5.first_run_retrieval_timestamp | `TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP` |         | Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data. |
 
+### Authentication
+
+The recommended authentication method is **OAuth 2.0 Client Credentials**:
+
+```
+TEAMT5_CLIENT_ID=<your-client-id>
+TEAMT5_CLIENT_SECRET=<your-client-secret>
+```
+
+The connector will POST to `<api_base_url>/oauth/token` on startup and automatically refresh the token before it expires.
+
+> **Deprecated:** The static API key (`TEAMT5_API_KEY`) is still supported for backwards compatibility but should not be used for new deployments. When both `api_key` and OAuth credentials are provided, OAuth takes precedence.
 
 ## Deployment
 
@@ -140,4 +157,4 @@ Note that logging messages can be added using `self.helper.connector_logger.{LOG
 
 ## Additional information
 
-- It should be noted that all objects ingested by the connector will be marked with the TLP Level you define in its configuration.  
+- It should be noted that all objects ingested by the connector will be marked with the TLP Level you define in its configuration.

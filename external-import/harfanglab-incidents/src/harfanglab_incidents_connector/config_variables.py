@@ -51,7 +51,7 @@ class ConfigConnector:
             yaml_path=["harfanglab_incidents", "url"],
             config=self.load,
             required=True,
-        )
+        ).rstrip("/")
         self.harfanglab_ssl_verify = get_config_variable(
             env_var="HARFANGLAB_INCIDENTS_SSL_VERIFY",
             yaml_path=["harfanglab_incidents", "ssl_verify"],

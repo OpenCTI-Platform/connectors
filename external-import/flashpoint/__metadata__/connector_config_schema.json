@@ -59,6 +59,7 @@
       "writeOnly": true
     },
     "FLASHPOINT_IMPORT_START_DATE": {
+      "default": "P30D",
       "description": "The date from which to start importing data.",
       "format": "date-time",
       "type": "string"

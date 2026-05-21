@@ -55,7 +55,6 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
             marking_ids=src_entity.object_marking_refs,
             created=datetime.now(tz=timezone.utc),
             modified=datetime.now(tz=timezone.utc),
-            description=f"{type(src_entity).__name__} {relation_type} {type(target_entity).__name__}",
         )
 
     def __init__(
@@ -158,7 +157,9 @@ class GTIThreatActorToSTIXIntrusionSet(BaseMapper):
         aliases = []
         for alt_name in attributes.alt_names_details:
             if hasattr(alt_name, "value") and alt_name.value:
-                aliases.append(alt_name.value)
+                # Remove source from alias to prevent deduplication issue
+                alt_name_without_source = alt_name.value.split(" (", 1)[0]
+                aliases.append(alt_name_without_source)
 
         return aliases if aliases else None
 

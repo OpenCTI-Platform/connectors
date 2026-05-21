@@ -3,10 +3,9 @@ from base64 import b64encode
 from typing import Any, TypedDict
 
 from cvss import CVSS3
+from external_import_connector.settings import ConnectorSettings
 from markdown_it import MarkdownIt
 from pycti import OpenCTIConnectorHelper
-
-from .config_variables import ConfigConnector
 
 md = MarkdownIt(
     options_update={"options": {"html": True, "linkify": True, "typographer": True}}
@@ -22,7 +21,7 @@ class VulnerabilityPlatform(TypedDict):
 
 class OpenCTISTIXFormatter:
     __helper: OpenCTIConnectorHelper
-    __config: ConfigConnector
+    __config: ConnectorSettings
 
     def __init__(self, helper: OpenCTIConnectorHelper, config):
         self.__helper = helper
@@ -71,7 +70,7 @@ class OpenCTISTIXFormatter:
             {"source_name": "x_force_stix_id", "external_id": obj["id"]}
         )
 
-        obj["x_opencti_create_observables"] = self.__config.create_observables
+        obj["x_opencti_create_observables"] = self.__config.ibm_xti.create_observables
         if obj["x_opencti_create_observables"]:
             match = re.search(r"\[(.*?):.*'(.*?)\'\]", obj["pattern"])
             if match is not None:

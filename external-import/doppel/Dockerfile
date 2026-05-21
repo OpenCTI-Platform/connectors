@@ -2,8 +2,8 @@ FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
 
 # Set working directory and copy code
-WORKDIR /opt/doppel
-COPY src /opt/doppel
+COPY src /opt/opencti-connector-doppel
+WORKDIR /opt/opencti-connector-doppel
 
 # Install required OS packages and Python dependencies
 RUN apk update && apk upgrade && \
@@ -13,8 +13,5 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base
 
-# Copy entrypoint and make executable
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
+# Execute the connector
+CMD [ "python", "main.py" ]

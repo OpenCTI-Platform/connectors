@@ -25,19 +25,20 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for s3 Connector:
 
-| Parameter `s3`    | config.yml          | Docker environment variable | Default           | Mandatory | Example        | Description                                      |
-|-------------------|---------------------|-----------------------------|-------------------|-----------|----------------|--------------------------------------------------|
-| Region            | `region`            | `S3_REGION`                 | `us-east-1`       | No        | `us-east-1`    | S3 Region for Amazon                             |
-| Endpoint URL      | `endpoint_url`      | `S3_ENDPOINT_URL`           | /                 | No        | /              | S3 Endpoint                                      |
-| Access Key ID     | `access_key_id`     | `S3_ACCESS_KEY_ID`          | /                 | Yes       | /              | S3 Access Key ID                                 |
-| Secret Access Key | `secret_access_key` | `S3_SECRET_ACCESS_KEY`      | /                 | Yes       | /              | S3 Secret Access Key                             |
-| Bucket name       | `bucket_name`       | `S3_BUCKET_NAME`            | /                 | Yes       | /              | S3 Bucket Name                                   |
-| Bucket prefixes   | `bucket_prefixes`   | `S3_BUCKET_PREFIXES`        | `ACI_TI,ACI_Vuln` | No        | /              | S3 Bucket Prefixes to process                    |
-| Author            | `author`            | `S3_AUTHOR`                 | /                 | No        | /              | Put author (created by ref) if not exist in data |
-| Marking           | `marking`           | `S3_MARKING`                | `TLP:GREEN`       | No        | `TLP:AMBER`    | Put marking if not exist in data                 |
-| Interval          | `interval`          | `S3_INTERVAL`               | `30`              | No        | `30`           | Interval to poll S3 bucket (in seconds)          |
-| Attach Original File | `attach_original_file` | `S3_ATTACH_ORIGINAL_FILE` | `false`        | No        | `true`         | Attach the original JSON file to vulnerabilities |
-| Delete After Import | `delete_after_import` | `S3_DELETE_AFTER_IMPORT` | `true`          | No        | `false`        | Delete files from S3 after processing (set to false for debugging) |
+| Parameter `s3`       | config.yml             | Docker environment variable | Default             | Mandatory | Example        | Description                                                        |
+|----------------------|------------------------|-----------------------------|---------------------|-----------|----------------|--------------------------------------------------------------------|
+| Region               | `region`               | `S3_REGION`                 | `us-east-1`         | No        | `us-east-1`    | S3 Region for Amazon                                               |
+| Endpoint URL         | `endpoint_url`         | `S3_ENDPOINT_URL`           | /                   | No        | /              | S3 Endpoint                                                        |
+| Access Key ID        | `access_key_id`        | `S3_ACCESS_KEY_ID`          | /                   | Yes       | /              | S3 Access Key ID                                                   |
+| Secret Access Key    | `secret_access_key`    | `S3_SECRET_ACCESS_KEY`      | /                   | Yes       | /              | S3 Secret Access Key                                               |
+| Bucket name          | `bucket_name`          | `S3_BUCKET_NAME`            | /                   | Yes       | /              | S3 Bucket Name                                                     |
+| Bucket prefixes      | `bucket_prefixes`      | `S3_BUCKET_PREFIXES`        | `ACI_TI,ACI_Vuln`   | No        | /              | S3 Bucket Prefixes to process                                      |
+| Author               | `author`               | `S3_AUTHOR`                 | /                   | No        | /              | Put author (created by ref) if not exist in data                   |
+| Marking              | `marking`              | `S3_MARKING`                | `TLP:GREEN`         | No        | `TLP:AMBER`    | Put marking if not exist in data                                   |
+| Interval             | `interval`             | `S3_INTERVAL`               | `30`                | No        | `30`           | Interval to poll S3 bucket (in seconds)                            |
+| Attach Original File | `attach_original_file` | `S3_ATTACH_ORIGINAL_FILE`   | `false`             | No        | `true`         | Attach the original JSON file to vulnerabilities                   |
+| Delete After Import  | `delete_after_import`  | `S3_DELETE_AFTER_IMPORT`    | `true`              | No        | `false`        | Delete files from S3 after processing (set to false for debugging) |
+| No split bundles     | `no_split_bundles`     | `S3_NO_SPLIT_BUNDLES`       | `true`              | No        | `false`        | No split bundle                                                    |
 
 ## Behavior
 

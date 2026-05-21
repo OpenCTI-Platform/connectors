@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """OpenCTI Valhalla Knowledge importer module."""
 
 import re
 from datetime import datetime, timezone
-from typing import Any, Mapping
+from typing import TYPE_CHECKING, Any, Mapping
 from urllib.parse import urlparse
 
 import pycti
@@ -13,6 +12,10 @@ from pycti.connector.opencti_connector_helper import OpenCTIConnectorHelper
 from stix2 import Bundle, ExternalReference, Identity, Indicator, Relationship
 
 from .models import ApiResponse, StixEnterpriseAttack
+
+if TYPE_CHECKING:
+    from stix2 import MarkingDefinition
+    from valhallaAPI.valhalla import ValhallaAPI
 
 
 class KnowledgeImporter:
@@ -25,15 +28,13 @@ class KnowledgeImporter:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        update_data: bool,
-        default_marking,
-        valhalla_client: str,
+        default_marking: "MarkingDefinition",
+        valhalla_client: "ValhallaAPI",
     ) -> None:
         """Initialize Valhalla indicator importer."""
         self.helper = helper
         self.guess_malware = True
         self.guess_actor = True
-        self.update_data = update_data
         self.default_marking = default_marking
         self.valhalla_client = valhalla_client
         self.organization = Identity(
@@ -80,7 +81,7 @@ class KnowledgeImporter:
         for yr in response.rules:
             # Handle reference URLs supplied by the Valhalla API
             refs = []
-            if yr.reference is not None and yr.reference != "" and yr.reference != "-":
+            if yr.reference is not None and yr.reference not in {"", "-"}:
                 try:
                     san_url = urlparse(yr.reference)
                     ref = ExternalReference(
@@ -168,7 +169,7 @@ class KnowledgeImporter:
             return None
 
         for obj in response.objects:
-            if obj.type == "attack-pattern" or obj.type == "intrusion-set":
+            if obj.type in {"attack-pattern", "intrusion-set"}:
                 if obj.external_references[0].external_id and obj.id:
                     self._ATTACK_MAPPING[obj.external_references[0].external_id] = (
                         obj.id

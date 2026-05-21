@@ -91,17 +91,28 @@ function Find-RequirementsTxt {
     return $null
 }
 
+function Find-PyprojectToml {
+    param(
+        [string]$Path
+    )
+    
+    # Find all pyproject.toml files recursively
+    # Sort by path depth (number of backslashes) and take the first one (shortest path)
+    $files = Get-ChildItem -Path $Path -Filter "pyproject.toml" -Recurse |
+        Select-Object @{Name='Depth';Expression={($_.FullName -split '\\').Count}}, FullName |
+        Sort-Object Depth |
+        Select-Object -First 1
+    
+    if ($files) {
+        return $files.FullName
+    }
+    return $null
+}
+
 function Activate-Venv {
     param(
         [string]$ConnectorPath
     )
-    
-    $requirements_file = Find-RequirementsTxt -Path $ConnectorPath
-    
-    if (-not $requirements_file) {
-        Write-Host "No requirements.txt found in $ConnectorPath" -ForegroundColor Yellow
-        return $false
-    }
     
     # Create isolated virtual environment in connector path
     $venvPath = Join-Path $ConnectorPath $VENV_NAME
@@ -116,17 +127,28 @@ function Activate-Venv {
         return $false
     }
     
-    Write-Host "> Installing requirements in: $ConnectorPath"
+    # Install dependencies from connector's directory
+    Push-Location -Path $ConnectorPath
+    Write-Host "> Installing dependencies in: $ConnectorPath"
     
-    # Install requirements quietly
-    & python -m pip install -q -r $requirements_file
+    $requirementsFile = Find-RequirementsTxt -Path $ConnectorPath
+    if ($requirementsFile) {
+        # Install requirements quietly
+        & python -m pip install -q -r $requirementsFile
+    } else {
+        # If no requirements.txt, try to install the connector as a package (assuming pyproject.toml exists)
+        & python -m pip install .
+    }
+
+    # Return to original working directory
+    Pop-Location
     
     # Check if venv is well created
     if (Test-Path $venvPath) {
-        Write-Host "✅ Requirements installed for: $ConnectorPath" -ForegroundColor Green
+        Write-Host "✅ Dependencies installed for: $ConnectorPath" -ForegroundColor Green
         return $true
     } else {
-        Write-Host "❌ Requirements not installed for: $ConnectorPath" -ForegroundColor Red
+        Write-Host "❌ Dependencies not installed for: $ConnectorPath" -ForegroundColor Red
         return $false
     }
 }
@@ -246,110 +268,79 @@ Write-Host ""
 Write-Host "Processing connector: $CONNECTOR_NAME" -ForegroundColor Green
 Write-Host "> Looking for a config model in $CONNECTOR_DIRECTORY"
 
-$requirements_file = Find-RequirementsTxt -Path $CONNECTOR_DIRECTORY
-if ($requirements_file) {
-    Write-Host "Found requirements.txt: $requirements_file"
-    
-    # Check if requirements file contains pydantic-settings or connectors-sdk
-    $requirementsContent = Get-Content $requirements_file -Raw
+$requirementsFile = Find-RequirementsTxt -Path $CONNECTOR_DIRECTORY
+$pyprojectToml = Find-PyprojectToml -Path $CONNECTOR_DIRECTORY
+
+if ($requirementsFile) {
+    $requirementsContent = Get-Content $requirementsFile -Raw
     if ($requirementsContent -match "pydantic-settings" -or $requirementsContent -match "connectors-sdk") {
-        Write-Host "Found pydantic-settings or connectors-sdk in requirements. Proceeding with schema generation..." -ForegroundColor Green
-        
-        # Create a new PowerShell session to isolate the virtual environment
-        $scriptBlock = {
-            param($ConnectorPath, $VENV_NAME)
-            
-            # Save the original directory
-            $originalDir = Get-Location
-            
-            # Change to the connector directory for all operations
-            Set-Location -Path $ConnectorPath
-            
-            # Recreate functions in the new session
-            function Activate-Venv {
-                param([string]$ConnectorPath)
-                
-                # Find requirements.txt
-                $requirements = Get-ChildItem -Path $ConnectorPath -Filter "requirements.txt" -Recurse | 
-                    Select-Object -First 1
-                
-                if ($requirements) {
-                    $venvPath = Join-Path $ConnectorPath $VENV_NAME
-                    & python -m venv $venvPath
-                    
-                    $activateScript = Join-Path $venvPath "Scripts\Activate.ps1"
-                    if (Test-Path $activateScript) {
-                        & $activateScript
-                        & python -m pip install -q -r $requirements.FullName
-                        return $true
-                    }
-                }
-                return $false
-            }
-            
-            if (Activate-Venv -ConnectorPath $ConnectorPath) {
-                Write-Host "> Generating connector JSON schema..." -ForegroundColor Cyan
-                
-                # Generate connector JSON schema
-                # Find the generator script from the original location
-                $generator = Get-ChildItem -Path $originalDir -Recurse -Filter "generate_connector_config_json_schema.py.sample" | 
-                    Select-Object -First 1
-                
-                if ($generator) {
-                    $tempScript = "generate_connector_config_json_schema_tmp.py"
-                    Copy-Item -Path $generator.FullName -Destination $tempScript
-                    & python $tempScript
-                    Remove-Item $tempScript -Force
-                    Write-Host "✅ JSON schema generated successfully" -ForegroundColor Green
-                } else {
-                    Write-Host "❌ Could not find generate_connector_config_json_schema.py.sample" -ForegroundColor Red
-                }
-                
-                Write-Host "> Generating configurations table..." -ForegroundColor Cyan
-                
-                # Generate configurations table
-                & python -m pip install -q --disable-pip-version-check jsonschema_markdown
-                
-                $configGenerator = Get-ChildItem -Path $originalDir -Recurse -Filter "generate_connector_config_doc.py.sample" | 
-                    Select-Object -First 1
-                
-                if ($configGenerator) {
-                    $tempConfigScript = "generate_connector_config_doc_tmp.py"
-                    Copy-Item -Path $configGenerator.FullName -Destination $tempConfigScript
-                    & python $tempConfigScript
-                    Remove-Item $tempConfigScript -Force
-                    Write-Host "✅ Configuration documentation generated successfully" -ForegroundColor Green
-                } else {
-                    Write-Host "❌ Could not find generate_connector_config_doc.py.sample" -ForegroundColor Red
-                }
-                
-                # Clean up
-                if (Get-Command deactivate -ErrorAction SilentlyContinue) {
-                    deactivate
-                }
-                $venvPath = Join-Path $ConnectorPath $VENV_NAME
-                if (Test-Path $venvPath) {
-                    Remove-Item -Path $venvPath -Recurse -Force
-                }
-            } else {
-                Write-Host "❌ Failed to activate virtual environment" -ForegroundColor Red
-            }
-        }
-        
-        # Execute in isolated session
-        Invoke-Command -ScriptBlock $scriptBlock -ArgumentList $CONNECTOR_DIRECTORY, $VENV_NAME
-        
-        Write-Host ""
-        Write-Host "✅ Schema generation completed for connector: $CONNECTOR_NAME" -ForegroundColor Green
-    } else {
-        Write-Host "Warning: pydantic-settings or connectors-sdk not found in requirements.txt" -ForegroundColor Yellow
-        Write-Host "This connector may not support config schema generation." -ForegroundColor Yellow
+        Write-Host "Found requirements.txt: $requirementsFile"
+    }
+} elseif ($pyprojectToml) {
+    $pyprojectTomlContent = Get-Content $pyprojectToml -Raw
+    if ($pyprojectTomlContent -match "connectors-sdk") {
+        Write-Host "Found pyproject.toml: $pyprojectToml"
     }
 } else {
-    Write-Host "Error: No requirements.txt found in connector directory." -ForegroundColor Red
-    Write-Host "Cannot proceed with schema generation." -ForegroundColor Red
+    Write-Host "Warning: pydantic-settings or connectors-sdk not found in connector's dependencies" -ForegroundColor Yellow
+    Write-Host "This connector may not support config schema generation." -ForegroundColor Yellow
     exit 1
 }
+
+Write-Host "Found pydantic-settings or connectors-sdk in dependencies. Proceeding with schema generation..." -ForegroundColor Green
+
+# Create a new PowerShell session to isolate the virtual environment
+$scriptBlock = {
+    param($ConnectorPath, $VENV_NAME)
+    
+    if (Activate-Venv -ConnectorPath $ConnectorPath) {
+        Write-Host "> Generating connector JSON schema..." -ForegroundColor Cyan
+        
+        # Generate connector JSON schema
+        # Find the generator script from the original location
+        $generator = Get-ChildItem -Path . -Recurse -Filter "generate_connector_config_json_schema.py.sample" | 
+            Select-Object -First 1
+        
+        if ($generator) {
+            $tempScript = Join-Path $ConnectorPath "generate_connector_config_json_schema_tmp.py"
+            Copy-Item -Path $generator.FullName -Destination $tempScript
+            & python $tempScript
+            Remove-Item $tempScript -Force
+            Write-Host "✅ JSON schema generated successfully" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Could not find generate_connector_config_json_schema.py.sample" -ForegroundColor Red
+        }
+        
+        Write-Host "> Generating configurations table..." -ForegroundColor Cyan
+        
+        # Generate configurations table
+        & python -m pip install -q --disable-pip-version-check jsonschema_markdown
+        
+        $configGenerator = Get-ChildItem -Path . -Recurse -Filter "generate_connector_config_doc.py.sample" | 
+            Select-Object -First 1
+        
+        if ($configGenerator) {
+            $tempConfigScript = Join-Path $ConnectorPath "generate_connector_config_doc_tmp.py"
+            Copy-Item -Path $configGenerator.FullName -Destination $tempConfigScript
+            & python $tempConfigScript
+            Remove-Item $tempConfigScript -Force
+            Write-Host "✅ Configuration documentation generated successfully" -ForegroundColor Green
+        } else {
+            Write-Host "❌ Could not find generate_connector_config_doc.py.sample" -ForegroundColor Red
+        }
+
+        # Clean up
+        Deactivate-Venv -VenvPath (Join-Path $ConnectorPath $VENV_NAME)
+    } else {
+        Write-Host "❌ Failed to activate virtual environment" -ForegroundColor Red
+    }
+}
+
+# Execute in isolated session
+Invoke-Command -ScriptBlock $scriptBlock -ArgumentList $CONNECTOR_DIRECTORY, $VENV_NAME
+
+Write-Host ""
+Write-Host "✅ Schema generation completed for connector: $CONNECTOR_NAME" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "Done!" -ForegroundColor Green

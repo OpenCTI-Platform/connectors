@@ -99,6 +99,7 @@ class ReportImporter:
                 "name": data["file_id"].replace("import/global/", ""),
                 "data": file_data_encoded,
                 "mime_type": "application/pdf",
+                "no_trigger_import": True,
             }
         parsed_data = parser.run_raw_parser(file_name, data["file_mime"])
         os.remove(file_name)
@@ -215,6 +216,7 @@ class ReportImporter:
                 "name": data["file_id"].replace("import/global/", ""),
                 "data": file_data_encoded,
                 "mime_type": "application/pdf",
+                "no_trigger_import": True,
             }
         parsed = parser.run_parser(file_name, data["file_mime"])
         os.remove(file_name)

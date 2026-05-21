@@ -5,7 +5,6 @@ import stix2
 from pycti import Identity as pyctiIdentity
 from pycti import MarkingDefinition, OpenCTIConnectorHelper
 from stix2 import Identity
-
 from teamt5_connector.settings import ConnectorSettings
 from teamt5_services import Teamt5Client
 

@@ -14,11 +14,4 @@ services:
       - CONNECTOR_DURATION_PERIOD=ChangeMe # ISO8601 format in String, start with 'P...' for Period
       - WIZ_THREAT_ACTOR_AS_INTRUSION_SET=False
       - WIZ_TLP_LEVEL=clear
-      # Connector's definition parameters OPTIONAL
-      # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
-      # - CONNECTOR_RUN_AND_TERMINATE=False # Default False, True run connector once
-      # - CONNECTOR_SEND_TO_QUEUE=True # Default True
-      # - CONNECTOR_SEND_TO_DIRECTORY=False # Default False 
-      # - CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe # if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path
-      # - CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7 # Default 7, in days
     restart: always

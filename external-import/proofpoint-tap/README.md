@@ -1,9 +1,5 @@
 # Proofpoint TAP Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Filigran Verified | -    | -       |
-
 The Proofpoint TAP connector imports phishing campaign data, events, and threat intelligence from Proofpoint Targeted Attack Protection (TAP) into OpenCTI.
 See: https://www.proofpoint.com/us/products/threat-defense
 
@@ -12,7 +8,7 @@ See: https://www.proofpoint.com/us/products/threat-defense
 - [Proofpoint TAP Connector](#proofpoint-tap-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
-  - [Configuration variables](#configuration-variables)
+  - [Configuration](#configuration)
   - [Deployment](#deployment)
   - [Usage](#usage)
   - [Behavior](#behavior)
@@ -20,6 +16,7 @@ See: https://www.proofpoint.com/us/products/threat-defense
   - [Additional information](#additional-information)
 
 ## Introduction
+
 This connector fetches data such as campaign and their members, and integrates them 
 into OpenCTI for further analysis and correlation with other threat intelligence data.
 
@@ -30,13 +27,13 @@ into OpenCTI for further analysis and correlation with other threat intelligence
 - OpenCTI Platform >= 6.4
 - Proofpoint TAP API access
 
-## Configuration variables
+## Configuration
 
-The connector should be configured via environment variables.
+Configuration parameters can be provided in either **`config.yml`** file, **`.env`** file or directly as **environment variables** (e.g. from **`docker-compose.yml`** for Docker deployments).
 
-For instance using `shell`
+Priority: **YAML > .env > environment > defaults**
 
-directly
+For instance using `shell` directly
 ```shell
 export ENV_VAR_NAME="..."
 ```
@@ -46,69 +43,20 @@ with a .env file
 export $(grep -v '^#' .env | xargs -d '\n')
 ```
 
-or `docker-compose.yml` in the container `environment` section.
-
 with a config.yaml file (dev purposes):
-
-config.yaml should be composed of 2 levels keys/value such as
 ```yaml
 connector: 
   id: "..."
 ```
-you can then alter the `app.py` file to load the config.yaml using the dedicated adapter:
 
-```python 
-from proofpoint_tap.adapters.config import ConfigLoaderYaml
+### Configuration variables
 
-config = ConfigLoaderYaml("path/to/config.yaml")
-```
-
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | Docker environment variable | Mandatory | Description                                          |
-|---------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-| Parameter       | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | `CONNECTOR_ID`              |                 | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name  | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `CONNECTOR_LOG_LEVEL`       |                 | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Duration Period | `CONNECTOR_DURATION_PERIOD` |                 | Yes       | The interval at which the connector runs, in ISO8601 format. Example: PT30M for 30 minutes. |
-| Queue Threshold | `CONNECTOR_QUEUE_THRESHOLD` | 500 | No | The maximum size of the queue in MBytes. Default is 500MBytes. |
-| Run and Terminate | `CONNECTOR_RUN_AND_TERMINATE` | False | No | If set to True, the connector will run once and then terminate. Default is False. |
-| Send to Queue | `CONNECTOR_SEND_TO_QUEUE` | True | No | If set to True, the connector will send data to the queue. Default is True. |
-| Send to Directory | `CONNECTOR_SEND_TO_DIRECTORY` | False | No | If set to True, the connector will send data to a directory. Default is False. |
-| Directory Path | `CONNECTOR_SEND_TO_DIRECTORY_PATH` | CHANGEME | No | The path to the directory where data will be sent if `CONNECTOR_SEND_TO_DIRECTORY` is True. |
-| Directory Retention | `CONNECTOR_SEND_TO_DIRECTORY_RETENTION` | 7 | No | The number of days to retain data in the directory. Default is 7 days. |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter                              | Docker environment variable       | Default | Mandatory | Description                                                                                     |
-|----------------------------------------|-----------------------------------|---------|-----------|-------------------------------------------------------------------------------------------------|
-| API base URL                           | `TAP_API_BASE_URL`                |         | Yes       | Base URL for Proofpoint TAP API                                                        |
-| API access key                         | `TAP_API_PRINCIPAL`               |         | Yes       | Access key for Proofpoint TAP API                                                       |
-| API secret key                         | `TAP_API_SECRET`                  |         | Yes       | Secret key for Proofpoint TAP API                                                       |
-| API timeout                            | `TAP_API_TIMEOUT`                 |         | Yes       | Timeout for API requests in ISO8601                                                          |
-| API backoff                            | `TAP_API_BACKOFF`                 |         | Yes       | Backoff time in ISO8601 for API retries                                                         |
-| API retries                            | `TAP_API_RETRIES`                 |         | Yes       | Number of retries for API requests                                                              |
-| Marking definition                     | `TAP_MARKING_DEFINITION`          |         | Yes       | Marking definition for exported data (Should be one of  "white", "green", "amber", "amber+strict", "red")                                                           |
-| Export Campaigns                        | `TAP_EXPORT_CAMPAIGNS`           | False   | No        | Export campaigns to OpenCTI                                                  |
-| Export Events                          | `TAP_EXPORT_EVENTS`               | False   | No        | Export events to OpenCTI                                                     |
-| Events type                           | `TAP_EVENTS_TYPE  `                |         | No        | Events types to export (all, issues,messages_blocked,messages_delivered,clicks_blocked,clicks_permitted ) |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__)
 
 ## Deployment
 
 ### Docker Deployment
+
 Build a Docker Image using the provided `Dockerfile`.
 
 Example:
@@ -138,7 +86,7 @@ pip install .
 Then, start the connector:
 
 ```shell
-python app.py
+python src/main.py
 ```
 
 ## Usage

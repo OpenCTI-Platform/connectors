@@ -270,9 +270,6 @@ class Hostname(Observable):
     """Represents a hostname observable."""
 
     value: str = Field(..., description="The hostname.", min_length=1)
-    __value_validator = field_validator("value", mode="after")(
-        make_validator("value", validators.hostname)
-    )
 
     def to_stix2_object(self) -> Any:
         return PyCTIHostname(

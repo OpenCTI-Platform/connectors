@@ -116,3 +116,9 @@ class ConfigConnector:
             self.relative_import_start_date = isodate.parse_duration(
                 self.relative_import_start_date
             )
+        self.threat_actor_as_intrusion_set = get_config_variable(
+            "ACCENTURE_ACTI_THREAT_ACTOR_AS_INTRUSION_SET",
+            ["accenture_acti", "threat_actor_as_intrusion_set"],
+            self.load,
+            default=True,
+        )

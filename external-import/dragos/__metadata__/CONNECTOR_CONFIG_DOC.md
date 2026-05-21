@@ -16,5 +16,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | The period of time to await between two runs of the connector. |
 | DRAGOS_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://portal.dragos.com/"` | Dragos API base URL. |
-| DRAGOS_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | Start date of first import (ISO format). Can be a relative or an absolute date. |
+| DRAGOS_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | Start date of first import (ISO format). Can be a relative or an absolute date. |
 | DRAGOS_TLP_LEVEL | `string` |  | `white` `green` `amber` `amber+strict` `red` | `"amber+strict"` | TLP level to apply on objects imported into OpenCTI. |

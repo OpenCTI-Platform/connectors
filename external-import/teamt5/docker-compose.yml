@@ -10,7 +10,12 @@ services:
       - CONNECTOR_SCOPE=ChangeMe
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=P1D
-      - TEAMT5_API_KEY=ChangeMe
+      - TEAMT5_API_BASE_URL=https://api.threatvision.org/
+      # Recommended: OAuth 2.0 Client Credentials
+      - TEAMT5_CLIENT_ID=ChangeMe
+      - TEAMT5_CLIENT_SECRET=ChangeMe
+      # Deprecated: pre-obtained Bearer token (use client_id + client_secret instead)
+      # - TEAMT5_API_KEY=ChangeMe
       - TEAMT5_TLP_LEVEL=clear
       - TEAMT5_FIRST_RUN_RETRIEVAL_TIMESTAMP=ChangeMe
 

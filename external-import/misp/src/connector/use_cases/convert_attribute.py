@@ -1,15 +1,17 @@
 import ipaddress
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pycti
 import stix2
 from api_client.models import ExtendedAttributeItem
-from connector.threats_guesser import ThreatsGuesser
 
 from .common import ConverterConfig, ConverterError
 from .convert_galaxy import GalaxyConverter
 from .convert_tag import TagConverter
+
+if TYPE_CHECKING:
+    from utils.threats_guesser import ThreatsGuesser
 
 """
     Mapping of STIX observable types to OCTI ones.
@@ -120,7 +122,9 @@ class AttributeConverterError(ConverterError):
 
 
 class AttributeConverter:
-    def __init__(self, config: ConverterConfig, threats_guesser: ThreatsGuesser = None):
+    def __init__(
+        self, config: ConverterConfig, threats_guesser: "ThreatsGuesser | None" = None
+    ):
         self.config = config
         self.threats_guesser = threats_guesser
 
@@ -176,6 +180,28 @@ class AttributeConverter:
                 object_marking_refs=markings,
                 custom_properties=custom_properties,
             )
+
+    def create_intrusion_set_from_attribute(
+        self,
+        attribute: ExtendedAttributeItem,
+        labels: list[str],
+        author: stix2.Identity,
+        markings: list[stix2.v21.MarkingDefinition],
+        external_references: list[stix2.ExternalReference],
+    ) -> stix2.IntrusionSet | None:
+        name = attribute.value
+        if not name:
+            return None
+        return stix2.IntrusionSet(
+            id=pycti.IntrusionSet.generate_id(name=name),
+            name=name,
+            labels=labels,
+            description=attribute.comment,
+            created_by_ref=author["id"],
+            object_marking_refs=markings,
+            external_references=external_references,
+            allow_custom=True,
+        )
 
     def create_observables(
         self,
@@ -494,8 +520,15 @@ class AttributeConverter:
         if is_external_reference or is_attachment:
             return stix_objects
 
-        # Extract STIX indicator's metadata from MISP event's attribute's tag
-        attribute_labels = labels
+        # Extract STIX indicator's metadata from MISP event's attribute's tag.
+        # ``labels`` is owned by the caller (the event converter passes a
+        # ``deepcopy(event_labels)`` per attribute, but the object converter
+        # forwards its own list verbatim). Without making a fresh copy here,
+        # ``attribute_labels.append(label)`` below would mutate the caller's
+        # list, which causes attribute-level tags to bleed into every
+        # subsequent attribute / object processed in the same event
+        # (see OpenCTI-Platform/connectors#4532).
+        attribute_labels = list(labels)
         attribute_markings = []
 
         for tag in attribute.Tag or []:
@@ -531,6 +564,21 @@ class AttributeConverter:
                 tag, author=author, markings=attribute_markings
             )
             stix_objects.extend(tag_stix_objects)
+
+        is_threat_actor_attribution = (
+            attribute.type == "threat-actor" and attribute.category == "Attribution"
+        )
+
+        if is_threat_actor_attribution:
+            intrusion_set = self.create_intrusion_set_from_attribute(
+                attribute,
+                labels=attribute_labels,
+                author=author,
+                markings=attribute_markings,
+                external_references=external_references,
+            )
+            if intrusion_set:
+                stix_objects.append(intrusion_set)
 
         observables = []
         if self.config.convert_attribute_to_observable:

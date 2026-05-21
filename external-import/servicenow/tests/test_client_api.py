@@ -15,6 +15,10 @@ def mock_client():
 
     config.servicenow.api_leaky_bucket_rate = 10
     config.servicenow.api_leaky_bucket_capacity = 10
+    # ``sysparm_display_value`` is forwarded on every ServiceNow Table
+    # API call; the client coerces it to the lowercase ``"true"`` /
+    # ``"false"`` string ServiceNow expects.
+    config.servicenow.sysparm_display_value = True
 
     return ServiceNowClient(helper=helper, config=config)
 
@@ -107,3 +111,39 @@ async def test_list_matched(config_labels, mock_response, expected_result):
     )
     # Then the results should be in the values matching the labels
     assert result == expected_result
+
+
+@pytest.mark.parametrize(
+    ("configured_value", "expected_query_value"),
+    [
+        (True, "true"),
+        (False, "false"),
+    ],
+    ids=[
+        "true is sent as the lowercase 'true' ServiceNow expects",
+        "false is sent as the lowercase 'false' ServiceNow expects",
+    ],
+)
+def test_sysparm_display_value_is_serialized_as_lowercase(
+    configured_value, expected_query_value
+):
+    """Pin the bool → lowercase string coercion the ServiceNow API expects.
+
+    A naive ``f"sysparm_display_value={bool}"`` produces the
+    capitalised Python ``"True"`` / ``"False"`` representation,
+    which goes against ServiceNow's documented contract (the
+    parameter is documented as accepting the lowercase strings
+    ``"true"`` / ``"false"``). The client normalises the value
+    once at init so every Table API call site emits the correct
+    payload.
+    """
+    helper = Mock()
+    config = Mock()
+    config.servicenow.api_leaky_bucket_rate = 10
+    config.servicenow.api_leaky_bucket_capacity = 10
+    config.servicenow.sysparm_display_value = configured_value
+
+    client = ServiceNowClient(helper=helper, config=config)
+
+    assert client.sysparm_display_value == expected_query_value
+    assert isinstance(client.sysparm_display_value, str)

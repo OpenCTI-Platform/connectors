@@ -17,7 +17,9 @@ class ConverterToStix:
         self.external_reference = self._create_external_reference(
             self.helper.connect_name
         )
-        self.tlp_marking = self._create_tlp_marking(level=self.config.tlp_level.lower())
+        self.tlp_marking = self._create_tlp_marking(
+            level=self.config.wiz.tlp_level.lower()
+        )
 
     @staticmethod
     def _create_external_reference(source_name: str) -> stix2.ExternalReference:

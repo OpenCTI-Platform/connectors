@@ -63,6 +63,11 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
         alias="MISP_PUBLISH_ON_UPDATE",
         description="Automatically publish events when updated.",
     )
+    publish_alert: bool = Field(
+        default=False,
+        alias="MISP_PUBLISH_ALERT",
+        description="Send email alert notifications when publishing events.",
+    )
 
     # Tagging configuration
     tag_opencti: bool = Field(
@@ -84,6 +89,18 @@ class _ConfigLoaderMisp(ConfigBaseSettings):
             "Perform hard deletion of MISP events (permanent deletion without blocklisting). "
             "If False, deleted events are added to the blocklist to prevent re-importation. "
             "If True, events are permanently deleted and can be re-imported later."
+        ),
+    )
+
+    # Round-trip configuration
+    detect_round_trip: bool = Field(
+        default=False,
+        alias="MISP_DETECT_ROUND_TRIP",
+        description=(
+            "Enable round-trip detection. "
+            "When True, the connector checks if a container has an external reference "
+            "from MISP (source_name='misp' with a valid external_id). If so, it updates "
+            "the existing MISP event instead of creating a duplicate."
         ),
     )
 

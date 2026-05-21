@@ -1,0 +1,5 @@
+# Main dependencies needs to be installed
+-r ../src/requirements.txt
+-r ../dev/dev-requirements.txt
+pytest
+pytest-cov

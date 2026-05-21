@@ -1,11 +1,11 @@
 from copy import deepcopy
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 import pycti
 import stix2
 import stix2.exceptions
 from api_client.models import EventRestSearchListItem, ExtendedAttributeItem
-from connector.threats_guesser import ThreatsGuesser
 from pydantic import HttpUrl
 
 from .common import TLP_CLEAR, ConverterConfig, ConverterConfigError, ConverterError
@@ -16,18 +16,36 @@ from .convert_object import ObjectConverter
 from .convert_tag import TagConverter
 from .utils import find_type_by_uuid
 
+if TYPE_CHECKING:
+    from custom_typings.protocols import LoggerProtocol
+    from utils.threats_guesser import ThreatsGuesser
 
-def event_threat_level_to_opencti_score(threat_level: str) -> int:
-    """Convert MISP Event's threat level into OpenCTI score."""
-    if threat_level == "1":
-        score = 90
-    elif threat_level == "2":
-        score = 60
-    elif threat_level == "3":
-        score = 30
-    else:
-        score = 50
-    return score
+
+LOG_PREFIX = "[EventConverter]"
+
+
+# Used when no explicit mapping is provided. Matches the legacy behavior so
+# upgrading users who do not set ``MISP_THREAT_LEVEL_SCORE_MAPPING`` keep
+# getting identical scores.
+DEFAULT_THREAT_LEVEL_SCORE_MAPPING: dict[str, int] = {
+    "1": 90,
+    "2": 60,
+    "3": 30,
+    "4": 50,
+}
+
+
+def event_threat_level_to_opencti_score(
+    threat_level: str, mapping: dict[str, int] | None = None
+) -> int:
+    """Convert a MISP Event's threat level into an OpenCTI score.
+
+    The MISP API documents four threat-level values (1/2/3/4); any other
+    value coming from the wire falls back to the score associated with
+    level ``"4"`` (Undefined).
+    """
+    score_by_level = mapping or DEFAULT_THREAT_LEVEL_SCORE_MAPPING
+    return score_by_level.get(str(threat_level), score_by_level["4"])
 
 
 def find_event_attribute(
@@ -58,6 +76,7 @@ class EventConverter:
 
     def __init__(
         self,
+        logger: "LoggerProtocol",
         external_reference_base_url: HttpUrl,
         report_type: str = "misp-event",
         report_description_attribute_filters: dict = {},
@@ -75,8 +94,10 @@ class EventConverter:
         original_tags_to_keep_as_labels: list[str] = [],
         default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
-        threats_guesser: ThreatsGuesser | None = None,
+        threats_guesser: "ThreatsGuesser | None" = None,
+        threat_level_score_mapping: dict[str, int] | None = None,
     ):
+        self.logger = logger
         self.config = ConverterConfig(
             report_type=report_type,
             report_description_attribute_filters=report_description_attribute_filters,
@@ -95,6 +116,7 @@ class EventConverter:
             original_tags_to_keep_as_labels=original_tags_to_keep_as_labels,
             default_attribute_score=default_attribute_score,
             guess_threats_from_tags=guess_threats_from_tags,
+            threat_level_score_mapping=threat_level_score_mapping,
         )
 
         # Reminder for (future) developpers
@@ -168,10 +190,13 @@ class EventConverter:
 
     def process(
         self, event: EventRestSearchListItem, include_relationships: bool = True
-    ) -> list[stix2.v21._STIXBase21]:
+    ) -> tuple[
+        stix2.Identity, list[stix2.MarkingDefinition], list[stix2.v21._STIXBase21]
+    ]:
         """
         Process an event and convert it to a list of STIX objects.
         :param event: EventRestSearchListItem object
+        :param include_relationships: Whether to include relationships between objects
         :return: List of STIX objects
         """
         event_author = None
@@ -267,7 +292,10 @@ class EventConverter:
 
         # Extract report's object refs from Event's attributes and objects
         score = (
-            event_threat_level_to_opencti_score(event.Event.threat_level_id)
+            event_threat_level_to_opencti_score(
+                event.Event.threat_level_id,
+                self.config.threat_level_score_mapping,
+            )
             if event.Event.threat_level_id
             else None
         )
@@ -305,7 +333,7 @@ class EventConverter:
             event_intrusion_sets: list[stix2.IntrusionSet] = []
             event_malwares: list[stix2.Malware] = []
             event_tools: list[stix2.Tool] = []
-            event_countries: list[stix2.Location] = []
+            event_locations: list[stix2.Location] = []
             event_sectors: list[stix2.Identity] = []
             event_attack_patterns: list[stix2.AttackPattern] = []
 
@@ -318,8 +346,10 @@ class EventConverter:
                     case stix2.Tool():
                         event_tools.append(event_stix_object)
                     case stix2.Location():
-                        if event_stix_object["country"]:
-                            event_countries.append(event_stix_object)
+                        if event_stix_object.get("country") or event_stix_object.get(
+                            "region"
+                        ):
+                            event_locations.append(event_stix_object)
                     case stix2.Identity():
                         if event_stix_object["identity_class"] == "class":
                             event_sectors.append(event_stix_object)
@@ -360,7 +390,7 @@ class EventConverter:
                     event_intrusion_sets
                     + event_malwares
                     + event_tools
-                    + event_countries
+                    + event_locations
                     + event_sectors
                 ):
                     stix_objects.append(
@@ -398,7 +428,7 @@ class EventConverter:
                             allow_custom=True,
                         )
                     )
-                for event_entity in event_countries + event_sectors:
+                for event_entity in event_locations + event_sectors:
                     stix_objects.append(
                         stix2.Relationship(
                             id=pycti.StixCoreRelationship.generate_id(
@@ -435,10 +465,10 @@ class EventConverter:
                                     ),
                                     relationship_type="related-to",
                                     created_by_ref=event_author["id"],
-                                    description="Original Relationship: "
-                                    + object_reference["relationship_type"]
-                                    + "  \nComment: "
-                                    + object_reference["comment"],
+                                    description=(
+                                        f"Original Relationship: {object_reference['relationship_type']}\n"
+                                        f"Comment: {object_reference['comment']}"
+                                    ),
                                     source_ref=src_result["entity"]["id"],
                                     target_ref=target_result["entity"]["id"],
                                     object_marking_refs=event_markings,
@@ -447,7 +477,7 @@ class EventConverter:
                             )
 
         # Prepare the bundle
-        bundle_objects = [event_author]
+        bundle_objects = []
         # Keep track of objects in bundle to remove duplicates
         bundled_refs = [event_author["id"]]
 
@@ -459,7 +489,6 @@ class EventConverter:
         # Add event markings
         for event_marking in event_markings:
             if event_marking["id"] not in bundled_refs:
-                bundle_objects.append(event_marking)
                 bundled_refs.append(event_marking["id"])
 
         for stix_object in stix_objects:
@@ -503,4 +532,4 @@ class EventConverter:
                 )
                 bundle_objects.extend(note_stix_objects)
 
-        return bundle_objects
+        return (event_author, event_markings, bundle_objects)

@@ -1,14 +1,12 @@
 opencti:
   url: 'http://localhost'
-  token: 'OPENCTI_TOKEN'
+  token: 'ChangeMe'
 
-connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'CONNECTOR_ID'
-  name: 'Red Flag Domains'
-  scope: 'red-flag-domains'
-  update_existing_data: False
-  log_level: 'info'
+# connector:
+  # id: '971377CA-CA0E-41C2-BC96-8B8CCD8216BE'
+  # name: 'Red Flag Domains'
+  # scope: 'red-flag-domains'
+  # log_level: 'error'
 
-redflagdomains:
-  url: 'https://dl.red.flag.domains/daily/'
+# redflagdomains:
+#   url: 'https://dl.red.flag.domains/daily/'

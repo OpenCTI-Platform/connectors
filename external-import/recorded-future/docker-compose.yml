@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   connector-recorded-future:
     image: opencti/connector-recorded-future:latest
@@ -19,7 +19,7 @@ services:
       - RECORDED_FUTURE_INSIKT_ONLY=True #optional, can remove
       - RECORDED_FUTURE_PULL_SIGNATURES=False #optional, can remove
       - RECORDED_FUTURE_PERSON_TO_TA=False #optional, can remove
-      - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False #optional, can remove
+      - RECORDED_FUTURE_TA_TO_INTRUSION_SET=False # optional. Set to true to map Threat Actor entities to Intrusion Set.
       - RECORDED_FUTURE_RISK_AS_SCORE=True #optional, can remove
       - RECORDED_FUTURE_RISK_THRESHOLD=60 #optional, can remove
       - RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS=False #optional, can remove
@@ -32,8 +32,10 @@ services:
       - ALERT_DEFAULT_OPENCTI_SEVERITY=low # OPTIONAL - default: low
       - ALERT_PRIORITY_ALERTS_ONLY=False # OPTIONAL - default: False
       - PLAYBOOK_ALERT_ENABLE=False # REQUIRED
+      - PLAYBOOK_ALERT_CATEGORIES=domain_abuse,identity_novel_exposures,code_repo_leakage # REQUIRED
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_DOMAIN_ABUSE=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_IDENTITY_NOVEL_EXPOSURES=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CODE_REPO_LEAKAGE=Informational # OPTIONAL - default: Informational
+      - PLAYBOOK_ALERT_SEVERITY_THRESHOLD_CYBER_VULNERABILITIES=Informational # OPTIONAL - default: Informational
       - PLAYBOOK_ALERT_DEBUG=False # OPTIONAL - default: False
     restart: always

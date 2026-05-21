@@ -6,7 +6,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -34,8 +34,27 @@ class TeamT5Config(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the TeamT5 connector.
     """
 
-    api_key: SecretStr = Field(
-        description="The API key for authentication to TeamT5's ThreatVision Platform."
+    api_base_url: str = Field(
+        description="Base URL of the TeamT5 ThreatVision API.",
+        default="https://api.threatvision.org/",
+    )
+    # OAuth 2.0 client credentials — recommended authentication path. When
+    # both ``client_id`` and ``client_secret`` are set the connector will
+    # exchange them for a Bearer token against ``<api_base_url>/oauth/token``
+    # and refresh it automatically.
+    client_id: SecretStr | None = Field(
+        description="OAuth 2.0 client ID. Requires `client_secret` to also be set.",
+        default=None,
+    )
+    client_secret: SecretStr | None = Field(
+        description="OAuth 2.0 client secret. Requires `client_id` to also be set.",
+        default=None,
+    )
+    # Deprecated: pre-obtained static Bearer token. Kept for backwards
+    # compatibility; new deployments should use the OAuth flow above.
+    api_key: SecretStr | None = Field(
+        description="Deprecated. Static API key for authentication to TeamT5's ThreatVision Platform. Prefer `client_id` + `client_secret`.",
+        default=None,
     )
     tlp_level: Literal[
         "clear",
@@ -51,6 +70,17 @@ class TeamT5Config(BaseConfigModel):
     first_run_retrieval_timestamp: int = Field(
         description="Unix timestamp indicating the earliest point in time from which intel should be retrieved from the TeamT5 API. Used only on the connector's first run to import previously published data."
     )
+
+    @model_validator(mode="after")
+    def _require_some_authentication(self) -> "TeamT5Config":
+        has_api_key = self.api_key is not None
+        has_oauth = self.client_id is not None and self.client_secret is not None
+        if not (has_api_key or has_oauth):
+            raise ValueError(
+                "TeamT5 connector requires either `api_key` OR both "
+                "`client_id` and `client_secret` to be configured."
+            )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):

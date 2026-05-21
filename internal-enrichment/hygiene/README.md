@@ -19,7 +19,8 @@
 - [Usage](#usage)
 - [Behavior](#behavior)
   - [Data Flow](#data-flow)
-  - [Warning List Matching](#warning-list-matching)
+  - [Warning List](#warning-lists)
+  - [Warning List Matching](#warning-lists-matching)
   - [Score Adjustment](#score-adjustment)
   - [Processing Details](#processing-details)
 - [Performance and Multi-threading](#performance-and-multi-threading)
@@ -149,7 +150,7 @@ flowchart LR
     F --> H
 ```
 
-### Warning List Matching
+### Warning Lists
 
 The connector checks observables against various MISP warning lists including:
 - Public DNS servers
@@ -159,6 +160,44 @@ The connector checks observables against various MISP warning lists including:
 - Whitelisted certificates
 - Security vendor domains
 - And many more...
+
+### Warning Lists Matching
+
+The option "HYGIENE_WARNINGLISTS_SLOW_SEARCH" specifies how the matching will be performed between observables and Warning Lists entries.
+
+#### Exact matching (`HYGIENE_WARNINGLISTS_SLOW_SEARCH=False`)
+
+By default, this option is set to `False`, which implements an **exact matching** strategy between observable values and WarningList entries.
+
+- **Pros:** Fast performance
+- **Cons:** No subdomain or CIDR matching
+
+**Examples:**
+- Observable: www[.]02bancorp.com
+- WarningList: .02bancorp.com
+- Result: ❌ No match
+
+
+- Observable: 1.255.30.45
+- WarningList: 1.255.30.0/24
+- Result: ❌ No match
+
+#### Smart matching (`HYGIENE_WARNINGLISTS_SLOW_SEARCH=True`)
+
+When this option is set to `true`, it enables **smart matching** with subdomain and CIDR support.
+
+- **Pros:** Detects subdomains and IP ranges
+- **Cons:** Slower performance
+
+**Examples:**
+- Observable: www[.]02bancorp.com
+- WarningList: .02bancorp.com
+- Result: ✅ Match found (subdomain detection)
+
+
+- Observable: 1.255.30.45
+- WarningList: 1.255.30.0/24
+- Result: ✅ Match found (CIDR matching)
 
 ### Score Adjustment
 

@@ -1,7 +1,7 @@
 from copy import deepcopy
 from datetime import datetime, timezone
 
-from connectors_sdk.models.octi import (
+from connectors_sdk.models import (
     URL,
     AttackPattern,
     BaseIdentifiedEntity,
@@ -9,6 +9,7 @@ from connectors_sdk.models.octi import (
     File,
     Indicator,
     Individual,
+    IntrusionSet,
     IPV4Address,
     IPV6Address,
     Malware,
@@ -20,7 +21,7 @@ from connectors_sdk.models.octi import (
     TLPMarking,
     Vulnerability,
 )
-from connectors_sdk.models.octi.enums import TLPLevel
+from connectors_sdk.models.enums import TLPLevel
 from pycti import OpenCTIConnectorHelper
 
 # Import ValidationError from pydantic because it's the type of errors raised by connectors-sdk models
@@ -40,11 +41,13 @@ class ObservableEnricher:
         helper: OpenCTIConnectorHelper,
         tlp_level: TLPLevel,
         indicator_creation_threshold: int,
+        threat_actor_to_intrusion_set: bool = False,
     ):
         self.helper = helper  # to import pycti logger
         self.author = self._create_author()
         self.tlp_marking = self._create_tlp_marking(tlp_level)
         self.indicator_creation_threshold = indicator_creation_threshold
+        self.threat_actor_to_intrusion_set = threat_actor_to_intrusion_set
 
     def _create_author(self) -> OrganizationAuthor:
         """Create Recorded Future Author"""
@@ -204,12 +207,20 @@ class ObservableEnricher:
                     attribute.get("id") == "threat_actor"
                     for attribute in linked_entity.attributes
                 ):
-                    octi_objects.append(
-                        ThreatActorGroup(
-                            name=entity_value,
-                            author=self.author,
+                    if self.threat_actor_to_intrusion_set:
+                        octi_objects.append(
+                            IntrusionSet(
+                                name=entity_value,
+                                author=self.author,
+                            )
                         )
-                    )
+                    else:
+                        octi_objects.append(
+                            ThreatActorGroup(
+                                name=entity_value,
+                                author=self.author,
+                            )
+                        )
                 else:
                     match entity_type:
                         case "Company" | "Organization":
@@ -414,7 +425,7 @@ class ObservableEnricher:
                         source=octi_object,
                         target=enriched_observable,
                     )
-                case AttackPattern() | Malware() | ThreatActorGroup():
+                case AttackPattern() | Malware() | ThreatActorGroup() | IntrusionSet():
                     relationship = self._create_relationship(
                         relationship_type="indicates",
                         source=enriched_indicator,
