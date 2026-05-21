@@ -9,6 +9,7 @@ import yaml
 from lib.client import DataDogClient
 from lib.converter import StixConverter
 from lib.importer import DataImporter
+from lib.utils import normalize_csv_list
 from pycti import OpenCTIConnectorHelper, get_config_variable
 
 
@@ -135,21 +136,43 @@ class DataDogConnector:
             f"Config: create_incident_response_cases = {self.create_incident_response_cases} (type: {type(self.create_incident_response_cases).__name__})"
         )
 
-        # Alert filtering
-        self.alert_priorities = get_config_variable(
-            "DATADOG_ALERT_PRIORITIES",
-            ["datadog", "alert_priorities"],
-            config,
-            False,
-            ["P1", "P2", "P3", "P4"],
+        # Alert filtering.
+        #
+        # Both knobs are documented as comma-separated env vars
+        # (``DATADOG_ALERT_PRIORITIES="P1,P2"`` /
+        # ``DATADOG_ALERT_TAGS_FILTER="env:prod,team:secops"``) AND
+        # as YAML lists in ``config.yml.sample`` — so the value can
+        # arrive here as either a Python ``list`` (YAML path) or a
+        # raw ``str`` (env path). Without normalisation the env path
+        # would silently break both downstream consumers: the
+        # ``signal_priority not in priorities`` membership check in
+        # ``lib/client.py`` would devolve into a substring match
+        # (``"P1" in "P1,P2"`` is ``True`` but matches every prefix
+        # of the comma-separated list), and the
+        # ``[f"@tags:{tag}" for tag in tags_filter]`` comprehension
+        # would iterate the string character-by-character and emit a
+        # garbage ``filter[query]=@tags:e @tags:n @tags:v …`` URL.
+        # ``normalize_csv_list`` collapses both shapes (plus
+        # ``None`` / blank inputs) into a clean ``list[str]`` so
+        # the consumers can treat the value uniformly.
+        self.alert_priorities = normalize_csv_list(
+            get_config_variable(
+                "DATADOG_ALERT_PRIORITIES",
+                ["datadog", "alert_priorities"],
+                config,
+                False,
+                ["P1", "P2", "P3", "P4"],
+            )
         )
 
-        self.alert_tags_filter = get_config_variable(
-            "DATADOG_ALERT_TAGS_FILTER",
-            ["datadog", "alert_tags_filter"],
-            config,
-            False,
-            [],
+        self.alert_tags_filter = normalize_csv_list(
+            get_config_variable(
+                "DATADOG_ALERT_TAGS_FILTER",
+                ["datadog", "alert_tags_filter"],
+                config,
+                False,
+                [],
+            )
         )
 
         # Observable extraction settings
