@@ -43,7 +43,7 @@ There are a number of configuration options, which are set either in `docker-com
 ### Connector extra parameters environment variables
 | Parameter               | config.yml          | Docker environment variable     | Default                | Mandatory | Description                                                                                   |
 | ----------------------- | ------------------- | ------------------------------- | ---------------------- | --------- | --------------------------------------------------------------------------------------------- |
-| API Domain              | flare.api_domain  | `FLARE_API_DOMAIN`            | api.flare.co | Yes       | Flare API domain                                                                            |
+| API Base URL              | flare.api_base_url  | `FLARE_API_BASE_URL`            | api.flare.co | Yes       | Flare API base URL|
 | API Key                 | flare.api_key       | `FLARE_API_KEY`                 |                        | Yes       | Flare API key                                                                                 |
 | Tenant Id               | flare.tenant_id     | `FLARE_TENANT_ID`               | (default tenant)       | No        | The tenant in Flare for which the feed should be ingested.                                    |
 | Event types             | flare.event_types   | `FLARE_EVENT_TYPES`             | stealer_log,domain,ransomleak,leak                  | No        | https://api.docs.flare.io/event-types/overview (supported types are stealer_log, domain, ransomleak and leak (leaked credentials))                                               |
@@ -70,7 +70,7 @@ docker build -t opencti/connector-flare:rolling .
       - CONNECTOR_SCOPE=Incident,Observable,Indicator
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - FLARE_API_DOMAIN=api.flare.io
+      - FLARE_API_BASE_URL=api.flare.io
       - FLARE_API_KEY=fw_xxxxxx
       - FLARE_TENANT_ID=changeme
       - FLARE_EVENT_TYPES=changeme

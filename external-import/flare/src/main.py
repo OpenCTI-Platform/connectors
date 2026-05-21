@@ -15,9 +15,9 @@ if __name__ == "__main__":
 
         flare_client = FlareClient(
             helper=helper,
-            api_key=settings.flare_api_key,
-            api_domain=settings.flare_api_domain,
-            tenant_id=settings.flare_tenant_id,
+            api_key=settings.flare.api_key,
+            base_url=settings.flare.api_base_url,
+            tenant_id=settings.flare.tenant_id,
         )
 
         author_identity = stix2.Identity(

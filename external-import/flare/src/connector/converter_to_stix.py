@@ -49,10 +49,10 @@ class FlareToStixMapper:
         self, config: ConnectorSettings, author_identity: stix2.Identity
     ) -> None:
         self.author = author_identity
-        tlp_level = tlp_mapping.get(config.flare_tlp_level)
+        tlp_level = tlp_mapping.get(config.flare.tlp_level)
         if tlp_level is None:
             raise ValueError(
-                f"Invalid TLP level {config.flare_tlp_level!r}. "
+                f"Invalid TLP level {config.flare.tlp_level!r}. "
                 f"Valid values are: {list(tlp_mapping.keys())}"
             )
         self.tlp_level: MarkingDefinition = tlp_level

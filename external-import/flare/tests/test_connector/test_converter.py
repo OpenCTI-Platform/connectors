@@ -16,7 +16,7 @@ from connector.events import (
 )
 from pycti import Identity as PyctiIdentity
 
-BASE_DIR = Path(__file__).parent / "test_events"
+BASE_DIR = Path(__file__).parent.parent / "test_events"
 
 
 def _load_json(filename: str) -> dict[str, Any]:
@@ -27,7 +27,7 @@ def _load_json(filename: str) -> dict[str, Any]:
 
 def _make_config(tlp_level: str = "white") -> MagicMock:
     config = MagicMock()
-    config.flare_tlp_level = tlp_level
+    config.flare.tlp_level = tlp_level
     return config
 
 
@@ -74,6 +74,7 @@ def _make_leaked_credential(username: str) -> LeakedCredentialEvent:
         severity="medium",
         notes="",
         username=username,
+        identity_name=username,
     )
 
 

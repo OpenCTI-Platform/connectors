@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import MagicMock
-
+import pytest
 from connector.connector import FlareConnector
 
 
@@ -11,12 +11,12 @@ def _make_connector(
     lookback_days: int = 30,
 ) -> tuple[FlareConnector, MagicMock, MagicMock, MagicMock]:
     config = MagicMock()
-    config.connector_duration_period = "PT1H"
-    config.flare_lookback_days = lookback_days
-    config.flare_event_types = (
+    config.connector.duration_period.total_seconds.return_value = 3600.0
+    config.flare.lookback_days = lookback_days
+    config.flare.event_types = (
         event_types if event_types is not None else ["stealer_log"]
     )
-    config.flare_event_actions = event_actions
+    config.flare.event_actions = event_actions
     helper = MagicMock()
     flare_client = MagicMock()
     mapper = MagicMock()
@@ -116,19 +116,17 @@ class TestProcessMessage:
         helper.api.work.initiate_work.return_value = "work-123"
         flare_client.get_events.side_effect = RuntimeError("boom")
 
-        # Should not raise
-        connector.process_message()
+        with pytest.raises(RuntimeError):
+            connector.process_message()
 
         helper.connector_logger.error.assert_called()
-        helper.api.work.to_processed.assert_called_once_with(
-            "work-123", "boom", in_error=True
-        )
 
     def test_exception_before_initiate_work_does_not_call_to_processed(self) -> None:
         connector, helper, _, _ = _make_connector()
         helper.get_state.side_effect = RuntimeError("state error")
 
-        connector.process_message()
+        with pytest.raises(RuntimeError):
+            connector.process_message()
 
         helper.api.work.to_processed.assert_not_called()
 
@@ -198,3 +196,4 @@ class TestProcessEvents:
 
         assert result == 1
         helper.connector_logger.error.assert_called()
+

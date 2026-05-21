@@ -13,7 +13,7 @@ def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
         client = FlareClient(
             helper=helper,
             api_key="test-key",
-            api_domain="api.test.io",
+            base_url="api.test.io",
             tenant_id=None,
         )
     return client, helper, mock_api

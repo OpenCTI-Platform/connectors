@@ -4,20 +4,22 @@ from datetime import datetime
 from typing import Any
 
 from flareio import FlareApiClient  # pylint: disable=import-error
+from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 
 
 class FlareClient:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
-        helper: Any,
+        helper: OpenCTIConnectorHelper,
         api_key: str,
-        api_domain: str,
+        base_url: HttpUrl,
         tenant_id: int | None,
     ) -> None:
         self.helper = helper
         self._api = FlareApiClient(
             api_key=api_key,
-            api_domain=api_domain,
+            api_domain=str(base_url),
             tenant_id=tenant_id,
         )
 
@@ -48,7 +50,8 @@ class FlareClient:  # pylint: disable=too-few-public-methods
             page_count += 1
 
             self.helper.connector_logger.debug(
-                f"Page {page_count}: Fetched {len(items)} at cursor {last_from}"
+                "Fetched page",
+                {"page": page_count, "items_count": len(items), "cursor": last_from},
             )
 
             last_from = data.get("next")
@@ -58,7 +61,12 @@ class FlareClient:  # pylint: disable=too-few-public-methods
                 number_of_retries = 3
                 for current_try in range(number_of_retries):
                     self.helper.connector_logger.debug(
-                        f"Fetching event {uid} - {current_try + 1}/{number_of_retries} retries"
+                        "Fetching event",
+                        {
+                            "uid": uid,
+                            "attempt": current_try + 1,
+                            "max_attempts": number_of_retries,
+                        },
                     )
                     try:
                         event_response = self._api.get(
@@ -82,18 +90,19 @@ class FlareClient:  # pylint: disable=too-few-public-methods
                                 and not configured_actions & known_actions
                             ):
                                 self.helper.connector_logger.info(
-                                    "Only 'ignored' and 'remediated' are supported "
-                                    "as event actions, "
-                                    f"received={event_actions}"
+                                    "Unsupported event actions configured — only 'ignored' and 'remediated' are supported",
+                                    {"configured_actions": list(configured_actions)},
                                 )
                             elif "ignored" in event_actions and not is_ignored:
                                 self.helper.connector_logger.debug(
-                                    f"Event {uid} - skipped due to 'ignored' event action filter"
+                                    "Skipping event — not ignored",
+                                    {"uid": uid},
                                 )
                                 break
                             elif "remediated" in event_actions and not is_remediated:
                                 self.helper.connector_logger.debug(
-                                    f"Event {uid} - skipped due to 'remediated' event action filter"
+                                    "Skipping event — not remediated",
+                                    {"uid": uid},
                                 )
                                 break
 
@@ -101,8 +110,12 @@ class FlareClient:  # pylint: disable=too-few-public-methods
                         break
                     except Exception as e:
                         self.helper.connector_logger.error(
-                            f"Failed to fetch event {uid} - "
-                            f"{current_try + 1}/{number_of_retries} retries: {e}"
+                            "Failed to fetch event",
+                            {
+                                "uid": uid,
+                                "attempt": current_try + 1,
+                                "max_attempts": number_of_retries,
+                                "error": str(e),
+                            },
                         )
-                        continue
-                    time.sleep(1)
+                        time.sleep(1)
