@@ -7,7 +7,6 @@ It also supports custom pattern types for Elastic query languages.
 """
 
 import json
-from json import JSONDecodeError
 from typing import Dict, List
 
 from pycti import OpenCTIConnectorHelper
@@ -313,21 +312,21 @@ class ElasticSecurityIntelConnector:
             )
             self._process_observable_batch([data], "delete")
 
-    def validate_json(self, msg) -> Dict:
+    def validate_json(self, msg) -> Dict | None:
         """
         Validate and parse JSON data from the stream
         :param msg: Message event from stream
-        :return: Parsed JSON data
-        :raises JSONDecodeError: If JSON data cannot be parsed
+        :return: Parsed JSON data or None if parsing fails
         """
         try:
             parsed_msg = json.loads(msg.data)
             return parsed_msg
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as err:
             self.helper.connector_logger.error(
-                "Data cannot be parsed to JSON", {"msg_data": msg.data}
+                "Data cannot be parsed to JSON",
+                {"error": str(err), "msg_data": msg.data},
             )
-            raise JSONDecodeError("Data cannot be parsed to JSON", msg.data, 0)
+            return None
 
     def process_message(self, msg) -> None:
         """
@@ -342,6 +341,8 @@ class ElasticSecurityIntelConnector:
             self._check_stream_id()
 
             parsed_msg = self.validate_json(msg)
+            if parsed_msg is None:
+                return
             data = parsed_msg.get("data", {})
 
             # Log the event type and entity
