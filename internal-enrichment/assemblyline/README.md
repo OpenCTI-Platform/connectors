@@ -95,7 +95,7 @@ variables in `docker-compose.yml` (Docker deployment).
 | Connector Scope     | `scope`            | `CONNECTOR_SCOPE`              | `Artifact,StixFile`       | No        | Comma-separated list of observable types this connector enriches.          |
 | Connector Auto      | `auto`             | `CONNECTOR_AUTO`               | `true`                    | No        | Whether the connector auto-enriches newly created in-scope observables.    |
 | Confidence Level    | `confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL`   | `80`                      | No        | Default confidence (0 – 100) used on created STIX objects.                 |
-| Log Level           | `log_level`        | `CONNECTOR_LOG_LEVEL`          | `info`                    | No        | One of `debug`, `info`, `warn`, `error`.                                   |
+| Log Level           | `log_level`        | `CONNECTOR_LOG_LEVEL`          | `info`                    | No        | One of `debug`, `info`, `warn`, `warning`, `error` — `warn` and `warning` are accepted aliases.    |
 
 ### Connector extra parameters environment variables
 

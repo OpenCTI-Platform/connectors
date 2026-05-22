@@ -86,20 +86,39 @@ def _coerce_bool(value: Any, default: bool) -> bool:
 class AssemblyLineConnector:
     """OpenCTI internal-enrichment connector for AssemblyLine 4."""
 
-    def __init__(self) -> None:
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        # Use ``yaml.safe_load`` instead of ``yaml.load(..., Loader=FullLoader)``:
-        # ``FullLoader`` can instantiate arbitrary Python objects from YAML tags,
-        # which means a tampered ``config.yml`` could execute code at startup.
-        # ``safe_load`` restricts parsing to the YAML safe subset (plain
-        # mappings / lists / scalars), and the ``with open(...)`` context
-        # manager guarantees the file handle is released even if YAML parsing
-        # raises.
+    @staticmethod
+    def _load_config_file(config_file_path: str) -> dict:
+        """Load and parse ``config.yml`` using ``yaml.safe_load``.
+
+        Extracted from ``__init__`` so unit tests can pin the
+        connector's config-loading code path end-to-end (i.e. that the
+        parser used to load ``config.yml`` is ``yaml.safe_load``, not
+        ``yaml.load(..., Loader=FullLoader)`` or anything that would
+        re-open the YAML-tag attack surface). The previous shape
+        carried the parsing logic inline in ``__init__``, which made
+        the existing ``TestConfigYamlSafeLoad`` test only able to
+        assert the behaviour of ``yaml.safe_load`` itself rather than
+        the connector's actual code path — a regression to
+        ``FullLoader`` would have silently slipped through.
+
+        ``FullLoader`` can instantiate arbitrary Python objects from
+        YAML tags, which means a tampered ``config.yml`` could execute
+        code at startup; ``safe_load`` restricts parsing to the YAML
+        safe subset (plain mappings / lists / scalars). The
+        ``with open(...)`` context manager guarantees the file handle
+        is released even if YAML parsing raises. A missing config
+        file resolves to an empty dict so the connector can run
+        entirely off environment variables in containerised
+        deployments.
+        """
         if os.path.isfile(config_file_path):
             with open(config_file_path, encoding="utf-8") as fh:
-                config = yaml.safe_load(fh) or {}
-        else:
-            config = {}
+                return yaml.safe_load(fh) or {}
+        return {}
+
+    def __init__(self) -> None:
+        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
+        config = self._load_config_file(config_file_path)
         self.helper = OpenCTIConnectorHelper(config)
 
         # Strip any trailing slash so the connector never builds a URL

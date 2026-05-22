@@ -754,14 +754,24 @@ class TestResolveSubmissionClassification:
 class TestConfigYamlSafeLoad:
     """Config parsing rejects YAML tags that could instantiate Python objects.
 
-    Pins the config-loading security contract: parsing the
-    ``config.yml`` must go through ``yaml.safe_load`` so a tampered
-    file cannot instantiate arbitrary Python objects (the loader the
-    connector previously used — ``yaml.FullLoader`` — would happily
-    execute ``!!python/object/apply:os.system`` tags at load time).
+    Pins the config-loading security contract end-to-end through the
+    connector's actual code path: parsing the ``config.yml`` MUST go
+    through ``yaml.safe_load`` so a tampered file cannot instantiate
+    arbitrary Python objects (the loader the connector previously
+    used — ``yaml.FullLoader`` — would happily execute
+    ``!!python/object/apply:os.system`` tags at load time).
+
+    The first test exercises the connector's ``_load_config_file``
+    helper directly so a regression to ``yaml.load(..., FullLoader)``
+    in the connector's own code (rather than in ``yaml.safe_load``
+    itself) would fail the assertion. The second test pins the
+    happy-path behaviour: a valid ``config.yml`` parses cleanly to
+    its dict shape, and a missing file resolves to an empty dict so
+    the connector runs entirely off environment variables in
+    containerised deployments.
     """
 
-    def test_safe_load_rejects_python_object_tag(self, tmp_path) -> None:
+    def test_load_config_file_rejects_python_object_tag(self, tmp_path) -> None:
         import yaml
 
         config_path = tmp_path / "config.yml"
@@ -769,9 +779,31 @@ class TestConfigYamlSafeLoad:
             "key: !!python/object/apply:os.system ['echo pwned']\n",
             encoding="utf-8",
         )
-        with config_path.open(encoding="utf-8") as fh:
-            with pytest.raises(yaml.YAMLError):
-                yaml.safe_load(fh)
+        with pytest.raises(yaml.YAMLError):
+            AssemblyLineConnector._load_config_file(str(config_path))
+
+    def test_load_config_file_parses_valid_yaml(self, tmp_path) -> None:
+        config_path = tmp_path / "config.yml"
+        config_path.write_text(
+            "opencti:\n  url: https://opencti.example.com\n  token: t\n",
+            encoding="utf-8",
+        )
+        assert AssemblyLineConnector._load_config_file(str(config_path)) == {
+            "opencti": {"url": "https://opencti.example.com", "token": "t"},
+        }
+
+    def test_load_config_file_returns_empty_dict_when_missing(self, tmp_path) -> None:
+        missing_path = str(tmp_path / "does-not-exist.yml")
+        assert AssemblyLineConnector._load_config_file(missing_path) == {}
+
+    def test_load_config_file_returns_empty_dict_when_empty(self, tmp_path) -> None:
+        # ``yaml.safe_load`` of an empty file returns ``None``. The helper
+        # coerces that to ``{}`` so ``OpenCTIConnectorHelper(config)``
+        # downstream never receives ``None`` (which would raise on
+        # subscript access in ``get_config_variable``).
+        config_path = tmp_path / "config.yml"
+        config_path.write_text("", encoding="utf-8")
+        assert AssemblyLineConnector._load_config_file(str(config_path)) == {}
 
 
 class TestUnsupportedEntityType:
