@@ -123,7 +123,7 @@ class AnyRunTILookup:
         self, indicators: list[dict], indicator_type: str
     ) -> None:
         """
-        Process ANY.RUN task indicators. If indicator's threat level is 'No threads detected' crates related observable
+        Process ANY.RUN task indicators. If indicator's threat level is 'No threads detected' creates related observable
             else creates a new stix indicator
 
         :param indicators: List of ANY.RUN indicators
