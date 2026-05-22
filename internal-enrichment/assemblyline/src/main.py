@@ -1282,8 +1282,21 @@ class AssemblyLineConnector:
             times = results.get("times", {}) or {}
 
             result_value = self._score_to_result_name(max_score)
-            has_malicious_iocs = any(malicious_iocs.values())
-            if has_malicious_iocs and result_value not in ("malicious", "suspicious"):
+            # ``malicious_iocs`` carries four buckets: ``domains`` /
+            # ``ips`` / ``urls`` AND ``families`` (the malware-family
+            # attributions). The variable name reflects the broader
+            # "AssemblyLine emitted at least one malicious tag" signal
+            # so a future refactor cannot accidentally treat a
+            # family-only attribution as "no malicious evidence" and
+            # downgrade the result to a non-malicious verdict — a
+            # confirmed malware-family attribution from AssemblyLine
+            # is a strong enough signal on its own to force the
+            # ``malicious`` result.
+            has_malicious_evidence = any(malicious_iocs.values())
+            if has_malicious_evidence and result_value not in (
+                "malicious",
+                "suspicious",
+            ):
                 result_value = "malicious"
 
             now = datetime.now(tz=timezone.utc).replace(tzinfo=None)
@@ -1804,16 +1817,21 @@ class AssemblyLineConnector:
 
             malicious_iocs = self._extract_malicious_iocs(tags)
             suspicious_iocs = self._extract_suspicious_iocs(tags)
-            # ``has_malicious_iocs`` is intentionally scoped to the
+            # ``has_malicious_evidence`` is intentionally scoped to the
             # truly-malicious bucket — the "label source observable as
             # malicious", "set ``x_opencti_score=80``" and
             # "force ``malware-analysis.result=malicious``" paths must
             # not fire on suspicious-only analyses (those get their
             # own ``suspicious`` indicators with a moderate score
-            # below).
-            has_malicious_iocs = any(malicious_iocs.values())
+            # below). The bucket carries domains / ips / urls AND
+            # families (the malware-family attributions) — the name
+            # uses the broader "evidence" wording rather than "iocs"
+            # so a future contributor cannot mistake the flag for
+            # "IOCs only" and accidentally drop the
+            # family-attribution path on the floor.
+            has_malicious_evidence = any(malicious_iocs.values())
             has_suspicious_iocs = any(suspicious_iocs.values())
-            is_malicious = max_score >= 500 or has_malicious_iocs
+            is_malicious = max_score >= 500 or has_malicious_evidence
 
             if is_malicious:
                 try:
@@ -2044,9 +2062,14 @@ class AssemblyLineConnector:
         # ``suspicious`` / emits suspicious indicators for. The previous
         # ``MALICIOUS`` / ``SAFE`` binary collapsed every non-malicious
         # bucket — including the suspicious one — into ``SAFE``.
-        has_malicious_iocs = any(malicious_iocs.values())
+        # See ``_process_file`` for the rationale behind the
+        # ``has_malicious_evidence`` naming — the bucket carries
+        # ``families`` alongside the IOC categories so a name like
+        # ``has_malicious_iocs`` would understate what the flag
+        # actually represents.
+        has_malicious_evidence = any(malicious_iocs.values())
         has_suspicious_iocs = any((suspicious_iocs or {}).values())
-        if max_score >= 500 or has_malicious_iocs:
+        if max_score >= 500 or has_malicious_evidence:
             verdict = "MALICIOUS"
         elif max_score >= 100 or has_suspicious_iocs:
             verdict = "SUSPICIOUS"
