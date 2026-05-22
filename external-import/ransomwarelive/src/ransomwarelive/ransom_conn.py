@@ -628,7 +628,22 @@ class RansomwareAPIConnector:
 
         nb_stix_objects = 0
         bundles = []
-        last_run_datetime = self.last_run_datetime_with_ingested_data or self.last_run
+        # Upper bound for the recent-victim filter must be a clock that
+        # advances every cycle, otherwise a stretch of zero-ingest
+        # cycles can permanently freeze the window in the past and any
+        # disclosure with ``created`` past the frozen upper bound is
+        # silently dropped on every subsequent cycle.
+        # ``self.last_run`` is set by ``process_message`` on every
+        # cycle (independent of ingest outcome);
+        # ``self.last_run_datetime_with_ingested_data`` only advances
+        # on cycles that actually produced bundles. The previous shape
+        # used the ingest-only timestamp as the primary anchor, which
+        # made the upper bound stick at the last successful ingest and
+        # excluded every subsequently-disclosed victim from the
+        # window. Prefer ``self.last_run`` and only fall back to the
+        # ingest-only timestamp when the connector has never run
+        # before (cold start).
+        last_run_datetime = self.last_run or self.last_run_datetime_with_ingested_data
 
         for item in response_json:
             discovered_raw = item.get("discovered")
@@ -637,19 +652,21 @@ class RansomwareAPIConnector:
                 created = created.replace(tzinfo=timezone.utc)
 
             # The recent-victims filter accepts items disclosed in the
-            # 24h window centred on ``last_run``: from ``last_run - 1
-            # day`` (covering disclosures the previous run might have
-            # missed because the upstream stream had not flushed them
-            # yet) to ``last_run`` (excluded — anything more recent is
-            # picked up on the next cycle). The previous shape used
+            # 24h window ending at ``last_run_datetime``: from
+            # ``last_run_datetime - 1 day`` (covering disclosures the
+            # previous run might have missed because the upstream
+            # stream had not flushed them yet) to ``last_run_datetime``
+            # (excluded — anything more recent is picked up on the
+            # next cycle). The previous shape used
             # ``timedelta.seconds`` which only returns the 0..86399
             # seconds-of-day component and silently wrapped negative
-            # deltas (items disclosed *older* than ``last_run - 1 day``)
-            # back into the in-window range — defeating the 24h filter
-            # and re-importing every old victim on every cycle.
-            # Bounded ``0 <= time_diff < ONE_DAY_IN_SECONDS`` now
-            # respects both ends of the window so neither sign of
-            # drift slips through.
+            # deltas (items disclosed *older* than
+            # ``last_run_datetime - 1 day``) back into the in-window
+            # range — defeating the 24h filter and re-importing every
+            # old victim on every cycle. Bounded
+            # ``0 <= time_diff < ONE_DAY_IN_SECONDS`` now respects
+            # both ends of the window so neither sign of drift slips
+            # through.
             if not last_run_datetime:
                 is_recent = True
             else:

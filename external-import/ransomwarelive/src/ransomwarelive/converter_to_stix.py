@@ -424,7 +424,7 @@ class ConverterToStix:
     def process_intrusion_set(
         self,
         intrusion_set_name: str,
-        group_data: list[dict] | None,
+        group_data: list[dict],
         group_name_lockbit: str,
         victim: stix2.Identity,
         attack_date_iso: datetime = None,
@@ -435,7 +435,10 @@ class ConverterToStix:
 
         Params:
             intrusion_set_name (str): name of the intrusion set
-            group_data (list[dict] | None): result from the ransomware api ``/groups`` feed (list of group entries, or ``None`` when the upstream call failed)
+            group_data (list[dict]): result from the ransomware api ``/groups`` feed
+                (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
+                empty list when the upstream payload is empty and raises on error,
+                so callers never observe ``None`` here)
             group_name_lockbit (str): group name if intrusionset is lockbit type
             victim (Identity): stix2 Identity of the victim
             attack_date_iso (datetime): attack date in datetime
@@ -473,7 +476,7 @@ class ConverterToStix:
     def process_campaign(
         self,
         actor_name: str,
-        group_data: list[dict] | None,
+        group_data: list[dict],
         victim: stix2.Identity,
         attack_date_iso: datetime = None,
         discovered_iso: datetime = None,
@@ -485,7 +488,10 @@ class ConverterToStix:
 
         Params:
             actor_name (str): Name of the ransomware group (Intrusion Set) attributed to the campaign.
-            group_data (list[dict] | None): result from the ransomware api ``/groups`` feed (list of group entries, or ``None`` when the upstream call failed)
+            group_data (list[dict]): result from the ransomware api ``/groups`` feed
+                (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
+                empty list when the upstream payload is empty and raises on error,
+                so callers never observe ``None`` here)
             victim (Identity): stix2 Identity object of victim
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
@@ -720,7 +726,7 @@ class ConverterToStix:
     def process_threat_actor(
         self,
         threat_actor_name: str,
-        group_data: list[dict] | None,
+        group_data: list[dict],
         victim: stix2.Identity,
         attack_date_iso: datetime = None,
         discovered_iso: datetime = None,
@@ -730,7 +736,10 @@ class ConverterToStix:
 
         Params:
             threat_actor_name (str): name of the domain
-            group_data (list[dict] | None): result from the ransomware api ``/groups`` feed (list of group entries, or ``None`` when the upstream call failed)
+            group_data (list[dict]): result from the ransomware api ``/groups`` feed
+                (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
+                empty list when the upstream payload is empty and raises on error,
+                so callers never observe ``None`` here)
             victim (Identity): stix2 Identity object of victim
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
