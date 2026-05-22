@@ -99,11 +99,31 @@ class SigmaHQClient:
                     if filename.endswith(".yml"):
                         with zip_ref.open(filename) as file:
                             content = file.read()
-                            rule = {
-                                "filename": filename,
-                                "rule_content": content.decode("utf-8"),
-                            }
-                            sigma_rules.append(rule)
+                        # Per-file UTF-8 decode guard. SigmaHQ rules are
+                        # curated YAML and have always shipped as UTF-8,
+                        # but a single malformed file inside the archive
+                        # would otherwise raise ``UnicodeDecodeError`` and
+                        # bubble out to the outer ``except`` — dropping
+                        # the whole package even though every other rule
+                        # in the archive is valid. Log a warning and skip
+                        # the offending file so a single bad rule cannot
+                        # prevent ingestion of the rest of the bundle.
+                        try:
+                            rule_content = content.decode("utf-8")
+                        except UnicodeDecodeError as decode_err:
+                            self.helper.connector_logger.warning(
+                                "Skipping non-UTF-8 SigmaHQ rule file",
+                                {
+                                    "filename": filename,
+                                    "error": str(decode_err),
+                                },
+                            )
+                            continue
+                        rule = {
+                            "filename": filename,
+                            "rule_content": rule_content,
+                        }
+                        sigma_rules.append(rule)
             return sigma_rules
         except Exception as err:
             self.helper.connector_logger.error(
