@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock
 
 from conftest import SAMPLE_STIX_BUNDLE
-
 from connector.converter_to_stix import ConverterToStix
 
 

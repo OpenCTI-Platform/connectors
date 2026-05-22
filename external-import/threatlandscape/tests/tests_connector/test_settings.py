@@ -1,8 +1,7 @@
 import pytest
+from connector.settings import ConnectorSettings
 from connectors_sdk.settings.exceptions import ConfigValidationError
 from pydantic import ValidationError
-
-from connector.settings import ConnectorSettings
 
 _CONFIG_ERROR = (ValidationError, ConfigValidationError)
 

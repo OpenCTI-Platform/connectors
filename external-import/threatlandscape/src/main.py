@@ -1,8 +1,7 @@
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from connector import ConnectorSettings, ThreatLandscapeConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
