@@ -25,9 +25,7 @@ class AnyRunSandbox:
         """
         if opencti_entity["entity_type"] == "StixFile":
             if not opencti_entity["importFiles"]:
-                raise ValueError(
-                    "Failed to stat analysis. Observable hasn't attachments"
-                )
+                raise ValueError("Failed to stat analysis. Observable hasn't attachments")
 
             self._config = Config.update_config(
                 self._get_file_content(opencti_entity["importFiles"][-1]), "File"
@@ -67,9 +65,7 @@ class AnyRunSandbox:
             integration=self._config.VERSION,
             enable_requests=True,
         ) as connector:
-            iocs = connector.get_analysis_report(
-                task_uuid, report_format="ioc", ioc_reputation="all"
-            )
+            iocs = connector.get_analysis_report(task_uuid, report_format="ioc", ioc_reputation="all")
 
         return iocs if iocs else None
 

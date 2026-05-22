@@ -290,6 +290,8 @@ class AnyRunTILookup:
         else:
             return
 
+        observable.
+
         self._helper.send_stix2_bundle(
             self._helper.stix2_create_bundle([observable]), update=True
         )
