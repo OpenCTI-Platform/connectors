@@ -213,15 +213,26 @@ class BaseHandler(ABC):
         :return: The same STIX object in dictionary form, with the desired TLP Marking and author attached on the correct field.
         """
 
+        # Attribute-style ``.id`` access matches the contract used by
+        # ``ReportHandler._create_report`` (``self.author.id`` /
+        # ``self.tlp_ref.id``) and the canonical stix2 access pattern.
+        # ``TeamT5Connector`` already passes real ``stix2.Identity`` /
+        # ``stix2.MarkingDefinition`` instances into every handler, so we
+        # standardise on the same accessor here instead of mixing dict-style
+        # subscripting on the BaseHandler path and attribute access on the
+        # Report subclass.
+        author_id = self.author.id
+        tlp_id = self.tlp_ref.id
+
         obj_type = stix_object.get("type")
         if obj_type in _STIX_SCO_TYPES:
-            stix_object["x_opencti_created_by_ref"] = self.author["id"]
+            stix_object["x_opencti_created_by_ref"] = author_id
         elif obj_type and obj_type != "marking-definition":
-            stix_object["created_by_ref"] = self.author["id"]
+            stix_object["created_by_ref"] = author_id
 
         # Append TLP Marking
         stix_object["object_marking_refs"] = stix_object.get(
             "object_marking_refs", []
-        ) + [self.tlp_ref["id"]]
+        ) + [tlp_id]
 
         return stix_object

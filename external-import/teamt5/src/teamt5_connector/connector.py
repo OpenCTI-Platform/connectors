@@ -1,5 +1,6 @@
 import sys
 from datetime import datetime, timezone
+from typing import Optional
 
 import stix2
 from pycti import Identity as pyctiIdentity
@@ -42,6 +43,14 @@ class TeamT5Connector:
 
         self.helper.connector_logger.info(f"{self.config.connector.name}: Starting Run")
 
+        # ``work_id`` is created lazily inside the handler loop (one per handler).
+        # Tracking the *currently open* Work in the outer scope lets the
+        # ``except Exception`` handler below mark it as ``in_error=True`` so a
+        # crash mid-run does not leave a Work record stuck in the "running"
+        # state in the OpenCTI UI. We reset to ``None`` after every clean
+        # ``to_processed`` so we only ever close the Work that was actually
+        # left open by the failing handler.
+        work_id: Optional[str] = None
         try:
             now = datetime.now(tz=timezone.utc)
             current_state = self.helper.get_state()
@@ -83,6 +92,7 @@ class TeamT5Connector:
                     push_message = f"Connector Pushed {num_pushed} {handler.name}s"
                     self.helper.connector_logger.info(push_message)
                     self.helper.api.work.to_processed(work_id, push_message)
+                    work_id = None
 
                 else:
                     self.helper.connector_logger.info(f"No new {handler.name}s found")
@@ -106,13 +116,38 @@ class TeamT5Connector:
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            # Structured ``meta`` + ``exc_info=True`` so the traceback survives
+            # in the connector log and the failing call is actually actionable.
+            # If a Work was open when the exception fired, close it with
+            # ``in_error=True`` so it does not stay stuck in the "running"
+            # state in the OpenCTI UI; the close call is itself wrapped in a
+            # defensive ``try`` so a platform partition that caused the
+            # original failure cannot also crash this handler.
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Unhandled exception during run",
+                meta={"error": str(err)},
+                exc_info=True,
+            )
+            if work_id is not None:
+                try:
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        f"Unhandled exception: {err}",
+                        in_error=True,
+                    )
+                except Exception as close_err:  # noqa: BLE001
+                    self.helper.connector_logger.error(
+                        "[CONNECTOR] Failed to mark work as in_error",
+                        meta={"work_id": work_id, "error": str(close_err)},
+                    )
 
     def _create_tlp_marking(self, level: str) -> stix2.MarkingDefinition:
         """
-        Returns a STIX2 Marking Defintion corresponding to the TLP level defined
-        in the connector's configuration. A marking of 'clear/white is returned if
-        the specified marking is invalid.
+        Returns a STIX2 Marking Definition corresponding to the TLP level defined
+        in the connector's configuration. When ``level`` does not match any of the
+        supported labels, the connector logs the misconfiguration and falls back
+        to ``TLP:CLEAR`` so the run keeps producing a well-marked bundle instead
+        of crashing on a typo.
 
         :param level: Configured string reflecting the desired TLP level.
         :return: A Marking Definition for the desired TLP Marking.

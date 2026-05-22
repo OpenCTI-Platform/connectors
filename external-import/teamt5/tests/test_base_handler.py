@@ -12,6 +12,7 @@ Covers the pagination / failure-handling contract of
   out so the next scheduled run can resume.
 """
 
+from types import SimpleNamespace
 from unittest.mock import Mock
 
 from teamt5_connector.BaseHandler import _MAX_PAGE_FAILURES, BaseHandler
@@ -36,8 +37,12 @@ def _make_handler(client, base_url="https://custom.teamt5.example.com/"):
     helper.connector_logger = Mock()
     config = Mock()
     config.teamt5.api_base_url = base_url
-    author = {"id": "identity--author"}
-    tlp_ref = {"id": "marking-definition--tlp"}
+    # ``BaseHandler._append_author_and_tlp`` accesses ``self.author.id`` /
+    # ``self.tlp_ref.id`` (matching the stix2-object contract used in
+    # production by ``TeamT5Connector``). ``SimpleNamespace`` is the
+    # minimal stand-in that supports attribute access.
+    author = SimpleNamespace(id="identity--author")
+    tlp_ref = SimpleNamespace(id="marking-definition--tlp")
     return _StubHandler(
         client=client,
         helper=helper,
