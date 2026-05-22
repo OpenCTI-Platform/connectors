@@ -128,6 +128,85 @@ class TestRetrieveBundleReferencesPagination:
         assert client.request_data.call_count == 2
 
 
+class TestAppendAuthorAndTlp:
+    """Pin the ``_append_author_and_tlp`` field-mapping contract.
+
+    STIX 2.1 splits objects into SDOs/SROs, SCOs, and SMOs:
+
+    * SDOs/SROs accept the standard ``created_by_ref``.
+    * SCOs (``ipv4-addr``, ``domain-name``, ``url``, …) reject
+      ``created_by_ref``; OpenCTI carries the same concept via the
+      ``x_opencti_created_by_ref`` custom property.
+    * SMOs — ``marking-definition`` is the only one we encounter
+      upstream here — accept neither ``created_by_ref`` nor
+      ``object_marking_refs``; tagging the bundle's own TLP onto a
+      marking-definition would also produce a self-referential
+      relationship when the upstream payload already includes the
+      same marking SDO.
+
+    These tests assert each branch so a future refactor cannot
+    silently regress the SCO / SMO handling.
+    """
+
+    def _handler(self):
+        return _make_handler(Mock())
+
+    def test_sdo_gets_standard_created_by_ref(self):
+        handler = self._handler()
+        out = handler._append_author_and_tlp(
+            {"type": "indicator", "id": "indicator--x"}
+        )
+
+        assert out["created_by_ref"] == "identity--author"
+        assert "x_opencti_created_by_ref" not in out
+        assert out["object_marking_refs"] == ["marking-definition--tlp"]
+
+    def test_sco_gets_x_opencti_created_by_ref(self):
+        handler = self._handler()
+        out = handler._append_author_and_tlp({"type": "ipv4-addr", "value": "1.2.3.4"})
+
+        assert out["x_opencti_created_by_ref"] == "identity--author"
+        assert "created_by_ref" not in out
+        assert out["object_marking_refs"] == ["marking-definition--tlp"]
+
+    def test_marking_definition_is_skipped_entirely(self):
+        """SMO branch: neither field is touched on a ``marking-definition``.
+
+        Tagging the bundle's own TLP onto a ``marking-definition`` is
+        invalid STIX 2.1 and would produce a self-reference when the
+        upstream bundle already carries the same marking SDO the
+        connector is about to append.
+        """
+        handler = self._handler()
+        marking = {
+            "type": "marking-definition",
+            "id": "marking-definition--tlp",
+            "definition_type": "statement",
+        }
+
+        out = handler._append_author_and_tlp(dict(marking))
+
+        assert out == marking
+        assert "created_by_ref" not in out
+        assert "x_opencti_created_by_ref" not in out
+        assert "object_marking_refs" not in out
+
+    def test_existing_object_marking_refs_are_preserved(self):
+        handler = self._handler()
+        out = handler._append_author_and_tlp(
+            {
+                "type": "indicator",
+                "id": "indicator--x",
+                "object_marking_refs": ["marking-definition--upstream"],
+            }
+        )
+
+        assert out["object_marking_refs"] == [
+            "marking-definition--upstream",
+            "marking-definition--tlp",
+        ]
+
+
 class TestRetrieveBundleReferencesMaxFailuresAbort:
     def test_bails_after_consecutive_failures(self):
         """After _MAX_PAGE_FAILURES failed pages the loop exits."""

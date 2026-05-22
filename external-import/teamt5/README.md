@@ -55,9 +55,9 @@ There are a number of configuration options, which are set either in `docker-com
 | Parameter            | config.yml           | Docker environment variable     | Default         | Description                                                                              |
 |----------------------|---------------------|---------------------------------|-----------------|------------------------------------------------------------------------------------------|
 | Connector ID         | connector.id        | `CONNECTOR_ID`                  |                | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Name       | connector.name      | `CONNECTOR_NAME`                | TeamT5 External Import Connector | Name of the connector.                                                                   |
+| Connector Name       | connector.name      | `CONNECTOR_NAME`                | Team T5 External Import Connector | Name of the connector.                                                                   |
 | Connector Scope      | connector.scope     | `CONNECTOR_SCOPE`               |                 | The scope applied to the connector. |
-| Log Level            | connector.log_level | `CONNECTOR_LOG_LEVEL`           | info            | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Log Level            | connector.log_level | `CONNECTOR_LOG_LEVEL`           | error           | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 | Duration Period      | connector.duration_period | `CONNECTOR_DURATION_PERIOD`   | P1D            | Interval for the scheduler process in ISO-8601 format (e.g., P1D for 1 day). This determines the amount of time between two consecutive runs of the connector.        |
 
 ### Connector extra parameters environment variables

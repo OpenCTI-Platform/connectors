@@ -207,7 +207,12 @@ class BaseHandler(ABC):
         observables (SCOs) OpenCTI exposes the same concept via the
         ``x_opencti_created_by_ref`` custom property; setting the standard
         ``created_by_ref`` on an SCO produces an invalid bundle that the
-        platform rejects on import.
+        platform rejects on import. ``marking-definition`` objects are
+        STIX Meta Objects (SMOs) and accept neither ``created_by_ref``
+        nor ``object_marking_refs`` — attaching either produces an
+        invalid SMO (and, in the ``object_marking_refs`` case, a noisy
+        self-reference when the upstream bundle already carries the same
+        marking-definition the connector is about to append).
 
         :param stix_object: A STIX object in dictionary form.
         :return: The same STIX object in dictionary form, with the desired TLP Marking and author attached on the correct field.
@@ -225,12 +230,20 @@ class BaseHandler(ABC):
         tlp_id = self.tlp_ref.id
 
         obj_type = stix_object.get("type")
+        if obj_type == "marking-definition":
+            # SMO: skip both ``created_by_ref`` and ``object_marking_refs``
+            # — the field is invalid on the SMO itself and would also
+            # introduce a self-reference when the upstream bundle already
+            # contains the same marking the connector appends.
+            return stix_object
+
         if obj_type in _STIX_SCO_TYPES:
             stix_object["x_opencti_created_by_ref"] = author_id
-        elif obj_type and obj_type != "marking-definition":
+        elif obj_type:
             stix_object["created_by_ref"] = author_id
 
-        # Append TLP Marking
+        # Append TLP Marking on every SDO/SRO/SCO (the SMO branch
+        # above already returned).
         stix_object["object_marking_refs"] = stix_object.get(
             "object_marking_refs", []
         ) + [tlp_id]
