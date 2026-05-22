@@ -502,9 +502,19 @@ class RansomwareAPIConnector:
                 f"Invalid history_start_year '{history_start_year}', defaulting to 2020-01"
             )
 
-        # Clamp year/month to valid ranges
+        # Clamp year/month to valid ranges.
+        #
+        # When clamping the year up to 2020, the month MUST also be
+        # reset to 1 so the combined ``(year, month)`` floor matches
+        # the documented contract ("values older than 2020 are
+        # clamped to 2020-01"). The previous shape only clamped the
+        # year and left a parsed ``YYYYMM`` month intact — so a
+        # ``history_start_year=201912`` ended up starting the
+        # backfill at 2020-12 (skipping the entire 2020 jan-nov
+        # window) instead of the documented 2020-01.
         if start_year_historic < 2020:
             start_year_historic = 2020
+            start_month_historic = 1
         if not (1 <= start_month_historic <= 12):
             self.helper.connector_logger.warning(
                 f"Invalid start month parsed from history_start_year '{history_start_year}', defaulting to 1"
