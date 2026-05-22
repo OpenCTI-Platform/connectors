@@ -54,12 +54,13 @@ Set `CONNECTOR_LOG_LEVEL=debug` to surface every API call, every bundle creation
 
 The connector emits the following objects per disclosure (every flag-gated entry is only present when the matching `CONNECTOR_CREATE_*` flag is `true`):
 
-- `Identity` — the connector's author (`Ransomware.Live`), set as `created_by_ref` on every other SDO.
+- `Identity` (author) — the connector's author (`Ransomware.Live`), set as `created_by_ref` on every other SDO.
 - `MarkingDefinition` — the `TLP:*` marking configured via `CONNECTOR_MARKING_VALUE`.
 - `Identity` (victim) — always emitted.
-- `Domain-Name` + `located-at` `Location` — when the victim record carries a domain / country.
-- `Identity` (sector) + `targets` relationship from the victim — when the victim's industry is known.
-- `Threat Actor` + `targets` relationship to the victim — gated on `create_threat_actor`.
-- `Intrusion Set` + `targets` relationship to the victim + `attributed-to` relationship from the Threat Actor — gated on `create_intrusion_set`.
-- `Campaign` + `targets` relationship to the victim + `attributed-to` relationship from the Intrusion Set — gated on `create_campaign`.
-- `Report` whose `object_refs` carry every other SDO above — gated on `create_report`.
+- `Domain-Name` — when the victim record carries a domain. Linked to the victim via a `belongs-to` relationship (`Domain-Name → Identity`).
+- `Location` (country) — when the victim record carries a country. Linked to the victim via a `located-at` relationship (`Identity → Location`).
+- `Identity` (sector) — when the victim's industry is known. Linked to the victim via a `part-of` relationship (`Identity (victim) → Identity (sector)`).
+- `Threat Actor` — gated on `create_threat_actor`. Linked to the victim via a `targets` relationship (`Threat Actor → Identity`); when a sector/location is present the Threat Actor also `targets` those.
+- `Intrusion Set` — gated on `create_intrusion_set`. Linked to the victim via a `targets` relationship (`Intrusion Set → Identity`), to the Threat Actor via an `attributed-to` relationship (`Intrusion Set → Threat Actor`), and to the sector/location via `targets` relationships when present.
+- `Campaign` — gated on `create_campaign`. Linked to the victim via a `targets` relationship (`Campaign → Identity`), to the Intrusion Set via an `attributed-to` relationship (`Campaign → Intrusion Set`), and to the sector via a `targets` relationship when present.
+- `Report` — gated on `create_report`. Its `object_refs` carry every SDO and SRO emitted for the disclosure above (victim, optional Threat Actor / Intrusion Set / Campaign, Sector, Location, Domain-Name, and every relationship between them).

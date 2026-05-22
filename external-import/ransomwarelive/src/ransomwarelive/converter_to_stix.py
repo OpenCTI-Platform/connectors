@@ -564,10 +564,13 @@ class ConverterToStix:
         discovered_iso: datetime = None,
     ):
         """
-        Process location to stix2 and create stix2 relationship linked
+        Create stix2 relationships linked to the given location.
 
         Params:
-            country_name (str): name of the country
+            location (Location): already-resolved stix2 Location object
+                for the country (built by ``location_fetcher`` either by
+                resolving the name against OpenCTI or by falling back to
+                ``create_country``)
             victim (Identity): stix2 Identity of the victim
             intrusion_set (IntrusionSet): stix2 IntrusionSet object
             create_threat_actor (bool): env variable to create a Threat Actor object
@@ -576,10 +579,9 @@ class ConverterToStix:
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
         Returns:
-            location: stix2 Location object
-            location_relation: stix2 Relationship between location and victim
-            relation_intrusion_location: stix2 Relationship between location and intrusionset
-            relation_threat_actor_location: stix2 Relationship between location and threatactor
+            location_relation: stix2 Relationship between victim and location
+            relation_intrusion_location: stix2 Relationship between intrusionset and location, or None
+            relation_threat_actor_location: stix2 Relationship between threatactor and location, or None
         """
         location_relation = self.create_relationship(
             source_ref=victim.get("id"),
@@ -662,16 +664,20 @@ class ConverterToStix:
         discovered_iso: datetime = None,
     ):
         """
-        Create stix2 relationship linked to the given sector
+        Create stix2 relationships linked to the given sector.
 
         Params:
-            sector_name (str): name of sector to create
+            sector (Identity): already-resolved stix2 Identity object for
+                the sector (built by ``sector_fetcher`` either by
+                resolving the name against OpenCTI or by falling back to
+                ``create_sector``)
             victim (Identity): stix2 Identity object of victim
             create_threat_actor (bool): env variable to create a Threat Actor object
             create_intrusion_set (bool): Flag to create IntrusionSet relationship
             create_campaign (bool): Flag to create Campaign relationship
             intrusion_set (IntrusionSet): stix2 IntrusionSet object
             threat_actor (ThreatActor): stix2 ThreatActor object or None
+            campaign (Campaign): stix2 Campaign object or None
             attack_date_iso (datetime): attack date in datetime
             discovered_iso (datetime): discovered datetime
         Returns:
@@ -735,7 +741,7 @@ class ConverterToStix:
         Process threat actor to stix2 and create stix2 relationship linked
 
         Params:
-            threat_actor_name (str): name of the domain
+            threat_actor_name (str): name of the threat actor / ransomware group
             group_data (list[dict]): result from the ransomware api ``/groups`` feed
                 (list of group entries; ``RansomwareAPIClient.get_feed`` returns an
                 empty list when the upstream payload is empty and raises on error,
@@ -745,7 +751,7 @@ class ConverterToStix:
             discovered_iso (datetime): discovered datetime
 
         Returns:
-            threat_actor: stix2 TreatActor object
+            threat_actor: stix2 ThreatActor object
             target_relation: stix2 Relationship between threatactor and victim
         """
         threat_description = threat_description_generator(threat_actor_name, group_data)
