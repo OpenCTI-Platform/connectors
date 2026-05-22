@@ -161,6 +161,53 @@ class TestObservableMarkingRefs:
     def test_missing_or_malformed_returns_empty_list(self, observable):
         assert IPQSConnector._observable_marking_refs(observable) == []
 
+    @pytest.mark.parametrize(
+        "observable",
+        [
+            # ``standard_id`` is set but not a string — the previous shape
+            # let it through into the refs list and later poisoned
+            # ``stix2.Note(..., object_marking_refs=...)`` with an
+            # unhashable / invalid value. Filter must drop it.
+            pytest.param(
+                {"objectMarking": [{"standard_id": None}]},
+                id="standard_id_is_None",
+            ),
+            pytest.param(
+                {"objectMarking": [{"standard_id": ""}]},
+                id="standard_id_is_empty_string",
+            ),
+            pytest.param(
+                {"objectMarking": [{"standard_id": 42}]},
+                id="standard_id_is_int",
+            ),
+            pytest.param(
+                {"objectMarking": [{"standard_id": ["marking-definition--a"]}]},
+                id="standard_id_is_list",
+            ),
+            # Same shape on the flat ``object_marking_refs`` list — an
+            # empty string is filtered out by the ``and marking`` guard.
+            pytest.param(
+                {"object_marking_refs": [""]},
+                id="flat_ref_is_empty_string",
+            ),
+            # Non-string flat refs are skipped too.
+            pytest.param(
+                {"object_marking_refs": [None, 42]},
+                id="flat_refs_are_None_and_int",
+            ),
+        ],
+    )
+    def test_filters_falsy_and_non_string_refs(self, observable):
+        """Mirror ``IPQSBuilder._get_object_marking_refs`` filter contract.
+
+        Pins the regression — a non-string ``standard_id`` (or a non-string
+        flat ref) used to be appended verbatim and broke
+        ``stix2.Note(..., object_marking_refs=...)`` at serialisation
+        time. The filter now drops every shape that is not a non-empty
+        ``str``.
+        """
+        assert IPQSConnector._observable_marking_refs(observable) == []
+
 
 class TestMarkingIdToTLP:
     """Reverse lookup ``marking.id -> canonical TLP string``.
@@ -275,3 +322,60 @@ class TestCheckMaxTLPAlternateShape:
             "object_marking_refs": [stix2.TLP_RED.id],
         }
         assert connector._check_max_tlp(observable) is True
+
+    @pytest.mark.parametrize(
+        "observable, expected",
+        [
+            # Malformed ``objectMarking`` payloads must not crash the
+            # gate — the previous shape called
+            # ``marking_definition.get(...)`` unconditionally and would
+            # raise ``AttributeError`` on a non-dict entry, aborting
+            # enrichment for every entity type. With the
+            # ``isinstance`` guard the malformed entries are skipped
+            # and the gate falls through to the alternate shape /
+            # default TLP.
+            pytest.param(
+                {"objectMarking": "not-a-list"},
+                True,
+                id="object_marking_not_a_list",
+            ),
+            pytest.param(
+                {"objectMarking": [None, 42, "string-entry"]},
+                True,
+                id="object_marking_non_dict_entries",
+            ),
+            pytest.param(
+                {"objectMarking": [{"definition_type": "PAP"}]},
+                True,
+                id="object_marking_no_tlp_dict",
+            ),
+            # Non-list ``object_marking_refs`` must also fall back to
+            # the default rather than raising.
+            pytest.param(
+                {"object_marking_refs": "not-a-list"},
+                True,
+                id="flat_refs_not_a_list",
+            ),
+            # Mixed malformed primary + valid fallback: gate uses the
+            # fallback (TLP:RED) to block above the AMBER max.
+            pytest.param(
+                {
+                    "objectMarking": [None, 42],
+                    "object_marking_refs": [stix2.TLP_RED.id],
+                },
+                False,
+                id="malformed_primary_valid_fallback",
+            ),
+        ],
+    )
+    def test_malformed_payload_does_not_crash(self, observable, expected):
+        """Defensive ``isinstance`` guards prevent enrichment-wide aborts.
+
+        Mirrors what ``_observable_marking_refs`` does for the
+        failure-Note path — the gate and the failure-note marking
+        extractor must agree on the shape contract so a malformed
+        payload from one observable type cannot crash enrichment for
+        every other entity type the connector handles.
+        """
+        connector = self._make_connector(max_tlp="TLP:AMBER", default_tlp="TLP:CLEAR")
+        assert connector._check_max_tlp(observable) is expected

@@ -148,6 +148,31 @@ PHONE_ENRICH_FIELDS = {
 # Surfaced in the Indicator description when enriching an ``Artifact``
 # (the malware-file-scanner branch — ``/malware/scan`` /
 # ``/malware/lookup`` / ``/postback`` flow).
+#
+# The keys are matched against the *flattened* response built by
+# ``IPQSConnector._flatten_json``: scalar values keep their original
+# key, dict / list values get expanded into ``<key>_<subkey>`` /
+# ``<key>_<idx>`` entries (and the original key is dropped). The
+# IPQS API can return ``scan_date`` / ``result`` either as scalars OR
+# as nested objects depending on the endpoint and submission profile,
+# so the map intentionally carries BOTH shapes side-by-side:
+#
+# * ``scan_date`` — matches when IPQS returns a flat string
+#   (e.g. ``"2024-01-15T12:34:56Z"``);
+# * ``scan_date_date`` / ``scan_date_timezone_type`` /
+#   ``scan_date_timezone`` — match when IPQS returns the nested
+#   ``{"date": ..., "timezone_type": ..., "timezone": ...}`` object;
+# * ``result`` — matches when IPQS returns a flat verdict string
+#   (e.g. ``"clean"`` / ``"malicious"``); when it returns the nested
+#   per-engine ``{"engine_a": ..., "engine_b": ...}`` object, the
+#   per-engine lines come from the standalone ``engine_summary``
+#   rendering (see ``_render_engine_summary``) rather than this map.
+#
+# Description-building (``IPQSConnector._process_artifact``) guards
+# every entry with ``if field in flat_response:`` so the unused shape
+# is skipped silently on each response — no description-builder
+# error if only one of the two shapes ever materialises in a given
+# IPQS reply.
 FILE_ENRICH_FIELDS = {
     "file_name": "File Name",
     "file_hash": "File Hash",

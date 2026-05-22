@@ -300,8 +300,17 @@ class IPQSConnector:
 
         Supports both the GraphQL ``objectMarking`` shape (list of dicts
         with a ``standard_id``) and a plain ``object_marking_refs`` list
-        of ids. Returns ``[]`` when the observable carries no marking;
-        callers must fall back to ``_default_marking_refs`` in that case.
+        of ids. Falsy / non-string entries (``None``, empty strings,
+        partially-populated marking dicts with a ``"standard_id"`` key
+        whose value is ``None`` / ``""`` / a non-string scalar) are
+        filtered out, and duplicates are collapsed in-order. Returns
+        ``[]`` when the observable carries no usable marking; callers
+        must fall back to ``_default_marking_refs`` in that case. The
+        non-string filter mirrors ``IPQSBuilder._get_object_marking_refs``
+        so the two callers cannot diverge on the marking-list shape we
+        hand to ``stix2`` — a non-string ref later breaks
+        ``stix2.Note(..., object_marking_refs=...)`` (unhashable values
+        during dedup, invalid refs during serialization).
         """
         refs: List[str] = []
         raw = observable.get("objectMarking")
@@ -309,9 +318,11 @@ class IPQSConnector:
             raw = observable.get("object_marking_refs")
         if isinstance(raw, list):
             for marking in raw:
-                if isinstance(marking, dict) and marking.get("standard_id"):
-                    refs.append(marking["standard_id"])
-                elif isinstance(marking, str):
+                if isinstance(marking, dict):
+                    standard_id = marking.get("standard_id")
+                    if isinstance(standard_id, str) and standard_id:
+                        refs.append(standard_id)
+                elif isinstance(marking, str) and marking:
                     refs.append(marking)
         seen: set = set()
         result: List[str] = []
@@ -645,24 +656,42 @@ class IPQSConnector:
         * the alternate ``object_marking_refs`` flat list of
           marking-definition ids (resolved back to a canonical
           TLP string via ``_MARKING_ID_TO_TLP``).
+
+        Both shapes are wrapped in ``isinstance`` guards so a
+        malformed payload (non-list ``objectMarking``, non-dict
+        entries inside it, non-string entries in
+        ``object_marking_refs``) falls back through to the alternate
+        shape / configured default instead of raising
+        ``AttributeError`` and aborting enrichment for every entity
+        type — mirrors what ``_observable_marking_refs`` does for the
+        failure-Note path so the gate and the failure-note marking
+        extractor cannot diverge on the shape contract.
         """
         tlp = self.default_tlp_string
+        found_in_primary = False
         # Primary: GraphQL ``objectMarking`` (list of dicts).
-        for marking_definition in observable.get("objectMarking", []) or []:
-            if marking_definition.get("definition_type") == "TLP":
-                tlp = _normalize_tlp(
-                    marking_definition.get("definition"),
-                    fallback=self.default_tlp_string,
-                )
-                break
-        else:
+        raw_object_marking = observable.get("objectMarking")
+        if isinstance(raw_object_marking, list):
+            for marking_definition in raw_object_marking:
+                if not isinstance(marking_definition, dict):
+                    continue
+                if marking_definition.get("definition_type") == "TLP":
+                    tlp = _normalize_tlp(
+                        marking_definition.get("definition"),
+                        fallback=self.default_tlp_string,
+                    )
+                    found_in_primary = True
+                    break
+        if not found_in_primary:
             # Fallback: alternate ``object_marking_refs`` shape.
-            for ref in observable.get("object_marking_refs", []) or []:
-                if isinstance(ref, str):
-                    resolved = _MARKING_ID_TO_TLP.get(ref)
-                    if resolved is not None:
-                        tlp = resolved
-                        break
+            raw_marking_refs = observable.get("object_marking_refs")
+            if isinstance(raw_marking_refs, list):
+                for ref in raw_marking_refs:
+                    if isinstance(ref, str):
+                        resolved = _MARKING_ID_TO_TLP.get(ref)
+                        if resolved is not None:
+                            tlp = resolved
+                            break
         return OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp)
 
     # ------------------------------------------------------------------
