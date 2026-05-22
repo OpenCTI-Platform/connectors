@@ -61,8 +61,8 @@ class RestoreFilesConnector:
 
     def find_element(self, backup_files, dir_date, id):
         name = id + ".json"
-        existing_path = backup_files.get(name)
-        if existing_path is None:
+        candidate_dirs = backup_files.get(name)
+        if not candidate_dirs:
             # Missing references are expected — the backup-files connector
             # only writes entities that existed at the time of the snapshot,
             # so an `_ref` pointing at an entity outside the backup window
@@ -72,9 +72,30 @@ class RestoreFilesConnector:
             # on: callers always check for `None` and a noisy log here
             # would flood the connector logs on every restore.
             return None
-        if date_convert(existing_path) > dir_date:
-            path = self.backup_path + "/opencti_data/" + existing_path
-            return fetch_stix_data(os.path.join(path, name))[0]
+        # Multiple run directories may carry the same `<id>.json` —
+        # the backup-files connector keys directories on the entity's
+        # `created_at` (rounded to a minute), which is supposed to be
+        # immutable, but in practice the same id can land in several
+        # run-dirs (e.g. when a backup is mirrored from multiple
+        # OpenCTI instances, when the `created_at` extension diverges
+        # from the bare attribute across stream replays, or simply when
+        # operators concatenate two backups under the same
+        # `opencti_data` tree). The cache is built while iterating
+        # `dirs` in chronological order, so `candidate_dirs` is already
+        # sorted ascending. We pick the FIRST snapshot strictly after
+        # `dir_date` (the closest later snapshot) so the restore
+        # replays the entity's state as it was just after the run
+        # directory we are currently restoring — picking the latest
+        # snapshot would inject a "from-the-future" version of the
+        # entity into the current bundle and force the platform to
+        # regress to older versions on subsequent runs. This restores
+        # the legacy `os.walk`-based behaviour exactly while keeping
+        # the new cache's O(1) miss path on the common
+        # single-snapshot case.
+        for cand in candidate_dirs:
+            if date_convert(cand) > dir_date:
+                path = self.backup_path + "/opencti_data/" + cand
+                return fetch_stix_data(os.path.join(path, name))[0]
         return None
 
     def resolve_missing(self, backup_files, dir_date, element_ids, data, acc=None):
@@ -126,12 +147,20 @@ class RestoreFilesConnector:
         # The backup-files connector writes one flat directory per date range
         # under ``opencti_data``, with all entity JSON files at the immediate
         # child level — no nested subdirectories. We exploit that here to
-        # build an O(1) ``filename → run-directory`` lookup table once so the
-        # missing-reference resolution loop below stops re-walking the whole
-        # backup tree for every reference.
+        # build a ``filename → list of run-directory names`` lookup table
+        # once so the missing-reference resolution loop below stops
+        # re-walking the whole backup tree for every reference. The list
+        # shape (rather than a single string) is required because the
+        # same ``<id>.json`` can legitimately land in multiple run-dirs
+        # (see ``find_element`` for the rationale): collapsing those to
+        # a single entry would silently regress restored state when an
+        # entity changed across snapshots. ``dirs`` is iterated in
+        # chronological order so each list is sorted ascending without
+        # an explicit sort step.
         self.helper.log_info("Building files map cache (could take a while)")
         cache_start_time = datetime.datetime.now()
         backup_files = dict()
+        snapshot_count = 0
         for entry in dirs:
             with os.scandir(entry) as it:
                 for file in it:
@@ -145,14 +174,17 @@ class RestoreFilesConnector:
                     # that would otherwise crash ``fetch_stix_data`` further
                     # down if a non-JSON entry somehow matched a lookup.
                     if file.is_file() and file.name.endswith(".json"):
-                        backup_files[file.name] = entry.name
+                        backup_files.setdefault(file.name, []).append(entry.name)
+                        snapshot_count += 1
         cache_duration = (datetime.datetime.now() - cache_start_time).total_seconds()
         self.helper.log_info(
             "Files map cache built in "
             + str(cache_duration)
             + "s ("
             + str(len(backup_files))
-            + " files indexed across "
+            + " unique files / "
+            + str(snapshot_count)
+            + " snapshots indexed across "
             + str(len(dirs))
             + " directories)"
         )
