@@ -116,7 +116,7 @@
       "type": "boolean"
     },
     "FLASHPOINT_INDICATOR_TLP": {
-      "default": "TLP:CLEAR",
+      "default": "TLP:GREEN",
       "description": "TLP marking applied to imported indicators.",
       "enum": [
         "TLP:CLEAR",
@@ -133,5 +133,5 @@
     "OPENCTI_TOKEN",
     "FLASHPOINT_API_KEY"
   ],
-  "additionalProperties": false
+  "additionalProperties": true
 }

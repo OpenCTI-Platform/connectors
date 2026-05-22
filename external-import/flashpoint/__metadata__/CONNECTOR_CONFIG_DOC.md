@@ -4,8 +4,6 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 
 ### Type: `object`
 
-> ⚠️ Additional properties are not allowed.
-
 | Property | Type | Required | Possible values | Default | Description |
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
@@ -26,4 +24,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | FLASHPOINT_COMMUNITIES_QUERIES | `array` |  | string | `["cybersecurity", "cyberattack"]` | List of community queries to execute. |
 | FLASHPOINT_IMPORT_CCM_ALERTS | `boolean` |  | boolean | `false` | Whether to import Compromised Credentials Monitoring alerts or not. |
 | FLASHPOINT_FRESH_CCM_ALERTS_ONLY | `boolean` |  | boolean | `true` | Whether to import only fresh Compromised Credentials Monitoring alerts or all of them. |
-| FLASHPOINT_INDICATOR_TLP | `string` |  | `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:CLEAR"` | TLP marking applied to imported indicators. |
+| FLASHPOINT_INDICATOR_TLP | `string` |  | `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:GREEN"` | TLP marking applied to imported indicators. |
