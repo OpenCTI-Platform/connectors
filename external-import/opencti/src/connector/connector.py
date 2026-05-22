@@ -8,10 +8,6 @@ from datetime import datetime, timezone
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-CONFIG_SECTORS_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json"
-CONFIG_GEOGRAPHY_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json"
-CONFIG_COMPANIES_FILE_URL = "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json"
-
 
 def days_to_seconds(days):
     return int(days) * 24 * 60 * 60
@@ -29,7 +25,13 @@ class OpenCTI:
             self.config.config.geography_file_url,
             self.config.config.companies_file_url,
         ]
-        self.urls = list(filter(lambda url: url is not False, urls))
+        # Drop disabled-by-config entries (``False`` after the Pydantic
+        # ``BeforeValidator`` coercion in ``settings.py``, which translates
+        # the literal string ``"false"`` to ``False`` so the README's
+        # "set to ``false`` to disable" UX works regardless of whether the
+        # value arrives from ``config.yml`` (real YAML boolean) or an env
+        # var (``"false"`` string).
+        self.urls = [url for url in urls if url is not False]
         self.interval = days_to_seconds(self.config_interval)
 
     def retrieve_data(self, url: str) -> dict:

@@ -57,19 +57,21 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter         | config.yml      | Docker environment variable   | Default          | Mandatory | Description                                                                 |
 |-------------------|-----------------|-------------------------------|------------------|-----------|-----------------------------------------------------------------------------|
-| Connector ID      | id              | `CONNECTOR_ID`                |                  | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name    | name            | `CONNECTOR_NAME`              | OpenCTI Datasets | No        | Name of the connector.                                                      |
-| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | opencti          | No        | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info             | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Connector ID      | id              | `CONNECTOR_ID`                |                                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
+| Connector Name    | name            | `CONNECTOR_NAME`              | OpenCTI Datasets                      | No        | Name of the connector.                                                      |
+| Connector Scope   | scope           | `CONNECTOR_SCOPE`             | marking-definition,identity,location  | No        | The scope or type of data the connector is importing.                       |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info                                  | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT1H                                  | No        | ISO-8601 interval between two runs of the connector (default: 1 hour).      |
 
 ### Connector extra parameters environment variables
 
-| Parameter              | config.yml             | Docker environment variable   | Default                                                                                  | Mandatory | Description                                      |
-|------------------------|------------------------|-------------------------------|------------------------------------------------------------------------------------------|-----------|--------------------------------------------------|
-| Interval               | config.interval        | `CONFIG_INTERVAL`             | 7                                                                                        | Yes       | Interval in days between connector runs.         |
-| Remove Creator         | config.remove_creator  | `CONFIG_REMOVE_CREATOR`       | true                                                                                     | No        | Remove creator identity from imported objects.   |
-| Sectors File URL       | config.sectors_file_url| `CONFIG_SECTORS_FILE_URL`     | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json    | No        | URL to sectors dataset (set to `false` to disable). |
-| Geography File URL     | config.geography_file_url | `CONFIG_GEOGRAPHY_FILE_URL` | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json  | No        | URL to geography dataset (set to `false` to disable). |
+| Parameter              | config.yml                   | Docker environment variable   | Default                                                                                  | Mandatory | Description                                                                                  |
+|------------------------|------------------------------|-------------------------------|------------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------|
+| Interval               | config.interval              | `CONFIG_INTERVAL`             | 7                                                                                        | No        | Interval in days between connector runs.                                                     |
+| Remove Creator         | config.remove_creator        | `CONFIG_REMOVE_CREATOR`       | false                                                                                    | No        | Remove `created_by_ref` from every imported object before sending the bundle to OpenCTI.     |
+| Sectors File URL       | config.sectors_file_url      | `CONFIG_SECTORS_FILE_URL`     | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json     | No        | URL to sectors dataset (set to `false` to disable).                                          |
+| Geography File URL     | config.geography_file_url    | `CONFIG_GEOGRAPHY_FILE_URL`   | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json   | No        | URL to geography dataset (set to `false` to disable).                                        |
+| Companies File URL     | config.companies_file_url    | `CONFIG_COMPANIES_FILE_URL`   | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json   | No        | URL to companies dataset (set to `false` to disable).                                        |
 
 ## Deployment
 
@@ -91,12 +93,13 @@ Configure the connector in `docker-compose.yml`:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=OpenCTI Datasets
-      - CONNECTOR_SCOPE=opencti
+      - CONNECTOR_SCOPE=marking-definition,identity,location
       - CONNECTOR_LOG_LEVEL=info
       - CONFIG_INTERVAL=7 # In days
-      - CONFIG_REMOVE_CREATOR=true
+      - CONFIG_REMOVE_CREATOR=false
       - CONFIG_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
       - CONFIG_GEOGRAPHY_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json
+      - CONFIG_COMPANIES_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json
     restart: always
 ```
 
@@ -144,6 +147,7 @@ graph LR
         direction TB
         Sectors[sectors.json]
         Geography[geography.json]
+        Companies[companies.json]
     end
 
     subgraph OpenCTI
@@ -151,20 +155,23 @@ graph LR
         SectorIdentity[Identity - Sector]
         Country[Location - Country]
         Region[Location - Region]
+        CompanyIdentity[Identity - Organization]
     end
 
     Sectors --> SectorIdentity
     Geography --> Country
     Geography --> Region
+    Companies --> CompanyIdentity
 ```
 
 ### Entity Mapping
 
-| Dataset          | OpenCTI Entity      | Description                                      |
-|------------------|---------------------|--------------------------------------------------|
-| Sectors          | Identity (Sector)   | Industry sectors for targeting analysis          |
-| Geography        | Location (Country)  | Country entities with ISO codes                  |
-| Geography        | Location (Region)   | Geographic regions                               |
+| Dataset          | OpenCTI Entity            | Description                                      |
+|------------------|---------------------------|--------------------------------------------------|
+| Sectors          | Identity (Sector)         | Industry sectors for targeting analysis          |
+| Geography        | Location (Country)        | Country entities with ISO codes                  |
+| Geography        | Location (Region)         | Geographic regions                               |
+| Companies        | Identity (Organization)   | Reference organizations                          |
 
 ### Datasets Included
 
@@ -176,6 +183,10 @@ graph LR
    - Countries with ISO codes and aliases
    - Geographic regions
    - Used for geographic attribution and targeting
+
+3. **Companies Dataset** (`companies.json`):
+   - Reference organizations / well-known companies
+   - Used as a starting catalogue of identities
 
 ## Debugging
 

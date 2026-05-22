@@ -1,18 +1,22 @@
+"""Entry point for the OpenCTI Datasets connector.
+
+On uncaught exception we print the traceback to stderr (so the failing call
+is actionable in the connector log) and exit with status 1 so the
+orchestrator (Docker / systemd / Kubernetes) can detect the failure and
+restart the container.
+
+``sys.exit`` is preferred over the builtin ``exit``: the latter is injected
+by the ``site`` module and is intended mainly for interactive use, while
+``sys.exit`` is guaranteed to be present in any runtime environment.
+"""
+
+import sys
 import traceback
 
 from connector import ConnectorSettings, OpenCTI
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
-    """
-    Entry point of the script
-
-    - traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
-    The traceback includes information about the point in the program where the exception occurred,
-    which is very useful for debugging purposes.
-    - exit(1): effective way to terminate a Python program when an error is encountered.
-    It signals to the operating system and any calling processes that the program did not complete successfully.
-    """
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
@@ -21,4 +25,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)

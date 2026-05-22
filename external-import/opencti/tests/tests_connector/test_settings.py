@@ -31,7 +31,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {},
+                # ``id`` is required by ``BaseExternalImportConnectorConfig`` — the
+                # connector no longer pins a hardcoded default UUID (sharing one
+                # across deployments collides on the platform side), so the
+                # "minimal valid" dict still has to supply a unique connector id.
+                "connector": {"id": "connector-id"},
                 "config": {},
             },
             id="minimal_valid_settings_dict",
@@ -118,6 +122,56 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
 
-    with pytest.raises(ConfigValidationError) as err:
+    # ``match=`` checks the exception message via ``re.search``, which is the
+    # idiomatic way to assert content on a ``pytest.raises`` block; the previous
+    # ``str("Error validating configuration") in str(err)`` was brittle because
+    # ``err`` is a ``pytest.ExceptionInfo`` whose ``str`` form is just the
+    # repr of the wrapped exception class, not the exception message — the
+    # assertion would have passed for unrelated ``ConfigValidationError``
+    # messages too.
+    with pytest.raises(ConfigValidationError, match="Error validating configuration"):
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+
+
+@pytest.mark.parametrize(
+    "raw_value,expected",
+    [
+        # Real YAML boolean (from ``config.yml``) is preserved.
+        pytest.param(False, False, id="real_bool_false"),
+        # Env-var / Docker-compose string "false" (case-insensitive +
+        # surrounding whitespace) is coerced to ``False`` so the
+        # README's "set to ``false`` to disable" UX works end-to-end.
+        pytest.param("false", False, id="literal_string_false"),
+        pytest.param("FALSE", False, id="uppercase_string_false"),
+        pytest.param("  false  ", False, id="whitespace_string_false"),
+        # Any other string is preserved as-is (still a real URL).
+        pytest.param(
+            "https://example.invalid/x.json",
+            "https://example.invalid/x.json",
+            id="url_string",
+        ),
+    ],
+)
+def test_falsable_url_coercion(raw_value, expected):
+    """``"false"`` (any casing / surrounding whitespace) coerces to ``False``.
+
+    Pins the disable-via-config-false contract so a future refactor of the
+    ``BeforeValidator`` cannot silently re-introduce the bug where the typed
+    ``str`` field stored the literal string ``"false"`` and the downstream
+    ``url is not False`` filter never matched (leading the connector to
+    issue an HTTP GET for the URL ``"false"`` and log an error).
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "config": {"sectors_file_url": raw_value},
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.config.sectors_file_url == expected
