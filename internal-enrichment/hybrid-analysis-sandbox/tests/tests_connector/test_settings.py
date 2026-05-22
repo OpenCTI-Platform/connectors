@@ -18,11 +18,11 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "log_level": "error",
                     "auto": True,
                 },
-                "hybrid_analysis": {
+                "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                     "environment_id": 160,
                     "max_tlp": "TLP:AMBER",
-                    "api_key": "test-api-token",
+                    "token": "test-api-token",
                 },
             },
             id="full_valid_settings_dict",
@@ -30,7 +30,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "hybrid_analysis": {
+                "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                 },
             },
@@ -60,7 +60,7 @@ def test_settings_should_accept_valid_input(settings_dict):
     settings = FakeConnectorSettings()
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.hybrid_analysis, BaseConfigModel) is True
+    assert isinstance(settings.hybrid_analysis_sandbox, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -76,7 +76,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                 },
-                "hybrid_analysis": {
+                "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                     "environment_id": 160,
                     "max_tlp": "TLP:AMBER",
@@ -94,7 +94,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "scope": "test, connector",
                     "log_level": "error",
                 },
-                "hybrid_analysis": {
+                "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
                     "environment_id": 160,
                     "max_tlp": "TLP:AMBER",
