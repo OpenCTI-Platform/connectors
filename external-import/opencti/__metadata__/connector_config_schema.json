@@ -57,17 +57,26 @@
     "CONFIG_SECTORS_FILE_URL": {
       "default": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json",
       "description": "URL to sectors dataset (set to `false` to disable).",
-      "type": ["string", "boolean"]
+      "oneOf": [
+        { "type": "string" },
+        { "type": "boolean", "const": false }
+      ]
     },
     "CONFIG_GEOGRAPHY_FILE_URL": {
       "default": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json",
       "description": "URL to geography dataset (set to `false` to disable).",
-      "type": ["string", "boolean"]
+      "oneOf": [
+        { "type": "string" },
+        { "type": "boolean", "const": false }
+      ]
     },
     "CONFIG_COMPANIES_FILE_URL": {
       "default": "https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json",
       "description": "URL to companies dataset (set to `false` to disable).",
-      "type": ["string", "boolean"]
+      "oneOf": [
+        { "type": "string" },
+        { "type": "boolean", "const": false }
+      ]
     },
     "CONFIG_REMOVE_CREATOR": {
       "default": false,

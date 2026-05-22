@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -28,10 +28,17 @@ def _coerce_false(v):
 
 
 # Either a URL string (the active dataset endpoint) or the bool ``False``
-# (dataset disabled). The connector filters out ``False`` entries at the
-# url-list construction step so the disable-via-config-false UX advertised
-# in the README and ``config.yml.sample`` keeps working end-to-end.
-FalsableUrl = Annotated[str | bool, BeforeValidator(_coerce_false)]
+# (dataset disabled). The type is intentionally ``str | Literal[False]``
+# rather than ``str | bool`` so a real ``True`` (or the literal string
+# ``"true"`` after the upstream Docker / YAML coercion) fails Pydantic
+# validation up-front instead of silently surviving the typed field and
+# blowing up later in ``urllib.request.urlopen(True)``. The disable
+# contract is strictly "string URL OR ``false``" — there is no semantic
+# meaning to ``True`` here. The downstream filter
+# ``[url for url in urls if url is not False]`` only ever needs to
+# distinguish the disabled case from a real URL, so ``Literal[False]``
+# is exactly the right shape.
+FalsableUrl = Annotated[str | Literal[False], BeforeValidator(_coerce_false)]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):

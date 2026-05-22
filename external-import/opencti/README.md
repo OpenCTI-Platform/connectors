@@ -60,7 +60,7 @@ There are a number of configuration options, which are set either in `docker-com
 | Connector ID      | id              | `CONNECTOR_ID`                |                                       | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
 | Connector Name    | name            | `CONNECTOR_NAME`              | OpenCTI Datasets                      | No        | Name of the connector.                                                      |
 | Connector Scope   | scope           | `CONNECTOR_SCOPE`             | marking-definition,identity,location  | No        | The scope or type of data the connector is importing.                       |
-| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | info                                  | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
+| Log Level         | log_level       | `CONNECTOR_LOG_LEVEL`         | error                                 | No        | Minimum log level surfaced to the platform / container stdout. Valid values: `debug`, `info`, `warn` / `warning`, `error`. Matches the `connectors-sdk` base default; set to `info` (or `debug`) when you actively need lower-severity messages.  |
 | Duration Period   | duration_period | `CONNECTOR_DURATION_PERIOD`   | PT1H                                  | No        | ISO-8601 interval between two runs of the connector (default: 1 hour).      |
 
 ### Connector extra parameters environment variables
@@ -94,7 +94,7 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=OpenCTI Datasets
       - CONNECTOR_SCOPE=marking-definition,identity,location
-      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_LOG_LEVEL=error
       - CONFIG_INTERVAL=7 # In days
       - CONFIG_REMOVE_CREATOR=false
       - CONFIG_SECTORS_FILE_URL=https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json
