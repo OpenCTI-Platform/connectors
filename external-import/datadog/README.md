@@ -31,7 +31,7 @@ flowchart TB
     end
 
     subgraph Created["STIX Objects Created"]
-        ID["Identity\n(DataDog Connector)"]
+        ID["Identity\n(name = CONNECTOR_NAME)"]
         INC["Incident\n(Security Signal)"]
         CASE["Case-Incident\n(Optional)"]
         NOTE["Note\n(Context)"]
@@ -89,7 +89,7 @@ erDiagram
     NOTE ||--|| INCIDENT : references
     
     IDENTITY {
-        string name "DataDog Connector"
+        string name "CONNECTOR_NAME (e.g. DataDog)"
         string identity_class "system"
     }
     INCIDENT {
@@ -180,7 +180,7 @@ Every object emitted by the connector carries the marking configured via `DATADO
 
 | Object Type | Description |
 |-------------|-------------|
-| Identity | `DataDog Connector` (system) — `created_by_ref` of every downstream SDO |
+| Identity | `system` author whose name + deterministic id are seeded from the configured `CONNECTOR_NAME` (e.g. `DataDog` in the shipped samples, falling back to `DataDog Connector` if `CONNECTOR_NAME` is unset); `created_by_ref` of every downstream SDO |
 | MarkingDefinition | The configured TLP marking, materialised so the bundle is self-contained |
 | Incident | Per Security Signal — name, description, severity, priority, external reference to the signal in DataDog |
 | Case-Incident | Optional per signal (when `DATADOG_CREATE_INCIDENT_RESPONSE_CASES=true`) |

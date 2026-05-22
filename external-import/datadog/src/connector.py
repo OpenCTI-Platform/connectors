@@ -529,19 +529,45 @@ class DataDogConnector:
                     # Perform import
                     results = self._import_data(work_id)
 
-                    # Log results with improved messaging for batched approach
-                    if results.get("imported", 0) > 0:
+                    # Log results with improved messaging for batched approach.
+                    #
+                    # Three distinct outcomes — keep them visually
+                    # distinct in both the connector logs and the
+                    # OpenCTI Work summary so an operator never has
+                    # to cross-reference ``in_error`` to know what
+                    # actually happened during the cycle:
+                    #
+                    # 1. ``imported > 0``: at least one bundle was
+                    #    sent — report counts (and any errors that
+                    #    folded into the cycle).
+                    # 2. ``imported == 0`` and ``errors > 0``: the
+                    #    cycle failed before any bundle could be sent
+                    #    (API fetch returned ``None``, conversion /
+                    #    bundling raised, etc.). Surfacing this as
+                    #    "Import failed" stops the previous
+                    #    misleading "No new data to import (1 errors)"
+                    #    shape that conflated outages with clean
+                    #    no-op cycles.
+                    # 3. ``imported == 0`` and ``errors == 0``:
+                    #    genuinely nothing new in the window —
+                    #    "No new data to import" is correct.
+                    imported_count = results.get("imported", 0)
+                    cycle_errors = results.get("errors", 0)
+                    if imported_count > 0:
                         message = (
-                            f"Import completed: {results['imported']} bundle(s) sent "
+                            f"Import completed: {imported_count} bundle(s) sent "
                             f"({results.get('processed', 0)} alerts processed, "
                             f"{results.get('objects', 0)} STIX objects created, "
-                            f"{results.get('errors', 0)} errors)"
+                            f"{cycle_errors} errors)"
+                        )
+                    elif cycle_errors > 0:
+                        message = (
+                            f"Import failed: no bundle sent ({cycle_errors} "
+                            "error(s)); state cursor NOT advanced — the same "
+                            "window will be retried on the next cycle"
                         )
                     else:
-                        message = (
-                            f"Import completed: No new data to import "
-                            f"({results.get('errors', 0)} errors)"
-                        )
+                        message = "Import completed: No new data to import"
                     self.helper.log_info(message)
 
                     # Mark work as completed.

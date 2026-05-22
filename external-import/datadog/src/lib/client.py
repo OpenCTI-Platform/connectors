@@ -20,6 +20,19 @@ class DataDogClient:
     _MAX_RATE_LIMIT_RETRIES = 5
     _MAX_RATE_LIMIT_SLEEP = 300
 
+    # Hard ceiling on the number of Security Signals a single
+    # ``get_alerts`` cycle will pull from the v2 endpoint. The cap is
+    # a defensive backstop against an operator pointing the connector
+    # at a huge import window (``DATADOG_IMPORT_START_DATE``) paired
+    # with chatty rules — without it a single cycle could paginate
+    # forever and exhaust memory before any bundle is sent. Hitting
+    # the cap is treated as a pagination failure (``get_alerts``
+    # returns ``None``) so the state cursor is NOT advanced and the
+    # connector retries the same window on the next cycle — giving
+    # the operator a chance to narrow the window / tighten the
+    # filters before the cap silently truncates more data.
+    _MAX_SIGNALS_PER_CYCLE = 10000
+
     def __init__(
         self,
         api_token: str,
@@ -237,11 +250,35 @@ class DataDogClient:
                 if not next_cursor:
                     break
 
-                # Safety limit
-                if len(all_signals) >= 10000:
-                    self.helper.log_warning(
-                        "Reached 10,000 signal limit, stopping pagination"
+                # Defensive cap on the per-cycle signal count.
+                #
+                # Hitting the cap is treated as a pagination failure:
+                # ``get_alerts`` returns ``None``, the connector flags
+                # the Work as in-error, and the state cursor is NOT
+                # advanced — so the same window is retried on the
+                # next cycle instead of advancing past the (still
+                # unfetched) tail of signals. The previous shape
+                # broke the loop and returned ``success=True`` with
+                # the partial set, which would advance the cursor
+                # past the cap on the next ``send_stix2_bundle`` and
+                # silently drop every signal beyond the 10,000th
+                # forever. Operators who genuinely need a larger
+                # window should narrow it via
+                # ``DATADOG_IMPORT_START_DATE`` /
+                # ``DATADOG_IMPORT_INTERVAL`` or tighten filters
+                # rather than trust a silent truncation.
+                if len(all_signals) >= self._MAX_SIGNALS_PER_CYCLE:
+                    self.helper.log_error(
+                        "Security Signals pagination aborted: hit the "
+                        f"{self._MAX_SIGNALS_PER_CYCLE:,}-signal per-cycle cap "
+                        f"after {len(all_signals)} signal(s); the state cursor "
+                        "will NOT be advanced so the same window is retried on "
+                        "the next cycle. Narrow DATADOG_IMPORT_START_DATE / "
+                        "DATADOG_IMPORT_INTERVAL or tighten "
+                        "DATADOG_ALERT_PRIORITIES / DATADOG_ALERT_TAGS_FILTER "
+                        "to bring the per-cycle volume back under the cap."
                     )
+                    pagination_failed = True
                     break
 
             if pagination_failed:
