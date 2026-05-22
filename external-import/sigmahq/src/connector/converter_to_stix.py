@@ -169,10 +169,14 @@ class ConverterToStix:
                     )
                     related_techniques.append(technique)
                     # Only emit each unique AttackPattern once per
-                    # converter lifetime (see ``__init__``); the
+                    # *bundle* — the dedup sets are reset at the start
+                    # of every ``_collect_intelligence`` run via
+                    # :meth:`reset_dedup_state` (see ``__init__`` for
+                    # the per-bundle scope rationale). The
                     # ``related_techniques`` list is still populated so
                     # the per-rule ``indicates`` relationship below
-                    # references the same STIX id.
+                    # references the same STIX id even when the SDO
+                    # was already emitted earlier in this bundle.
                     if technique.id not in self._seen_attack_pattern_ids:
                         self._seen_attack_pattern_ids.add(technique.id)
                         stix_objects.append(technique)
