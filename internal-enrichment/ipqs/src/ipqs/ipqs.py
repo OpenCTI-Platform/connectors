@@ -157,10 +157,17 @@ class IPQSConnector:
         )
 
         # Used by the Artifact branch to download the file content from
-        # OpenCTI's object storage (``/storage/get/<id>``).
-        self.octi_api_url = get_config_variable(
-            "OPENCTI_URL", ["opencti", "url"], config, required=True
-        )
+        # OpenCTI's object storage (``/storage/get/<id>``). ``.rstrip("/")``
+        # so the per-endpoint URL builders never produce a double slash;
+        # mirrors the convention applied repo-wide by [all] Fix url to
+        # avoid double slash (#6394) and required by the
+        # ``tests/test_url_construction.py`` guard.
+        self.octi_api_url = (
+            get_config_variable(
+                "OPENCTI_URL", ["opencti", "url"], config, required=True
+            )
+            or ""
+        ).rstrip("/")
 
         self.author = Identity(
             id=pycti.Identity.generate_id(SOURCE_NAME, "organization"),
