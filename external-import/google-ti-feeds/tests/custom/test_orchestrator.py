@@ -87,6 +87,7 @@ class DummyConfig:
         self.vulnerability_origins = "All"
         self.tlp_level = tlp_level
         self.vulnerability_get_related_softwares = True
+        self.report_download_pdf = False
 
 
 # =====================

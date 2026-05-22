@@ -83,7 +83,10 @@ class MispFeedConfig(BaseConfigModel):
         description="Source type for the MISP feed (`url` or `s3`).",
         default="url",
     )
-    url: str | None = Field(
+    url: Annotated[
+        str | None,
+        BeforeValidator(lambda v: v.rstrip("/") if isinstance(v, str) else v),
+    ] = Field(
         description="The URL of the MISP feed (required if `source_type` is `url`).",
         default=None,  # required only if `source_type` is `url`
     )

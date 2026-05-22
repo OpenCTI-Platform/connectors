@@ -30,9 +30,10 @@
 
 ## Introduction
 
-IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector drives two IPQS API families with a single API key and a single OpenCTI scope:
+IPQualityScore (IPQS) provides enterprise-grade fraud prevention, risk analysis, and threat detection. This connector drives three IPQS API families with a single API key and a single OpenCTI scope:
 
 * the **fraud-and-risk-scoring** endpoints (`/ip`, `/url`, `/email`, `/phone`) for `IPv4-Addr`, `Email-Addr`, `Phone-Number`, `Domain-Name` and `Url` observables;
+* the **Darkweb-Leak** endpoints (`/leaked/email`, `/leaked/username`, `/leaked/password`) for `User-Account` observables (added by [PR #6399](https://github.com/OpenCTI-Platform/connectors/pull/6399));
 * the **malware-file-scanner** endpoints (`/malware/scan`, `/malware/lookup`, `/postback`) for `Artifact` observables — originally proposed as a standalone `ipqs-analyzer` connector in [PR #5970](https://github.com/OpenCTI-Platform/connectors/pull/5970), now integrated here so a single connector covers every IPQS use case (see [issue #6199](https://github.com/OpenCTI-Platform/connectors/issues/6199)).
 
 Key features:
@@ -42,6 +43,7 @@ Key features:
 - URL and domain reputation analysis
 - **Artifact malware scanning** with the IPQS Malware File Scanner API (cache-first lookup, then submit, then poll the postback endpoint)
 - Malware and phishing detection
+- Darkweb-Leak lookup for `User-Account` observables (username, email, password)
 
 ---
 
@@ -70,7 +72,7 @@ Key features:
 |-----------|---------------|-----------|-------------|
 | `connector_id` | `CONNECTOR_ID` | Yes | A valid arbitrary `UUIDv4` unique for this connector |
 | `connector_name` | `CONNECTOR_NAME` | Yes | The name of the connector instance |
-| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Domain-Name`, `IPv4-Addr`, `Email-Addr`, `Url`, `Phone-Number`, `Artifact` |
+| `connector_scope` | `CONNECTOR_SCOPE` | Yes | Supported: `Domain-Name`, `IPv4-Addr`, `Email-Addr`, `Url`, `Phone-Number`, `User-Account`, `Artifact` |
 | `connector_auto` | `CONNECTOR_AUTO` | Yes | Enable/disable auto-enrichment |
 | `connector_confidence_level` | `CONNECTOR_CONFIDENCE_LEVEL` | Yes | Default confidence level (0-100) |
 | `connector_log_level` | `CONNECTOR_LOG_LEVEL` | Yes | Log level (`debug`, `info`, `warn`, `error`) |
@@ -84,7 +86,7 @@ Key features:
 | `ip_add_relationships` | `IPQS_IP_ADD_RELATIONSHIPS` | No | `false` | Add ASN relationships for IPs |
 | `domain_add_relationships` | `IPQS_DOMAIN_ADD_RELATIONSHIPS` | No | `false` | Add IP resolution relationships for domains |
 | `default_tlp` | `IPQS_DEFAULT_TLP` | No | `TLP:CLEAR` | TLP marking applied to STIX objects emitted by the malware-file-scanner branch when the observable carries none. Supports `TLP:CLEAR` / `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`. |
-| `max_tlp` | `IPQS_MAX_TLP` | No | `TLP:AMBER` | Maximum TLP for which the connector will submit data to IPQS; observables with a higher marking are skipped. Enforced **on every enrichment branch** (IP / Email / URL / Phone / Artifact), not just on the Artifact branch. |
+| `max_tlp` | `IPQS_MAX_TLP` | No | `TLP:AMBER` | Maximum TLP for which the connector will submit data to IPQS; observables with a higher marking are skipped. Enforced **on every enrichment branch** (IP / Email / URL / Phone / User-Account / Artifact). |
 
 ---
 
@@ -106,7 +108,7 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=IPQS Fraud and Risk Scoring
-      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number,Artifact
+      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number,User-Account,Artifact
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=15
       - CONNECTOR_LOG_LEVEL=error
@@ -170,24 +172,48 @@ flowchart LR
 
 ### Enrichment Mapping
 
-| Entity Type | IPQS Endpoint | Enrichment Data |
-|-------------|---------------|-----------------|
-| IPv4-Addr | `/ip` | Fraud score, proxy detection, ASN, VPN, TOR |
-| Email-Addr | `/email` | Fraud score, disposable, valid, deliverability |
-| URL/Domain-Name | `/url` | Risk score, malware, phishing, suspicious |
-| Phone-Number | `/phone` | Fraud score, valid, active, carrier info |
-| Artifact | `/malware/lookup` → `/malware/scan` → `/postback` | Multi-engine malware verdict, file hashes, scan metadata |
+| Entity Type     | IPQS Endpoint                                                                                                            | Enrichment Data                                                                                              |
+|-----------------|--------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| IPv4-Addr       | `/ip`                                                                                                                    | Fraud score, proxy detection, ASN, VPN, TOR.                                                                 |
+| Email-Addr      | `/email`                                                                                                                 | Fraud score, disposable, valid, deliverability.                                                              |
+| URL/Domain-Name | `/url`                                                                                                                   | Risk score, malware, phishing, suspicious.                                                                   |
+| Phone-Number    | `/phone`                                                                                                                 | Fraud score, valid, active, carrier info.                                                                    |
+| User-Account    | `/leaked/email` or `/leaked/username` (when an `account_login` is set) or `/leaked/password` (when a `credential` is set) | Darkweb-Leak exposure (`exposed`, `plain_text_password`, sources, first-seen timestamp).                     |
+| Artifact        | `/malware/lookup` → `/malware/scan` → `/postback`                                                                          | Multi-engine malware verdict, file hashes, scan metadata.                                                    |
+
+### Darkweb-Leak (User-Account)
+
+When a `User-Account` observable is submitted, the connector picks one of
+the IPQS `/leaked/...` endpoints depending on which value is populated:
+
+- `account_login` that looks like an email → `/leaked/email`;
+- any other `account_login` → `/leaked/username`;
+- `credential` → `/leaked/password`. If both `account_login` and
+  `credential` are present, the credential lookup takes precedence
+  (passwords are the more sensitive value to know about).
+
+The verdict policy for User-Account observables is simple: any positive
+exposure (either `exposed=True` or `plain_text_password=True`) yields a
+`CRITICAL` score (100). A clean response yields `CLEAN` (0).
+
+The IPQS API key is **always** sent through the `IPQS-KEY` HTTP header
+— never in the URL path — so it is not leaked in HTTP access logs.
 
 ### Risk Scoring
 
-The connector assigns risk labels based on fraud scores for the fraud-and-risk-scoring branches:
+The connector renders an `IPQS:VERDICT="…"` label on each enriched
+observable. The mapping is endpoint-specific (see `builder.py` for the
+exact match statements) but follows the same colour palette:
 
-| Score Range | Risk Level | Description |
-|-------------|------------|-------------|
-| 0-25 | Low | Likely legitimate |
-| 26-50 | Medium | Moderate risk |
-| 51-75 | High | Suspicious activity |
-| 76-100 | Critical | High fraud risk |
+| Verdict label   | Hex colour | Meaning                                                                                                                       |
+|-----------------|------------|-------------------------------------------------------------------------------------------------------------------------------|
+| CLEAN           | `#CDCDCD`  | No evidence of risk.                                                                                                          |
+| LOW RISK        | `#CDCDCD`  | Marginal score, observable is probably benign.                                                                                |
+| MODERATE RISK   | `#FFCF00`  | Mid-range fraud score; investigate.                                                                                           |
+| SUSPICIOUS      | `#FFCF00`  | Mid-range fraud score with one or more risky attributes.                                                                      |
+| HIGH RISK       | `#D10028`  | High fraud score.                                                                                                             |
+| CRITICAL        | `#D10028`  | Score == 100, IPQS-flagged disposable email, or `exposed`/`plain_text_password` for User-Account.                             |
+| INVALID         | `#D10028`  | The observable is invalid according to IPQS (e.g. malformed email).                                                           |
 
 ### Malware File Scanner
 
@@ -205,15 +231,15 @@ The `Artifact` branch implements the IPQS Malware File Scanner API following the
 
 ### Generated STIX Objects
 
-| Object Type | Description |
-|-------------|-------------|
-| Identity | IPQS organization identity |
-| Indicator | Pattern-based indicator with fraud score / malware verdict |
-| Autonomous System | ASN for IP addresses (if enabled) |
-| IPv4-Addr | Resolved IP for domains (if enabled) |
-| External Reference | Link to the IPQS analysis report (Artifact branch) |
-| Relationship | `based-on` (indicator to observable), `belongs-to` (IP to ASN), `resolves-to` (domain to IP) |
-| Note | Markdown enrichment summary; also used to surface IPQS failures on the Artifact branch |
+| Object Type        | Description                                                                                                                       |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| Identity           | IPQS organization identity                                                                                                        |
+| Indicator          | Pattern-based indicator with fraud / leak / malware verdict, description and `IPQS:VERDICT` (or `Clean`/`Malicious`) label        |
+| Autonomous System  | ASN for IP addresses (if `IPQS_IP_ADD_RELATIONSHIPS=true`)                                                                        |
+| IPv4-Addr          | Resolved IP for domains (if `IPQS_DOMAIN_ADD_RELATIONSHIPS=true`)                                                                  |
+| External Reference | Link to the IPQS analysis report (Artifact branch, attached to the observable when the IPQS response carries a `request_id`)      |
+| Relationship       | `based-on` (indicator to observable), `belongs-to` (IP to ASN), `resolves-to` (domain to IP)                                      |
+| Note               | Failure-Note attached to the observable when an Artifact enrichment fails (`abstract="IPQS enrichment failed"`)                   |
 
 ---
 

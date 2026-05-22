@@ -171,7 +171,7 @@ class ReversingLabsSpectraAnalyzeConnector:
         if stix_entity["x_opencti_type"] == "Artifact":
             sample_name = self.opencti_entity["importFiles"][0]["name"]
             file_id = self.opencti_entity["importFiles"][0]["id"]
-            file_uri = f"{self.helper.opencti_url}/storage/get/{file_id}"
+            file_uri = f"{self.helper.opencti_url.rstrip('/')}/storage/get/{file_id}"
 
             analysis_response = self._upload_file_to_spectra_analyze(
                 file_uri, sample_name

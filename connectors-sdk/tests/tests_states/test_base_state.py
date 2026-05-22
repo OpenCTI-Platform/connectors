@@ -18,7 +18,7 @@ class DummyConnectorState(BaseConnectorState):
 def dummy_state(mock_opencti_connector_helper) -> DummyConnectorState:
     """Provide a `BaseConnectorState` subclass attached to a mocked helper."""
     state = DummyConnectorState()
-    state.attach_opencti_connector_helper(mock_opencti_connector_helper)
+    state.inject_dependencies(mock_opencti_connector_helper)
     return state
 
 
@@ -37,14 +37,14 @@ def test_base_connector_state_attach_opencti_connector_helper_initializes_client
 def test_base_connector_state_load_requires_helper() -> None:
     """Test that loading without attached helper raises runtime error."""
     state = DummyConnectorState()
-    with pytest.raises(RuntimeError, match="attach_opencti_connector_helper"):
+    with pytest.raises(RuntimeError, match="inject_dependencies"):
         state.load()
 
 
 def test_base_connector_state_save_requires_helper() -> None:
     """Test that saving without attached helper raises runtime error."""
     state = DummyConnectorState()
-    with pytest.raises(RuntimeError, match="attach_opencti_connector_helper"):
+    with pytest.raises(RuntimeError, match="inject_dependencies"):
         state.save()
 
 

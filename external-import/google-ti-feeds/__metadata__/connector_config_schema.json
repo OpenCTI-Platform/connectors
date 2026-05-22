@@ -279,6 +279,11 @@
       },
       "type": "array"
     },
+    "GTI_REPORT_DOWNLOAD_PDF": {
+      "default": false,
+      "description": "Whether to download report PDFs from the GTI API and attach them to the STIX Report objects in OpenCTI",
+      "type": "boolean"
+    },
     "GTI_REPORT_ORIGINS": {
       "default": [
         "google threat intelligence"
