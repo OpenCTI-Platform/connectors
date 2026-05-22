@@ -646,8 +646,19 @@ class AssemblyLineConnector:
                 self.helper.log_info("Existing AssemblyLine analysis found for hash")
                 return None, None, sha256
 
+        # ``file_hash`` falls back to ``observable.get("name")`` and then
+        # to the literal ``"unknown"`` when the StixFile carries no
+        # ``hashes`` at all (line 609). The previous "Only hash
+        # available: …" wording therefore lied half the time — the
+        # value rendered after the colon could be a plain filename or
+        # the literal ``"unknown"`` string. Rephrase to make the
+        # intent honest: this branch is reached when there is neither
+        # a usable file payload nor a SHA-256 to look up, and we
+        # surface whatever identifier we have so the operator can map
+        # the failure back to the source observable.
         raise Exception(
-            f"StixFile has no accessible file content. Only hash available: {file_hash}"
+            "StixFile has no accessible file content and no SHA-256 hash for "
+            f"AssemblyLine lookup (identifier: {file_hash})"
         )
 
     # ------------------------------------------------------------------ #
@@ -1489,12 +1500,24 @@ class AssemblyLineConnector:
             if source_marking_refs:
                 indicator_data["objectMarking"] = source_marking_refs
             indicator = self.helper.api.indicator.create(**indicator_data)
-            self.helper.api.stix_core_relationship.create(
-                fromId=observable_id,
-                toId=indicator["id"],
-                relationship_type="related-to",
-                description=description,
-            )
+            # ``source_marking_refs`` is propagated onto the
+            # ``related-to`` SRO so the source-observable → Indicator
+            # edge stays inside the same access-control bucket as its
+            # endpoints. Without this, a TLP:AMBER source observable
+            # carrying a TLP:AMBER Indicator endpoint would be linked
+            # by an unmarked SRO that OpenCTI exposes more broadly
+            # than either endpoint — a marking-propagation gap that
+            # the rest of the connector explicitly closes for every
+            # other SDO/SCO/SRO it emits.
+            related_to_data: Dict[str, Any] = {
+                "fromId": observable_id,
+                "toId": indicator["id"],
+                "relationship_type": "related-to",
+                "description": description,
+            }
+            if source_marking_refs:
+                related_to_data["objectMarking"] = source_marking_refs
+            self.helper.api.stix_core_relationship.create(**related_to_data)
             if self.assemblyline_create_observables:
                 try:
                     obs_data: Dict[str, Any] = {
@@ -1514,15 +1537,24 @@ class AssemblyLineConnector:
                     self.helper.api.stix_cyber_observable.add_label(
                         id=new_observable["id"], label=classification
                     )
-                    self.helper.api.stix_core_relationship.create(
-                        fromId=indicator["id"],
-                        toId=new_observable["id"],
-                        relationship_type="based-on",
-                        description=(
+                    # Same rationale as the ``related-to`` edge above:
+                    # the Indicator → Observable ``based-on`` SRO must
+                    # carry the source markings so the whole derived
+                    # sub-graph (Indicator + Observable + the two SROs
+                    # that wire them up) lands in OpenCTI with one
+                    # consistent marking shape.
+                    based_on_data: Dict[str, Any] = {
+                        "fromId": indicator["id"],
+                        "toId": new_observable["id"],
+                        "relationship_type": "based-on",
+                        "description": (
                             f"Indicator based on observed {classification} IOC "
                             "from AssemblyLine analysis"
                         ),
-                    )
+                    }
+                    if source_marking_refs:
+                        based_on_data["objectMarking"] = source_marking_refs
+                    self.helper.api.stix_core_relationship.create(**based_on_data)
                     observable_created = True
                 except Exception as obs_exc:
                     self.helper.log_warning(

@@ -1193,32 +1193,98 @@ class TestTerminalAssemblyLineStates:
     """Terminal AssemblyLine submission states must surface immediately.
 
     ``failed`` / ``error`` / ``cancelled`` are end-of-life — polling
-    them again will never recover. The polling loop must re-raise the
-    terminal failure right away instead of letting it be swallowed by
-    the broad ``except`` (which is there to absorb transient API /
-    network glitches).
+    them again will never recover. The polling loop in
+    ``_process_file`` must re-raise the terminal failure right away
+    instead of letting it be swallowed by the broad
+    ``except Exception`` (which is there to absorb transient API /
+    network glitches like a flaky ``ApiException`` from
+    ``assemblyline-client``).
     """
 
     @pytest.mark.parametrize(
         "terminal_state",
         ["failed", "error", "cancelled"],
     )
-    def test_terminal_state_raises_assemblyline_terminal_error(
-        self, terminal_state: str
+    def test_process_file_raises_terminal_error_on_terminal_state(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        terminal_state: str,
     ) -> None:
-        msg = f"AssemblyLine analysis {terminal_state} for submission s-1"
-        # Re-raise the same way the polling loop does.
-        try:
-            try:
-                raise AssemblyLineTerminalError(msg)
-            except AssemblyLineTerminalError:
-                raise
-            except Exception:  # pragma: no cover - sanity, never reached
-                pass
-        except AssemblyLineTerminalError as exc:
-            assert str(exc) == msg
-        else:  # pragma: no cover - test misconfiguration
-            pytest.fail("AssemblyLineTerminalError should have propagated")
+        """``_process_file`` re-raises ``AssemblyLineTerminalError`` immediately.
+
+        Pins the *real* polling-loop contract (not just the exception's
+        re-raise mechanic in isolation):
+
+        * ``requests.post`` returns a 200 with a valid ``sid`` — the
+          submission succeeds, ``_process_file`` enters the polling
+          loop.
+        * ``al_client.submission.full`` returns ``{"state": <terminal>}``
+          on the very first poll — the loop must raise immediately
+          instead of waiting for ``assemblyline_timeout`` to elapse.
+        * The raised exception is ``AssemblyLineTerminalError`` (NOT a
+          plain ``Exception``), so a caller upstream can catch the
+          terminal case specifically without masking transient
+          failures.
+
+        Without the dedicated branch in ``_process_file``'s polling
+        loop, the broad ``except Exception`` would swallow the
+        terminal state and let the loop spin until the global timeout.
+        """
+        connector = _make_connector(
+            assemblyline_force_resubmit=False,
+            assemblyline_timeout=300,
+        )
+        observable = {
+            "id": "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f",
+            "entity_type": "Artifact",
+            "hashes": [],
+            "objectMarking": [],
+        }
+        connector._get_file_content = MagicMock(
+            return_value=(b"abc", "sample.bin", "no-hash")
+        )
+        connector._check_existing_analysis = MagicMock(return_value=None)
+        connector._wait_for_al_ready = MagicMock()
+        connector._resolve_submission_classification = MagicMock(return_value="TLP:C")
+        connector._source_tlp = MagicMock(return_value="TLP:C")
+
+        # Stub the submit POST. ``main.requests.post`` is the call site;
+        # we do not need to fake the full ``requests.Response`` shape,
+        # just ``status_code`` and ``json()`` so ``_process_file`` can
+        # extract the ``sid`` and enter the polling loop.
+        from main import requests as main_requests
+
+        fake_post_response = MagicMock()
+        fake_post_response.status_code = 200
+        fake_post_response.json = MagicMock(
+            return_value={"api_response": {"sid": "s-1"}}
+        )
+        monkeypatch.setattr(
+            main_requests, "post", MagicMock(return_value=fake_post_response)
+        )
+
+        # First poll already returns the terminal state. The connector
+        # MUST raise immediately rather than retry, sleep or fall back
+        # to waiting out the timeout.
+        connector.al_client.submission.full = MagicMock(
+            return_value={"state": terminal_state}
+        )
+
+        with pytest.raises(AssemblyLineTerminalError) as exc_info:
+            connector._process_file(observable)
+
+        assert "s-1" in str(exc_info.value)
+        # ``failed`` carries a different message shape from ``error`` /
+        # ``cancelled`` (see ``main.py``); the common contract is that
+        # the terminal state and submission id BOTH appear in the
+        # raised message so the operator can map the failure back to
+        # the AssemblyLine submission.
+        assert (
+            terminal_state in str(exc_info.value).lower() or terminal_state == "failed"
+        )
+        # Submission ran exactly once and polling stopped on the first
+        # terminal-state response — no retry, no sleep-until-timeout.
+        connector.al_client.submission.full.assert_called_once_with("s-1")
 
     def test_terminal_error_is_distinct_from_transient_exception(self) -> None:
         # ``AssemblyLineTerminalError`` is a subclass of ``Exception``
