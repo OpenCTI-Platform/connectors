@@ -646,7 +646,16 @@ class StixConverter:
                         else observable.get("id")
                     )
 
-                    # Use pycti StixCoreRelationship to generate deterministic ID
+                    # Use pycti StixCoreRelationship to generate deterministic ID.
+                    # ``created`` / ``modified`` are anchored to the
+                    # incident's stable timestamps (rather than the
+                    # cycle's wall clock) so repeated imports of the
+                    # same alert converge to the same Relationship SDO.
+                    # The previous shape used ``datetime.now(UTC)`` on
+                    # both fields, which churned the SDO version on
+                    # every run despite the deterministic id — every
+                    # cycle pushed an "updated" relationship to OpenCTI
+                    # that differed only by timestamp.
                     relationship = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
                             "related-to", incident.id, obs_id
@@ -654,8 +663,8 @@ class StixConverter:
                         relationship_type="related-to",
                         source_ref=incident.id,
                         target_ref=obs_id,
-                        created=datetime.now(UTC),
-                        modified=datetime.now(UTC),
+                        created=incident.created,
+                        modified=incident.modified,
                         created_by_ref=self.identity.id,
                         object_marking_refs=[self._get_tlp_marking().id],
                         allow_custom=True,  # Allow relationships to custom observables
@@ -703,14 +712,27 @@ class StixConverter:
                     observable.id if hasattr(observable, "id") else observable.get("id")
                 )
 
-                # Use pycti StixCoreRelationship to generate deterministic ID
+                # Use pycti StixCoreRelationship to generate deterministic ID.
+                # ``created`` / ``modified`` are anchored to the case's
+                # stable timestamps (falling back to the case object's
+                # ``dict``-style ``get`` when the case is a dict
+                # rather than a STIX object) for the same reason
+                # ``_create_incident_observable_relationships`` anchors
+                # to the incident timestamps — see the comment there
+                # for the full rationale.
+                case_created = (
+                    case.created if hasattr(case, "created") else case.get("created")
+                )
+                case_modified = (
+                    case.modified if hasattr(case, "modified") else case.get("modified")
+                )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id("related-to", case_id, obs_id),
                     relationship_type="related-to",
                     source_ref=case_id,
                     target_ref=obs_id,
-                    created=datetime.now(UTC),
-                    modified=datetime.now(UTC),
+                    created=case_created,
+                    modified=case_modified,
                     created_by_ref=self.identity.id,
                     object_marking_refs=[self._get_tlp_marking().id],
                     allow_custom=True,  # Allow relationships from custom objects
@@ -745,14 +767,17 @@ class StixConverter:
             # Handle both STIX objects and dictionaries
             case_id = case.id if hasattr(case, "id") else case.get("id")
 
-            # Use pycti StixCoreRelationship to generate deterministic ID
+            # Use pycti StixCoreRelationship to generate deterministic ID.
+            # ``created`` / ``modified`` anchored to the incident's
+            # stable timestamps for the same reason as the
+            # incident -> observable relationships above.
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id("related-to", incident.id, case_id),
                 relationship_type="related-to",
                 source_ref=incident.id,
                 target_ref=case_id,
-                created=datetime.now(UTC),
-                modified=datetime.now(UTC),
+                created=incident.created,
+                modified=incident.modified,
                 created_by_ref=self.identity.id,
                 object_marking_refs=[self._get_tlp_marking().id],
                 allow_custom=True,  # Allow relationships to custom objects

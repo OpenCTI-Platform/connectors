@@ -393,9 +393,20 @@ class DataDogConnector:
                 create_incident_response_cases=self.create_incident_response_cases,
             )
 
+            # Surface any importer-level fatal error onto the cycle's
+            # error count — ``process_datadog_data`` returns
+            # ``errors=1`` when the per-alert processing loop short-
+            # circuits via an uncaught exception. Without this, an
+            # importer crash on a malformed signal would land here as
+            # ``processed_items=[]`` / ``object_errors=0`` and the
+            # cycle would be reported as a clean green no-op despite
+            # silently losing data. Seed ``object_errors`` from the
+            # importer count so the per-item conversion errors below
+            # accumulate on top.
+            object_errors = int(results.get("errors", 0) or 0)
+
             # Collect all STIX objects from all alerts (batching approach)
             all_stix_objects = []
-            object_errors = 0
 
             self.helper.log_info(
                 f"Creating STIX objects from {len(results.get('processed_items', []))} processed items"
@@ -554,11 +565,23 @@ class DataDogConnector:
                         )
 
                 except Exception as e:
+                    # ``in_error=True`` MUST be paired with the
+                    # ``log_error`` call so a hard cycle failure
+                    # (any uncaught exception during ``_import_data``)
+                    # is surfaced as a red Work in the OpenCTI UI
+                    # instead of the default green-on-success outcome
+                    # the platform applies when ``in_error`` is
+                    # omitted. ``exc_info=True`` captures the stack
+                    # trace alongside the message so operators can
+                    # diagnose the failure without re-running the
+                    # cycle in debug mode.
                     error_message = f"Import cycle failed: {str(e)}"
-                    self.helper.log_error(error_message)
+                    self.helper.log_error(error_message, exc_info=True)
 
                     if work_id:
-                        self.helper.api.work.to_processed(work_id, error_message)
+                        self.helper.api.work.to_processed(
+                            work_id, error_message, in_error=True
+                        )
 
                 # Wait for next import cycle
                 self.helper.log_info(f"Next import in {self.import_interval} minutes")

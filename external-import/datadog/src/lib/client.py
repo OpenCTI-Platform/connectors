@@ -74,22 +74,23 @@ class DataDogClient:
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
 
-        # Set default headers for DataDog API
+        # Set default headers for the DataDog Security Monitoring v2
+        # API. Both the API key (``DD-API-KEY``) and the application
+        # key (``DD-APPLICATION-KEY``) are required on every signal-
+        # search call — the v2 ``/api/v2/security_monitoring/signals``
+        # endpoint rejects calls missing the App key with a 403, so
+        # the App key MUST live on the session itself rather than on
+        # a request-specific override (and there is no longer a
+        # second header dict for an unimplemented Incidents API path
+        # that used to live here).
         self.session.headers.update(
             {
                 "DD-API-KEY": self.api_token,
+                "DD-APPLICATION-KEY": self.app_key,
                 "Content-Type": "application/json",
                 "User-Agent": "OpenCTI-DataDog-Connector/1.0.0",
             }
         )
-
-        # Set headers for incidents API (requires app key)
-        self.incident_headers = {
-            "DD-API-KEY": self.api_token,
-            "DD-APPLICATION-KEY": self.app_key,
-            "Content-Type": "application/json",
-            "User-Agent": "OpenCTI-DataDog-Connector/1.0.0",
-        }
 
     def _make_request(
         self, method: str, endpoint: str, **kwargs
@@ -192,14 +193,11 @@ class DataDogClient:
                     [f"@tags:{tag}" for tag in tags_filter]
                 )
 
-            # Use headers with app key
-            headers = {
-                "DD-API-KEY": self.api_token,
-                "DD-APPLICATION-KEY": self.app_key,
-                "Content-Type": "application/json",
-                "User-Agent": "OpenCTI-DataDog-Connector/1.0.0",
-            }
-
+            # No per-request ``headers`` override — the session
+            # itself carries both ``DD-API-KEY`` and
+            # ``DD-APPLICATION-KEY`` (set in ``__init__``), which is
+            # exactly what the v2 Security Monitoring API requires
+            # on every signal-search call.
             all_signals = []
             next_cursor = None
             # ``pagination_failed`` flips to True if any page fetch
@@ -216,9 +214,7 @@ class DataDogClient:
                 if next_cursor:
                     params["page[cursor]"] = next_cursor
 
-                response = self._make_request(
-                    "GET", endpoint, params=params, headers=headers
-                )
+                response = self._make_request("GET", endpoint, params=params)
                 if not response:
                     self.helper.log_error(
                         "Security Signals pagination aborted: page fetch failed "
