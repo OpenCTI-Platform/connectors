@@ -317,17 +317,11 @@ class ReportImporter:
             ]
             # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
             # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
-            author = context_entity.get("createdBy")
         else:
             object_markings = []
-            author = None
-        if author is not None:
-            author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
-                self._process_observable(
-                    match, object_markings, author, entities, observables
-                )
+                self._process_observable(match, object_markings, entities, observables)
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 stix_type = "-".join(
                     x[:1].upper() + x[1:]
@@ -363,7 +357,6 @@ class ReportImporter:
         self,
         match: Dict,
         object_markings=None,
-        author=None,
         entities=None,
         observables=None,
     ):
@@ -436,16 +429,16 @@ class ReportImporter:
             return entity_stix
         else:
             observable = None
-            # STIX 2.1 only defines ``created_by_ref`` on SDOs/SROs. For cyber
-            # observables (SCOs) OpenCTI exposes the same concept via the
-            # ``x_opencti_created_by_ref`` custom property; setting the standard
-            # ``created_by_ref`` on an SCO would land in the bundle as an
-            # arbitrary custom field and the platform would not pick up the
-            # observable's author. Apply the OpenCTI convention to every SCO
-            # the connector emits.
+            # SCO custom properties shared across every emitted observable
+            # type. ``x_opencti_created_by_ref`` is intentionally NOT set
+            # here: per OpenCTI-Platform/opencti#14105 the importer no
+            # longer propagates the triggering entity's author onto the
+            # extracted observables — they must keep the bundle author
+            # (or no author) so that, in draft mode, a list of IPs
+            # extracted from a Report does not silently inherit the
+            # Report's author.
             custom_properties = {
                 "x_opencti_create_indicator": self.create_indicator,
-                "x_opencti_created_by_ref": author,
             }
             if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
                 observable = stix2.AutonomousSystem(

@@ -10,7 +10,6 @@ from .client_api import ImportDocumentAIClient
 from .config_loader import ConfigConnector
 from .util import (
     OpenCTIFileObject,
-    bulk_update_authors,
     bulk_update_object_markings,
     compute_bundle_stats,
     convert_location_to_octi_location,
@@ -145,7 +144,12 @@ class Connector:
                 )
 
         # Enrich the triggering entity reference if relevant
-        # then the imported objects author and marking refs
+        # then propagate the triggering entity's marking_refs to the imported
+        # objects. The triggering entity author is intentionally NOT propagated
+        # any more — imported observables must keep the bundle author (or no
+        # author) so that, in draft mode, a list of IPs imported from a Report
+        # does not silently inherit the Report's author
+        # (see OpenCTI-Platform/opencti#14105).
         if triggering_entity:
             enrichment_objects_holder = []
             triggering_entity_stix = triggering_entity.get_stix(helper=self.helper)
@@ -185,9 +189,11 @@ class Connector:
                     relate_to(objects_ids, [triggering_entity_stix["id"]])
                 )
 
-            # Attach triggering entity author and marking_refs to imported objects
+            # Attach the triggering entity's marking_refs to the imported
+            # objects (author propagation was removed for
+            # OpenCTI-Platform/opencti#14105 — see the comment above the
+            # ``if triggering_entity`` block).
             ai_bundle = extend_bundle(ai_bundle, enrichment_objects_holder)
-            ai_bundle = bulk_update_authors(triggering_entity.author_id, ai_bundle)
             ai_bundle = bulk_update_object_markings(
                 triggering_entity.object_marking_refs, ai_bundle, extend=True
             )
