@@ -157,11 +157,43 @@ class RestoreFilesConnector:
         # entity changed across snapshots. ``dirs`` is iterated in
         # chronological order so each list is sorted ascending without
         # an explicit sort step.
-        self.helper.log_info("Building files map cache (could take a while)")
+        # Resume mode: the main restore loop below skips every run-dir
+        # whose date is ``<= start_date`` (the timestamp of the last
+        # successfully restored directory), so ``find_element`` is only
+        # ever called with a ``dir_date > start_date``. ``find_element``
+        # in turn only ever returns snapshots strictly later than
+        # ``dir_date``, which means snapshots from directories at or
+        # before ``start_date`` can never be a valid resolution target.
+        # Skipping them here avoids ``os.scandir``-ing the entire
+        # pre-``start_date`` history on every resume — on long-lived
+        # backups (months of run-dirs) that is the difference between
+        # a sub-second cache build and a multi-minute one. ``dirs`` is
+        # iterated in chronological order so each cache list is still
+        # sorted ascending without an explicit sort step.
+        if start_date is not None:
+            cache_dirs = [d for d in dirs if date_convert(d.name) > start_date]
+        else:
+            cache_dirs = dirs
+        self.helper.log_info(
+            "Building files map cache (could take a while) — indexing "
+            + str(len(cache_dirs))
+            + " of "
+            + str(len(dirs))
+            + " run directories"
+            + (
+                " (skipping "
+                + str(len(dirs) - len(cache_dirs))
+                + " at or before resume cursor "
+                + start_directory
+                + ")"
+                if start_date is not None
+                else ""
+            )
+        )
         cache_start_time = datetime.datetime.now()
         backup_files = dict()
         snapshot_count = 0
-        for entry in dirs:
+        for entry in cache_dirs:
             with os.scandir(entry) as it:
                 for file in it:
                     # Filter to ``*.json`` files: ``find_element`` only ever
@@ -185,7 +217,7 @@ class RestoreFilesConnector:
             + " unique files / "
             + str(snapshot_count)
             + " snapshots indexed across "
-            + str(len(dirs))
+            + str(len(cache_dirs))
             + " directories)"
         )
 
@@ -198,15 +230,26 @@ class RestoreFilesConnector:
             # 00 - Create a bundle for the directory
             files_data = []
             element_ids = []
-            # 01 - build all _ref / _refs contained in the bundle
+            # 01 - build all _ref / _refs contained in the bundle.
+            #
+            # ``os.scandir`` returns an iterator that holds an OS-level
+            # directory handle (``DIR*`` on POSIX, ``HANDLE`` on Windows);
+            # wrap it in a ``with`` block so the handle is released as
+            # soon as we are done iterating, matching the cache-build
+            # site above and avoiding a per-run-dir handle leak on long
+            # restore runs. ``file.is_file()`` keeps subdirectories and
+            # symlinks-to-dirs out of the bundle so ``fetch_stix_data``
+            # never tries to ``open()`` something that is not a regular
+            # file.
             element_refs = []
-            for file in os.scandir(entry):
-                if file.is_file():
-                    objects = fetch_stix_data(file)
-                    object_ids = set(map(lambda x: x["id"], objects))
-                    element_refs.extend(ref_extractors(objects))
-                    files_data.extend(objects)
-                    element_ids.extend(object_ids)
+            with os.scandir(entry) as it:
+                for file in it:
+                    if file.is_file():
+                        objects = fetch_stix_data(file)
+                        object_ids = set(map(lambda x: x["id"], objects))
+                        element_refs.extend(ref_extractors(objects))
+                        files_data.extend(objects)
+                        element_ids.extend(object_ids)
             # Ensure the bundle is consistent (include meta elements)
             # 02 - Scan bundle to detect missing elements
             acc = []
@@ -226,10 +269,14 @@ class RestoreFilesConnector:
             # 05 - Add elements to the bundle
             objects_with_missing = acc + files_data
             stop_time = datetime.datetime.now()
+            # Past tense + explicit ``s`` suffix so the line is
+            # unambiguous in production logs: the work is already done
+            # by the time we log it, and a raw float without a unit can
+            # be misread as milliseconds at a glance on busy log views.
             self.helper.log_info(
-                "Handle missing resolutions in "
+                "Handled missing reference resolution in "
                 + str((stop_time - start_time).total_seconds())
-                + " ("
+                + "s ("
                 + str(len(objects_with_missing))
                 + " objects)"
             )
