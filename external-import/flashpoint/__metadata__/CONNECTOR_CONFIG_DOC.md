@@ -18,13 +18,12 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | FLASHPOINT_IMPORT_START_DATE | `string` |  | Format: [`date-time`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"P30D"` | The date from which to start importing data. |
 | FLASHPOINT_IMPORT_REPORTS | `boolean` |  | boolean | `true` | Whether to import reports from Flashpoint or not. |
-| FLASHPOINT_INDICATORS_IN_REPORTS | `boolean` |  | boolean | `false` | Whether to include indicators in the reports imported from MispFeed or not. |
-| FLASHPOINT_CREATE_REPORTS | `boolean` |  | boolean | `false` | Whether to create reports or groupings from MispFeed events or not. |
 | FLASHPOINT_GUESS_RELATIONSHIPS_FROM_REPORTS | `boolean` |  | boolean | `false` | Whether to guess relationships between entities or not. |
-| FLASHPOINT_IMPORT_INDICATORS | `boolean` |  | boolean | `true` | WHether to import indicators of compromise (IoCs) or not. |
+| FLASHPOINT_IMPORT_INDICATORS | `boolean` |  | boolean | `true` | Whether to import indicators of compromise (IoCs) or not. |
 | FLASHPOINT_IMPORT_ALERTS | `boolean` |  | boolean | `true` | Whether to import alert data from Flashpoint or not. |
 | FLASHPOINT_ALERT_CREATE_RELATED_ENTITIES | `boolean` |  | boolean | `false` | Whether to create alert related Channel entity and Media-Content observable or not. |
 | FLASHPOINT_IMPORT_COMMUNITIES | `boolean` |  | boolean | `false` | Whether to import community data or not. |
 | FLASHPOINT_COMMUNITIES_QUERIES | `array` |  | string | `["cybersecurity", "cyberattack"]` | List of community queries to execute. |
 | FLASHPOINT_IMPORT_CCM_ALERTS | `boolean` |  | boolean | `false` | Whether to import Compromised Credentials Monitoring alerts or not. |
 | FLASHPOINT_FRESH_CCM_ALERTS_ONLY | `boolean` |  | boolean | `true` | Whether to import only fresh Compromised Credentials Monitoring alerts or all of them. |
+| FLASHPOINT_INDICATOR_TLP | `string` |  | `TLP:CLEAR` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:CLEAR"` | TLP marking applied to imported indicators. |
