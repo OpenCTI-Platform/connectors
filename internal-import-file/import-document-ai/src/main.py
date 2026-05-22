@@ -13,16 +13,22 @@ if __name__ == "__main__":
         # If xtm one enabled, register intent for the connector
         # This code allows backward compatibility with previous versions of opencti not implementing xtm one
         # Will be removed after deprecation of legacy IA management
-        if helper.connector.xtm_one_intent is None:
+        if hasattr(helper.connector, "xtm_one_intent") and helper.connector.xtm_one_intent is None:
             platform_about = helper.api.about()
             dependencies = platform_about.get("dependencies", [])
             xtm_one_available = any(
                 dep.get("name") == "XTM-One" for dep in dependencies
             )
-            if xtm_one_available and helper.connector.xtm_one_intent is None:
+            if xtm_one_available:
                 # Register again the connector with the default intent
-                helper.connector.xtm_one_intent = "cti.stix_harvester"
-                helper.api.connector.register(helper.connector)
+                try:
+                    helper.connector.xtm_one_intent = "cti.stix_harvester"
+                    helper.api.connector.register(helper.connector)
+                except Exception as e:
+                    helper.connector_logger.error(
+                        "Failed to register XTM One intent",
+                        {"error": str(e)}
+                    )
         # Start the connector
         connector = Connector(config=config, helper=helper)
         connector.run()
