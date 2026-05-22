@@ -4,7 +4,6 @@ import pytest
 import requests
 import responses as resp_mock
 from conftest import SAMPLE_API_ROWS, SAMPLE_STIX_BUNDLE
-
 from threatlandscape_client.api_client import ThreatLandscapeClient
 
 

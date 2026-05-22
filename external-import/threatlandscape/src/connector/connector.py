@@ -3,10 +3,9 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import requests
-from pycti import OpenCTIConnectorHelper
-
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 from threatlandscape_client import ThreatLandscapeClient
 
 # Flush and start a new work bundle after accumulating this many STIX objects.
