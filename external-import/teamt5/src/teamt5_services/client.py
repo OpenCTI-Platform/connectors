@@ -127,12 +127,24 @@ class Teamt5Client:
         ):
             self._refresh_token()
 
-    def request_data(self, url: str, params=None) -> Optional[dict]:
+    def request_data(
+        self, url: str, params=None, throttle: bool = False
+    ) -> Optional[dict]:
         """
         Make a GET request to a TeamT5 API URL and return the decoded JSON body.
 
         :param url: The URL to request data from.
         :param params: Optional dictionary of query parameters.
+        :param throttle: When ``True``, sleep for one second AFTER a
+            successful response. Reserved for tight pagination loops
+            (``BaseHandler.retrieve_bundle_references``) where back-to-back
+            GETs against the same listing endpoint are paced to avoid
+            hammering the upstream API. The default ``False`` keeps
+            STIX bundle downloads (``BaseHandler.push_objects``,
+            ``Teamt5Client._refresh_token`` callers, …) unthrottled —
+            on a run with many bundles, an unconditional one-second
+            sleep after every GET would silently add minutes to the
+            wall-clock time of every cycle.
         :return: The decoded JSON body of the response on success, or ``None`` on failure (HTTP error, network error, or invalid JSON).
         """
         timeout = 15
@@ -141,9 +153,13 @@ class Teamt5Client:
             self._ensure_valid_token()
             response = self.session.get(url, params=params, timeout=timeout)
             response.raise_for_status()
-            # Small delay so we do not hammer the API on tight pagination loops.
-            time.sleep(1)
-            return response.json()
+            payload = response.json()
+            # Only the pagination caller opts into the throttle (see the
+            # ``throttle`` argument docstring above) — bundle downloads
+            # do NOT pay this cost.
+            if throttle:
+                time.sleep(1)
+            return payload
 
         # ``requests.RequestException`` is the root of the requests
         # exception hierarchy and covers ``HTTPError`` /

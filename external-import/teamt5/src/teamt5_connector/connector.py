@@ -70,6 +70,17 @@ class TeamT5Connector:
                     self.config.teamt5.first_run_retrieval_timestamp
                 )
 
+            # ``last_run`` is only advanced when every handler completes
+            # without partial failure (no ``_MAX_PAGE_FAILURES`` bail-out
+            # AND every retrieved bundle was successfully pushed). Holding
+            # the cursor at its previous value on partial failure lets the
+            # next scheduled run retry the unprocessed tail — advancing
+            # past it would silently skip every TeamT5 item between the
+            # frozen ``last_run`` and the failed bundle, which is the data
+            # loss path the Copilot review thread on ``connector.py:106``
+            # called out.
+            had_partial_failure = False
+
             # For each handler (Reports and IOC Bundles) retrieve bundle references and push to OpenCTI
             for handler in [self.report_handler, self.indicator_bundle_handler]:
                 self.helper.connector_logger.info(
@@ -78,6 +89,11 @@ class TeamT5Connector:
                 retrieved_bundle_refs = handler.retrieve_bundle_references(
                     last_run_timestamp
                 )
+
+                if handler.aborted:
+                    # ``_MAX_PAGE_FAILURES`` bail-out — the listing did
+                    # not complete, so the cursor stays where it is.
+                    had_partial_failure = True
 
                 if retrieved_bundle_refs:
 
@@ -91,23 +107,39 @@ class TeamT5Connector:
                     num_pushed = handler.push_objects(work_id, retrieved_bundle_refs)
                     push_message = f"Connector Pushed {num_pushed} {handler.name}s"
                     self.helper.connector_logger.info(push_message)
-                    self.helper.api.work.to_processed(work_id, push_message)
+                    # ``in_error=True`` when not every retrieved bundle made
+                    # it through (some bundle download / parse failed and was
+                    # skipped) so the OpenCTI UI flags the Work red instead
+                    # of green-on-failure.
+                    self.helper.api.work.to_processed(
+                        work_id, push_message, in_error=handler.partial_push
+                    )
+                    if handler.partial_push:
+                        had_partial_failure = True
                     work_id = None
 
                 else:
                     self.helper.connector_logger.info(f"No new {handler.name}s found")
 
-            current_state = self.helper.get_state()
+            current_state = self.helper.get_state() or {}
             current_state_datetime = now.isoformat(timespec="seconds")
-            if current_state:
-                current_state["last_run"] = current_state_datetime
+            if had_partial_failure:
+                # Keep the previous ``last_run`` value so the next cycle
+                # retries the unprocessed window. Log explicitly so the
+                # operator can see the cursor was intentionally held.
+                self.helper.connector_logger.warning(
+                    f"{self.helper.connect_name} connector finished with partial failure; "
+                    "holding last_run at the previous value so the next scheduled run "
+                    "retries the unprocessed bundles.",
+                    meta={"previous_last_run": current_state.get("last_run")},
+                )
             else:
-                current_state = {"last_run": current_state_datetime}
-            self.helper.set_state(current_state)
-            self.helper.connector_logger.info(
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + current_state_datetime
-            )
+                current_state["last_run"] = current_state_datetime
+                self.helper.set_state(current_state)
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector successfully run, storing last_run as "
+                    + current_state_datetime
+                )
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(

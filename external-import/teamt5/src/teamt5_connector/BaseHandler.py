@@ -57,6 +57,18 @@ class BaseHandler(ABC):
         self.config = config
         self.author = author
         self.tlp_ref = tlp_ref
+        # Per-run success flags consumed by ``TeamT5Connector.process_message``
+        # to decide whether the persisted ``last_run`` cursor can be safely
+        # advanced. ``aborted`` flips to ``True`` when
+        # ``retrieve_bundle_references`` bails out after
+        # ``_MAX_PAGE_FAILURES`` consecutive failed pages; ``partial_push``
+        # flips to ``True`` when ``push_objects`` failed to push every
+        # retrieved bundle (e.g. one of the per-bundle STIX downloads
+        # returned ``None`` / contained no objects / had no ``stix_url``).
+        # Both reset to ``False`` at the start of each retrieval /
+        # push pass so a previous-cycle failure does not stick.
+        self.aborted: bool = False
+        self.partial_push: bool = False
 
     @abstractmethod
     def map_bundle_reference(self, raw_bundle_ref: dict) -> dict:
@@ -104,6 +116,11 @@ class BaseHandler(ABC):
         url = f"{self.config.teamt5.api_base_url.rstrip('/')}{self.url_suffix}"
         retrieved_bundle_refs = []
         failure_count = 0
+        # Reset success flags at the top of each retrieval pass so a
+        # previous-cycle failure does not stick to the handler instance
+        # (the connector instantiates each handler once and re-uses it
+        # across scheduled runs).
+        self.aborted = False
 
         while True:
 
@@ -112,7 +129,12 @@ class BaseHandler(ABC):
                 "date[from]": last_run_timestamp,
             }
 
-            data = self.client.request_data(url, params)
+            # Pagination opts into the one-second throttle so tight
+            # back-to-back listing GETs do not hammer the upstream API.
+            # The same throttle is intentionally NOT applied to bundle
+            # downloads in ``push_objects`` — see
+            # ``Teamt5Client.request_data`` docstring for the rationale.
+            data = self.client.request_data(url, params, throttle=True)
             if not data or not data.get("success"):
                 failure_count += 1
                 self.helper.connector_logger.warning(
@@ -124,6 +146,13 @@ class BaseHandler(ABC):
                         f"Giving up on {self.name} retrieval after {failure_count} consecutive "
                         "failed pages; the next scheduled run will retry."
                     )
+                    # Signal partial-failure to the caller so the
+                    # connector's persisted ``last_run`` cursor is NOT
+                    # advanced past the unprocessed listing tail —
+                    # advancing it would silently skip every bundle
+                    # that was published after ``last_run`` but before
+                    # the page that failed.
+                    self.aborted = True
                     break
                 continue
 
@@ -154,6 +183,10 @@ class BaseHandler(ABC):
         :return: The number of bundles successfully pushed to OpenCTI.
         """
 
+        # Reset the per-run flag so a previous-cycle partial-failure does
+        # not leak into the current pass (the handler is re-used across
+        # ``schedule_iso`` invocations).
+        self.partial_push = False
         num_bundles_pushed = 0
 
         for bundle_ref in bundle_refs:
@@ -196,6 +229,17 @@ class BaseHandler(ABC):
                 f"{self.name} with {len(stix_content)} objects pushed to OpenCTI successfully."
             )
             num_bundles_pushed += 1
+
+        # Signal partial failure to the caller (consumed by
+        # ``TeamT5Connector.process_message`` to decide whether the
+        # persisted ``last_run`` cursor can be advanced). Any bundle
+        # that fell through the ``continue`` branches above (missing
+        # ``stix_url``, transport error returning ``None`` for the
+        # bundle download, empty / objectless bundle body) was skipped
+        # rather than retried, so advancing the cursor past these
+        # references would silently lose them on the next cycle.
+        if num_bundles_pushed < len(bundle_refs):
+            self.partial_push = True
 
         return num_bundles_pushed
 

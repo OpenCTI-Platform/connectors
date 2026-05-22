@@ -233,3 +233,184 @@ class TestRetrieveBundleReferencesMaxFailuresAbort:
         assert refs == []
         assert client.request_data.call_count == _MAX_PAGE_FAILURES
         handler.helper.connector_logger.error.assert_called_once()
+
+
+class TestRetrieveBundleReferencesAbortedFlag:
+    """``handler.aborted`` reflects the success of the latest retrieval pass.
+
+    The connector reads this flag in ``process_message`` to decide whether
+    the persisted ``last_run`` cursor can be advanced — a stale ``True``
+    from a previous-cycle bail-out would have silently held the cursor
+    in place forever, so the flag is reset at the top of every retrieval
+    pass and only set when ``_MAX_PAGE_FAILURES`` is actually hit.
+    """
+
+    def test_aborted_false_after_clean_run(self):
+        client = Mock()
+        client.request_data.return_value = {"success": True, "stubs": []}
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        assert handler.aborted is False
+
+    def test_aborted_true_after_max_failures(self):
+        client = Mock()
+        client.request_data.side_effect = [
+            {"success": False} for _ in range(_MAX_PAGE_FAILURES)
+        ]
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        assert handler.aborted is True
+
+    def test_aborted_resets_between_runs(self):
+        """A clean run after a failed one must reset the flag."""
+        client = Mock()
+        # First run bails out — flag flips to True.
+        client.request_data.side_effect = [
+            {"success": False} for _ in range(_MAX_PAGE_FAILURES)
+        ]
+        handler = _make_handler(client)
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+        assert handler.aborted is True
+
+        # Second run with the same handler instance completes cleanly —
+        # flag must reset (the connector re-uses the handler across
+        # ``schedule_iso`` invocations, so a stale True would silently
+        # freeze the cursor forever).
+        client.request_data.side_effect = None
+        client.request_data.return_value = {"success": True, "stubs": []}
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+        assert handler.aborted is False
+
+
+class TestRetrieveBundleReferencesUsesThrottle:
+    """``request_data`` is called with ``throttle=True`` from the listing loop.
+
+    The throttle is intentionally kept opt-in (it gates pagination only,
+    not bundle downloads in ``push_objects``); pinning that the listing
+    loop opts in here means a future refactor that removes the
+    ``throttle=True`` kwarg on the listing call site will fail this
+    test before silently re-introducing the rate-limit risk on tight
+    pagination loops.
+    """
+
+    def test_listing_loop_passes_throttle_true(self):
+        client = Mock()
+        client.request_data.return_value = {"success": True, "stubs": []}
+        handler = _make_handler(client)
+
+        handler.retrieve_bundle_references(last_run_timestamp=0)
+
+        # Every call to ``request_data`` from the listing loop must
+        # opt into the throttle.
+        for call in client.request_data.call_args_list:
+            assert (
+                call.kwargs.get("throttle") is True
+            ), f"listing call missing throttle=True: {call}"
+
+
+class TestPushObjectsPartialPushFlag:
+    """``handler.partial_push`` reflects whether every retrieved bundle was pushed.
+
+    Consumed by ``TeamT5Connector.process_message`` to decide whether the
+    persisted ``last_run`` cursor can be advanced; a bundle that fell
+    through a ``continue`` branch (missing ``stix_url`` / transport error
+    / empty body) was skipped, not retried, so advancing past it would
+    silently drop it on the next cycle.
+    """
+
+    def _make_handler_for_push(self, bundle_responses):
+        client = Mock()
+        # The first ``request_data`` call inside ``push_objects`` is for the
+        # bundle download itself (one per bundle ref).
+        client.request_data.side_effect = bundle_responses
+        handler = _StubHandler(
+            client=client,
+            helper=Mock(),
+            config=SimpleNamespace(
+                teamt5=SimpleNamespace(api_base_url="https://example.invalid/")
+            ),
+            author=SimpleNamespace(id="identity--stub"),
+            tlp_ref=SimpleNamespace(id="marking-definition--stub"),
+        )
+        handler.helper.stix2_create_bundle.return_value = "<bundle>"
+        return handler
+
+    def test_partial_push_false_when_every_bundle_lands(self):
+        handler = self._make_handler_for_push(
+            [
+                {
+                    "objects": [
+                        {"type": "indicator", "id": "indicator--a"},
+                    ]
+                },
+                {
+                    "objects": [
+                        {"type": "indicator", "id": "indicator--b"},
+                    ]
+                },
+            ]
+        )
+        bundle_refs = [
+            {"stix_url": "https://example.invalid/a", "created_at": 1700000000},
+            {"stix_url": "https://example.invalid/b", "created_at": 1700000001},
+        ]
+
+        pushed = handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert pushed == 2
+        assert handler.partial_push is False
+
+    def test_partial_push_true_when_some_bundles_skipped(self):
+        # Mix of: missing ``stix_url`` (skipped before any client call),
+        # transport-failed bundle download (None), valid bundle.
+        handler = self._make_handler_for_push(
+            [
+                None,  # download failure for the second ref
+                {
+                    "objects": [
+                        {"type": "indicator", "id": "indicator--ok"},
+                    ]
+                },
+            ]
+        )
+        bundle_refs = [
+            # Missing ``stix_url`` — skipped without consuming a side_effect entry.
+            {"created_at": 1700000000},
+            # Download fails — first side_effect entry consumed, returns None.
+            {"stix_url": "https://example.invalid/fail", "created_at": 1700000001},
+            # Download succeeds — second side_effect entry consumed.
+            {"stix_url": "https://example.invalid/ok", "created_at": 1700000002},
+        ]
+
+        pushed = handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert pushed == 1  # only the third one made it through
+        assert handler.partial_push is True
+
+    def test_partial_push_resets_between_calls(self):
+        """A clean push after a failed one must reset the flag."""
+        # First pass: one bundle skipped.
+        handler = self._make_handler_for_push(
+            [
+                None,  # download failure
+            ]
+        )
+        bundle_refs = [
+            {"stix_url": "https://example.invalid/fail", "created_at": 1700000001},
+        ]
+        handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+        assert handler.partial_push is True
+
+        # Second pass on the same handler instance with everything green.
+        handler.client.request_data.side_effect = [
+            {"objects": [{"type": "indicator", "id": "indicator--ok"}]},
+        ]
+        clean_refs = [
+            {"stix_url": "https://example.invalid/ok", "created_at": 1700000002},
+        ]
+        handler.push_objects(work_id="work--y", bundle_refs=clean_refs)
+        assert handler.partial_push is False
