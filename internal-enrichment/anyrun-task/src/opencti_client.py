@@ -7,7 +7,7 @@ from pycti import (
     get_config_variable,
     StixCoreRelationship,
     Identity,
-    Indicator
+    Indicator,
 )
 
 ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE = {
@@ -37,7 +37,7 @@ class OpenCTI:
             name="ANY.RUN",
             identity_class="organization",
             description="Empowers SOC teams with a Sandbox for real-time malware analysis, Threat Intelligence Lookup, "
-                        "and high-quality feeds to enhance detection and threat coverage.",
+            "and high-quality feeds to enhance detection and threat coverage.",
             contact_information="techsupport@any.run",
         )
 
@@ -63,7 +63,7 @@ class OpenCTI:
         self._attach_report(task_uuid)
 
         if self._anyrun.get_verdict(
-                task_uuid
+            task_uuid
         ) != "No threats detected" and get_config_variable(
             "ANYRUN_ENABLE_IOC", ["anyrun", "enable_ioc"], config, default=True
         ):
@@ -103,26 +103,40 @@ class OpenCTI:
                 value=self._opencti_entity.get("value"),
                 custom_properties={
                     "x_opencti_labels": labels,
-                    "x_opencti_score": self._get_score(analysis_summary["analysis"]["scores"]["verdict"]["score"]),
+                    "x_opencti_score": self._get_score(
+                        analysis_summary["analysis"]["scores"]["verdict"]["score"]
+                    ),
                     "x_opencti_description": "Detected by ANY.RUN Sandbox",
                     "x_opencti_created_by_ref": self._identity.get("id"),
-                    "x_opencti_external_references": self._get_external_reference(task_uuid)
-                }
+                    "x_opencti_external_references": self._get_external_reference(
+                        task_uuid
+                    ),
+                },
             )
         else:
             observable = stix2.File(
                 hashes={
-                    "MD5": analysis_summary["analysis"]["content"]["mainObject"]["hashes"]["md5"],
-                    "SHA-256": analysis_summary["analysis"]["content"]["mainObject"]["hashes"]["sha256"],
-                    "SHA-1": analysis_summary["analysis"]["content"]["mainObject"]["hashes"]["sha1"]
+                    "MD5": analysis_summary["analysis"]["content"]["mainObject"][
+                        "hashes"
+                    ]["md5"],
+                    "SHA-256": analysis_summary["analysis"]["content"]["mainObject"][
+                        "hashes"
+                    ]["sha256"],
+                    "SHA-1": analysis_summary["analysis"]["content"]["mainObject"][
+                        "hashes"
+                    ]["sha1"],
                 },
                 custom_properties={
                     "x_opencti_labels": labels,
-                    "x_opencti_score": self._get_score(analysis_summary["analysis"]["scores"]["verdict"]["score"]),
+                    "x_opencti_score": self._get_score(
+                        analysis_summary["analysis"]["scores"]["verdict"]["score"]
+                    ),
                     "x_opencti_description": "Detected by ANY.RUN Sandbox",
                     "x_opencti_created_by_ref": self._identity.get("id"),
-                    "x_opencti_external_references": self._get_external_reference(task_uuid)
-                }
+                    "x_opencti_external_references": self._get_external_reference(
+                        task_uuid
+                    ),
+                },
             )
 
             relationship = stix2.Relationship(
@@ -138,16 +152,17 @@ class OpenCTI:
                 source_ref=observable.id,
                 target_ref=self._opencti_entity.get("standard_id"),
                 custom_properties={
-                    "x_opencti_external_references": self._get_external_reference(task_uuid)
-                }
+                    "x_opencti_external_references": self._get_external_reference(
+                        task_uuid
+                    )
+                },
             )
             bundle.append(relationship)
 
         bundle.append(observable)
 
         self._helper.send_stix2_bundle(
-            self._helper.stix2_create_bundle(bundle),
-            update=True
+            self._helper.stix2_create_bundle(bundle), update=True
         )
 
     def _get_score(self, anyrun_score: int) -> int:
@@ -179,7 +194,9 @@ class OpenCTI:
                     if ioc.get("category") == "Main object":
                         continue
 
-                    observable_type = ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE.get(ioc.get("type"))
+                    observable_type = ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE.get(
+                        ioc.get("type")
+                    )
                     observable_value = ioc.get("ioc")
 
                     if observable_type == "File":
@@ -188,8 +205,10 @@ class OpenCTI:
                             custom_properties={
                                 "x_opencti_description": "Detected by ANY.RUN Sandbox",
                                 "x_opencti_created_by_ref": self._identity.get("id"),
-                                "x_opencti_external_references": self._get_external_reference(task_uuid)
-                            }
+                                "x_opencti_external_references": self._get_external_reference(
+                                    task_uuid
+                                ),
+                            },
                         )
                     elif observable_type == "Domain-Name":
                         observable = stix2.DomainName(
@@ -197,8 +216,10 @@ class OpenCTI:
                             custom_properties={
                                 "x_opencti_description": "Detected by ANY.RUN Sandbox",
                                 "x_opencti_created_by_ref": self._identity.get("id"),
-                                "x_opencti_external_references": self._get_external_reference(task_uuid)
-                            }
+                                "x_opencti_external_references": self._get_external_reference(
+                                    task_uuid
+                                ),
+                            },
                         )
                     elif observable_type == "Url":
                         observable = stix2.URL(
@@ -206,8 +227,10 @@ class OpenCTI:
                             custom_properties={
                                 "x_opencti_description": "Detected by ANY.RUN Sandbox",
                                 "x_opencti_created_by_ref": self._identity.get("id"),
-                                "x_opencti_external_references": self._get_external_reference(task_uuid)
-                            }
+                                "x_opencti_external_references": self._get_external_reference(
+                                    task_uuid
+                                ),
+                            },
                         )
                     elif observable_type == "IPv4-Addr":
                         observable = stix2.IPv4Address(
@@ -215,8 +238,10 @@ class OpenCTI:
                             custom_properties={
                                 "x_opencti_description": "Detected by ANY.RUN Sandbox",
                                 "x_opencti_created_by_ref": self._identity.get("id"),
-                                "x_opencti_external_references": self._get_external_reference(task_uuid)
-                            }
+                                "x_opencti_external_references": self._get_external_reference(
+                                    task_uuid
+                                ),
+                            },
                         )
 
                     relationship = stix2.Relationship(
@@ -232,13 +257,14 @@ class OpenCTI:
                         source_ref=observable.id,
                         target_ref=self._opencti_entity.get("standard_id"),
                         custom_properties={
-                            "x_opencti_external_references": self._get_external_reference(task_uuid)
-                        }
+                            "x_opencti_external_references": self._get_external_reference(
+                                task_uuid
+                            )
+                        },
                     )
 
                     objects.append(observable)
                     objects.append(relationship)
-
 
                 elif ioc.get("reputation") in (1, 2):
                     pattern = "[{}:value = '{}']".format(
@@ -253,11 +279,17 @@ class OpenCTI:
                         pattern_type="stix",
                         pattern=pattern,
                         custom_properties={
-                            "x_opencti_score": {1: 50, 2: 100}.get(ioc.get("reputation")),
+                            "x_opencti_score": {1: 50, 2: 100}.get(
+                                ioc.get("reputation")
+                            ),
                             "x_opencti_created_by_ref": self._identity.get("id"),
-                            "x_opencti_external_references": self._get_external_reference(task_uuid),
-                            "x_opencti_main_observable_type": ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE.get(ioc.get("type"))
-                        }
+                            "x_opencti_external_references": self._get_external_reference(
+                                task_uuid
+                            ),
+                            "x_opencti_main_observable_type": ANYRUN_INDICATOR_TO_MAIN_OBSERVABLE.get(
+                                ioc.get("type")
+                            ),
+                        },
                     )
 
                     relationship = stix2.Relationship(
@@ -273,16 +305,16 @@ class OpenCTI:
                         source_ref=indicator.id,
                         target_ref=self._opencti_entity.get("standard_id"),
                         custom_properties={
-                            "x_opencti_external_references": self._get_external_reference(task_uuid)
-                        }
+                            "x_opencti_external_references": self._get_external_reference(
+                                task_uuid
+                            )
+                        },
                     )
 
                     objects.append(indicator)
                     objects.append(relationship)
 
-            self._helper.send_stix2_bundle(
-                self._helper.stix2_create_bundle(objects)
-            )
+            self._helper.send_stix2_bundle(self._helper.stix2_create_bundle(objects))
 
     def _attach_report(self, task_uuid: str) -> None:
         """
@@ -309,7 +341,7 @@ class OpenCTI:
             stix2.ExternalReference(
                 source_name=f"ANY.RUN analysis {task_uuid}",
                 url=f"https://app.any.run/tasks/{task_uuid}",
-                description="ANY.RUN related analysis URL"
+                description="ANY.RUN related analysis URL",
             )
         ]
 
