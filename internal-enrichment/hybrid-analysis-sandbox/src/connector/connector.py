@@ -13,7 +13,6 @@ from pycti import (
     OpenCTIConnectorHelper,
     StixCoreRelationship,
 )
-from stix2 import DomainName, File, IPv4Address, IPv6Address
 
 
 class HybridAnalysisReportError(Exception):
@@ -73,18 +72,14 @@ class HybridAnalysis:
         if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
             # Modifying the hashes will produce new `Standard STIX ID`s on OpenCTI side
             # This is an **expected** behavior handled by OpenCTI during bundle ingestion
+            enriched_entity_hashes = enriched_entity.get("hashes", {})
             if report["md5"] is not None:
-                if enriched_entity.get("hashes") is None:
-                    enriched_entity["hashes"] = {}
-                enriched_entity["hashes"]["MD5"] = report["md5"]
+                enriched_entity_hashes["MD5"] = report["md5"]
             if report["sha1"] is not None:
-                if enriched_entity.get("hashes") is None:
-                    enriched_entity["hashes"] = {}
-                enriched_entity["hashes"]["SHA-1"] = report["sha1"]
+                enriched_entity_hashes["SHA-1"] = report["sha1"]
             if report["sha256"] is not None:
-                if enriched_entity.get("hashes") is None:
-                    enriched_entity["hashes"] = {}
-                enriched_entity["hashes"]["SHA-256"] = report["sha256"]
+                enriched_entity_hashes["SHA-256"] = report["sha256"]
+            enriched_entity["hashes"] = enriched_entity_hashes
 
             if report["submit_name"] is not None:
                 enriched_entity["x_opencti_additional_names"] = report["submit_name"]
@@ -136,7 +131,7 @@ class HybridAnalysis:
 
         for domain in report["domains"]:
             if domain != opencti_entity["observable_value"]:
-                domain_stix = DomainName(
+                domain_stix = stix2.DomainName(
                     value=domain,
                     object_marking_refs=[self.tlp],
                     custom_properties={"created_by_ref": self.identity.id},
@@ -157,13 +152,13 @@ class HybridAnalysis:
 
         for host in report["hosts"]:
             if self.detect_ip_version(host) == "IPv4-Addr":
-                host_stix = IPv4Address(
+                host_stix = stix2.IPv4Address(
                     value=host,
                     object_marking_refs=[self.tlp],
                     custom_properties={"created_by_ref": self.identity.id},
                 )
             else:
-                host_stix = IPv6Address(
+                host_stix = stix2.IPv6Address(
                     value=host,
                     object_marking_refs=[self.tlp],
                     custom_properties={"created_by_ref": self.identity.id},
@@ -184,7 +179,7 @@ class HybridAnalysis:
 
         for file in report["extracted_files"]:
             if file["threat_level"] > 0:
-                file_stix = File(
+                file_stix = stix2.File(
                     hashes={
                         "MD5": file["md5"],
                         "SHA-1": file["sha1"],
@@ -192,9 +187,11 @@ class HybridAnalysis:
                     },
                     size=file["size"],
                     name=file["name"],
-                    custom_properties={"x_opencti_labels": file["type_tags"]},
-                    created_by_ref=self.identity.id,
                     object_marking_refs=[self.tlp],
+                    custom_properties={
+                        "created_by_ref": self.identity.id,
+                        "x_opencti_labels": file["type_tags"],
+                    },
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
