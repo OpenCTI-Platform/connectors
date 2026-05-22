@@ -1,8 +1,15 @@
 FROM python:3.12-alpine
 ENV CONNECTOR_TYPE=INTERNAL_ENRICHMENT
 
-# Copy the connector
-COPY src /opt/opencti-connector-assemblyline
+# Copy ONLY the requirements file first so the ``pip install`` layer
+# can be cached across rebuilds whenever the connector source changes
+# but dependencies do not. Copying the full ``src/`` tree before
+# ``pip install`` (as the earlier shape did) invalidated the
+# dependency-install layer on every source edit — slow on CI and
+# unnecessary. Matches the established
+# ``internal-enrichment/joe-sandbox/Dockerfile`` pattern referenced in
+# the ``apk`` rationale below.
+COPY src/requirements.txt /opt/opencti-connector-assemblyline/requirements.txt
 
 # Install Python modules.
 # ``assemblyline-client==4.9.9`` pulls ``pycryptodome``, ``python-baseconv``,
@@ -18,6 +25,11 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
     cd /opt/opencti-connector-assemblyline && \
     pip3 install --no-cache-dir -r requirements.txt && \
     apk del git build-base
+
+# Copy the rest of the source tree AFTER ``pip install`` so the
+# preceding dependency-install layer stays cache-friendly across
+# source-only rebuilds.
+COPY src /opt/opencti-connector-assemblyline
 
 # Expose and entrypoint
 COPY entrypoint.sh /

@@ -490,12 +490,28 @@ class AssemblyLineConnector:
         into ``self._current_file_size`` so :meth:`_create_summary_note`
         can fall back to it when neither the observable nor the
         AssemblyLine ``file_info`` carry a size.
+
+        ``fetch_opencti_file(..., binary=True)`` is documented to
+        return a bytes payload, but in degraded conditions (e.g. an
+        HTML error page surfaced by the platform's reverse proxy)
+        callers have seen ``str`` come back instead. The downstream
+        consumers (``io.BytesIO(file_content)`` in :meth:`_process_file`
+        and the ``submit`` call into the AssemblyLine SDK) then crash
+        with an opaque ``TypeError`` that points at the wrong place.
+        Validate the return type up-front and raise a clear exception
+        — mirrors what :meth:`_download_import_file` does for the
+        ``importFiles`` path so a failure mode in either fetch path
+        surfaces with the same shape.
         """
         file_uri = f"{self.opencti_url}/storage/get/{file_id}"
         content = self.helper.api.fetch_opencti_file(file_uri, binary=True)
-        if isinstance(content, (bytes, bytearray)):
-            self._current_file_size = len(content)
-        return content
+        if not isinstance(content, (bytes, bytearray)):
+            raise Exception(
+                "fetch_opencti_file returned a non-binary payload "
+                f"({type(content).__name__})"
+            )
+        self._current_file_size = len(content)
+        return bytes(content)
 
     def _get_file_content(
         self, observable: Dict[str, Any]
