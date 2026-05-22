@@ -546,7 +546,7 @@ def test_process_message_with_triggering_entity_does_not_propagate_author_to_imp
     NOT inherit the triggering entity's author, even when one is set on the
     triggering entity mock.
 
-    Before #14105, the connector called ``bulk_update_authors(triggering_entity.author_id, ai_bundle)``
+    Before OpenCTI-Platform/opencti#14105, the connector called ``bulk_update_authors(triggering_entity.author_id, ai_bundle)``
     after assembling the triggering-entity-driven enrichment, which silently
     overwrote ``created_by_ref`` (and ``x_opencti_created_by_ref`` for SCOs)
     on every imported object. In draft mode this meant a list of IPs imported
