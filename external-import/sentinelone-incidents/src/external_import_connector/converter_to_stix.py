@@ -86,10 +86,16 @@ class ConverterToStix:
 
     def create_user_account_observable(
         self, s1_incident: dict, cti_incident_id: str
-    ) -> list[stix2.UserAccount, stix2.Relationship]:
+    ) -> list:
         """
         Creates a Stix UserAccount Observable from a SentinelOne incident
         alongside a relationship to the incident.
+
+        Returns an empty list when the incident carries no usable
+        ``agentComputerName`` — the caller in ``connector.py`` extends
+        a single ``stix_objects`` list with the return value and used
+        to crash with ``TypeError: 'NoneType' is not iterable`` when
+        this function returned ``None`` instead.
         """
 
         self.helper.connector_logger.debug(
@@ -100,7 +106,7 @@ class ConverterToStix:
             "agentComputerName", ""
         )
         if not endpoint_name:
-            return None
+            return []
 
         account_name = s1_incident.get("agentRealtimeInfo", {}).get(
             "accountName", "unknown"
@@ -144,10 +150,24 @@ class ConverterToStix:
         for indicator in incident_data.get("indicators", []):
             for tactic in indicator.get("tactics", []):
                 for technique in tactic.get("techniques", []):
+                    # Skip techniques without a usable name —
+                    # ``AttackPattern.generate_id("")`` would otherwise
+                    # produce a single constant deterministic id for
+                    # every nameless technique, silently collapsing
+                    # them into one empty-name SDO that collides with
+                    # every other nameless technique across all
+                    # incidents.
+                    technique_name = (technique.get("name") or "").strip()
+                    if not technique_name:
+                        self.helper.connector_logger.debug(
+                            "Skipping technique with empty name",
+                            meta={"technique": technique},
+                        )
+                        continue
                     attack_pattern = stix2.AttackPattern(
-                        id=AttackPattern.generate_id(technique.get("name", "")),
+                        id=AttackPattern.generate_id(technique_name),
                         created_by_ref=self.author,
-                        name=technique.get("name", ""),
+                        name=technique_name,
                         description=indicator.get("description", ""),
                         external_references=[create_mitre_reference(technique)],
                         object_marking_refs=[stix2.TLP_RED.id],

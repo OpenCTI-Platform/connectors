@@ -107,5 +107,7 @@ class ConfigConnector:
             self.load,
         )
         if not configured_import_start_date:
-            raise ConnectorConfigurationError("IMPORT_START_DATE is not configured")
+            raise ConnectorConfigurationError(
+                "SENTINELONE_INCIDENTS_IMPORT_START_DATE is not configured"
+            )
         self.import_start_date = configured_import_start_date

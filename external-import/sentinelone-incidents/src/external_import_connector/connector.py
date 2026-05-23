@@ -1,12 +1,37 @@
-import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from pycti import OpenCTIConnectorHelper
 
 from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
 from .s1_client import SentinelOneClient
+
+
+def _parse_iso_datetime(value: str) -> datetime:
+    """Parse an ISO 8601 datetime string and return a UTC-aware ``datetime``.
+
+    ``datetime.fromisoformat`` only learned to accept the trailing ``Z``
+    suffix in Python 3.11; both the persisted state
+    (``current_state["last_run"]`` is written as ``...Z`` further down
+    in this module) and ``SENTINELONE_INCIDENTS_IMPORT_START_DATE``
+    (the shipped samples use ``2026-01-01T00:00:00Z``) would otherwise
+    crash on startup or on the second run with a ``ValueError``.
+    Normalise a trailing ``Z`` to ``+00:00`` first, then coerce
+    timezone-naive values to UTC so downstream comparisons against
+    UTC-aware values (``incident_created_at`` in
+    :meth:`SentinelOneClient.fetch_incidents`) do not raise
+    ``TypeError`` when aware and naive datetimes are compared.
+    """
+    normalised = value.strip()
+    if normalised.endswith("Z"):
+        normalised = normalised[:-1] + "+00:00"
+    parsed = datetime.fromisoformat(normalised)
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    else:
+        parsed = parsed.astimezone(timezone.utc)
+    return parsed
 
 
 class IncidentConnector:
@@ -19,28 +44,6 @@ class IncidentConnector:
         self.s1_client = SentinelOneClient(self.helper.connector_logger, self.config)
         self.stix_client = ConverterToStix(self.helper)
 
-        # self._setup_development_logging(self.helper)
-
-    def _setup_development_logging(self):
-        """
-        Override json logging for more clarity in
-        development :)
-
-        """
-
-        logging.basicConfig(
-            format="%(levelname)s %(asctime)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-            level=logging.DEBUG,
-            force=True,
-        )
-
-        logging.addLevelName(logging.DEBUG, "[*]")
-        logging.addLevelName(logging.INFO, "[+]")
-        logging.addLevelName(logging.WARNING, "[?]")
-        logging.addLevelName(logging.ERROR, "[!]")
-        logging.addLevelName(logging.CRITICAL, "[⚠️]")
-
     def process_message(self) -> None:
         """
         The main process for the connector, triggered
@@ -49,40 +52,48 @@ class IncidentConnector:
         """
         self.helper.connector_logger.info(
             "Starting connector...",
-            {"connector_name": self.helper.connect_name},
+            meta={"connector_name": self.helper.connect_name},
         )
 
         try:
-            # Get the current state
+            # Get the current state. ``_parse_iso_datetime`` normalises
+            # both the persisted state (written as ``...Z``) and the
+            # configured ``SENTINELONE_INCIDENTS_IMPORT_START_DATE`` to
+            # a UTC-aware datetime so the downstream comparison against
+            # ``incident_created_at`` in ``fetch_incidents`` does not
+            # crash with ``TypeError`` (aware vs naive) or silently fall
+            # back to the configured start date on every run because
+            # ``datetime.fromisoformat`` rejected the ``Z`` suffix.
             current_state = self.helper.get_state() or {}
             last_run = (
-                datetime.fromisoformat(current_state["last_run"])
+                _parse_iso_datetime(current_state["last_run"])
                 if "last_run" in current_state
                 else None
             )
 
             self.helper.connector_logger.info(
                 "Connector last run",
-                {"last_run": last_run or "Never"},
+                meta={"last_run": str(last_run) if last_run else "Never"},
             )
             self.helper.connector_logger.info(
                 "Running connector...",
-                {"connector_name": self.helper.connect_name},
+                meta={"connector_name": self.helper.connect_name},
             )
 
             # Performing the collection of intelligence
-            start_date = last_run or datetime.fromisoformat(
-                self.config.import_start_date
-            )
+            start_date = last_run or _parse_iso_datetime(self.config.import_start_date)
 
             ############### PHASE 1: SCAN FOR INCIDENTS ###############
 
             # query new incidents
             self._query_new_incidents(start_date)
 
-            # after this, close that work
+            # The scan filters incidents by their ``createdAt`` against
+            # ``start_date`` — there is no flag/sign filter anymore — so
+            # the log line reflects the current behaviour.
             self.helper.connector_logger.info(
-                "Connector Completed Flagged Incidents Scan"
+                "Connector completed incidents scan",
+                meta={"start_date": str(start_date)},
             )
             #########################################################
 
@@ -94,25 +105,25 @@ class IncidentConnector:
 
             ################ PHASE 3: Update State ###############
 
-            # Store the current timestamp as a last run of the connector
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
+            # Store the current timestamp as the last run of the
+            # connector. Use a UTC-aware ``datetime.now`` (the previous
+            # ``datetime.utcfromtimestamp`` is deprecated in Python
+            # 3.12+) and serialise back to the canonical
+            # ``YYYY-MM-DDTHH:MM:SSZ`` shape so the next cycle's
+            # ``_parse_iso_datetime`` round-trip is exact.
+            now_utc = datetime.now(timezone.utc)
+            current_state_datetime = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
             current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-            last_run_datetime = datetime.utcfromtimestamp(current_timestamp).strftime(
-                "%Y-%m-%dT%H:%M:%SZ"
-            )
             if current_state:
                 current_state["last_run"] = current_state_datetime
             else:
                 current_state = {"last_run": current_state_datetime}
             self.helper.set_state(current_state)
 
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} connector successfully run, storing "
+                f"last_run as {current_state_datetime}"
             )
-            self.helper.connector_logger.info(message)
             #########################################################
 
         except (KeyboardInterrupt, SystemExit):
@@ -134,8 +145,10 @@ class IncidentConnector:
 
     def _query_new_incidents(self, start_date: datetime) -> None:
         """
-        Queries for new incidents that are flagged to the
-        connector and adds them to the to_process list.
+        Queries for incidents created on SentinelOne strictly after
+        ``start_date`` and adds them to the ``to_process`` list. No
+        flag/sign filter is applied — the ``createdAt`` cursor is the
+        only selection criterion.
         """
 
         # Retrieve all incidents from SentinelOne
@@ -194,9 +207,16 @@ class IncidentConnector:
             cti_incident_id = incident_items[0].get("id")
             stix_objects.extend(incident_items)
 
-            # UserAccount + Relationship to Incident
-            account_items = self.stix_client.create_user_account_observable(
-                s1_incident, cti_incident_id
+            # UserAccount + Relationship to Incident.
+            # ``create_user_account_observable`` returns an empty list
+            # when the incident carries no ``agentComputerName``; treat
+            # the falsy return uniformly via ``extend([])`` rather than
+            # crashing on ``extend(None)``.
+            account_items = (
+                self.stix_client.create_user_account_observable(
+                    s1_incident, cti_incident_id
+                )
+                or []
             )
             stix_objects.extend(account_items)
 

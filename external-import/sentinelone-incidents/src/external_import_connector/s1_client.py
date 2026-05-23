@@ -17,17 +17,28 @@ INCIDENTS_API_LOCATION = (
 INCIDENT_NOTES_API_LOCATION_TEMPLATE = "/web/api/v2.1/threats/{incident_id}/notes?limit=1000&sortBy=createdAt&sortOrder=desc"
 
 
-def _parse_utc(dt_str: str) -> datetime:
+def _parse_utc(dt_str: Optional[str]) -> Optional[datetime]:
     """Parse an ISO 8601 datetime string and ensure it is UTC-aware.
-    Handles both 'Z' suffix and missing timezone (assumes UTC).
-    Compatible with Python 3.9+.
+
+    Returns ``None`` when the input is missing/empty so the caller can
+    explicitly decide what to do with an incident that carries no
+    ``createdAt`` — the previous shape returned the Unix epoch
+    (``1970-01-01T00:00:00Z``), which in :meth:`fetch_incidents` would
+    immediately be ``< start_date`` and stop pagination on the first
+    timestamp-less record, silently skipping every newer incident
+    behind it.
+
+    Handles both the ``Z`` suffix and timezone-naive inputs (assumed
+    UTC). Compatible with Python 3.9+.
     """
     if not dt_str:
-        return datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return None
     dt_str = dt_str.replace("Z", "+00:00")
     dt = datetime.fromisoformat(dt_str)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
     return dt
 
 
@@ -44,6 +55,18 @@ class SentinelOneClient:
         Results are sorted descending by createdAt, so we stop as soon
         as we hit an incident older than start_date.
         """
+        # Normalise ``start_date`` to UTC-aware so the
+        # ``incident_created_at < start_date`` comparison below never
+        # raises ``TypeError`` when the caller hands in a naive
+        # datetime (e.g. a downstream regression that re-introduces
+        # naive parsing in ``connector.py``). Naive values are assumed
+        # to already be UTC — the connector only produces UTC
+        # timestamps anyway.
+        if start_date.tzinfo is None:
+            start_date = start_date.replace(tzinfo=timezone.utc)
+        else:
+            start_date = start_date.astimezone(timezone.utc)
+
         url = self.config.s1_url + INCIDENTS_API_LOCATION + self.config.s1_account_id
         incidents = []
         skip = 0
@@ -66,6 +89,22 @@ class SentinelOneClient:
             for incident in page_data:
                 threat_info = incident.get("threatInfo", {})
                 incident_created_at = _parse_utc(threat_info.get("createdAt", ""))
+
+                # Skip incidents with a missing/empty ``createdAt``
+                # rather than stopping the pagination: ``_parse_utc``
+                # now returns ``None`` for those, and treating them as
+                # 1970-01-01 (the previous shape) would always be
+                # ``< start_date`` and silently truncate the result
+                # set on the first timestamp-less record. Log and
+                # continue so the operator can investigate the upstream
+                # data quality issue without losing every newer
+                # incident behind it.
+                if incident_created_at is None:
+                    self.logger.warning(
+                        "Incident has no createdAt timestamp; skipping",
+                        meta={"incident_id": incident.get("id")},
+                    )
+                    continue
 
                 if incident_created_at < start_date:
                     self.logger.info(
