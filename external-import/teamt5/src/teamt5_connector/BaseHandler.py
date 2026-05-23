@@ -188,6 +188,22 @@ class BaseHandler(ABC):
         # ``schedule_iso`` invocations).
         self.partial_push = False
         num_bundles_pushed = 0
+        # Count refs the connector actually attempted to push — i.e.
+        # those carrying a ``stix_url`` we can dereference. References
+        # that the upstream TeamT5 listing returns without a
+        # ``stix_url`` are intentionally non-pushable (the listing
+        # surfaces them for visibility but ``BaseHandler.push_objects``
+        # has nothing to download), so they MUST be excluded from the
+        # ``partial_push`` denominator below: counting them as
+        # failures would treat every cycle that sees a non-pushable
+        # ref as a partial failure, freeze the persisted ``last_run``
+        # cursor in place forever, and re-process the same bundles on
+        # every subsequent run. Transport / decode failures on a
+        # ``stix_url`` we DID attempt to download are still counted as
+        # partial failures — those bundles can be retried on the next
+        # cycle and the cursor should hold so they are not silently
+        # skipped.
+        pushable_refs = 0
 
         for bundle_ref in bundle_refs:
 
@@ -198,9 +214,11 @@ class BaseHandler(ABC):
             bundle_url = bundle_ref.get("stix_url")
             if bundle_url is None:
                 self.helper.connector_logger.warning(
-                    f"Failed to push {self.name}: {self.name} has no STIX url from which it can be retrieved."
+                    f"Skipping {self.name}: listing reference has no STIX url to download."
                 )
                 continue
+
+            pushable_refs += 1
 
             # Retrieve the STIX Bundle corresponding to the bundle reference
             stix_bundle = self.client.request_data(bundle_url)
@@ -232,13 +250,15 @@ class BaseHandler(ABC):
 
         # Signal partial failure to the caller (consumed by
         # ``TeamT5Connector.process_message`` to decide whether the
-        # persisted ``last_run`` cursor can be advanced). Any bundle
-        # that fell through the ``continue`` branches above (missing
-        # ``stix_url``, transport error returning ``None`` for the
-        # bundle download, empty / objectless bundle body) was skipped
-        # rather than retried, so advancing the cursor past these
-        # references would silently lose them on the next cycle.
-        if num_bundles_pushed < len(bundle_refs):
+        # persisted ``last_run`` cursor can be advanced). The
+        # denominator is ``pushable_refs`` (refs with a ``stix_url``),
+        # NOT ``len(bundle_refs)`` — references the upstream listing
+        # surfaced without a ``stix_url`` are intentionally
+        # non-pushable and must not freeze the cursor. Refs that DID
+        # carry a ``stix_url`` but fell through a download / decode /
+        # empty-body ``continue`` branch above ARE counted as
+        # failures so the next scheduled cycle retries them.
+        if num_bundles_pushed < pushable_refs:
             self.partial_push = True
 
         return num_bundles_pushed

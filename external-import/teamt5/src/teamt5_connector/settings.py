@@ -72,14 +72,42 @@ class TeamT5Config(BaseConfigModel):
         default=0,
     )
 
+    @staticmethod
+    def _has_secret_value(secret: SecretStr | None) -> bool:
+        """Return True only when ``secret`` carries a non-empty value.
+
+        Pydantic's ``SecretStr | None`` Field accepts an empty string as a
+        valid populated value (``SecretStr("")`` is not None), but in
+        practice an unset env var on a Compose deployment frequently
+        materialises as ``""`` rather than ``None``. The earlier
+        ``is not None`` check let those empties through validation, and
+        ``Teamt5Client.__init__`` then resolved both branches to falsy
+        values and silently fell through to a no-auth client. Treat
+        empty / whitespace-only secrets as missing here so the operator
+        sees the actionable startup error this validator is supposed to
+        produce, instead of a silent no-auth start that fails at the
+        first API call.
+        """
+        if secret is None:
+            return False
+        try:
+            value = secret.get_secret_value()
+        except AttributeError:
+            return False
+        return bool(value) and bool(str(value).strip())
+
     @model_validator(mode="after")
     def _require_some_authentication(self) -> "TeamT5Config":
-        has_api_key = self.api_key is not None
-        has_oauth = self.client_id is not None and self.client_secret is not None
+        has_api_key = self._has_secret_value(self.api_key)
+        has_oauth = self._has_secret_value(self.client_id) and self._has_secret_value(
+            self.client_secret
+        )
         if not (has_api_key or has_oauth):
             raise ValueError(
                 "TeamT5 connector requires either `api_key` OR both "
-                "`client_id` and `client_secret` to be configured."
+                "`client_id` and `client_secret` to be configured "
+                "(empty / whitespace-only values are treated as "
+                "unset)."
             )
         return self
 

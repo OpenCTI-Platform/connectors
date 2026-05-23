@@ -414,3 +414,99 @@ class TestPushObjectsPartialPushFlag:
         ]
         handler.push_objects(work_id="work--y", bundle_refs=clean_refs)
         assert handler.partial_push is False
+
+    def test_partial_push_false_when_only_missing_stix_url_refs_skipped(self):
+        """Refs without ``stix_url`` are non-pushable, NOT partial failures.
+
+        Pins the regression flagged by the Copilot review thread on
+        ``BaseHandler.py:242``: the upstream TeamT5 listing can
+        legitimately surface bundle references without a ``stix_url``
+        (e.g. IOC bundle entries that have not been promoted to a
+        downloadable STIX dump yet). Counting those as failures
+        against the ``num_bundles_pushed < len(bundle_refs)``
+        denominator would (a) treat every cycle that sees one of
+        these refs as a partial failure, (b) freeze
+        ``last_run`` in place forever in
+        ``TeamT5Connector.process_message``, and (c) silently
+        re-process every bundle on every subsequent run.
+        ``partial_push`` is now computed against the count of refs
+        that DID carry a ``stix_url`` (the connector's "pushable"
+        set) so a listing dominated by non-pushable refs never
+        freezes the cursor.
+        """
+        # Only the third ref carries a ``stix_url``; the other two
+        # are non-pushable listing entries. Push side-effect therefore
+        # only consumes one entry — the successful download for the
+        # pushable ref.
+        handler = self._make_handler_for_push(
+            [
+                {"objects": [{"type": "indicator", "id": "indicator--ok"}]},
+            ]
+        )
+        bundle_refs = [
+            {"created_at": 1700000000},  # no stix_url
+            {"created_at": 1700000001},  # no stix_url
+            {"stix_url": "https://example.invalid/ok", "created_at": 1700000002},
+        ]
+
+        pushed = handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert pushed == 1
+        # Only one ref was actually pushable, and it was pushed —
+        # so this is a clean run and the cursor should be allowed
+        # to advance.
+        assert handler.partial_push is False
+
+    def test_partial_push_false_when_every_ref_is_non_pushable(self):
+        """A listing of only non-pushable refs is a clean run, not a failure.
+
+        Edge case: the entire listing came back without ``stix_url``s.
+        ``num_bundles_pushed = 0`` and ``pushable_refs = 0``, so the
+        ``num_pushed < pushable_refs`` check evaluates ``0 < 0`` =
+        False and the cursor is allowed to advance on the next
+        cycle — exactly what we want, because none of those refs
+        will ever be retryable through this code path. Logging the
+        skip is enough; it is a listing-quality issue upstream, not
+        a connector failure.
+        """
+        handler = self._make_handler_for_push([])
+        bundle_refs = [
+            {"created_at": 1700000000},
+            {"created_at": 1700000001},
+        ]
+
+        pushed = handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert pushed == 0
+        assert handler.partial_push is False
+
+    def test_partial_push_true_when_pushable_ref_download_fails(self):
+        """Transport / decode failures on a *pushable* ref still hold the cursor.
+
+        Mirrors the Copilot review intent: refs the connector
+        attempted but failed to download must still be retried on
+        the next cycle, so ``partial_push`` flips to ``True`` and
+        the persisted ``last_run`` is held at the previous value.
+        Refs without ``stix_url`` (non-pushable, see the test above)
+        are excluded from the denominator, but a transport failure
+        on a downloadable ``stix_url`` keeps the original
+        retry semantics.
+        """
+        handler = self._make_handler_for_push(
+            [
+                None,  # download failure for the second pushable ref
+                {"objects": [{"type": "indicator", "id": "indicator--ok"}]},
+            ]
+        )
+        bundle_refs = [
+            {"created_at": 1700000000},  # non-pushable, excluded
+            {"stix_url": "https://example.invalid/fail", "created_at": 1700000001},
+            {"stix_url": "https://example.invalid/ok", "created_at": 1700000002},
+        ]
+
+        pushed = handler.push_objects(work_id="work--x", bundle_refs=bundle_refs)
+
+        assert pushed == 1
+        # Of the two pushable refs only one made it through —
+        # partial failure, hold the cursor.
+        assert handler.partial_push is True

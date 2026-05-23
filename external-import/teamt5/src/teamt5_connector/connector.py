@@ -118,6 +118,23 @@ class TeamT5Connector:
                         had_partial_failure = True
                     work_id = None
 
+                elif handler.aborted:
+                    # Distinct log line when the listing bailed out after
+                    # ``_MAX_PAGE_FAILURES`` consecutive failed pages —
+                    # the run actually FAILED to retrieve the upstream
+                    # listing and the next scheduled cycle will retry,
+                    # so logging "No new ... found" here would lie to
+                    # the operator about why no objects were imported.
+                    # ``had_partial_failure`` is already set above when
+                    # the abort flag flipped, so the cursor is also held
+                    # at its previous value.
+                    self.helper.connector_logger.warning(
+                        f"{handler.name} retrieval aborted after consecutive "
+                        f"failed pages; no objects were imported and "
+                        f"last_run will be held at its previous value so "
+                        f"the next scheduled run retries."
+                    )
+
                 else:
                     self.helper.connector_logger.info(f"No new {handler.name}s found")
 
