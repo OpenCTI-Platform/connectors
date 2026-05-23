@@ -23,12 +23,16 @@ def ref_extractors(objects):
     return set(ids)
 
 
-def fetch_stix_data(file):
-    # Open a file: file
-    file = open(file, mode="r")
-    file_content = file.read()
-    file.close()
-    file_json = json.loads(file_content)
+def fetch_stix_data(path):
+    # ``with open(...)`` guarantees the file descriptor is released even
+    # if ``json.loads`` raises on a malformed payload — the previous
+    # ``open(...) / read() / close()`` shape leaked the fd on any
+    # exception between ``open`` and ``close``, which on a long restore
+    # of a corrupt backup tree would slowly exhaust the per-process
+    # fd limit. Renamed the parameter from ``file`` to ``path`` so it
+    # doesn't shadow the freshly opened file object.
+    with open(path, mode="r") as fh:
+        file_json = json.load(fh)
     return file_json["objects"]
 
 
@@ -94,8 +98,12 @@ class RestoreFilesConnector:
         # single-snapshot case.
         for cand in candidate_dirs:
             if date_convert(cand) > dir_date:
-                path = self.backup_path + "/opencti_data/" + cand
-                return fetch_stix_data(os.path.join(path, name))[0]
+                # ``os.path.join`` rather than string concatenation so a
+                # ``backup_path`` with or without a trailing slash both
+                # produce a well-formed path on POSIX and Windows.
+                return fetch_stix_data(
+                    os.path.join(self.backup_path, "opencti_data", cand, name)
+                )[0]
         return None
 
     def resolve_missing(self, backup_files, dir_date, element_ids, data, acc=None):
@@ -136,7 +144,7 @@ class RestoreFilesConnector:
             date_convert(start_directory) if start_directory is not None else None
         )
 
-        path = self.backup_path + "/opencti_data"
+        path = os.path.join(self.backup_path, "opencti_data")
         # ``opencti_data`` should only contain run directories named with the
         # date format expected by ``date_convert`` — but skip anything that
         # is not a directory or whose name is not a valid date so a stray
@@ -254,7 +262,14 @@ class RestoreFilesConnector:
             with os.scandir(entry) as it:
                 for file in it:
                     if file.is_file():
-                        objects = fetch_stix_data(file)
+                        # Pass the explicit ``str`` path rather than the
+                        # ``DirEntry`` itself so ``fetch_stix_data``'s
+                        # ``open(path, mode="r")`` does not rely on the
+                        # implicit ``os.PathLike`` protocol — keeps the
+                        # call site symmetric with the ``find_element``
+                        # path (which already passes a string built
+                        # via ``os.path.join``).
+                        objects = fetch_stix_data(file.path)
                         object_ids = set(map(lambda x: x["id"], objects))
                         element_refs.extend(ref_extractors(objects))
                         files_data.extend(objects)
@@ -339,10 +354,9 @@ class RestoreFilesConnector:
 
     def start(self):
         # Check if the directory exists
-        if not os.path.exists(self.backup_path + "/opencti_data"):
-            raise ValueError(
-                "Backup path does not exist - " + self.backup_path + "/opencti_data"
-            )
+        backup_root = os.path.join(self.backup_path, "opencti_data")
+        if not os.path.exists(backup_root):
+            raise ValueError("Backup path does not exist - " + backup_root)
         self.restore_files()
 
 
