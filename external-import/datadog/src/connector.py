@@ -276,10 +276,23 @@ class DataDogConnector:
             # Ensure timezone-aware datetime
             return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
 
-        # On first run, use configured start date if available
+        # On first run, use configured start date if available.
+        #
+        # ``datetime.fromisoformat`` only learned to accept the
+        # trailing ``Z`` suffix in Python 3.11; the documented sample
+        # values (``2024-01-01T00:00:00Z`` in ``.env.sample`` /
+        # ``config.yml.sample`` / ``docker-compose.yml.sample``) would
+        # silently hit the ``ValueError`` branch and fall back to "24
+        # hours ago" on any older runtime. Normalise a trailing ``Z``
+        # → ``+00:00`` up front so the documented sample format
+        # always parses regardless of the Python version the operator
+        # runs.
         if self.import_start_date:
             try:
-                dt = datetime.fromisoformat(self.import_start_date)
+                normalised = self.import_start_date.strip()
+                if normalised.endswith("Z"):
+                    normalised = normalised[:-1] + "+00:00"
+                dt = datetime.fromisoformat(normalised)
                 # Ensure timezone-aware datetime
                 return dt.replace(tzinfo=UTC) if dt.tzinfo is None else dt
             except ValueError:
@@ -428,8 +441,7 @@ class DataDogConnector:
                         object_errors += 1
                 except Exception as e:
                     self.helper.log_error(
-                        f"Error creating objects for item {data_item.get('id', 'unknown')}: {str(e)}",
-                        exc_info=True,
+                        f"Error creating objects for item {data_item.get('id', 'unknown')}: {str(e)}"
                     )
                     object_errors += 1
 
@@ -449,7 +461,7 @@ class DataDogConnector:
                     f"Created single bundle containing {len(all_stix_objects)} objects from {len(results.get('processed_items', []))} alerts"
                 )
             except Exception as e:
-                self.helper.log_error(f"Error creating bundle: {str(e)}", exc_info=True)
+                self.helper.log_error(f"Error creating bundle: {str(e)}")
                 return {"imported": 0, "errors": 1}
 
             # Send the single bundle to OpenCTI.
@@ -503,7 +515,7 @@ class DataDogConnector:
                 }
 
             except Exception as e:
-                self.helper.log_error(f"Error sending bundle: {str(e)}", exc_info=True)
+                self.helper.log_error(f"Error sending bundle: {str(e)}")
                 return {"imported": 0, "errors": 1}
 
         except Exception as e:
@@ -597,12 +609,22 @@ class DataDogConnector:
                     # is surfaced as a red Work in the OpenCTI UI
                     # instead of the default green-on-success outcome
                     # the platform applies when ``in_error`` is
-                    # omitted. ``exc_info=True`` captures the stack
-                    # trace alongside the message so operators can
-                    # diagnose the failure without re-running the
-                    # cycle in debug mode.
+                    # omitted. The pycti ``AppLogger.error`` helper
+                    # already attaches the stack trace via its
+                    # internal ``exc_info=1`` (see
+                    # ``pycti/utils/opencti_logger.py``), so the
+                    # trace lands in the connector logs without
+                    # any extra kwarg here — and passing
+                    # ``exc_info=True`` explicitly raises
+                    # ``TypeError: error() got an unexpected
+                    # keyword argument 'exc_info'`` because the
+                    # ``AppLogger.error`` signature is
+                    # ``error(message, meta=None)`` with no
+                    # ``**kwargs`` forwarder. Same fix applied to
+                    # every sibling ``log_error`` call in
+                    # ``_import_data`` and ``importer.py``.
                     error_message = f"Import cycle failed: {str(e)}"
-                    self.helper.log_error(error_message, exc_info=True)
+                    self.helper.log_error(error_message)
 
                     if work_id:
                         self.helper.api.work.to_processed(

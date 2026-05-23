@@ -62,9 +62,7 @@ class DataImporter:
             # ``connector.py::_import_data`` reads this flag and folds
             # it into the cycle's ``errors`` count so the OpenCTI Work
             # is marked red instead of green-on-failure.
-            self.helper.log_error(
-                f"Error processing DataDog data: {str(e)}", exc_info=True
-            )
+            self.helper.log_error(f"Error processing DataDog data: {str(e)}")
             return {"processed_items": [], "total_processed": 0, "errors": 1}
 
     def _process_datadog_alert(
