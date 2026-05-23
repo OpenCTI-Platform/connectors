@@ -63,6 +63,44 @@ _MARKING_ID_TO_TLP: Dict[str, str] = {
 }
 
 
+def _marking_objects_for_ids(ids: List[str]) -> List[stix2.MarkingDefinition]:
+    """Return the MarkingDefinition objects matching ``ids``, deduplicated.
+
+    Looks each id up against ``_MARKING_ID_TO_TLP`` (the reverse
+    index of ``_TLP_MAP``) and returns the corresponding
+    ``stix2.MarkingDefinition`` object. Used by the Artifact and
+    failure-Note branches to ensure every TLP id referenced by an
+    emitted SDO is also registered in the bundle by name. The
+    previous shape only ever shipped ``self.default_tlp_marking``,
+    leaving any other TLP id inherited from the source observable
+    (e.g. ``TLP:CLEAR`` / ``TLP:AMBER+STRICT`` — both OpenCTI-specific
+    custom markings) as a dangling reference: the bundle would
+    advertise the marking on the SDO without registering the
+    corresponding MarkingDefinition object, which collapses the
+    OpenCTI label rendering back to whatever the platform happened
+    to know about that id (typically ``TLP:WHITE`` for the CLEAR
+    collision, or simply ``unknown`` for ``TLP:AMBER+STRICT``).
+
+    Unknown ids (PAP markings, third-party custom markings, ...) are
+    skipped silently — the connector cannot materialise a marking
+    object it does not own and the platform is expected to recognise
+    such ids on its own. Both callers only ever look up the ids
+    actually attached to the SDOs they emit, so this scope is
+    intentional and bounded.
+    """
+    seen: set = set()
+    result: List[stix2.MarkingDefinition] = []
+    for marking_id in ids:
+        if not isinstance(marking_id, str) or not marking_id or marking_id in seen:
+            continue
+        seen.add(marking_id)
+        tlp_string = _MARKING_ID_TO_TLP.get(marking_id)
+        if tlp_string is None:
+            continue
+        result.append(_TLP_MAP[tlp_string])
+    return result
+
+
 def _normalize_tlp(value: Optional[str], fallback: str = "TLP:CLEAR") -> str:
     """Normalize a TLP marking string to OpenCTI's TLP:LEVEL format."""
     if not value or not isinstance(value, str):
@@ -237,23 +275,63 @@ class IPQSConnector:
     # Helpers shared with the Artifact / failure-note branches
     # ------------------------------------------------------------------
     @staticmethod
-    def _is_detected(response: Dict[str, Any]) -> bool:
+    def _normalize_engine_results(
+        response: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Return the per-engine entries on ``response['result']`` as a list.
+
+        IPQS can return ``result`` in two shapes depending on the
+        endpoint and submission profile:
+
+        * a list of per-engine dicts (each carrying its own ``"name"``
+          field), as produced by the ``/malware/scan`` flow;
+        * a per-engine map keyed on the engine name with the engine's
+          detection payload as the value, as produced by some cached
+          ``/malware/lookup`` responses (and called out by the
+          ``constants.FILE_ENRICH_FIELDS`` block-comment).
+
+        This helper normalises both shapes to a single ``list[dict]``
+        so ``_is_detected`` and ``_build_result_summary`` cannot
+        diverge on the shape contract — the previous implementation
+        only walked the list shape and silently treated the dict
+        shape as if there were no engine results, which would have
+        labelled a detected-by-IPQS file as ``Clean``.
+
+        Unknown / malformed shapes return an empty list so the
+        callers fall through to their respective ``no engine
+        results`` paths instead of raising.
+        """
+        raw = response.get("result")
+        if isinstance(raw, list):
+            return [item for item in raw if isinstance(item, dict)]
+        if isinstance(raw, dict):
+            normalized: List[Dict[str, Any]] = []
+            for engine_name, engine_data in raw.items():
+                if not isinstance(engine_data, dict):
+                    continue
+                # Preserve any explicit ``name`` already on the engine
+                # payload so a misshaped IPQS response that carries a
+                # ``name`` field inside the dict shape does not lose it.
+                entry: Dict[str, Any] = {"name": engine_name}
+                entry.update(engine_data)
+                normalized.append(entry)
+            return normalized
+        return []
+
+    @classmethod
+    def _is_detected(cls, response: Dict[str, Any]) -> bool:
         """Return True if at least one malware engine reports a detection."""
-        results = response.get("result", [])
-        if not isinstance(results, list):
-            return False
-        for item in results:
-            if isinstance(item, dict) and item.get("detected") is True:
+        for engine in cls._normalize_engine_results(response):
+            if engine.get("detected") is True:
                 return True
         return False
 
-    @staticmethod
-    def _build_result_summary(response: Dict[str, Any]) -> str:
+    @classmethod
+    def _build_result_summary(cls, response: Dict[str, Any]) -> str:
         """Return a formatted, multi-line summary of each engine result."""
+        engines = cls._normalize_engine_results(response)
         lines: List[str] = []
-        for engine in response.get("result", []) or []:
-            if not isinstance(engine, dict):
-                continue
+        for engine in engines:
             name = engine.get("name", "Unknown Engine")
             detected = engine.get("detected", False)
             error = engine.get("error", False)
@@ -390,12 +468,27 @@ class IPQSConnector:
             labels=labels,
             object_marking_refs=marking_refs,
         )
-        # Include the configured default marking-definition object in
-        # the bundle so OpenCTI-specific markings (TLP:CLEAR,
-        # TLP:AMBER+STRICT) are registered with the platform by
-        # name even when this is the connector's first emission for the
-        # observable. The platform deduplicates by id on subsequent bundles.
-        bundle_objects: List[Any] = [self.author, self.default_tlp_marking, note]
+        # Ship every TLP MarkingDefinition object actually referenced
+        # by the Note (the observable's own markings + the connector
+        # default) so OpenCTI-specific markings (``TLP:CLEAR`` /
+        # ``TLP:AMBER+STRICT``) are registered with the platform by
+        # name rather than being left as dangling references. The
+        # previous shape always shipped only ``self.default_tlp_marking``
+        # — when the source observable was marked
+        # ``TLP:AMBER+STRICT`` (or any other custom TLP id that did
+        # not match the connector default), the bundle's
+        # ``object_marking_refs`` pointed at a marking the bundle
+        # itself never registered, which made the platform fall back
+        # to whatever the id resolved to globally (often
+        # ``TLP:WHITE`` for the CLEAR collision, ``unknown`` for
+        # ``TLP:AMBER+STRICT``). The helper deduplicates by id and
+        # silently skips unknown ids so the scope stays bounded to
+        # markings the connector actually owns.
+        all_marking_ids = list(marking_refs)
+        if self.default_tlp_id:
+            all_marking_ids.append(self.default_tlp_id)
+        marking_objects = _marking_objects_for_ids(all_marking_ids)
+        bundle_objects: List[Any] = [self.author, *marking_objects, note]
         self.helper.send_stix2_bundle(
             stix2.Bundle(*bundle_objects, allow_custom=True).serialize()
         )
@@ -611,12 +704,28 @@ class IPQSConnector:
             score,
             default_object_marking_refs=self._default_marking_refs(),
         )
-        # Ship the configured default marking-definition object alongside
-        # the bundle so non-built-in markings (TLP:CLEAR /
-        # TLP:AMBER+STRICT) are registered with the platform by name
-        # rather than being left as dangling references. OpenCTI
-        # deduplicates by id on subsequent emissions.
-        builder.bundle.append(self.default_tlp_marking)
+        # Ship every TLP MarkingDefinition object referenced by the
+        # bundle's emitted SDOs (the observable's own markings + the
+        # connector default) so non-built-in markings (``TLP:CLEAR`` /
+        # ``TLP:AMBER+STRICT``) are registered with the platform by
+        # name rather than being left as dangling references. The
+        # previous shape only shipped ``self.default_tlp_marking``,
+        # so an Indicator / Relationship inheriting a custom TLP id
+        # from the source observable (built by
+        # ``IPQSBuilder._get_object_marking_refs``) would advertise a
+        # marking the bundle never registered. The helper resolves
+        # only the TLP ids the connector owns (built-in TLP_* +
+        # OpenCTI-specific CLEAR / AMBER+STRICT) and silently skips
+        # third-party / unknown ids that the platform is expected to
+        # recognise on its own. OpenCTI deduplicates by id on
+        # subsequent emissions, so re-shipping a marking the platform
+        # already knows about is harmless.
+        observable_marking_ids = self._observable_marking_refs(observable)
+        all_marking_ids = list(observable_marking_ids)
+        if self.default_tlp_id:
+            all_marking_ids.append(self.default_tlp_id)
+        for marking_obj in _marking_objects_for_ids(all_marking_ids):
+            builder.bundle.append(marking_obj)
 
         description_lines: List[str] = []
         for field, label in self.client.file_enrich_fields.items():

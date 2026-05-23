@@ -165,8 +165,10 @@ PHONE_ENRICH_FIELDS = {
 # * ``result`` — matches when IPQS returns a flat verdict string
 #   (e.g. ``"clean"`` / ``"malicious"``); when it returns the nested
 #   per-engine ``{"engine_a": ..., "engine_b": ...}`` object, the
-#   per-engine lines come from the standalone ``engine_summary``
-#   rendering (see ``_render_engine_summary``) rather than this map.
+#   per-engine lines come from the standalone engine-summary
+#   rendering (see ``IPQSConnector._build_result_summary``, which
+#   normalises both the list and dict shapes IPQS may return)
+#   rather than this map.
 #
 # Description-building (``IPQSConnector._process_artifact``) guards
 # every entry with ``if field in flat_response:`` so the unused shape

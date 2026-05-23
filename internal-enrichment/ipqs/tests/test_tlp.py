@@ -17,6 +17,7 @@ from ipqs.ipqs import (
     _TLP_MAP,
     IPQSConnector,
     _make_tlp_marking,
+    _marking_objects_for_ids,
     _normalize_tlp,
     _resolve_tlp,
 )
@@ -379,3 +380,169 @@ class TestCheckMaxTLPAlternateShape:
         """
         connector = self._make_connector(max_tlp="TLP:AMBER", default_tlp="TLP:CLEAR")
         assert connector._check_max_tlp(observable) is expected
+
+
+class TestMarkingObjectsForIds:
+    """``_marking_objects_for_ids`` materialises every TLP id used.
+
+    Pins the regression that the Artifact / failure-Note bundle used
+    to ship only the connector default ``MarkingDefinition`` even when
+    the emitted SDOs referenced custom TLP ids inherited from the
+    source observable — leaving ``TLP:CLEAR`` / ``TLP:AMBER+STRICT``
+    references dangling.
+    """
+
+    def test_resolves_known_tlp_ids_to_marking_objects(self):
+        ids = [_TLP_MAP["TLP:AMBER+STRICT"].id, _TLP_MAP["TLP:RED"].id]
+        objects = _marking_objects_for_ids(ids)
+        assert {obj.id for obj in objects} == set(ids)
+        assert all(isinstance(obj, stix2.MarkingDefinition) for obj in objects)
+
+    def test_deduplicates_repeated_ids(self):
+        amber_strict_id = _TLP_MAP["TLP:AMBER+STRICT"].id
+        objects = _marking_objects_for_ids(
+            [amber_strict_id, amber_strict_id, amber_strict_id]
+        )
+        assert len(objects) == 1
+        assert objects[0].id == amber_strict_id
+
+    @pytest.mark.parametrize(
+        "ids",
+        [
+            ["marking-definition--unknown-id"],
+            [],
+            [None, 42, ""],
+        ],
+    )
+    def test_skips_unknown_or_falsy_ids(self, ids):
+        # Unknown / non-string / empty ids are silently dropped — the
+        # connector cannot materialise a marking object it does not
+        # own. The platform recognises such ids on its own.
+        assert _marking_objects_for_ids(ids) == []
+
+    def test_includes_amber_strict_when_observable_carries_it(self):
+        """Pins the Copilot finding on `_send_failure_note` / `_process_artifact`.
+
+        When the source observable is marked TLP:AMBER+STRICT, the
+        emitted Note / Indicator / Relationship must ship the matching
+        MarkingDefinition object alongside — the previous shape only
+        shipped the connector default and left the AMBER+STRICT id as
+        a dangling reference.
+        """
+        amber_strict_id = _TLP_MAP["TLP:AMBER+STRICT"].id
+        clear_id = _TLP_MAP["TLP:CLEAR"].id
+        objects = _marking_objects_for_ids([amber_strict_id, clear_id])
+        ids = {obj.id for obj in objects}
+        assert amber_strict_id in ids
+        assert clear_id in ids
+
+
+class TestNormalizeEngineResults:
+    """``_normalize_engine_results`` accepts both list and dict shapes."""
+
+    def test_list_shape_passes_through(self):
+        response: Dict[str, Any] = {
+            "result": [
+                {"name": "Engine A", "detected": True},
+                {"name": "Engine B", "detected": False},
+            ]
+        }
+        engines = IPQSConnector._normalize_engine_results(response)
+        assert [e["name"] for e in engines] == ["Engine A", "Engine B"]
+        assert engines[0]["detected"] is True
+
+    def test_dict_shape_is_normalised_to_list(self):
+        """Pins the Copilot finding on `_build_result_summary`.
+
+        IPQS sometimes returns ``result`` as a per-engine map. The
+        previous implementation iterated ``response.get("result", [])``
+        directly, which iterated the dict's KEYS (engine names as
+        strings); the ``isinstance(engine, dict)`` guard then skipped
+        every entry and the summary fell through to "No engine
+        results available." — even when the response did carry
+        per-engine detections that should have flipped the verdict.
+        """
+        response = {
+            "result": {
+                "Engine A": {"detected": True, "error": False},
+                "Engine B": {"detected": False, "error": False},
+            }
+        }
+        engines = IPQSConnector._normalize_engine_results(response)
+        assert {e["name"] for e in engines} == {"Engine A", "Engine B"}
+        # detection / error fields preserved through the normalisation.
+        engine_a = next(e for e in engines if e["name"] == "Engine A")
+        assert engine_a["detected"] is True
+        assert engine_a["error"] is False
+
+    @pytest.mark.parametrize(
+        "response",
+        [
+            {},
+            {"result": None},
+            {"result": "clean"},
+            {"result": 42},
+            {"result": [None, "string-entry", 123]},
+            {"result": {"engine-a": "not-a-dict"}},
+        ],
+    )
+    def test_unknown_or_malformed_returns_empty_list(self, response):
+        assert IPQSConnector._normalize_engine_results(response) == []
+
+
+class TestIsDetectedDictShape:
+    """``_is_detected`` honours both list and dict shapes for ``result``."""
+
+    def test_dict_shape_with_one_detection_returns_true(self):
+        """Pins the Copilot finding on `_is_detected`.
+
+        Without normalising the dict shape this would return
+        ``False`` and silently mark the observable ``Clean`` even
+        though IPQS reported a detection.
+        """
+        response = {
+            "result": {
+                "Engine A": {"detected": True},
+                "Engine B": {"detected": False},
+            }
+        }
+        assert IPQSConnector._is_detected(response) is True
+
+    def test_dict_shape_with_no_detection_returns_false(self):
+        response = {
+            "result": {
+                "Engine A": {"detected": False},
+                "Engine B": {"detected": False},
+            }
+        }
+        assert IPQSConnector._is_detected(response) is False
+
+    def test_list_shape_still_works(self):
+        response = {
+            "result": [
+                {"name": "Engine A", "detected": True},
+                {"name": "Engine B", "detected": False},
+            ]
+        }
+        assert IPQSConnector._is_detected(response) is True
+
+
+class TestBuildResultSummaryDictShape:
+    """``_build_result_summary`` honours both list and dict shapes."""
+
+    def test_dict_shape_renders_engine_lines(self):
+        response = {
+            "result": {
+                "Engine A": {"detected": True, "error": False},
+            }
+        }
+        summary = IPQSConnector._build_result_summary(response)
+        assert "Engine A" in summary
+        assert "Detected - True" in summary
+        assert "No engine results available." not in summary
+
+    def test_unknown_shape_falls_back_to_default_message(self):
+        assert (
+            IPQSConnector._build_result_summary({"result": "clean"})
+            == "No engine results available."
+        )
