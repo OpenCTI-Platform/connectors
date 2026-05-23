@@ -254,10 +254,16 @@ class RansomwareAPIConnector:
                 if relation_campaign_intrusion:
                     bundle_objects.append(relation_campaign_intrusion)
 
-        # 5. Creating Report object — external references are built once
-        # at the top of this method now, so the Report and the earlier
-        # Campaign share the same canonical reference list.
-        report = None
+        # 5. Accumulate the Report ``object_refs`` as the bundle is
+        # built. ``stix2`` SDOs are conceptually immutable: although
+        # the ``object_refs`` list happens to round-trip a ``.append``
+        # in stix2 3.0.1, the pattern bypasses the property
+        # validators, relies on the storage container being a list
+        # (a future stix2 release could swap it for a tuple), and is
+        # easy to misread because the Report would have to be
+        # constructed with a partial ``object_refs`` list and then
+        # mutated in-place. Build the canonical list here and create
+        # the Report once at the end of this method instead.
         object_refs = []
         if self.config.connector.create_report:
             object_refs.append(victim.get("id"))
@@ -285,31 +291,16 @@ class RansomwareAPIConnector:
                 and relation_intrusion_threat_actor
             ):
                 object_refs.append(relation_intrusion_threat_actor.get("id"))
-
-            report = self.converter_to_stix.process_report(
-                report_name=item.get("group"),
-                victim_name=victim_name,
-                attack_date_iso=attack_date_iso,
-                description=item.get("description"),
-                object_refs=object_refs,
-                discovered_iso=discovered_iso,
-                external_references=external_references,
-            )
-            if report:
-                if self.config.connector.create_campaign and campaign:
-                    report.get("object_refs").append(campaign.get("id"))
-                    if relation_campaign_victim:
-                        report.get("object_refs").append(
-                            relation_campaign_victim.get("id")
-                        )
-                if (
-                    self.config.connector.create_campaign
-                    and self.config.connector.create_intrusion_set
-                    and relation_campaign_intrusion
-                ):
-                    report.get("object_refs").append(
-                        relation_campaign_intrusion.get("id")
-                    )
+            if self.config.connector.create_campaign and campaign:
+                object_refs.append(campaign.get("id"))
+                if relation_campaign_victim:
+                    object_refs.append(relation_campaign_victim.get("id"))
+            if (
+                self.config.connector.create_campaign
+                and self.config.connector.create_intrusion_set
+                and relation_campaign_intrusion
+            ):
+                object_refs.append(relation_campaign_intrusion.get("id"))
 
         # 6. Creating Sector object — the converter's ``process_sector``
         # now gates the per-actor / per-intrusion / per-campaign
@@ -356,21 +347,15 @@ class RansomwareAPIConnector:
                 if self.config.connector.create_campaign and relation_campaign_sector:
                     bundle_objects.append(relation_campaign_sector)
 
-                if self.config.connector.create_report and report:
-                    report.get("object_refs").append(sector.get("id"))
-                    report.get("object_refs").append(relation_sector_victim.get("id"))
+                if self.config.connector.create_report:
+                    object_refs.append(sector.get("id"))
+                    object_refs.append(relation_sector_victim.get("id"))
                     if relation_sector_threat_actor:
-                        report.get("object_refs").append(
-                            relation_sector_threat_actor.get("id")
-                        )
+                        object_refs.append(relation_sector_threat_actor.get("id"))
                     if relation_intrusion_sector:
-                        report.get("object_refs").append(
-                            relation_intrusion_sector.get("id")
-                        )
+                        object_refs.append(relation_intrusion_sector.get("id"))
                     if relation_campaign_sector:
-                        report.get("object_refs").append(
-                            relation_campaign_sector.get("id")
-                        )
+                        object_refs.append(relation_campaign_sector.get("id"))
 
         # 7. Creating Domain object — guard the unicode-strip against a
         # missing/null ``domain`` field. ``item.get("domain")`` can be
@@ -399,9 +384,9 @@ class RansomwareAPIConnector:
             bundle_objects.append(domain)
             bundle_objects.append(relation_victim_domain)
 
-            if self.config.connector.create_report and report:
-                report.get("object_refs").append(domain.get("id"))
-                report.get("object_refs").append(relation_victim_domain.get("id"))
+            if self.config.connector.create_report:
+                object_refs.append(domain.get("id"))
+                object_refs.append(relation_victim_domain.get("id"))
 
         # 8. Creating Location object — ``process_location`` now gates
         # the IntrusionSet -> Location relationship on
@@ -440,25 +425,37 @@ class RansomwareAPIConnector:
                 ):
                     bundle_objects.append(relation_threat_actor_location)
 
-                if self.config.connector.create_report and report:
+                if self.config.connector.create_report:
                     if relation_threat_actor_location:
-                        report.get("object_refs").append(
-                            relation_threat_actor_location.get("id")
-                        )
-                    report.get("object_refs").append(location.get("id"))
+                        object_refs.append(relation_threat_actor_location.get("id"))
+                    object_refs.append(location.get("id"))
                     if relation_intrusion_location:
-                        report.get("object_refs").append(
-                            relation_intrusion_location.get("id")
-                        )
-                    report.get("object_refs").append(location_relation.get("id"))
+                        object_refs.append(relation_intrusion_location.get("id"))
+                    object_refs.append(location_relation.get("id"))
 
-        # Append the Report exactly once, after every ``object_refs``
-        # mutation above is complete. The earlier shape appended it both
-        # inside the location block AND here, relying on downstream
-        # dedup to undo the duplicate — better to keep the flow
-        # obvious.
-        if report:
-            bundle_objects.append(report)
+        # 9. Creating Report object — built ONCE here, after every
+        # ``object_refs`` entry has been accumulated above. The earlier
+        # shape created the Report mid-flow and then mutated
+        # ``report.get("object_refs").append(...)`` from the Sector /
+        # Domain / Location blocks. Although that round-tripped on
+        # stix2 3.0.1 (where ``object_refs`` is internally a list) the
+        # pattern bypasses property validators and breaks the moment a
+        # future stix2 release stores list properties as tuples — and
+        # makes the data flow much harder to follow. Building the full
+        # ``object_refs`` list first and constructing the Report once
+        # is the canonical stix2 idiom.
+        if self.config.connector.create_report:
+            report = self.converter_to_stix.process_report(
+                report_name=item.get("group"),
+                victim_name=victim_name,
+                attack_date_iso=attack_date_iso,
+                description=item.get("description"),
+                object_refs=object_refs,
+                discovered_iso=discovered_iso,
+                external_references=external_references,
+            )
+            if report:
+                bundle_objects.append(report)
 
         self.helper.connector_logger.info(
             "Sending STIX objects to collect_intelligence.",
