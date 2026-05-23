@@ -1308,11 +1308,22 @@ class AssemblyLineConnector:
             # confirmed malware-family attribution from AssemblyLine
             # is a strong enough signal on its own to force the
             # ``malicious`` result.
+            #
+            # The upgrade fires whenever ``has_malicious_evidence`` is
+            # true and the score-bucket result is not already
+            # ``malicious`` — including the ``suspicious`` bucket. A
+            # score in [100, 500) plus a ``malicious``-tagged IOC (or
+            # family attribution) means the rest of the connector
+            # already labels the source observable ``malicious``,
+            # bumps ``x_opencti_score`` to 80, and emits a Note with
+            # ``Verdict: MALICIOUS`` (see ``_process_file`` /
+            # ``_create_summary_note``). Leaving the Malware-Analysis
+            # SDO's ``result`` at ``suspicious`` in that case made the
+            # SDO disagree with everything else the enrichment
+            # produced — the OpenCTI UI then showed contradictory
+            # signals on the same observable.
             has_malicious_evidence = any(malicious_iocs.values())
-            if has_malicious_evidence and result_value not in (
-                "malicious",
-                "suspicious",
-            ):
+            if has_malicious_evidence and result_value != "malicious":
                 result_value = "malicious"
 
             now = datetime.now(tz=timezone.utc).replace(tzinfo=None)

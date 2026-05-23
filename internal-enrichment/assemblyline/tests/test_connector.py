@@ -1979,5 +1979,130 @@ class TestAttackPatternInheritsSourceMarkings:
         assert "objectMarking" not in attack_pattern_kwargs
 
 
+class TestMalwareAnalysisResultValue:
+    """``_create_malware_analysis`` must align ``result`` with malicious evidence.
+
+    The Malware-Analysis SDO's ``result`` is what the OpenCTI UI shows
+    in the *Malware Analysis* section of the enriched observable. The
+    rest of the connector treats *any* malicious tag (or malware-family
+    attribution) as a malicious verdict:
+
+    * ``_process_file`` flips ``is_malicious`` to ``True`` and labels
+      the source observable ``malicious`` with ``x_opencti_score=80``.
+    * ``_create_summary_note`` sets ``Verdict: MALICIOUS``.
+
+    The Malware-Analysis SDO must therefore reach the same conclusion,
+    otherwise the UI shows two contradicting signals on the same
+    observable (e.g. ``label=malicious``, ``score=80``,
+    ``Verdict: MALICIOUS``, but ``Malware-Analysis.result=suspicious``).
+    The previous shape only upgraded a *below-suspicious* score
+    (``unknown`` / ``benign``) when malicious evidence was present —
+    a score in ``[100, 500)`` plus a malicious IOC stayed
+    ``suspicious`` and produced exactly that contradiction.
+    """
+
+    _IDENTITY_ID = "identity--c9a6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f"
+    _SOURCE_ID = "artifact--d9b6f1d2-3b4f-4f4f-8f8f-4f4f4f4f4f4f"
+
+    @classmethod
+    def _observable(cls) -> Dict[str, Any]:
+        return {
+            "id": cls._SOURCE_ID,
+            "entity_type": "Artifact",
+            "standard_id": cls._SOURCE_ID,
+            "objectMarking": [],
+        }
+
+    @classmethod
+    def _empty_iocs(cls) -> Dict[str, list]:
+        return {"domains": [], "ips": [], "urls": [], "families": []}
+
+    def _captured_result(self, max_score: int, malicious_iocs: Dict[str, list]) -> str:
+        connector = _make_connector(
+            assemblyline_identity_standard_id=self._IDENTITY_ID,
+            assemblyline_author=self._IDENTITY_ID,
+        )
+        sent_bundles: list = []
+        connector.helper.stix2_create_bundle = MagicMock(
+            side_effect=lambda objects: sent_bundles.append(objects) or "{}"
+        )
+        connector.helper.send_stix2_bundle = MagicMock()
+        connector._create_malware_analysis(
+            observable_id=self._SOURCE_ID,
+            observable=self._observable(),
+            results={
+                "sid": "sid-1",
+                "max_score": max_score,
+                "times": {
+                    "submitted": "2024-05-04T10:11:12.345Z",
+                    "completed": "2024-05-04T10:12:00Z",
+                },
+            },
+            malicious_iocs=malicious_iocs,
+        )
+        assert sent_bundles, (
+            "Expected a Malware-Analysis bundle to be sent; "
+            f"log_error calls were: {connector.helper.log_error.call_args_list}"
+        )
+        malware_analysis = next(
+            o for o in sent_bundles[0] if getattr(o, "type", None) == "malware-analysis"
+        )
+        return malware_analysis.result
+
+    def test_malicious_score_keeps_malicious_result(self) -> None:
+        # The score-bucket already says ``malicious`` so no upgrade is
+        # required — pinning this ensures the upgrade branch never
+        # accidentally overwrites a higher-confidence verdict.
+        assert self._captured_result(1500, self._empty_iocs()) == "malicious"
+
+    def test_suspicious_score_with_no_iocs_stays_suspicious(self) -> None:
+        # A score in the suspicious bucket without any malicious IOC
+        # remains ``suspicious`` — that matches the score-only verdict
+        # ``_score_to_result_name`` produces. The upgrade branch must
+        # only fire on actual malicious evidence.
+        assert self._captured_result(120, self._empty_iocs()) == "suspicious"
+
+    def test_suspicious_score_with_malicious_ioc_upgrades_to_malicious(
+        self,
+    ) -> None:
+        # Regression test for the previous shape: a score in
+        # ``[100, 500)`` plus a malicious-tagged IOC used to leave the
+        # SDO at ``result=suspicious`` even though
+        # ``_process_file`` / ``_create_summary_note`` already treated
+        # the same input as ``malicious``. The upgrade branch must
+        # therefore fire on the suspicious score-bucket too.
+        iocs = self._empty_iocs()
+        iocs["domains"] = ["malware.example.com"]
+        assert self._captured_result(120, iocs) == "malicious"
+
+    def test_suspicious_score_with_malicious_family_upgrades_to_malicious(
+        self,
+    ) -> None:
+        # The ``families`` bucket counts as malicious evidence on its
+        # own — a confirmed malware-family attribution from
+        # AssemblyLine is a strong enough signal to flip the result
+        # even when no IOC tags were emitted. ``has_malicious_evidence``
+        # therefore drives off ``any(malicious_iocs.values())``, which
+        # includes the ``families`` bucket.
+        iocs = self._empty_iocs()
+        iocs["families"] = ["EMOTET"]
+        assert self._captured_result(120, iocs) == "malicious"
+
+    def test_unknown_score_with_malicious_ioc_upgrades_to_malicious(self) -> None:
+        # A score in the ``unknown`` bucket (1-99) plus a malicious
+        # IOC must also upgrade — covers the original upgrade contract
+        # alongside the ``suspicious``-bucket case above.
+        iocs = self._empty_iocs()
+        iocs["urls"] = ["http://malware.example.com/payload"]
+        assert self._captured_result(50, iocs) == "malicious"
+
+    def test_benign_score_with_no_iocs_stays_benign(self) -> None:
+        # ``score == 0`` and no malicious evidence should keep the
+        # ``benign`` verdict — the upgrade branch only fires on
+        # malicious evidence, never as a side effect of how
+        # ``_score_to_result_name`` slices the score.
+        assert self._captured_result(0, self._empty_iocs()) == "benign"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
