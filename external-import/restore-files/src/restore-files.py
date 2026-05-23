@@ -103,19 +103,28 @@ class RestoreFilesConnector:
         # never use a mutable default value here, otherwise successive top-level
         # invocations would share the same list and cross-run contamination
         # would silently leak elements from one restore directory into another.
+        #
+        # ``element_ids`` is the same ``set`` instance the main bundle-build
+        # loop in ``restore_files`` initialises and passes in: every resolved
+        # ``missing_element`` is inserted into ``acc`` AND its id is added to
+        # ``element_ids`` so subsequent ``ref not in element_ids`` checks
+        # become O(1) set membership instead of a linear scan over the
+        # ever-growing ``acc`` list. The previous shape did
+        # ``next((x for x in acc if x["id"] == ref), None)`` which made the
+        # recursive resolution quadratic in the number of resolved elements
+        # on bundles with many shared ancestors.
         if acc is None:
             acc = []
         refs = ref_extractors([data])
         for ref in refs:
             if ref not in element_ids:
-                not_in = next((x for x in acc if x["id"] == ref), None)
-                if not_in is None:
-                    missing_element = self.find_element(backup_files, dir_date, ref)
-                    if missing_element is not None:
-                        acc.insert(0, missing_element)
-                        self.resolve_missing(
-                            backup_files, dir_date, element_ids, missing_element, acc
-                        )
+                missing_element = self.find_element(backup_files, dir_date, ref)
+                if missing_element is not None:
+                    acc.insert(0, missing_element)
+                    element_ids.add(missing_element["id"])
+                    self.resolve_missing(
+                        backup_files, dir_date, element_ids, missing_element, acc
+                    )
 
     def restore_files(self):
         stix2_splitter = OpenCTIStix2Splitter()
@@ -262,6 +271,15 @@ class RestoreFilesConnector:
                     missing_element = self.find_element(backup_files, dir_date, ref)
                     if missing_element is not None:
                         acc.insert(0, missing_element)
+                        # Dedup against ``ids`` so any other ref in this same
+                        # bundle that points at the same missing entity hits
+                        # the O(1) ``ref not in ids`` early exit on the next
+                        # loop iteration instead of going through the slow
+                        # ``find_element`` + recursive ``resolve_missing``
+                        # path again. ``ids`` is also the same set instance
+                        # passed into ``resolve_missing`` below, so the
+                        # recursive walk shares the same dedup state.
+                        ids.add(missing_element["id"])
                         # 04 - Restart the process to handle recursive resolution
                         self.resolve_missing(
                             backup_files, dir_date, ids, missing_element, acc
