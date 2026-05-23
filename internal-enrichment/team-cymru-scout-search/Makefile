@@ -10,10 +10,10 @@ help:
 	@echo "  docker-down  - Stop docker-compose"
 
 install:
-	pip install -r requirements.txt
+	pip install -r src/requirements.txt
 
 run:
-	python -m src.scout_search_connector.main
+	cd src && python main.py
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +

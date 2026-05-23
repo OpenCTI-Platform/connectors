@@ -10,7 +10,7 @@ connector:
   log_level: info
   interval: 3600 # In seconds
 
-# Connector specific configuration
+# Connector-specific configuration
 # All values can also be provided with environment variables prefixed with
 # DEP_ (for example DEP_USERNAME)
 # and the generic connector values with CONNECTOR_ and OPENCTI_ prefixes.
@@ -29,3 +29,6 @@ dep:
   enable_site_indicator: true
   enable_hash_indicator: true
   skip_empty_victim: true
+  create_sector_identities: true
+  create_intrusion_sets: true
+  create_country_locations: true

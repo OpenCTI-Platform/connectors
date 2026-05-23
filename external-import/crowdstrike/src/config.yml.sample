@@ -22,14 +22,21 @@ crowdstrike:
   malware_start_timestamp:  # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL malware!
   report_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL reports!
   vulnerability_start_timestamp:                                    # Unix timestamp. Leave empty for default (30 days ago). 0 means ALL vulnerabilities!
+  vulnerability_import_affected_products: false
   report_status: 'New'
   report_include_types: 'notice,tipper,intelligence report,periodic report'
   report_type: 'threat-report'
   report_target_industries: ''
   report_guess_malware: false # Use report tags to guess malware
   report_guess_relations: false # Automatically guess and create relationships between entities in reports
+  report_extract_iocs: '' # Comma-separated list of IOC types to extract from report text as observables. Supported: ipv4,ipv6,domain,url,md5,sha1,sha256. Leave empty to disable.
   indicator_start_timestamp:   # Unix timestamp. Leave empty for default (30 days ago). BEWARE! 0 means ALL indicators!
   indicator_exclude_types: 'hash_ion,hash_md5,hash_sha1,password,username'
+  indicator_ip_max_age: 'P90D' # ISO8601 Duration format. Covers both IPv4 and IPv6.
+  indicator_domain_max_age: 'P365D' # ISO8601 Duration format.
+  indicator_url_max_age: 'P60D' # ISO8601 Duration format.
+  indicator_hash_max_age: 'P730D' # ISO8601 Duration format. Covers MD5, SHA1, and SHA256.
+  indicator_default_max_age: 'P30D' # ISO8601 Duration format. Default threshold for any other type.
   default_x_opencti_score: 50
   indicator_low_score: 40
   indicator_low_score_labels: 'MaliciousConfidence/Low'
@@ -38,5 +45,6 @@ crowdstrike:
   indicator_high_score: 80
   indicator_high_score_labels: 'MaliciousConfidence/High'
   indicator_unwanted_labels: '' # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
+  indicator_max_records_per_run: 20000 # Max indicators ingested per run (CrowdStrike can return up to ~1.5M IoCs over 30 days). Set to 0 (or any negative number) to disable the cap.
   no_file_trigger_import: true
   attack_version: "17.1"

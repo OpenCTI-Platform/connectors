@@ -2,7 +2,10 @@
 
 import ipaddress
 
+from connectors_sdk.models.autonomous_system import AutonomousSystem
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
+from connectors_sdk.models.mac_address import MACAddress
+from connectors_sdk.models.reference import Reference
 from pydantic import Field, field_validator
 from stix2.v21 import IPv6Address as Stix2IPv6Address
 
@@ -16,17 +19,19 @@ class IPV6Address(BaseObservableEntity):
         ...     create_indicator=True,
         ...     )
         >>> entity = ip.to_stix2_object()
-
-    Notes:
-        - The `resolves_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `resolves-to` relationships.
-        - The `belongs_to_refs` (from STIX2.1 spec) field is not implemented on OpenCTI.
-          It must be replaced by explicit `belongs-to` relationships.
     """
 
     value: str = Field(
         description="The IP address value. CIDR is allowed.",
         min_length=1,
+    )
+    resolves_to: list[MACAddress | Reference] | None = Field(
+        description="List of MAC addresses that this IP V6 address resolves to.",
+        default=None,
+    )
+    belongs_to: list[AutonomousSystem | Reference] | None = Field(
+        description="List of autonomous systems that this IP V6 address belongs to.",
+        default=None,
     )
 
     @field_validator("value", mode="before")
@@ -45,5 +50,11 @@ class IPV6Address(BaseObservableEntity):
         """Make stix object."""
         return Stix2IPv6Address(
             value=self.value,
+            resolves_to_refs=(
+                [obj.id for obj in self.resolves_to] if self.resolves_to else None
+            ),
+            belongs_to_refs=(
+                [obj.id for obj in self.belongs_to] if self.belongs_to else None
+            ),
             **self._common_stix2_properties(),
         )

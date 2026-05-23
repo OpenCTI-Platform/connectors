@@ -1,13 +1,16 @@
 import ipaddress
-from typing import Literal, Optional
+from datetime import datetime
+from typing import Literal
 
 from connectors_sdk.models import (
-    Indicator,
+    IPV4Address,
+    IPV6Address,
     Malware,
     OrganizationAuthor,
     Relationship,
     TLPMarking,
 )
+from connectors_sdk.models.enums import RelationshipType
 from pycti import (
     OpenCTIConnectorHelper,
 )
@@ -29,8 +32,7 @@ class ConverterToStix:
     ):
         """
         Initialize the converter with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `tlp_level`) if necessary.
+        The connector helper is injected for logging and tracing.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
@@ -57,60 +59,40 @@ class ConverterToStix:
 
         return malware_stix
 
-    def convert_ip(self, ip: str) -> Indicator:
+    def convert_ip(self, ip: str) -> IPV4Address | IPV6Address | None:
 
         if self._is_ipv4(ip):
-            ip_pattern = f"[ipv4-addr:value = '{ ip }']"
-            ip_type = "IPv4-Addr"
-            ip_indicator = self.create_indicator(ip, ip_pattern, ip_type)
+            ip_indicator = IPV4Address(value=ip)
 
         elif self._is_ipv6(ip):
-            ip_pattern = f"[ipv6-addr:value = '{ ip }']"
-            ip_type = "IPv6-Addr"
-            ip_indicator = self.create_indicator(ip, ip_pattern, ip_type)
+            ip_indicator = IPV6Address(value=ip)
 
         else:
             ip_indicator = None
 
         return ip_indicator
 
-    def create_indicator(self, ip: str, ip_pattern: str, ip_type: str) -> Indicator:
-
-        ip_indicator = Indicator(
-            name=ip,
-            pattern=ip_pattern,
-            pattern_type="stix",
-            main_observable_type=ip_type,
-            create_observables=True,
-            author=self.author,
-            markings=[self.tlp_marking],
-        )
-
-        return ip_indicator
-
     @staticmethod
-    def create_author() -> dict:
+    def create_author() -> OrganizationAuthor:
         """
         Create Author
         """
-        author = OrganizationAuthor(name="MontySecurity")
-        return author
+        return OrganizationAuthor(name="MontySecurity")
 
     @staticmethod
-    def _create_tlp_marking(level):
+    def _create_tlp_marking(level) -> TLPMarking:
         """
         Create TLPMarking object
         """
-        tlp_marking = TLPMarking(level=level)
-        return tlp_marking
+        return TLPMarking(level=level)
 
     def create_relationship(
         self,
-        relationship_type: str,
+        relationship_type: RelationshipType,
         source_obj,
         target_obj,
-        start_time: Optional[str] = None,
-        stop_time: Optional[str] = None,
+        start_time: datetime | None = None,
+        stop_time: datetime | None = None,
     ) -> Relationship:
         """
         Creates Relationship object

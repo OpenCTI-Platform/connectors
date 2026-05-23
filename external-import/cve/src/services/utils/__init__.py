@@ -1,5 +1,13 @@
 from src.services.utils.common import convert_hours_to_seconds
 from src.services.utils.constants import MAX_AUTHORIZED  # noqa: F401
+from src.services.utils.cpe_parser import parse_cpe_uri  # noqa: F401
+from src.services.utils.rate_limiter import AsyncRateLimiter  # noqa: F401
 from src.services.utils.version import __version__ as APP_VERSION  # noqa: F401
 
-__all__ = ["MAX_AUTHORIZED", "convert_hours_to_seconds", "APP_VERSION"]
+__all__ = [
+    "MAX_AUTHORIZED",
+    "convert_hours_to_seconds",
+    "APP_VERSION",
+    "parse_cpe_uri",
+    "AsyncRateLimiter",
+]

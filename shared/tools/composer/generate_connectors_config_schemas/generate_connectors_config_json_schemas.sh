@@ -63,7 +63,7 @@ activate_venv() {
 
     # Ensure connectors-sdk is available for script generation
     echo "🔄 Installing connectors-sdk for schema generation..."
-    uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
+    uv pip install "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${RELEASE_REF:-master}#subdirectory=connectors-sdk"
 
     # Return to original working directory
     popd
@@ -96,16 +96,20 @@ fi
 # Find all parents directory of connector with __metadata__ directory
 connector_directories_path=$(find . -type d -name "$CONNECTOR_METADATA_DIRECTORY" | sed 's:/*'"$CONNECTOR_METADATA_DIRECTORY"'$::' | sort -u)
 
+# CircleCI uses a shallow clone by default, so we need to fetch the full history to compare with the base branch
+git fetch --unshallow || git fetch --depth=100
+git fetch origin "+refs/heads/*:refs/remotes/origin/*"
+
 # Loop in each connector directory with infos and regenerate JSON schema if changed
 for connector_directory_path in $connector_directories_path
 do
   if [ -d "$connector_directory_path" ]; then
     # Only generate schema for directory that changed
     CIRCLE_BRANCH=${CIRCLE_BRANCH:-""}
-    if [ "$CIRCLE_BRANCH" = "master" ]; then
+    if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-master}" ]; then
       directory_has_changed=$(git diff HEAD~1 HEAD -- "$connector_directory_path")
     else
-      directory_has_changed=$(git diff $(git merge-base master HEAD) HEAD "$connector_directory_path")
+      directory_has_changed=$(git diff $(git merge-base origin/"${RELEASE_REF:-master}" HEAD) HEAD "$connector_directory_path")
     fi
 
     if [ -z "$directory_has_changed" ] ; then

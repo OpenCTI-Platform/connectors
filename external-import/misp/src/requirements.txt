@@ -1,5 +1,7 @@
-pycti==7.260317.0
-urllib3==2.6.3
+datasize==1.0.0
+pycti==7.260522.0
+pympler==1.1
+urllib3==2.7.0
 pymisp~=2.5.17
 pydantic==2.11.6
 pydantic-settings==2.10.1

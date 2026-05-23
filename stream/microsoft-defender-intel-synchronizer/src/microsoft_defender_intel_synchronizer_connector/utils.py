@@ -3,10 +3,9 @@ import unicodedata
 import urllib.parse
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from typing import Any, Final, Optional
 
-from pycti import OpenCTIConnectorHelper
-
-OBSERVABLE_TYPES = [
+OBSERVABLE_TYPES: Final = [
     "ipv4-addr",
     "ipv6-addr",
     "domain-name",
@@ -16,7 +15,7 @@ OBSERVABLE_TYPES = [
     "file",
 ]
 
-IOC_TYPES = {
+IOC_TYPES: Final = {
     "ipv4-addr": "IpAddress",
     "ipv6-addr": "IpAddress",
     "domain-name": "DomainName",
@@ -28,13 +27,108 @@ IOC_TYPES = {
     "x509-certificate": "CertificateThumbprint",
 }
 
-FILE_HASH_TYPES_MAPPER = {
+FILE_HASH_TYPES_MAPPER: Final = {
     "md5": "md5",
     "sha-1": "sha1",
     "sha1": "sha1",
     "sha-256": "sha256",
     "sha256": "sha256",
 }
+
+# Hash algorithms Defender accepts as indicators, in decreasing
+# preference order. ``md5`` is intentionally excluded — the Defender
+# Indicators API rejects ``FileMd5`` for create requests, so using it
+# as a de-dup key would never match an existing indicator anyway.
+_FILE_HASH_PREFERENCE: Final = ("sha256", "sha1")
+
+
+def defender_file_dedup_key(observable_data: dict) -> tuple[str, str] | None:
+    """Return ``(indicatorType, hash_value)`` for a STIX file observable.
+
+    Picks the highest-priority Defender-supported hash present on the
+    observable (SHA-256 preferred over SHA-1; MD5 is intentionally
+    ignored because Defender rejects ``FileMd5`` create requests).
+    Returns :data:`None` when no usable hash is available, which lets
+    the caller fall back to the ``externalId`` path.
+
+    The returned tuple matches the ``(indicatorType, indicatorValue)``
+    shape used by :func:`connector._key_from_candidate`, so file
+    observables can now participate in the same key-based dedup as
+    every other observable type instead of being treated as
+    externalId-only.
+    """
+    hashes = observable_data.get("hashes")
+    if not isinstance(hashes, dict):
+        return None
+    normalised: dict[str, str] = {}
+    for raw_algo, raw_value in hashes.items():
+        if not isinstance(raw_algo, str) or not raw_value:
+            continue
+        algo = FILE_HASH_TYPES_MAPPER.get(raw_algo.lower())
+        if not algo:
+            continue
+        normalised[algo] = str(raw_value).strip()
+    for algo in _FILE_HASH_PREFERENCE:
+        value = normalised.get(algo)
+        if value:
+            return IOC_TYPES[algo], value
+    return None
+
+
+# Defender's ``CertificateThumbprint`` indicator is keyed on the
+# certificate fingerprint hash. ``_build_request_body`` prefers SHA-1
+# (the canonical thumbprint algorithm), falls back to SHA-256, then
+# MD5, so the dedup key uses the same order — picking a different
+# hash here than the api_handler picks on POST would create a
+# duplicate Defender indicator on every cycle.
+_CERTIFICATE_HASH_PREFERENCE: Final = ("sha1", "sha256", "md5")
+
+
+def defender_certificate_dedup_key(observable_data: dict) -> tuple[str, str] | None:
+    """Return ``("CertificateThumbprint", thumbprint)`` for a STIX x509-certificate.
+
+    OpenCTI ``x509-certificate`` observables carry their fingerprint
+    in ``hashes`` rather than in ``value``. The previous planner
+    derived the dedup key from ``observable_data["value"]`` (empty
+    for certificates), which silently dropped every certificate
+    indicator from the planning pass. This helper mirrors
+    :func:`defender_file_dedup_key` for certificates so they
+    participate in the same key-based dedup as every other observable
+    type.
+
+    Returns :data:`None` when no usable hash is available — the
+    planner then falls back to the ``externalId`` path.
+    """
+    hashes = observable_data.get("hashes")
+    if not isinstance(hashes, dict):
+        return None
+    normalised: dict[str, str] = {}
+    for raw_algo, raw_value in hashes.items():
+        if not isinstance(raw_algo, str) or not raw_value:
+            continue
+        algo = FILE_HASH_TYPES_MAPPER.get(raw_algo.lower())
+        if not algo:
+            continue
+        normalised[algo] = str(raw_value).strip()
+    for algo in _CERTIFICATE_HASH_PREFERENCE:
+        value = normalised.get(algo)
+        if value:
+            return "CertificateThumbprint", value
+    return None
+
+
+# Only these indicator types are written to Defender.
+# All other types (e.g., WebCategory) are read-only in our connector.
+CREATABLE_INDICATOR_TYPES: Final = {
+    "DomainName",
+    "Url",
+    "IpAddress",
+    "FileSha1",
+    "FileSha256",
+    "CertificateThumbprint",
+}
+
+_MAX_LEN_FOR_KEY: Final[int] = 800
 
 
 def is_stix_indicator(data: dict) -> bool:
@@ -67,33 +161,112 @@ def get_ioc_type(data: dict) -> str | None:
 
 def get_description(data: dict) -> str:
     """
-    Get a description according to observable.
-    :param data: Observable data to extract description from
-    :return: Observable description summary or "No Description"
+    Return a short description for the indicator.
+    Falls back to the indicator value when no explicit description is available.
     """
-    stix_description = OpenCTIConnectorHelper.get_attribute_in_extension(
-        "description", data
-    )
-    return stix_description[0:99] if stix_description is not None else "No description"
+    desc = data.get("description")
+    if isinstance(desc, str) and desc.strip():
+        return desc.strip()[:99]  # Defender prefers <=100 chars
+
+    # Fallback: use indicator value if present
+    val = data.get("value")
+    if isinstance(val, str) and val.strip():
+        return val.strip()[:99]
+
+    # Final fallback
+    return "Auto-imported from OpenCTI feed"
 
 
-def get_action(data: dict) -> str:
+def _score_from_any(data: dict) -> int:
+    s = data.get("x_opencti_score")
+    try:
+        return int(s) if s is not None else 0
+    except Exception:
+        return 0
+
+
+def get_action(data: dict, default_action: str | None = None) -> str:
     """
-    Get an action according to observable score.
-    :param data: Observable data to get action from
-    :return: Action name or "unknown"
+    Determine the effective action for this observable.
+
+    Precedence (first match wins):
+      1) Per-observable override (``__policy_action``) — typically
+         applied by a per-collection policy in
+         ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_TAXII_COLLECTIONS``.
+      2) Connector-level ``default_action`` — when an operator pins a
+         single global action (the connector ships with
+         ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION="Audit"`` by
+         default, so the score-based mapping below is opt-in: set
+         ``MICROSOFT_DEFENDER_INTEL_SYNCHRONIZER_ACTION=""`` to disable
+         the global pin and fall through to the score-based mapping).
+      3) Score-based mapping — only reached when both (1) and (2) are
+         empty / unset.
+
+    Score-based mapping (defensive, defaults to ``Audit``):
+      * ``score >= 60``         -> ``Block``
+      * ``30 < score < 60``     -> ``Warn``
+      * ``0 < score < 30``      -> ``Audit``
+      * ``score == 0`` / missing -> ``Audit``
+
+    A missing or zero ``x_opencti_score`` (e.g. observables imported
+    without a score, or score normalisation failures) MUST NOT
+    automatically produce an ``Allowed`` indicator in Defender — that
+    would silently allow-list IOCs. The mapping therefore falls back
+    to ``Audit`` for the ``score == 0`` case, matching the sibling
+    ``stream/microsoft-defender-intel`` connector's safe default.
     """
-    score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
-    action = "Audit"
+    if isinstance(data, dict):
+        v = data.get("__policy_action")
+        if v:
+            return str(v)
+
+    if default_action:
+        return str(default_action)
+
+    score = _score_from_any(data)
     if score >= 60:
-        action = "Block"
-    elif 30 < score < 60:
-        action = "Alert"
-    elif 0 < score < 30:
-        action = "Warn"
-    elif score == 0:
-        action = "Audit"
-    return action
+        return "Block"
+    if 30 < score < 60:
+        return "Warn"
+    return "Audit"
+
+
+def get_educate_url(o: dict[str, Any], default_url: Optional[str]) -> Optional[str]:
+    """
+    Effective educateUrl: override or default.
+    """
+    if isinstance(o, dict):
+        v = o.get("__policy_educate_url")
+        if v not in (None, ""):
+            return str(v)
+    return default_url
+
+
+def get_expire_days(o: dict[str, Any], default_days: int) -> int:
+    """
+    Effective expiration (days): override (__policy_expire_time_days) or default_days.
+    """
+    try:
+        v = o.get("__policy_expire_time_days")
+        if v is not None:
+            return int(v)
+    except (TypeError, ValueError, AttributeError):
+        # If the override is missing or invalid, fall back to the default.
+        return int(default_days)
+    return int(default_days)
+
+
+def get_recommended_actions(
+    o: dict[str, Any], default_text: Optional[str]
+) -> Optional[str]:
+    """
+    Effective recommendedActions text: override or default.
+    """
+    if isinstance(o, dict):
+        v = o.get("__policy_recommended_actions")
+        if v not in (None, ""):
+            return str(v)
+    return default_text
 
 
 def get_severity(data: dict) -> str:
@@ -102,7 +275,7 @@ def get_severity(data: dict) -> str:
     :param data: Observable data to get action from
     :return: Severity or "unknown"
     """
-    score = OpenCTIConnectorHelper.get_attribute_in_extension("score", data)
+    score = _score_from_any(data)
     if score >= 60:
         severity = "High"
     elif score >= 40:
@@ -125,28 +298,20 @@ def get_expiration_datetime(data: dict, expiration_time: int) -> str:
     :return: Datetime of observable expiration as ISO8601 string
     """
     now = datetime.now(timezone.utc)
-    expire_datetime = now + timedelta(days=expiration_time)
+    default_exp = now + timedelta(days=expiration_time)
 
     # Get valid_until if present
-    valid_until = OpenCTIConnectorHelper.get_attribute_in_extension("valid_until", data)
-    if valid_until:
-        valid_until_datetime = datetime.fromisoformat(valid_until)
-        # Return the earliest of expire_datetime and valid_until_datetime
-        earliest = min(expire_datetime, valid_until_datetime)
-        return earliest.isoformat()
+    valid_until = data.get("valid_until")
 
-    return expire_datetime.isoformat()
+    if isinstance(valid_until, str) and valid_until:
+        vu = valid_until.replace("Z", "+00:00")
+        try:
+            vu_dt = datetime.fromisoformat(vu)
+            return min(default_exp, vu_dt).isoformat()
+        except Exception:
+            pass
 
-
-def get_tags(data: dict) -> list[str]:
-    """
-    Get tags for an observable.
-    :param data: Observable data to extract tags from
-    :return: List of tags
-    """
-    tags = ["opencti"]
-    labels = OpenCTIConnectorHelper.get_attribute_in_extension("labels", data)
-    return tags + labels if labels is not None else tags
+    return default_exp.isoformat()
 
 
 def get_hash_type(data: dict) -> str | None:
@@ -167,16 +332,23 @@ def get_hash_type(data: dict) -> str | None:
     return hash_type
 
 
-_URL_RE = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
-_AT_RE = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
-_TRAILING_PUNCT_RE = re.compile(r"[.,;!?]+$")
-_PLACEHOLDER_DOTS_RE = re.compile(r"\.\.\.+$")
-_WHITESPACE_RE = re.compile(r"\s+")
-_BRACKET_TRANS = str.maketrans("", "", "[]")
+def is_defender_supported_domain(value: str) -> bool:
+    if not isinstance(value, str):
+        return False
+    value = value.strip().lower()
+    return bool(value) and not value.startswith("_")
+
+
+_URL_RE: Final = re.compile(r'https?://[^\s"\'<>()]+', re.IGNORECASE)
+_AT_RE: Final = re.compile(r"\[at\]|\(at\)", re.IGNORECASE)
+_TRAILING_PUNCT_RE: Final = re.compile(r"[.,;!?]+$")
+_PLACEHOLDER_DOTS_RE: Final = re.compile(r"\.\.\.+$")
+_TRAILING_WHITESPACE_RE: Final = re.compile(r"\s+$")
+_BRACKET_TRANS: Final = str.maketrans("", "", "[]")
 
 
 @lru_cache(maxsize=20000)
-def indicator_value(value: str, max_length: int = 800) -> str | None:
+def indicator_value(value: str, max_length: int = _MAX_LEN_FOR_KEY) -> str | None:
     """
     Clean, refang, normalize, and truncate an indicator value for Defender API submission.
 
@@ -209,14 +381,14 @@ def indicator_value(value: str, max_length: int = 800) -> str | None:
     if match:
         try:
             # We treat this as a URL and sanitize accordingly
-            extracted_url = match.group(0)
-
-            # Clean trailing punctuation early
-            extracted_url = extracted_url.rstrip(".,;!?…")
+            extracted_url = match.group(0).rstrip(".,;!?…")
 
             parsed = urllib.parse.urlparse(extracted_url)
             if not parsed.scheme or not parsed.netloc:
                 return None
+
+            # Normalize host to lowercase
+            netloc = parsed.netloc.lower()
 
             # Decode and normalize
             decoded_path = _sanitize_url_component(
@@ -227,20 +399,32 @@ def indicator_value(value: str, max_length: int = 800) -> str | None:
             )
 
             safe_path = urllib.parse.quote(decoded_path, safe="/")
-            safe_query = urllib.parse.quote(decoded_query, safe="-=&")
+            safe_query = urllib.parse.quote_plus(decoded_query, safe="=&")
 
             value = urllib.parse.urlunparse(
-                (parsed.scheme, parsed.netloc, safe_path, "", safe_query, "")
+                (parsed.scheme, netloc, safe_path, "", safe_query, "")
             )
 
         except Exception:
             return None
+    else:
+        # Not a URL and looks like a plain host
+        if " " not in value and "." in value and not any(c in value for c in "/:@"):
+            value = value.rstrip(".").lower()
 
-    # Collapse trailing whitespace
-    value = _WHITESPACE_RE.sub("", value)
+    # Strip *trailing* whitespace (including non-breaking spaces and any
+    # other Unicode whitespace classes the ``urllib`` quote / unquote
+    # round-trip can leave behind). Defender rejects indicator values
+    # whose ``indicatorValue`` ends with whitespace with a 400 response,
+    # so trimming here keeps the value canonical before the trailing
+    # punctuation pass below.
+    value = _TRAILING_WHITESPACE_RE.sub("", value)
 
     # Strip trailing punctuation Defender doesn't like
     value = _TRAILING_PUNCT_RE.sub("", value)
+
+    if not value:
+        return None
 
     # Final length enforcement
     return value[:max_length]
@@ -273,3 +457,36 @@ def indicator_title(value: str, max_length: int = 4000) -> str:
     if value is not None and isinstance(value, str) and len(value) > max_length:
         return value[:max_length]
     return value
+
+
+__all__ = [
+    "OBSERVABLE_TYPES",
+    "IOC_TYPES",
+    "FILE_HASH_TYPES_MAPPER",
+    "CREATABLE_INDICATOR_TYPES",
+    "indicator_value",
+    "indicator_title",
+    "get_action",
+    "get_educate_url",
+    "get_expire_days",
+    "get_recommended_actions",
+    "get_severity",
+    "get_expiration_datetime",
+    "get_hash_type",
+    # ``defender_file_dedup_key`` / ``defender_certificate_dedup_key``
+    # are the file- and certificate-observable dedup-key helpers the
+    # connector uses on both sides of the planner (Defender-side
+    # ``GET /indicators`` rows and OpenCTI-side candidate
+    # observables) so the SHA-256 / SHA-1 collapsing stays symmetric;
+    # ``is_defender_supported_domain`` is the regex-only domain
+    # validator that gates Hostname → Domain-Name normalisation.
+    # All three are imported by ``connector.py`` and exercised
+    # directly by ``tests/test_get_action_and_file_dedup.py`` and
+    # ``tests/test_key_normalization.py``, so they are part of the
+    # module's public surface — explicitly listed in ``__all__`` so
+    # ``from utils import *`` and static-analysis exports stay in
+    # sync with the call sites.
+    "defender_file_dedup_key",
+    "defender_certificate_dedup_key",
+    "is_defender_supported_domain",
+]

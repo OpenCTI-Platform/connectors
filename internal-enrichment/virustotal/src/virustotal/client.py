@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Virustotal client module."""
 
 import base64
@@ -10,7 +9,7 @@ import urllib.parse
 import requests
 from pycti import OpenCTIConnectorHelper
 from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
+from urllib3 import Retry
 
 
 class VirusTotalClient:
@@ -27,6 +26,7 @@ class VirusTotalClient:
         self.headers = {
             "x-apikey": token,
             "accept": "application/json",
+            "x-tool": f"OpenCTI VirusTotal Connector {self.helper.connector_id}",
         }
 
     def _query(self, url):
@@ -78,6 +78,10 @@ class VirusTotalClient:
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
             self.helper.metric.inc("client_error_count")
+
+        if response is None:
+            return None
+
         try:
             self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
@@ -134,6 +138,10 @@ class VirusTotalClient:
         except Exception as err:
             self.helper.log_error(f"[VirusTotal] Unknown error {err}")
             self.helper.metric.inc("client_error_count")
+
+        if response is None:
+            return None
+
         try:
             self.helper.log_debug(f"[VirusTotal] data retrieved: {response.json()}")
             return response.json()
@@ -248,6 +256,8 @@ class VirusTotalClient:
         """
         base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}"
         results = self._query(base64_url)
+        if results is None:
+            return None
         if "error" in results:
             sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}"
             results = self._query(sha256_url)
@@ -346,6 +356,8 @@ class VirusTotalClient:
         """
         base64_url = f"{self.url}/urls/{VirusTotalClient.base64_encode_no_padding(url)}/{relationship}"
         results = self._query(base64_url)
+        if results is None:
+            return None
         if "error" in results:
             sha256_url = f"{self.url}/urls/{hashlib.sha256(url.encode()).hexdigest()}/{relationship}"
             results = self._query(sha256_url)

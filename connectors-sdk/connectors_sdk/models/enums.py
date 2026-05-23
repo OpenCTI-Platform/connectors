@@ -9,9 +9,13 @@ __all__ = [
     "AccountType",
     "AttackMotivation",
     "AttackResourceLevel",
+    "ChannelType",
     "CvssSeverity",
     "HashAlgorithm",
     "ImplementationLanguage",
+    "IncidentSeverity",
+    "IncidentType",
+    "InfrastructureType",
     "IndustrySector",
     "LocationType",
     "MalwareCapability",
@@ -112,6 +116,16 @@ class CvssSeverity(StrEnum):
     UNKNOWN = "Unknown"
 
 
+class ChannelType(_PermissiveEnum):
+    """Channel Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L129
+    """
+
+    TWITTER = "Twitter"
+    FACEBOOK = "Facebook"
+
+
 class HashAlgorithm(_PermissiveEnum):
     """Hash Algorithm Open Vocabulary.
 
@@ -203,6 +217,58 @@ class IndustrySector(_PermissiveEnum):
     TELECOMMUNICATIONS = "telecommunications"
     TRANSPORTATION = "transportation"
     UTILITIES = "utilities"
+
+
+class InfrastructureType(_PermissiveEnum):
+    """Infrastructure Type Open Vocabulary.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_67vrmztjft3h
+    """
+
+    AMPLIFICATION = "amplification"
+    ANONYMIZATION = "anonymization"
+    BOTNET = "botnet"
+    COMMAND_AND_CONTROL = "command-and-control"
+    CONTROL_SYSTEM = "control-system"
+    EXFILTRATION = "exfiltration"
+    FIREWALL = "firewall"
+    HOSTING_MALWARE = "hosting-malware"
+    HOSTING_TARGET_LISTS = "hosting-target-lists"
+    PHISHING = "phishing"
+    RECONNAISSANCE = "reconnaissance"
+    ROUTERS_SWITCHES = "routers-switches"
+    STAGING = "staging"
+    WORKSTATION = "workstation"
+    UNKNOWN = "unknown"
+
+
+class IncidentSeverity(_PermissiveEnum):
+    """Incident Severity Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L316
+    """
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class IncidentType(_PermissiveEnum):
+    """Incident Type Open Vocabulary.
+
+    See https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/modules/vocabulary/vocabulary-utils.ts#L278
+    """
+
+    ALERT = "alert"
+    COMPROMISE = "compromise"
+    INFORMATION_SYSTEM_DISRUPTION = "information-system-disruption"
+    RANSOMWARE = "ransomware"
+    REPUTATION_DAMAGE = "reputation-damage"
+    DATA_LEAK = "data-leak"
+    TYPOSQUATTING = "typosquatting"
+    PHISHING = "phishing"
+    CYBERCRIME = "cybercrime"
 
 
 class LocationType(StrEnum):
@@ -361,17 +427,70 @@ class RelationshipType(_PermissiveEnum):
     """Relationship Type Open Vocabulary.
 
     See https://docs.oasis-open.org/cti/stix/v2.1/os/stix-v2.1-os.html#_e2e1szrqfoan
+    and https://github.com/OpenCTI-Platform/opencti/blob/master/opencti-platform/opencti-graphql/src/schema/stixCoreRelationship.ts
     """
 
-    RELATED_TO = "related-to"
+    # Standard STIX 2.1
+    ANALYSIS_OF = "analysis-of"
+    ATTRIBUTED_TO = "attributed-to"
+    AUTHORED_BY = "authored-by"
     BASED_ON = "based-on"
-    DERIVED_FROM = "derived-from"
-    INDICATES = "indicates"
-    TARGETS = "targets"
-    LOCATED_AT = "located-at"
-    HAS = "has"
+    BEACONS_TO = "beacons-to"
     BELONGS_TO = "belongs-to"
+    CHARACTERIZES = "characterizes"
+    COMMUNICATES_WITH = "communicates-with"
+    COMPROMISES = "compromises"
+    CONSISTS_OF = "consists-of"
+    CONTROLS = "controls"
+    DELIVERS = "delivers"
+    DEMONSTRATES = "demonstrates"
+    DERIVED_FROM = "derived-from"
+    DOWNLOADS = "downloads"
+    DROPS = "drops"
+    DUPLICATE_OF = "duplicate-of"
+    DYNAMIC_ANALYSIS_OF = "dynamic-analysis-of"
+    EXFILTRATES_TO = "exfiltrates-to"
+    EXPLOITS = "exploits"
+    HAS = "has"
+    HOSTS = "hosts"
+    IMPERSONATES = "impersonates"
+    INDICATES = "indicates"
+    INVESTIGATES = "investigates"
+    LOCATED_AT = "located-at"
+    MITIGATES = "mitigates"
+    ORIGINATES_FROM = "originates-from"
+    OWNS = "owns"
+    RELATED_TO = "related-to"
+    REMEDIATES = "remediates"
     RESOLVES_TO = "resolves-to"
+    STATIC_ANALYSIS_OF = "static-analysis-of"
+    TARGETS = "targets"
+    TECHNOLOGY = "technology"
+    TECHNOLOGY_FROM = "technology-from"
+    TECHNOLOGY_TO = "technology-to"
+    TRANSFERRED_TO = "transferred-to"
+    USES = "uses"
+    VARIANT_OF = "variant-of"
+    # OpenCTI Extensions
+    AMPLIFIES = "amplifies"
+    CITIZEN_OF = "citizen-of"
+    COOPERATES_WITH = "cooperates-with"
+    EMPLOYED_BY = "employed-by"
+    HAS_COVERED = "has-covered"
+    KNOWN_AS = "known-as"
+    NATIONAL_OF = "national-of"
+    PART_OF = "part-of"
+    PARTICIPATES_IN = "participates-in"
+    PUBLISHES = "publishes"
+    REPORTS_TO = "reports-to"
+    RESIDES_IN = "resides-in"
+    SHOULD_COVER = "should-cover"
+    SUBNARRATIVE_OF = "subnarrative-of"
+    SUPPORTS = "supports"
+    # MITRE Extensions
+    DETECTS = "detects"
+    REVOKED_BY = "revoked-by"
+    SUBTECHNIQUE_OF = "subtechnique-of"
 
 
 class Reliability(_PermissiveEnum):

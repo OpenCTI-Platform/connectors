@@ -135,7 +135,6 @@ class GTICampaignToSTIXComposite(BaseMapper):
                 modified=modified,
                 start_time=location_with_timing.first_seen,
                 stop_time=location_with_timing.last_seen,
-                description=f"Campaign '{attributes.name}' targets location '{location.name}'",
             )
             relationships.append(relationship)
 
@@ -155,7 +154,6 @@ class GTICampaignToSTIXComposite(BaseMapper):
                 modified=modified,
                 start_time=location_with_timing.first_seen,
                 stop_time=location_with_timing.last_seen,
-                description=f"Campaign '{attributes.name}' originates from location '{location.name}'",
             )
             relationships.append(relationship)
 
@@ -172,7 +170,6 @@ class GTICampaignToSTIXComposite(BaseMapper):
                 modified=modified,
                 start_time=identity_with_timing.first_seen,
                 stop_time=identity_with_timing.last_seen,
-                description=f"Campaign '{attributes.name}' targets industry '{identity.name}'",
             )
             relationships.append(relationship)
 

@@ -13,6 +13,7 @@ from connector.src.custom.models.gti.gti_campaign_model import (
     AltNameDetail,
     CampaignModel,
     GTICampaignData,
+    Motivation,
     TagDetail,
 )
 from polyfactory import Use
@@ -40,6 +41,15 @@ class ActivityDetailFactory(ModelFactory[ActivityDetail]):
 
     confidence = "high"
     value = "2023-01-01T00:00:00Z"
+
+
+class MotivationFactory(ModelFactory[Motivation]):
+    """Factory for Motivation model."""
+
+    __model__ = Motivation
+
+    confidence = "high"
+    value = "espionage"
 
 
 class TagDetailFactory(ModelFactory[TagDetail]):
@@ -105,6 +115,7 @@ def minimal_campaign_data() -> GTICampaignData:
             alt_names_details=None,
             first_seen_details=None,
             last_seen_details=None,
+            motivations=None,
             tags_details=None,
         )
     )
@@ -150,6 +161,42 @@ def campaign_with_all_data() -> GTICampaignData:
                 ActivityDetailFactory.build(value="2023-12-31T23:59:59Z")
             ],
             tags_details=[TagDetailFactory.build(value="Campaign")],
+        )
+    )
+
+
+@pytest.fixture
+def campaign_with_motivations() -> GTICampaignData:
+    """Fixture for campaign data with a single motivation."""
+    return GTICampaignDataFactory.build(
+        attributes=CampaignModelFactory.build(
+            motivations=[MotivationFactory.build(value="espionage")],
+        )
+    )
+
+
+@pytest.fixture
+def campaign_with_multiple_motivations() -> GTICampaignData:
+    """Fixture for campaign data with multiple motivations."""
+    return GTICampaignDataFactory.build(
+        attributes=CampaignModelFactory.build(
+            motivations=[
+                MotivationFactory.build(value="espionage"),
+                MotivationFactory.build(value="financial-gain"),
+            ],
+        )
+    )
+
+
+@pytest.fixture
+def campaign_with_null_motivation_values() -> GTICampaignData:
+    """Fixture for campaign data with motivations that have None values."""
+    return GTICampaignDataFactory.build(
+        attributes=CampaignModelFactory.build(
+            motivations=[
+                MotivationFactory.build(value=None),
+                MotivationFactory.build(value="espionage"),
+            ],
         )
     )
 
@@ -306,6 +353,121 @@ def test_gti_campaign_to_stix_with_all_data(
     )
     _then_stix_campaign_has_seen_dates(stix_campaign, campaign_with_all_data)
     _then_stix_campaign_has_labels(stix_campaign, campaign_with_all_data)
+
+
+# Scenario: Create STIX campaign with a single motivation mapped to objective
+@pytest.mark.order(1)
+def test_gti_campaign_to_stix_with_single_motivation(
+    campaign_with_motivations: GTICampaignData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test converting GTI campaign with a single motivation to STIX objective."""
+    # Given a GTI campaign with one motivation
+    mapper = _given_gti_campaign_mapper(
+        campaign_with_motivations, mock_organization, mock_tlp_marking
+    )
+    # When converting to STIX
+    stix_campaign = _when_convert_to_stix(mapper)
+    # Then STIX campaign objective should equal the motivation value
+    _then_stix_campaign_has_objective(stix_campaign, "espionage")
+
+
+# Scenario: Create STIX campaign with multiple motivations joined as objective
+@pytest.mark.order(1)
+def test_gti_campaign_to_stix_with_multiple_motivations(
+    campaign_with_multiple_motivations: GTICampaignData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test converting GTI campaign with multiple motivations to a joined STIX objective."""
+    # Given a GTI campaign with multiple motivations
+    mapper = _given_gti_campaign_mapper(
+        campaign_with_multiple_motivations, mock_organization, mock_tlp_marking
+    )
+    # When converting to STIX
+    stix_campaign = _when_convert_to_stix(mapper)
+    # Then STIX campaign objective should contain all motivation values joined
+    _then_stix_campaign_has_objective(stix_campaign, "espionage, financial-gain")
+
+
+# Scenario: Create STIX campaign with no motivations — objective should be None
+@pytest.mark.order(1)
+def test_gti_campaign_to_stix_no_motivations(
+    minimal_campaign_data: GTICampaignData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test that objective is None when no motivations are present."""
+    # Given a GTI campaign without motivations
+    mapper = _given_gti_campaign_mapper(
+        minimal_campaign_data, mock_organization, mock_tlp_marking
+    )
+    # When converting to STIX
+    stix_campaign = _when_convert_to_stix(mapper)
+    # Then objective should be absent / None
+    assert (
+        not hasattr(stix_campaign, "objective") or stix_campaign.objective is None
+    )  # noqa: S101
+
+
+# Scenario: Null motivation values are skipped when building objective
+@pytest.mark.order(1)
+def test_gti_campaign_to_stix_null_motivation_values(
+    campaign_with_null_motivation_values: GTICampaignData,
+    mock_organization: Identity,
+    mock_tlp_marking: MarkingDefinition,
+) -> None:
+    """Test that None motivation values are skipped when building objective."""
+    # Given a GTI campaign where one motivation value is None
+    mapper = _given_gti_campaign_mapper(
+        campaign_with_null_motivation_values, mock_organization, mock_tlp_marking
+    )
+    # When converting to STIX
+    stix_campaign = _when_convert_to_stix(mapper)
+    # Then objective should only contain the non-None motivation value
+    _then_stix_campaign_has_objective(stix_campaign, "espionage")
+
+
+# Scenario: Test _extract_objective static method directly
+@pytest.mark.order(1)
+def test_extract_objective() -> None:
+    """Test extracting objective from campaign motivations."""
+    # Given campaign attributes with motivations
+    attributes = CampaignModelFactory.build(
+        motivations=[
+            MotivationFactory.build(value="espionage"),
+            MotivationFactory.build(value="financial-gain"),
+        ]
+    )
+    # When extracting the objective
+    objective = _when_extract_objective(attributes)
+    # Then the objective should be the joined motivation values
+    assert objective == "espionage, financial-gain"  # noqa: S101
+
+
+# Scenario: Test _extract_objective with empty motivations list
+@pytest.mark.order(1)
+def test_extract_objective_empty_motivations() -> None:
+    """Test extracting objective when motivations list is empty."""
+    # Given campaign attributes with an empty motivations list
+    attributes = CampaignModelFactory.build(motivations=[])
+    # When extracting the objective
+    objective = _when_extract_objective(attributes)
+    # Then objective should be None
+    assert objective is None  # noqa: S101
+
+
+# Scenario: Test _extract_objective with None motivations
+@pytest.mark.order(1)
+def test_extract_objective_none_motivations() -> None:
+    """Test extracting objective when motivations is None."""
+    # Given campaign attributes with no motivations
+    attributes = CampaignModelFactory.build(motivations=None)
+    # When extracting the objective
+    objective = _when_extract_objective(attributes)
+    # Then objective should be None
+    assert objective is None  # noqa: S101
 
 
 # =====================
@@ -621,6 +783,12 @@ def _when_convert_to_stix_raises_error(
         mapper.to_stix()
 
 
+# When extract objective
+def _when_extract_objective(attributes: CampaignModel) -> str | None:
+    """Extract objective from campaign motivations."""
+    return GTICampaignToSTIXCampaign._extract_objective(attributes)
+
+
 # When extract seen dates
 def _when_extract_seen_dates(
     attributes: CampaignModel,
@@ -690,6 +858,14 @@ def _then_stix_campaign_has_labels(
     if gti_campaign.attributes.tags_details:
         assert stix_campaign.labels is not None  # noqa: S101
         assert len(stix_campaign.labels) > 0  # noqa: S101
+
+
+# Then STIX campaign has objective
+def _then_stix_campaign_has_objective(
+    stix_campaign: Any, expected_objective: str
+) -> None:
+    """Check if STIX campaign has the expected objective."""
+    assert stix_campaign.objective == expected_objective  # noqa: S101
 
 
 # Then STIX campaign handles invalid dates

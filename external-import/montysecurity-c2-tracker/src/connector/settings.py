@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl
 
@@ -19,9 +20,17 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="MontysecurityC2TrackerConnector",
     )
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="359a9fed-89e7-4baa-a5a7-fb0ce3a923cb",
+    )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(weeks=1),
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector, e.g. 'flashpoint'.",
+        default=["montysecurity-c2-tracker"],
     )
 
 

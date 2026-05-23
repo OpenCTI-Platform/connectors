@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/proofpoint-tap_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ProofPointTAP",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "report"
+      ],
+      "description": "The type of data the connector is importing, i.e. the type of Stix Objects (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT12H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "PROOFPOINT_TAP_API_BASE_URL": {
+      "default": "https://tap-api-v2.proofpoint.com/",
+      "description": "Proofpoint API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "PROOFPOINT_TAP_API_PRINCIPAL_KEY": {
+      "description": "Proofpoint API principal key for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "PROOFPOINT_TAP_API_SECRET_KEY": {
+      "description": "Proofpoint API secret key for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "PROOFPOINT_TAP_API_TIMEOUT": {
+      "default": "PT30S",
+      "description": "Timeout duration for API requests.",
+      "format": "duration",
+      "type": "string"
+    },
+    "PROOFPOINT_TAP_API_BACKOFF": {
+      "default": "PT5S",
+      "description": "Backoff duration for API requests.",
+      "format": "duration",
+      "type": "string"
+    },
+    "PROOFPOINT_TAP_API_RETRIES": {
+      "default": 3,
+      "description": "Number of retries for API requests.",
+      "type": "integer"
+    },
+    "PROOFPOINT_TAP_MARKING_DEFINITION": {
+      "default": "amber+strict",
+      "description": "Default TLP level of the imported entities.",
+      "enum": [
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "PROOFPOINT_TAP_EXPORT_CAMPAIGNS": {
+      "default": true,
+      "description": "Whether to export Proofpoint campaigns and import them into OpenCTI.",
+      "type": "boolean"
+    },
+    "PROOFPOINT_TAP_EXPORT_EVENTS": {
+      "default": false,
+      "description": "Whether to export Proofpoint events and import them into OpenCTI.",
+      "type": "boolean"
+    },
+    "PROOFPOINT_TAP_EVENTS_TYPE": {
+      "default": "issues",
+      "description": "The type of events to export (`PROOFPOINT_TAP_EXPORT_EVENTS` must be enabled).",
+      "enum": [
+        "all",
+        "issues",
+        "messages_blocked",
+        "messages_delivered",
+        "clicks_blocked",
+        "clicks_permitted"
+      ],
+      "type": "string"
+    },
+    "TAP_API_BASE_URL": {
+      "default": "https://tap-api-v2.proofpoint.com/",
+      "description": "Use PROOFPOINT_TAP_API_BASE_URL instead. (removal scheduled for 2026-08-27)",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string",
+      "deprecated": true
+    },
+    "TAP_API_PRINCIPAL_KEY": {
+      "description": "Use PROOFPOINT_TAP_API_PRINCIPAL_KEY instead. (removal scheduled for 2026-08-27)",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "deprecated": true
+    },
+    "TAP_API_SECRET_KEY": {
+      "description": "Use PROOFPOINT_TAP_API_SECRET_KEY instead. (removal scheduled for 2026-08-27)",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true,
+      "deprecated": true
+    },
+    "TAP_API_TIMEOUT": {
+      "default": "PT30S",
+      "description": "Use PROOFPOINT_TAP_API_TIMEOUT instead. (removal scheduled for 2026-08-27)",
+      "format": "duration",
+      "type": "string",
+      "deprecated": true
+    },
+    "TAP_API_BACKOFF": {
+      "default": "PT5S",
+      "description": "Use PROOFPOINT_TAP_API_BACKOFF instead. (removal scheduled for 2026-08-27)",
+      "format": "duration",
+      "type": "string",
+      "deprecated": true
+    },
+    "TAP_API_RETRIES": {
+      "default": 3,
+      "description": "Use PROOFPOINT_TAP_API_RETRIES instead. (removal scheduled for 2026-08-27)",
+      "type": "integer",
+      "deprecated": true
+    },
+    "TAP_MARKING_DEFINITION": {
+      "default": "amber+strict",
+      "description": "Use PROOFPOINT_TAP_MARKING_DEFINITION instead. (removal scheduled for 2026-08-27)",
+      "enum": [
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "deprecated": true
+    },
+    "TAP_EXPORT_CAMPAIGNS": {
+      "default": true,
+      "description": "Use PROOFPOINT_TAP_EXPORT_CAMPAIGNS instead. (removal scheduled for 2026-08-27)",
+      "type": "boolean",
+      "deprecated": true
+    },
+    "TAP_EXPORT_EVENTS": {
+      "default": false,
+      "description": "Use PROOFPOINT_TAP_EXPORT_EVENTS instead. (removal scheduled for 2026-08-27)",
+      "type": "boolean",
+      "deprecated": true
+    },
+    "TAP_EVENTS_TYPE": {
+      "default": "issues",
+      "description": "Use PROOFPOINT_TAP_EVENTS_TYPE instead. (removal scheduled for 2026-08-27)",
+      "enum": [
+        "all",
+        "issues",
+        "messages_blocked",
+        "messages_delivered",
+        "clicks_blocked",
+        "clicks_permitted"
+      ],
+      "type": "string",
+      "deprecated": true
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "PROOFPOINT_TAP_API_PRINCIPAL_KEY",
+    "PROOFPOINT_TAP_API_SECRET_KEY"
+  ],
+  "additionalProperties": true
+}

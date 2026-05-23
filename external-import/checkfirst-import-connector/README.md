@@ -8,7 +8,6 @@ This is an `EXTERNAL_IMPORT` connector that:
 - Fetches articles from a paginated REST API (`Api-Key` header auth)
 - Maps each article to STIX 2.1 objects and sends them in batches
 - Persists page-based progress in OpenCTI connector state so reruns resume where they left off
-- Records a `last_run` unix timestamp in state for operational visibility
 
 ## STIX object model
 
@@ -60,31 +59,13 @@ All STIX IDs are deterministic — reruns produce no duplicates.
 
 ## Configuration
 
-All settings can be provided as environment variables or via `config.yml` (see `config.yml.sample`).
+Configuration parameters can be provided in either **`config.yml`** file, **`.env`** file or directly as **environment variables** (e.g. from **`docker-compose.yml`** for Docker deployments).
 
-### OpenCTI / connector
+Priority: **YAML > .env > environment > defaults**.
 
-| Variable | Description | Default |
-|---|---|---|
-| `OPENCTI_URL` | OpenCTI platform URL | — |
-| `OPENCTI_TOKEN` | OpenCTI API token | — |
-| `CONNECTOR_ID` | Stable UUID for this connector instance | — |
-| `CONNECTOR_NAME` | Display name | `Checkfirst Import Connector` |
-| `CONNECTOR_SCOPE` | Connector scope metadata | `checkfirst` |
-| `CONNECTOR_LOG_LEVEL` | Log verbosity (`debug`, `info`, `warn`, `error`) | `info` |
-| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration between runs | `P7D` |
+### Configuration variables
 
-### Checkfirst-specific
-
-| Variable | Description | Default |
-|---|---|---|
-| `CHECKFIRST_API_URL` | Base URL of the Checkfirst API | — |
-| `CHECKFIRST_API_KEY` | API key (sent as `Api-Key` request header) | — |
-| `CHECKFIRST_API_ENDPOINT` | Endpoint path | `/v1/articles` |
-| `CHECKFIRST_SINCE` | Only ingest articles published on or after this date. Accepts ISO 8601 absolute dates (`2024-01-01T00:00:00Z`) or durations relative to now (`P365D`, `P1Y`, `P6M`, `P4W`) | `P365D` |
-| `CHECKFIRST_TLP_LEVEL` | TLP marking applied to all created objects (`clear`, `green`, `amber`, `amber+strict`, `red`) | `clear` |
-| `CHECKFIRST_FORCE_REPROCESS` | Ignore saved state and restart from page 1 (also re-sends the infrastructure bundle) | `false` |
-| `CHECKFIRST_MAX_ROW_BYTES` | Skip API rows exceeding this approximate byte size | unset |
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
 See `.env.sample` for a ready-to-use local template.
 

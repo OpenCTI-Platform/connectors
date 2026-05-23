@@ -21,12 +21,14 @@ class RSTNoiseControlConnector:
             else {}
         )
         self.helper = OpenCTIConnectorHelper(config, True)
-        self.base_url = get_config_variable(
-            "RST_NOISE_CONTROL_BASE_URL",
-            ["rst-noise-control", "base_url"],
-            config,
-            default="https://api.rstcloud.net/v1",
-        )
+        self.base_url = str(
+            get_config_variable(
+                "RST_NOISE_CONTROL_BASE_URL",
+                ["rst-noise-control", "base_url"],
+                config,
+                default="https://api.rstcloud.net/v1",
+            )
+        ).rstrip("/")
         self.api_key = get_config_variable(
             "RST_NOISE_CONTROL_API_KEY", ["rst-noise-control", "api_key"], config
         )

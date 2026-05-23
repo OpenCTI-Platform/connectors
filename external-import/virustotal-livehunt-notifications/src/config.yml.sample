@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'virustotal_livehunt_notifications'
   name: 'VirusTotal Livehunt Notifications'
-  scope: 'StixFile,Indicator,Incident'
+  scope: 'StixFile,Indicator,Incident,Domain-Name,Url,IPv4-Addr,IPv6-Addr'
   create_indicator: False
   log_level: 'info'
   duration_period: 'PT5M'
@@ -31,3 +31,9 @@ virustotal_livehunt_notifications:
   livehunt_label_prefix: 'vt:lh:' # Prefix that is added in livehunt label
   livehunt_tag_prefix: '' # Prefix used to state that the tag is imported from Livehunt
   enable_label_enrichment: True # Add livehunt name and matched yara rules label to the alert
+  get_malware_config: False # (optional) Set to true to extract C2 infrastructure (domains, IPs, URLs) from the VirusTotal malware configuration analysis. Only effective when create_file is True.
+  create_file_indicators: False # (optional) Set to true to create a File Indicator (SHA-256 pattern) for each matched file. Only effective when create_file is true. Default is false.
+  create_domain_name_indicators: False # (optional) Set to true to create Domain-Name Indicators for domains extracted from the malware configuration. Default is false.
+  create_ip_indicators: False # (optional) Set to true to create IPv4/IPv6 Indicators for IP addresses extracted from the malware configuration. Default is false.
+  create_url_indicators: False # (optional) Set to true to create URL Indicators for URLs extracted from the malware configuration. Default is false.
+  # limit: 100 # (optional) Maximum number of notifications to process per run. Leave unset to process every available notification.

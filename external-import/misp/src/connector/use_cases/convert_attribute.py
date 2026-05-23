@@ -165,21 +165,79 @@ class AttributeConverter:
         markings: list[stix2.v21.MarkingDefinition],
         custom_properties: dict[str, str],
     ) -> stix2.IPv4Address | stix2.IPv6Address:
-        try:
-            # Test if valid IP v4 address
-            ipaddress.IPv4Address(value)
+        """Build a STIX 2.1 IPv4 / IPv6 observable from a MISP ``ip-src`` / ``ip-dst`` value.
 
-            return stix2.IPv4Address(
-                value=value,
-                object_marking_refs=markings,
-                custom_properties=custom_properties,
-            )
-        except ipaddress.AddressValueError:
+        Both single hosts (``1.2.3.4``, ``::1``) and CIDR ranges
+        (``192.168.0.0/24``, ``2001:db8::/32``) are accepted — the STIX 2.1
+        spec explicitly allows CIDR notation in the ``IPv4-Addr`` /
+        ``IPv6-Addr`` ``value`` field.
+
+        ``ipaddress.ip_network(value, strict=False)`` validates the **full**
+        input in a single call — including the prefix length — so:
+
+        * ``192.168.0.0/24`` correctly resolves to ``version == 4`` (the
+          previous ``ipaddress.IPv4Address(value)`` call raised on the
+          ``/`` and silently routed the value to the IPv6 fallback,
+          producing the IPv6-tagged-IPv4-range bug this PR set out to fix);
+        * ``1.2.3.4/999`` and other malformed-prefix variants raise
+          ``ValueError`` instead of slipping through a "validate only the
+          address half" guard, so the connector no longer emits an
+          ``IPv4Address`` observable with a structurally invalid
+          ``value``;
+        * ``strict=False`` lets host-bits-set CIDRs (``1.2.3.4/24`` →
+          ``1.2.3.0/24``) through without raising — MISP attributes
+          commonly carry the address-with-mask form, and the converter's
+          job is to type-tag the observable, not to canonicalise the
+          range on its behalf.
+
+        The ``ValueError`` branch keeps the connector's prior
+        "anything that does not parse as IPv4 is an IPv6 observable"
+        contract — the MISP source of truth gets to decide what is and
+        is not a valid IP; the converter only chooses the STIX type
+        tag.
+        """
+        try:
+            network = ipaddress.ip_network(value, strict=False)
+        except ValueError:
             return stix2.IPv6Address(
                 value=value,
                 object_marking_refs=markings,
                 custom_properties=custom_properties,
             )
+
+        if network.version == 4:
+            return stix2.IPv4Address(
+                value=value,
+                object_marking_refs=markings,
+                custom_properties=custom_properties,
+            )
+        return stix2.IPv6Address(
+            value=value,
+            object_marking_refs=markings,
+            custom_properties=custom_properties,
+        )
+
+    def create_intrusion_set_from_attribute(
+        self,
+        attribute: ExtendedAttributeItem,
+        labels: list[str],
+        author: stix2.Identity,
+        markings: list[stix2.v21.MarkingDefinition],
+        external_references: list[stix2.ExternalReference],
+    ) -> stix2.IntrusionSet | None:
+        name = attribute.value
+        if not name:
+            return None
+        return stix2.IntrusionSet(
+            id=pycti.IntrusionSet.generate_id(name=name),
+            name=name,
+            labels=labels,
+            description=attribute.comment,
+            created_by_ref=author["id"],
+            object_marking_refs=markings,
+            external_references=external_references,
+            allow_custom=True,
+        )
 
     def create_observables(
         self,
@@ -498,8 +556,15 @@ class AttributeConverter:
         if is_external_reference or is_attachment:
             return stix_objects
 
-        # Extract STIX indicator's metadata from MISP event's attribute's tag
-        attribute_labels = labels
+        # Extract STIX indicator's metadata from MISP event's attribute's tag.
+        # ``labels`` is owned by the caller (the event converter passes a
+        # ``deepcopy(event_labels)`` per attribute, but the object converter
+        # forwards its own list verbatim). Without making a fresh copy here,
+        # ``attribute_labels.append(label)`` below would mutate the caller's
+        # list, which causes attribute-level tags to bleed into every
+        # subsequent attribute / object processed in the same event
+        # (see OpenCTI-Platform/connectors#4532).
+        attribute_labels = list(labels)
         attribute_markings = []
 
         for tag in attribute.Tag or []:
@@ -535,6 +600,21 @@ class AttributeConverter:
                 tag, author=author, markings=attribute_markings
             )
             stix_objects.extend(tag_stix_objects)
+
+        is_threat_actor_attribution = (
+            attribute.type == "threat-actor" and attribute.category == "Attribution"
+        )
+
+        if is_threat_actor_attribution:
+            intrusion_set = self.create_intrusion_set_from_attribute(
+                attribute,
+                labels=attribute_labels,
+                author=author,
+                markings=attribute_markings,
+                external_references=external_references,
+            )
+            if intrusion_set:
+                stix_objects.append(intrusion_set)
 
         observables = []
         if self.config.convert_attribute_to_observable:
