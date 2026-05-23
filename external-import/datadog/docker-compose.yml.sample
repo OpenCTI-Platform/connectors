@@ -8,7 +8,6 @@ services:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=DataDog
       - CONNECTOR_SCOPE=stix2
-      - CONNECTOR_UPDATE_EXISTING_DATA=false
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=true
       - DATADOG_TOKEN=ChangeMe

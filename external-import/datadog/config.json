@@ -26,10 +26,6 @@
       "value": "stix2"
     },
     {
-      "name": "CONNECTOR_UPDATE_EXISTING_DATA",
-      "value": "false"
-    },
-    {
       "name": "CONNECTOR_LOG_LEVEL",
       "value": "info"
     },

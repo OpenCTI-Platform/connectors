@@ -99,12 +99,6 @@ class DataDogConnector:
             "DATADOG_MAX_TLP", ["datadog", "max_tlp"], config, False, "TLP:AMBER"
         )
 
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
-
         # Alert Configuration
         self.import_alerts = get_config_variable(
             "DATADOG_IMPORT_ALERTS", ["datadog", "import_alerts"], config, False, True
@@ -474,9 +468,20 @@ class DataDogConnector:
             # in the bundle so this guard is never tripped by the
             # connector itself.
             try:
+                # ``update_existing_data`` was the legacy knob that
+                # controlled whether the ingestion worker overwrote
+                # existing SDOs. It has been removed from the helper's
+                # public contract (see the connector-linter ``VC506``
+                # rule and the ``efb345a5`` commit on the platform
+                # repo) and is no longer accepted as a configuration
+                # input. The helper still tolerates a literal
+                # ``update=`` kwarg on this call for backwards
+                # compatibility, but the connector now defers entirely
+                # to the platform-side default behaviour rather than
+                # plumbing a deprecated knob through a community
+                # connector's config surface.
                 self.helper.send_stix2_bundle(
                     stix_bundle.serialize(),
-                    update=self.update_existing_data,
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )

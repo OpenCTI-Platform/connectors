@@ -9,7 +9,6 @@ connector:
   scope: 'stix2'
   auto: true
   log_level: 'info'
-  update_existing_data: false
 
 datadog:
   token: 'ChangeMe'
