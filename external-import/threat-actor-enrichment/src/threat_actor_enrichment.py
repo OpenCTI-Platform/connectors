@@ -21,7 +21,13 @@ class ThreatActorEnrichment:
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         if os.path.isfile(config_file_path):
             with open(config_file_path) as config_file:
-                config = yaml.load(config_file, Loader=yaml.FullLoader)
+                # ``yaml.load`` returns ``None`` for an empty / whitespace-
+                # only document. Both ``OpenCTIConnectorHelper`` and the
+                # downstream ``get_config_variable(..., config, ...)``
+                # calls index into the mapping, so a ``None`` here would
+                # crash startup. ``or {}`` upholds the same contract as
+                # the missing-file branch below.
+                config = yaml.load(config_file, Loader=yaml.FullLoader) or {}
         else:
             config = {}
 
@@ -187,12 +193,25 @@ class ThreatActorEnrichment:
 
     @staticmethod
     def _parse_date(date_str: str | None) -> datetime | None:
+        """Parse an ISO-8601 timestamp into a UTC-aware ``datetime``.
+
+        Always returns a timezone-aware value (UTC) on success so the
+        downstream ``max(candidate_dates, ...)`` and ``best_dt >
+        current_dt`` comparisons never raise ``TypeError`` on mixed
+        aware / naive operands. ``datetime.fromisoformat`` returns a
+        naive ``datetime`` for inputs that carry no offset (legacy
+        STIX dates, malformed-but-parseable values), so we normalise
+        explicitly here rather than at every call site.
+        """
         if not date_str:
             return None
         try:
-            return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
         except (ValueError, AttributeError):
             return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
 
     @staticmethod
     def _format_last_seen(dt: datetime) -> str:
@@ -217,12 +236,23 @@ class ThreatActorEnrichment:
         millis = dt_utc.microsecond // 1000
         return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.") + f"{millis:03d}Z"
 
-    @staticmethod
-    def _is_stale(current_last_seen: str | None) -> bool:
-        """Check if last_seen is missing, epoch-zero, or far-future."""
+    @classmethod
+    def _is_stale(cls, current_last_seen: str | None) -> bool:
+        """Check if last_seen is missing, sentinel, or unparseable.
+
+        Unparseable values are treated as stale so the connector can
+        self-heal historical bad data (e.g. an upstream import that
+        wrote a garbage string into ``last_seen``). The previous
+        shape only flagged missing / epoch-zero / far-future, so a
+        non-empty but unparseable value would short-circuit the
+        ``best_dt > current_dt`` branch on a ``current_dt is None``
+        guard and the bad value would be locked in forever.
+        """
         if not current_last_seen:
             return True
-        return current_last_seen in (EPOCH_ZERO, FAR_FUTURE)
+        if current_last_seen in (EPOCH_ZERO, FAR_FUTURE):
+            return True
+        return cls._parse_date(current_last_seen) is None
 
     def _process_enrichment(self):
         """Main enrichment logic: scan all threat actors and update stale last_seen."""
@@ -293,8 +323,17 @@ class ThreatActorEnrichment:
                 )
                 updated += 1
 
-            except Exception:
-                self.helper.log_error(f"Error processing threat actor {ta_name}")
+            except Exception as err:
+                # Surface the exception type AND message so an operator
+                # can diagnose the failure (ES query error vs. GraphQL
+                # update vs. mapping mismatch) without enabling debug
+                # logging. The previous shape dropped both, leaving
+                # only "Error processing threat actor <name>" with no
+                # actionable signal.
+                self.helper.log_error(
+                    f"Error processing threat actor {ta_name} "
+                    f"({type(err).__name__}): {err}"
+                )
                 errors += 1
 
         self.helper.log_info(
