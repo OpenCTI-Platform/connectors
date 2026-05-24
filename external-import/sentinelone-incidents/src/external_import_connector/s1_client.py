@@ -131,8 +131,19 @@ class SentinelOneClient:
 
             skip += len(page_data)
 
-            # Stop if we've fetched everything
-            if skip >= total_items:
+            # Stop if we've fetched everything. ``total_items`` is
+            # only a meaningful upper bound when SentinelOne returned
+            # a positive ``pagination.totalItems`` — when the field
+            # is missing or zero (some v2.1 responses omit it), the
+            # previous shape would unconditionally break here after
+            # the first page because ``skip`` (e.g. 50) was already
+            # ``>= 0``, silently truncating the result set to a
+            # single page even when more pages existed. The
+            # empty-page check at the top of the next iteration is
+            # the natural pagination terminator on those payloads,
+            # so guard the bound on ``total_items > 0`` and let the
+            # loop fall through to it.
+            if total_items > 0 and skip >= total_items:
                 break
 
         self.logger.info(f"Fetched {len(incidents)} incidents since {start_date}.")
