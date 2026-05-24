@@ -29,9 +29,9 @@ def fetch_stix_data(path):
     # ``open(...) / read() / close()`` shape leaked the fd on any
     # exception between ``open`` and ``close``, which on a long restore
     # of a corrupt backup tree would slowly exhaust the per-process
-    # fd limit. ``json.load(fh)`` reads + decodes directly from the
-    # file handle (no intermediate ``read()`` materialising the whole
-    # payload as a string in memory). Renamed the parameter from
+    # fd limit. ``json.load(fh)`` keeps the parsing logic in one place
+    # (it still reads the full file content internally) and avoids
+    # shadowing the file handle name. Renamed the parameter from
     # ``file`` to ``path`` so it doesn't shadow the freshly opened
     # file object.
     with open(path, mode="r") as fh:
