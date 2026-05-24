@@ -151,25 +151,50 @@ class StreamImporterConnector(ExternalImportConnector):
 
                 continue
 
+            # ``response`` is initialised here (not inside the
+            # ``try``) so the ``finally`` cleanup never crashes with
+            # ``UnboundLocalError``. ``minio_client.get_object`` can
+            # raise ``S3Error`` / network errors that the ``except``
+            # block below does NOT catch — they fall through to the
+            # ``finally`` first, and without the explicit ``None``
+            # seed the close / release call would mask the real
+            # failure with an attribute error on an undefined name.
+            response = None
             try:
                 response = self.minio_client.get_object(
                     obj.bucket_name,
                     obj.object_name,
                 )
-                # Read data from response
-                self.send_event(Event(obj.object_name, response.data.decode()))
-
-                # Update the state
-                state["file_count"] = expected_file_number
-                self.helper.set_state(state)
+                # Read data from response. ``send_event`` returns
+                # ``True`` only when every entry in the file was
+                # successfully published to RabbitMQ AND the file was
+                # subsequently moved to the destination bucket — we
+                # only advance the state cursor in that case so a
+                # partial publish (broker NACK, channel closed by
+                # broker, etc.) gets retried on the next scan cycle
+                # rather than silently losing the unsent entries
+                # behind an advanced ``file_count``.
+                if self.send_event(Event(obj.object_name, response.data.decode())):
+                    state["file_count"] = expected_file_number
+                    self.helper.set_state(state)
             except json.decoder.JSONDecodeError as e:
                 self.metrics.import_down()
                 self.helper.log_error(
                     f"File {obj.object_name} is malformatted, not processing: {e}"
                 )
             finally:
-                response.close()
-                response.release_conn()
+                # Guard both calls so a failure before ``response`` is
+                # assigned does not crash the cleanup. ``release_conn``
+                # was added in newer ``urllib3`` releases and may not
+                # exist on every response object minio-py returns —
+                # treat it as best-effort so a missing attribute does
+                # not turn a successful publish into a failed one.
+                if response is not None:
+                    try:
+                        response.close()
+                    finally:
+                        if hasattr(response, "release_conn"):
+                            response.release_conn()
 
     def _object_exists(self, bucket_name: str, object_name: str) -> bool:
         """
@@ -195,15 +220,32 @@ class StreamImporterConnector(ExternalImportConnector):
                 return False
             raise
 
-    def send_event(self, event: Event) -> None:
+    def send_event(self, event: Event) -> bool:
         """Send an event to RabbitMQ.
 
-        Once the event is sent, the file is moved to another bucket.
+        Once every entry in the event has been successfully published,
+        the file is moved to the destination bucket and ``True`` is
+        returned. When any entry fails to publish — either because the
+        broker closed the channel (``ChannelClosedByBroker``) or the
+        bounded retry loop exhausted for a NACK / unroutable response
+        — ``False`` is returned and the source file is left in place
+        so the next scan cycle can retry it; the state cursor in
+        :meth:`_collect_intelligence` is guarded on this return value
+        so a partial publish does not silently advance the cursor
+        past the unsent entries.
 
         Parameters
         ----------
         event : tuple[Path, str]
             Event as a tuple with the first element being the path of the file and the second the content (not encoded).
+
+        Returns
+        -------
+        bool
+            ``True`` if every entry was published AND the file was
+            moved to the destination bucket; ``False`` on any publish
+            failure (channel closed / retry exhausted) so the caller
+            can hold the state cursor.
         """
         self.helper.log_info(f"Processing events from {event.path}")
         pika_credentials = pika.PlainCredentials(
@@ -233,16 +275,49 @@ class StreamImporterConnector(ExternalImportConnector):
             self.helper.connector_logger.warning(str(err))
             channel.close()
             pika_connection.close()
-            return
+            return False
 
+        # Track per-entry success so the file is only moved (and the
+        # ``sent_messages_total`` counter only incremented) when every
+        # entry actually went through. The previous shape incremented
+        # ``metrics.send()`` unconditionally — even when
+        # ``_send_event`` had dropped the event after a
+        # ``ChannelClosedByBroker`` or after exhausting the bounded
+        # NACK / unroutable retry — which inflated the Prometheus
+        # success counter against the actual broker state. On the
+        # first publish failure we also break the loop: subsequent
+        # ``basic_publish`` calls on a closed channel raise
+        # ``pika.exceptions.ChannelWrongStateError`` (NOT caught in
+        # ``_send_event``), so the previous "keep iterating" shape
+        # could crash the connector on the second entry rather than
+        # fail cleanly on the first one.
+        all_ok = True
         for e in event.entries.split("\n"):
-            self._send_event(
-                channel,
-                e,
-            )
-            self.metrics.send()
+            if self._send_event(channel, e):
+                self.metrics.send()
+            else:
+                all_ok = False
+                self.helper.connector_logger.warning(
+                    f"Publish failed for an entry in {event.path}; "
+                    "stopping iteration on this file so the channel "
+                    "state cannot crash subsequent publishes."
+                )
+                break
         channel.close()
         pika_connection.close()
+
+        if not all_ok:
+            # Leave the source file in place AND skip the state-cursor
+            # advance (in ``_collect_intelligence``) so the next scan
+            # cycle reprocesses this file. Without this branch the
+            # file would be moved to the destination bucket and the
+            # ``file_count`` cursor advanced past it, silently losing
+            # the unsent entries forever.
+            self.helper.connector_logger.warning(
+                f"File {event.path} had publish failures; leaving it "
+                "in the source bucket so the next scan cycle can retry."
+            )
+            return False
 
         # The event is processed, the file can be moved (well, copied and deleted...).
         self.minio_client.copy_object(
@@ -257,6 +332,7 @@ class StreamImporterConnector(ExternalImportConnector):
         self.helper.log_info(
             f"File {event.path} moved to {os.path.join(self.minio_dst_bucket, self.minio_dst_path)}"
         )
+        return True
 
     # Hard cap on the number of times :meth:`_send_event` will retry a
     # publish that the broker NACKed or returned as unroutable before
@@ -267,7 +343,7 @@ class StreamImporterConnector(ExternalImportConnector):
     # a missing binding, or persistent publisher-confirms NACKs).
     _MAX_PUBLISH_RETRIES = 3
 
-    def _send_event(self, channel, event: str, attempt: int = 1) -> None:
+    def _send_event(self, channel, event: str, attempt: int = 1) -> bool:
         """Send the content of the event to RabbitMQ.
 
         Parameters
@@ -281,10 +357,25 @@ class StreamImporterConnector(ExternalImportConnector):
             ``NackError`` / ``UnroutableError``. Defaults to 1 for the
             first attempt; the helper recurses with ``attempt + 1`` and
             gives up once it exceeds :attr:`_MAX_PUBLISH_RETRIES`.
+
+        Returns
+        -------
+        bool
+            ``True`` when the publish was confirmed by the broker (or
+            the entry was an empty / blank string that we deliberately
+            skip — counted as a clean no-op so the caller does not
+            interpret it as a failure); ``False`` when the publish
+            was dropped on a permanently closed channel
+            (``ChannelClosedByBroker``) or after exhausting the
+            bounded NACK / unroutable retry. The caller in
+            :meth:`send_event` uses this to gate both the
+            ``metrics.send()`` increment and the destination-bucket
+            file move so the success counter and the per-file
+            "moved" semantic always match the actual broker state.
         """
         if not event:
             self.helper.log_debug("Event is empty, skipping")
-            return
+            return True
 
         event_parsed = json.loads(event)
         self.helper.log_debug(f"Event parsed: {event_parsed}")
@@ -312,6 +403,7 @@ class StreamImporterConnector(ExternalImportConnector):
             )
             self.helper.connector_logger.debug("Event has been sent")
             self.helper.metric.inc("bundle_send")
+            return True
         except ChannelClosedByBroker as err:
             # ``ChannelClosedByBroker`` is raised when the RabbitMQ broker
             # closes the channel itself (most commonly because the message
@@ -320,14 +412,19 @@ class StreamImporterConnector(ExternalImportConnector):
             # pattern used for ``UnroutableError`` / ``NackError`` would
             # have looped forever on the very same closed channel — every
             # subsequent ``basic_publish`` would re-raise the same
-            # exception. Just record the metric, log the error, and drop
-            # this event so the outer per-file loop in :meth:`send_event`
-            # can open a fresh channel for the next file.
+            # exception. Record the metric, log the error, and return
+            # ``False`` so the caller in :meth:`send_event` breaks the
+            # per-entry loop (subsequent publishes on the now-closed
+            # channel would otherwise raise
+            # ``pika.exceptions.ChannelWrongStateError`` and crash the
+            # connector) and skips both the success counter and the
+            # destination-bucket move for this file.
             self.metrics.send_error()
             self.helper.connector_logger.error(
                 f"Unable to send bundle ({type(err).__name__}): {err}; "
                 "channel is closed, skipping retry."
             )
+            return False
         except (NackError, UnroutableError) as err:
             # ``NackError`` is raised when the broker NACKs a publisher-
             # confirmed message; ``UnroutableError`` when a ``mandatory``
@@ -340,19 +437,21 @@ class StreamImporterConnector(ExternalImportConnector):
             # recursion limit and crash the connector with a
             # ``RecursionError`` instead of just dropping the offending
             # event and moving on. Bound the retry, then drop+log on
-            # the same shape as the ``ChannelClosedByBroker`` branch.
+            # the same shape as the ``ChannelClosedByBroker`` branch
+            # and return ``False`` so the caller's success counter and
+            # destination move stay aligned with reality.
             self.metrics.send_error()
             if attempt >= self._MAX_PUBLISH_RETRIES:
                 self.helper.connector_logger.error(
                     f"Unable to send bundle ({type(err).__name__}): {err}; "
                     f"exhausted {self._MAX_PUBLISH_RETRIES} retries, dropping event."
                 )
-                return
+                return False
             self.helper.connector_logger.error(
                 f"Unable to send bundle ({type(err).__name__}): {err}, "
                 f"retrying (attempt {attempt + 1}/{self._MAX_PUBLISH_RETRIES})..."
             )
-            self._send_event(channel, event, attempt=attempt + 1)
+            return self._send_event(channel, event, attempt=attempt + 1)
 
 
 def str_to_bool(val):
