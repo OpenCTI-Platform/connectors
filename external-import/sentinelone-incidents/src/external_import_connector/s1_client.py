@@ -209,13 +209,16 @@ class SentinelOneClient:
         Dynamic API request sender handling all
         important cases and retries.
 
-        Returns the response decoded as a ``dict`` on a 2xx response
-        and ``None`` on a transport-level failure (429 retry exhaustion
-        or a non-200 status). Authentication failures (401) raise
-        :class:`SentinelOnePermissionError`. The ``None`` sentinel
-        matches the ``Optional[dict]`` return annotation, so callers
-        like :meth:`fetch_incident_notes` can safely fall back to an
-        empty result without an ``AttributeError`` on ``.get(...)``.
+        Returns the response decoded as a ``dict`` on any 2xx response
+        (with an empty ``dict`` for a 204 / empty body, so callers can
+        still safely call ``.get(...)``) and ``None`` on a transport-
+        level failure (network / DNS / timeout / connection reset, 429
+        retry exhaustion or a non-2xx status). Authentication failures
+        (401) raise :class:`SentinelOnePermissionError`. The ``None``
+        sentinel matches the ``Optional[dict]`` return annotation, so
+        callers like :meth:`fetch_incident_notes` can safely fall back
+        to an empty result without an ``AttributeError`` on
+        ``.get(...)``.
         """
 
         def calculate_exponential_delay(last_wait_time):
@@ -227,13 +230,32 @@ class SentinelOneClient:
             "Authorization": self.config.s1_api_key,
         }
 
-        response = requests.request(
-            method=request_type,
-            url=url,
-            headers=headers,
-            data=payload or {},
-            timeout=REQUEST_TIMEOUT,
-        )
+        # ``requests.request`` raises ``RequestException`` (the base for
+        # DNS errors, timeouts, connection resets, SSL errors, …) on
+        # any transport-level failure. Without this guard the
+        # exception would bubble out of ``fetch_incidents`` /
+        # ``fetch_incident_notes`` and abort the whole scheduler
+        # cycle for a transient network blip. The docstring above
+        # promises a ``None`` return on transport failure, so the
+        # try/except keeps the runtime behaviour aligned with the
+        # contract (callers degrade gracefully — `fetch_incidents`
+        # stops pagination cleanly and `fetch_incident_notes` falls
+        # back to an empty notes list for the current incident).
+        try:
+            response = requests.request(
+                method=request_type,
+                url=url,
+                headers=headers,
+                data=payload or {},
+                timeout=REQUEST_TIMEOUT,
+            )
+        except requests.exceptions.RequestException as exc:
+            self.logger.error(
+                "Transport-level failure talking to SentinelOne; "
+                "returning None so the caller can degrade gracefully.",
+                meta={"url": url, "method": request_type, "error": str(exc)},
+            )
+            return None
 
         # Authentication Errors should be raised and halt execution, nothing can continue if they are present.
         if response.status_code == 401:
@@ -258,12 +280,43 @@ class SentinelOneClient:
                 )
             return None
 
-        # Random errors should be logged with context of their origin
-        elif response.status_code != 200:
-            self.logger.info(f"Error, Request got Response: {response.status_code}")
-            self.logger.debug(f"URL Used: {url}")
-            self.logger.debug(f"S1 responded with: {response.text}")
-            return None
+        # Treat every 2xx as success and align the runtime with the
+        # ``Returns the response decoded as a ``dict`` on any 2xx
+        # response`` contract advertised in the docstring above. The
+        # previous shape only accepted 200, so a future SentinelOne
+        # endpoint that returns 201 (created) or 202 (accepted) — both
+        # documented as legal success codes by the SentinelOne v2.1
+        # API — would silently fall through to the ``None`` branch
+        # despite the response being a successful one. ``204 No
+        # Content`` (or any other empty-body success) is collapsed to
+        # an empty ``dict`` here so callers' ``.get("data", [])`` etc.
+        # still works without an extra branch — ``response.json()``
+        # would otherwise raise ``JSONDecodeError`` on an empty body.
+        elif 200 <= response.status_code < 300:
+            if response.status_code == 204 or not response.content:
+                return {}
+            try:
+                return response.json()
+            except ValueError as exc:
+                # Non-JSON body on a 2xx response — surface it as a
+                # transport-level failure rather than crashing the
+                # caller. The SentinelOne v2.1 API documents JSON
+                # responses for every endpoint the connector hits, so
+                # this branch only fires on a misconfigured
+                # tenant / proxy.
+                self.logger.error(
+                    "Non-JSON 2xx response from SentinelOne; returning None.",
+                    meta={
+                        "url": url,
+                        "method": request_type,
+                        "status_code": response.status_code,
+                        "error": str(exc),
+                    },
+                )
+                return None
 
-        # Dynamic, return the response as a dict.
-        return response.json()
+        # Non-2xx (and non-401/429) errors should be logged with context of their origin
+        self.logger.info(f"Error, Request got Response: {response.status_code}")
+        self.logger.debug(f"URL Used: {url}")
+        self.logger.debug(f"S1 responded with: {response.text}")
+        return None
