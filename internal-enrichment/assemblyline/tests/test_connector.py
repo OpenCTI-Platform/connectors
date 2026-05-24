@@ -853,6 +853,43 @@ class TestUnpinnedFileFetch:
         )
 
 
+class TestZeroByteFileContent:
+    """A successfully fetched ``b""`` payload must be returned, not treated as missing.
+
+    Regression test for the Copilot review threads on
+    ``main.py:692`` / ``main.py:705`` — the previous truthiness
+    checks (``if not file_content`` / ``if file_content``) would
+    treat a 0-byte file (``b""``) as a failed download and fall
+    through to the SHA-256 hash-lookup path even though the
+    download had succeeded. The fix uses ``is None`` / ``is not None``
+    so a real empty payload short-circuits at the importFiles
+    branch like a non-empty one does.
+    """
+
+    def test_zero_byte_import_file_is_returned(self) -> None:
+        connector = _make_connector()
+        connector._download_import_file = MagicMock(  # type: ignore[method-assign]
+            return_value=b""
+        )
+        connector._fetch_attached_file = MagicMock()  # type: ignore[method-assign]
+        connector._select_any_hash = MagicMock(return_value="hash")  # type: ignore[method-assign]
+        observable = {
+            "entity_type": "StixFile",
+            "name": "empty.bin",
+            "importFiles": [{"id": "file-empty", "name": "empty.bin"}],
+            "x_opencti_files": [{"id": "file-fallback", "name": "fallback.bin"}],
+            "hashes": [{"algorithm": "SHA-256", "hash": "a" * 64}],
+        }
+        content, name, _ = connector._get_stixfile_content(observable)
+        assert content == b""
+        assert name == "empty.bin"
+        # The ``x_opencti_files`` fallback must NOT have been
+        # invoked: the empty payload was a successful fetch, not a
+        # missing one. Pin both that and the absence of the
+        # SHA-256 hash-lookup path.
+        connector._fetch_attached_file.assert_not_called()
+
+
 class TestSourceMarkingRefs:
     """Derived analysis SCOs inherit the source observable's TLP markings.
 

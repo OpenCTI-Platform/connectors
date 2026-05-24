@@ -688,7 +688,17 @@ class AssemblyLineConnector:
             except Exception as exc:
                 self.helper.log_warning(f"Failed to download from importFiles: {exc}")
 
-        if not file_content:
+        # Explicit ``is None`` checks (not truthiness) — a 0-byte file
+        # payload (``b""``) is falsy in Python, so ``if not file_content``
+        # would treat a successfully-downloaded empty file as "missing"
+        # and either fall through to ``x_opencti_files`` for nothing
+        # or skip the early return and trigger the SHA-256 fallback
+        # path below as if no content had been fetched. The downstream
+        # code already handles ``b""`` correctly (the file size is
+        # tracked separately from content presence), so the right
+        # signal here is "did the download succeed?" — i.e. did the
+        # source return a ``bytes`` object at all, regardless of length.
+        if file_content is None:
             x_files = observable.get("x_opencti_files") or []
             if x_files:
                 file_id = x_files[0]["id"]
@@ -701,7 +711,7 @@ class AssemblyLineConnector:
                         f"Failed to fetch from x_opencti_files: {exc}"
                     )
 
-        if file_content:
+        if file_content is not None:
             return file_content, file_name, file_hash
 
         sha256 = self._select_sha256(hashes)
