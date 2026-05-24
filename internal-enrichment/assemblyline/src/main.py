@@ -612,19 +612,24 @@ class AssemblyLineConnector:
                 except Exception as exc:
                     self.helper.log_warning(f"Error refreshing observable: {exc}")
 
-        # No file content recovered — try a hash-only AssemblyLine lookup.
-        # ``_check_existing_analysis`` searches ``files.sha256:<hash>``,
-        # so only attempting it for SHA-256 (consistent with the
-        # ``_get_stixfile_content`` branch and with the dedup contract
-        # documented in ``_process_file``).
+        # No file content recovered — defer the AssemblyLine lookup to
+        # :meth:`_process_file`. The previous shape called
+        # ``_check_existing_analysis(sha256)`` here AND
+        # ``_process_file`` then called it again on the
+        # ``file_content is None`` branch — the same Lucene
+        # ``files.sha256:<hash>`` query twice per cycle, doubling the
+        # AssemblyLine API round-trip and the audit-log noise on every
+        # hash-only Artifact reuse. Return ``(None, None, sha256)``
+        # when a SHA-256 is available and let ``_process_file`` perform
+        # the single lookup; raise here only when there is no SHA-256
+        # to defer with.
         sha256 = self._select_sha256(observable.get("hashes", []))
         if sha256:
             self.helper.log_info(
-                f"No file content available, checking AssemblyLine for SHA-256: {sha256}"
+                "No file content available, "
+                f"deferring to AssemblyLine SHA-256 lookup in _process_file: {sha256}"
             )
-            if self._check_existing_analysis(sha256):
-                self.helper.log_info("Existing AssemblyLine analysis found for hash")
-                return None, None, sha256
+            return None, None, sha256
         raise Exception(
             "Artifact has no file content for analysis. File may still be uploading "
             "or artifact contains only hashes."
@@ -674,12 +679,20 @@ class AssemblyLineConnector:
 
         sha256 = self._select_sha256(hashes)
         if sha256:
+            # Defer the AssemblyLine lookup to :meth:`_process_file`.
+            # Same rationale as ``_get_artifact_content``: the previous
+            # shape ran ``_check_existing_analysis(sha256)`` here AND
+            # ``_process_file`` ran it again on the
+            # ``file_content is None`` branch, paying for two
+            # identical ``files.sha256:<hash>`` searches per cycle on
+            # every hash-only StixFile reuse. Return ``(None, None,
+            # sha256)`` and let ``_process_file`` perform the single
+            # lookup.
             self.helper.log_info(
-                f"StixFile has no content, checking AssemblyLine for hash: {sha256}"
+                "StixFile has no content, "
+                f"deferring to AssemblyLine SHA-256 lookup in _process_file: {sha256}"
             )
-            if self._check_existing_analysis(sha256):
-                self.helper.log_info("Existing AssemblyLine analysis found for hash")
-                return None, None, sha256
+            return None, None, sha256
 
         # ``file_hash`` falls back to ``observable.get("name")`` and then
         # to the literal ``"unknown"`` when the StixFile carries no
@@ -970,7 +983,18 @@ class AssemblyLineConnector:
                         f"Submission {submission_id} not found in AssemblyLine"
                     ) from exc
                 self.helper.log_warning(f"Error checking submission status: {exc}")
-            time.sleep(_POLL_SLEEP_SECONDS)
+            # Cap the sleep at the remaining time until ``deadline`` so the
+            # polling loop never overshoots ``ASSEMBLYLINE_TIMEOUT`` by
+            # nearly a full ``_POLL_SLEEP_SECONDS`` interval. ``while
+            # time.monotonic() < deadline`` only guards the *next*
+            # iteration; without this cap, the last sleep before the
+            # ``deadline`` check could extend total wall-time well past
+            # the configured timeout (which the README and config schema
+            # both document as the maximum wait).
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(_POLL_SLEEP_SECONDS, remaining))
 
         raise Exception(
             f"Timeout waiting for AssemblyLine results after {self.assemblyline_timeout} seconds"
