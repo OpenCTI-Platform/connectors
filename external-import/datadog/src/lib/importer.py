@@ -167,18 +167,37 @@ class DataImporter:
                 "Recursively searching response for observable fields"
             )
 
-            # Recursively find all values for specific field names
-            client_ips = self._find_values_by_key(raw_signal, "client_ip")
-            x_real_ips = self._find_values_by_key(raw_signal, "x-real-ip")
-            x_forwarded_fors = self._find_values_by_key(raw_signal, "x-forwarded-for")
-
-            hosts = self._find_values_by_key(raw_signal, "host")
-            hostnames = self._find_values_by_key(raw_signal, "hostname")
-
-            urls = self._find_values_by_key(raw_signal, "url")
-
-            user_agents = self._find_values_by_key(raw_signal, "user-agent")
-            useragents = self._find_values_by_key(raw_signal, "useragent")
+            # Single pass collecting every observable-bearing field at
+            # once. The previous shape called ``_find_values_by_key``
+            # eight times against the same ``raw_signal`` tree —
+            # O(K · N) traversal overhead (with ``K`` = number of
+            # target keys, ``N`` = total node count). DataDog Security
+            # Signal payloads can carry deeply nested ``samples`` /
+            # ``messages`` arrays, so on a 10,000-signal cycle that
+            # was eight full walks of every signal. ``_find_values``
+            # walks the tree once for the entire key set and returns
+            # a dict keyed on the target name.
+            extracted = self._find_values(
+                raw_signal,
+                {
+                    "client_ip",
+                    "x-real-ip",
+                    "x-forwarded-for",
+                    "host",
+                    "hostname",
+                    "url",
+                    "user-agent",
+                    "useragent",
+                },
+            )
+            client_ips = extracted["client_ip"]
+            x_real_ips = extracted["x-real-ip"]
+            x_forwarded_fors = extracted["x-forwarded-for"]
+            hosts = extracted["host"]
+            hostnames = extracted["hostname"]
+            urls = extracted["url"]
+            user_agents = extracted["user-agent"]
+            useragents = extracted["useragent"]
 
             # Process IPs
             all_ips = client_ips + x_real_ips
@@ -329,32 +348,46 @@ class DataImporter:
             self.helper.log_error(traceback.format_exc())
             return observables
 
-    def _find_values_by_key(self, data: Any, target_key: str) -> list[Any]:
+    def _find_values(self, data: Any, target_keys: set[str]) -> dict[str, list[Any]]:
         """
-        Recursively search for all values with a specific key name
+        Recursively search ``data`` once and return every value seen
+        under any of ``target_keys``.
+
+        One-pass replacement for the previous ``_find_values_by_key``
+        helper. The earlier shape was called separately for each key
+        the caller wanted, which made the traversal cost grow linearly
+        with the number of keys (O(K · N) with ``K`` = number of keys,
+        ``N`` = total nodes in the signal tree). The DataDog Security
+        Signal payload is deeply nested (``attributes.attributes.*``,
+        ``samples[*]``, repeated ``http`` blocks etc.) so on a high-
+        volume cycle that overhead was non-trivial.
 
         Args:
-            data: Data structure to search (dict, list, or other)
-            target_key: Key name to search for
+            data: Data structure to search (dict, list, or scalar).
+            target_keys: Set of key names to collect.
 
         Returns:
-            List of all values found for that key
+            Dict mapping every requested key to the list of values
+            found for it. Keys with no matches are present with an
+            empty list so callers do not need a ``.get(key, [])``
+            guard. List values are flattened one level (matching the
+            previous helper's behaviour).
         """
-        results = []
+        results: dict[str, list[Any]] = {key: [] for key in target_keys}
 
-        if isinstance(data, dict):
-            for key, value in data.items():
-                if key == target_key:
-                    # Handle both single values and arrays
-                    if isinstance(value, list):
-                        results.extend(value)
-                    else:
-                        results.append(value)
-                # Recursively search nested structures
-                results.extend(self._find_values_by_key(value, target_key))
-        elif isinstance(data, list):
-            for item in data:
-                results.extend(self._find_values_by_key(item, target_key))
+        stack: list[Any] = [data]
+        while stack:
+            node = stack.pop()
+            if isinstance(node, dict):
+                for key, value in node.items():
+                    if key in target_keys:
+                        if isinstance(value, list):
+                            results[key].extend(value)
+                        else:
+                            results[key].append(value)
+                    stack.append(value)
+            elif isinstance(node, list):
+                stack.extend(node)
 
         return results
 
@@ -404,10 +437,14 @@ class DataImporter:
         # like ``172.example.com`` while only ``172.16.0.0/12`` is
         # actually a private range. Validating through ``ipaddress``
         # keeps that distinction correct.
+        # ``ipaddress.AddressValueError`` is a ``ValueError`` subclass
+        # (see ``cpython/Lib/ipaddress.py``), so catching the parent
+        # is sufficient — the redundant tuple form would have
+        # silently swallowed any future stdlib re-parenting too.
         try:
             ipaddress.IPv4Address(domain)
             return False
-        except (ValueError, ipaddress.AddressValueError):
+        except ValueError:
             pass
 
         domain_pattern = (
