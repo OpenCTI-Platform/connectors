@@ -25,12 +25,15 @@ def ref_extractors(objects):
 
 def fetch_stix_data(path):
     # ``with open(...)`` guarantees the file descriptor is released even
-    # if ``json.loads`` raises on a malformed payload — the previous
+    # if ``json.load`` raises on a malformed payload — the previous
     # ``open(...) / read() / close()`` shape leaked the fd on any
     # exception between ``open`` and ``close``, which on a long restore
     # of a corrupt backup tree would slowly exhaust the per-process
-    # fd limit. Renamed the parameter from ``file`` to ``path`` so it
-    # doesn't shadow the freshly opened file object.
+    # fd limit. ``json.load(fh)`` reads + decodes directly from the
+    # file handle (no intermediate ``read()`` materialising the whole
+    # payload as a string in memory). Renamed the parameter from
+    # ``file`` to ``path`` so it doesn't shadow the freshly opened
+    # file object.
     with open(path, mode="r") as fh:
         file_json = json.load(fh)
     return file_json["objects"]
@@ -261,7 +264,17 @@ class RestoreFilesConnector:
             element_refs = []
             with os.scandir(entry) as it:
                 for file in it:
-                    if file.is_file():
+                    # Mirror the cache-build filter: only ``*.json`` files
+                    # carry STIX payloads. Any sidecar file the backup
+                    # writer (or an operator) may have dropped under a
+                    # run-dir (``manifest.txt``, ``.gitkeep``, partial
+                    # writes, …) would otherwise reach ``fetch_stix_data``
+                    # and crash the restore on a JSON-decode error or a
+                    # missing ``objects`` key. ``file.is_file()`` is
+                    # preserved on the same line so subdirectories and
+                    # symlinks-to-dirs are still skipped before the
+                    # name check.
+                    if file.is_file() and file.name.endswith(".json"):
                         # Pass the explicit ``str`` path rather than the
                         # ``DirEntry`` itself so ``fetch_stix_data``'s
                         # ``open(path, mode="r")`` does not rely on the
