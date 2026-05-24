@@ -47,7 +47,13 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting combined indicator entities...")
 
-        response_body = response["body"]
+        # ``handle_api_error`` normalises ``response["body"]`` to ``{}``
+        # when the upstream omits it (or returns ``None``), but we still
+        # use ``.get(...) or {}`` here so the read is robust even if
+        # ``handle_api_error`` is ever refactored to drop the in-place
+        # normalisation, and so a static reader can see the contract on
+        # the call site without grepping the base class.
+        response_body = response.get("body") or {}
         response_body["next_page"] = self.get_next_page(response)
 
         return response_body

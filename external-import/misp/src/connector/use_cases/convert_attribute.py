@@ -165,21 +165,57 @@ class AttributeConverter:
         markings: list[stix2.v21.MarkingDefinition],
         custom_properties: dict[str, str],
     ) -> stix2.IPv4Address | stix2.IPv6Address:
-        try:
-            # Test if valid IP v4 address
-            ipaddress.IPv4Address(value)
+        """Build a STIX 2.1 IPv4 / IPv6 observable from a MISP ``ip-src`` / ``ip-dst`` value.
 
-            return stix2.IPv4Address(
-                value=value,
-                object_marking_refs=markings,
-                custom_properties=custom_properties,
-            )
-        except ipaddress.AddressValueError:
+        Both single hosts (``1.2.3.4``, ``::1``) and CIDR ranges
+        (``192.168.0.0/24``, ``2001:db8::/32``) are accepted — the STIX 2.1
+        spec explicitly allows CIDR notation in the ``IPv4-Addr`` /
+        ``IPv6-Addr`` ``value`` field.
+
+        ``ipaddress.ip_network(value, strict=False)`` validates the **full**
+        input in a single call — including the prefix length — so:
+
+        * ``192.168.0.0/24`` correctly resolves to ``version == 4`` (the
+          previous ``ipaddress.IPv4Address(value)`` call raised on the
+          ``/`` and silently routed the value to the IPv6 fallback,
+          producing the IPv6-tagged-IPv4-range bug this PR set out to fix);
+        * ``1.2.3.4/999`` and other malformed-prefix variants raise
+          ``ValueError`` instead of slipping through a "validate only the
+          address half" guard, so the connector no longer emits an
+          ``IPv4Address`` observable with a structurally invalid
+          ``value``;
+        * ``strict=False`` lets host-bits-set CIDRs (``1.2.3.4/24`` →
+          ``1.2.3.0/24``) through without raising — MISP attributes
+          commonly carry the address-with-mask form, and the converter's
+          job is to type-tag the observable, not to canonicalise the
+          range on its behalf.
+
+        The ``ValueError`` branch keeps the connector's prior
+        "anything that does not parse as IPv4 is an IPv6 observable"
+        contract — the MISP source of truth gets to decide what is and
+        is not a valid IP; the converter only chooses the STIX type
+        tag.
+        """
+        try:
+            network = ipaddress.ip_network(value, strict=False)
+        except ValueError:
             return stix2.IPv6Address(
                 value=value,
                 object_marking_refs=markings,
                 custom_properties=custom_properties,
             )
+
+        if network.version == 4:
+            return stix2.IPv4Address(
+                value=value,
+                object_marking_refs=markings,
+                custom_properties=custom_properties,
+            )
+        return stix2.IPv6Address(
+            value=value,
+            object_marking_refs=markings,
+            custom_properties=custom_properties,
+        )
 
     def create_intrusion_set_from_attribute(
         self,

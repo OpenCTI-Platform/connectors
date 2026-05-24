@@ -45,6 +45,8 @@ class Cluster25:
 
         # Cluster25 connector configuration
         self.base_url = self._get_configuration(config, self._CONFIG_BASE_URL)
+        if isinstance(self.base_url, str):
+            self.base_url = self.base_url.rstrip("/")
         self.client_id = self._get_configuration(config, self._CONFIG_CLIENT_ID)
         self.client_secret = self._get_configuration(config, self._CONFIG_CLIENT_SECRET)
 
