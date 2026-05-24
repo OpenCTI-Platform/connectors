@@ -227,8 +227,20 @@ class StixConverter:
                 self.helper.log_info(
                     f"Creating incident response case for alert {alert_data.get('id', 'unknown')}"
                 )
+                # Pass the observables we already created above so the
+                # case-creation helper does not recompute them. The
+                # previous shape rebuilt the same SCOs inside
+                # ``_create_incident_response_case_from_alert`` — the
+                # bundle dedup pass would later collapse the
+                # duplicates by id (correctness is preserved), but
+                # every alert still paid for two passes through
+                # ``_create_observables_from_alert`` and the matching
+                # ``stix2`` constructors on the case-enabled path.
+                # Reusing the list keeps the work single-pass and the
+                # log output truthful (the per-cycle observable count
+                # is no longer double-counted).
                 case_objects = self._create_incident_response_case_from_alert(
-                    alert_data
+                    alert_data, existing_observables=observables
                 )
                 self.helper.log_info(f"Created {len(case_objects)} case objects")
                 stix_objects.extend(case_objects)
@@ -261,13 +273,24 @@ class StixConverter:
             return []
 
     def _create_incident_response_case_from_alert(
-        self, alert_data: dict[str, Any]
+        self,
+        alert_data: dict[str, Any],
+        existing_observables: list[Any] | None = None,
     ) -> list[Any]:
         """
         Create incident response case objects from security signal (alert) data
 
         Args:
             alert_data: Processed alert data from security signal
+            existing_observables: Optional list of observable SDOs that the
+                caller has already built for the same alert (the standard
+                path from :meth:`_create_alert_stix_objects`). When
+                provided the helper reuses them as-is and skips the
+                redundant call to :meth:`_create_observables_from_alert`;
+                when ``None`` it falls back to building them on demand so
+                a direct caller (e.g. a future code path that creates a
+                case without the surrounding incident-side observables)
+                still works.
 
         Returns:
             List of STIX objects for the case
@@ -300,9 +323,29 @@ class StixConverter:
                 f"Case data prepared: name={case_data.get('name')}, type={case_data.get('type')}, severity={case_data.get('severity')}"
             )
 
-            # Create observables FIRST so we can add them to the case
-            observables = self._create_observables_from_alert(alert_data)
-            self.helper.log_info(f"Created {len(observables)} observables for case")
+            # Reuse the caller's pre-built observable SDOs when supplied
+            # so the case-enabled path stops recomputing the same SCOs
+            # the incident path already built. When the caller already
+            # has them in its own ``stix_objects`` list (the standard
+            # path from :meth:`_create_alert_stix_objects`), this
+            # helper MUST NOT re-include them in the returned list —
+            # otherwise the caller's downstream ``stix_objects.extend(
+            # case_objects)`` would add duplicates that the bundle
+            # dedup would have to collapse by id. The fallback
+            # ``None`` branch builds the SCOs on demand AND includes
+            # them in the returned list, preserving the legacy
+            # contract for any direct caller that does not own them
+            # yet.
+            if existing_observables is not None:
+                observables = list(existing_observables)
+                include_observables_in_return = False
+                self.helper.log_info(
+                    f"Reusing {len(observables)} pre-built observables for case"
+                )
+            else:
+                observables = self._create_observables_from_alert(alert_data)
+                include_observables_in_return = True
+                self.helper.log_info(f"Created {len(observables)} observables for case")
 
             # Create custom incident response case object WITH observables
             case = self._create_custom_case_object(case_data, observables)
@@ -315,8 +358,11 @@ class StixConverter:
                 self.helper.log_warning("Failed to create custom case object")
                 return []
 
-            # Add observables to the bundle
-            stix_objects.extend(observables)
+            # Only re-add observables to the returned bundle when this
+            # helper built them itself; the caller already has them
+            # when it passed ``existing_observables``.
+            if include_observables_in_return:
+                stix_objects.extend(observables)
 
             # Create relationships between case and observables
             if observables:

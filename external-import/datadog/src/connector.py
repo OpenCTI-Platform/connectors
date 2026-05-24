@@ -250,9 +250,22 @@ class DataDogConnector:
         ]:
             raise ValueError(f"Invalid TLP level: {self.max_tlp}")
 
-        # Validate alert configuration
+        # ``DATADOG_IMPORT_ALERTS`` is the only data source this
+        # connector currently emits, so setting it to ``false`` simply
+        # produces a clean no-op cycle (``_import_data`` skips the
+        # fetch, returns ``imported=0 / errors=0`` and the Work is
+        # marked completed without an error). The previous shape
+        # raised ``ValueError`` here, which turned a documented toggle
+        # into a startup crash that surprised operators who disabled
+        # it expecting a no-op. Honour the documented contract: log
+        # a warning so the operator can see the connector is running
+        # idle, but let the cycle complete cleanly.
         if not self.import_alerts:
-            raise ValueError("import_alerts must be enabled")
+            self.helper.log_warning(
+                "DATADOG_IMPORT_ALERTS is disabled; the connector will "
+                "run idle cycles (no data sources active). Set "
+                "DATADOG_IMPORT_ALERTS=true to resume ingestion."
+            )
 
     def _get_import_timestamp(self) -> datetime:
         """
