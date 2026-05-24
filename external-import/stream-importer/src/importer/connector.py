@@ -171,10 +171,20 @@ class StreamImporterConnector(ExternalImportConnector):
             self.minio_client.stat_object(bucket_name, object_name)
             return True
         except S3Error as err:
-            # MinIO returns a 404 / NoSuchKey when the object is missing.
-            if err.code == "NoSuchKey" or err.code == "404":
+            # ``minio-py`` populates ``S3Error.code`` with the textual S3
+            # error code (e.g. ``"NoSuchKey"`` for a missing object,
+            # ``"NoSuchBucket"`` for a missing bucket); the HTTP status
+            # is exposed separately via ``err.response.status``. The
+            # earlier ``err.code == "404"`` branch was therefore dead
+            # code (``code`` is never a numeric string) — kept only the
+            # ``NoSuchKey`` check, which is the actual signal a stat on
+            # a missing object surfaces. Anything else (permission
+            # error, ``NoSuchBucket`` from a misconfigured destination,
+            # network problem) should bubble up so the operator sees
+            # the real failure instead of being silently treated as a
+            # missing-file false negative.
+            if err.code == "NoSuchKey":
                 return False
-            # Anything else (e.g. permission errors, network problems) should bubble up.
             raise
 
     def send_event(self, event: Event) -> None:
@@ -240,7 +250,16 @@ class StreamImporterConnector(ExternalImportConnector):
             f"File {event.path} moved to {os.path.join(self.minio_dst_bucket, self.minio_dst_path)}"
         )
 
-    def _send_event(self, channel, event: str) -> None:
+    # Hard cap on the number of times :meth:`_send_event` will retry a
+    # publish that the broker NACKed or returned as unroutable before
+    # giving up and dropping the event. The previous shape recursed
+    # unconditionally on every ``NackError`` / ``UnroutableError``,
+    # which would blow Python's recursion limit (~1000) when the broker
+    # kept rejecting the same message (e.g. a misconfigured exchange,
+    # a missing binding, or persistent publisher-confirms NACKs).
+    _MAX_PUBLISH_RETRIES = 3
+
+    def _send_event(self, channel, event: str, attempt: int = 1) -> None:
         """Send the content of the event to RabbitMQ.
 
         Parameters
@@ -249,6 +268,11 @@ class StreamImporterConnector(ExternalImportConnector):
             Channel to send the event to.
         event : str
             Content of the event, as string.
+        attempt : int
+            1-based retry counter used to bound the recursive retry on
+            ``NackError`` / ``UnroutableError``. Defaults to 1 for the
+            first attempt; the helper recurses with ``attempt + 1`` and
+            gives up once it exceeds :attr:`_MAX_PUBLISH_RETRIES`.
         """
         if not event:
             self.helper.log_debug("Event is empty, skipping")
@@ -297,11 +321,30 @@ class StreamImporterConnector(ExternalImportConnector):
                 "channel is closed, skipping retry."
             )
         except (NackError, UnroutableError) as err:
+            # ``NackError`` is raised when the broker NACKs a publisher-
+            # confirmed message; ``UnroutableError`` when a ``mandatory``
+            # publish has no matching queue binding. Both can be
+            # transient (broker memory pressure, a binding being created
+            # concurrently) so we retry once or twice, but the previous
+            # shape recursed unconditionally — which on a persistent
+            # configuration error (wrong exchange, missing binding,
+            # broker rejecting every confirm) would exhaust Python's
+            # recursion limit and crash the connector with a
+            # ``RecursionError`` instead of just dropping the offending
+            # event and moving on. Bound the retry, then drop+log on
+            # the same shape as the ``ChannelClosedByBroker`` branch.
             self.metrics.send_error()
+            if attempt >= self._MAX_PUBLISH_RETRIES:
+                self.helper.connector_logger.error(
+                    f"Unable to send bundle ({type(err).__name__}): {err}; "
+                    f"exhausted {self._MAX_PUBLISH_RETRIES} retries, dropping event."
+                )
+                return
             self.helper.connector_logger.error(
-                f"Unable to send bundle ({type(err).__name__}): {err}, retrying..."
+                f"Unable to send bundle ({type(err).__name__}): {err}, "
+                f"retrying (attempt {attempt + 1}/{self._MAX_PUBLISH_RETRIES})..."
             )
-            self._send_event(channel, event)
+            self._send_event(channel, event, attempt=attempt + 1)
 
 
 def str_to_bool(val):
