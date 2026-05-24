@@ -1383,7 +1383,19 @@ class AssemblyLineConnector:
     ) -> Optional[str]:
         """Emit a Malware-Analysis SDO + analysis_sco_refs bundle."""
         try:
-            max_score = results.get("max_score", 0)
+            # ``max_score`` is fed straight into the numeric
+            # comparisons in ``_score_to_result_name``. AssemblyLine
+            # has been seen returning ``null`` (when no sub-service
+            # produced a score, e.g. a benign upload that was
+            # short-circuited) and the field is not strictly typed in
+            # the ``v4_client`` response shape, so a future server-
+            # side change could surface a string too. Normalising via
+            # ``int(... or 0)`` mirrors ``_process_message`` and
+            # ``_create_summary_note`` (the other two call sites that
+            # read this field) so the Malware-Analysis emission can
+            # never crash with ``TypeError`` and silently drop the
+            # whole bundle on a benign-but-score-less submission.
+            max_score = int(results.get("max_score", 0) or 0)
             sid = results.get("sid", "unknown")
             times = results.get("times", {}) or {}
 
@@ -2145,7 +2157,15 @@ class AssemblyLineConnector:
 
         file_sha256 = file_info.get("sha256") or "N/A"
         file_type = file_info.get("type") or "N/A"
-        file_size: Any = file_info.get("size") or "N/A"
+        # ``file_size`` distinguishes "absent" from "explicitly 0
+        # bytes" via ``is not None``. A legitimate empty file (an
+        # AssemblyLine submission of a zero-byte sample, a 0-length
+        # archive entry surfaced by an upstream extractor, etc.)
+        # would otherwise have its size rendered as ``N/A`` in the
+        # summary Note by the previous ``or "N/A"`` truthiness check,
+        # hiding the real datum from analysts reading the Note.
+        raw_file_size = file_info.get("size")
+        file_size: Any = raw_file_size if raw_file_size is not None else "N/A"
 
         if file_sha256 == "N/A":
             for hash_entry in observable.get("hashes", []) or []:
@@ -2157,16 +2177,22 @@ class AssemblyLineConnector:
                     break
 
         if file_size == "N/A":
+            # Fallback resolution: prefer the SCO's own metadata
+            # before reaching for the per-fetch cache. Each step is
+            # gated on ``is not None`` (not truthiness) for the same
+            # reason as the ``file_info.get("size")`` branch above —
+            # a zero-byte payload is a valid datum and must not be
+            # silently dropped into ``N/A``.
             if observable.get("payload_bin"):
                 try:
                     file_size = len(base64.b64decode(observable["payload_bin"]))
                 except Exception:
                     pass
-            elif observable.get("size"):
+            elif observable.get("size") is not None:
                 file_size = observable.get("size")
-            elif observable.get("x_opencti_size"):
+            elif observable.get("x_opencti_size") is not None:
                 file_size = observable.get("x_opencti_size")
-            elif getattr(self, "_current_file_size", None):
+            elif getattr(self, "_current_file_size", None) is not None:
                 file_size = self._current_file_size
 
         if file_type == "N/A" and observable.get("mime_type"):
