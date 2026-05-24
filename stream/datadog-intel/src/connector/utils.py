@@ -87,6 +87,36 @@ def normalize_event_type(data: dict) -> str:
     return "create" if is_initial else data.get("event_type")
 
 
+def _parse_valid_until(value: str) -> datetime | None:
+    """Parse a STIX ``valid_until`` timestamp to a UTC-aware ``datetime``.
+
+    OpenCTI / STIX stream payloads commonly serialise ``valid_until``
+    as an RFC3339 string with a trailing ``Z`` (e.g.
+    ``2024-04-29T12:33:20.098Z``). ``datetime.fromisoformat`` only
+    learned to accept that ``Z`` suffix in Python 3.11 — on older
+    runtimes the call raises ``ValueError`` and crashes the
+    stream callback for the offending event.
+
+    Normalise a trailing ``Z`` to ``+00:00`` first, then coerce
+    timezone-naive values to UTC so the downstream
+    ``< datetime.now(timezone.utc)`` comparison never raises
+    ``TypeError`` on aware-vs-naive operands. Returns ``None`` for
+    inputs we cannot parse so the caller can decide how to treat
+    them (current contract: do not drop the event on parse failure;
+    just skip the expiry check).
+    """
+    normalised = value.strip()
+    if normalised.endswith("Z"):
+        normalised = normalised[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(normalised)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def is_valid_event(
     data: dict, helper: OpenCTIConnectorHelper, config: ConnectorSettings
 ) -> bool:
@@ -96,13 +126,20 @@ def is_valid_event(
     observable type, a recognized event type (create/update/delete), and a
     ``valid_until`` date that has not yet passed.
 
+    ``delete`` events are exempt from the ``valid_until`` check: even
+    if the indicator has expired, the delete still needs to reach
+    Datadog so a previously-forwarded indicator is dropped from the
+    remote feed instead of remaining stale (the pre-fix shape
+    silently swallowed the delete and left Datadog out of sync with
+    OpenCTI).
+
     Args:
         data: A STIX-formatted event payload.
         helper: The helper of the connector. Used for logs.
         config: The configuration of the connector. Used to get the indicator type.
 
     Returns:
-        The event ``data`` dict (truthy) if valid, ``False`` otherwise.
+        ``True`` if the event should be forwarded, ``False`` otherwise.
     """
 
     # Check if the event is an indicator and a STIX event
@@ -111,7 +148,7 @@ def is_valid_event(
     if entity_type != "indicator" or not pattern_type.startswith("stix"):
         helper.connector_logger.debug(
             "Skipping non-indicator or non-STIX message",
-            {"entity_type": entity_type, "pattern_type": pattern_type},
+            meta={"entity_type": entity_type, "pattern_type": pattern_type},
         )
         return False
 
@@ -120,7 +157,8 @@ def is_valid_event(
 
     if effective_event_type not in ("create", "update", "delete"):
         helper.connector_logger.debug(
-            "Skipping unknown event type", {"event_type": effective_event_type}
+            "Skipping unknown event type",
+            meta={"event_type": effective_event_type},
         )
         return False
 
@@ -129,17 +167,24 @@ def is_valid_event(
     if indicator_type not in config.datadog_intel.indicator_type:
         helper.connector_logger.debug(
             "Skipping indicator with no allowed type",
-            {"type": indicator_type},
+            meta={"type": indicator_type},
         )
         return False
 
-    # Check if the indicator has expired
+    # Check if the indicator has expired. The expiry filter must NOT
+    # drop ``delete`` events: even an expired indicator's delete
+    # event needs to reach Datadog so a previously-forwarded record
+    # is removed from the remote feed.
     valid_until = data.get("valid_until")
-    if valid_until and datetime.fromisoformat(valid_until) < datetime.now(timezone.utc):
-        helper.connector_logger.debug(
-            "Skipping expired indicator",
-            {"valid_until": valid_until, "id": data.get("id")},
-        )
-        return False
+    if valid_until and effective_event_type != "delete":
+        parsed_valid_until = _parse_valid_until(valid_until)
+        if parsed_valid_until is not None and parsed_valid_until < datetime.now(
+            timezone.utc
+        ):
+            helper.connector_logger.debug(
+                "Skipping expired indicator",
+                meta={"valid_until": valid_until, "id": data.get("id")},
+            )
+            return False
 
     return True

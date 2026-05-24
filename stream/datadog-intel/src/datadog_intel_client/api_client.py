@@ -66,7 +66,10 @@ class DatadogIntelClient:
         retry=retry_if_exception(_is_retryable),
         before_sleep=lambda s: s.args[0].helper.connector_logger.warning(
             "Retrying POST to endpoint",
-            {"attempt": s.attempt_number, "error": str(s.outcome.exception())},
+            meta={
+                "attempt": s.attempt_number,
+                "error": str(s.outcome.exception()),
+            },
         ),
         reraise=True,
     )
@@ -81,7 +84,10 @@ class DatadogIntelClient:
         )
         self.helper.connector_logger.debug(
             "POST response",
-            {"status_code": response.status_code, "url": self.integration_api_url},
+            meta={
+                "status_code": response.status_code,
+                "url": self.integration_api_url,
+            },
         )
         response.raise_for_status()
 
@@ -92,7 +98,10 @@ class DatadogIntelClient:
     def _append_to_batch(self, data: dict) -> None:
         indicator_id = indicator_id_from_event(data)
         if indicator_id is None:
-            self.helper.connector_logger.error("Indicator ID is missing", {"raw": data})
+            self.helper.connector_logger.error(
+                "Indicator ID is missing",
+                meta={"raw": data},
+            )
             return
 
         with self.batch_lock:
@@ -112,39 +121,78 @@ class DatadogIntelClient:
         if self._flush_timer is not None:
             self._flush_timer.cancel()
             self._flush_timer = None
+
+        # Snapshot the current batch under the lock so the HTTP POST
+        # below can happen WITHOUT holding ``batch_lock``. The
+        # previous shape held the lock for the full retry cycle (up
+        # to ~60 s of exponential backoff during a Datadog outage),
+        # blocking every incoming ``_append_to_batch`` call and
+        # serialising the timer-driven flushes against
+        # ``process_indicator``. The shallow ``dict(self.batch)`` copy
+        # keeps the value references shared with the live batch — so
+        # if a concurrent ``_append_to_batch`` REPLACES one of the
+        # entries during the POST, we can detect it with an
+        # identity check below and leave the new state in the batch
+        # for the next flush instead of discarding it.
         with self.batch_lock:
             if not self.batch:
                 return
-            self.helper.connector_logger.info(
-                "Flushing batch",
-                {"count": len(self.batch), "indicator_type": self.indicator_type},
-            )
+            snapshot = dict(self.batch)
+            snapshot_count = len(snapshot)
 
-            try:
-                self._post_indicators(json.dumps(list(self.batch.values())))
-            except requests.RequestException as e:
-                self.helper.connector_logger.error(
-                    "Failed to push batch after all retries",
-                    {"error": str(e), "url": self.integration_api_url},
-                )
-                # Drop the batch if it has grown beyond BATCH_SIZE to avoid unbounded memory
-                # consumption on the OpenCTI instance during a Datadog outage.
+        self.helper.connector_logger.info(
+            "Flushing batch",
+            meta={
+                "count": snapshot_count,
+                "indicator_type": self.indicator_type,
+            },
+        )
+
+        try:
+            self._post_indicators(json.dumps(list(snapshot.values())))
+        except requests.RequestException as exc:
+            self.helper.connector_logger.error(
+                "Failed to push batch after all retries",
+                meta={"error": str(exc), "url": self.integration_api_url},
+            )
+            # Drop the batch when it has grown past BATCH_SIZE so a
+            # prolonged Datadog outage cannot blow OpenCTI's worker
+            # memory; otherwise keep the in-memory contents AND
+            # reschedule a fresh timer so retained events are retried
+            # once the endpoint recovers, even if no new events
+            # arrive to drive a flush.
+            with self.batch_lock:
                 if len(self.batch) >= BATCH_SIZE:
                     self.helper.connector_logger.error(
                         "Dropping batch — size limit reached while endpoint is unreachable",
-                        {"count": len(self.batch)},
+                        meta={"count": len(self.batch)},
                     )
                     self.batch = {}
                 else:
-                    # Reschedule so the retained batch is retried once the endpoint recovers,
-                    # even if no new indicators arrive to trigger a flush.
                     self._reset_flush_timer()
-                return
-            self.helper.connector_logger.info(
-                "Batch flushed",
-                {"count": len(self.batch), "indicator_type": self.indicator_type},
-            )
-            self.batch = {}
+            return
+
+        self.helper.connector_logger.info(
+            "Batch flushed",
+            meta={
+                "count": snapshot_count,
+                "indicator_type": self.indicator_type,
+            },
+        )
+        # Remove only the entries we actually pushed; new events that
+        # arrived during the POST stay in the batch for the next
+        # flush. Identity comparison detects replacements made by
+        # ``_append_to_batch`` (which always assigns a fresh dict
+        # ref) — in-place mutations on the same dict (e.g. the
+        # "create-then-delete-mid-flight" edge case in
+        # ``_append_to_batch``) are already reflected in the
+        # snapshot we just posted, so removing the entry here is
+        # correct in that case too.
+        with self.batch_lock:
+            for ind_id, sent_value in snapshot.items():
+                current = self.batch.get(ind_id)
+                if current is sent_value:
+                    self.batch.pop(ind_id, None)
 
     def _reset_flush_timer(self) -> None:
         if self._flush_timer is not None:
