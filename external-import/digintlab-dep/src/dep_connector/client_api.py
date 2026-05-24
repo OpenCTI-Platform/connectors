@@ -47,8 +47,42 @@ class DepClient:
             timeout=30,
         )
         response.raise_for_status()
-        auth_payload: dict[str, dict[str, str]] = response.json()
-        token = auth_payload["AuthenticationResult"]["IdToken"]
+        # Validate the Cognito response shape explicitly. The previous
+        # ``auth_payload["AuthenticationResult"]["IdToken"]`` chain
+        # would surface a Cognito error envelope (e.g.
+        # ``{"__type": "NotAuthorizedException", "message": "..."}``)
+        # as a bare ``KeyError`` / ``TypeError`` deep in the connector,
+        # which is hard to debug. Fail fast at the client boundary
+        # with a descriptive ``ValueError`` (matching what
+        # ``fetch_raw`` already does on a non-list payload), and
+        # include the unexpected top-level keys / error fields so the
+        # operator can correlate against the Cognito error reference
+        # without re-running with a debugger attached.
+        try:
+            auth_payload = response.json()
+        except json.JSONDecodeError as exception:
+            error = "Unable to decode authentication response"
+            raise ValueError(error) from exception
+        if not isinstance(auth_payload, dict):
+            error = (
+                "Authentication response is not a JSON object; "
+                f"expected dict, got {type(auth_payload).__name__}"
+            )
+            raise ValueError(error)
+        try:
+            authentication_result = auth_payload["AuthenticationResult"]
+            token = authentication_result["IdToken"]
+        except (KeyError, TypeError) as exception:
+            error_keys = sorted(auth_payload.keys())
+            error_type = auth_payload.get("__type")
+            error_message = auth_payload.get("message")
+            error = (
+                "Unable to retrieve IdToken from authentication response; "
+                f"top-level keys: {error_keys}"
+            )
+            if error_type or error_message:
+                error += f" (Cognito error: {error_type} - {error_message})"
+            raise ValueError(error) from exception
         if not token:
             error = "Unable to retrieve IdToken from authentication response"
             raise ValueError(error)

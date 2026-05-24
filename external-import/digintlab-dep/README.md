@@ -152,9 +152,13 @@ services:
 ### Manual Deployment
 
 1. Clone the repository and navigate to the connector directory.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Configure `config.yml` using `config.yml.sample`.
-4. Run: `python main.py`
+2. Install dependencies: `pip install -r src/requirements.txt`
+3. Configure `src/config.yml` using `src/config.yml.sample`.
+4. Run: `python src/main.py`
+
+(The Dockerfile copies the contents of `src/` to the container working
+directory, so inside Docker the file layout is flat — but for a manual
+local run the same commands have to point at `src/`.)
 
 ---
 
@@ -192,8 +196,10 @@ graph TB
     Actor --> Sector
     Actor --> Country
     Sector --> Country
-    DomainInd -->|related-to or indicates| Primary
-    HashInd -->|related-to or indicates| Primary
+    DomainInd -->|related-to in report mode| Victim
+    DomainInd -->|indicates in incident mode| Primary
+    HashInd -->|related-to in report mode| Victim
+    HashInd -->|indicates in incident mode| Primary
 ```
 
 ### Entity Mapping
@@ -297,8 +303,9 @@ graph TB
 10. **Marking and Delivery**
 
 - All generated objects and relationships are marked `TLP:AMBER`
-- Each connector cycle is tracked as an OpenCTI work item
-- Bundles are sent with `update=true` and inconsistent bundle cleanup enabled
+- The marking-definition SDO is included in every emitted bundle so the platform's `cleanup_inconsistent_bundle` pass cannot strip the markings as dangling references
+- Each connector cycle is tracked as an OpenCTI work item; the Work record is closed with `in_error=True` whenever the cycle hit a fetch failure or any per-item processing error
+- Bundles are sent with inconsistent-bundle cleanup enabled. The legacy `update=` kwarg is no longer plumbed through (the helper-side knob was deprecated and removed under the connector-linter `VC506` rule); the connector now defers entirely to the platform's default update behaviour
 
 11. **Record Filtering**
 

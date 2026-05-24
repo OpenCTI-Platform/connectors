@@ -291,7 +291,29 @@ class DepConnector:
             content.append(victim)
         content.extend(self._build_optional_entities(item, victim, incident_id))
         content.extend(indicators)
-        content.extend(self._build_indicator_victim_relationships(indicators, victim))
+        # Indicator → Victim ``related-to`` relationships are a
+        # report-mode-only construct: in report mode the indicators
+        # are listed in ``object_refs`` of the Report and the only
+        # SDO they can be linked to that survives outside the
+        # report's content scope is the victim, so ``related-to``
+        # against the victim is the right shape. In incident mode the
+        # indicators are linked to the Incident with ``indicates``
+        # (added by ``_process_item_as_incident`` on top of the
+        # ``_build_content`` output), and emitting an additional
+        # ``related-to`` against the victim would (a) duplicate the
+        # indicator → victim graph against what the platform already
+        # infers from ``indicates`` + ``targets`` and (b) contradict
+        # the Behavior section of the README, which only documents
+        # ``indicates`` for incident mode. Use ``incident_id is None``
+        # as the report-mode signal — it is exactly how callers
+        # already distinguish the two paths
+        # (``_process_item_as_report`` passes no ``incident_id``,
+        # ``_process_item_as_incident`` passes the freshly-created
+        # incident's id).
+        if incident_id is None:
+            content.extend(
+                self._build_indicator_victim_relationships(indicators, victim)
+            )
         return content
 
     def _send_objects(self, objects: list[stix2._STIXBase21]) -> None:
