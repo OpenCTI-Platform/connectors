@@ -36,10 +36,18 @@ class StreamImporterConnector(ExternalImportConnector):
         """Initialization of the connector"""
         super().__init__()
 
+        # Historical typo: the env var was read as ``METRICS_SUBSYTEM``
+        # (missing the second ``S``) while the README has always
+        # advertised ``METRICS_SUBSYSTEM``. Any operator following the
+        # README would have had their setting silently ignored. Keep
+        # the misspelled name as a fallback so we don't break a
+        # deployment that happened to follow the code, but prefer the
+        # documented ``METRICS_SUBSYSTEM`` when both are set so the
+        # README is finally truthful.
         self.metrics = Metrics(
             self.helper.connect_name,
             os.environ.get("METRICS_NAMESPACE"),
-            os.environ.get("METRICS_SUBSYTEM"),
+            os.environ.get("METRICS_SUBSYSTEM", os.environ.get("METRICS_SUBSYTEM")),
         )
 
         minio_endpoint = os.environ.get("MINIO_ENDPOINT")
