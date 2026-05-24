@@ -309,11 +309,15 @@ class ConnectorScoring:
             enriched_indicator = self._compute_score(
                 indicator, indicator_context, indicator_author
             )
-            stix_objects = [enriched_indicator]
-
-            if not stix_objects:
-                return "No information found"
-            return self._send_bundle(stix_objects)
+            # ``_compute_score`` always returns the enriched indicator
+            # (in-place mutation of the passed-in dict), so this
+            # bundle is always exactly one SDO. The previous
+            # ``if not stix_objects: return "No information found"``
+            # branch was unreachable dead code — ``[enriched_indicator]``
+            # is never empty — and obscured the actual control flow
+            # by suggesting an empty-bundle outcome that the helper
+            # cannot produce. Forward straight to the bundle send.
+            return self._send_bundle([enriched_indicator])
         except Exception as err:
             # Logger.error returns ``None``; build the message
             # ourselves so the callback's return contract holds and

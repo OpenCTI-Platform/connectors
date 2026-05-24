@@ -8,6 +8,21 @@ from pycti import get_config_variable
 
 
 def normalize_list_param(param):
+    """Normalise a label-priority config value into a ``list[str]`` of
+    lowercase tokens that ``ConnectorScoring._priority_of`` can compare
+    against.
+
+    The downstream comparison in ``_priority_of`` lowercases the
+    incoming label value before checking membership, so every branch
+    here MUST return lowercase strings — otherwise a single-string
+    config value (or a non-string fallback) would silently never
+    match an incoming label even when the operator's intent was a
+    direct equality. The previous shape returned the raw ``[param]``
+    on the bare-string fallback, so an operator who wrote
+    ``CONNECTOR_SCORING_HIGH_PRIORITY_LABELS=High`` (no JSON, no
+    Python-literal list) got a list ``["High"]`` that never matched
+    a lowercased ``"high"`` from the incoming label.
+    """
     if not param:
         return []
 
@@ -31,7 +46,7 @@ def normalize_list_param(param):
     elif isinstance(param, list):
         return [str(s).lower() for s in param]
 
-    return [param]
+    return [str(param).lower()]
 
 
 class ConfigConnector:
@@ -47,14 +62,22 @@ class ConfigConnector:
     @staticmethod
     def _load_config() -> dict:
         """
-        Load the configuration from the YAML file
+        Load the configuration from the YAML file.
+
+        ``yaml.load`` returns ``None`` for an empty or whitespace-only
+        YAML document — the annotated return type is ``dict``, so the
+        ``or {}`` guard upholds the contract and keeps every
+        downstream ``get_config_variable(..., self.load, ...)`` call
+        safe (the helper indexes into ``self.load`` and would crash
+        on ``None``). Missing file already returns ``{}`` above.
+
         :return: Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         if not os.path.isfile(config_file_path):
             return {}
         with open(config_file_path) as config_file:
-            return yaml.load(config_file, Loader=yaml.FullLoader)
+            return yaml.load(config_file, Loader=yaml.FullLoader) or {}
 
     def _initialize_configurations(self) -> None:
         """
