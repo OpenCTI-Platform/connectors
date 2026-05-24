@@ -10,16 +10,11 @@ from connectors_sdk.models.base_identified_object import BaseIdentifiedObject
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.reference import Reference
 from connectors_sdk.models.tlp_marking import TLPMarking
-from pydantic import (
-    Field,
-    PrivateAttr,
-)
+from pydantic import AwareDatetime, Field
 
 
 class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
     """Base class that can be identified thanks to a stix-like id."""
-
-    _stix2_id: str | None = PrivateAttr(default=None)
 
     author: BaseAuthorEntity | Reference | None = Field(
         default=None,
@@ -34,6 +29,11 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
     external_references: list[ExternalReference] | None = Field(
         default=None,
         description="External references of the observable.",
+    )
+
+    created: AwareDatetime | None = Field(
+        default=None,
+        description="The time at which the object was originally created (STIX standard property).",
     )
 
     def _common_stix2_properties(self) -> dict[str, Any]:
@@ -53,4 +53,5 @@ class BaseIdentifiedEntity(BaseIdentifiedObject, ABC):
                 if self.external_references is not None
                 else None
             ),
+            created=self.created,
         )

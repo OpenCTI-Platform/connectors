@@ -92,8 +92,8 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
     assert helper.connect_live_stream_id == "live"
-    assert helper.connect_live_stream_listen_delete == True
-    assert helper.connect_live_stream_no_dependencies == True
+    assert helper.connect_live_stream_listen_delete
+    assert helper.connect_live_stream_no_dependencies
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):

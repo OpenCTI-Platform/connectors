@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 from doppel.constants import RETRYABLE_REQUEST_ERRORS
@@ -11,9 +11,13 @@ from tenacity import (
     wait_fixed,
 )
 
+if TYPE_CHECKING:
+    from doppel import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class ConnectorClient:
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         """
         Initialize the client with necessary configurations
         """
@@ -21,12 +25,15 @@ class ConnectorClient:
         self.config = config
 
         self.session = requests.Session()
-        headers = {"x-api-key": self.config.api_key, "accept": "application/json"}
+        headers = {
+            "x-api-key": self.config.doppel.api_key,
+            "accept": "application/json",
+        }
         # Add user_api_key if provided
-        if self.config.user_api_key:
-            headers["x-user-api-key"] = self.config.user_api_key
-        if self.config.organization_code:
-            headers["x-organization-code"] = self.config.organization_code
+        if self.config.doppel.user_api_key:
+            headers["x-user-api-key"] = self.config.doppel.user_api_key
+        if self.config.doppel.organization_code:
+            headers["x-organization-code"] = self.config.doppel.organization_code
 
         self.session.headers.update(headers)
 
@@ -117,14 +124,13 @@ class ConnectorClient:
         """
         Retrieve alerts from api
         """
-        url = f"{self.config.api_base_url}{self.config.alerts_endpoint}"
-
-        if last_activity_timestamp.endswith("+00:00"):
-            last_activity_timestamp = last_activity_timestamp.replace("+00:00", "")
+        url = f"{self.config.doppel.api_base_url}{self.config.doppel.alerts_endpoint}"
 
         # Dynamically set retry settings
-        self._request_data.retry.wait = wait_fixed(self.config.retry_delay)
-        self._request_data.retry.stop = stop_after_attempt(self.config.max_retries)
+        self._request_data.retry.wait = wait_fixed(self.config.doppel.retry_delay)
+        self._request_data.retry.stop = stop_after_attempt(
+            self.config.doppel.max_retries
+        )
 
         params = {
             "last_activity_timestamp": last_activity_timestamp,

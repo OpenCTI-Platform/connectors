@@ -95,3 +95,26 @@ class Client:
                 for hit in res.result.result.hits:
                     if hit.host_v1:
                         yield hit.host_v1.resource
+
+    def fetch_certs_by_domain(self, domain: str) -> Generator[Certificate, None, None]:
+        """Fetch certificates that reference a domain in their names
+
+        Args:
+            domain (str): The domain name to search for.
+
+        Yields:
+            Generator[Certificate, None, None]: Yields Certificate objects matching the domain.
+        """
+        with SDK(
+            organization_id=self.organisation_id,
+            personal_access_token=self.token,
+        ) as sdk:
+            query = f"cert.names = '{domain}'"
+            search_query = SearchQueryInputBody(query=query)
+            res: V3GlobaldataSearchQueryResponse = sdk.global_data.search(
+                search_query_input_body=search_query
+            )
+            if res.result.result:
+                for hit in res.result.result.hits:
+                    if hit.certificate_v1:
+                        yield hit.certificate_v1.resource

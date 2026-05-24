@@ -4,7 +4,6 @@ import os
 import sys
 import time
 import traceback
-import uuid
 from datetime import datetime
 
 import requests
@@ -21,6 +20,7 @@ from pycti import (
     CustomObjectCaseIncident,
     CustomObjectTask,
     Incident,
+    Note,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
     StixSightingRelationship,
@@ -51,6 +51,8 @@ class TheHive:
         self.thehive_url = get_config_variable(
             "THEHIVE_URL", ["thehive", "url"], config
         )
+        if isinstance(self.thehive_url, str):
+            self.thehive_url = self.thehive_url.rstrip("/")
         self.thehive_api_key = get_config_variable(
             "THEHIVE_API_KEY", ["thehive", "api_key"], config
         )
@@ -647,7 +649,7 @@ class TheHive:
             # Creating a dictionary representing a STIX Note object
             stix_comment = {
                 "type": "note",
-                "id": "note--" + str(uuid.uuid4()),
+                "id": Note.generate_id(comment.get("message", "No comment"), created),
                 "content": comment.get("message", "No comment"),
                 "created": created,
                 "modified": created,

@@ -2,21 +2,19 @@ import traceback
 
 from pycti import OpenCTIConnectorHelper
 from scout_search_connector import ConnectorSettings, ScoutSearchConnectorConnector
+from scout_search_connector.setup_pattern_type import setup_vocabulary
 
 if __name__ == "__main__":
-    """
-    Entry point of the script
-
-    - traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
-    The traceback includes information about the point in the program where the exception occurred,
-    which is very useful for debugging purposes.
-    - exit(1): effective way to terminate a Python program when an error is encountered.
-    It signals to the operating system and any calling processes that the program did not complete successfully.
-    """
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(
             config=settings.to_helper_config(), playbook_compatible=True
+        )
+
+        setup_vocabulary(
+            helper,
+            settings.pure_signal_scout.indicator_pattern_type,
+            settings.pure_signal_scout.pattern_description,
         )
 
         connector = ScoutSearchConnectorConnector(config=settings, helper=helper)

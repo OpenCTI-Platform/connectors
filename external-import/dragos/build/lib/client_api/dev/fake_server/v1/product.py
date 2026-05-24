@@ -1,5 +1,6 @@
 # isort:skip_file
 """Offer fake api/v1/product endpoint router."""
+
 import pathlib
 import json
 from typing import List, Optional

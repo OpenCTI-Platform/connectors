@@ -34,6 +34,9 @@ misp:
   tag_opencti: true  # Add OpenCTI-specific tags to MISP events
   tag_prefix: 'opencti:'  # Prefix for OpenCTI tags
 
+  # Round-trip configuration
+  detect_round_trip: false  # Enable round-trip detection (update existing MISP events instead of creating duplicates)
+
 # Optional proxy configuration
 proxy:
   http: ''  # HTTP proxy URL (e.g., http://proxy:8080)

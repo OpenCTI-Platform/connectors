@@ -64,7 +64,9 @@ class Utils:
 
     @staticmethod
     def transform_description_to_markdown(
-        comment_to_exclude: list[str], description: str, comments: str
+        comment_to_exclude: list[str],
+        description: str,
+        comments: str | None,
     ) -> str:
         """This method allows you to structure the entity's description in OpenCTI, starting with a description and then
         adding a Markdown table to list the comments written in ServiceNow. The description field can be empty, just
@@ -77,11 +79,19 @@ class Utils:
         Args:
             comment_to_exclude (list[str]): A list of comment types to exclude (e.g., ["private", "auto"]).
             description (str): The original description content to include at the top.
-            comments (str): The raw comment string from ServiceNow to parse and format.
+            comments (str | None): The raw comment string from ServiceNow to parse and format.
+                ServiceNow's REST API returns ``null`` (``None``) when no comments are
+                present on the security incident; the helper accepts both ``None`` and
+                an empty / whitespace-only string and renders the description-only
+                Markdown in those cases (no Markdown table is emitted).
 
         Returns:
             str: A formatted string containing the description and comments in the form of a Markdown table.
         """
+
+        if comments is None:
+            comments = ""
+
         pattern = r"(?=\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} - )"
         blocks = re.split(pattern, comments.strip())
         list_comments = [block.strip() for block in blocks if block.strip()]

@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/yara_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "YARA",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "YARA_TLP_LEVEL": {
+      "description": "Default TLP marking to apply to created relationships when neither the artifact nor the indicator have markings.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "clear"
+    },
+    "YARA_PROPAGATE_MALWARE_RELATIONSHIP": {
+      "default": false,
+      "description": "When ``true``, for every YARA Indicator that matches the enriched Artifact, the connector follows the indicator's ``indicates`` relationships to Malware entities and emits an additional ``related-to`` STIX relationship from the Artifact to each of those Malware entities. Defaults to ``false`` to preserve the connector's previous behaviour.",
+      "type": "boolean"
+    },
+    "YARA_PROPAGATE_LABELS": {
+      "default": false,
+      "description": "When ``true``, every OpenCTI label carried by a YARA Indicator that matches the enriched Artifact is added to the Artifact (via the ``stix_cyber_observable.add_label`` mutation). Defaults to ``false`` to preserve the connector's previous behaviour.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

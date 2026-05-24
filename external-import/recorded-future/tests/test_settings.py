@@ -172,3 +172,27 @@ def test_none_or_empty_raises_value_error(field, value, error_message):
         _ConfigLoaderRecordedFuture(**kwargs)
 
     assert error_message in str(err)
+
+
+def test_ta_to_intrusion_set_default_is_false():
+    config = _ConfigLoaderRecordedFuture(**_minimal_kwargs())
+
+    assert config.ta_to_intrusion_set is False
+
+
+def test_ta_to_intrusion_set_accepts_true():
+    kwargs = _minimal_kwargs()
+    kwargs["ta_to_intrusion_set"] = True
+
+    config = _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert config.ta_to_intrusion_set is True
+
+
+def test_ta_to_intrusion_set_accepts_false():
+    kwargs = _minimal_kwargs()
+    kwargs["ta_to_intrusion_set"] = False
+
+    config = _ConfigLoaderRecordedFuture(**kwargs)
+
+    assert config.ta_to_intrusion_set is False

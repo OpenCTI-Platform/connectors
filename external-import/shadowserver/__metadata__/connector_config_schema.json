@@ -106,6 +106,14 @@
       },
       "type": "array"
     },
+    "SHADOWSERVER_REPORT_NAMES": {
+      "default": [],
+      "description": "List of report names to retrieve. If empty, all report names will be retrieved.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "SHADOWSERVER_INITIAL_LOOKBACK": {
       "default": 30,
       "description": "Number of days to look back for reports during the first run.",

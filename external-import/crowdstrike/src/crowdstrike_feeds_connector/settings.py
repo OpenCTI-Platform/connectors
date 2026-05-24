@@ -163,6 +163,27 @@ class CrowdstrikeConfig(BaseConfigModel):
         default=False,
         description="Whether to automatically guess and create relationships in reports.",
     )
+    report_extract_iocs: ListFromString = Field(
+        default=[],
+        description=(
+            "Comma-separated list of IOC types to extract from report text content via regex. "
+            "Extracted IOCs are created as Observables (not Indicators) and linked to the report. "
+            "Supported types: ipv4, ipv6, domain, url, md5, sha1, sha256. "
+            "Leave empty to disable."
+        ),
+    )
+
+    @field_validator("report_extract_iocs", mode="after")
+    @classmethod
+    def validate_ioc_types(cls, v: list[str]) -> list[str]:
+        valid = {"ipv4", "ipv6", "domain", "url", "md5", "sha1", "sha256"}
+        for item in v:
+            if item not in valid:
+                raise ValueError(
+                    f"Invalid IOC type '{item}'. "
+                    f"Supported types: {', '.join(sorted(valid))}"
+                )
+        return v
 
     # Indicator configuration
     indicator_start_timestamp: int = Field(
@@ -178,6 +199,35 @@ class CrowdstrikeConfig(BaseConfigModel):
             "username",
         ],
         description="Comma-separated list of indicator types to exclude from import.",
+    )
+    indicator_ip_max_age: timedelta | None = Field(
+        default=None,
+        description=(
+            "ISO8601 Duration format starting with 'P' for Period (e.g., 'P90D' for 90 days). "
+            "Covers both IPv4 and IPv6."
+        ),
+    )
+    indicator_domain_max_age: timedelta | None = Field(
+        default=None,
+        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'P365D' for 365 days).",
+    )
+    indicator_url_max_age: timedelta | None = Field(
+        default=None,
+        description="ISO8601 Duration format starting with 'P' for Period (e.g., 'P60D' for 60 days).",
+    )
+    indicator_hash_max_age: timedelta | None = Field(
+        default=None,
+        description=(
+            "ISO8601 Duration format starting with 'P' for Period (e.g., 'P730D' for 730 days). "
+            "Covers MD5, SHA1, and SHA256 hashes."
+        ),
+    )
+    indicator_default_max_age: timedelta | None = Field(
+        default=None,
+        description=(
+            "ISO8601 Duration format starting with 'P' for Period (e.g., 'P30D' for 30 days). "
+            "Default threshold for any other indicator type."
+        ),
     )
     default_x_opencti_score: PositiveInt = Field(
         default=50,
@@ -214,6 +264,17 @@ class CrowdstrikeConfig(BaseConfigModel):
             "Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'."
         ),
     )
+    indicator_max_records_per_run: int = Field(
+        default=20000,
+        description=(
+            "Maximum number of indicators ingested in a single run of the "
+            "connector. CrowdStrike can return up to ~1.5M IoCs for the last "
+            "30 days, which would overwhelm the OpenCTI ingestion pipeline; "
+            "pagination stops when this cap is reached. Set to 0 (or a "
+            "negative number) to disable the cap and fetch every available "
+            "indicator."
+        ),
+    )
 
     # Trigger import configuration
     no_file_trigger_import: bool = Field(
@@ -225,6 +286,14 @@ class CrowdstrikeConfig(BaseConfigModel):
     vulnerability_start_timestamp: int = Field(
         default_factory=_get_default_timestamp_30_days_ago,
         description="Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
+    )
+    vulnerability_import_affected_products: bool = Field(
+        default=False,
+        description=(
+            "Whether to import affected products from vulnerability data. "
+            "When enabled, creates STIX Software observables and 'has' relationships "
+            "linking each product to its parent vulnerability."
+        ),
     )
 
     # [DEPRECATED] Interval configuration

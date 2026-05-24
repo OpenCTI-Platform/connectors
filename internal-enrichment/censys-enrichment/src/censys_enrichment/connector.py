@@ -75,10 +75,23 @@ class Connector:
                     certs=list(self.client.fetch_certs(hashes=stix_entity["hashes"])),
                 )
             case "domain-name":
-                return self.converter.generate_octi_objects_from_hosts(
-                    stix_entity=stix_entity,
-                    hosts=list(self.client.fetch_hosts(stix_entity["value"])),
-                )
+
+                def _generate_domain_objects():
+                    # yield objects from associated hosts
+                    yield from self.converter.generate_octi_objects_from_hosts(
+                        stix_entity=stix_entity,
+                        hosts=list(self.client.fetch_hosts(stix_entity["value"])),
+                    )
+                    # yield certificates associated with the domain
+                    yield from self.converter.generate_octi_objects_from_domain_certs(
+                        stix_entity=stix_entity,
+                        certs=list(
+                            self.client.fetch_certs_by_domain(stix_entity["value"])
+                        ),
+                    )
+
+                return _generate_domain_objects()
+
             case _:
                 raise EntityTypeNotSupportedError(
                     f"Observable type {stix_entity['type']} not supported"

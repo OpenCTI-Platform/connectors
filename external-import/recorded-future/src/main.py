@@ -50,7 +50,7 @@ class BaseRFConnector:
         )
 
         self.rf_person_to_TA = self.config.recorded_future.person_to_ta
-        self.rf_TA_to_intrusion_set = self.config.recorded_future.ta_to_intrusion_set
+        self.ta_to_intrusion_set = self.config.recorded_future.ta_to_intrusion_set
         self.risk_as_score = self.config.recorded_future.risk_as_score
         self.risk_threshold = self.config.recorded_future.risk_threshold
         self.risk_list_threshold = self.config.recorded_future.risk_list_threshold
@@ -137,6 +137,7 @@ class RFConnector:
                     self.RF.rf_alerts_api,
                     self.RF.opencti_default_severity,
                     self.RF.tlp,
+                    self.RF.rf_initial_lookback,
                 )
                 self.alerts.start()
                 threads.append(self.alerts)
@@ -174,6 +175,7 @@ class RFConnector:
                     self.RF.risk_list_threshold,
                     self.RF.risklist_related_entities,
                     self.RF.rf_riskrules_as_label,
+                    self.RF.ta_to_intrusion_set,
                 )
                 self.risk_list.start()
                 threads.append(self.risk_list)
@@ -209,7 +211,7 @@ class RFConnector:
                     self.RF.rf_topics,
                     self.RF.tlp,
                     self.RF.rf_person_to_TA,
-                    self.RF.rf_TA_to_intrusion_set,
+                    self.RF.ta_to_intrusion_set,
                     self.RF.risk_as_score,
                     self.RF.risk_threshold,
                     self.RF.analyst_notes_guess_relationships,

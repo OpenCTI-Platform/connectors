@@ -133,7 +133,7 @@
     },
     "RECORDED_FUTURE_TA_TO_INTRUSION_SET": {
       "default": false,
-      "description": "Whether to convert Threat Actor entities to Intrusion Set entities.",
+      "description": "Whether to map Threat Actor entities to Intrusion Set instead of Threat Actor.",
       "type": "boolean"
     },
     "RECORDED_FUTURE_RISK_AS_SCORE": {

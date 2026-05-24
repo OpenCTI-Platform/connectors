@@ -147,6 +147,86 @@ class MispIntelConnector:
             )
             return None
 
+    def _find_existing_misp_event_uuid(self, container: Dict) -> Optional[str]:
+        """
+        Check if the container has an external reference from MISP with a valid external_id
+        that still exists in MISP. Used in MISP-to-MISP mode to detect round-trip events.
+
+        Filters out refs whose event no longer exists in MISP.
+        Returns the first valid UUID found, or None if no valid match exists.
+
+        :param container: Container STIX data
+        :return: MISP event UUID if at least one valid match found, None otherwise
+        """
+        container_id = None
+        try:
+            if not container or "external_references" not in container:
+                return None
+
+            container_id = self.helper.get_attribute_in_extension("id", container)
+
+            misp_refs = []
+            for ext_ref in container["external_references"]:
+                if ext_ref.get("source_name", "").lower() == "misp" and ext_ref.get(
+                    "external_id"
+                ):
+                    misp_refs.append(ext_ref["external_id"])
+
+            original_misp_refs = misp_refs.copy()
+
+            for misp_ref in misp_refs.copy():
+                # Check if the external_id still exists in MISP.
+                if not self.api.get_event_by_uuid(misp_ref):
+                    misp_refs.remove(misp_ref)
+
+            if not misp_refs:
+                if not original_misp_refs:
+                    self.helper.connector_logger.info(
+                        "[MISP-TO-MISP] No MISP external reference found for container",
+                        {"container_id": container_id},
+                    )
+                else:
+                    self.helper.connector_logger.info(
+                        "[MISP-TO-MISP] MISP external references found for "
+                        "container, but none still exist in MISP",
+                        {
+                            "container_id": container_id,
+                            "misp_refs_count": len(original_misp_refs),
+                            "misp_refs": original_misp_refs,
+                        },
+                    )
+                return None
+
+            if len(misp_refs) == 1:
+                self.helper.connector_logger.info(
+                    "[MISP-TO-MISP] Found existing MISP external reference",
+                    {
+                        "container_id": container_id,
+                        "misp_event_uuid": misp_refs[0],
+                    },
+                )
+
+            if len(misp_refs) > 1:
+                self.helper.connector_logger.warning(
+                    "[MISP-TO-MISP] Multiple MISP external references found, "
+                    "taking the first one",
+                    {
+                        "container_id": container_id,
+                        "misp_event_uuid": misp_refs[0],
+                        "misp_refs_count": len(misp_refs),
+                        "misp_refs": misp_refs,
+                    },
+                )
+
+            return misp_refs[0]
+
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                f"[MISP-TO-MISP] Could not check external references: {str(e)}",
+                {"container_id": container_id},
+            )
+            return None
+
     def _create_misp_event(self, container_data: Dict) -> Optional[Dict]:
         """
         Create a MISP event from an OpenCTI container
@@ -155,6 +235,33 @@ class MispIntelConnector:
         """
         try:
             container_id = self.helper.get_attribute_in_extension("id", container_data)
+
+            # MISP-to-MISP round-trip detection:
+            # Check if this container already has a MISP external reference,
+            # meaning it was originally imported from MISP. If so, update
+            # the existing MISP event instead of creating a duplicate.
+            # _find_existing_misp_event_uuid already verifies the event exists in MISP.
+            if self.config.misp.detect_round_trip:
+                existing_uuid = self._find_existing_misp_event_uuid(container_data)
+                if existing_uuid:
+                    self.helper.connector_logger.info(
+                        "[MISP-TO-MISP] Updating existing MISP event "
+                        "instead of creating a duplicate",
+                        {
+                            "misp_event_uuid": existing_uuid,
+                            "opencti_id": container_id,
+                        },
+                    )
+                    updated = self._update_misp_event(container_data, existing_uuid)
+                    if not updated:
+                        self.helper.connector_logger.error(
+                            "[MISP-TO-MISP] Failed to update existing MISP event",
+                            {
+                                "misp_event_uuid": existing_uuid,
+                                "opencti_id": container_id,
+                            },
+                        )
+                    return None
 
             # Resolve full container with references
             stix_bundle = self._resolve_container_references(container_data)
@@ -383,11 +490,22 @@ class MispIntelConnector:
                     self._create_misp_event(container_data)
 
                 elif event_type == "update":
-                    # Use container_id directly as MISP UUID (since we set it during creation)
-                    misp_event_uuid = container_id
+                    # In MISP-to-MISP round-trip mode, prioritize the original
+                    # MISP event UUID from external references over the OpenCTI
+                    # container_id to avoid updating a duplicate event.
+                    misp_event_uuid = None
+                    existing_event = None
+                    if self.config.misp.detect_round_trip:
+                        alt_uuid = self._find_existing_misp_event_uuid(container_data)
+                        if alt_uuid:
+                            existing_event = True
+                            misp_event_uuid = alt_uuid
 
-                    # Check if the event exists in MISP
-                    existing_event = self.api.get_event_by_uuid(misp_event_uuid)
+                    if not existing_event:
+                        # Fallback: use container_id directly as MISP UUID
+                        misp_event_uuid = container_id
+                        existing_event = self.api.get_event_by_uuid(misp_event_uuid)
+
                     if existing_event:
                         self._update_misp_event(container_data, misp_event_uuid)
                     else:

@@ -9,20 +9,20 @@ description = "Connectors SDK for Octi Connectors."
 requires-python = ">=3.11, <3.13"
 
 dependencies = [
-    "pycti==7.260318.0",
+    "pycti==7.260522.0",
     "pydantic>=2.8.2,<3", # ISO pycti https://github.com/OpenCTI-Platform/client-python/blob/master/requirements.txt#L8
     "pydantic_settings>= 2.9.1,<3", # Actual minimal version used in the connectors
 ]
 
 [project.optional-dependencies]
 dev = [
-    "black==26.1.0",  # Aligned with ci-requirements
+    "black==26.3.1",  # Aligned with ci-requirements
     "isort==7.0.0",  # Aligned with ci-requirements
 ]
 test = [
     "freezegun>=1.5.5,<2",
     "pip-audit==2.10.0",
-    "pytest>=8.3.5,<9",
+    "pytest>=9.0.3,<10",
     "pytest-cov>=7,<8",
     "pydocstyle>=6.3.0,<7",
     "mypy>=1.15.0,<2",

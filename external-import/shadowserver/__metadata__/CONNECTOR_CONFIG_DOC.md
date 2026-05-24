@@ -20,6 +20,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | SHADOWSERVER_INCIDENT_SEVERITY | `string` |  | string |  | `"low"` | Default incident severity. |
 | SHADOWSERVER_INCIDENT_PRIORITY | `string` |  | string |  | `"P4"` | Default incident priority. |
 | SHADOWSERVER_REPORT_TYPES | `array` |  | string |  | `[]` | List of report types to retrieve. If empty, all report types will be retrieved. |
+| SHADOWSERVER_REPORT_NAMES | `array` |  | string |  | `[]` | List of report names to retrieve. If empty, all report names will be retrieved. |
 | SHADOWSERVER_INITIAL_LOOKBACK | `integer` |  | `0 <= x ` |  | `30` | Number of days to look back for reports during the first run. |
 | SHADOWSERVER_LOOKBACK | `integer` |  | `0 <= x ` |  | `3` | Number of days to look back for reports during subsequent runs. |
 | SHADOWSERVER_MAX_THREADS | `integer` |  | `1 <= x <= 32` |  | `8` | Maximum number of threads used to download and transform reports in parallel. |
