@@ -25,8 +25,14 @@ class ConfigConnector:
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
         if not os.path.isfile(config_file_path):
             return {}
+        # ``yaml.load`` returns ``None`` when the YAML document is
+        # empty (e.g. an operator shipped a placeholder ``config.yml``
+        # alongside env-var deployment), which would make ``self.load``
+        # non-dict and break downstream ``get_config_variable`` lookups
+        # that treat the config argument as a mapping. Coerce to ``{}``
+        # to preserve the documented ``-> dict`` contract.
         with open(config_file_path) as config_file:
-            return yaml.load(config_file, Loader=yaml.FullLoader)
+            return yaml.load(config_file, Loader=yaml.FullLoader) or {}
 
     def _initialize_configurations(self) -> None:
         """

@@ -51,10 +51,23 @@ class ConverterToStix:
         account_id = incident_data.get("agentRealtimeInfo", {}).get(
             "accountId", "unknown"
         )
+        # Use ``.get(...)`` chains rather than direct ``[...]``
+        # indexing: every other field on ``incident_data`` is read
+        # defensively, and a single SentinelOne payload missing
+        # ``threatInfo.threatName`` or
+        # ``threatInfo.mitigationStatusDescription`` (both are
+        # documented as optional in some signal shapes) would
+        # otherwise raise ``KeyError`` here and abort the whole batch
+        # via the outer ``except Exception`` in ``connector.py`` —
+        # silently dropping every later incident in the same cycle
+        # along with this one.
+        threat_info = incident_data.get("threatInfo", {})
+        threat_name = threat_info.get("threatName", "unknown")
+        mitigation_status = threat_info.get("mitigationStatusDescription", "unknown")
         description = (
             f"Threat detected on machine {machine} under account {account_name} (id: {account_id})."
-            f"\nThreat Name: {incident_data['threatInfo']['threatName']}."
-            f"\nMitigation Status: {incident_data['threatInfo']['mitigationStatusDescription']}."
+            f"\nThreat Name: {threat_name}."
+            f"\nMitigation Status: {mitigation_status}."
         )
         labels = [
             indicator.get("category", "")
@@ -76,8 +89,8 @@ class ConverterToStix:
             description="View Incident In SentinelOne",
         )
 
-        name = f'{incident_data.get("threatInfo", {}).get("threatName", "")} - {incident_id}'
-        created = incident_data.get("threatInfo", {}).get("identifiedAt", "")
+        name = f"{threat_name} - {incident_id}"
+        created = threat_info.get("identifiedAt", "")
 
         incident = stix2.Incident(
             id=Incident.generate_id(name, created),

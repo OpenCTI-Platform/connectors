@@ -56,6 +56,23 @@ class IncidentConnector:
         )
 
         try:
+            # Capture the cursor candidate BEFORE fetching so any
+            # incident created during this cycle (between the
+            # ``fetch_incidents`` call and the end-of-cycle
+            # ``set_state``) is still picked up on the next cycle.
+            # The previous shape captured ``datetime.now`` after
+            # processing, which produced a data-loss window: incidents
+            # created in the interval ``[fetch_start, cycle_end]`` had
+            # ``createdAt > start_date`` for THIS cycle (so they were
+            # fetched) but also ``createdAt < cycle_end`` (so on the
+            # next cycle their ``createdAt`` would be ``<= start_date``
+            # and the strict-after cursor would skip them). Capturing
+            # the cursor here makes the persisted state describe
+            # "everything created up to this instant has been
+            # considered" — anything newer is left for the next cycle.
+            cycle_cursor = datetime.now(timezone.utc)
+            cycle_cursor_iso = cycle_cursor.strftime("%Y-%m-%dT%H:%M:%SZ")
+
             # Get the current state. ``_parse_iso_datetime`` normalises
             # both the persisted state (written as ``...Z``) and the
             # configured ``SENTINELONE_INCIDENTS_IMPORT_START_DATE`` to
@@ -99,31 +116,54 @@ class IncidentConnector:
 
             ################ PHASE 2: Process Incidents ###############
             # Individual work is made and closed in the incident processing method.
+            processing_complete = True
             if self.to_process:
-                self._process_incidents()
+                processing_complete = self._process_incidents()
             #########################################################
 
             ################ PHASE 3: Update State ###############
 
-            # Store the current timestamp as the last run of the
-            # connector. Use a UTC-aware ``datetime.now`` (the previous
-            # ``datetime.utcfromtimestamp`` is deprecated in Python
-            # 3.12+) and serialise back to the canonical
-            # ``YYYY-MM-DDTHH:MM:SSZ`` shape so the next cycle's
-            # ``_parse_iso_datetime`` round-trip is exact.
-            now_utc = datetime.now(timezone.utc)
-            current_state_datetime = now_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
-            current_state = self.helper.get_state()
-            if current_state:
-                current_state["last_run"] = current_state_datetime
+            # Only advance the ``last_run`` cursor when BOTH the fetch
+            # AND the per-incident processing completed without a
+            # failure that left incidents behind:
+            #
+            # * ``self.s1_client.last_fetch_complete`` is ``False`` when
+            #   pagination aborted mid-walk on a transport / 5xx /
+            #   non-2xx response — the rest of the SentinelOne
+            #   ``/threats`` window in scope was not consumed, so
+            #   advancing the cursor would silently drop those
+            #   incidents from the ingest forever.
+            # * ``processing_complete`` is ``False`` when at least one
+            #   per-incident bundle assembly failed (``create_incident``
+            #   returned an empty list or a per-incident exception was
+            #   caught). The successful incidents in the same batch
+            #   were already sent to OpenCTI with deterministic
+            #   ``Incident.generate_id`` keys; the next cycle will
+            #   re-fetch the same window and OpenCTI will dedup them
+            #   while retrying the failed ones.
+            #
+            # When the cycle is clean we persist ``cycle_cursor_iso``
+            # (captured up front, before fetching) rather than a
+            # ``datetime.now()`` taken after processing — see the
+            # ``cycle_cursor`` rationale at the top of this method.
+            fetch_complete = self.s1_client.last_fetch_complete
+            if fetch_complete and processing_complete:
+                current_state = self.helper.get_state() or {}
+                current_state["last_run"] = cycle_cursor_iso
+                self.helper.set_state(current_state)
+                self.helper.connector_logger.info(
+                    f"{self.helper.connect_name} connector successfully run, "
+                    f"storing last_run as {cycle_cursor_iso}"
+                )
             else:
-                current_state = {"last_run": current_state_datetime}
-            self.helper.set_state(current_state)
-
-            self.helper.connector_logger.info(
-                f"{self.helper.connect_name} connector successfully run, storing "
-                f"last_run as {current_state_datetime}"
-            )
+                self.helper.connector_logger.warning(
+                    "Holding last_run cursor at previous value so the "
+                    "incomplete window is retried on the next cycle",
+                    meta={
+                        "fetch_complete": fetch_complete,
+                        "processing_complete": processing_complete,
+                    },
+                )
             #########################################################
 
         except (KeyboardInterrupt, SystemExit):
@@ -177,7 +217,7 @@ class IncidentConnector:
 
         self.helper.connector_logger.info("Retrieval process complete")
 
-    def _process_incidents(self):
+    def _process_incidents(self) -> bool:
         """
         Processes each incident in the to_process list by creating
         corresponding stix objects.
@@ -185,12 +225,27 @@ class IncidentConnector:
         Incident objects are mandatory whereas the rest of objects
         are optional and depend on the incident data: UserAccount,
         Notes, Indicators, Attack Patterns.
+
+        Returns
+        -------
+        bool
+            ``True`` when every incident in the batch produced a
+            bundle and the work was closed cleanly; ``False`` when at
+            least one incident failed conversion (empty
+            ``incident_items``) or raised an unhandled exception. The
+            caller in :meth:`process_message` uses this flag to
+            decide whether to advance the persisted ``last_run``
+            cursor — holding the cursor on a partial-success cycle
+            lets the next cycle retry the failed incidents (OpenCTI's
+            deterministic ``Incident.generate_id`` keys guarantee the
+            successful ones are deduplicated on the retry pass).
         """
 
         self.helper.connector_logger.info(
             "Connector beginning creation of applicable incidents",
             meta={"incident_count": len(self.to_process)},
         )
+        processing_complete = True
         for _, s1_incident in enumerate(self.to_process):
             # SentinelOne's v2.1 ``/threats`` items expose the
             # canonical identifier under ``threatInfo.threatId``;
@@ -217,79 +272,127 @@ class IncidentConnector:
                 meta={"s1_incident_id": s1_incident_id},
             )
 
-            stix_objects = []
+            # Wrap the per-incident bundle assembly in a try/except so
+            # one malformed SentinelOne payload (e.g. a missing
+            # ``threatInfo`` key the converter relies on) does not
+            # abort the rest of the batch. The previous shape ``break``ed
+            # out of the loop on the first ``create_incident`` failure
+            # which left every later incident in ``self.to_process``
+            # unprocessed AND still advanced the ``last_run`` cursor at
+            # the end of the cycle — silently dropping them from the
+            # ingest forever. ``processing_complete`` is flipped on any
+            # failure so :meth:`process_message` holds the cursor and
+            # the next cycle retries the same window.
+            try:
+                stix_objects = []
 
-            # Incident + Source
-            incident_items = self.stix_client.create_incident(
-                s1_incident, s1_incident_id, self.config.s1_url
-            )
-            if not incident_items:
-                self.helper.connector_logger.error(
-                    "Connector unable to create Incident, creation process cannot continue."
+                # Incident + Source
+                incident_items = self.stix_client.create_incident(
+                    s1_incident, s1_incident_id, self.config.s1_url
                 )
-                break
+                if not incident_items:
+                    self.helper.connector_logger.error(
+                        "Connector unable to create Incident; skipping this "
+                        "one and continuing with the rest of the batch.",
+                        meta={"s1_incident_id": s1_incident_id},
+                    )
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        "incident creation failed",
+                        in_error=True,
+                    )
+                    processing_complete = False
+                    continue
 
-            cti_incident_id = incident_items[0].get("id")
-            stix_objects.extend(incident_items)
+                cti_incident_id = incident_items[0].get("id")
+                stix_objects.extend(incident_items)
 
-            # UserAccount + Relationship to Incident.
-            # ``create_user_account_observable`` returns an empty list
-            # when the incident carries no ``agentComputerName``; treat
-            # the falsy return uniformly via ``extend([])`` rather than
-            # crashing on ``extend(None)``.
-            account_items = (
-                self.stix_client.create_user_account_observable(
+                # UserAccount + Relationship to Incident.
+                # ``create_user_account_observable`` returns an empty list
+                # when the incident carries no ``agentComputerName``; treat
+                # the falsy return uniformly via ``extend([])`` rather than
+                # crashing on ``extend(None)``.
+                account_items = (
+                    self.stix_client.create_user_account_observable(
+                        s1_incident, cti_incident_id
+                    )
+                    or []
+                )
+                stix_objects.extend(account_items)
+
+                # List Of Notes
+                s1_incident_notes = self.s1_client.fetch_incident_notes(s1_incident_id)
+                notes_items = self.stix_client.create_notes(
+                    s1_incident_notes, cti_incident_id
+                )
+                stix_objects.extend(notes_items)
+
+                # List Of Indicators  with Relationships to Incident
+                indicators_items = self.stix_client.create_hash_indicators(
                     s1_incident, cti_incident_id
                 )
-                or []
-            )
-            stix_objects.extend(account_items)
+                stix_objects.extend(indicators_items)
 
-            # List Of Notes
-            s1_incident_notes = self.s1_client.fetch_incident_notes(s1_incident_id)
-            notes_items = self.stix_client.create_notes(
-                s1_incident_notes, cti_incident_id
-            )
-            stix_objects.extend(notes_items)
+                # List Of Attack Patterns with Relationships to Incident and Sub Attack Patterns with
+                # Relationships to the Attack Patterns
+                attack_patterns_items = self.stix_client.create_attack_patterns(
+                    s1_incident, cti_incident_id
+                )
+                stix_objects.extend(attack_patterns_items)
 
-            # List Of Indicators  with Relationships to Incident
-            indicators_items = self.stix_client.create_hash_indicators(
-                s1_incident, cti_incident_id
-            )
-            stix_objects.extend(indicators_items)
+                # Always include the author Identity SDO in the bundle
+                # so ``created_by_ref`` resolves under
+                # ``cleanup_inconsistent_bundle=True`` instead of being
+                # silently stripped — matches the pattern used by
+                # every sibling incident connector
+                # (elastic-security-incidents, harfanglab-incidents,
+                # sigmahq).
+                stix_objects.append(self.stix_client.author)
 
-            # List Of Attack Patterns with Relationships to Incident and Sub Attack Patterns with
-            # Relationships to the Attack Patterns
-            attack_patterns_items = self.stix_client.create_attack_patterns(
-                s1_incident, cti_incident_id
-            )
-            stix_objects.extend(attack_patterns_items)
+                # Informative log of all created objects
+                message = ""
+                if incident_items:
+                    message += "Incident"
+                if account_items:
+                    message += ", UserAccount"
+                if notes_items:
+                    message += ", Notes"
+                if indicators_items:
+                    message += ", Indicators"
+                if attack_patterns_items:
+                    message += ", Attack Patterns"
+                self.helper.connector_logger.info(
+                    f"Connector created the following objects for the Incident: {message}"
+                )
 
-            # Informative log of all created objects
-            message = ""
-            if incident_items:
-                message += "Incident"
-            if account_items:
-                message += ", UserAccount"
-            if notes_items:
-                message += ", Notes"
-            if indicators_items:
-                message += ", Indicators"
-            if attack_patterns_items:
-                message += ", Attack Patterns"
-            self.helper.connector_logger.info(
-                f"Connector created the following objects for the Incident: {message}"
-            )
+                # Send the bundle to OpenCTI
+                bundle = self.helper.stix2_create_bundle(stix_objects)
+                bundles_sent = self.helper.send_stix2_bundle(
+                    bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+                )
+                self.helper.connector_logger.info(
+                    f"Connector Sent Bundle of {len(bundles_sent)} STIX objects to OpenCTI"
+                )
 
-            # Send the bundle to OpenCTI
-            bundle = self.helper.stix2_create_bundle(stix_objects)
-            bundles_sent = self.helper.send_stix2_bundle(
-                bundle, work_id=work_id, cleanup_inconsistent_bundle=True
-            )
-            self.helper.connector_logger.info(
-                f"Connector Sent Bundle of {len(bundles_sent)} STIX objects to OpenCTI"
-            )
-
-            self.helper.api.work.to_processed(work_id, "completed creation of incident")
+                self.helper.api.work.to_processed(
+                    work_id, "completed creation of incident"
+                )
+            except Exception as exc:
+                self.helper.connector_logger.error(
+                    "Unhandled error while processing SentinelOne incident; "
+                    "marking work as in-error and continuing with the rest "
+                    "of the batch.",
+                    meta={
+                        "s1_incident_id": s1_incident_id,
+                        "error": str(exc),
+                    },
+                )
+                self.helper.api.work.to_processed(
+                    work_id,
+                    f"incident processing failed: {exc}",
+                    in_error=True,
+                )
+                processing_complete = False
 
         self.helper.connector_logger.info("Completed incident creation process")
+        return processing_complete

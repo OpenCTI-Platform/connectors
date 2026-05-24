@@ -76,6 +76,16 @@ class SentinelOneClient:
     def __init__(self, logger: _MetaLogger, config: ConfigConnector):
         self.logger = logger
         self.config = config
+        # ``last_fetch_complete`` reflects whether the most recent
+        # :meth:`fetch_incidents` call walked the full SentinelOne
+        # ``/threats`` window without a transport / pagination failure.
+        # ``connector.py`` reads this flag after fetching to decide
+        # whether to advance the persisted ``last_run`` cursor: a
+        # partial fetch (transport failure on page 2+) returns the
+        # already-collected subset for processing but holds the cursor
+        # so the missing pages are retried on the next cycle instead
+        # of being silently dropped.
+        self.last_fetch_complete: bool = True
         self.logger.info("SentinelOne Client Initialised Successfully.")
 
     def fetch_incidents(self, start_date: datetime) -> list:
@@ -83,7 +93,14 @@ class SentinelOneClient:
         Fetches all incidents from SentinelOne created after start_date.
         Results are sorted descending by createdAt, so we stop as soon
         as we hit an incident older than start_date.
+
+        Sets :attr:`last_fetch_complete` to ``False`` when a transport
+        or pagination failure interrupts the walk before the
+        configured window has been fully consumed; callers should not
+        advance the persisted state cursor in that case so the missing
+        pages are retried on the next cycle.
         """
+        self.last_fetch_complete = True
         # Normalise ``start_date`` to UTC-aware so the
         # ``incident_created_at < start_date`` comparison below never
         # raises ``TypeError`` when the caller hands in a naive
@@ -113,7 +130,16 @@ class SentinelOneClient:
             # aborts pagination on the rest of the SentinelOne /threats
             # window.
             if response is None:
+                # Transport / pagination failure mid-walk. Flag the
+                # fetch as incomplete so ``connector.py`` holds the
+                # ``last_run`` cursor at its previous value and the
+                # missing pages are retried on the next cycle — the
+                # already-collected subset is still returned for
+                # processing so the work done so far is not wasted,
+                # but the cycle MUST NOT advance the cursor past the
+                # window we failed to fully read.
                 self.logger.error("API request failed, stopping fetch.")
+                self.last_fetch_complete = False
                 break
 
             page_data = response.get("data", [])
@@ -149,6 +175,24 @@ class SentinelOneClient:
                     self.logger.warning(
                         "Incident has no createdAt timestamp; skipping",
                         meta={"incident_id": incident_id},
+                    )
+                    continue
+
+                # Skip incidents where neither identifier path resolves
+                # — downstream URL composition (``threats/{id}/notes``)
+                # and the STIX external-reference link would otherwise
+                # produce ``threats/None/notes`` and break the whole
+                # per-incident bundle assembly. A missing identifier
+                # is an upstream data-quality issue worth surfacing in
+                # the operator log; the cursor logic is unaffected
+                # because the incident is dropped before reaching the
+                # ``incidents`` list.
+                if not incident_id:
+                    self.logger.warning(
+                        "Incident has no resolvable identifier "
+                        "(neither threatInfo.threatId nor top-level id); "
+                        "skipping",
+                        meta={"createdAt": str(incident_created_at)},
                     )
                     continue
 
