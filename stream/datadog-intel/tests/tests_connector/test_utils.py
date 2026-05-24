@@ -246,6 +246,86 @@ def test_is_valid_event_rejects_missing_observable_type():
 
 
 # ---------------------------------------------------------------------------
+# is_valid_event: ``Z``-suffixed ``valid_until`` handling
+# ---------------------------------------------------------------------------
+#
+# OpenCTI / STIX stream payloads commonly serialise ``valid_until``
+# as RFC3339 with a trailing ``Z`` (e.g. ``2024-04-29T12:33:20.098Z``).
+# ``datetime.fromisoformat`` only learned to accept that suffix in
+# Python 3.11, so on older runtimes the previous shape raised
+# ``ValueError`` and crashed the stream callback for the offending
+# event. The fix normalises the ``Z`` to ``+00:00`` first.
+
+
+def _future_z_timestamp():
+    return (
+        (datetime.now(timezone.utc) + timedelta(days=1))
+        .replace(microsecond=98000)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def _past_z_timestamp():
+    return (
+        (datetime.now(timezone.utc) - timedelta(days=1))
+        .replace(microsecond=0)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def test_is_valid_event_accepts_z_suffixed_future_valid_until():
+    event = _base_event(valid_until=_future_z_timestamp())
+    assert is_valid_event(event, _make_helper(), _make_config()) is True
+
+
+def test_is_valid_event_rejects_z_suffixed_expired_valid_until():
+    event = _base_event(valid_until=_past_z_timestamp())
+    assert is_valid_event(event, _make_helper(), _make_config()) is False
+
+
+def test_is_valid_event_does_not_crash_on_unparseable_valid_until():
+    # ``_parse_valid_until`` returns ``None`` on unparseable input;
+    # ``is_valid_event`` must treat that as "no expiry information"
+    # and accept the event rather than raising. Prevents a malformed
+    # upstream payload from killing the stream callback for every
+    # subsequent event.
+    event = _base_event(valid_until="not-a-date")
+    assert is_valid_event(event, _make_helper(), _make_config()) is True
+
+
+# ---------------------------------------------------------------------------
+# is_valid_event: ``delete`` events bypass the ``valid_until`` filter
+# ---------------------------------------------------------------------------
+#
+# The previous shape silently dropped delete events for expired
+# indicators — even though the delete still needs to reach Datadog so
+# a previously-forwarded record is removed from the remote feed.
+# Otherwise Datadog stays out of sync with OpenCTI as soon as an
+# indicator expires AND is then deleted on the OpenCTI side.
+
+
+def test_is_valid_event_delete_passes_through_expired_valid_until():
+    event = _base_event(event_type="delete", valid_until=_past_timestamp())
+    assert is_valid_event(event, _make_helper(), _make_config()) is True
+
+
+def test_is_valid_event_delete_passes_through_expired_z_suffixed_valid_until():
+    event = _base_event(event_type="delete", valid_until=_past_z_timestamp())
+    assert is_valid_event(event, _make_helper(), _make_config()) is True
+
+
+def test_is_valid_event_create_still_rejected_when_expired():
+    # Sanity-check that the delete-bypass does NOT widen the gate for
+    # create / update events on an expired indicator.
+    event = _base_event(event_type="create", valid_until=_past_timestamp())
+    assert is_valid_event(event, _make_helper(), _make_config()) is False
+    event = _base_event(event_type="update", valid_until=_past_timestamp())
+    assert is_valid_event(event, _make_helper(), _make_config()) is False
+
+
+# ---------------------------------------------------------------------------
 # indicator_type_for_event
 # ---------------------------------------------------------------------------
 

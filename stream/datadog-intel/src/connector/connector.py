@@ -71,7 +71,8 @@ class DatadogIntelConnector:
         :return: string
         """
         self.helper.connector_logger.debug(
-            "Message received", {"event": msg.event, "id": msg.id}
+            "Message received",
+            meta={"event": msg.event, "id": msg.id},
         )
 
         try:
@@ -81,11 +82,12 @@ class DatadogIntelConnector:
             data["x_opencti_event_type"] = msg.event
         except Exception as e:
             self.helper.connector_logger.error(
-                "Cannot parse message", {"error": str(e), "raw": msg.data}
+                "Cannot parse message",
+                meta={"error": str(e), "raw": msg.data},
             )
             return
 
-        self.helper.connector_logger.debug("Message parsed", {"data": data})
+        self.helper.connector_logger.debug("Message parsed", meta={"data": data})
 
         if not is_valid_event(data, self.helper, self.config):
             return

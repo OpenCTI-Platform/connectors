@@ -5,8 +5,8 @@ opencti:
 connector:
   type: 'STREAM'
   id: 'ChangeMe'
-  name: 'Template Connector' # optional (default: 'Template Connector')
-  scope: 'ChangeMe'
+  name: 'Datadog Threat Intel' # optional (default: 'DatadogIntelConnector')
+  scope: 'indicator'
   log_level: 'error' # optional (default: 'error')
   live_stream_id: 'live' # optional, ID of the live stream created in the OpenCTI UI (default: 'live')
   live_stream_listen_delete: true # optional (default: true)
