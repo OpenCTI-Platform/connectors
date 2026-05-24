@@ -37,6 +37,26 @@ class YaraConfig(BaseConfigModel):
         description="Default TLP marking to apply to created relationships when neither the artifact nor the indicator have markings.",
         default=TLPLevel.CLEAR,
     )
+    propagate_malware_relationship: bool = Field(
+        description=(
+            "When ``true``, for every YARA Indicator that matches the enriched "
+            "Artifact, the connector follows the indicator's ``indicates`` "
+            "relationships to Malware entities and emits an additional "
+            "``related-to`` STIX relationship from the Artifact to each of "
+            "those Malware entities. Defaults to ``false`` to preserve the "
+            "connector's previous behaviour."
+        ),
+        default=False,
+    )
+    propagate_labels: bool = Field(
+        description=(
+            "When ``true``, every OpenCTI label carried by a YARA Indicator "
+            "that matches the enriched Artifact is added to the Artifact "
+            "(via the ``stix_cyber_observable.add_label`` mutation). Defaults "
+            "to ``false`` to preserve the connector's previous behaviour."
+        ),
+        default=False,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

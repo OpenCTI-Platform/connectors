@@ -44,7 +44,7 @@ class ExternalImportConnector:
     (e.g. one for indicators, one for reports, one for vulnerabilities).
 
     Attributes:
-        config: The connector configuration (subclass of ``BaseConnectorSettings``).
+        settings: The connector configuration (subclass of ``BaseConnectorSettings``).
         logger: The ``ConnectorLogger`` for logging without direct pycti dependency.
         state: The ``ExternalImportConnectorState`` for persisting connector state.
         data_processors: The list of ``BaseDataProcessor`` instances.
@@ -60,7 +60,7 @@ class ExternalImportConnector:
         ...
         >>> settings = MyConnectorSettings()
         >>> connector = ExternalImportConnector(
-        ...     config=settings,
+        ...     settings=settings,
         ...     data_processors=[IndicatorProcessor()],
         ... )
         >>> connector.start()
@@ -68,7 +68,7 @@ class ExternalImportConnector:
 
     def __init__(
         self,
-        config: BaseConnectorSettings,
+        settings: BaseConnectorSettings,
         data_processors: list[BaseDataProcessor],
         state: ExternalImportConnectorState | None = None,
     ) -> None:
@@ -78,14 +78,14 @@ class ExternalImportConnector:
         created when ``start()`` is called (via ``_init_dependencies()``).
 
         Args:
-            config: The connector configuration settings.
+            settings: The connector configuration settings.
             data_processors: The list of ``BaseDataProcessor`` instances to run.
             state: Optional custom state instance. If ``None``, a default
                 ``ExternalImportConnectorState`` is created in ``_init_dependencies()``.
         """
         if not data_processors:
             raise ValueError("At least one BaseDataProcessor must be provided.")
-        self.config = config
+        self.settings = settings
         self.data_processors = data_processors
         self.state = state if state is not None else ExternalImportConnectorState()
 
@@ -98,12 +98,12 @@ class ExternalImportConnector:
         3. Initializes the state and injects dependencies
         4. Calls ``inject_dependencies()`` on each data processor
         """
-        self._helper = OpenCTIConnectorHelper(config=self.config.to_helper_config())
+        self._helper = OpenCTIConnectorHelper(config=self.settings.to_helper_config())
         self.logger = ConnectorLogger(self._helper)
         self.state.inject_dependencies(self._helper)
         for processor in self.data_processors:
             processor.inject_dependencies(
-                config=self.config,
+                settings=self.settings,
                 helper=self._helper,
                 state=self.state,
             )
@@ -120,7 +120,7 @@ class ExternalImportConnector:
 
         Override this method for fully custom processing logic.
         """
-        connector_name = self.config.connector.name
+        connector_name = self.settings.connector.name
         self.logger.info(
             "[CONNECTOR] Starting connector...",
             {"connector_name": connector_name},
@@ -174,11 +174,11 @@ class ExternalImportConnector:
         until the queue is reduced.
 
         Note:
-            The ``config.connector`` must be a ``BaseExternalImportConnectorConfig``
+            The ``settings.connector`` must be a ``BaseExternalImportConnectorConfig``
             (or subclass) with a ``duration_period`` field.
         """
         self._init_dependencies()
         self._helper.schedule_process(
             message_callback=self.callback,
-            duration_period=self.config.connector.duration_period.total_seconds(),  # type: ignore[attr-defined]
+            duration_period=self.settings.connector.duration_period.total_seconds(),  # type: ignore[attr-defined]
         )

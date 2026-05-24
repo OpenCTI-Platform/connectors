@@ -2,6 +2,8 @@
 
 import datetime
 import io
+import ipaddress
+import itertools
 import logging
 import re
 from typing import List, Optional
@@ -14,6 +16,50 @@ import vt
 from pycti import Incident, Indicator, OpenCTIConnectorHelper, StixCoreRelationship
 
 logging.getLogger("plyara").setLevel(logging.ERROR)
+
+
+def _escape_stix_pattern_value(value: str) -> str:
+    """Escape backslashes and single quotes for use inside a STIX pattern.
+
+    STIX patterns wrap string values in single quotes and use ``\\`` as the
+    escape character. Without escaping, an IOC containing either character
+    produces a malformed pattern AND a mismatched deterministic indicator
+    id, which silently drops the indicator on import.
+    """
+    return value.replace("\\", "\\\\").replace("'", "\\'")
+
+
+# Conservative RFC-1035 / RFC-1123 style domain check. We deliberately do
+# NOT perform any DNS resolution here: a valid C2 domain may be NXDOMAIN
+# right now, blocked by the connector's network policy, or only resolve
+# AAAA, and we still want to ingest it as an IOC. The previous live
+# ``dns.google`` lookup also added up to 5 s per host of latency.
+#
+# Every label MUST start and end with an alphanumeric character — RFC 1123
+# explicitly disallows leading or trailing hyphens **on every label**, not
+# only the first one. The ``_LABEL`` building block encodes that:
+#
+#   * ``[a-zA-Z0-9]`` — first char must be alphanumeric (no leading ``-``);
+#   * ``(?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?`` — optional middle + trailing
+#     run, but if present the trailing char MUST be alphanumeric (no
+#     trailing ``-``). The ``?`` makes single-char labels (e.g. ``a.b.c``,
+#     ``1.example.com``) still valid.
+#
+# The previous regex only had a ``(?!-)`` lookahead on the first label,
+# so values like ``a.-b.com`` / ``a.b-.com`` slipped through despite
+# the comment claiming RFC-style validation.
+#
+# The same ``_LABEL`` rule is reused for the TLD position too. A
+# previous revision pinned the TLD to ``[a-zA-Z]{2,63}``, which
+# rejected RFC-1123-valid TLDs that contain digits and/or hyphens —
+# crucially punycode TLDs like ``xn--p1ai`` (`.рф`) /
+# ``xn--80akhbyknj4f`` (`.испытание`) — so legitimate C2 domain
+# IOCs targeting non-latin TLDs were silently dropped. Per RFC 1123
+# §2.1, any label (TLD included) may start/end with a letter or
+# digit and contain hyphens in between, so the same building block
+# applies everywhere.
+_LABEL = r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?"
+_DOMAIN_REGEX = re.compile(rf"^(?=.{{1,253}}$){_LABEL}(?:\.{_LABEL})+$")
 
 
 class LivehuntBuilder:
@@ -44,6 +90,13 @@ class LivehuntBuilder:
         livehunt_label_prefix: str,
         livehunt_tag_prefix: str,
         enable_label_enrichment: bool,
+        *,
+        get_malware_config: bool = False,
+        create_file_indicators: bool = False,
+        create_domain_name_indicators: bool = False,
+        create_ip_indicators: bool = False,
+        create_url_indicators: bool = False,
+        limit: Optional[int] = None,
     ) -> None:
         """Initialize Virustotal builder."""
         self.client = client
@@ -69,6 +122,12 @@ class LivehuntBuilder:
         self.livehunt_label_prefix = livehunt_label_prefix
         self.livehunt_tag_prefix = livehunt_tag_prefix
         self.enable_label_enrichment = enable_label_enrichment
+        self.get_malware_config = get_malware_config
+        self.create_file_indicators = create_file_indicators
+        self.create_domain_name_indicators = create_domain_name_indicators
+        self.create_ip_indicators = create_ip_indicators
+        self.create_url_indicators = create_url_indicators
+        self.limit = limit
 
     def process(self, start_date: str, timestamp: int):
         # Work id will only be set and instantiated if there are bundles to send.
@@ -83,11 +142,41 @@ class LivehuntBuilder:
             "descriptors_only": "False",
             "filter": filter,
         }
+        if self.limit is not None:
+            # The VT iterator honours ``limit`` as a server-side cap so a small
+            # API quota is respected even when the upstream stream is much
+            # bigger than what the connector should process in a single run.
+            params["limit"] = str(self.limit)
         self.helper.connector_logger.info(
             f"Url for notifications: {url} / params: {params}"
         )
 
         files_iterator = self.client.iterator(url, params=params)
+        if self.limit is not None:
+            # Belt-and-braces client-side cap: ``itertools.islice`` stops
+            # the iterator after exactly ``self.limit`` items, so no extra
+            # ``vtobj`` (and crucially no extra paginated page fetch from
+            # the VT API) lands past the configured cap even if the
+            # server-side ``params["limit"]`` above silently drifts — the
+            # API renames the param in a future version, the server
+            # enforces a soft rather than hard limit, the iterator
+            # paginates past it. The previous shape broke out of the
+            # ``for`` loop AFTER the iterator had already yielded (and
+            # paginated for) one extra notification, so the client kept
+            # consuming API quota past the cap in that drift scenario.
+            files_iterator = itertools.islice(files_iterator, self.limit)
+
+        # ``processed`` counts notifications that survived every
+        # client-side filter AND produced at least one new entity in the
+        # bundle — i.e. the notifications for which the connector
+        # actually opened a Work and emitted STIX. Notifications that
+        # pass the filter chain but contribute nothing (e.g.
+        # ``create_alert`` returned ``None`` because the alert already
+        # exists, or ``create_alert`` / ``create_file`` /
+        # ``create_yara_rule`` are all disabled) are NOT counted, so the
+        # "Processing done for N notifications" log line below reflects
+        # work the connector actually did this run.
+        processed = 0
 
         for vtobj in files_iterator:
             if self.delete_notification:
@@ -163,11 +252,28 @@ class LivehuntBuilder:
                         file_id,
                     )
 
-            if len(self.bundle) > 0:
+            # ``self.bundle`` is initialised with ``[author, tlp_marking]``
+            # in ``__init__`` and reset to the same baseline by
+            # ``send_bundle`` at the end of every iteration. A literal
+            # ``len(self.bundle) > 0`` would therefore always be True
+            # and we'd initiate / close a Work for notifications that
+            # produced no per-notification entities (e.g. when
+            # ``create_alert`` / ``create_file`` / ``create_yara_rule``
+            # are all disabled, or every file filter short-circuited the
+            # path above). Compare against the default-bundle size so a
+            # Work is only opened when at least one entity was actually
+            # appended.
+            if len(self.bundle) > len(self._default_bundle):
                 if work_id is None:
                     work_id = self.initiate_work(timestamp)
                 self.send_bundle(work_id)
+                processed += 1
 
+        self.helper.connector_logger.info(
+            f"Processing done for {processed} VirusTotal Livehunt notifications."
+        )
+
+        if work_id is not None:
             self.helper.api.work.to_processed(
                 work_id, message="Connector's work finished gracefully"
             )
@@ -323,14 +429,23 @@ class LivehuntBuilder:
             description=description,
             hashes={
                 "MD5": vtobj.md5,
-                "SHA256": vtobj.sha256,
-                "SHA1": vtobj.sha1,
+                "SHA-256": vtobj.sha256,
+                "SHA-1": vtobj.sha1,
             },
             size=vtobj.size,
             external_references=[external_reference],
             custom_properties={
                 "x_opencti_score": vt_score,
-                "created_by_ref": self.author.id,
+                # ``stix2.File`` is a SCO (Stix Cyber Observable); its
+                # author must be carried via the OpenCTI-specific
+                # ``x_opencti_created_by_ref`` custom property rather
+                # than ``created_by_ref`` (which is an SDO-only field
+                # and would land as an inert custom attribute on a
+                # SCO). The malware-config observables below
+                # (Domain-Name / IPv4-Addr / IPv6-Addr / URL) already
+                # use the same shape, and the connectors-sdk
+                # ``BaseObservableEntity`` sets author this way too.
+                "x_opencti_created_by_ref": self.author.id,
                 "x_opencti_additional_names": x_opencti_additional_names,
             },
             allow_custom=True,
@@ -354,7 +469,289 @@ class LivehuntBuilder:
                 object_marking_refs=[self.tlp_marking],
             )
             self.bundle.append(relationship)
+
+        # Optionally surface a File Indicator carrying the canonical SHA-256
+        # pattern so OpenCTI detection rules pick the verdict up.
+        if self.create_file_indicators:
+            self._create_file_indicator(vtobj, incident_id, file["id"])
+
+        # Optionally extract C2 infrastructure (domains, IPs, URLs) from the
+        # VirusTotal malware configuration analysis and add the resulting
+        # observables (and, when configured, indicators) to the bundle.
+        if self.get_malware_config:
+            self._extract_malware_config(vtobj, incident_id, file["id"])
+
         return file["id"]
+
+    def _create_file_indicator(
+        self,
+        vtobj,
+        incident_id: Optional[str],
+        file_id: str,
+    ) -> None:
+        """Create a File Indicator for ``vtobj`` and link it back to incident / file."""
+        sha256 = vtobj.sha256
+        escaped = _escape_stix_pattern_value(sha256)
+        pattern = f"[file:hashes.'SHA-256' = '{escaped}']"
+        indicator = stix2.Indicator(
+            id=Indicator.generate_id(pattern),
+            created_by_ref=self.author.id,
+            name=f"VT Livehunt file {sha256}",
+            description=(f"File flagged by VirusTotal Livehunt (SHA-256 {sha256})."),
+            pattern=pattern,
+            pattern_type="stix",
+            valid_from=self.helper.api.stix2.format_date(
+                datetime.datetime.now(datetime.timezone.utc)
+            ),
+            object_marking_refs=[self.tlp_marking],
+            custom_properties={
+                "x_opencti_main_observable_type": "StixFile",
+            },
+            allow_custom=True,
+        )
+        self.bundle.append(indicator)
+        # based-on between the indicator and the observable, plus a related-to
+        # back to the incident so the alert page surfaces the indicator.
+        self.bundle.append(
+            stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on", indicator["id"], file_id
+                ),
+                relationship_type="based-on",
+                created_by_ref=self.author.id,
+                source_ref=indicator["id"],
+                target_ref=file_id,
+                allow_custom=True,
+                object_marking_refs=[self.tlp_marking],
+            )
+        )
+        if incident_id is not None:
+            self.bundle.append(
+                stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", incident_id, indicator["id"]
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.author.id,
+                    source_ref=incident_id,
+                    target_ref=indicator["id"],
+                    allow_custom=True,
+                    object_marking_refs=[self.tlp_marking],
+                )
+            )
+
+    def _extract_malware_config(
+        self,
+        vtobj,
+        incident_id: Optional[str],
+        file_id: str,
+    ) -> None:
+        """Extract domain / IP / URL C2 infrastructure from VirusTotal's malware config analysis.
+
+        VirusTotal's ``behaviour_mitre_trees`` endpoint exposes a
+        ``malware_configurations`` block on the file object. The exact
+        shape depends on the malware family, but each network IOC ends
+        up in one of three top-level lists: ``domains``, ``ips``,
+        ``urls``. We surface them as STIX observables (and, when the
+        ``create_*_indicators`` flags are set, matching Indicators) so
+        OpenCTI users can pivot on them without manually re-running the
+        analysis.
+        """
+        try:
+            config = self.client.get_object(
+                f"/files/{vtobj.sha256}/behaviour_mitre_trees"
+            )
+        except Exception as exc:
+            self.helper.connector_logger.warning(
+                f"Failed to fetch malware configuration for {vtobj.sha256}: {exc}"
+            )
+            return
+
+        configs = getattr(config, "malware_configurations", None) or {}
+
+        for domain in self._unique_strings(configs.get("domains")):
+            if not self._is_valid_domain_name(domain):
+                self.helper.connector_logger.debug(
+                    f"Skipping invalid malware-config domain {domain!r}"
+                )
+                continue
+            observable = stix2.DomainName(
+                value=domain,
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "x_opencti_created_by_ref": self.author.id,
+                },
+                allow_custom=True,
+            )
+            self.bundle.append(observable)
+            self._link_malware_config_object(observable, incident_id, file_id)
+            if self.create_domain_name_indicators:
+                self._create_malware_config_indicator(
+                    observable, "domain-name", "Domain-Name", incident_id
+                )
+
+        for ip in self._unique_strings(configs.get("ips")):
+            ip_version = self._ip_version(ip)
+            if ip_version is None:
+                self.helper.connector_logger.debug(
+                    f"Skipping invalid malware-config IP {ip!r}"
+                )
+                continue
+            observable_type = "ipv6-addr" if ip_version == 6 else "ipv4-addr"
+            stix_class = stix2.IPv6Address if ip_version == 6 else stix2.IPv4Address
+            observable = stix_class(
+                value=ip,
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "x_opencti_created_by_ref": self.author.id,
+                },
+                allow_custom=True,
+            )
+            self.bundle.append(observable)
+            self._link_malware_config_object(observable, incident_id, file_id)
+            if self.create_ip_indicators:
+                octi_type = "IPv6-Addr" if ip_version == 6 else "IPv4-Addr"
+                self._create_malware_config_indicator(
+                    observable, observable_type, octi_type, incident_id
+                )
+
+        for url in self._unique_strings(configs.get("urls")):
+            observable = stix2.URL(
+                value=url,
+                object_marking_refs=[self.tlp_marking],
+                custom_properties={
+                    "x_opencti_created_by_ref": self.author.id,
+                },
+                allow_custom=True,
+            )
+            self.bundle.append(observable)
+            self._link_malware_config_object(observable, incident_id, file_id)
+            if self.create_url_indicators:
+                self._create_malware_config_indicator(
+                    observable, "url", "Url", incident_id
+                )
+
+    def _link_malware_config_object(
+        self,
+        observable,
+        incident_id: Optional[str],
+        file_id: str,
+    ) -> None:
+        # The observable was contacted by the file => related-to the file,
+        # and (when present) to the incident that surfaced the file.
+        self.bundle.append(
+            stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "related-to", file_id, observable.id
+                ),
+                relationship_type="related-to",
+                created_by_ref=self.author.id,
+                source_ref=file_id,
+                target_ref=observable.id,
+                allow_custom=True,
+                object_marking_refs=[self.tlp_marking],
+            )
+        )
+        if incident_id is not None:
+            self.bundle.append(
+                stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", incident_id, observable.id
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.author.id,
+                    source_ref=incident_id,
+                    target_ref=observable.id,
+                    allow_custom=True,
+                    object_marking_refs=[self.tlp_marking],
+                )
+            )
+
+    def _create_malware_config_indicator(
+        self,
+        observable,
+        stix_observable_type: str,
+        opencti_observable_type: str,
+        incident_id: Optional[str],
+    ) -> None:
+        escaped = _escape_stix_pattern_value(observable.value)
+        pattern = f"[{stix_observable_type}:value = '{escaped}']"
+        indicator = stix2.Indicator(
+            id=Indicator.generate_id(pattern),
+            created_by_ref=self.author.id,
+            name=observable.value,
+            description=(
+                f"Observable {observable.value} extracted from malware configuration."
+            ),
+            pattern=pattern,
+            pattern_type="stix",
+            valid_from=self.helper.api.stix2.format_date(
+                datetime.datetime.now(datetime.timezone.utc)
+            ),
+            object_marking_refs=[self.tlp_marking],
+            custom_properties={
+                "x_opencti_main_observable_type": opencti_observable_type,
+            },
+            allow_custom=True,
+        )
+        self.bundle.append(indicator)
+        self.bundle.append(
+            stix2.Relationship(
+                id=StixCoreRelationship.generate_id(
+                    "based-on", indicator["id"], observable.id
+                ),
+                relationship_type="based-on",
+                created_by_ref=self.author.id,
+                source_ref=indicator["id"],
+                target_ref=observable.id,
+                allow_custom=True,
+                object_marking_refs=[self.tlp_marking],
+            )
+        )
+        if incident_id is not None:
+            self.bundle.append(
+                stix2.Relationship(
+                    id=StixCoreRelationship.generate_id(
+                        "related-to", incident_id, indicator["id"]
+                    ),
+                    relationship_type="related-to",
+                    created_by_ref=self.author.id,
+                    source_ref=incident_id,
+                    target_ref=indicator["id"],
+                    allow_custom=True,
+                    object_marking_refs=[self.tlp_marking],
+                )
+            )
+
+    @staticmethod
+    def _unique_strings(values) -> list[str]:
+        """Return a deduplicated list of trimmed, non-empty string values."""
+        if not values:
+            return []
+        seen: set[str] = set()
+        result: list[str] = []
+        for value in values:
+            if not isinstance(value, str):
+                continue
+            value = value.strip()
+            if not value or value in seen:
+                continue
+            seen.add(value)
+            result.append(value)
+        return result
+
+    @staticmethod
+    def _is_valid_domain_name(value: str) -> bool:
+        """Regex-only validation: never block on a live DNS query."""
+        return bool(value) and bool(_DOMAIN_REGEX.match(value))
+
+    @staticmethod
+    def _ip_version(address: str) -> Optional[int]:
+        """Return 4 / 6 for valid IPv4 / IPv6, or None for invalid input."""
+        try:
+            return ipaddress.ip_address(address).version
+        except (ValueError, TypeError):
+            return None
 
     def create_rule(
         self,
