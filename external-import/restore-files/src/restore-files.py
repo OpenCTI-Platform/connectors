@@ -366,10 +366,19 @@ class RestoreFilesConnector:
         self.helper.log_info("restore run completed")
 
     def start(self):
-        # Check if the directory exists
+        # Validate ``opencti_data`` is an actual directory rather than just
+        # using ``os.path.exists`` — the latter returns True if the path is
+        # a regular file (or pipe / socket / broken symlink), which would
+        # let the connector start and then crash with a less actionable
+        # ``NotADirectoryError`` from ``Path(...).iterdir()`` /
+        # ``os.scandir`` deeper in ``restore_files``. ``os.path.isdir``
+        # collapses both failure modes (missing path AND wrong type) into
+        # a single early ValueError with a clear message at startup.
         backup_root = os.path.join(self.backup_path, "opencti_data")
-        if not os.path.exists(backup_root):
-            raise ValueError("Backup path does not exist - " + backup_root)
+        if not os.path.isdir(backup_root):
+            raise ValueError(
+                "Backup path does not exist or is not a directory - " + backup_root
+            )
         self.restore_files()
 
 
