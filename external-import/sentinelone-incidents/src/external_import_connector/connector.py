@@ -156,7 +156,7 @@ class IncidentConnector:
         self.to_process = self.s1_client.fetch_incidents(start_date)
         if not self.to_process:
             self.helper.connector_logger.info(
-                "Connector retreived no incidents from SentinelOne"
+                "Connector retrieved no incidents from SentinelOne"
             )
             return
         self.helper.connector_logger.info(f"Found {len(self.to_process)} incidents")

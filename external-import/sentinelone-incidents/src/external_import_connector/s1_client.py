@@ -106,9 +106,22 @@ class SentinelOneClient:
                     )
                     continue
 
-                if incident_created_at < start_date:
+                # Use ``<=`` (not ``<``) so the cursor semantics are
+                # "created strictly after ``start_date``", matching the
+                # docstring above and the README. ``last_run`` is
+                # written as ``datetime.now(...).strftime("...Z")`` at
+                # the end of every cycle (second-precision wall clock),
+                # so any incident whose ``createdAt`` second-aligns
+                # with the previous cycle's cursor would otherwise be
+                # appended on this cycle AND on the previous one,
+                # producing a duplicate-import. On the very first
+                # cycle the cursor is the configured
+                # ``IMPORT_START_DATE``: incidents created at exactly
+                # that second are excluded too, matching the
+                # documented "strictly after" semantic.
+                if incident_created_at <= start_date:
                     self.logger.info(
-                        f"Incident created at {incident_created_at} is before "
+                        f"Incident created at {incident_created_at} is at or before "
                         f"start_date {start_date}, stopping fetch."
                     )
                     stop_fetching = True
