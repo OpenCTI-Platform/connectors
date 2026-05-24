@@ -267,16 +267,11 @@ class StreamImporterConnector(ExternalImportConnector):
             ),
         )
         pika_connection = pika.BlockingConnection(pika_parameters)
-        channel = pika_connection.channel()
-        try:
-            channel.confirm_delivery()
-        except Exception as err:  # pylint: disable=broad-except
-            self.metrics.send_error()
-            self.helper.connector_logger.warning(str(err))
-            channel.close()
-            pika_connection.close()
-            return False
-
+        # ``channel`` is initialised to ``None`` so the ``finally``
+        # cleanup below works even if ``pika_connection.channel()``
+        # itself raises (``finally`` would otherwise fail with
+        # ``UnboundLocalError`` and mask the real broker failure).
+        channel = None
         # Track per-entry success so the file is only moved (and the
         # ``sent_messages_total`` counter only incremented) when every
         # entry actually went through. The previous shape incremented
@@ -292,19 +287,58 @@ class StreamImporterConnector(ExternalImportConnector):
         # could crash the connector on the second entry rather than
         # fail cleanly on the first one.
         all_ok = True
-        for e in event.entries.split("\n"):
-            if self._send_event(channel, e):
-                self.metrics.send()
-            else:
-                all_ok = False
-                self.helper.connector_logger.warning(
-                    f"Publish failed for an entry in {event.path}; "
-                    "stopping iteration on this file so the channel "
-                    "state cannot crash subsequent publishes."
-                )
-                break
-        channel.close()
-        pika_connection.close()
+        # Wrap the publish flow in ``try / finally`` so the broker
+        # channel and TCP connection are always released — even when
+        # an unexpected exception escapes ``_send_event`` (e.g.
+        # ``json.JSONDecodeError`` on a malformed entry, or any
+        # ``pika`` exception not caught in the helper's branches). The
+        # previous shape kept ``channel.close()`` / ``pika_connection.close()``
+        # as straight-line statements after the loop, so a single bad
+        # entry leaked both the channel and the underlying TCP
+        # connection and eventually exhausted the broker's per-client
+        # connection cap on a connector that runs every few minutes.
+        try:
+            channel = pika_connection.channel()
+            try:
+                channel.confirm_delivery()
+            except Exception as err:  # pylint: disable=broad-except
+                self.metrics.send_error()
+                self.helper.connector_logger.warning(str(err))
+                return False
+
+            for e in event.entries.split("\n"):
+                # ``file.split("\n")`` always yields a trailing empty
+                # string when the source file ends in ``\n`` and may
+                # include blank / whitespace-only lines from a broken
+                # upstream writer. Filter them here so they are never
+                # passed to ``_send_event`` — counted as a no-op, they
+                # used to make the helper return ``True`` which then
+                # incremented ``sent_messages_total`` for a message
+                # the broker never actually received.
+                if not e.strip():
+                    continue
+                if self._send_event(channel, e):
+                    self.metrics.send()
+                else:
+                    all_ok = False
+                    self.helper.connector_logger.warning(
+                        f"Publish failed for an entry in {event.path}; "
+                        "stopping iteration on this file so the channel "
+                        "state cannot crash subsequent publishes."
+                    )
+                    break
+        finally:
+            # ``channel.close()`` is best-effort: the broker may have
+            # already closed the channel (``ChannelClosedByBroker``)
+            # and a redundant close raises ``ChannelWrongStateError``.
+            # ``pika_connection.close()`` always runs so the TCP
+            # connection is released regardless.
+            if channel is not None:
+                try:
+                    channel.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            pika_connection.close()
 
         if not all_ok:
             # Leave the source file in place AND skip the state-cursor
@@ -346,12 +380,26 @@ class StreamImporterConnector(ExternalImportConnector):
     def _send_event(self, channel, event: str, attempt: int = 1) -> bool:
         """Send the content of the event to RabbitMQ.
 
+        The caller in :meth:`send_event` is responsible for filtering
+        out empty / whitespace-only entries before calling this
+        helper, so the body assumes ``event`` is a non-empty payload
+        and does not short-circuit on falsy input. A defensive empty
+        skip used to live here, but it returned ``True`` and the
+        caller incremented ``sent_messages_total`` unconditionally
+        on a truthy return — inflating the success counter for every
+        trailing blank line produced by ``file.split("\\n")``.
+        Filtering at the caller and assuming non-empty input here
+        keeps the counter aligned with the number of actual messages
+        the broker confirmed.
+
         Parameters
         ----------
-        channel : pike.BlockingChannel
+        channel : pika.adapters.blocking_connection.BlockingChannel
             Channel to send the event to.
         event : str
-            Content of the event, as string.
+            Content of the event, as string. MUST be non-empty;
+            empty / whitespace-only entries are filtered by the
+            caller in :meth:`send_event`.
         attempt : int
             1-based retry counter used to bound the recursive retry on
             ``NackError`` / ``UnroutableError``. Defaults to 1 for the
@@ -361,22 +409,15 @@ class StreamImporterConnector(ExternalImportConnector):
         Returns
         -------
         bool
-            ``True`` when the publish was confirmed by the broker (or
-            the entry was an empty / blank string that we deliberately
-            skip — counted as a clean no-op so the caller does not
-            interpret it as a failure); ``False`` when the publish
-            was dropped on a permanently closed channel
-            (``ChannelClosedByBroker``) or after exhausting the
-            bounded NACK / unroutable retry. The caller in
-            :meth:`send_event` uses this to gate both the
+            ``True`` when the publish was confirmed by the broker;
+            ``False`` when the publish was dropped on a permanently
+            closed channel (``ChannelClosedByBroker``) or after
+            exhausting the bounded NACK / unroutable retry. The
+            caller in :meth:`send_event` uses this to gate both the
             ``metrics.send()`` increment and the destination-bucket
             file move so the success counter and the per-file
             "moved" semantic always match the actual broker state.
         """
-        if not event:
-            self.helper.log_debug("Event is empty, skipping")
-            return True
-
         event_parsed = json.loads(event)
         self.helper.log_debug(f"Event parsed: {event_parsed}")
 
