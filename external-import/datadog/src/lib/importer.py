@@ -3,6 +3,7 @@ import json
 import re
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import urlsplit
 
 
 class DataImporter:
@@ -427,9 +428,35 @@ class DataImporter:
         if not url or not isinstance(url, str):
             return False
 
-        # HTTP/HTTPS URL pattern
-        url_pattern = r"^https?://[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(/.*)?$"
-        return bool(re.match(url_pattern, url.strip()))
+        # Switched from a hand-rolled regex to ``urllib.parse`` because
+        # the regex shape was rejecting common URL productions that
+        # DataDog signals legitimately carry:
+        #
+        # * Explicit ports — ``https://example.com:8443/path`` did not
+        #   match the ``[a-zA-Z0-9-]`` host class (no ``:`` allowed
+        #   between the host and the optional path), so any URL with
+        #   a non-default port was silently dropped on the floor.
+        # * Userinfo — ``https://user:pass@example.com/`` was rejected
+        #   for the same reason (no ``@``/``:`` in the host class).
+        # * IPv4 / IPv6 literal hosts — ``http://192.0.2.1/`` matched
+        #   only because the digits happen to fit ``[a-zA-Z0-9]``, but
+        #   ``http://[2001:db8::1]/`` did not (no brackets in the host
+        #   class).
+        #
+        # ``urllib.parse.urlsplit`` handles every RFC-3986 host
+        # production (reg-name, IP-literal, IPv4address) for free and
+        # we only need to constrain the scheme to ``http``/``https``
+        # (the only schemes the converter knows how to map to a STIX
+        # ``url`` observable) and require a non-empty host. The host
+        # check uses ``urlsplit.hostname`` because it strips userinfo
+        # and the port for us, so a missing host (e.g. ``https:///x``)
+        # still fails cleanly.
+        try:
+            parts = urlsplit(url.strip())
+        except ValueError:
+            return False
+
+        return parts.scheme in ("http", "https") and bool(parts.hostname)
 
     def _extract_alert_context(self, alert: dict[str, Any]) -> dict[str, Any]:
         """

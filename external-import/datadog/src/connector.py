@@ -401,8 +401,26 @@ class DataDogConnector:
                     )
                     return {"imported": 0, "errors": 1}
 
+            # Distinguish "operator-disabled all data sources" from "an
+            # enabled source ran but produced no data". The startup
+            # warning emitted by ``_validate_config`` already tells the
+            # operator the connector is idle by design; firing another
+            # warning every cycle would make idle deployments look
+            # like they are failing in the OpenCTI logs and noise up
+            # alerting (one line per cycle, every ``DATADOG_IMPORT_INTERVAL``
+            # minutes). Downgrade to ``info`` in that case and keep the
+            # ``warning`` shape only when an enabled source actually
+            # produced an empty result — which is unexpected because
+            # an enabled source either returns rows or aborts the
+            # cycle with ``errors=1`` in the branches above.
             if not all_import_data:
-                self.helper.log_warning("No data available for import")
+                if not self.import_alerts:
+                    self.helper.log_info(
+                        "DATADOG_IMPORT_ALERTS is disabled; running idle "
+                        "cycle (no data sources active)."
+                    )
+                else:
+                    self.helper.log_warning("No data available for import")
                 return {"imported": 0, "errors": 0}
 
             # Process and convert data
