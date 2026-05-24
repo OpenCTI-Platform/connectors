@@ -401,8 +401,22 @@ class DataDogClient:
             else:
                 status = status.lower()
 
-            # Get timestamps
+            # Get timestamps.
+            #
+            # Both the missing-timestamp branch and the parse-failure
+            # branch leave ``created`` as ``None`` rather than falling
+            # back to ``datetime.now(UTC)`` — the downstream
+            # ``StixConverter`` derives deterministic STIX ids from
+            # ``data.get("created") or _FALLBACK_TIMESTAMP``, and a
+            # wall-clock fallback here would silently shift the
+            # ``created`` value (and therefore the ``Incident`` /
+            # ``CaseIncident`` / ``Note`` ids) on every retry of the
+            # same signal, defeating dedup. The converter's fixed
+            # epoch fallback only kicks in when ``created`` is falsy,
+            # so propagating ``None`` here is what makes the
+            # deterministic-id contract end-to-end.
             timestamp = attributes.get("timestamp")
+            created: datetime | None = None
             if timestamp:
                 try:
                     # Handle both string (ISO format) and int (milliseconds)
@@ -417,9 +431,7 @@ class DataDogClient:
                     self.helper.log_warning(
                         f"Failed to parse timestamp '{timestamp}': {e}"
                     )
-                    created = datetime.now(UTC)
-            else:
-                created = datetime.now(UTC)
+                    created = None
 
             # Map severity to priority
             severity_priority_map = {
@@ -606,8 +618,19 @@ class DataDogClient:
                 "priority": priority,
                 "severity": severity,
                 "tags": attributes.get("tags", []),
-                "created": created.isoformat(),
-                "modified": created.isoformat(),
+                # ``created`` is ``None`` when the signal carried no
+                # parseable timestamp; serialise that through to the
+                # importer as a literal ``None`` so
+                # ``_extract_timestamp(None)`` returns ``None`` and
+                # the converter picks up the deterministic
+                # ``_FALLBACK_TIMESTAMP``. Calling ``.isoformat()`` on
+                # a ``None`` here would crash; calling it on a
+                # wall-clock ``datetime.now()`` would leak a fresh,
+                # non-deterministic value into ``Incident.generate_id``
+                # / ``CaseIncident.generate_id`` / ``Note.generate_id``
+                # on every retry of the same signal.
+                "created": created.isoformat() if created is not None else None,
+                "modified": created.isoformat() if created is not None else None,
                 "type": "alert",
                 "signal_id": signal_id,
                 "rule_id": rule_info.get("id"),
