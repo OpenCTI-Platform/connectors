@@ -17,6 +17,7 @@ timeout), and pushes the results back into OpenCTI:
 from __future__ import annotations
 
 import base64
+import binascii
 import io
 import json
 import os
@@ -547,15 +548,41 @@ class AssemblyLineConnector:
             )
 
             if observable.get("payload_bin"):
-                file_content = base64.b64decode(observable["payload_bin"])
-                file_name = (
-                    observable.get("x_opencti_additional_names")
-                    or [f"artifact_{str(observable.get('id', 'unknown'))[:8]}"]
-                )[0]
-                hashes = observable.get("hashes", [])
-                file_hash = self._select_any_hash(hashes) or "unknown"
-                self.helper.log_info("File content found in payload_bin")
-                return file_content, file_name, file_hash
+                # ``base64.b64decode`` raises ``binascii.Error`` (a
+                # ``ValueError`` subclass) on malformed input.
+                # Without an explicit guard, a single corrupted
+                # observable would bypass the retry loop and surface
+                # as a bare exception with no observable context —
+                # making it hard to tell which observable caused the
+                # failure or whether the upstream ``payload_bin``
+                # field is itself the issue. Wrap with a contextual
+                # ``ValueError`` and ``log_warning`` so the operator
+                # can correlate the failure with the observable id
+                # and the rest of the per-observable retry / fallback
+                # path (``importFiles`` → ``x_opencti_files`` →
+                # SHA-256 deferred lookup) still has a chance to
+                # succeed instead of crashing on the first attempt.
+                try:
+                    file_content = base64.b64decode(
+                        observable["payload_bin"], validate=False
+                    )
+                except (binascii.Error, ValueError) as exc:
+                    observable_id = observable.get("id", "unknown")
+                    self.helper.log_warning(
+                        f"payload_bin for observable {observable_id} is not valid "
+                        f"base64 ({type(exc).__name__}: {exc}); falling back to "
+                        "importFiles / x_opencti_files"
+                    )
+                    file_content = None
+                if file_content is not None:
+                    file_name = (
+                        observable.get("x_opencti_additional_names")
+                        or [f"artifact_{str(observable.get('id', 'unknown'))[:8]}"]
+                    )[0]
+                    hashes = observable.get("hashes", [])
+                    file_hash = self._select_any_hash(hashes) or "unknown"
+                    self.helper.log_info("File content found in payload_bin")
+                    return file_content, file_name, file_hash
 
             import_files = observable.get("importFiles") or []
             if import_files:
@@ -814,7 +841,21 @@ class AssemblyLineConnector:
                     f"[Sequential] Error checking AL status: {exc}, retrying in "
                     f"{self.assemblyline_poll_interval}s..."
                 )
-            time.sleep(self.assemblyline_poll_interval)
+            # Cap the sleep at the remaining deadline budget — the
+            # ``while True`` guard only protects the *next* iteration,
+            # so an unconditional ``sleep(poll_interval)`` could
+            # overshoot ``ASSEMBLYLINE_TIMEOUT`` by up to one poll
+            # interval on the boundary tick. Sleep at most as long as
+            # the deadline allows, and break out immediately if no
+            # budget remains so the caller's exception path
+            # (already raised above when remaining <= 0) is the only
+            # way out.
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise Exception(
+                    "[Sequential] Timed out waiting for AssemblyLine to become idle"
+                )
+            time.sleep(min(self.assemblyline_poll_interval, remaining))
 
     def _process_file(self, observable: Dict[str, Any]) -> Dict[str, Any]:
         """Submit (or reuse) an AssemblyLine analysis for an observable."""
@@ -889,6 +930,14 @@ class AssemblyLineConnector:
             f"Submission classification: {submission_classification} "
             f"(source TLP: {self._source_tlp(observable)})"
         )
+        # ``ignore_cache`` tells AssemblyLine itself to skip its own
+        # result cache and re-run the full service chain. When the
+        # operator sets ``ASSEMBLYLINE_FORCE_RESUBMIT=true``, the
+        # connector's OpenCTI-side dedup lookup
+        # (``_check_existing_analysis``) is already skipped above —
+        # wire the same intent through to AssemblyLine so a forced
+        # resubmit isn't silently served from AL's own cache one
+        # layer deeper.
         json_data = {
             "name": file_name,
             "submission_profile": self.assemblyline_submission_profile,
@@ -898,7 +947,7 @@ class AssemblyLineConnector:
                 "description": f'Submitted from OpenCTI - {observable["id"]}',
                 "deep_scan": False,
                 "priority": 1000,
-                "ignore_cache": False,
+                "ignore_cache": bool(self.assemblyline_force_resubmit),
                 "services": {"selected": [], "resubmit": [], "excluded": []},
             },
         }
@@ -1263,6 +1312,23 @@ class AssemblyLineConnector:
         """Heuristic IPv4 vs IPv6 split (AssemblyLine does not split them)."""
         return ":" in value
 
+    # IP literals that AssemblyLine routinely reports as observed during
+    # sandbox detonation but that are never meaningful indicators in
+    # OpenCTI: loopback (``127.0.0.1``, ``::1``) and the IPv4
+    # unspecified / "any" address (``0.0.0.0``). The Malware-Analysis
+    # bundle SCO path already skips these — extract the list as a
+    # module-level constant so the indicator/observable creation path
+    # below applies the same filter and a future contributor adding
+    # another sandbox-internal address has a single site to update.
+    _SKIP_IP_LITERALS = frozenset({"127.0.0.1", "::1", "0.0.0.0"})
+
+    @classmethod
+    def _is_skippable_ip(cls, value: str) -> bool:
+        """Return ``True`` for IPs we never want to materialise as
+        indicators / observables (loopback, unspecified).
+        """
+        return value in cls._SKIP_IP_LITERALS
+
     @staticmethod
     def _escape_stix_string(value: str) -> str:
         """Escape a literal string for inclusion in a STIX pattern.
@@ -1418,7 +1484,7 @@ class AssemblyLineConnector:
 
             for ip in malicious_iocs.get("ips", []):
                 try:
-                    if ip in ("127.0.0.1", "::1", "0.0.0.0"):
+                    if self._is_skippable_ip(ip):
                         continue
                     if self._is_ipv6(ip):
                         ip_stix = stix2.IPv6Address(
@@ -1737,6 +1803,15 @@ class AssemblyLineConnector:
                         counts["relationships"] += 1
 
             for ip in bucket["ips"][:20]:
+                # Mirror the SCO-bundle path's skip list so loopback /
+                # unspecified addresses AssemblyLine reports as
+                # "contacted during detonation" (often sandbox-internal
+                # noise) are not materialised as OpenCTI indicators.
+                # The pre-fix shape produced indicators for ``127.0.0.1``,
+                # ``::1`` and ``0.0.0.0`` whenever they showed up in the
+                # IOC bucket, polluting the indicator index.
+                if self._is_skippable_ip(ip):
+                    continue
                 stix_type = "ipv6-addr" if self._is_ipv6(ip) else "ipv4-addr"
                 octi_type = "IPv6-Addr" if self._is_ipv6(ip) else "IPv4-Addr"
                 ind_id, obs_created = self._create_indicator_observable(

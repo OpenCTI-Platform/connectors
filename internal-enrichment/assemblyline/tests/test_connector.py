@@ -10,6 +10,7 @@ still calling the real production code.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from typing import Any, Dict
@@ -2102,6 +2103,244 @@ class TestMalwareAnalysisResultValue:
         # malicious evidence, never as a side effect of how
         # ``_score_to_result_name`` slices the score.
         assert self._captured_result(0, self._empty_iocs()) == "benign"
+
+
+class TestPollSleepHonoursDeadline:
+    """``_wait_for_al_ready`` must never sleep past the deadline.
+
+    Regression test for the Copilot review thread on
+    ``main.py:817`` — the previous shape unconditionally slept the
+    full ``assemblyline_poll_interval`` after each polling iteration,
+    so on the boundary tick the wait could overshoot
+    ``ASSEMBLYLINE_TIMEOUT`` by nearly one poll interval. The fix
+    caps the sleep at ``min(poll_interval, max(0, remaining))`` so
+    total wall-time honours the configured timeout.
+    """
+
+    def test_sleep_capped_at_remaining_budget(self, monkeypatch) -> None:
+        import time as _time_mod
+
+        # 30 s poll interval but only ~0.05 s remaining before
+        # deadline → the sleep arg must be ≤ 0.05 s.
+        connector = _make_connector(
+            assemblyline_sequential_mode=True,
+            assemblyline_poll_interval=30,
+        )
+        # First call returns "busy" so we enter the sleep path, then
+        # the second call raises out of the loop via the deadline
+        # check on the next iteration — we only care about the value
+        # passed to time.sleep on the first tick.
+        connector.al_client.search.submission = MagicMock(
+            side_effect=[{"total": 5}, Exception("deadline already past")]
+        )
+
+        sleeps: list = []
+        monkeypatch.setattr(_time_mod, "sleep", lambda s: sleeps.append(s))
+
+        deadline = _time_mod.monotonic() + 0.05
+        with pytest.raises(Exception):
+            connector._wait_for_al_ready(deadline=deadline)
+
+        assert sleeps, "expected at least one time.sleep call"
+        # Every sleep must be bounded by what was left on the
+        # deadline at the time the call was made — the
+        # 30-second poll interval can never appear here.
+        for s in sleeps:
+            assert s <= 0.05 + 1e-3, f"sleep {s}s overshot the deadline"
+
+
+class TestForceResubmitWiresAssemblyLineIgnoreCache:
+    """``ASSEMBLYLINE_FORCE_RESUBMIT`` must reach AssemblyLine itself.
+
+    Regression test for the Copilot review thread on ``main.py:901``
+    — the connector was skipping the OpenCTI-side dedup
+    (``_check_existing_analysis``) when the flag was set but still
+    sent ``ignore_cache: False`` in the submission payload, so
+    AssemblyLine could still serve a cached result one layer deeper
+    and silently no-op the operator's intent.
+    """
+
+    def _run_submission(self, *, force_resubmit: bool):
+        """Drive ``_process_file`` far enough to capture the POST."""
+        import io as _io
+        import time as _time_mod
+
+        connector = _make_connector(
+            assemblyline_force_resubmit=force_resubmit,
+            assemblyline_timeout=60,
+            assemblyline_poll_interval=0,
+        )
+        connector._get_file_content = MagicMock(  # type: ignore[method-assign]
+            return_value=(b"binary", "sample.exe", "sha256")
+        )
+        connector._select_sha256 = MagicMock(  # type: ignore[method-assign]
+            return_value="sha256-hash"
+        )
+        connector._check_existing_analysis = MagicMock(  # type: ignore[method-assign]
+            return_value=None
+        )
+        connector._wait_for_al_ready = MagicMock()  # type: ignore[method-assign]
+        connector._resolve_submission_classification = MagicMock(  # type: ignore[method-assign]
+            return_value="TLP:C"
+        )
+        connector._source_tlp = MagicMock(return_value="TLP:CLEAR")  # type: ignore[method-assign]
+
+        captured: dict = {}
+
+        class _PostResp:
+            status_code = 200
+
+            def json(self):  # noqa: D401
+                return {"api_response": {"sid": "sid-1"}}
+
+            def raise_for_status(self):  # noqa: D401
+                return None
+
+        def _fake_post(url, **kwargs):
+            files = kwargs.get("files") or {}
+            json_field = files.get("json")
+            if json_field:
+                captured["json"] = json.loads(json_field[1])
+            return _PostResp()
+
+        # Pretend the submission completes immediately on the very
+        # first polling iteration so we exit the timeout loop and
+        # don't have to mock the full polling state machine.
+        class _CompletedSub:
+            def __call__(self, sid):
+                return {"state": "completed", "max_score": 10}
+
+        connector.al_client.submission = _CompletedSub()
+        connector.al_client.submission.full = MagicMock(  # type: ignore[attr-defined]
+            return_value={"max_score": 10}
+        )
+        connector.al_client.submission.summary = MagicMock(  # type: ignore[attr-defined]
+            return_value={"sid": "sid-1"}
+        )
+
+        import requests as _requests
+
+        # Patch the symbol that ``_process_file`` reaches through.
+        from main import requests as _main_requests
+
+        monkey_post = MagicMock(side_effect=_fake_post)
+        original_post = _main_requests.post
+        _main_requests.post = monkey_post
+        try:
+            try:
+                connector._process_file({"id": "obs-1", "hashes": []})
+            except Exception:
+                # We don't need the full processing to succeed; the
+                # POST capture is all this test cares about.
+                pass
+        finally:
+            _main_requests.post = original_post
+
+        # silence unused-import lint
+        _ = _io, _time_mod, _requests
+        return captured
+
+    def test_force_resubmit_sets_ignore_cache_true(self) -> None:
+        captured = self._run_submission(force_resubmit=True)
+        assert (
+            captured.get("json", {}).get("params", {}).get("ignore_cache") is True
+        ), captured
+
+    def test_no_force_resubmit_keeps_ignore_cache_false(self) -> None:
+        captured = self._run_submission(force_resubmit=False)
+        assert (
+            captured.get("json", {}).get("params", {}).get("ignore_cache") is False
+        ), captured
+
+
+class TestPayloadBinDecodeError:
+    """Malformed ``payload_bin`` must not crash the per-observable loop.
+
+    Regression test for the Copilot review thread on ``main.py:558``
+    — ``base64.b64decode`` raises ``binascii.Error`` on malformed
+    input. Without the guard, a single corrupted observable would
+    bypass the per-observable retry / fallback path (``importFiles`` →
+    ``x_opencti_files`` → SHA-256 deferred lookup) and surface as a
+    bare exception with no observable context. The fix logs a
+    warning with the observable id and falls through to the next
+    source.
+    """
+
+    def test_invalid_payload_bin_falls_back_to_importfiles(self) -> None:
+        connector = _make_connector()
+        connector._download_import_file = MagicMock(  # type: ignore[method-assign]
+            return_value=b"recovered"
+        )
+        connector._select_any_hash = MagicMock(return_value="hash")  # type: ignore[method-assign]
+        # Call ``_get_artifact_content`` directly — the public
+        # ``_get_file_content`` dispatches by ``entity_type`` and
+        # the ``payload_bin`` path only fires on the Artifact branch.
+        # A single character is an invalid base64 length (1 mod 4)
+        # so it reliably triggers ``binascii.Error`` on every
+        # supported Python version even with ``validate=False``,
+        # unlike inputs that happen to decode to garbage bytes.
+        observable = {
+            "id": "obs-bad-payload",
+            "entity_type": "Artifact",
+            "payload_bin": "A",
+            "importFiles": [{"id": "file-1", "name": "fallback.bin"}],
+            "hashes": [],
+        }
+        content, name, _ = connector._get_artifact_content(observable)
+        assert content == b"recovered"
+        assert name == "fallback.bin"
+        # The decode failure must have been logged with the
+        # observable id so the operator can correlate.
+        warn_msgs = [
+            call.args[0]
+            for call in connector.helper.log_warning.call_args_list
+            if call.args
+        ]
+        assert any("obs-bad-payload" in m for m in warn_msgs), warn_msgs
+
+
+class TestSkipLoopbackInIndicatorPath:
+    """``_create_indicators`` must skip loopback / unspecified IPs.
+
+    Regression test for the Copilot review thread on
+    ``main.py:1751`` — the Malware-Analysis bundle SCO path already
+    filtered ``127.0.0.1`` / ``::1`` / ``0.0.0.0`` (AssemblyLine
+    routinely reports them as observed during sandbox detonation,
+    but they are never meaningful indicators in OpenCTI) but the
+    indicator / observable creation path did not. The fix mirrors
+    the same skip list via ``_is_skippable_ip`` so the two sites
+    stay aligned.
+    """
+
+    def test_loopback_and_unspecified_ips_are_skipped(self) -> None:
+        connector = _make_connector(assemblyline_create_observables=False)
+        connector.helper.api.indicator.create = MagicMock(return_value={"id": "ind-1"})
+        connector.helper.api.stix_core_relationship.create = MagicMock()
+        connector.helper.api.stix2.format_date = MagicMock(return_value="2024-01-01")
+        counts, indicator_ids = connector._create_indicators(
+            {"id": "obs-root", "objectMarking": []},
+            900,
+            {
+                "domains": [],
+                "ips": ["127.0.0.1", "::1", "0.0.0.0", "203.0.113.5"],
+                "urls": [],
+                "families": [],
+            },
+        )
+        # Only ``203.0.113.5`` (TEST-NET-3, a routable example range)
+        # should have produced an indicator. The three sandbox-noise
+        # literals must have been filtered before reaching the
+        # indicator create call.
+        assert counts["indicators"] == 1, counts
+        assert counts["malicious_ips"] == 1, counts
+        assert indicator_ids == ["ind-1"]
+        # Every payload sent to indicator.create must contain the
+        # routable IP and never the loopback / unspecified ones.
+        for call in connector.helper.api.indicator.create.call_args_list:
+            pattern = call.kwargs.get("pattern", "")
+            assert "127.0.0.1" not in pattern
+            assert "::1" not in pattern
+            assert "0.0.0.0" not in pattern
 
 
 if __name__ == "__main__":
