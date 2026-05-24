@@ -31,7 +31,7 @@ The connector evaluates the following categories of related entities:
 | Location | Countries, Regions                                            | Geographic relevance to your organization.      |
 | Sector   | Sectors                                                       | Industry sectors relevant to your organization. |
 | TTP      | Attack Patterns                                               | Techniques and tactics.                         |
-| Author   | Entity' Author field                                          | Intelligence sources and feed providers.        |
+| Author   | Indicator `created_by_ref`                                    | Intelligence sources and feed providers.        |
 
 Each category can be independently enabled or disabled.
 
@@ -149,12 +149,12 @@ Each category follows the same pattern. Set `*_IMPACT_SCORE` to `true` to enable
 
 #### Author
 
-| Parameter                                    | Required | Description                | Default |
-|----------------------------------------------|----------|----------------------------|---------|
-| `CONNECTOR_SCORING_AUTHOR_IMPACT_SCORE`      | ❌        | Enable author category     | `false` |
-| `CONNECTOR_SCORING_AUTHOR_HIGH_CONFIDENCE`   | ❌        | High priority impact (%)   | `0`     |
-| `CONNECTOR_SCORING_AUTHOR_MEDIUM_CONFIDENCE` | ❌        | Medium priority impact (%) | `0`     |
-| `CONNECTOR_SCORING_AUTHOR_LOW_CONFIDENCE`    | ❌        | Low priority impact (%)    | `0`     |
+| Parameter                                  | Required | Description                | Default |
+|--------------------------------------------|----------|----------------------------|---------|
+| `CONNECTOR_SCORING_AUTHOR_IMPACT_SCORE`    | ❌        | Enable author category     | `false` |
+| `CONNECTOR_SCORING_AUTHOR_HIGH_PRIORITY`   | ❌        | High priority impact (%)   | `0`     |
+| `CONNECTOR_SCORING_AUTHOR_MEDIUM_PRIORITY` | ❌        | Medium priority impact (%) | `0`     |
+| `CONNECTOR_SCORING_AUTHOR_LOW_PRIORITY`    | ❌        | Low priority impact (%)    | `0`     |
 
 ## Usage Example
 

@@ -51,13 +51,10 @@ class ConfigConnector:
         :return: Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        return config
+        if not os.path.isfile(config_file_path):
+            return {}
+        with open(config_file_path) as config_file:
+            return yaml.load(config_file, Loader=yaml.FullLoader)
 
     def _initialize_configurations(self) -> None:
         """
@@ -108,7 +105,16 @@ class ConfigConnector:
             self.load,
             default="IPv4-Addr,IPv6-Addr,Domain-Name,StixFile",
         )
-        self.indicator_type_enrichable = self.indicator_type_enrichable.split(",")
+        # Strip whitespace on every token so an operator-friendly
+        # ``"IPv4-Addr, IPv6-Addr, Domain-Name"`` (with the spaces a
+        # human would naturally insert after the commas) matches the
+        # canonical bare-comma form ``"IPv4-Addr,IPv6-Addr,..."`` that
+        # the rest of the connector compares against.
+        self.indicator_type_enrichable = [
+            entry.strip()
+            for entry in self.indicator_type_enrichable.split(",")
+            if entry.strip()
+        ]
 
         self.browse_report = get_config_variable(
             "CONNECTOR_SCORING_BROWSE_REPORT",
@@ -277,7 +283,16 @@ class ConfigConnector:
             isNumber=True,
         )
 
-        # Creator impact config
+        # Author impact config. Use the same ``*_PRIORITY`` /
+        # ``*_priority`` naming as every other category above (Threat,
+        # Toolbox, Location, Sector, TTP) so the docker-compose env
+        # vars, the YAML sample keys and the README all line up with
+        # the values the loader actually reads. The previous shape
+        # accidentally mixed three different names (env var ``*_PRIORITY``,
+        # YAML key ``*_confidence`` here, and ``*_CONFIDENCE`` in both
+        # ``docker-compose.yml.sample`` and the README) so the author
+        # impact configuration silently did nothing regardless of how
+        # the operator set it.
         self.author_impact_score = get_config_variable(
             "CONNECTOR_SCORING_AUTHOR_IMPACT_SCORE",
             ["connector_scoring", "author_impact_score"],
@@ -287,7 +302,7 @@ class ConfigConnector:
 
         self.author_high_priority = get_config_variable(
             "CONNECTOR_SCORING_AUTHOR_HIGH_PRIORITY",
-            ["connector_scoring", "author_high_confidence"],
+            ["connector_scoring", "author_high_priority"],
             self.load,
             default=0,
             isNumber=True,
@@ -295,7 +310,7 @@ class ConfigConnector:
 
         self.author_medium_priority = get_config_variable(
             "CONNECTOR_SCORING_AUTHOR_MEDIUM_PRIORITY",
-            ["connector_scoring", "author_medium_confidence"],
+            ["connector_scoring", "author_medium_priority"],
             self.load,
             default=0,
             isNumber=True,
@@ -303,7 +318,7 @@ class ConfigConnector:
 
         self.author_low_priority = get_config_variable(
             "CONNECTOR_SCORING_AUTHOR_LOW_PRIORITY",
-            ["connector_scoring", "author_low_confidence"],
+            ["connector_scoring", "author_low_priority"],
             self.load,
             default=0,
             isNumber=True,

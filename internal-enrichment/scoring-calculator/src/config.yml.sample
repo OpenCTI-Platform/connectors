@@ -43,6 +43,6 @@ connector_scoring:
   ttp_low_priority: "5" # Impact on the score for a TTP (Attack pattern) categorized as "low priority"
 
   author_impact_score: false # Defines whether the author (Organizations) related impacts the score
-  author_high_confidence: "20" # Impact on the score for a author (Organization) categorized as "high confidence"
-  author_medium_confidence: "10" # Impact on the score for a author (Organization) categorized as "medium confidence"
-  author_low_confidence: "5" # Impact on the score for a author (Organization) categorized as "low confidence"
+  author_high_priority: "20" # Impact on the score for a author (Organization) categorized as "high priority"
+  author_medium_priority: "10" # Impact on the score for a author (Organization) categorized as "medium priority"
+  author_low_priority: "5" # Impact on the score for a author (Organization) categorized as "low priority"

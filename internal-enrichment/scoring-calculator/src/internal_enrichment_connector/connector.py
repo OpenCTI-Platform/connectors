@@ -110,9 +110,10 @@ class ConnectorScoring:
 
         enabled = self.config.impact_enabled.get(category, False)
         self.helper.connector_logger.debug(
-            f"[IMPACT] Impact - impact_enabled[{category}]={enabled}"
+            "Impact configuration evaluated",
+            meta={"category": category, "enabled": enabled},
         )
-        if not self.config.impact_enabled.get(category, False):
+        if not enabled:
             return 0
 
         prio = self._priority_of(entity)
@@ -124,15 +125,20 @@ class ConnectorScoring:
 
     def _compute_score(
         self, entity_to_enrich, indicator_context, indicator_author
-    ) -> list:
-        """
-        Calculate the score
-        :return: List of STIX objects
+    ) -> dict:
+        """Apply the aggregated per-category impact to the indicator's score.
+
+        Mutates ``entity_to_enrich["x_opencti_score"]`` in place using
+        the relative-percentage formula documented in the README and
+        returns the same dict so the caller can wrap it in a STIX
+        bundle. The previous ``-> list`` annotation + ``"List of STIX
+        objects"`` docstring described a return shape this method
+        never actually produced.
         """
 
         self.helper.connector_logger.debug(
-            "[DEBUG] Start compute the impact on score",
-            {
+            "Start compute the impact on score",
+            meta={
                 "indicator_id": entity_to_enrich.get("id"),
                 "current_score": entity_to_enrich.get("x_opencti_score"),
                 "context_size": len(indicator_context),
@@ -145,8 +151,8 @@ class ConnectorScoring:
             impact = self._impact_on_score(entity)
             total_impact += impact
             self.helper.connector_logger.debug(
-                "[DEBUG] Relation impact on score",
-                {
+                "Relation impact on score",
+                meta={
                     "entity_id": entity.get("id"),
                     "entity_type": entity.get("entity_type"),
                     "impact": impact,
@@ -157,8 +163,8 @@ class ConnectorScoring:
             impact = self._impact_on_score(indicator_author)
             total_impact += impact
             self.helper.connector_logger.debug(
-                "[DEBUG] Author impact on score",
-                {
+                "Author impact on score",
+                meta={
                     "entity_id": indicator_author.get("id"),
                     "entity_type": indicator_author.get("entity_type"),
                     "impact": impact,
@@ -173,8 +179,8 @@ class ConnectorScoring:
         entity_to_enrich["x_opencti_score"] = int(round(new_score))
 
         self.helper.connector_logger.debug(
-            "[DEBUG] Score computation result",
-            {
+            "Score computation result",
+            meta={
                 "total_impact": total_impact,
                 "impact_ratio": impact_ratio,
                 "old_score": actual_score,
@@ -195,33 +201,45 @@ class ConnectorScoring:
         entity_type = entity_split[0].lower()
         entity = data["stix_entity"]
 
+        # Use ``.get(...)`` (not bracket indexing / unconditional string
+        # concat) so the debug log can never crash on a non-Indicator
+        # entity that ends up routed here — ``pattern_type`` and
+        # ``x_opencti_main_observable_type`` are Indicator-specific
+        # attributes and would otherwise raise ``TypeError`` when the
+        # ``+`` operator hit a ``None`` value. Move the context to
+        # structured ``meta=`` so it is queryable rather than buried
+        # in a string.
         self.helper.connector_logger.debug(
-            "[DEBUG] Evaluation of the support of the object - pattern_type: "
-            + entity.get("pattern_type")
-            + "; observable_type: "
-            + entity.get("x_opencti_main_observable_type")
-            + "; observable_type: "
-            + str(self.config.indicator_type_enrichable)
+            "Evaluating object support",
+            meta={
+                "pattern_type": entity.get("pattern_type"),
+                "observable_type": entity.get("x_opencti_main_observable_type"),
+                "enrichable_types": self.config.indicator_type_enrichable,
+            },
         )
 
-        if entity_type in scopes:
-            pattern_type = entity["pattern_type"]
-            ioc_type = entity["x_opencti_main_observable_type"]
-            if pattern_type == "stix" and ioc_type.lower() in (
-                v.lower() for v in self.config.indicator_type_enrichable
-            ):
-                return True
-            else:
-                self.helper.connector_logger.info(
-                    f"Indicator not enriched, {ioc_type} is not listed in the indicator_type_enrichable "
-                    f"parameter."
-                )
-                return False
-        else:
+        if entity_type not in scopes:
             self.helper.connector_logger.info(
-                f"Object not enriched, {entity_type} is not in the scope."
+                "Object not enriched, entity type is not in the scope",
+                meta={"entity_type": entity_type},
             )
             return False
+
+        pattern_type = entity.get("pattern_type")
+        ioc_type = entity.get("x_opencti_main_observable_type")
+        if (
+            pattern_type == "stix"
+            and ioc_type
+            and ioc_type.lower()
+            in (v.lower() for v in self.config.indicator_type_enrichable)
+        ):
+            return True
+
+        self.helper.connector_logger.info(
+            "Indicator not enriched, observable type is not in indicator_type_enrichable",
+            meta={"observable_type": ioc_type},
+        )
+        return False
 
     def process_message(self, data: dict) -> str:
         """
@@ -232,7 +250,7 @@ class ConnectorScoring:
         :return: string
         """
         try:
-            self.helper.connector_logger.info("[CONNECTOR] Starting enrichment...")
+            self.helper.connector_logger.info("Starting enrichment")
 
             opencti_entity = data["enrichment_entity"]
 
@@ -241,65 +259,72 @@ class ConnectorScoring:
             indicator = data["stix_entity"]
 
             self.helper.connector_logger.debug(
-                "[DEBUG] Processing the message for the entity: "
-                + data.get("entity_id")
+                "Processing message",
+                meta={"entity_id": data.get("entity_id")},
             )
 
-            if self.entity_in_scope(data):
+            if not self.entity_in_scope(data):
+                # Out-of-scope path. For a non-playbook trigger
+                # (``event_type`` absent on a direct enrichment
+                # request) we forward the upstream bundle untouched so
+                # the work is recorded as completed; for a playbook
+                # trigger we simply skip. Either way return a
+                # human-readable status string so the connector
+                # callback never returns ``None`` (which would have
+                # made troubleshooting harder than necessary).
+                if not data.get("event_type"):
+                    return self._send_bundle(stix_objects_list)
+                indicator_type = indicator.get("x_opencti_main_observable_type")
+                msg = (
+                    f"Indicator not enriched, {indicator_type} is not "
+                    f"in indicator_type_enrichable"
+                )
+                self.helper.connector_logger.info(msg)
+                return msg
 
-                # Calculate the score of the Indicator
-                direct_relations = self.client.get_direct_relations(
+            # Calculate the score of the Indicator
+            direct_relations = self.client.get_direct_relations(opencti_entity["id"])
+            self.helper.connector_logger.debug(
+                "Direct relations fetched",
+                meta={"count": len(direct_relations)},
+            )
+
+            report_relations = []
+            if self.config.browse_report:
+                report_relations = self.client.get_report_relations(
                     opencti_entity["id"]
                 )
                 self.helper.connector_logger.debug(
-                    "[DEBUG] Direct relations fetched - count: "
-                    + str(len(direct_relations))
+                    "Report relations fetched",
+                    meta={"count": len(report_relations)},
                 )
 
-                report_relations = []
-                if self.config.browse_report:
-                    report_relations = self.client.get_report_relations(
-                        opencti_entity["id"]
-                    )
-                    self.helper.connector_logger.debug(
-                        "[DEBUG] Report fetched - count: " + str(len(report_relations))
-                    )
+            all_relations = direct_relations + report_relations
+            merged = {r["id"]: r for r in all_relations}
+            indicator_context = list(merged.values())
 
-                all_relations = direct_relations + report_relations
-                merged = {r["id"]: r for r in all_relations}
-                indicator_context = list(merged.values())
+            author_id = indicator.get("created_by_ref")
+            indicator_author = self.client.get_author(author_id) if author_id else None
 
-                author_id = indicator.get("created_by_ref", None)
-                if author_id:
-                    indicator_author = self.client.get_author(author_id)
-                else:
-                    indicator_author = {}
-
-                enriched_indicator = self._compute_score(
-                    indicator, indicator_context, indicator_author
-                )
-                stix_objects = [enriched_indicator]
-
-                if stix_objects is not None and len(stix_objects):
-                    return self._send_bundle(stix_objects)
-                else:
-                    info_msg = "[CONNECTOR] No information found"
-                    return info_msg
-
-            else:
-                if not data.get("event_type"):
-                    self._send_bundle(stix_objects_list)
-                else:
-                    indicator_type = indicator.get("x_opencti_main_observable_type")
-                    self.helper.connector_logger.info(
-                        f"Indicator not enriched, {indicator_type} is not listed in the indicator_type_enrichable "
-                        f"parameter."
-                    )
-        except Exception as err:
-            # Handling other unexpected exceptions
-            return self.helper.connector_logger.error(
-                "[ERROR] Unexpected Error occurred", {"error_message": str(err)}
+            enriched_indicator = self._compute_score(
+                indicator, indicator_context, indicator_author
             )
+            stix_objects = [enriched_indicator]
+
+            if not stix_objects:
+                return "No information found"
+            return self._send_bundle(stix_objects)
+        except Exception as err:
+            # Logger.error returns ``None``; build the message
+            # ourselves so the callback's return contract holds and
+            # the platform's worker queue logs surface the actual
+            # failure.
+            err_msg = f"Unexpected error occurred: {err}"
+            self.helper.connector_logger.error(
+                err_msg,
+                meta={"error_message": str(err)},
+            )
+            return err_msg
 
     def _send_bundle(self, stix_objects: list) -> str:
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)

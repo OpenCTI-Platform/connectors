@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from pycti import OpenCTIApiClient
 
@@ -249,10 +249,13 @@ class ConnectorClient:
             cursor = data["pageInfo"]["endCursor"]
         return edges
 
-    def get_direct_relations(self, entity_id) -> List[str]:
+    def get_direct_relations(self, entity_id: str) -> List[Dict[str, Any]]:
+        """Return the StixDomainObjects on the far side of every direct
+        StixCoreRelationship the entity participates in.
+        """
         edges = self._paginate_relations(entity_id=entity_id, query=GET_REL_QUERY)
 
-        related_entities = []
+        related_entities: List[Dict[str, Any]] = []
         for e in edges:
             n = e["node"]
             f, t = n.get("from"), n.get("to")
@@ -262,14 +265,17 @@ class ConnectorClient:
                 related_entities.append(f)
         return related_entities
 
-    def get_report_relations(self, entity_id) -> List[str]:
+    def get_report_relations(self, entity_id: str) -> List[Dict[str, Any]]:
+        """Return every StixDomainObject contained in a Report that also
+        contains the given entity.
+        """
         report_list = self._paginate_report(entity_id=entity_id, query=GET_REPORT_QUERY)
 
         related_containers = []
         for e in report_list:
             related_containers.append(e["node"])
 
-        related_entities = []
+        related_entities: List[Dict[str, Any]] = []
         for container in related_containers:
             entities_list = self._paginate_contained_entities(
                 entity_id=container["id"], query=GET_CONTAINED_ENTITIES
@@ -279,7 +285,13 @@ class ConnectorClient:
 
         return related_entities
 
-    def get_author(self, author_id) -> List[str]:
+    def get_author(self, author_id: str) -> Optional[Dict[str, Any]]:
+        """Return the StixDomainObject behind ``created_by_ref``.
+
+        ``None`` when OpenCTI does not know the author (e.g. a dangling
+        ``created_by_ref`` whose target has been deleted) so the caller
+        can skip the author-impact step instead of crashing on a
+        ``None.get(...)``.
+        """
         res = self.api.query(GET_AUTHOR_QUERY, variables={"id": author_id})
-        data = res["data"]["stixDomainObject"]
-        return data
+        return res["data"]["stixDomainObject"]
