@@ -112,22 +112,20 @@ class DataDogConnector:
         # runtime default" mismatch that would otherwise create case
         # objects in production deployments that copy the sample
         # verbatim and never override the flag.
+        # ``get_config_variable`` already normalises ``"true"`` /
+        # ``"false"`` / ``"yes"`` / ``"no"`` strings to a Python
+        # bool, so the manual coercion the previous shape applied to
+        # this one knob (and to no other boolean knob) was dead code
+        # — and the accompanying startup ``log_info`` line was a
+        # repeated config-dump that did not belong in steady-state
+        # logs. Documented bool toggles flow through the helper
+        # uniformly now.
         self.create_incident_response_cases = get_config_variable(
             "DATADOG_CREATE_INCIDENT_RESPONSE_CASES",
             ["datadog", "create_incident_response_cases"],
             config,
             False,
             False,
-        )
-
-        # Ensure boolean type (in case it's read as string from config)
-        if isinstance(self.create_incident_response_cases, str):
-            self.create_incident_response_cases = (
-                self.create_incident_response_cases.lower() in ["true", "1", "yes"]
-            )
-
-        self.helper.log_info(
-            f"Config: create_incident_response_cases = {self.create_incident_response_cases} (type: {type(self.create_incident_response_cases).__name__})"
         )
 
         # Alert filtering.
@@ -312,12 +310,23 @@ class DataDogConnector:
 
     def _update_import_timestamp(self, timestamp: datetime) -> None:
         """
-        Update the last import timestamp in connector state
+        Update the last import timestamp in connector state.
+
+        Merges with any pre-existing state instead of replacing it.
+        :meth:`OpenCTIConnectorHelper.set_state` overwrites the whole
+        state mapping, so an unconditional ``set_state({"…": …})``
+        call wipes any other keys the platform or a future revision
+        of this connector might store alongside the cursor (e.g.
+        per-source cursors, watermark metadata). Reading + merging
+        is the convention used by every other external-import
+        connector in this repository.
 
         Args:
             timestamp: Timestamp to store
         """
-        self.helper.set_state({"last_run_timestamp": timestamp.isoformat()})
+        state = self.helper.get_state() or {}
+        state["last_run_timestamp"] = timestamp.isoformat()
+        self.helper.set_state(state)
 
     def _import_data(self, work_id: str | None = None) -> dict[str, Any]:
         """
@@ -332,12 +341,17 @@ class DataDogConnector:
         since = self._get_import_timestamp()
         current_time = datetime.now(UTC)
 
-        # Log detailed timestamp information for debugging
+        # Timestamp diagnostics emit once per cycle and are only
+        # useful when an operator is actively debugging the import
+        # window. They are demoted from ``info`` to ``debug`` so
+        # steady-state runs only log the cycle summary in
+        # :meth:`run` ("Import completed: …"); the operator can
+        # enable ``debug`` to bring them back when needed.
         time_diff = (current_time - since).total_seconds()
-        self.helper.log_info(f"Starting import since {since.isoformat()}")
-        self.helper.log_info(f"Current time: {current_time.isoformat()}")
-        self.helper.log_info(
-            f"Time range: {time_diff/3600:.2f} hours ({time_diff:.0f} seconds)"
+        self.helper.log_debug(
+            f"Starting import since {since.isoformat()} "
+            f"(now={current_time.isoformat()}, "
+            f"range={time_diff / 3600:.2f}h / {time_diff:.0f}s)"
         )
 
         try:
@@ -356,13 +370,15 @@ class DataDogConnector:
             # critical: lumping them together used to mark the Work as
             # ``processed`` (success) and emit a "No data available
             # for import" warning, hiding API outages in the work
-            # summary and metrics. The state cursor is *not* advanced
-            # in either branch (the timestamp-advance gate later in
-            # this method only fires after a successful bundle send),
-            # so an API failure correctly lets the next cycle retry
-            # the same window — but the operator now sees the failure
-            # surface as an in-error Work and ``errors: 1`` in the
-            # run summary instead of a silent "0 errors" success.
+            # summary and metrics. On the ``None`` path the state
+            # cursor is held at its previous value so the next cycle
+            # retries the same window; the empty-success path falls
+            # through to the "no STIX objects" branch below which
+            # advances the cursor (so a quiet tenant does not
+            # re-query the same growing window forever) — the
+            # operator still sees an API failure surface as an
+            # in-error Work and ``errors: 1`` in the run summary
+            # instead of a silent "0 errors" success.
             if self.import_alerts:
                 self.helper.log_info("Fetching DataDog alerts...")
                 alerts_data = self.client.get_alerts(
@@ -401,27 +417,31 @@ class DataDogConnector:
                     )
                     return {"imported": 0, "errors": 1}
 
-            # Distinguish "operator-disabled all data sources" from "an
-            # enabled source ran but produced no data". The startup
-            # warning emitted by ``_validate_config`` already tells the
-            # operator the connector is idle by design; firing another
-            # warning every cycle would make idle deployments look
-            # like they are failing in the OpenCTI logs and noise up
-            # alerting (one line per cycle, every ``DATADOG_IMPORT_INTERVAL``
-            # minutes). Downgrade to ``info`` in that case and keep the
-            # ``warning`` shape only when an enabled source actually
-            # produced an empty result — which is unexpected because
-            # an enabled source either returns rows or aborts the
-            # cycle with ``errors=1`` in the branches above.
+            # All data sources are disabled (``DATADOG_IMPORT_ALERTS=false``
+            # is the only path that lands here today — every enabled
+            # source either appends to ``all_import_data`` or aborts
+            # the cycle with ``errors=1`` in the branches above). The
+            # startup warning emitted by ``_validate_config`` already
+            # tells the operator the connector is idle by design;
+            # demote the per-cycle line to ``info`` so idle deployments
+            # do not look like they are failing in the OpenCTI logs
+            # (one warning per cycle, every ``DATADOG_IMPORT_INTERVAL``
+            # minutes). The cursor is still advanced because the
+            # connector never called the API on this cycle — there is
+            # no "failed window" to retry and the next cycle should
+            # look forward from ``current_time`` if the operator flips
+            # the source back on.
             if not all_import_data:
-                if not self.import_alerts:
-                    self.helper.log_info(
-                        "DATADOG_IMPORT_ALERTS is disabled; running idle "
-                        "cycle (no data sources active)."
-                    )
-                else:
-                    self.helper.log_warning("No data available for import")
-                return {"imported": 0, "errors": 0}
+                self.helper.log_info(
+                    "DATADOG_IMPORT_ALERTS is disabled; running idle "
+                    "cycle (no data sources active)."
+                )
+                self._update_import_timestamp(current_time)
+                return {
+                    "imported": 0,
+                    "errors": 0,
+                    "timestamp": current_time.isoformat(),
+                }
 
             # Process and convert data
             results = self.importer.process_datadog_data(
@@ -474,9 +494,31 @@ class DataDogConnector:
                 f"Successfully created {len(all_stix_objects)} STIX objects from {len(results.get('processed_items', []))} alerts ({object_errors} errors)"
             )
 
-            # If no objects created, return early
+            # If no objects created, advance the cursor when the cycle
+            # completed without errors so a quiet tenant does not
+            # re-query the same (growing) window forever — but hold
+            # the cursor on a partial-failure cycle (every alert
+            # failed to convert) so the next cycle retries the same
+            # window. The distinction matters: ``object_errors == 0``
+            # AND ``processed_items == 0`` means "API returned 0
+            # signals in this window", which is a valid no-op;
+            # ``object_errors > 0`` means "we lost data this cycle"
+            # and dropping the window would silently drop those
+            # signals from ingest forever.
             if not all_stix_objects:
-                self.helper.log_warning("No STIX objects to send")
+                if object_errors == 0:
+                    self.helper.log_info("No new signals in the configured window")
+                    self._update_import_timestamp(current_time)
+                    return {
+                        "imported": 0,
+                        "errors": 0,
+                        "timestamp": current_time.isoformat(),
+                    }
+                self.helper.log_warning(
+                    f"No STIX objects to send ({object_errors} conversion "
+                    "error(s)); holding last_run_timestamp at the previous "
+                    "value so the failed alerts are retried on the next cycle."
+                )
                 return {"imported": 0, "errors": object_errors}
 
             # Create a single bundle with all objects (batched approach)

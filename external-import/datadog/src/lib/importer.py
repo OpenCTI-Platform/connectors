@@ -45,6 +45,19 @@ class DataImporter:
         """
         try:
             processed_items = []
+            # ``per_item_errors`` counts the alerts that
+            # :meth:`_process_datadog_alert` returned ``None`` for —
+            # i.e. the per-alert ``try`` swallowed a malformed signal
+            # and logged it. Without this counter every per-alert
+            # failure would land in the caller as
+            # ``processed_items=[]`` / ``errors=0``, which the cycle
+            # gate in ``connector.py`` reads as "nothing to do" and
+            # advances the state cursor past the failed window —
+            # silently dropping the data forever. The counter is
+            # surfaced via ``errors`` so the cycle is marked red and
+            # the cursor is held at the previous value (see the
+            # ``object_errors > 0`` branches in ``_import_data``).
+            per_item_errors = 0
 
             for data_source in import_data:
                 data_type = data_source.get("type")
@@ -57,12 +70,14 @@ class DataImporter:
                         processed_alert = self._process_datadog_alert(alert, **kwargs)
                         if processed_alert:
                             processed_items.append(processed_alert)
+                        else:
+                            per_item_errors += 1
 
             return {
                 "processed_items": processed_items,
                 "total_processed": len(processed_items),
                 "timestamp": datetime.now(UTC).isoformat(),
-                "errors": 0,
+                "errors": per_item_errors,
             }
 
         except Exception as e:
@@ -466,7 +481,15 @@ class DataImporter:
 
     def _is_valid_ipv4(self, ip: str) -> bool:
         """
-        Validate IPv4 address
+        Validate IPv4 address.
+
+        Delegates to :mod:`ipaddress` so every RFC-compliant IPv4
+        literal (zero-padded octets, dotted-quad, etc.) is accepted
+        identically to the rest of the standard library. The earlier
+        hand-rolled regex rejected legitimate forms (and a few
+        non-standard ones the stdlib explicitly tolerates), so a
+        regex-only validator silently dropped real IPv4 observables
+        depending on how DataDog serialised the value upstream.
 
         Args:
             ip: IP address string
@@ -474,12 +497,23 @@ class DataImporter:
         Returns:
             True if valid IPv4
         """
-        ipv4_pattern = r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-        return bool(re.match(ipv4_pattern, ip))
+        if not ip or not isinstance(ip, str):
+            return False
+        try:
+            ipaddress.IPv4Address(ip.strip())
+        except ValueError:
+            return False
+        return True
 
     def _is_valid_ipv6(self, ip: str) -> bool:
         """
-        Validate IPv6 address
+        Validate IPv6 address.
+
+        Same rationale as :meth:`_is_valid_ipv4` — the previous
+        hand-rolled regex rejected common compressed forms (``::1``,
+        ``2001:db8::1``, …) and silently dropped legitimate IPv6
+        observables. ``ipaddress.IPv6Address`` accepts every RFC-5952
+        production for free.
 
         Args:
             ip: IP address string
@@ -487,8 +521,13 @@ class DataImporter:
         Returns:
             True if valid IPv6
         """
-        ipv6_pattern = r"^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(?:[0-9a-fA-F]{1,4}:){1,7}:$|^:(?::[0-9a-fA-F]{1,4}){1,7}$|^(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}$|^(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}$|^(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}$|^(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}$|^(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}$|^[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})$|^:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)$"
-        return bool(re.match(ipv6_pattern, ip))
+        if not ip or not isinstance(ip, str):
+            return False
+        try:
+            ipaddress.IPv6Address(ip.strip())
+        except ValueError:
+            return False
+        return True
 
     def _is_valid_domain(self, domain: str) -> bool:
         """
@@ -584,12 +623,16 @@ class DataImporter:
         Sanitisation strategy
         ---------------------
 
-        * Strip userinfo. The URL is rebuilt from
-          ``urllib.parse.urlsplit`` with an authority built from
-          ``hostname`` (already lowercased by ``urlsplit``) and
-          ``port`` (only emitted when an explicit port was present),
-          which drops any ``username`` / ``password`` carried in
-          ``netloc``.
+        * Strip userinfo. The URL is rebuilt by taking
+          ``parts.netloc.rsplit("@", 1)[-1]`` so any
+          ``username[:password]@`` prefix is dropped but the rest of
+          the authority (host, optional ``:port``, and IPv6 brackets)
+          is preserved verbatim. This avoids the IPv6-rebuild pitfall
+          of going through ``parts.hostname`` + ``parts.port``:
+          ``urlsplit().hostname`` strips the surrounding ``[]`` for
+          IPv6 literals, so a rebuilt authority like
+          ``2001:db8::1:443`` is ambiguous (a valid IPv6 in its own
+          right) and would corrupt the URL observable.
         * Preserve scheme, host, port, path, query and fragment.
           These can carry indicators-of-compromise themselves (e.g.
           phishing kit paths, signed-token reconnaissance, fragment-
@@ -621,12 +664,15 @@ class DataImporter:
         if not parts.username and not parts.password:
             return url
 
-        hostname = parts.hostname or ""
-        try:
-            port = parts.port
-        except ValueError:
-            port = None
-        authority = f"{hostname}:{port}" if port is not None else hostname
+        # ``rsplit("@", 1)`` drops the userinfo prefix while keeping
+        # any later ``@`` literals in the path / query / fragment
+        # untouched (``urlsplit`` already split those off into
+        # ``parts.path`` / ``parts.query`` / ``parts.fragment``). When
+        # there is no ``@`` in ``parts.netloc`` the call returns the
+        # netloc unchanged, but the userinfo guard above already
+        # short-circuits that path so this branch only runs when an
+        # ``@`` is guaranteed to be present.
+        authority = parts.netloc.rsplit("@", 1)[-1]
         return urlunsplit(
             (parts.scheme, authority, parts.path, parts.query, parts.fragment)
         )

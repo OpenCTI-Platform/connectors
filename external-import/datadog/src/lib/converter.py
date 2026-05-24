@@ -18,6 +18,16 @@ from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
 
 from .utils import CASE_INCIDENT_PRIORITIES
 
+# Stable fallback timestamp used for deterministic id seeds when the
+# upstream signal does not carry a parseable ``created`` value. Using
+# ``datetime.now(UTC)`` here would produce a fresh STIX id on every
+# import attempt — duplicating Incidents / Cases for the same signal
+# instead of converging to a single deterministic id (the whole point
+# of pycti's ``generate_id`` helpers). The Unix epoch is intentionally
+# off-screen of any realistic signal timestamp so the seed cannot
+# collide with a legitimate ``created`` value.
+_FALLBACK_TIMESTAMP = datetime(1970, 1, 1, tzinfo=UTC)
+
 
 class StixConverter:
     """Converts enrichment data to STIX 2.1 objects"""
@@ -457,17 +467,38 @@ class StixConverter:
                 label = f"datadog-{data_type}-{data.get('status', 'unknown')}"
 
             # Use pycti Incident class to generate deterministic ID.
+            # The id-generation seed includes the DataDog signal /
+            # incident id so two distinct signals with the same title
+            # and second-level timestamp do not collide and merge in
+            # OpenCTI (DataDog rule titles are reused across many
+            # signals — keying only on ``(name, created)`` was a real
+            # collision hazard). The visible ``name`` keeps the raw
+            # title for analyst readability; the seed is the only
+            # place the source id appears.
+            #
             # ``dict.get(key, default)`` only returns the default when
             # the key is absent — if the importer set ``created`` to
             # ``None`` (e.g. unparseable timestamp), ``get`` returns
-            # ``None`` and ``Incident.generate_id`` raises. Coerce the
-            # falsy case explicitly via ``or``.
+            # ``None`` and ``Incident.generate_id`` raises. The
+            # fallback was previously ``datetime.now(UTC)``, which
+            # broke determinism (every retry of the same signal
+            # produced a fresh id and a duplicate Incident in
+            # OpenCTI). Anchor the fallback to a fixed epoch
+            # instead so the id stays stable across retries; the
+            # observable seed already discriminates between distinct
+            # signals.
             incident_name = data.get("name", f"Unknown {data_type.title()}")
-            incident_created = data.get("created") or datetime.now(UTC)
-            incident_modified = data.get("modified") or datetime.now(UTC)
+            source_id = data.get("metadata", {}).get("alert_id") or data.get(
+                "metadata", {}
+            ).get("incident_id")
+            id_seed_name = (
+                f"[{source_id}] {incident_name}" if source_id else incident_name
+            )
+            incident_created = data.get("created") or _FALLBACK_TIMESTAMP
+            incident_modified = data.get("modified") or incident_created
 
             incident = stix2.Incident(
-                id=Incident.generate_id(incident_name, incident_created),
+                id=Incident.generate_id(id_seed_name, incident_created),
                 name=incident_name,
                 description=data.get("description", ""),
                 created=incident_created,
@@ -533,10 +564,21 @@ class StixConverter:
                     external_refs.append(ext_ref)
 
             # Get case name and created time for ID generation. Same
-            # ``or`` guard as the incident path above — protect against
-            # ``None`` from upstream parsing failures.
+            # treatment as the incident path above:
+            #
+            # * Seed the id with the DataDog source id so cases for
+            #   distinct signals do not merge under a shared title.
+            # * Fall back to a fixed epoch (never ``datetime.now()``)
+            #   so retries of the same signal converge to the same
+            #   id instead of producing duplicate cases.
             case_name = case_data.get("name", "Unknown Case")
-            case_created = case_data.get("created") or datetime.now(UTC)
+            source_id = (
+                source_data.get("signal_id")
+                or source_data.get("id")
+                or case_data.get("metadata", {}).get("incident_id")
+            )
+            id_seed_name = f"[{source_id}] {case_name}" if source_id else case_name
+            case_created = case_data.get("created") or _FALLBACK_TIMESTAMP
 
             # Collect observable IDs for object_refs if observables provided
             object_refs = []
@@ -551,9 +593,9 @@ class StixConverter:
             )
 
             # Create the case using the pycti CustomObjectCaseIncident class
-            case_modified = case_data.get("modified") or datetime.now(UTC)
+            case_modified = case_data.get("modified") or case_created
             case = CustomObjectCaseIncident(
-                id=CaseIncident.generate_id(case_name, case_created),
+                id=CaseIncident.generate_id(id_seed_name, case_created),
                 name=case_name,
                 description=case_data.get("description", ""),
                 severity=severity,
@@ -616,6 +658,19 @@ class StixConverter:
         try:
             obs_type = obs_data.get("type")
             obs_value = obs_data.get("value")
+
+            # Guard against empty / whitespace observable values. The
+            # upstream importer already filters most of these out, but
+            # nested signal payloads can carry empty strings (or values
+            # that whitespace-normalise to empty). ``stix2`` would
+            # either raise ``MissingPropertiesError`` (logged, dropping
+            # the relationship target) or — worse — accept the value
+            # and emit a junk observable with a deterministic id that
+            # then merges every empty signal in OpenCTI. Bail early
+            # with ``None`` so the caller's relationship-builder skips
+            # the entry cleanly.
+            if obs_value is None or not str(obs_value).strip():
+                return None
 
             # Note: STIX 2.1 Cyber Observable Objects (SCOs) don't accept created, modified, created_by_ref
             # Those properties are only for STIX Domain Objects (SDOs)
