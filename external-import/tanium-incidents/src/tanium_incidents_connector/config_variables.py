@@ -41,11 +41,15 @@ class ConfigConnector:
         self.tanium_url = get_config_variable(
             "TANIUM_INCIDENTS_URL", ["tanium_incidents", "url"], self.load
         )
+        if isinstance(self.tanium_url, str):
+            self.tanium_url = self.tanium_url.rstrip("/")
         self.tanium_url_console = get_config_variable(
             "TANIUM_INCIDENTS_URL_CONSOLE",
             ["tanium_incidents", "url_console"],
             self.load,
         )
+        if isinstance(self.tanium_url_console, str):
+            self.tanium_url_console = self.tanium_url_console.rstrip("/")
         self.tanium_ssl_verify = get_config_variable(
             "TANIUM_INCIDENTS_SSL_VERIFY",
             ["tanium_incidents", "ssl_verify"],

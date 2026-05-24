@@ -105,7 +105,7 @@ nano .env
 2. Install dependencies:
 
 ```bash
-pip3 install -r requirements.txt
+pip3 install -r src/requirements.txt
 ```
 
 3. Start the connector:

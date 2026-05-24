@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, call, patch
 
 from rflib.pyrf import Alert, PrioritiedRule, RecordedFutureApiClient
@@ -24,7 +24,7 @@ def _make_alert(alert_id, alert_date="2025-01-01T00:00:00Z"):
     )
 
 
-def _build_connector(helper):
+def _build_connector(helper, rf_initial_lookback=48):
     """Build a connector instance with mocked internals."""
     rf_api = MagicMock()
     with patch.object(
@@ -39,6 +39,7 @@ def _build_connector(helper):
         connector.author = MagicMock()
         connector.update_rules = MagicMock()
         connector.alert_to_incident = MagicMock()
+        connector.rf_initial_lookback = rf_initial_lookback
     return connector
 
 
@@ -217,3 +218,27 @@ def test_raw_get_alerts_sends_sort_params():
         params = mock_get.call_args.kwargs["params"]
         assert params["orderby"] == "triggered"
         assert params["direction"] == "asc"
+
+
+def test_first_run_uses_initial_lookback():
+    """On first run (no state), collect_alerts must use now - rf_initial_lookback hours."""
+    # Given: no prior state and a specific lookback
+    helper = MagicMock()
+    helper.get_state.return_value = {}
+    helper.connect_name = "RecordedFuture"
+    helper.connector_id = "connector-1"
+
+    lookback_hours = 72
+    connector = _build_connector(helper, rf_initial_lookback=lookback_hours)
+    connector.collect_alerts = MagicMock(return_value=[])
+
+    # When: the connector runs
+    before = datetime.now(tz=timezone.utc)
+    connector.run()
+    after = datetime.now(tz=timezone.utc)
+
+    # Then: collect_alerts was called with a 'since' approximately now - lookback
+    since_arg = connector.collect_alerts.call_args.kwargs["since"]
+    expected_earliest = before - timedelta(hours=lookback_hours)
+    expected_latest = after - timedelta(hours=lookback_hours)
+    assert expected_earliest <= since_arg <= expected_latest

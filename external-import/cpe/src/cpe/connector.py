@@ -2,7 +2,6 @@ import math
 import sys
 import time
 from datetime import datetime, timezone
-from uuid import uuid4
 
 import langcodes
 import requests
@@ -111,18 +110,6 @@ class CPEConnector:
         """
         return datetime.fromtimestamp(timestamp, tz=timezone.utc).isoformat()
 
-    def _get_id(self, type: str) -> str:
-        """
-        Generates a unique ID for a STIX2 object
-
-        Args:
-            type (str): The type of the object to generate an ID for
-
-        Returns:
-            str: A unique ID for the STIX object
-        """
-        return f"{type}--{str(uuid4())}"
-
     def _get_api_url(self, start_index, start_date, end_date) -> str:
         """
         Returns the API URL to use for the connector
@@ -197,22 +184,18 @@ class CPEConnector:
         nb_results = json_objects["resultsPerPage"]
         stix_objects = []
         for i in range(nb_results):
-            cpe_infos = self._get_cpe_infos(
-                json_objects["products"][i]["cpe"]["cpeName"]
-            )
+            cpename = json_objects["products"][i]["cpe"]["cpeName"]
+            cpe_infos = self._get_cpe_infos(cpename)
             if (
                 json_objects["products"][i]["cpe"]["deprecated"] is False
                 and cpe_infos["is_hardware"] is False
             ):
-                self.helper.log_debug(
-                    f"Creating a software for the CPE: {json_objects['products'][i]['cpe']['cpeName']}"
-                )
+                self.helper.log_debug(f"Creating a software for the CPE: {cpename}")
                 software = stix2.Software(
                     type="software",
                     spec_version="2.1",
-                    id=self._get_id("software"),
                     name=self._get_cpe_title(json_objects["products"][i]["cpe"]),
-                    cpe=json_objects["products"][i]["cpe"]["cpeName"],
+                    cpe=cpename,
                     languages=cpe_infos["language"],
                     vendor=cpe_infos["vendor"],
                     version=cpe_infos["version"],

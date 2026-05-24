@@ -33,6 +33,7 @@ def fixture_config_dict() -> dict[str, dict[str, Any]]:
             "incident_severity": "high",
             "incident_priority": "P1",
             "report_types": "scan_http,open_dns_resolvers",
+            "report_names": "company",
             "initial_lookback": 45,
             "lookback": 7,
         },

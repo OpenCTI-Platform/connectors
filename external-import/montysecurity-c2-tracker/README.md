@@ -1,14 +1,12 @@
 # Monty Security C2 Tracker
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
 
-Table of Contents
+## Verification status
+
+| Status            |    Date    | Comment |
+|-------------------|------------|---------|
+| Filigran Verified | 17/03/2026 |         |
+
+## Table of Contents
 
 - [Monty Security C2 Tracker](#monty-security-c2-tracker)
   - [Introduction](#introduction)
@@ -42,39 +40,10 @@ across the internet.
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-Below are the parameters you'll need to set for OpenCTI:
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-| ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-Below are the parameters you'll need to set for running the connector properly:
-
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-| --------------- | ---------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-
-### Connector extra parameters environment variables
-
-Below are the parameters you'll need to set for the connector:
-
-| Parameter            | config.yml           | Docker environment variable | Default | Mandatory | Description                                                |
-|----------------------|----------------------| --------------------------- |---------| --------- |------------------------------------------------------------|
-| TLP Level            | tlp_level            |                             | clear   | Yes       | The TLP is clear by default for OSINT                      |
-| Malware list URL     | malware_list_url     |                             |https://github.com/montysecurity/C2-Tracker/tree/main/data      | Yes       | The up to date malware list on Github                      |
-| Malware IPs base URL | malware_ips_base_url |                             |https://raw.githubusercontent.com/montysecurity/C2-Tracker/main/data/         | Yes       | The based URL used to go through all the malware IPs files |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding these variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -133,12 +102,17 @@ download of data by re-running the connector.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+At each run, the connector fetches the malware list from the Monty Security C2-Tracker
+dataset, then downloads associated IP lists for each malware family. It converts
+malware names and IP observables into STIX objects and creates `indicates`
+relationships between each IP and its malware.
+
+The generated bundle is sent to OpenCTI as a scheduled external import. The
+connector also stores `last_run` in state so operators can track previous
+executions in logs.
+
+Because the source is community OSINT, entities are marked with a configurable
+TLP level (default: `clear`) and attributed to the Monty Security author identity.
 
 ## Debugging
 

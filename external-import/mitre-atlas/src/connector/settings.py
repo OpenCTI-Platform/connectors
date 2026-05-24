@@ -28,12 +28,12 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The scope of the connector.",
         default=[
             "identity",
-            "attack - pattern",
-            "course - of - action",
+            "attack-pattern",
+            "course-of-action",
             "relationship",
-            "x - mitre - collection",
-            "x - mitre - matrix",
-            "x - mitre - tactic",
+            "x-mitre-collection",
+            "x-mitre-matrix",
+            "x-mitre-tactic",
         ],
     )
     duration_period: timedelta = Field(

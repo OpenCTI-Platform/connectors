@@ -87,6 +87,10 @@ class Indicator(BaseIdentifiedEntity):
         default=None,
         description="Description of the indicator.",
     )
+    labels: list[str] | None = Field(
+        default=None,
+        description="Labels of the indicator.",
+    )
     indicator_types: list[str] | None = Field(
         default=None,
         description="Indicator types. The default OpenCTI types are: "
@@ -137,6 +141,7 @@ class Indicator(BaseIdentifiedEntity):
             indicator_types=self.indicator_types,
             pattern_type=self.pattern_type,
             pattern=self.pattern,
+            labels=self.labels,
             valid_from=self.valid_from,
             valid_until=self.valid_until,
             kill_chain_phases=[

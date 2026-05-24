@@ -17,6 +17,9 @@ services:
       - CROWDSTRIKE_CLIENT_SECRET=ChangeMe
       # - CROWDSTRIKE_PERMANENT_DELETE=False # optional
       # - CROWDSTRIKE_FALCON_FOR_MOBILE_ACTIVE=False # optional
+      # - CROWDSTRIKE_ACTION_ON_IP=detect # optional (no_action, detect)
+      # - CROWDSTRIKE_ACTION_ON_DOMAIN=detect # optional (no_action, detect)
+      # - CROWDSTRIKE_ACTION_ON_HASH=detect # optional (no_action, allow, detect, prevent)
       # - METRICS_ENABLE=False # optional
       # - METRICS_PORT=9113 # optional
       # - METRICS_ADDR=0.0.0.0 # optional

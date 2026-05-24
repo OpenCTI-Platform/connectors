@@ -25,3 +25,7 @@ microsoft_sentinel_intel:
 #  extra_labels: 'label1,label2'
 #  workspace_api_version: '2024-02-01-preview'
 #  management_api_version: '2025-03-01'
+#  batch_mode: false
+#  batch_size: 100
+#  batch_timeout: 30
+#  event_types: 'create,update,delete'

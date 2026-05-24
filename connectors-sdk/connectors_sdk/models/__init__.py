@@ -18,6 +18,7 @@ from connectors_sdk.models.email_address import EmailAddress
 from connectors_sdk.models.external_reference import ExternalReference
 from connectors_sdk.models.file import File
 from connectors_sdk.models.hostname import Hostname
+from connectors_sdk.models.incident import Incident
 from connectors_sdk.models.indicator import Indicator
 from connectors_sdk.models.individual import Individual
 from connectors_sdk.models.infrastructure import Infrastructure
@@ -37,7 +38,9 @@ from connectors_sdk.models.region import Region
 from connectors_sdk.models.relationship import Relationship
 from connectors_sdk.models.report import Report
 from connectors_sdk.models.sector import Sector
+from connectors_sdk.models.sighting import Sighting
 from connectors_sdk.models.software import Software
+from connectors_sdk.models.text import Text
 from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from connectors_sdk.models.tlp_marking import TLPMarking
 from connectors_sdk.models.url import URL
@@ -66,6 +69,7 @@ __all__ = [
     "ExternalReference",
     "File",
     "Hostname",
+    "Incident",
     "Indicator",
     "Individual",
     "Infrastructure",
@@ -85,7 +89,9 @@ __all__ = [
     "Relationship",
     "Report",
     "Sector",
+    "Sighting",
     "Software",
+    "Text",
     "ThreatActorGroup",
     "TLPMarking",
     "URL",

@@ -13,8 +13,18 @@ from crowdstrike_feeds_services.utils import (
     paginate,
     timestamp_to_datetime,
 )
+from crowdstrike_feeds_services.utils.ioc_extractor import extract_iocs
+from crowdstrike_feeds_services.utils.observables import (
+    ObservableProperties,
+    create_observable_domain_name,
+    create_observable_file_md5,
+    create_observable_file_sha1,
+    create_observable_file_sha256,
+    create_observable_ip_address,
+    create_observable_url,
+)
 from stix2 import Bundle, Identity, MarkingDefinition
-from stix2.v21 import _DomainObject
+from stix2.v21 import _DomainObject, _Observable
 
 from ..importer import BaseImporter
 from ..indicator.builder import IndicatorBundleBuilder
@@ -52,6 +62,7 @@ class ReportImporter(BaseImporter):
         indicator_config: dict,
         no_file_trigger_import: bool,
         scopes: set[str],
+        report_extract_iocs: list[str] | None = None,
     ) -> None:
         """Initialize CrowdStrike report importer."""
         super().__init__(config, helper, author, tlp_marking)
@@ -68,7 +79,12 @@ class ReportImporter(BaseImporter):
         self.indicator_config = indicator_config
         self.no_file_trigger_import = no_file_trigger_import
         self.scopes = scopes
+        self.report_extract_iocs = report_extract_iocs or []
         self.malware_guess_cache: dict[str, str] = {}
+        # Cache the "missing indicator scope" outcome so we don't hammer the
+        # CrowdStrike API with calls that we already know will return a 403
+        # for the lifetime of this importer instance.
+        self._missing_indicator_scope = False
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
         self._info(
@@ -120,6 +136,10 @@ class ReportImporter(BaseImporter):
         fields = ["__full__"]
 
         fql_filter = f"last_modified_date:>{start_timestamp}"
+
+        # Also filter by created_date to avoid importing very old reports
+        # that were recently modified (e.g., tag updates by CrowdStrike).
+        fql_filter = f"{fql_filter}+created_date:>{self.default_latest_timestamp}"
 
         if self.include_types:
             fql_filter = f"{fql_filter}+type:{self.include_types}"
@@ -265,11 +285,73 @@ class ReportImporter(BaseImporter):
             _sort = "last_updated|asc"
             _fql_filter = f"reports:['{report_name}']"
 
+            # If a previous call already returned a 403 (no indicator scope),
+            # short-circuit further calls for the lifetime of this importer
+            # instance — the API client credentials are not going to gain the
+            # missing scope between two reports in the same run.
+            if self._missing_indicator_scope:
+                return related_indicators_with_related_entities
+
             # Getting IOCs linked and based on report name
             response = self.indicators_api_cs.get_combined_indicator_entities(
                 limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
             )
-            related_indicators.extend(response["resources"])
+
+            # Check if response has resources or if it's an error response.
+            # ``resources`` can legitimately be ``None`` (or another
+            # non-iterable) when the upstream returned a degenerate body —
+            # extracting via ``response.get("resources") or []`` keeps the
+            # ``extend`` call crash-free and matches the defensive pattern
+            # already used elsewhere in this connector (see the indicator
+            # importer). Without this guard a ``{"resources": None}``
+            # response re-introduces the ``TypeError: ... is not iterable``
+            # secondary crash that the surrounding ``try/except`` would
+            # swallow, masking the real diagnostic.
+            if "resources" in response:
+                resources = response.get("resources") or []
+                related_indicators.extend(resources)
+            elif "errors" in response:
+                # API returned an error (e.g., 403 permission denied).
+                # ``errors`` can legitimately be an empty list / ``None``
+                # (the upstream sometimes reports a generic failure
+                # without a specific item) or, on a malformed payload,
+                # a non-list value the SDK forgot to wrap. Normalise to
+                # an actual list before indexing so this defensive path
+                # cannot re-introduce the original ``IndexError`` /
+                # ``KeyError`` it was supposed to prevent.
+                raw_errors = response.get("errors")
+                errors = raw_errors if isinstance(raw_errors, (list, tuple)) else []
+                first_error = errors[0] if errors else {}
+                error_code = (
+                    first_error.get("code") if isinstance(first_error, dict) else None
+                )
+                if error_code == 403:
+                    self._warning(
+                        "Skipping IOC fetching for report {0} - no indicator scope permission",
+                        report_name,
+                    )
+                    # Remember that this token can't access the indicator
+                    # scope so we don't re-issue the same 403-producing call
+                    # for every subsequent report in this run.
+                    self._missing_indicator_scope = True
+                    return (
+                        related_indicators_with_related_entities  # Return what we have
+                    )
+                else:
+                    # Other errors should be logged
+                    self._warning(
+                        "Error fetching related IOCs for report {0}: {1}",
+                        report_name,
+                        str(response),
+                    )
+                    return related_indicators_with_related_entities
+            else:
+                # Unexpected response format
+                self._warning(
+                    "Unexpected response format when fetching indicators for report {0}",
+                    report_name,
+                )
+                return related_indicators_with_related_entities
 
             if related_indicators is not None:
                 for indicator in related_indicators:
@@ -371,6 +453,9 @@ class ReportImporter(BaseImporter):
             )
         malwares_from_field = report.get("malware", [])
 
+        # Extract IOCs from report text content
+        extracted_observables = self._extract_iocs_from_report(report)
+
         bundle_builder = ReportBundleBuilder(
             report,
             author,
@@ -384,8 +469,67 @@ class ReportImporter(BaseImporter):
             self.report_guess_relations,
             malwares_from_field=malwares_from_field,
             scopes=self.scopes,
+            extracted_observables=extracted_observables,
         )
         return bundle_builder.build()
+
+    # Map IOC type -> observable factory function
+    _IOC_OBSERVABLE_FACTORIES = {
+        "ipv4": create_observable_ip_address,
+        "ipv6": create_observable_ip_address,
+        "domain": create_observable_domain_name,
+        "url": create_observable_url,
+        "md5": create_observable_file_md5,
+        "sha1": create_observable_file_sha1,
+        "sha256": create_observable_file_sha256,
+    }
+
+    def _extract_iocs_from_report(self, report) -> list[_Observable]:
+        """Extract IOCs from report text content and create STIX observables."""
+        if not self.report_extract_iocs:
+            return []
+
+        text = self._get_report_text_content(report)
+        if not text:
+            return []
+
+        iocs = extract_iocs(text, self.report_extract_iocs)
+        if not iocs:
+            return []
+
+        self._info(
+            "Extracted {0} IOCs from report {1}",
+            len(iocs),
+            report.get("name", "unknown"),
+        )
+
+        observables: list[_Observable] = []
+        for ioc in iocs:
+            factory = self._IOC_OBSERVABLE_FACTORIES.get(ioc.type)
+            if factory is None:
+                continue
+            try:
+                props = ObservableProperties(
+                    value=ioc.value,
+                    created_by=self.author,
+                    labels=["extracted-from-report"],
+                    score=0,
+                    object_markings=[self.tlp_marking],
+                )
+                observables.append(factory(props))
+            except Exception as err:
+                self._error(
+                    "Failed to create observable for {0} ({1}): {2}",
+                    ioc.type,
+                    ioc.value,
+                    err,
+                )
+        return observables
+
+    @staticmethod
+    def _get_report_text_content(report: dict) -> str:
+        """Extract plain text content from the report for IOC extraction."""
+        return report.get("description") or report.get("short_description") or ""
 
     # MVP2
     def _guess_malwares_from_tags(self, tags: List) -> dict[str, str]:

@@ -29,7 +29,12 @@ The CVE connector imports Common Vulnerabilities and Exposures (CVE) data from t
 
 The National Vulnerability Database (NVD) is the U.S. government repository of standards-based vulnerability management data. This connector retrieves CVE (Common Vulnerabilities and Exposures) data from the NVD API and imports it into OpenCTI as Vulnerability entities.
 
-The connector supports both incremental updates (maintaining data since last run) and historical import (pulling all CVEs from a specified year).
+The connector supports both incremental updates (maintaining data since last run) and historical import (pulling all CVEs from a specified year). It can also optionally resolve CPEs (Common Platform Enumerations) associated with each CVE via the [NVD CPE Match API](https://nvd.nist.gov/developers/products) and import them as Software entities linked to Vulnerabilities.
+
+> [!WARNING]
+> **`import_software` option — High data volume risk**
+>
+> Enabling the `CVE_IMPORT_SOFTWARE` option can lead to the ingestion of a **very significant volume of data** into the platform. Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and `has` relationships being created. This dramatically increases storage usage, ingestion time, and API calls to the NVD. **Enable this option only if you fully understand the impact and have sized your platform accordingly.**
 
 ## Installation
 
@@ -69,6 +74,9 @@ There are a number of configuration options, which are set either in `docker-com
 | Maintain Data      | cve.maintain_data    | `CVE_MAINTAIN_DATA`         | true                                         | No        | Import CVEs from last run to current time (incremental updates).            |
 | Pull History       | cve.pull_history     | `CVE_PULL_HISTORY`          | false                                        | No        | Import all CVEs from `history_start_year`. Requires `history_start_year`.   |
 | History Start Year | cve.history_start_year | `CVE_HISTORY_START_YEAR`  | 2019                                         | No        | Required if `pull_history=true`. Minimum 2019 (CVSS v3.1 release).          |
+| Import Software    | cve.import_software    | `CVE_IMPORT_SOFTWARE`     | false                                        | No        | If `true`, resolve CPEs for each CVE via the NVD CPE Match API and import them as Software objects with `has` relationships to Vulnerabilities. **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform. Each CVE may resolve to dozens of CPE matches, resulting in massive amounts of Software entities and relationships. Use with caution and ensure your platform is sized accordingly.** |
+| CPE Max Concurrency | cve.cpe_max_concurrency | `CVE_CPE_MAX_CONCURRENCY` | 10                                         | No        | Maximum number of concurrent CPE resolution tasks when `import_software=true`. |
+| CVE Max Concurrency | cve.cve_max_concurrency | `CVE_CVE_MAX_CONCURRENCY` | 50                                         | No        | Maximum number of concurrent CVE processing workers. This bounds pending tasks and bundle sends during large imports. |
 
 ## Deployment
 
@@ -99,6 +107,9 @@ Configure the connector in `docker-compose.yml`:
       # - CVE_MAINTAIN_DATA=true
       # - CVE_PULL_HISTORY=false
       # - CVE_HISTORY_START_YEAR=2019
+      # - CVE_IMPORT_SOFTWARE=false  # Enable to import Software (CPE) objects
+      # - CVE_CPE_MAX_CONCURRENCY=10  # Bound concurrent CPE resolution tasks (used when CVE_IMPORT_SOFTWARE=true)
+      # - CVE_CVE_MAX_CONCURRENCY=50  # Bound concurrent CVE processing workers (overall pipeline concurrency)
     restart: always
 ```
 
@@ -134,7 +145,7 @@ Find the connector and click the refresh button to reset the state and trigger a
 
 ## Behavior
 
-The connector fetches CVE data from the NVD API and converts it to STIX Vulnerability objects.
+The connector fetches CVE data from the NVD API and converts it to STIX Vulnerability objects. When `import_software` is enabled, it also calls the [NVD CPE Match API](https://nvd.nist.gov/developers/products) to resolve CPEs associated with each CVE and creates STIX Software objects with `has` relationships to the corresponding Vulnerability.
 
 ### Data Flow
 
@@ -143,16 +154,22 @@ graph LR
     subgraph NVD API
         direction TB
         CVE[CVE Data]
+        CPEMatch[CPE Match API]
     end
 
     subgraph OpenCTI
         direction LR
         Vulnerability[Vulnerability]
+        Software[Software]
         ExternalRef[External Reference]
+        HasRel["has (Relationship)"]
     end
 
     CVE --> Vulnerability
     CVE --> ExternalRef
+    CPEMatch -->|import_software=true| Software
+    Software --> HasRel
+    HasRel --> Vulnerability
 ```
 
 ### Entity Mapping
@@ -196,6 +213,23 @@ graph LR
 | CWE IDs              | Labels                  | Weakness classifications                         |
 | References           | External References     | Links to advisories and patches                  |
 
+#### Software Entity Mapping (when `import_software=true`)
+
+When the `import_software` option is enabled, the connector resolves CPEs (Common Platform Enumerations) for each CVE using the [NVD CPE Match API](https://nvd.nist.gov/developers/products) and creates STIX Software objects:
+
+| CPE Data             | OpenCTI Entity/Property | Description                                      |
+|----------------------|-------------------------|--------------------------------------------------|
+| CPE Name             | Software.cpe            | Full CPE 2.3 URI (e.g., `cpe:2.3:a:nodejs:node.js:16.0.0:*:*:*:*:*:*:*`) |
+| Vendor               | Software.vendor         | Vendor name extracted from CPE URI               |
+| Vendor + Product (+ Version) | Software.name  | Human-readable software name                     |
+| Version              | Software.version        | Software version (omitted if wildcard `*`)       |
+
+#### Relationship Mapping (when `import_software=true`)
+
+| Source Entity | Relationship Type | Target Entity   | Description                                |
+|---------------|-------------------|-----------------|--------------------------------------------|
+| Software      | `has`             | Vulnerability   | Indicates the software is affected by the vulnerability |
+
 ### Operating Modes
 
 1. **Incremental Updates** (`maintain_data=true`):
@@ -208,12 +242,20 @@ graph LR
    - Useful for initial population
    - Requires `history_start_year` (minimum 2019)
 
+3. **Software Import** (`import_software=true`):
+   - Resolves CPEs for each CVE via the NVD CPE Match API
+   - Creates Software entities with vendor, product, version, and CPE URI
+   - Links each Software to its Vulnerability with a `has` relationship
+   - Can be combined with any operating mode (incremental or historical)
+   - **⚠️ WARNING: Enabling this option can lead to the ingestion of a VERY SIGNIFICANT volume of data into the platform.** Each CVE may resolve to dozens (or even hundreds) of CPE matches, resulting in massive amounts of Software entities and relationships. This also generates one additional NVD API call per CVE, significantly impacting rate limits and ingestion time. **Ensure your platform is sized accordingly before enabling this option.**
+
 ### Processing Details
 
 - **CVSS Support**: Connector supports CVSS v2, v3.1, and v4.0
 - **Rate Limiting**: NVD API has rate limits; connector handles pagination
 - **Date Range**: Maximum 120-day range per API query
 - **API Key Required**: Unauthenticated requests are heavily rate-limited
+- **CPE Match API**: When `import_software=true`, an additional API call per CVE is made to the [NVD CPE Match API](https://nvd.nist.gov/developers/products). These requests use the same NVD API key and are throttled by the connector's shared sliding-window `AsyncRateLimiter`, rather than a fixed 6-second sleep between requests.
 
 ## Debugging
 

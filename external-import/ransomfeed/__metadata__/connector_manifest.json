@@ -1,0 +1,22 @@
+{
+  "title": "RansomFeed",
+  "slug": "ransomfeed",
+  "description": "Imports public ransomware claims from the RansomFeed API (https://ransomfeed.it). Each claim is converted into STIX 2.1 objects describing the victim (Identity), the ransomware group (IntrusionSet), the targeted country (Location), the leak-site domain (Domain-Name) and an optional file-hash Indicator, all grouped under a Report. Bundles are pushed to OpenCTI through the standard RabbitMQ ingest queue.",
+  "short_description": "Imports ransomware claims from the RansomFeed API as STIX 2.1 Reports.",
+  "logo": null,
+  "use_cases": [
+    "Threat Intelligence",
+    "Open Source Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 70,
+  "support_version": ">=6.0.0",
+  "subscription_link": "https://ransomfeed.it",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ransomfeed",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ransomfeed",
+  "container_type": "EXTERNAL_IMPORT"
+}
