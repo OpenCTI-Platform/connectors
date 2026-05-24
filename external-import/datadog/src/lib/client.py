@@ -241,7 +241,19 @@ class DataDogClient:
                 signals = response.get("data", [])
                 all_signals.extend(signals)
 
-                self.helper.log_info(
+                # Per-page progress is a debug-only diagnostic. With a
+                # small ``DATADOG_BATCH_SIZE`` (the documented sample
+                # default is 100) and a large import window
+                # (``DATADOG_IMPORT_START_DATE`` set to days ago after
+                # a connector outage), the previous ``log_info`` here
+                # produced hundreds of "Fetched N signals (total so
+                # far: M)" lines per cycle in production — drowning
+                # out the once-per-cycle "Security Signals API
+                # returned N total signals" / "Signal filtering: N →
+                # M passed filters" info-level summary just below.
+                # The cycle-level summary lines remain at ``info``;
+                # only the per-page breadcrumb is debug.
+                self.helper.log_debug(
                     f"Fetched {len(signals)} signals (total so far: {len(all_signals)})"
                 )
 

@@ -1,9 +1,21 @@
 import ipaddress
-import json
 import re
 from datetime import UTC, datetime
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, urlunsplit
+
+# Module-level email regex.
+#
+# Compiled once at import time so the per-signal scan in
+# :meth:`DataImporter._extract_observables_from_http_headers` does not
+# re-compile the same pattern on every alert. On a cycle that hits the
+# per-cycle cap (``DataDogClient._MAX_SIGNALS_PER_CYCLE`` = 10,000)
+# the previous shape was paying one ``re.compile`` per signal on top of
+# a full ``json.dumps(raw_signal)`` serialization — both wasted CPU and
+# allocated large temporary strings. The scan is now applied directly
+# to each string leaf of the signal tree (see
+# :meth:`DataImporter._find_values`) rather than the serialized blob.
+_EMAIL_RE = re.compile(r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b")
 
 
 class DataImporter:
@@ -167,16 +179,33 @@ class DataImporter:
                 "Recursively searching response for observable fields"
             )
 
-            # Single pass collecting every observable-bearing field at
+            # Single pass collecting every observable-bearing field
+            # AND every email address embedded in any string leaf at
             # once. The previous shape called ``_find_values_by_key``
             # eight times against the same ``raw_signal`` tree —
             # O(K · N) traversal overhead (with ``K`` = number of
-            # target keys, ``N`` = total node count). DataDog Security
-            # Signal payloads can carry deeply nested ``samples`` /
-            # ``messages`` arrays, so on a 10,000-signal cycle that
-            # was eight full walks of every signal. ``_find_values``
-            # walks the tree once for the entire key set and returns
-            # a dict keyed on the target name.
+            # target keys, ``N`` = total node count) — and then ran
+            # ``json.dumps(raw_signal)`` + ``re.findall(...)`` on the
+            # serialized blob to scrape emails out, which allocated a
+            # full copy of every signal as one giant string and
+            # compiled the email regex per call. Both passes are now
+            # folded into the same traversal via ``_find_values``'s
+            # ``string_leaf_handler`` hook (the precompiled module-
+            # level ``_EMAIL_RE`` does the per-leaf scan), so a
+            # 10,000-signal cycle walks each signal tree exactly once
+            # instead of eight (key search) + once (json.dumps) + once
+            # (regex scan over the full dump).
+            email_values: set[str] = set()
+
+            def _scan_emails(leaf: str) -> None:
+                # ``finditer`` (rather than ``findall``) so we can
+                # collect into a set without materialising a per-leaf
+                # list; dedup also fold here before the observable
+                # list is built, so the downstream
+                # ``unique_observables`` pass has less work to do.
+                for match in _EMAIL_RE.finditer(leaf):
+                    email_values.add(match.group(0))
+
             extracted = self._find_values(
                 raw_signal,
                 {
@@ -189,6 +218,7 @@ class DataImporter:
                     "user-agent",
                     "useragent",
                 },
+                string_leaf_handler=_scan_emails,
             )
             client_ips = extracted["client_ip"]
             x_real_ips = extracted["x-real-ip"]
@@ -282,12 +312,32 @@ class DataImporter:
                         }
                     )
 
-            # Process URLs
+            # Process URLs.
+            #
+            # The raw URL string is **not** preserved verbatim when it
+            # carries basic-auth userinfo (``https://user:pass@host/x``).
+            # ``_is_valid_url`` deliberately accepts userinfo (DataDog
+            # signals legitimately carry such URLs in HTTP samples and
+            # rejecting them would silently drop real observables), but
+            # the URL observable persisted into OpenCTI MUST NOT carry
+            # the credentials. ``_sanitize_url_value`` rebuilds the URL
+            # from the parsed components without userinfo (scheme,
+            # host, port, path, query, fragment are all preserved for
+            # their threat-intel value — only the credentials are
+            # stripped). When no userinfo is present the original
+            # string flows through unchanged so observable identity
+            # stays stable on signals without basic-auth URLs.
             for url in urls:
                 if isinstance(url, str) and self._is_valid_url(url):
-                    observables.append(
-                        {"type": "url", "value": url, "source": "field_search"}
-                    )
+                    sanitized_url = self._sanitize_url_value(url)
+                    if sanitized_url:
+                        observables.append(
+                            {
+                                "type": "url",
+                                "value": sanitized_url,
+                                "source": "field_search",
+                            }
+                        )
 
             # Process user-agents
             all_user_agents = user_agents + useragents
@@ -297,11 +347,14 @@ class DataImporter:
                         {"type": "user-agent", "value": ua, "source": "field_search"}
                     )
 
-            # Scan for emails in the entire response
-            response_str = json.dumps(raw_signal)
-            email_pattern = r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
-            email_matches = re.findall(email_pattern, response_str)
-            for email in email_matches:
+            # Emails were collected in the same traversal as the field
+            # search above via the ``_scan_emails`` callback — no
+            # second walk of the signal tree and no
+            # ``json.dumps(raw_signal)`` allocation needed. Iterate
+            # the deduped set into the observable list here so the
+            # downstream ``unique_observables`` pass still gets a
+            # consistent ``{type, value, source}`` shape per entry.
+            for email in email_values:
                 observables.append(
                     {"type": "email", "value": email, "source": "field_search"}
                 )
@@ -348,7 +401,12 @@ class DataImporter:
             self.helper.log_error(traceback.format_exc())
             return observables
 
-    def _find_values(self, data: Any, target_keys: set[str]) -> dict[str, list[Any]]:
+    def _find_values(
+        self,
+        data: Any,
+        target_keys: set[str],
+        string_leaf_handler=None,
+    ) -> dict[str, list[Any]]:
         """
         Recursively search ``data`` once and return every value seen
         under any of ``target_keys``.
@@ -362,9 +420,22 @@ class DataImporter:
         ``samples[*]``, repeated ``http`` blocks etc.) so on a high-
         volume cycle that overhead was non-trivial.
 
+        The optional ``string_leaf_handler`` callback is invoked once
+        for every ``str`` leaf encountered during the walk — used by
+        the caller to fold the per-signal email scan into the same
+        traversal instead of doing a second ``json.dumps`` + regex
+        pass over the full serialized payload (see the
+        ``_extract_observables_from_http_headers`` call site for the
+        rationale).
+
         Args:
             data: Data structure to search (dict, list, or scalar).
             target_keys: Set of key names to collect.
+            string_leaf_handler: Optional callable invoked with each
+                string leaf value seen during the traversal. Allows
+                callers to opt into a single-pass scan over the same
+                tree (e.g. scanning for email addresses) without a
+                second walk. Defaults to ``None`` (no leaf scanning).
 
         Returns:
             Dict mapping every requested key to the list of values
@@ -388,6 +459,8 @@ class DataImporter:
                     stack.append(value)
             elif isinstance(node, list):
                 stack.extend(node)
+            elif string_leaf_handler is not None and isinstance(node, str):
+                string_leaf_handler(node)
 
         return results
 
@@ -494,6 +567,69 @@ class DataImporter:
             return False
 
         return parts.scheme in ("http", "https") and bool(parts.hostname)
+
+    def _sanitize_url_value(self, url: str) -> str | None:
+        """Rebuild ``url`` without any basic-auth userinfo component.
+
+        The HTTP samples in a DataDog Security Signal can carry URLs
+        with embedded credentials (``https://user:pass@host/path``).
+        ``_is_valid_url`` deliberately accepts that shape — rejecting
+        it would drop legitimate threat-intel-bearing observables for
+        the surrounding host / path — but the value persisted into
+        OpenCTI MUST NOT carry the credentials. Without sanitisation
+        the URL observable becomes a credential-leak vector: the
+        secret is replicated across every consumer of the OpenCTI
+        platform (UI, audit log, downstream stream connectors, …).
+
+        Sanitisation strategy
+        ---------------------
+
+        * Strip userinfo. The URL is rebuilt from
+          ``urllib.parse.urlsplit`` with an authority built from
+          ``hostname`` (already lowercased by ``urlsplit``) and
+          ``port`` (only emitted when an explicit port was present),
+          which drops any ``username`` / ``password`` carried in
+          ``netloc``.
+        * Preserve scheme, host, port, path, query and fragment.
+          These can carry indicators-of-compromise themselves (e.g.
+          phishing kit paths, signed-token reconnaissance, fragment-
+          based exfiltration) so silently dropping them would lose
+          threat-intel value. Only credentials are stripped.
+        * Returns the original string verbatim when no userinfo is
+          present so observable identity stays stable across cycles
+          for the typical credential-free URL — only credential-
+          carrying URLs are normalised.
+
+        Returns
+        -------
+        ``str``
+            The sanitised URL on success, or the original ``url`` when
+            parsing fails (defensive — never lose an observable
+            because of a parser edge case; the upstream
+            ``_is_valid_url`` already gated this on ``urlsplit``
+            succeeding so the failure branch should be unreachable).
+        ``None``
+            When the input is empty / not a string.
+        """
+        if not url or not isinstance(url, str):
+            return None
+        try:
+            parts = urlsplit(url.strip())
+        except ValueError:
+            return url
+
+        if not parts.username and not parts.password:
+            return url
+
+        hostname = parts.hostname or ""
+        try:
+            port = parts.port
+        except ValueError:
+            port = None
+        authority = f"{hostname}:{port}" if port is not None else hostname
+        return urlunsplit(
+            (parts.scheme, authority, parts.path, parts.query, parts.fragment)
+        )
 
     def _extract_alert_context(self, alert: dict[str, Any]) -> dict[str, Any]:
         """
