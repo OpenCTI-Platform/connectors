@@ -153,7 +153,18 @@ class DataImporter:
                 )
                 return observables
 
-            self.helper.log_info("Recursively searching response for observable fields")
+            # Per-alert observable-extraction details are logged at
+            # ``debug`` level so a high-volume cycle (the per-cycle cap
+            # is 10,000 signals) does not produce one info-level
+            # "searching" / "extracted N observables" / "no observables"
+            # line per alert in production. The cycle-level summary in
+            # ``connector.py::run`` ("Import completed: N bundle(s) sent
+            # (X alerts processed, Y STIX objects created, Z errors)")
+            # already covers the operator-visible metrics; the
+            # per-alert lines are a debug-only diagnostic.
+            self.helper.log_debug(
+                "Recursively searching response for observable fields"
+            )
 
             # Recursively find all values for specific field names
             client_ips = self._find_values_by_key(raw_signal, "client_ip")
@@ -198,20 +209,44 @@ class DataImporter:
             # Process hosts/hostnames. ``host`` values from upstream
             # field searches may carry a ``:port`` suffix (e.g.
             # ``example.com:443``) or be a bracketed IPv6 literal
-            # (``[2001:db8::1]:443``). ``host.split(":")[0]`` is wrong
-            # for the IPv6 case — it would yield ``"[2001"`` and drop
-            # the observable entirely. IPv6 literals are not domain
-            # candidates anyway (they are handled by the IP-extraction
-            # pass above), so the safest thing is to skip bracketed
-            # values here and only strip a trailing ``:<digits>`` from
-            # the non-bracketed (domain) case.
+            # (``[2001:db8::1]:443`` — the canonical RFC-3986
+            # ``host`` production for an HTTP ``Host`` header that
+            # carries an IPv6 address). ``host.split(":")[0]`` is
+            # wrong for the IPv6 case — it would yield ``"[2001"``
+            # and drop the observable entirely.
+            #
+            # Bracketed values can carry an IPv6 address that does
+            # NOT appear anywhere else in the signal (the upstream
+            # ``client_ip`` / ``x-real-ip`` / ``x-forwarded-for``
+            # passes do not always cover the Host header), so we
+            # cannot just skip them — we have to strip the brackets
+            # (and the optional ``:<port>`` suffix) and emit an
+            # ``ipv6`` observable when the inner value is a valid
+            # IPv6 literal. If the inner value is not a valid IPv6
+            # we fall through silently (a bracketed non-IPv6 host is
+            # not a valid RFC-3986 production and is not a domain
+            # candidate either). For non-bracketed values we keep
+            # the previous shape: only strip a trailing ``:<digits>``
+            # before passing to ``_is_valid_domain`` so we never
+            # break a domain whose right-hand side happens to be
+            # non-numeric.
             all_hosts = hosts + hostnames
             for host in all_hosts:
                 if not isinstance(host, str) or not host:
                     continue
                 if host.startswith("["):
-                    # IPv6 literal — never a domain. Already covered by
-                    # the IP-extraction branch above.
+                    closing = host.find("]")
+                    if closing == -1:
+                        continue
+                    inner = host[1:closing]
+                    if self._is_valid_ipv6(inner):
+                        observables.append(
+                            {
+                                "type": "ipv6",
+                                "value": inner,
+                                "source": "field_search",
+                            }
+                        )
                     continue
                 domain = host
                 if ":" in domain:
@@ -260,7 +295,15 @@ class DataImporter:
                     seen.add(key)
                     unique_observables.append(obs)
 
-            # Log summary by type
+            # Per-alert observable-count summary kept at ``debug`` for
+            # the same reason as the "searching" line above — info /
+            # warning here would emit one line per signal in a cycle
+            # that can carry up to ``_MAX_SIGNALS_PER_CYCLE`` alerts.
+            # The "no observables extracted" branch is also a debug
+            # signal: it is the expected outcome on signals that do
+            # not carry HTTP-header observables (e.g. log-only rules)
+            # and a warning here would have flagged thousands of
+            # benign cycles per day.
             if unique_observables:
                 type_counts = {}
                 for obs in unique_observables:
@@ -270,11 +313,11 @@ class DataImporter:
                 summary = ", ".join(
                     [f"{count} {obs_type}" for obs_type, count in type_counts.items()]
                 )
-                self.helper.log_info(
+                self.helper.log_debug(
                     f"Extracted {len(unique_observables)} unique observables: {summary}"
                 )
             else:
-                self.helper.log_warning("No observables extracted from response")
+                self.helper.log_debug("No observables extracted from response")
 
             return unique_observables
 

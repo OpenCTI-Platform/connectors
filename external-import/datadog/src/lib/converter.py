@@ -222,9 +222,21 @@ class StixConverter:
                 )
                 stix_objects.extend(relationships)
 
-            # Create incident response case from security signal if config enabled
+            # Create incident response case from security signal if config enabled.
+            #
+            # Per-alert progress is logged at ``debug`` level rather
+            # than ``info`` so a high-volume cycle (the per-cycle cap
+            # is ``DataDogClient._MAX_SIGNALS_PER_CYCLE`` = 10,000
+            # alerts) does not flood the connector logs with one
+            # info-level line per alert. The cycle-level summary in
+            # ``connector.py::run`` already captures the operator-
+            # visible counters (alerts processed, STIX objects
+            # created, errors) and the converter-init log line at
+            # construction time captures whether case creation is
+            # globally enabled — neither needs to be repeated per
+            # alert.
             if self.create_incident_response_cases:
-                self.helper.log_info(
+                self.helper.log_debug(
                     f"Creating incident response case for alert {alert_data.get('id', 'unknown')}"
                 )
                 # Pass the observables we already created above so the
@@ -242,7 +254,7 @@ class StixConverter:
                 case_objects = self._create_incident_response_case_from_alert(
                     alert_data, existing_observables=observables
                 )
-                self.helper.log_info(f"Created {len(case_objects)} case objects")
+                self.helper.log_debug(f"Created {len(case_objects)} case objects")
                 stix_objects.extend(case_objects)
 
                 # Create relationship between incident and case
@@ -252,11 +264,7 @@ class StixConverter:
                     )
                     if case_relationship:
                         stix_objects.append(case_relationship)
-                        self.helper.log_info("Created incident-case relationship")
-            else:
-                self.helper.log_info(
-                    f"Incident response case creation is disabled (create_incident_response_cases={self.create_incident_response_cases})"
-                )
+                        self.helper.log_debug("Created incident-case relationship")
 
             # Create notes for context
             if alert_data.get("context") and incident:
@@ -298,7 +306,14 @@ class StixConverter:
         stix_objects = []
 
         try:
-            self.helper.log_info(
+            # All ``log_info`` lines in this helper are kept at
+            # ``debug`` level — they fire once per case-enabled alert
+            # and on a high-volume cycle (``_MAX_SIGNALS_PER_CYCLE`` =
+            # 10,000) would otherwise emit thousands of identical
+            # progress lines. The cycle-level summary in
+            # ``connector.py::run`` is the single info-level line per
+            # cycle that captures the operator-visible metrics.
+            self.helper.log_debug(
                 f"Starting case creation for alert {alert_data.get('id', 'unknown')}"
             )
 
@@ -319,7 +334,7 @@ class StixConverter:
                 "type": "alert",  # Mark as alert-based case
             }
 
-            self.helper.log_info(
+            self.helper.log_debug(
                 f"Case data prepared: name={case_data.get('name')}, type={case_data.get('type')}, severity={case_data.get('severity')}"
             )
 
@@ -339,22 +354,32 @@ class StixConverter:
             if existing_observables is not None:
                 observables = list(existing_observables)
                 include_observables_in_return = False
-                self.helper.log_info(
+                self.helper.log_debug(
                     f"Reusing {len(observables)} pre-built observables for case"
                 )
             else:
                 observables = self._create_observables_from_alert(alert_data)
                 include_observables_in_return = True
-                self.helper.log_info(f"Created {len(observables)} observables for case")
+                self.helper.log_debug(
+                    f"Created {len(observables)} observables for case"
+                )
 
             # Create custom incident response case object WITH observables
             case = self._create_custom_case_object(case_data, observables)
             if case:
                 stix_objects.append(case)
-                self.helper.log_info(
+                self.helper.log_debug(
                     f"Custom case object created successfully with {len(observables)} observables"
                 )
             else:
+                # ``log_warning`` here is intentional — failure to
+                # build the case SDO is a real per-alert error
+                # (the case-enabled path silently dropped the case
+                # for this alert) and operators need to see it. The
+                # earlier-in-this-helper progress lines were
+                # downgraded to debug because they fire on every
+                # successful alert; this branch only fires when
+                # something is actually wrong.
                 self.helper.log_warning("Failed to create custom case object")
                 return []
 
@@ -370,11 +395,11 @@ class StixConverter:
                     case, observables
                 )
                 stix_objects.extend(relationships)
-                self.helper.log_info(
+                self.helper.log_debug(
                     f"Created {len(relationships)} case-observable relationships"
                 )
 
-            self.helper.log_info(f"Total case objects created: {len(stix_objects)}")
+            self.helper.log_debug(f"Total case objects created: {len(stix_objects)}")
             return stix_objects
 
         except Exception as e:
@@ -521,7 +546,7 @@ class StixConverter:
                     if obs_id:
                         object_refs.append(obs_id)
 
-            self.helper.log_info(
+            self.helper.log_debug(
                 f"Case will have {len(object_refs)} observable refs, severity={severity}, priority={priority}"
             )
 
@@ -542,7 +567,7 @@ class StixConverter:
                 object_refs=object_refs,  # Add observable references
             )
 
-            self.helper.log_info(
+            self.helper.log_debug(
                 f"Created CustomObjectCaseIncident: {case.id} with {len(external_refs)} external refs"
             )
             return case
