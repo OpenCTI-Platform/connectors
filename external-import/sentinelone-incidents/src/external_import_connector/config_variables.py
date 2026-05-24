@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -22,13 +23,10 @@ class ConfigConnector:
         :return: Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        return config
+        if not os.path.isfile(config_file_path):
+            return {}
+        with open(config_file_path) as config_file:
+            return yaml.load(config_file, Loader=yaml.FullLoader)
 
     def _initialize_configurations(self) -> None:
         """
@@ -110,4 +108,25 @@ class ConfigConnector:
             raise ConnectorConfigurationError(
                 "SENTINELONE_INCIDENTS_IMPORT_START_DATE is not configured"
             )
+        # Validate the ISO-8601 shape at startup so a typo (or a
+        # legacy ``YYYY-MM-DD`` value missing the time component) is
+        # reported with a clear, contextual message instead of
+        # surfacing later as a generic ``ValueError`` raised deep in
+        # ``_parse_iso_datetime`` on the first scan cycle. The same
+        # ``Z`` → ``+00:00`` normalisation applied by the runtime
+        # parser is reproduced here so the sample value
+        # ``2026-01-01T00:00:00Z`` is accepted on every supported
+        # Python version (``datetime.fromisoformat`` only learned to
+        # accept the trailing ``Z`` in 3.11).
+        normalised_start_date = configured_import_start_date.strip()
+        if normalised_start_date.endswith("Z"):
+            normalised_start_date = normalised_start_date[:-1] + "+00:00"
+        try:
+            datetime.fromisoformat(normalised_start_date)
+        except ValueError as exc:
+            raise ConnectorConfigurationError(
+                f"SENTINELONE_INCIDENTS_IMPORT_START_DATE is not a valid "
+                f"ISO-8601 datetime (got {configured_import_start_date!r}): "
+                f"{exc}"
+            ) from exc
         self.import_start_date = configured_import_start_date

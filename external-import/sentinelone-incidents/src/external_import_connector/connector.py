@@ -178,8 +178,9 @@ class IncidentConnector:
         Notes, Indicators, Attack Patterns.
         """
 
-        self.helper.log_info(
-            f"Connector Beginning creation of {len(self.to_process)} applicable Incidents"
+        self.helper.connector_logger.info(
+            "Connector beginning creation of applicable incidents",
+            meta={"incident_count": len(self.to_process)},
         )
         for _, s1_incident in enumerate(self.to_process):
             s1_incident_id = s1_incident.get("id")
@@ -188,8 +189,9 @@ class IncidentConnector:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-            self.helper.log_info(
-                f"Connector Beggining Creation of Incident for S1 ID: {s1_incident_id}"
+            self.helper.connector_logger.info(
+                "Connector beginning creation of incident",
+                meta={"s1_incident_id": s1_incident_id},
             )
 
             stix_objects = []
@@ -267,4 +269,4 @@ class IncidentConnector:
 
             self.helper.api.work.to_processed(work_id, "completed creation of incident")
 
-        self.helper.log_info("Completed Incident Creation Process.")
+        self.helper.connector_logger.info("Completed incident creation process")

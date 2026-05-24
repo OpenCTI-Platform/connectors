@@ -1,20 +1,49 @@
-import logging
 import time
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Protocol
 
 import requests
 
 from .config_variables import ConfigConnector
 from .custom_exceptions import SentinelOnePermissionError
 
-# The timeout for the API request (rare backup)
 REQUEST_TIMEOUT = (10, 30)
 
+# All endpoints start with a leading ``/`` because
+# ``ConfigConnector`` strips the trailing ``/`` from ``s1_url``
+# (see ``config_variables.py``); composing the request URL with
+# ``s1_url + INCIDENTS_API_LOCATION`` therefore yields
+# ``https://<tenant>.sentinelone.net/web/api/v2.1/threats?...``
+# rather than the broken ``...netweb/api/...`` form a missing
+# leading slash would produce.
 INCIDENTS_API_LOCATION = (
     "/web/api/v2.1/threats?limit=50&sortBy=createdAt&sortOrder=desc&accountIds="
 )
 INCIDENT_NOTES_API_LOCATION_TEMPLATE = "/web/api/v2.1/threats/{incident_id}/notes?limit=1000&sortBy=createdAt&sortOrder=desc"
+
+
+class _MetaLogger(Protocol):
+    """Minimal structural type for the connector logger.
+
+    ``SentinelOneClient`` is constructed with
+    ``OpenCTIConnectorHelper.connector_logger`` (a pycti ``AppLogger``)
+    whose level methods accept an optional ``meta`` keyword for
+    structured context. The stdlib ``logging.Logger`` API does **not**
+    accept ``meta``, so annotating the parameter as ``logging.Logger``
+    (the previous shape) was misleading and would silently break a
+    type-checker if a stdlib logger was ever passed in. ``AppLogger``
+    is created dynamically inside the pycti ``logger(...)`` factory
+    and is not importable, so we capture the contract structurally
+    here.
+    """
+
+    def debug(self, message: str, meta: Optional[dict] = None) -> None: ...
+
+    def info(self, message: str, meta: Optional[dict] = None) -> None: ...
+
+    def warning(self, message: str, meta: Optional[dict] = None) -> None: ...
+
+    def error(self, message: str, meta: Optional[dict] = None) -> None: ...
 
 
 def _parse_utc(dt_str: Optional[str]) -> Optional[datetime]:
@@ -44,7 +73,7 @@ def _parse_utc(dt_str: Optional[str]) -> Optional[datetime]:
 
 class SentinelOneClient:
 
-    def __init__(self, logger: logging.Logger, config: ConfigConnector):
+    def __init__(self, logger: _MetaLogger, config: ConfigConnector):
         self.logger = logger
         self.config = config
         self.logger.info("SentinelOne Client Initialised Successfully.")
@@ -151,19 +180,28 @@ class SentinelOneClient:
 
     def fetch_incident_notes(self, incident_id: str) -> list:
         """
-        Fetches all notes from a single incident from SentinelOne via API
+        Fetches all notes from a single incident from SentinelOne via API.
+
+        Returns an empty list when ``_send_api_req`` could not retrieve
+        a usable response (transport failure, 429 retry exhaustion or a
+        non-200 status) so the caller's bundle assembly still completes
+        for the rest of the incident's STIX objects instead of crashing
+        with ``AttributeError: 'NoneType' object has no attribute 'get'``.
         """
 
         url = self.config.s1_url + INCIDENT_NOTES_API_LOCATION_TEMPLATE.format(
             incident_id=incident_id
         )
-        return self._send_api_req(url, "GET").get("data", [])
+        response = self._send_api_req(url, "GET")
+        if not response:
+            return []
+        return response.get("data", [])
 
     def _send_api_req(
         self,
         url: str,
         request_type: str,
-        payload: dict = {},
+        payload: Optional[dict] = None,
         wait_time: int = 1,
         attempts: int = 0,
     ) -> Optional[dict]:
@@ -171,8 +209,13 @@ class SentinelOneClient:
         Dynamic API request sender handling all
         important cases and retries.
 
-        Returns a dictionary of the response from the API
-        if all succeeds, otherwise returns False.
+        Returns the response decoded as a ``dict`` on a 2xx response
+        and ``None`` on a transport-level failure (429 retry exhaustion
+        or a non-200 status). Authentication failures (401) raise
+        :class:`SentinelOnePermissionError`. The ``None`` sentinel
+        matches the ``Optional[dict]`` return annotation, so callers
+        like :meth:`fetch_incident_notes` can safely fall back to an
+        empty result without an ``AttributeError`` on ``.get(...)``.
         """
 
         def calculate_exponential_delay(last_wait_time):
@@ -188,7 +231,7 @@ class SentinelOneClient:
             method=request_type,
             url=url,
             headers=headers,
-            data=payload,
+            data=payload or {},
             timeout=REQUEST_TIMEOUT,
         )
 
@@ -213,14 +256,14 @@ class SentinelOneClient:
                 self.logger.error(
                     f"Error, unable to send Payload to SentinelOne after: {self.config.max_api_attempts} attempts."
                 )
-            return False
+            return None
 
         # Random errors should be logged with context of their origin
         elif response.status_code != 200:
             self.logger.info(f"Error, Request got Response: {response.status_code}")
             self.logger.debug(f"URL Used: {url}")
             self.logger.debug(f"S1 responded with: {response.text}")
-            return False
+            return None
 
         # Dynamic, return the response as a dict.
         return response.json()

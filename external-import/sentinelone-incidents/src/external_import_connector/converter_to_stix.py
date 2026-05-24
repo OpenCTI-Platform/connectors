@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 import stix2
 from pycti import (
     AttackPattern,
@@ -60,9 +62,17 @@ class ConverterToStix:
             if indicator.get("category", "") != ""
         ]
 
+        # ``ConfigConnector`` strips the trailing ``/`` from
+        # ``s1_url``, so concatenating ``{s1_url}incidents/...``
+        # used to produce a broken URL of the form
+        # ``https://<tenant>.sentinelone.netincidents/threats/...``.
+        # Compose with ``urljoin`` so the host and the incident path
+        # are always separated by exactly one ``/``, regardless of
+        # whether the operator stored ``s1_url`` with or without a
+        # trailing slash.
         external_s1_ref = stix2.ExternalReference(
             source_name="SentinelOne",
-            url=f"{s1_url}incidents/threats/{incident_id}/overview",
+            url=urljoin(f"{s1_url}/", f"incidents/threats/{incident_id}/overview"),
             description="View Incident In SentinelOne",
         )
 
@@ -77,7 +87,7 @@ class ConverterToStix:
             description=description,
             labels=labels,
             created=created,
-            external_references=[external_s1_ref] if external_s1_ref else None,
+            external_references=[external_s1_ref],
             object_marking_refs=[stix2.TLP_RED.id],
             custom_properties={"source": self.author.name},
         )
