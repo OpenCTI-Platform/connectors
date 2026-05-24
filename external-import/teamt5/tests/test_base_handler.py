@@ -1,4 +1,4 @@
-"""Unit tests for ``teamt5_connector.BaseHandler``.
+"""Unit tests for ``teamt5_connector.base_handler``.
 
 Covers the pagination / failure-handling contract of
 ``BaseHandler.retrieve_bundle_references``:
@@ -15,7 +15,7 @@ Covers the pagination / failure-handling contract of
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from teamt5_connector.BaseHandler import _MAX_PAGE_FAILURES, BaseHandler
+from teamt5_connector.base_handler import _MAX_PAGE_FAILURES, BaseHandler
 
 
 class _StubHandler(BaseHandler):

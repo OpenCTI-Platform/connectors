@@ -1,4 +1,4 @@
-"""Unit tests for ``teamt5_connector.ReportHandler``.
+"""Unit tests for ``teamt5_connector.report_handler``.
 
 Pins the URL-fallback contract added in this PR:
 
@@ -21,7 +21,7 @@ Pins the URL-fallback contract added in this PR:
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from teamt5_connector.ReportHandler import ReportHandler
+from teamt5_connector.report_handler import ReportHandler
 
 
 def _make_handler(api_base_url="https://api.threatvision.org/"):

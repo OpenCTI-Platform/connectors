@@ -1,4 +1,4 @@
-from .BaseHandler import BaseHandler
+from .base_handler import BaseHandler
 
 
 class IndicatorBundleHandler(BaseHandler):

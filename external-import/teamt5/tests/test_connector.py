@@ -81,7 +81,11 @@ class TestProcessMessageNoNewItemsLogBranching:
     """
 
     def test_logs_no_new_items_when_listing_truly_empty(self):
-        connector, helper, report_handler, _ = _make_connector(
+        # ``report_handler`` is unpacked from ``_make_connector`` but
+        # not read by this test (it asserts against the helper's log
+        # calls instead). Discard the slot with ``_`` to keep flake8
+        # F841 happy.
+        connector, helper, _, _ = _make_connector(
             handler_aborted=False, retrieved_refs=[]
         )
 
@@ -120,7 +124,8 @@ class TestProcessMessageNoNewItemsLogBranching:
         ), f"unexpected aborted warning on clean run: {warning_messages}"
 
     def test_logs_aborted_warning_when_handler_aborted_with_no_refs(self):
-        connector, helper, report_handler, _ = _make_connector(
+        # Same ``_`` discard as the sibling clean-run test above.
+        connector, helper, _, _ = _make_connector(
             handler_aborted=True, retrieved_refs=[]
         )
 

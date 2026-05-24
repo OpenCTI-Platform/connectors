@@ -9,8 +9,8 @@ from stix2 import Identity
 from teamt5_connector.settings import ConnectorSettings
 from teamt5_services import Teamt5Client
 
-from .IndicatorBundleHandler import IndicatorBundleHandler
-from .ReportHandler import ReportHandler
+from .indicator_bundle_handler import IndicatorBundleHandler
+from .report_handler import ReportHandler
 
 
 class TeamT5Connector:
