@@ -10,7 +10,8 @@ from pycti import OpenCTIConnectorHelper
 from src import ConfigLoader
 
 from .constants import (
-    ENTERPRISE_ATTACK_KILL_CHAIN_PHASES,
+    ENTERPRISE_ATTACK_KILL_CHAIN_PHASES_V18,
+    ENTERPRISE_ATTACK_KILL_CHAIN_PHASES_V19,
     ICS_ATTACK_KILL_CHAIN_PHASES,
     MOBILE_ATTACK_KILL_CHAIN_PHASES,
     STATEMENT_MARKINGS,
@@ -176,17 +177,58 @@ class Mitre:
         return None
 
     @staticmethod
-    def _build_kill_chain_order_mapping() -> dict:
+    def _build_kill_chain_order_mapping(
+        collection_version: Optional[str] = None,
+    ) -> dict:
         """
         Build a mapping from (kill_chain_name, phase_name) to x_opencti_order.
+
+        The Enterprise variant is selected from ``collection_version``
+        because MITRE ATT&CK v19 (April 2026) split the legacy
+        ``defense-evasion`` tactic into ``stealth`` /
+        ``defense-impairment`` and shifted every subsequent tactic's
+        order up by one. Pre-v19 bundles (operators pinning
+        ``MITRE_ENTERPRISE_FILE_URL`` to an older release) carry
+        ``defense-evasion``; v19+ bundles carry the two new tactic
+        names. Selecting the right variant at build time keeps the
+        order mapping aligned with whichever schema the inbound bundle
+        actually uses — without this guard, a v18 bundle would lose
+        ``x_opencti_order`` on every Defense Evasion attack-pattern
+        (and OpenCTI would silently default the order to 0 in the
+        UI).
+
+        Mobile and ICS mappings are unchanged across v18 / v19 (the
+        Defense Evasion split is Enterprise-only per the official
+        ATT&CK v19 release notes), so they share a single static
+        mapping regardless of the collection version.
+
+        Parameters
+        ----------
+        collection_version : Optional[str]
+            The major version of the bundle's ``x-mitre-collection``
+            object (e.g. ``"18"``, ``"19"``). When ``None`` or
+            unparseable (synthetic bundles, partial fixtures, etc.),
+            falls back to the v19+ shape — the canonical
+            ``enterprise-attack/enterprise-attack.json`` on MITRE's
+            CTI repo currently ships v19, so the unknown-version path
+            mirrors the most likely real-world input.
 
         Returns
         -------
         dict
             A dictionary mapping (kill_chain_name, phase_name) tuples to order values.
         """
+        try:
+            major = int(collection_version) if collection_version else None
+        except (TypeError, ValueError):
+            major = None
+        enterprise_phases = (
+            ENTERPRISE_ATTACK_KILL_CHAIN_PHASES_V18
+            if major is not None and major < 19
+            else ENTERPRISE_ATTACK_KILL_CHAIN_PHASES_V19
+        )
         mapping = {}
-        for phase in ENTERPRISE_ATTACK_KILL_CHAIN_PHASES:
+        for phase in enterprise_phases:
             mapping[("mitre-attack", phase["name"])] = phase["order"]
         for phase in MOBILE_ATTACK_KILL_CHAIN_PHASES:
             mapping[("mitre-mobile-attack", phase["name"])] = phase["order"]
@@ -208,9 +250,6 @@ class Mitre:
         url : str
             The URL from which the bundle was retrieved (used to check if CAPEC).
         """
-        # Build the order mapping
-        order_mapping = self._build_kill_chain_order_mapping()
-
         # Check if this is CAPEC
         is_capec = "capec" in url.lower()
 
@@ -227,6 +266,25 @@ class Mitre:
                     "Could not find x-mitre-collection version in bundle, skipping versioned kill chain phases"
                 )
 
+        # Build the order mapping. ``collection_version`` selects the
+        # Enterprise variant (v18 vs v19+) so a bundle pinned to a
+        # pre-v19 release still maps ``defense-evasion`` correctly —
+        # see :meth:`_build_kill_chain_order_mapping` for the full
+        # rationale.
+        order_mapping = self._build_kill_chain_order_mapping(collection_version)
+
+        # Track per-cycle missing-phase pairs so the warning logs once
+        # per unique ``(kill_chain_name, phase_name)`` rather than once
+        # per attack-pattern. The previous shape fired the warning
+        # inside the per-phase loop, which on a missing tactic with N
+        # techniques produced N identical warnings per cycle — for a
+        # MITRE-scale bundle (Enterprise carries ~600 techniques across
+        # 14 tactics) that could turn a single mapping miss into
+        # hundreds of duplicate log lines per cycle. Deduping at the
+        # cycle level keeps the operator-visible signal sharp without
+        # losing it on the first appearance of an unmapped phase.
+        missing_phases: set[tuple[str, str]] = set()
+
         # Process all attack patterns
         for obj in stix_bundle["objects"]:
             if obj.get("type") == "attack-pattern" and "kill_chain_phases" in obj:
@@ -238,21 +296,21 @@ class Mitre:
                     # Look up the order for this phase
                     order = order_mapping.get((kill_chain_name, phase_name))
 
-                    # Warn if no mapping found for ATT&CK phases (CAPEC phases are expected to be unmapped)
+                    # Record the miss for the deduped per-cycle summary
+                    # (CAPEC phases are expected to be unmapped — no
+                    # ``x_opencti_order`` is required for them — so
+                    # only track ATT&CK matrices).
                     if (
                         order is None
                         and not is_capec
                         and kill_chain_name
-                        in [
+                        in (
                             "mitre-attack",
                             "mitre-mobile-attack",
                             "mitre-ics-attack",
-                        ]
-                    ):
-                        self.helper.log_warning(
-                            f"No order mapping found for kill chain phase: "
-                            f"'{kill_chain_name}' / '{phase_name}' — x_opencti_order will default to 0"
                         )
+                    ):
+                        missing_phases.add((kill_chain_name, phase_name))
 
                     # Build enriched phase with x_opencti_order
                     enriched_phase = {
@@ -265,11 +323,11 @@ class Mitre:
                     enriched_phases.append(enriched_phase)
 
                     # Add versioned kill chain phase for ATT&CK matrices
-                    if collection_version and kill_chain_name in [
+                    if collection_version and kill_chain_name in (
                         "mitre-attack",
                         "mitre-mobile-attack",
                         "mitre-ics-attack",
-                    ]:
+                    ):
                         versioned_phase = {
                             "kill_chain_name": f"{kill_chain_name}-v{collection_version}",
                             "phase_name": phase_name,
@@ -280,6 +338,25 @@ class Mitre:
 
                 # Replace with enriched phases
                 obj["kill_chain_phases"] = enriched_phases
+
+        # Emit one structured warning per unique missing phase so a
+        # future MITRE tactic addition surfaces as a clear actionable
+        # signal in the operator's logs rather than getting silently
+        # defaulted to ``x_opencti_order=0`` in the UI. Using
+        # ``connector_logger.warning`` (the structured-logger API) so
+        # the ``kill_chain_name`` / ``phase_name`` ride as proper
+        # metadata fields — the older ``helper.log_warning`` would
+        # collapse them into the message body.
+        for kill_chain_name, phase_name in sorted(missing_phases):
+            self.helper.connector_logger.warning(
+                "No order mapping found for kill chain phase; "
+                "x_opencti_order will default to 0 in the UI",
+                meta={
+                    "kill_chain_name": kill_chain_name,
+                    "phase_name": phase_name,
+                    "collection_version": collection_version,
+                },
+            )
 
     def process_data(self):
         unixtime_now = get_unixtime_now()
