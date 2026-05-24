@@ -162,8 +162,17 @@ class IncidentConnector:
         self.helper.connector_logger.info(f"Found {len(self.to_process)} incidents")
 
         for incident in self.to_process:
+            # See the ``_process_incidents`` rationale for the
+            # ``threatInfo.threatId`` preference: SentinelOne's v2.1
+            # ``/threats`` items expose the canonical identifier
+            # there; the top-level ``id`` is only a convenience mirror
+            # in current responses. Use the same preference here so
+            # the debug log line stays useful even on a payload that
+            # omits the top-level alias.
+            threat_info = incident.get("threatInfo", {})
+            incident_id = threat_info.get("threatId") or incident.get("id")
             self.helper.connector_logger.debug(
-                f"Found applicable incident with ID: {incident.get('id')}"
+                f"Found applicable incident with ID: {incident_id}"
             )
 
         self.helper.connector_logger.info("Retrieval process complete")
@@ -183,7 +192,21 @@ class IncidentConnector:
             meta={"incident_count": len(self.to_process)},
         )
         for _, s1_incident in enumerate(self.to_process):
-            s1_incident_id = s1_incident.get("id")
+            # SentinelOne's v2.1 ``/threats`` items expose the
+            # canonical identifier under ``threatInfo.threatId``;
+            # the top-level ``id`` is populated as a convenience
+            # mirror in current responses but is not guaranteed by
+            # the API documentation. Prefer the nested field and
+            # fall back to the top-level alias so the notes endpoint
+            # URL composition (``threats/{incident_id}/notes``) and
+            # the STIX external-reference URL composed in
+            # ``ConverterToStix.create_incident`` stay correct even
+            # if a future SentinelOne release drops the top-level
+            # mirror — otherwise this would silently become
+            # ``threats/None/notes`` and break every incident's
+            # bundle assembly.
+            threat_info = s1_incident.get("threatInfo", {})
+            s1_incident_id = threat_info.get("threatId") or s1_incident.get("id")
             friendly_name = f"S1 Incident Connector: Creating Incident From Threat with ID: {s1_incident_id}"
 
             work_id = self.helper.api.work.initiate_work(

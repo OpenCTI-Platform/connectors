@@ -105,7 +105,14 @@ class SentinelOneClient:
             page_url = url + (f"&skip={skip}" if skip > 0 else "")
             response = self._send_api_req(page_url, "GET")
 
-            if not response:
+            # ``_send_api_req`` documents ``None`` as the only failure
+            # sentinel — a successful 204 / empty-body 2xx now returns
+            # an empty ``dict`` (which is falsy in Python). Comparing
+            # against ``None`` explicitly so a legitimate empty success
+            # response does not get misclassified as a failure that
+            # aborts pagination on the rest of the SentinelOne /threats
+            # window.
+            if response is None:
                 self.logger.error("API request failed, stopping fetch.")
                 break
 
@@ -118,6 +125,16 @@ class SentinelOneClient:
             for incident in page_data:
                 threat_info = incident.get("threatInfo", {})
                 incident_created_at = _parse_utc(threat_info.get("createdAt", ""))
+                # SentinelOne's v2.1 ``/threats`` items expose the
+                # canonical identifier under ``threatInfo.threatId``;
+                # the top-level ``id`` is populated as a convenience
+                # mirror in current responses but is not guaranteed
+                # by the API documentation. Prefer the nested field
+                # and fall back to the top-level alias so log lines,
+                # downstream URL composition and STIX external
+                # references stay correct even if a future
+                # SentinelOne release drops the top-level mirror.
+                incident_id = threat_info.get("threatId") or incident.get("id")
 
                 # Skip incidents with a missing/empty ``createdAt``
                 # rather than stopping the pagination: ``_parse_utc``
@@ -131,7 +148,7 @@ class SentinelOneClient:
                 if incident_created_at is None:
                     self.logger.warning(
                         "Incident has no createdAt timestamp; skipping",
-                        meta={"incident_id": incident.get("id")},
+                        meta={"incident_id": incident_id},
                     )
                     continue
 
@@ -193,7 +210,13 @@ class SentinelOneClient:
             incident_id=incident_id
         )
         response = self._send_api_req(url, "GET")
-        if not response:
+        # See the ``fetch_incidents`` rationale for the explicit
+        # ``is None`` check: a successful 204 / empty-body 2xx returns
+        # ``{}`` and ``not {}`` is ``True``, which would otherwise be
+        # treated as a transport failure and degrade silently to an
+        # empty notes list even when the API legitimately said
+        # "no notes for this incident".
+        if response is None:
             return []
         return response.get("data", [])
 
