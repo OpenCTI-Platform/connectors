@@ -3,7 +3,6 @@
 import json
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import pytest
 from crowdstrike_feeds_connector.actor.builder import ActorBundleBuilder
@@ -37,22 +36,6 @@ def author_identity() -> Identity:
 def tlp_marking() -> MarkingDefinition:
     """Fixture for TLP marking."""
     return TLP_AMBER
-
-
-@pytest.fixture
-def crowdstrike_config_standard() -> dict[str, str]:
-    """Fixture for standard CrowdStrike configuration."""
-    return {
-        "OPENCTI_URL": "http://localhost:8080",
-        "OPENCTI_TOKEN": f"{uuid4()}",
-        "CONNECTOR_ID": f"{uuid4()}",
-        "CONNECTOR_NAME": "CrowdStrike Test",
-        "CONNECTOR_SCOPE": "crowdstrike",
-        "CROWDSTRIKE_BASE_URL": "https://api.crowdstrike.com",
-        "CROWDSTRIKE_CLIENT_ID": f"{uuid4()}",
-        "CROWDSTRIKE_CLIENT_SECRET": f"{uuid4()}",
-        "CONNECTOR_LOG_LEVEL": "info",
-    }
 
 
 # =====================
@@ -354,3 +337,58 @@ def test_related_actor_builder_raw_values_not_stix_mapped(
     assert "Nation State" in labels
     # STIX mapped values should NOT appear as labels
     assert "geopolitical" not in labels
+
+
+# =====================
+# Dedup tests (helper contract)
+# =====================
+
+
+def test_actor_builder_duplicate_motivations_dedup_to_single_label(
+    fake_actor_data: dict,
+    author_identity: Identity,
+    tlp_marking: MarkingDefinition,
+) -> None:
+    """
+    Scenario: Duplicate motivation entries produce a single label
+    The helper's docstring promises a deduped output list — when
+    CrowdStrike returns the same motivation twice (e.g. due to an
+    upstream API hiccup or analyst tagging the actor twice), the
+    label must appear only once on the IntrusionSet.
+    """
+    actor = dict(fake_actor_data)
+    actor["motivations"] = [
+        {"id": 1, "slug": "criminal", "value": "Criminal"},
+        {"id": 2, "slug": "espionage", "value": "Espionage"},
+        {"id": 1, "slug": "criminal", "value": "Criminal"},
+    ]
+    actor["actor_type"] = None
+
+    intrusion_set = _build_intrusion_set(actor, author_identity, tlp_marking)
+
+    labels = intrusion_set.get("labels") or []
+    assert labels.count("Criminal") == 1
+    assert labels.count("Espionage") == 1
+
+
+def test_actor_builder_actor_type_matching_motivation_dedup(
+    fake_actor_data: dict,
+    author_identity: Identity,
+    tlp_marking: MarkingDefinition,
+) -> None:
+    """
+    Scenario: An ``actor_type`` that exactly matches a motivation
+    value collapses to a single label (the helper's deduped
+    contract applies across both source fields, not just within
+    the motivations list).
+    """
+    actor = dict(fake_actor_data)
+    actor["motivations"] = [
+        {"id": 1, "slug": "criminal", "value": "Criminal"},
+    ]
+    actor["actor_type"] = "Criminal"
+
+    intrusion_set = _build_intrusion_set(actor, author_identity, tlp_marking)
+
+    labels = intrusion_set.get("labels") or []
+    assert labels.count("Criminal") == 1

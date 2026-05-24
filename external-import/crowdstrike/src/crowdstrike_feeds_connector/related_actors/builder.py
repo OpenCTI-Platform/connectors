@@ -7,7 +7,7 @@ from typing import Any, cast
 from crowdstrike_feeds_services.utils import (
     create_external_reference,
     create_intrusion_set,
-    extract_actor_motivation_labels,
+    extract_actor_intrusion_set_labels,
     normalize_start_time_and_stop_time,
     timestamp_to_datetime,
 )
@@ -255,12 +255,12 @@ class RelatedActorBundleBuilder:
             )
 
         # Labels: raw CrowdStrike motivation values and actor_type.
-        # Centralised in ``extract_actor_motivation_labels`` so this
-        # cross-feed path emits exactly the same labels the
+        # Centralised in ``extract_actor_intrusion_set_labels`` so
+        # this cross-feed path emits exactly the same labels the
         # ``ActorBundleBuilder`` full-actor path emits for the same
         # actor record — see the helper's docstring for the
         # rationale and the input-shape contract.
-        labels = extract_actor_motivation_labels(actor)
+        labels = extract_actor_intrusion_set_labels(actor)
 
         return create_intrusion_set(
             name,

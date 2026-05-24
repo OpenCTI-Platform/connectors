@@ -430,20 +430,23 @@ def create_attack_pattern(
     )
 
 
-def extract_actor_motivation_labels(
+def extract_actor_intrusion_set_labels(
     actor: Mapping[str, Any],
 ) -> Optional[List[str]]:
     """Extract IntrusionSet labels from a CrowdStrike actor's raw fields.
 
     Both the ``ActorBundleBuilder`` (full-actor path) and the
     ``RelatedActorBundleBuilder`` (cross-feed actor reference path)
-    surface the actor's raw ``motivations`` values and the
+    surface the actor's raw ``motivations`` values *and* the
     ``actor_type`` string as IntrusionSet labels so analysts can
     filter / pivot by motivation or adversary type without opening
     the detail view. The two extraction paths used to live as
     duplicated inline code in each builder; this helper centralises
     them so any future change (e.g. accepting an additional source
     field, normalising a new shape) only has to land in one place.
+    The name reflects the full output contract — both motivations
+    AND ``actor_type`` flow into the returned labels list — rather
+    than just one of the two source fields.
 
     Input shape:
 
@@ -465,7 +468,11 @@ def extract_actor_motivation_labels(
     * Returns the deduped list of labels in input order, or ``None``
       when neither field produced any value (so the caller can pass
       the result straight into ``create_intrusion_set(labels=...)``
-      without a separate empty-list guard).
+      without a separate empty-list guard). Dedup uses a seen-set
+      against the post-strip values, so a duplicate motivation
+      entry or an ``actor_type`` that exactly matches a motivation
+      value collapses to a single label — matching the docstring's
+      "deduped" contract that the previous shape silently violated.
 
     The raw CrowdStrike motivation values are kept verbatim — the
     STIX-mapped motivation values (``personal-gain`` etc.) are still
@@ -474,6 +481,12 @@ def extract_actor_motivation_labels(
     only adds the analyst-friendly raw values as labels.
     """
     labels: List[str] = []
+    seen: set[str] = set()
+
+    def _append_unique(value: str) -> None:
+        if value and value not in seen:
+            seen.add(value)
+            labels.append(value)
 
     actor_motivations = actor.get("motivations")
     if isinstance(actor_motivations, list):
@@ -484,14 +497,11 @@ def extract_actor_motivation_labels(
                 ).strip()
             else:
                 value = str(motivation).strip()
-            if value:
-                labels.append(value)
+            _append_unique(value)
 
     actor_type = actor.get("actor_type")
     if actor_type:
-        actor_type_str = str(actor_type).strip()
-        if actor_type_str:
-            labels.append(actor_type_str)
+        _append_unique(str(actor_type).strip())
 
     return labels or None
 

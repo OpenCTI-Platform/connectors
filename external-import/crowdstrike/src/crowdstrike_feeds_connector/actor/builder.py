@@ -13,7 +13,7 @@ from crowdstrike_feeds_services.utils import (
     create_sectors_from_entities,
     create_targets_relationships,
     create_uses_relationships,
-    extract_actor_motivation_labels,
+    extract_actor_intrusion_set_labels,
     normalize_start_time_and_stop_time,
     remove_html_tags,
     timestamp_to_datetime,
@@ -111,11 +111,11 @@ class ActorBundleBuilder:
         # Surface the raw CrowdStrike ``motivations`` values + the
         # ``actor_type`` string as IntrusionSet labels (analyst-side
         # filter pivot). Extraction is centralised in
-        # ``extract_actor_motivation_labels`` so the
+        # ``extract_actor_intrusion_set_labels`` so the
         # ``RelatedActorBundleBuilder`` cross-feed path emits exactly
         # the same set of labels for the same actor record — see the
         # rationale in the helper's docstring.
-        labels = extract_actor_motivation_labels(self.actor)
+        labels = extract_actor_intrusion_set_labels(self.actor)
 
         return create_intrusion_set(
             self.actor["name"],
