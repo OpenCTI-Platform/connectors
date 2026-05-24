@@ -104,8 +104,10 @@ class Mitre:
             # First find all revoked ids
             revoked_objects = list(
                 filter(
-                    lambda stix: stix.get("revoked", False) is True
-                    or stix.get("x_capec_status", "") == "Deprecated",
+                    lambda stix: (
+                        stix.get("revoked", False) is True
+                        or stix.get("x_capec_status", "") == "Deprecated"
+                    ),
                     stix_objects,
                 )
             )
@@ -235,6 +237,22 @@ class Mitre:
 
                     # Look up the order for this phase
                     order = order_mapping.get((kill_chain_name, phase_name))
+
+                    # Warn if no mapping found for ATT&CK phases (CAPEC phases are expected to be unmapped)
+                    if (
+                        order is None
+                        and not is_capec
+                        and kill_chain_name
+                        in [
+                            "mitre-attack",
+                            "mitre-mobile-attack",
+                            "mitre-ics-attack",
+                        ]
+                    ):
+                        self.helper.log_warning(
+                            f"No order mapping found for kill chain phase: "
+                            f"'{kill_chain_name}' / '{phase_name}' — x_opencti_order will default to 0"
+                        )
 
                     # Build enriched phase with x_opencti_order
                     enriched_phase = {

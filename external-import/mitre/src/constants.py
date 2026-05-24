@@ -10,14 +10,15 @@ ENTERPRISE_ATTACK_KILL_CHAIN_PHASES = [
     {"name": "execution", "order": 3},
     {"name": "persistence", "order": 4},
     {"name": "privilege-escalation", "order": 5},
-    {"name": "defense-evasion", "order": 6},
-    {"name": "credential-access", "order": 7},
-    {"name": "discovery", "order": 8},
-    {"name": "lateral-movement", "order": 9},
-    {"name": "collection", "order": 10},
-    {"name": "command-and-control", "order": 11},
-    {"name": "exfiltration", "order": 12},
-    {"name": "impact", "order": 13},
+    {"name": "stealth", "order": 6},
+    {"name": "defense-impairment", "order": 7},
+    {"name": "credential-access", "order": 8},
+    {"name": "discovery", "order": 9},
+    {"name": "lateral-movement", "order": 10},
+    {"name": "collection", "order": 11},
+    {"name": "command-and-control", "order": 12},
+    {"name": "exfiltration", "order": 13},
+    {"name": "impact", "order": 14},
 ]
 
 MOBILE_ATTACK_KILL_CHAIN_PHASES = [
