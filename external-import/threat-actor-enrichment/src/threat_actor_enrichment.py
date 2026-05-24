@@ -19,11 +19,11 @@ SCROLL_SIZE = 200
 class ThreatActorEnrichment:
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            with open(config_file_path) as config_file:
+                config = yaml.load(config_file, Loader=yaml.FullLoader)
+        else:
+            config = {}
 
         self.helper = OpenCTIConnectorHelper(config)
 
@@ -78,28 +78,50 @@ class ThreatActorEnrichment:
         return Elasticsearch(self.es_host, **kwargs)
 
     def _fetch_all_threat_actors(self, es: Elasticsearch) -> list[dict]:
-        """Fetch every threat-actor-group with its rel_uses links via scroll."""
+        """Fetch every threat-actor-group with its rel_uses links via scroll.
+
+        OpenCTI stores denormalised relationships as **literal flat
+        top-level keys with a dot in the name** (e.g.
+        ``rel_uses.internal_id``) rather than as nested objects — see
+        ``opencti-graphql/src/database/engine.ts`` where the indexer
+        manipulates ``ctx._source['rel_uses.internal_id']`` directly,
+        and ``schema/general.js::buildRefRelationKey`` which composes
+        the field name as ``${REL_INDEX_PREFIX}${type}.${field}``. ES
+        ``_source`` filtering, on the other hand, interprets dotted
+        paths as nested traversal, so requesting
+        ``_source=["rel_uses.internal_id"]`` silently strips the field
+        from the returned hit and the connector ends up with an empty
+        malware list for every threat actor — silently a no-op.
+
+        Use the ``fields`` API for the dotted-key field so ES returns
+        it as a flat list at ``hit["fields"]["rel_uses.internal_id"]``
+        via the mapping, and keep ``_source`` for the plain attributes
+        we actually need to read by their canonical names. Sort by
+        ``_doc`` for the recommended efficient full-index scroll
+        pattern (no scoring, no sort overhead), and always release the
+        scroll context (the ES default is 5 min retention; releasing
+        early frees server resources even if the caller crashes
+        mid-iteration).
+        """
         results = []
         resp = es.search(
             index=self.sdo_index,
             scroll="2m",
             size=SCROLL_SIZE,
             query={"term": {"entity_type.keyword": "threat-actor-group"}},
-            _source=[
-                "name",
-                "internal_id",
-                "last_seen",
-                "first_seen",
-                "rel_uses.internal_id",
-            ],
+            sort=["_doc"],
+            _source=["name", "internal_id", "last_seen", "first_seen"],
+            fields=["rel_uses.internal_id"],
         )
         scroll_id = resp["_scroll_id"]
-        results.extend(resp["hits"]["hits"])
-        while len(resp["hits"]["hits"]) > 0:
-            resp = es.scroll(scroll_id=scroll_id, scroll="2m")
-            scroll_id = resp["_scroll_id"]
+        try:
             results.extend(resp["hits"]["hits"])
-        es.clear_scroll(scroll_id=scroll_id)
+            while len(resp["hits"]["hits"]) > 0:
+                resp = es.scroll(scroll_id=scroll_id, scroll="2m")
+                scroll_id = resp["_scroll_id"]
+                results.extend(resp["hits"]["hits"])
+        finally:
+            es.clear_scroll(scroll_id=scroll_id)
         return results
 
     def _get_latest_indicator_date(
@@ -173,6 +195,29 @@ class ThreatActorEnrichment:
             return None
 
     @staticmethod
+    def _format_last_seen(dt: datetime) -> str:
+        """Serialise a ``datetime`` to OpenCTI's canonical ``last_seen`` shape.
+
+        OpenCTI stores ``last_seen`` as a UTC ISO-8601 timestamp with
+        millisecond precision and a ``Z`` suffix
+        (``YYYY-MM-DDTHH:MM:SS.sssZ``). The previous shape used
+        ``strftime("%Y-%m-%dT%H:%M:%S.000Z")`` which (a) truncated the
+        millisecond field to ``.000``, dropping any sub-second
+        precision the source carried, and (b) tacked a ``Z`` on without
+        converting to UTC — so a ``best_dt`` with a ``+02:00`` offset
+        would have been written as if it were UTC, silently moving
+        ``last_seen`` two hours backward. Normalise to UTC, then
+        compose the canonical millisecond shape explicitly so the
+        output is timezone-correct and preserves the source precision.
+        """
+        if dt.tzinfo is None:
+            dt_utc = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt_utc = dt.astimezone(timezone.utc)
+        millis = dt_utc.microsecond // 1000
+        return dt_utc.strftime("%Y-%m-%dT%H:%M:%S.") + f"{millis:03d}Z"
+
+    @staticmethod
     def _is_stale(current_last_seen: str | None) -> bool:
         """Check if last_seen is missing, epoch-zero, or far-future."""
         if not current_last_seen:
@@ -197,31 +242,35 @@ class ThreatActorEnrichment:
             ta_internal_id = src.get("internal_id")
             current_last_seen = src.get("last_seen")
 
-            # rel_uses.internal_id is a flat dot-notation field in ES
-            malware_ids = src.get("rel_uses.internal_id", [])
+            # ``rel_uses.internal_id`` is a literal flat top-level
+            # dotted-key in OpenCTI's ES mapping (see
+            # ``_fetch_all_threat_actors``); the ``fields`` API
+            # returns it as a flat list at ``hit["fields"][...]``.
+            fields = ta_hit.get("fields") or {}
+            malware_ids = fields.get("rel_uses.internal_id") or []
 
             try:
-                candidate_dates: list[str] = []
+                # Collect candidate dates as ``(parsed, raw)`` tuples
+                # so we can ``max`` on the parsed ``datetime`` (a
+                # lex-string compare across mixed ISO offsets or
+                # precisions can pick the wrong value) but still keep
+                # the raw source string for logging.
+                candidate_dates: list[tuple[datetime, str]] = []
 
-                ind_date = self._get_latest_indicator_date(es, malware_ids)
-                if ind_date:
-                    candidate_dates.append(ind_date)
-
-                rpt_date = self._get_latest_report_date(es, malware_ids)
-                if rpt_date:
-                    candidate_dates.append(rpt_date)
+                for raw in (
+                    self._get_latest_indicator_date(es, malware_ids),
+                    self._get_latest_report_date(es, malware_ids),
+                ):
+                    parsed = self._parse_date(raw)
+                    if parsed is not None:
+                        candidate_dates.append((parsed, raw))
 
                 if not candidate_dates:
                     skipped += 1
                     continue
 
-                best_date_str = max(candidate_dates)
-                best_dt = self._parse_date(best_date_str)
+                best_dt, _best_raw = max(candidate_dates, key=lambda pair: pair[0])
                 current_dt = self._parse_date(current_last_seen)
-
-                if best_dt is None:
-                    skipped += 1
-                    continue
 
                 should_update = self._is_stale(current_last_seen) or (
                     current_dt is not None and best_dt > current_dt
@@ -231,7 +280,7 @@ class ThreatActorEnrichment:
                     skipped += 1
                     continue
 
-                new_last_seen = best_dt.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+                new_last_seen = self._format_last_seen(best_dt)
 
                 self.helper.api.stix_domain_object.update_field(
                     id=ta_internal_id,
@@ -258,13 +307,6 @@ class ThreatActorEnrichment:
         while True:
             try:
                 timestamp = int(time.time())
-                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                friendly_name = "Threat Actor Enrichment run @ " + now.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
 
                 current_state = self.helper.get_state()
                 if current_state and "last_run" in current_state:
@@ -280,19 +322,56 @@ class ThreatActorEnrichment:
                     self.helper.log_info("Connector has never run")
 
                 interval_seconds = int(self.interval) * 60 * 60
+                # Only initiate a work when we're actually going to
+                # process — the previous shape created a fresh work
+                # on every 60-second loop tick regardless of the
+                # interval check, leaving one dangling "in progress"
+                # work per minute (≈ 1440 per day) when the connector
+                # was idle waiting for the next cycle. ``initiate_work``
+                # has no counterpart cleanup on the idle path, so any
+                # work we open here must be closed by ``to_processed``
+                # on the same iteration.
                 if last_run is None or (timestamp - last_run) > interval_seconds:
-                    self._process_enrichment()
-
-                    utc_time = calendar.timegm(
-                        datetime.now(timezone.utc).utctimetuple()
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                    friendly_name = "Threat Actor Enrichment run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
                     )
-                    self.helper.set_state({"last_run": utc_time})
-                    message = (
-                        f"Connector ran successfully, next run in "
-                        f"{self.interval} hours"
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
                     )
-                    self.helper.api.work.to_processed(work_id, message)
-                    self.helper.log_info(message)
+                    # Pre-assign so the ``finally`` below can always
+                    # reference ``message`` even if a
+                    # ``KeyboardInterrupt`` / ``SystemExit`` (which the
+                    # inner ``except Exception`` deliberately does not
+                    # catch) interrupts the body before either branch
+                    # assigns it — otherwise the cleanup would mask
+                    # the real exception with ``UnboundLocalError``.
+                    message = "Connector run interrupted"
+                    try:
+                        self._process_enrichment()
+                        utc_time = calendar.timegm(
+                            datetime.now(timezone.utc).utctimetuple()
+                        )
+                        self.helper.set_state({"last_run": utc_time})
+                        message = (
+                            f"Connector ran successfully, next run in "
+                            f"{self.interval} hours"
+                        )
+                        self.helper.log_info(message)
+                    except Exception as run_err:
+                        # Surface the failure on the work itself so
+                        # OpenCTI doesn't show a permanently
+                        # "in progress" entry and the operator sees
+                        # the underlying error in the work log; the
+                        # outer broad ``except`` below still keeps the
+                        # connector alive for the next interval.
+                        message = (
+                            f"Connector run failed ({type(run_err).__name__}): "
+                            f"{run_err}"
+                        )
+                        self.helper.log_error(message)
+                    finally:
+                        self.helper.api.work.to_processed(work_id, message)
                 else:
                     next_in = interval_seconds - (timestamp - last_run)
                     self.helper.log_info(
