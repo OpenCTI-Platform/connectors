@@ -131,7 +131,7 @@ class HybridAnalysis:
                 domain_stix = stix2.DomainName(
                     value=domain,
                     object_marking_refs=[self.tlp],
-                    custom_properties={"created_by_ref": self.identity.id},
+                    custom_properties={"x_opencti_created_by_ref": self.identity.id},
                 )
                 relationship = stix2.Relationship(
                     id=StixCoreRelationship.generate_id(
@@ -152,13 +152,13 @@ class HybridAnalysis:
                 host_stix = stix2.IPv4Address(
                     value=host,
                     object_marking_refs=[self.tlp],
-                    custom_properties={"created_by_ref": self.identity.id},
+                    custom_properties={"x_opencti_created_by_ref": self.identity.id},
                 )
             else:
                 host_stix = stix2.IPv6Address(
                     value=host,
                     object_marking_refs=[self.tlp],
-                    custom_properties={"created_by_ref": self.identity.id},
+                    custom_properties={"x_opencti_created_by_ref": self.identity.id},
                 )
             relationship = stix2.Relationship(
                 id=StixCoreRelationship.generate_id(
@@ -186,7 +186,7 @@ class HybridAnalysis:
                     name=file["name"],
                     object_marking_refs=[self.tlp],
                     custom_properties={
-                        "created_by_ref": self.identity.id,
+                        "x_opencti_created_by_ref": self.identity.id,
                         "x_opencti_labels": file["type_tags"],
                     },
                 )
