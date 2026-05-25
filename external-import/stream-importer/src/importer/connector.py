@@ -67,6 +67,34 @@ class StreamImporterConnector(ExternalImportConnector):
             if "/" in os.environ.get("MINIO_DST_PATH")
             else (os.environ.get("MINIO_DST_PATH"), "")
         )
+        # Reject the unsafe ``src bucket == dst bucket AND dst_path is
+        # empty`` configuration up front. The ``bucket_exists`` /
+        # ``make_bucket`` plumbing below cannot defend this case
+        # because the source bucket already exists by construction, so
+        # the connector would otherwise proceed past startup and at
+        # the end of :meth:`send_event` call
+        # ``copy_object(bucket, key, CopySource(bucket, key))``
+        # followed by ``remove_object(bucket, key)`` — copying the
+        # object onto itself and then deleting it, which is silent
+        # data loss on every processed file. A non-empty
+        # ``minio_dst_path`` is the only way to disambiguate source
+        # from destination keys in a single bucket; the
+        # ``_collect_intelligence`` listing loop also relies on that
+        # prefix to skip already-moved files when
+        # ``MINIO_SRC_RECURSE=true`` (see the ``dst_prefix`` guard
+        # there). Failing fast with a clear ``ValueError`` here keeps
+        # the operator's misconfiguration loud at startup instead of
+        # turning into silent attrition on every run.
+        if self.minio_src_bucket == self.minio_dst_bucket and not self.minio_dst_path:
+            raise ValueError(
+                "Unsafe MinIO configuration: MINIO_SRC_PATH and "
+                "MINIO_DST_PATH resolve to the same bucket "
+                f"({self.minio_src_bucket!r}) with no destination "
+                "subfolder. Set MINIO_DST_PATH to a distinct bucket "
+                "or to a non-empty subfolder under "
+                f"{self.minio_src_bucket!r} (e.g. "
+                f"{self.minio_src_bucket}/processed)."
+            )
         minio_access_key = os.environ.get("MINIO_ACCESS_KEY")
         minio_secret_key = os.environ.get("MINIO_SECRET_KEY")
         minio_secure = str_to_bool(os.environ.get("MINIO_SECURE", default="true"))
@@ -130,11 +158,14 @@ class StreamImporterConnector(ExternalImportConnector):
         # Compute the destination prefix as ``dst_path + "/"`` so a
         # configured value like ``"processed"`` is matched against
         # ``"processed/sync_1.json"`` rather than the false-positive
-        # ``"processed_v2/...":`` shape. Empty ``dst_path`` (bucket
-        # root as destination) cannot be defended this way — that
-        # configuration is intentionally not supported when src and
-        # dst buckets match, and would have always blown up at the
-        # destination-bucket-creation step anyway.
+        # ``"processed_v2/...":`` shape. The empty ``dst_path`` /
+        # same-bucket case cannot be defended by a prefix check (the
+        # bucket root has no prefix to match against), but it is
+        # already rejected at startup by the explicit
+        # ``src_bucket == dst_bucket and not dst_path`` guard in
+        # :meth:`__init__` — the listing loop here is therefore
+        # guaranteed to see a non-empty ``dst_prefix`` whenever src
+        # and dst buckets coincide.
         dst_prefix = (
             self.minio_dst_path.rstrip("/") + "/" if self.minio_dst_path else ""
         )
@@ -381,17 +412,26 @@ class StreamImporterConnector(ExternalImportConnector):
                     )
                     break
         finally:
-            # ``channel.close()`` is best-effort: the broker may have
-            # already closed the channel (``ChannelClosedByBroker``)
-            # and a redundant close raises ``ChannelWrongStateError``.
-            # ``pika_connection.close()`` always runs so the TCP
-            # connection is released regardless.
+            # Both calls are best-effort: the broker may have already
+            # closed the channel (``ChannelClosedByBroker``) and a
+            # redundant close raises ``ChannelWrongStateError``;
+            # ``pika_connection.close()`` can also raise (e.g. on a
+            # broken TCP socket) and we do not want a teardown
+            # failure to mask the real publish outcome (``all_ok``)
+            # the caller is about to act on. Either way the
+            # underlying socket is released by ``pika`` when the
+            # ``BlockingConnection`` object goes out of scope, so a
+            # swallowed close-time exception does not leak the
+            # connection.
             if channel is not None:
                 try:
                     channel.close()
                 except Exception:  # pylint: disable=broad-except
                     pass
-            pika_connection.close()
+            try:
+                pika_connection.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
 
         if not all_ok:
             # Leave the source file in place AND skip the state-cursor
@@ -485,7 +525,25 @@ class StreamImporterConnector(ExternalImportConnector):
 
         self.helper.log_debug(f"Message to push: {json.dumps(message)}")
 
-        # Send the message
+        # ``mandatory=True`` is required for ``UnroutableError`` to
+        # ever surface here: ``pika`` only raises it when a
+        # publisher-confirmed publish (we enabled
+        # ``channel.confirm_delivery()`` above) carries ``mandatory``
+        # AND the broker cannot route the message to a queue. Without
+        # ``mandatory`` the broker silently discards an unroutable
+        # message and still ACKs the publish — the ``UnroutableError``
+        # branch below would be dead code and a missing-binding
+        # misconfiguration would manifest as silent data loss with
+        # every per-entry publish ticking ``sent_messages_total`` for
+        # a message that never reached a queue. Pairing
+        # ``mandatory=True`` with the bounded NACK / unroutable retry
+        # below means a transient binding-being-created race retries
+        # cleanly, and a persistent missing-binding situation drops
+        # the event AFTER exhausting the retry budget — surfacing as
+        # a loud ``Unable to send bundle (UnroutableError)`` error
+        # and holding the source file in place so the operator can
+        # fix the binding and the next scan cycle resumes from the
+        # same cursor.
         try:
             channel.basic_publish(
                 exchange=self.helper.connector_config["push_exchange"],
@@ -494,6 +552,7 @@ class StreamImporterConnector(ExternalImportConnector):
                 properties=pika.BasicProperties(
                     delivery_mode=2, content_encoding="utf-8"  # make message persistent
                 ),
+                mandatory=True,
             )
             self.helper.connector_logger.debug("Event has been sent")
             self.helper.metric.inc("bundle_send")
