@@ -414,14 +414,14 @@ class HybridAnalysis:
                 f"[CONNECTOR] {err.__class__.__name__}: {str(err)}"
             )
             self._send_bundle(original_stix_objects)
-            raise err
+            raise
         except Exception as err:
             self.helper.connector_logger.error(
                 "[CONNECTOR] An unexpected error occurred",
                 {"error": str(err)},
             )
             self._send_bundle(original_stix_objects)
-            raise err
+            raise
 
     def start(self):
         """Start the connector by listening to messages from OpenCTI."""
