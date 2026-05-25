@@ -3,20 +3,61 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from typing import Any, Iterable
 
-import urllib3
 import yaml
-from elasticsearch import Elasticsearch
 from pycti import OpenCTIConnectorHelper, get_config_variable
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 EPOCH_ZERO = "1970-01-01T00:00:00.000Z"
 FAR_FUTURE = "5138-11-16T09:46:40.000Z"
-SCROLL_SIZE = 200
+
+# Custom-attribute GraphQL projections kept lean so the API queries
+# only fetch the fields the connector actually reads. The platform
+# returns one node per match; widening the projection would just add
+# wire-payload and serialisation cost for fields we never look at.
+_TA_ATTRIBUTES = """
+    id
+    standard_id
+    name
+    last_seen
+"""
+
+_USES_REL_ATTRIBUTES = """
+    id
+    to {
+        ... on BasicObject {
+            id
+            standard_id
+            entity_type
+        }
+    }
+"""
+
+_INDICATOR_LATEST_ATTRIBUTES = """
+    id
+    valid_from
+    created_at
+"""
+
+_REPORT_LATEST_ATTRIBUTES = """
+    id
+    published
+"""
 
 
 class ThreatActorEnrichment:
+    """Enrich ``threat-actor-group`` entities with a forward-only ``last_seen``.
+
+    The connector walks every ``Threat-Actor-Group`` in the platform,
+    aggregates the most recent activity date from the indicators and
+    reports linked to the malware the actor ``uses``, and writes the
+    result back as ``last_seen`` via the OpenCTI GraphQL API. All
+    reads and writes go through ``helper.api`` (pycti) — no direct
+    Elasticsearch access — so the connector inherits the platform's
+    access-control model, GraphQL filter semantics, query schedulers
+    and TLS / proxy settings.
+    """
+
     def __init__(self):
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         if os.path.isfile(config_file_path):
@@ -27,51 +68,12 @@ class ThreatActorEnrichment:
                 # calls index into the mapping, so a ``None`` here would
                 # crash startup. ``or {}`` upholds the same contract as
                 # the missing-file branch below.
-                config = yaml.load(config_file, Loader=yaml.FullLoader) or {}
+                config = yaml.safe_load(config_file) or {}
         else:
             config = {}
 
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.es_host = get_config_variable(
-            "THREAT_ACTOR_ENRICHMENT_ES_HOST",
-            ["threat_actor_enrichment", "es_host"],
-            config,
-        )
-        self.es_user = get_config_variable(
-            "THREAT_ACTOR_ENRICHMENT_ES_USER",
-            ["threat_actor_enrichment", "es_user"],
-            config,
-            False,
-            "",
-        )
-        self.es_password = get_config_variable(
-            "THREAT_ACTOR_ENRICHMENT_ES_PASSWORD",
-            ["threat_actor_enrichment", "es_password"],
-            config,
-            False,
-            "",
-        )
-        # Default to ``True`` so a fresh deployment does TLS
-        # certificate verification out of the box (matches the
-        # convention used by ``cuckoo`` / ``cape`` / ``echocti`` /
-        # ``elastic-security-incidents``). Operators on self-signed
-        # ES clusters can still opt out explicitly via the env var
-        # / yaml flag.
-        self.es_verify_ssl = get_config_variable(
-            "THREAT_ACTOR_ENRICHMENT_ES_VERIFY_SSL",
-            ["threat_actor_enrichment", "es_verify_ssl"],
-            config,
-            False,
-            True,
-        )
-        self.sdo_index = get_config_variable(
-            "THREAT_ACTOR_ENRICHMENT_SDO_INDEX",
-            ["threat_actor_enrichment", "sdo_index"],
-            config,
-            False,
-            "opencti_stix_domain_objects-*",
-        )
         self.interval = get_config_variable(
             "THREAT_ACTOR_ENRICHMENT_INTERVAL",
             ["threat_actor_enrichment", "interval"],
@@ -80,134 +82,21 @@ class ThreatActorEnrichment:
             24,
         )
 
-    def _get_es_client(self) -> Elasticsearch:
-        kwargs = {
-            "verify_certs": self.es_verify_ssl,
-            "request_timeout": 120,
-        }
-        if self.es_user and self.es_password:
-            kwargs["basic_auth"] = (self.es_user, self.es_password)
-        return Elasticsearch(self.es_host, **kwargs)
-
-    def _fetch_all_threat_actors(self, es: Elasticsearch) -> list[dict]:
-        """Fetch every threat-actor-group with its rel_uses links via scroll.
-
-        OpenCTI stores denormalised relationships as **literal flat
-        top-level keys with a dot in the name** (e.g.
-        ``rel_uses.internal_id``) rather than as nested objects — see
-        ``opencti-graphql/src/database/engine.ts`` where the indexer
-        manipulates ``ctx._source['rel_uses.internal_id']`` directly,
-        and ``schema/general.js::buildRefRelationKey`` which composes
-        the field name as ``${REL_INDEX_PREFIX}${type}.${field}``. ES
-        ``_source`` filtering, on the other hand, interprets dotted
-        paths as nested traversal, so requesting
-        ``_source=["rel_uses.internal_id"]`` silently strips the field
-        from the returned hit and the connector ends up with an empty
-        malware list for every threat actor — silently a no-op.
-
-        Use the ``fields`` API for the dotted-key field so ES returns
-        it as a flat list at ``hit["fields"]["rel_uses.internal_id"]``
-        via the mapping, and keep ``_source`` for the plain attributes
-        we actually need to read by their canonical names. Sort by
-        ``_doc`` for the recommended efficient full-index scroll
-        pattern (no scoring, no sort overhead), and always release the
-        scroll context (the ES default is 5 min retention; releasing
-        early frees server resources even if the caller crashes
-        mid-iteration).
-        """
-        results = []
-        resp = es.search(
-            index=self.sdo_index,
-            scroll="2m",
-            size=SCROLL_SIZE,
-            query={"term": {"entity_type.keyword": "threat-actor-group"}},
-            sort=["_doc"],
-            _source=["name", "internal_id", "last_seen"],
-            fields=["rel_uses.internal_id"],
-        )
-        scroll_id = resp["_scroll_id"]
-        try:
-            results.extend(resp["hits"]["hits"])
-            while len(resp["hits"]["hits"]) > 0:
-                resp = es.scroll(scroll_id=scroll_id, scroll="2m")
-                scroll_id = resp["_scroll_id"]
-                results.extend(resp["hits"]["hits"])
-        finally:
-            es.clear_scroll(scroll_id=scroll_id)
-        return results
-
-    def _get_latest_indicator_date(
-        self, es: Elasticsearch, malware_ids: list[str]
-    ) -> str | None:
-        """Find the latest valid_from from indicators linked to the given malware.
-
-        Prefers valid_from (the authoritative STIX activity date) over created_at,
-        falling back to created_at only when valid_from is missing or sentinel.
-        """
-        if not malware_ids:
-            return None
-
-        resp = es.search(
-            index=self.sdo_index,
-            size=0,
-            query={
-                "bool": {
-                    "must": [{"term": {"entity_type.keyword": "indicator"}}],
-                    "filter": {
-                        "terms": {"rel_indicates.internal_id.keyword": malware_ids}
-                    },
-                }
-            },
-            aggs={
-                "latest_valid_from": {"max": {"field": "valid_from"}},
-                "latest_created": {"max": {"field": "created_at"}},
-            },
-        )
-        aggs = resp["aggregations"]
-        vf = aggs["latest_valid_from"].get("value_as_string")
-        if vf and vf not in (EPOCH_ZERO, FAR_FUTURE):
-            return vf
-        ca = aggs["latest_created"].get("value_as_string")
-        if ca and ca not in (EPOCH_ZERO, FAR_FUTURE):
-            return ca
-        return None
-
-    def _get_latest_report_date(
-        self, es: Elasticsearch, malware_ids: list[str]
-    ) -> str | None:
-        """Find the latest published date from reports referencing the given malware."""
-        if not malware_ids:
-            return None
-
-        resp = es.search(
-            index=self.sdo_index,
-            size=0,
-            query={
-                "bool": {
-                    "must": [{"term": {"entity_type.keyword": "report"}}],
-                    "filter": {
-                        "terms": {"rel_object.internal_id.keyword": malware_ids}
-                    },
-                }
-            },
-            aggs={"latest_published": {"max": {"field": "published"}}},
-        )
-        val = resp["aggregations"]["latest_published"].get("value_as_string")
-        if val and val not in (EPOCH_ZERO, FAR_FUTURE):
-            return val
-        return None
+    # ------------------------------------------------------------------ #
+    # Date helpers                                                       #
+    # ------------------------------------------------------------------ #
 
     @staticmethod
     def _parse_date(date_str: str | None) -> datetime | None:
         """Parse an ISO-8601 timestamp into a UTC-aware ``datetime``.
 
         Always returns a timezone-aware value (UTC) on success so the
-        downstream ``max(candidate_dates, ...)`` and ``best_dt >
-        current_dt`` comparisons never raise ``TypeError`` on mixed
-        aware / naive operands. ``datetime.fromisoformat`` returns a
-        naive ``datetime`` for inputs that carry no offset (legacy
-        STIX dates, malformed-but-parseable values), so we normalise
-        explicitly here rather than at every call site.
+        downstream ``max(candidate_dates, ...)`` and
+        ``best_dt > current_dt`` comparisons never raise ``TypeError``
+        on mixed aware / naive operands. ``datetime.fromisoformat``
+        returns a naive ``datetime`` for inputs that carry no offset
+        (legacy STIX dates, malformed-but-parseable values), so we
+        normalise explicitly here rather than at every call site.
         """
         if not date_str:
             return None
@@ -225,15 +114,11 @@ class ThreatActorEnrichment:
 
         OpenCTI stores ``last_seen`` as a UTC ISO-8601 timestamp with
         millisecond precision and a ``Z`` suffix
-        (``YYYY-MM-DDTHH:MM:SS.sssZ``). The previous shape used
-        ``strftime("%Y-%m-%dT%H:%M:%S.000Z")`` which (a) truncated the
-        millisecond field to ``.000``, dropping any sub-second
-        precision the source carried, and (b) tacked a ``Z`` on without
-        converting to UTC — so a ``best_dt`` with a ``+02:00`` offset
-        would have been written as if it were UTC, silently moving
-        ``last_seen`` two hours backward. Normalise to UTC, then
-        compose the canonical millisecond shape explicitly so the
-        output is timezone-correct and preserves the source precision.
+        (``YYYY-MM-DDTHH:MM:SS.sssZ``). Normalise to UTC first so an
+        offset-bearing ``datetime`` cannot silently move the value
+        backward, then compose the canonical millisecond shape
+        explicitly so the output is timezone-correct and preserves
+        the source precision.
         """
         if dt.tzinfo is None:
             dt_utc = dt.replace(tzinfo=timezone.utc)
@@ -244,14 +129,13 @@ class ThreatActorEnrichment:
 
     @classmethod
     def _is_stale(cls, current_last_seen: str | None) -> bool:
-        """Check if last_seen is missing, sentinel, or unparseable.
+        """Check if ``last_seen`` is missing, sentinel, or unparseable.
 
         Unparseable values are treated as stale so the connector can
         self-heal historical bad data (e.g. an upstream import that
-        wrote a garbage string into ``last_seen``). The previous
-        shape only flagged missing / epoch-zero / far-future, so a
-        non-empty but unparseable value would short-circuit the
-        ``best_dt > current_dt`` branch on a ``current_dt is None``
+        wrote a garbage string into ``last_seen``). Flagging only
+        missing / epoch-zero / far-future would have short-circuited
+        the ``best_dt > current_dt`` branch on a ``current_dt is None``
         guard and the bad value would be locked in forever.
         """
         if not current_last_seen:
@@ -260,42 +144,189 @@ class ThreatActorEnrichment:
             return True
         return cls._parse_date(current_last_seen) is None
 
-    def _process_enrichment(self):
-        """Main enrichment logic: scan all threat actors and update stale last_seen."""
-        self.helper.log_info("Starting threat actor last_seen enrichment run")
-        es = self._get_es_client()
+    # ------------------------------------------------------------------ #
+    # OpenCTI API queries (read-side)                                    #
+    # ------------------------------------------------------------------ #
 
-        threat_actors = self._fetch_all_threat_actors(es)
+    def _iter_threat_actor_groups(self) -> Iterable[dict]:
+        """Yield every ``Threat-Actor-Group`` from the platform.
+
+        ``helper.api.threat_actor_group.list(getAll=True)`` paginates
+        under the hood (the default page size is server-controlled),
+        so a single call is enough to walk the full collection
+        without the per-cycle scroll bookkeeping a direct ES query
+        would need.
+        """
+        return (
+            self.helper.api.threat_actor_group.list(
+                getAll=True,
+                customAttributes=_TA_ATTRIBUTES,
+            )
+            or []
+        )
+
+    def _get_malware_ids(self, ta_internal_id: str) -> list[str]:
+        """Return the OpenCTI ids of every malware the threat actor uses."""
+        relationships = (
+            self.helper.api.stix_core_relationship.list(
+                fromId=ta_internal_id,
+                relationship_type="uses",
+                toTypes=["Malware"],
+                getAll=True,
+                customAttributes=_USES_REL_ATTRIBUTES,
+            )
+            or []
+        )
+        malware_ids: list[str] = []
+        for rel in relationships:
+            if not isinstance(rel, dict):
+                continue
+            target = rel.get("to")
+            if not isinstance(target, dict):
+                continue
+            target_id = target.get("id")
+            if target_id and target_id not in malware_ids:
+                malware_ids.append(target_id)
+        return malware_ids
+
+    @staticmethod
+    def _regarding_filter(malware_ids: list[str], relationship_type: str) -> dict:
+        """Build a ``regardingOf`` filter for entities related to malware.
+
+        OpenCTI's ``regardingOf`` filter selects entities that are on
+        either end of a relationship of the given type pointing at any
+        of the supplied ids. Used to fetch indicators that ``indicates``
+        the threat actor's malware in a single round-trip.
+        """
+        return {
+            "mode": "and",
+            "filters": [
+                {
+                    "key": "regardingOf",
+                    "values": [
+                        {"key": "id", "values": malware_ids},
+                        {"key": "relationship_type", "values": [relationship_type]},
+                    ],
+                }
+            ],
+            "filterGroups": [],
+        }
+
+    @staticmethod
+    def _objects_filter(malware_ids: list[str]) -> dict:
+        """Build a filter for containers (e.g. reports) holding the malware."""
+        return {
+            "mode": "and",
+            "filters": [
+                {
+                    "key": "objects",
+                    "values": malware_ids,
+                }
+            ],
+            "filterGroups": [],
+        }
+
+    def _get_latest_indicator_date(self, malware_ids: list[str]) -> str | None:
+        """Return the most recent ``valid_from`` of any indicator that
+        ``indicates`` one of the malware ids (falls back to ``created_at``).
+
+        Asks the API for one indicator sorted descending by
+        ``valid_from`` so the result set is at most a single node
+        regardless of how many indicators reference the malware. A
+        sentinel epoch-zero / far-future ``valid_from`` is ignored in
+        favour of the ``created_at`` carried by the same node — the
+        previous direct-ES shape used two separate aggregations for
+        the same effect; here a single node already carries both.
+        """
+        if not malware_ids:
+            return None
+        indicators = (
+            self.helper.api.indicator.list(
+                filters=self._regarding_filter(malware_ids, "indicates"),
+                orderBy="valid_from",
+                orderMode="desc",
+                first=1,
+                customAttributes=_INDICATOR_LATEST_ATTRIBUTES,
+            )
+            or []
+        )
+        if not indicators:
+            return None
+        node = indicators[0]
+        vf = node.get("valid_from")
+        if vf and vf not in (EPOCH_ZERO, FAR_FUTURE):
+            return vf
+        ca = node.get("created_at")
+        if ca and ca not in (EPOCH_ZERO, FAR_FUTURE):
+            return ca
+        return None
+
+    def _get_latest_report_date(self, malware_ids: list[str]) -> str | None:
+        """Return the most recent ``published`` date of any report that
+        contains one of the malware ids.
+        """
+        if not malware_ids:
+            return None
+        reports = (
+            self.helper.api.report.list(
+                filters=self._objects_filter(malware_ids),
+                orderBy="published",
+                orderMode="desc",
+                first=1,
+                customAttributes=_REPORT_LATEST_ATTRIBUTES,
+            )
+            or []
+        )
+        if not reports:
+            return None
+        published = reports[0].get("published")
+        if published and published not in (EPOCH_ZERO, FAR_FUTURE):
+            return published
+        return None
+
+    # ------------------------------------------------------------------ #
+    # Enrichment orchestration                                           #
+    # ------------------------------------------------------------------ #
+
+    def _process_enrichment(self) -> None:
+        """Main enrichment logic: scan every threat actor and update stale last_seen."""
+        self.helper.log_info("Starting threat actor last_seen enrichment run")
+
+        threat_actors = list(self._iter_threat_actor_groups())
         self.helper.log_info(f"Found {len(threat_actors)} threat-actor-group entities")
 
         updated = 0
         skipped = 0
         errors = 0
 
-        for ta_hit in threat_actors:
-            src = ta_hit["_source"]
-            ta_name = src.get("name", "unknown")
-            ta_internal_id = src.get("internal_id")
-            current_last_seen = src.get("last_seen")
+        for ta in threat_actors:
+            ta_name: str = ta.get("name") or "unknown"
+            ta_internal_id: str | None = ta.get("id")
+            current_last_seen: str | None = ta.get("last_seen")
 
-            # ``rel_uses.internal_id`` is a literal flat top-level
-            # dotted-key in OpenCTI's ES mapping (see
-            # ``_fetch_all_threat_actors``); the ``fields`` API
-            # returns it as a flat list at ``hit["fields"][...]``.
-            fields = ta_hit.get("fields") or {}
-            malware_ids = fields.get("rel_uses.internal_id") or []
+            if not ta_internal_id:
+                # Defensive: a payload missing the canonical id would
+                # crash the ``update_field`` write below with an opaque
+                # error from the API layer. Surface it here with a
+                # contextual log line so the operator can correlate
+                # the upstream data-quality issue with the source TA.
+                self.helper.log_warning(
+                    f"Skipping threat actor {ta_name} with no resolvable id"
+                )
+                skipped += 1
+                continue
 
             try:
-                # Collect candidate dates as ``(parsed, raw)`` tuples
-                # so we can ``max`` on the parsed ``datetime`` (a
-                # lex-string compare across mixed ISO offsets or
-                # precisions can pick the wrong value) but still keep
-                # the raw source string for logging.
+                malware_ids = self._get_malware_ids(ta_internal_id)
+                # ``(parsed, raw)`` tuples so ``max`` keys on the
+                # comparable ``datetime`` form (lex-string compare
+                # across mixed ISO offsets / precisions can pick the
+                # wrong value) while the raw source string remains
+                # available for logging.
                 candidate_dates: list[tuple[datetime, str]] = []
-
                 for raw in (
-                    self._get_latest_indicator_date(es, malware_ids),
-                    self._get_latest_report_date(es, malware_ids),
+                    self._get_latest_indicator_date(malware_ids),
+                    self._get_latest_report_date(malware_ids),
                 ):
                     parsed = self._parse_date(raw)
                     if parsed is not None:
@@ -330,12 +361,10 @@ class ThreatActorEnrichment:
                 updated += 1
 
             except Exception as err:
-                # Surface the exception type AND message so an operator
-                # can diagnose the failure (ES query error vs. GraphQL
-                # update vs. mapping mismatch) without enabling debug
-                # logging. The previous shape dropped both, leaving
-                # only "Error processing threat actor <name>" with no
-                # actionable signal.
+                # Surface the exception type AND message so an
+                # operator can diagnose the failure (API timeout vs.
+                # GraphQL validation error vs. permission denied)
+                # without enabling debug logging.
                 self.helper.log_error(
                     f"Error processing threat actor {ta_name} "
                     f"({type(err).__name__}): {err}"
@@ -347,13 +376,17 @@ class ThreatActorEnrichment:
             f"{errors} errors (of {len(threat_actors)} total)"
         )
 
-    def start(self):
+    # ------------------------------------------------------------------ #
+    # Scheduler loop                                                     #
+    # ------------------------------------------------------------------ #
+
+    def start(self) -> None:
         self.helper.log_info("Threat Actor Enrichment connector starting")
         while True:
             try:
                 timestamp = int(time.time())
 
-                current_state = self.helper.get_state()
+                current_state: dict[str, Any] | None = self.helper.get_state()
                 if current_state and "last_run" in current_state:
                     last_run = current_state["last_run"]
                     self.helper.log_info(
@@ -368,14 +401,14 @@ class ThreatActorEnrichment:
 
                 interval_seconds = int(self.interval) * 60 * 60
                 # Only initiate a work when we're actually going to
-                # process — the previous shape created a fresh work
-                # on every 60-second loop tick regardless of the
-                # interval check, leaving one dangling "in progress"
-                # work per minute (≈ 1440 per day) when the connector
-                # was idle waiting for the next cycle. ``initiate_work``
-                # has no counterpart cleanup on the idle path, so any
-                # work we open here must be closed by ``to_processed``
-                # on the same iteration.
+                # process — creating a work on every 60-second loop
+                # tick regardless of the interval check would leave a
+                # dangling "in progress" work per minute (≈ 1440 per
+                # day) when the connector was idle waiting for the
+                # next cycle. ``initiate_work`` has no counterpart
+                # cleanup on the idle path, so any work we open here
+                # must be closed by ``to_processed`` on the same
+                # iteration.
                 if last_run is None or (timestamp - last_run) > interval_seconds:
                     now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = "Threat Actor Enrichment run @ " + now.strftime(
@@ -441,7 +474,7 @@ class ThreatActorEnrichment:
 
             time.sleep(60)
 
-    def run(self):
+    def run(self) -> None:
         self.start()
 
 

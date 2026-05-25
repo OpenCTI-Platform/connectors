@@ -1,6 +1,6 @@
 # OpenCTI Threat Actor Enrichment Connector
 
-Periodically enriches threat actor group entities by computing their real `last_seen` date from related indicators and reports.
+Periodically enriches `threat-actor-group` entities by computing their real `last_seen` date from related indicators and reports.
 
 ## Problem
 
@@ -8,25 +8,21 @@ OpenCTI treats `last_seen` on threat actors as a static STIX property. When new 
 
 ## How it works
 
-Runs on a configurable interval (default: 24 hours). For each `threat-actor-group`:
+Runs on a configurable interval (default: 24 hours). For each `threat-actor-group`, the connector talks to OpenCTI exclusively through `pycti`'s API client (`helper.api.*`) — there is no direct Elasticsearch access — so reads and writes inherit the platform's access-control model, GraphQL filter semantics, TLS / proxy settings and audit logging:
 
-1. Queries Elasticsearch for malware IDs linked via `rel_uses` relationships
-2. Finds the latest `valid_from` from **indicators** that indicate the linked malware
-3. Finds the latest `published` date from **reports** referencing the linked malware
-4. Updates `last_seen` via the OpenCTI GraphQL API when either the computed date is newer than the current value, **or** the current value is missing, an epoch-zero/far-future sentinel, or otherwise unparseable (so the connector also self-heals historical bad data on the next run)
-
-Reads use Elasticsearch for fast aggregations. Writes go through the OpenCTI API for proper cache invalidation, stream events, and audit logging.
+1. Lists every `Threat-Actor-Group` via `helper.api.threat_actor_group.list(getAll=True)`.
+2. For each actor, lists the `uses` relationships pointing at `Malware` (`helper.api.stix_core_relationship.list(fromId=..., relationship_type="uses", toTypes=["Malware"])`) and collects the related malware ids.
+3. Finds the latest indicator activity via `helper.api.indicator.list(filters=regardingOf(malware_ids, "indicates"), orderBy="valid_from", first=1)`. Falls back to the indicator's `created_at` when `valid_from` is missing or sentinel.
+4. Finds the latest report activity via `helper.api.report.list(filters=objects(malware_ids), orderBy="published", first=1)`.
+5. Updates `last_seen` via `helper.api.stix_domain_object.update_field(...)` when either the computed date is newer than the current value, **or** the current value is missing, an epoch-zero/far-future sentinel, or otherwise unparseable (the connector also self-heals historical bad data on the next run).
 
 ## Configuration
 
-| Parameter | Environment variable | Default | Description |
-|---|---|---|---|
-| `es_host` | `THREAT_ACTOR_ENRICHMENT_ES_HOST` | — | Elasticsearch URL |
-| `es_user` | `THREAT_ACTOR_ENRICHMENT_ES_USER` | `""` | Elasticsearch username |
-| `es_password` | `THREAT_ACTOR_ENRICHMENT_ES_PASSWORD` | `""` | Elasticsearch password |
-| `es_verify_ssl` | `THREAT_ACTOR_ENRICHMENT_ES_VERIFY_SSL` | `true` | Verify ES SSL certificate (set to `false` only for self-signed clusters in non-production environments) |
-| `sdo_index` | `THREAT_ACTOR_ENRICHMENT_SDO_INDEX` | `opencti_stix_domain_objects-*` | SDO index pattern |
-| `interval` | `THREAT_ACTOR_ENRICHMENT_INTERVAL` | `24` | Hours between runs |
+| Parameter  | Environment variable                  | Default | Description       |
+|------------|---------------------------------------|---------|-------------------|
+| `interval` | `THREAT_ACTOR_ENRICHMENT_INTERVAL`    | `24`    | Hours between runs |
+
+The connector also reads the standard `OPENCTI_URL`, `OPENCTI_TOKEN`, `CONNECTOR_ID`, `CONNECTOR_TYPE`, `CONNECTOR_NAME`, `CONNECTOR_SCOPE` and `CONNECTOR_LOG_LEVEL` variables shared by every external-import connector.
 
 ## Deployment
 
@@ -43,7 +39,6 @@ connector-threat-actor-enrichment:
     - CONNECTOR_NAME=Threat Actor Enrichment
     - CONNECTOR_SCOPE=threat-actor-group
     - CONNECTOR_LOG_LEVEL=info
-    - THREAT_ACTOR_ENRICHMENT_ES_HOST=http://elasticsearch:9200
     - THREAT_ACTOR_ENRICHMENT_INTERVAL=24
   restart: always
   depends_on:

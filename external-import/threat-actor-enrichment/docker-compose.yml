@@ -11,9 +11,4 @@ services:
       - CONNECTOR_NAME=Threat Actor Enrichment
       - CONNECTOR_SCOPE=threat-actor-group
       - CONNECTOR_LOG_LEVEL=info
-      - THREAT_ACTOR_ENRICHMENT_ES_HOST=http://elasticsearch:9200
-      - THREAT_ACTOR_ENRICHMENT_ES_USER=
-      - THREAT_ACTOR_ENRICHMENT_ES_PASSWORD=
-      - THREAT_ACTOR_ENRICHMENT_ES_VERIFY_SSL=true
-      - THREAT_ACTOR_ENRICHMENT_SDO_INDEX=opencti_stix_domain_objects-*
       - THREAT_ACTOR_ENRICHMENT_INTERVAL=24
