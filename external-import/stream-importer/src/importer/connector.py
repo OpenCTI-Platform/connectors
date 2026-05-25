@@ -108,6 +108,37 @@ class StreamImporterConnector(ExternalImportConnector):
         self.helper.log_debug(
             f"{self.helper.connect_name} connector is starting the collection of objects..."
         )
+        # When the source and destination share the same bucket AND the
+        # destination is a subfolder under the source prefix, a
+        # ``MINIO_SRC_RECURSE=true`` listing descends into the
+        # destination subtree too and surfaces every already-moved
+        # file. Without the skip below those files would be:
+        #
+        # * fed back into the ``file_number < expected_file_number``
+        #   branch (every destination file has been processed so its
+        #   number is lower than the cursor) and then probed via
+        #   ``_object_exists`` with a *duplicated* destination prefix
+        #   (``os.path.join(dst_path, obj.object_name)`` where
+        #   ``obj.object_name`` already starts with ``dst_path``) —
+        #   the probe fails and ``WrongFileOrder`` is raised even
+        #   though the file IS in the destination, and
+        # * if the cursor happens to align, re-copied into an even
+        #   deeper nested destination key
+        #   (``dst_path/dst_path/filename``) by the move at the end
+        #   of :meth:`send_event`.
+        #
+        # Compute the destination prefix as ``dst_path + "/"`` so a
+        # configured value like ``"processed"`` is matched against
+        # ``"processed/sync_1.json"`` rather than the false-positive
+        # ``"processed_v2/...":`` shape. Empty ``dst_path`` (bucket
+        # root as destination) cannot be defended this way — that
+        # configuration is intentionally not supported when src and
+        # dst buckets match, and would have always blown up at the
+        # destination-bucket-creation step anyway.
+        dst_prefix = (
+            self.minio_dst_path.rstrip("/") + "/" if self.minio_dst_path else ""
+        )
+        src_dst_same_bucket = self.minio_src_bucket == self.minio_dst_bucket
         # Read objects from minio, each object contains multiple events.
         for obj in self.minio_client.list_objects(
             self.minio_src_bucket,
@@ -116,6 +147,20 @@ class StreamImporterConnector(ExternalImportConnector):
         ):
             # Skip directories.
             if obj.object_name.endswith("/"):
+                continue
+
+            # Skip recursive-listing hits that are already in the
+            # destination subtree of the same bucket (see the
+            # ``dst_prefix`` rationale above).
+            if (
+                src_dst_same_bucket
+                and dst_prefix
+                and obj.object_name.startswith(dst_prefix)
+            ):
+                self.helper.log_debug(
+                    f"Skipping {obj.object_name}: already under destination "
+                    f"prefix {dst_prefix}"
+                )
                 continue
 
             self.metrics.read()
@@ -236,8 +281,16 @@ class StreamImporterConnector(ExternalImportConnector):
 
         Parameters
         ----------
-        event : tuple[Path, str]
-            Event as a tuple with the first element being the path of the file and the second the content (not encoded).
+        event : Event
+            ``Event`` namedtuple (``Event = namedtuple("Event", "path entries")``)
+            where ``path`` is the MinIO object key (a ``str``, not
+            ``pathlib.Path``) and ``entries`` is the raw file content
+            as a string (one JSON event per line, decoded from the
+            ``minio_client.get_object(...)`` response). The previous
+            docstring shape (``tuple[Path, str]``) was historical and
+            never matched the actual call site in
+            :meth:`_collect_intelligence`, which constructs the value
+            with ``Event(obj.object_name, response.data.decode())``.
 
         Returns
         -------
