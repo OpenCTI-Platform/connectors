@@ -16,6 +16,21 @@ class ConverterToStix:
     def __init__(self, helper):
         self.helper = helper
         self.author = self._create_author()
+        # Expose the connector-wide TLP marking so the caller in
+        # ``connector.py`` can append it to every per-incident bundle
+        # alongside the author Identity. ``send_stix2_bundle`` is
+        # called with ``cleanup_inconsistent_bundle=True`` which strips
+        # any reference whose target SDO is not also in the bundle —
+        # the previous shape included the author but not the
+        # MarkingDefinition, so every ``object_marking_refs=[stix2.TLP_RED.id]``
+        # referenced from the Incident / UserAccount / AttackPattern /
+        # Note / Indicator / Relationship SDOs would be silently
+        # stripped at cleanup time and the resulting OpenCTI objects
+        # would land unmarked. Matches the pattern used by
+        # ``elastic-security-incidents`` (the closest sibling
+        # connector), where ``tlp_marking`` is prepended to every
+        # bundle alongside the author.
+        self.tlp_marking = stix2.TLP_RED
 
     def _create_author(self) -> dict:
         """

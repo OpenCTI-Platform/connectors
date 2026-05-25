@@ -340,14 +340,23 @@ class IncidentConnector:
                 )
                 stix_objects.extend(attack_patterns_items)
 
-                # Always include the author Identity SDO in the bundle
-                # so ``created_by_ref`` resolves under
-                # ``cleanup_inconsistent_bundle=True`` instead of being
-                # silently stripped — matches the pattern used by
-                # every sibling incident connector
-                # (elastic-security-incidents, harfanglab-incidents,
-                # sigmahq).
+                # Always include the author Identity SDO AND the TLP
+                # MarkingDefinition in the bundle so the references
+                # carried on every other SDO/SCO/SRO
+                # (``created_by_ref`` and ``object_marking_refs``)
+                # resolve under ``cleanup_inconsistent_bundle=True``
+                # instead of being silently stripped. Without the
+                # MarkingDefinition the per-incident bundle would land
+                # in OpenCTI with every ``object_marking_refs=[TLP_RED.id]``
+                # reference removed at cleanup time and the resulting
+                # objects would be visible to user groups that should
+                # not have access to the TLP:RED incident. Matches the
+                # pattern used by every sibling incident connector
+                # (``elastic-security-incidents`` prepends both
+                # ``converter_to_stix.author`` and ``tlp_marking`` to
+                # the bundle in lockstep).
                 stix_objects.append(self.stix_client.author)
+                stix_objects.append(self.stix_client.tlp_marking)
 
                 # Informative log of all created objects
                 message = ""
