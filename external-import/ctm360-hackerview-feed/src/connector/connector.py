@@ -85,17 +85,21 @@ class CTM360HackerViewConnector:
             "[CONNECTOR] Starting import loop",
             {"interval_seconds": self._interval},
         )
-        while True:
-            try:
-                self._import_data()
-            except (KeyboardInterrupt, SystemExit):
-                self.helper.connector_logger.info("[CONNECTOR] Stopping")
-                break
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    "[CONNECTOR] Import cycle failed", {"error": str(e)}
-                )
-            time.sleep(self._interval)
+
+        self.helper.schedule_process(
+            message_callback=self._callback,
+            duration_period=self._interval,
+        )
+
+    def _callback(self):
+        try:
+            self._import_data()
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info("[CONNECTOR] Stopping")
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Import cycle failed", {"error": str(e)}
+            )
 
     def _import_data(self):
         state = self.helper.get_state() or {}
