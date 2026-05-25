@@ -244,18 +244,36 @@ class DataImporter:
             user_agents = extracted["user-agent"]
             useragents = extracted["useragent"]
 
-            # Process IPs
+            # Process IPs. Strip the value before storing in the
+            # observable dict so the SCO ``value`` carried into the
+            # converter is canonical: ``_is_valid_ipv4`` /
+            # ``_is_valid_ipv6`` already validate ``.strip()``-ed
+            # input, so without the same normalisation here a DataDog
+            # signal that emits ``' 192.0.2.1 '`` (upstream padding
+            # has been observed on ``client_ip`` values copied from
+            # log lines) would either crash ``stix2.IPv4Address``
+            # (which rejects whitespace-padded values) or — worse —
+            # produce two distinct OpenCTI observables for the same
+            # logical address (one padded, one canonical) on later
+            # cycles. Centralise the strip in this loop so the
+            # ``observables`` list never carries whitespace-padded
+            # IP values regardless of which upstream key produced
+            # them.
             all_ips = client_ips + x_real_ips
             for ip in all_ips:
-                if isinstance(ip, str):
-                    if self._is_valid_ipv4(ip):
-                        observables.append(
-                            {"type": "ip", "value": ip, "source": "field_search"}
-                        )
-                    elif self._is_valid_ipv6(ip):
-                        observables.append(
-                            {"type": "ipv6", "value": ip, "source": "field_search"}
-                        )
+                if not isinstance(ip, str):
+                    continue
+                ip = ip.strip()
+                if not ip:
+                    continue
+                if self._is_valid_ipv4(ip):
+                    observables.append(
+                        {"type": "ip", "value": ip, "source": "field_search"}
+                    )
+                elif self._is_valid_ipv6(ip):
+                    observables.append(
+                        {"type": "ipv6", "value": ip, "source": "field_search"}
+                    )
 
             # Process x-forwarded-for (can have multiple IPs)
             for xff in x_forwarded_fors:
@@ -297,13 +315,24 @@ class DataImporter:
             # non-numeric.
             all_hosts = hosts + hostnames
             for host in all_hosts:
-                if not isinstance(host, str) or not host:
+                if not isinstance(host, str):
+                    continue
+                # Normalise whitespace up-front so every downstream
+                # branch (bracketed-IPv6 / domain-with-port / plain
+                # domain) sees the canonical value: ``_is_valid_ipv6``
+                # / ``_is_valid_domain`` already validate against the
+                # ``.strip()``-ed input, but the observable dict was
+                # storing the raw padded value — producing duplicate
+                # OpenCTI SCOs across cycles for the same logical
+                # host and risking ``stix2`` constructor rejection.
+                host = host.strip()
+                if not host:
                     continue
                 if host.startswith("["):
                     closing = host.find("]")
                     if closing == -1:
                         continue
-                    inner = host[1:closing]
+                    inner = host[1:closing].strip()
                     if self._is_valid_ipv6(inner):
                         observables.append(
                             {
@@ -656,13 +685,24 @@ class DataImporter:
         """
         if not url or not isinstance(url, str):
             return None
+        # Normalise whitespace once at the top so every return path
+        # (parse-failure, no-userinfo fast path, userinfo-stripped
+        # rebuild) yields the same canonical observable value.
+        # ``_is_valid_url`` already gates membership on a parse of
+        # ``url.strip()``; returning the unstripped original from
+        # the no-userinfo branch below would have persisted the
+        # whitespace-padded form into OpenCTI and produced duplicate
+        # SCOs across cycles for the same logical URL.
+        stripped = url.strip()
+        if not stripped:
+            return None
         try:
-            parts = urlsplit(url.strip())
+            parts = urlsplit(stripped)
         except ValueError:
-            return url
+            return stripped
 
         if not parts.username and not parts.password:
-            return url
+            return stripped
 
         # ``rsplit("@", 1)`` drops the userinfo prefix while keeping
         # any later ``@`` literals in the path / query / fragment

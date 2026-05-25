@@ -659,17 +659,36 @@ class StixConverter:
             obs_type = obs_data.get("type")
             obs_value = obs_data.get("value")
 
-            # Guard against empty / whitespace observable values. The
-            # upstream importer already filters most of these out, but
-            # nested signal payloads can carry empty strings (or values
-            # that whitespace-normalise to empty). ``stix2`` would
-            # either raise ``MissingPropertiesError`` (logged, dropping
-            # the relationship target) or — worse — accept the value
-            # and emit a junk observable with a deterministic id that
-            # then merges every empty signal in OpenCTI. Bail early
-            # with ``None`` so the caller's relationship-builder skips
-            # the entry cleanly.
-            if obs_value is None or not str(obs_value).strip():
+            # Guard against empty / whitespace observable values AND
+            # canonicalise the value before it reaches every ``stix2``
+            # constructor below. The upstream importer already filters
+            # most empties out, but nested signal payloads can carry
+            # empty strings (or values that whitespace-normalise to
+            # empty). ``stix2`` would either raise
+            # ``MissingPropertiesError`` (logged, dropping the
+            # relationship target) or — worse — accept the value and
+            # emit a junk observable with a deterministic id that then
+            # merges every empty signal in OpenCTI. Bail early with
+            # ``None`` so the caller's relationship-builder skips the
+            # entry cleanly.
+            #
+            # Stripping here is a defence-in-depth pass on top of the
+            # importer's per-extraction-site normalisation: the
+            # importer already strips at the point of extraction so
+            # the observable dict's ``value`` is canonical, but a
+            # future upstream addition (or a third-party caller of
+            # this method) might forget. Centralising the strip at
+            # the single SCO-construction site guarantees the
+            # deterministic-id property (one logical observable ⇒
+            # one OpenCTI SCO across cycles) regardless of how the
+            # value got here.
+            if obs_value is None:
+                return None
+            if isinstance(obs_value, str):
+                obs_value = obs_value.strip()
+            else:
+                obs_value = str(obs_value).strip()
+            if not obs_value:
                 return None
 
             # Note: STIX 2.1 Cyber Observable Objects (SCOs) don't accept created, modified, created_by_ref
