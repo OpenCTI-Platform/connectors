@@ -43,7 +43,7 @@ class HybridAnalysisClient:
             raise_on_status=True,
         )
         http_adapter = HTTPAdapter(max_retries=retry_strategy)
-        self.session.mount(self.base_url, http_adapter)
+        self.session.mount("https://", http_adapter)
 
         headers = {
             "api-key": token,
