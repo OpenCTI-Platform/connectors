@@ -238,17 +238,31 @@ class ThreatActorEnrichment:
             "filterGroups": [],
         }
 
+    # Pull a small window rather than ``first=1`` on the ranked
+    # queries below. With ``orderBy=<date> desc + first=1`` a single
+    # indicator or report carrying a sentinel ``valid_from`` /
+    # ``published`` (``FAR_FUTURE`` or ``EPOCH_ZERO`` — both legal
+    # placeholder values produced by some upstream pipelines) would
+    # dominate the result and either short-circuit the fallback
+    # (indicators) or cause the function to return ``None``
+    # (reports), silently locking the connector out of seeing the
+    # real latest activity. ``10`` is large enough to absorb a
+    # cluster of sentinel-bearing nodes while keeping the wire
+    # payload small (each node is at most a handful of fields).
+    _LATEST_WINDOW = 10
+
     def _get_latest_indicator_date(self, malware_ids: list[str]) -> str | None:
         """Return the most recent ``valid_from`` of any indicator that
         ``indicates`` one of the malware ids (falls back to ``created_at``).
 
-        Asks the API for one indicator sorted descending by
-        ``valid_from`` so the result set is at most a single node
-        regardless of how many indicators reference the malware. A
-        sentinel epoch-zero / far-future ``valid_from`` is ignored in
-        favour of the ``created_at`` carried by the same node — the
-        previous direct-ES shape used two separate aggregations for
-        the same effect; here a single node already carries both.
+        Walks a small window of indicators sorted descending by
+        ``valid_from``. The first non-sentinel ``valid_from`` is the
+        latest real one (the server-side sort guarantees that). When
+        every ``valid_from`` in the window is a sentinel, the
+        function falls back to the largest non-sentinel
+        ``created_at`` carried by the same window — computed
+        client-side because the iteration order is by
+        ``valid_from``, not ``created_at``.
         """
         if not malware_ids:
             return None
@@ -257,25 +271,36 @@ class ThreatActorEnrichment:
                 filters=self._regarding_filter(malware_ids, "indicates"),
                 orderBy="valid_from",
                 orderMode="desc",
-                first=1,
+                first=self._LATEST_WINDOW,
                 customAttributes=_INDICATOR_LATEST_ATTRIBUTES,
             )
             or []
         )
-        if not indicators:
-            return None
-        node = indicators[0]
-        vf = node.get("valid_from")
-        if vf and vf not in (EPOCH_ZERO, FAR_FUTURE):
-            return vf
-        ca = node.get("created_at")
-        if ca and ca not in (EPOCH_ZERO, FAR_FUTURE):
-            return ca
-        return None
+        for node in indicators:
+            vf = node.get("valid_from")
+            if vf and vf not in (EPOCH_ZERO, FAR_FUTURE):
+                return vf
+        best: tuple[datetime, str] | None = None
+        for node in indicators:
+            ca = node.get("created_at")
+            if not ca or ca in (EPOCH_ZERO, FAR_FUTURE):
+                continue
+            parsed = self._parse_date(ca)
+            if parsed is None:
+                continue
+            if best is None or parsed > best[0]:
+                best = (parsed, ca)
+        return best[1] if best else None
 
     def _get_latest_report_date(self, malware_ids: list[str]) -> str | None:
         """Return the most recent ``published`` date of any report that
         contains one of the malware ids.
+
+        Walks a small window of reports sorted descending by
+        ``published`` and returns the first non-sentinel value.
+        With ``first=1`` a stray sentinel at the top of the order
+        would cause the function to return ``None`` even when other
+        reports in the same window carry valid ``published`` dates.
         """
         if not malware_ids:
             return None
@@ -284,16 +309,15 @@ class ThreatActorEnrichment:
                 filters=self._objects_filter(malware_ids),
                 orderBy="published",
                 orderMode="desc",
-                first=1,
+                first=self._LATEST_WINDOW,
                 customAttributes=_REPORT_LATEST_ATTRIBUTES,
             )
             or []
         )
-        if not reports:
-            return None
-        published = reports[0].get("published")
-        if published and published not in (EPOCH_ZERO, FAR_FUTURE):
-            return published
+        for node in reports:
+            published = node.get("published")
+            if published and published not in (EPOCH_ZERO, FAR_FUTURE):
+                return published
         return None
 
     # ------------------------------------------------------------------ #
