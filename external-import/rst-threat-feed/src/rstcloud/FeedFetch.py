@@ -6,7 +6,9 @@ import requests
 class Downloader:
     def __init__(self, conf):
         # connection
-        self.api_url = str(conf.get("baseurl", "https://api.rstcloud.net/v1"))
+        self.api_url = conf.get("baseurl", "https://api.rstcloud.net/v1")
+        if isinstance(self.api_url, str):
+            self.api_url = self.api_url.rstrip("/")
         self.api_key = str(conf.get("apikey", "REPLACEME"))
         self.timeout = (
             int(conf.get("contimeout", 30)),

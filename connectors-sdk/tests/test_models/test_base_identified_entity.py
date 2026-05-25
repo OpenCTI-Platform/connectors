@@ -158,3 +158,25 @@ def test_base_identified_entity_should_accept_reference_object_for_author_and_ma
     # Then author and marking should be a Reference model
     assert entity_instance.author == fake_valid_reference
     assert entity_instance.markings == [fake_valid_reference_with_tlp_id]
+
+
+def test_base_identified_entity_common_stix2_properties_includes_created(
+    implemented_base_identified_entity,
+):
+    """Test that _common_stix2_properties includes created when set."""
+    entity = implemented_base_identified_entity(
+        toto="toto",
+        created="2024-01-01T00:00:00Z",
+    )
+    props = entity._common_stix2_properties()
+    assert props["created"] is not None
+
+
+def test_base_identified_entity_common_stix2_properties_includes_created_as_none(
+    implemented_base_identified_entity,
+):
+    """Test that _common_stix2_properties includes created as None when not set."""
+    entity = implemented_base_identified_entity(toto="toto")
+    props = entity._common_stix2_properties()
+    assert "created" in props
+    assert props["created"] is None

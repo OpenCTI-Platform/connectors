@@ -1,0 +1,5 @@
+pycti==7.260522.0
+stix2==3.0.1
+requests~=2.33.0
+urllib3==2.7.0
+PyYAML==6.0.3

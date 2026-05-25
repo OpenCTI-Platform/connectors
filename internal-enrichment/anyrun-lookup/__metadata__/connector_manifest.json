@@ -1,0 +1,23 @@
+{
+  "title": "ANY.RUN TI Lookup",
+  "slug": "anyrun-lookup",
+  "description": "ANY.RUN’s TI Lookup is a service that allows you to browse IOCs and related threat data to simplify and enrich cyberattack investigations.",
+  "short_description": "Analyze StixFile, Artifact, Domain-Name, Hostname, IPv4-Addr or Url in ANY.RUN TI Lookup",
+  "logo": "internal-enrichment/anyrun-lookup/__metadata__/logo.png",
+  "use_cases": [
+    "Enrichment & Analysis",
+    "Threat Intelligence",
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=6.0.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/anyrun-lookup",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-anyrun-lookup",
+  "container_type": "INTERNAL_ENRICHMENT"
+}

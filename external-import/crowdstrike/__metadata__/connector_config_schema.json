@@ -182,6 +182,14 @@
       "description": "Whether to automatically guess and create relationships in reports.",
       "type": "boolean"
     },
+    "CROWDSTRIKE_REPORT_EXTRACT_IOCS": {
+      "default": [],
+      "description": "Comma-separated list of IOC types to extract from report text content via regex. Extracted IOCs are created as Observables (not Indicators) and linked to the report. Supported types: ipv4, ipv6, domain, url, md5, sha1, sha256. Leave empty to disable.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "CROWDSTRIKE_INDICATOR_START_TIMESTAMP": {
       "description": "Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
       "type": "integer"
@@ -199,6 +207,36 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_IP_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P90D' for 90 days). Covers both IPv4 and IPv6.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_DOMAIN_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P365D' for 365 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_URL_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P60D' for 60 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_HASH_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P730D' for 730 days). Covers MD5, SHA1, and SHA256 hashes.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_DEFAULT_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P30D' for 30 days). Default threshold for any other indicator type.",
+      "format": "duration",
+      "type": "string"
     },
     "CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE": {
       "default": 50,
@@ -261,6 +299,11 @@
         "type": "string"
       },
       "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_MAX_RECORDS_PER_RUN": {
+      "default": 20000,
+      "description": "Maximum number of indicators ingested in a single run of the connector. CrowdStrike can return up to ~1.5M IoCs for the last 30 days, which would overwhelm the OpenCTI ingestion pipeline; pagination stops when this cap is reached. Set to 0 (or a negative number) to disable the cap and fetch every available indicator.",
+      "type": "integer"
     },
     "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT": {
       "default": true,

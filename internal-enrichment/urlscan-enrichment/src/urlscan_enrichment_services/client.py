@@ -17,12 +17,16 @@ class UrlscanClient:
         helper: OpenCTIConnectorHelper,
         api_key: str | None,
         default_scan_visibility: Literal["public", "unlisted", "private"],
+        import_screenshot: bool = True,
     ):
         self.helper = helper
 
         self.base_url = "https://urlscan.io/api/v1/"
         self.api_key = api_key
         self.default_visibility = default_scan_visibility
+        # Skip the "no screenshot returned" warning when screenshot ingestion
+        # is disabled, since the absence of a screenshot is then expected.
+        self.import_screenshot = import_screenshot
         self.constants = UrlscanConstants
         # Define headers in session and update when needed
         headers = {"API-Key": self.api_key, "Content-Type": "application/json"}
@@ -154,7 +158,7 @@ class UrlscanClient:
                                 "response"
                             ]["dataLength"]
 
-                            if data_length == 0:
+                            if data_length == 0 and self.import_screenshot:
                                 self.helper.connector_logger.warning(
                                     "[API-RESULT] The request has been submitted to URLScan, "
                                     "but the URL does not return any screenshot."
@@ -173,7 +177,7 @@ class UrlscanClient:
             else:
                 result = response.json()
                 data_length = result["data"]["requests"][0]["response"]["dataLength"]
-                if data_length == 0:
+                if data_length == 0 and self.import_screenshot:
                     self.helper.connector_logger.warning(
                         "[API-RESULT] The request has been submitted to URLScan, "
                         "but the URL does not return any screenshot."

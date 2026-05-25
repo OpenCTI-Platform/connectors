@@ -1,9 +1,9 @@
 import json
 import os
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock
 
 import pytest
-from src.secops_siem_services import CTIConverter
+from secops_siem_services import CTIConverter
 
 
 @pytest.fixture(scope="class")
@@ -13,10 +13,7 @@ def setup_config(request):
     Create fake pycti OpenCTI helper
     """
     request.cls.mock_helper = MagicMock()
-    request.cls.mock_config = Mock()
-    request.cls.CTIConverter = CTIConverter(
-        request.cls.mock_helper, request.cls.mock_config
-    )
+    request.cls.CTIConverter = CTIConverter(request.cls.mock_helper)
 
     yield
 

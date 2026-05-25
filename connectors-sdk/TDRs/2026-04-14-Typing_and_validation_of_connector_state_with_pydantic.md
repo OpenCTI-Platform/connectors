@@ -4,7 +4,7 @@
 
 ## Overview
 
-This document describes the introduction of `ConnectorStateManager`, a Pydantic-based class added to the `connectors-sdk` under the `state_manager` module.  
+This document describes the introduction of `BaseConnectorState` (and its subclasses), a Pydantic-based class added to the `connectors-sdk` under the `states` module.  
 It provides a standardized, typed, and validated interface for loading and saving a connector's state to and from the OpenCTI platform, replacing the ad-hoc, per-connector state management patterns that currently exist across the repository.
 
 This work is a first step in building the `BaseConnector` module suite — a set of standardized SDK components designed to reduce the boilerplate each connector developer has to write and maintain.
@@ -47,28 +47,32 @@ While simple in isolation, this pattern is repeated — with variations — acro
 
 ## Proposed Solution
 
-### The `ConnectorStateManager` class
+### The `BaseConnectorState` class
 
-`ConnectorStateManager` is a non-abstract Pydantic `BaseModel` that wraps the `OpenCTIConnectorHelper` state API. It can be used directly or subclassed to define connector-specific state fields.
+`BaseConnectorState` is a base Pydantic `BaseModel` that wraps the `OpenCTIConnectorHelper` state API.
+It is used by public, concrete state classes specific to connector types. These concrete classes can be used directly or subclassed to define connector-specific state fields.
 
 ```python
-# connectors-sdk/connectors_sdk/state_manager/state_manager.py
+# connectors_sdk/states/_base_state.py
 
-class ConnectorStateManager(BaseModel):
+class BaseConnectorState(BaseModel, ABC):
     model_config = ConfigDict(
         extra="allow",
         validate_assignment=True,
     )
-
-    last_run: datetime | None = Field(default=None)
-
-    def __init__(self, helper: OpenCTIConnectorHelper): ...
 
     def load(self) -> None:
         """Overwrite instance's fields with the connector's state stored on OpenCTI."""
 
     def save(self) -> None:
         """Save instance's fields as connector's state on OpenCTI."""
+
+
+# connectors_sdk/states/states.py
+
+class ExternalImportConnectorState(BaseConnectorState):
+    last_run: datetime | None = Field(default=None)
+
 ```
 
 <br>
@@ -78,13 +82,12 @@ class ConnectorStateManager(BaseModel):
 | Decision | Rationale |
 | --- | --- |
 | Inherits from `pydantic.BaseModel` | Consistent with `BaseConnectorSettings`; provides typing, validation, and JSON serialization for free. |
-| `extra="allow"` | Allows connectors to store additional state fields not declared in the base class, without breaking the model. |
+| `extra="allow"` | Allows connectors to load additional fields (i.e. not declared in the state model) from OpenCTI, without breaking the model. |
 | `validate_assignment=True` | Ensures that any field update (via `setattr`) is validated immediately, not only at construction time. |
 | `last_run: datetime \| None` | Provides a common baseline field that virtually every connector needs, pre-typed as `datetime`. |
 | `load()` | Dynamically populates declared fields from the raw `dict` returned by OpenCTI, with Pydantic validation applied on assignment. |
-| `save()` uses `model_dump(mode="json")` | Serializes all fields to JSON-safe types automatically, removing the need for manual type
-conversions (e.g. converting a `datetime` to a string). |
-| Not abstract | Can be used as-is for simple connectors; subclassed for connectors with richer state needs. |
+| `save()` uses `model_dump(mode="json")` | Serializes all fields to JSON-safe types automatically, removing the need for manual type conversions (e.g. converting a `datetime` to a string). |
+| Not abstract | Provide public classes to use as-is in simple connectors; or subclassed in connectors with richer state needs. |
 
 <br>
 
@@ -93,28 +96,31 @@ conversions (e.g. converting a `datetime` to a string). |
 #### Simple usage (no subclassing needed):
 
 ```python
-state_manager = ConnectorStateManager(helper=self.helper)
-state_manager.load()
+state = ExternalImportConnectorState()
+state.attach_opencti_connector_helper(helper) # establish the connection with OpenCTI
+state.load()
 
-if state_manager.last_run:
-    self.helper.connector_logger.info("Last run:", {"last_run": state_manager.last_run})
+if state.last_run:
+    self.helper.connector_logger.info("Last run:", {"last_run": state.last_run})
 
-state_manager.last_run = datetime.now(tz=timezone.utc)
-state_manager.save()
+state.last_run = datetime.now(tz=timezone.utc)
+state.save()
 ```
 
 #### Subclassed with connector-specific fields:
 
 ```python
-class CustomConnectorState(ConnectorStateManager):
+class CustomConnectorState(ExternalImportConnectorState):
     last_cursor: str | None = Field(default=None)
     last_page: int = Field(default=0)
 
-state_manager = CustomConnectorState(helper=self.helper)
-state_manager.load()
-state_manager.last_cursor = "abc123"
-state_manager.last_page = 5
-state_manager.save()
+state = CustomConnectorState()
+state.attach_opencti_connector_helper(helper) # establish the connection with OpenCTI
+state.load()
+state.last_run = datetime.now(tz=timezone.utc)
+state.last_cursor = "abc123"
+state.last_page = 5
+state.save()
 ```
 
 <br>
@@ -126,12 +132,13 @@ Consistent with the SDK folder structure agreed in the architecture decisions, t
 ```plaintext
 connectors-sdk/
 └── connectors_sdk/
-    └── state_manager/
+    └── states/
         ├── __init__.py
-        └── state_manager.py
+        ├── _base_state.py
+        └── states.py
 ```
 
-The `state_manager` module has no dependency on other SDK modules (`settings`, `models`, etc) and can therefore be adopted by any connector, independently of the broader `BaseConnector` usage.
+The `states` module has no dependency on other SDK modules (`settings`, `models`, etc) and can therefore be adopted by any connector, independently of the broader `BaseConnector` usage.
 
 <br>
 
@@ -153,11 +160,11 @@ The `state_manager` module has no dependency on other SDK modules (`settings`, `
 
 ## Disadvantages
 
-- **Pydantic dependency**. `ConnectorStateManager` inherits Pydantic's lifecycle and upgrade constraints. This is an accepted trade-off, consistent with the rest of the SDK.
+- **Pydantic dependency**. `BaseConnectorState` inherits Pydantic's lifecycle and upgrade constraints. This is an accepted trade-off, consistent with the rest of the SDK.
 
 - **`extra="allow"` may mask errors**. Undeclared fields are silently accepted. A typo in a field name when subclassing would not raise an error — the value would be stored as an extra field rather than populating the intended declared field. This is mitigated by `validate_assignment=True` on declared fields and is a deliberate flexibility trade-off for backward compatibility.
 
-- **`save()` only persists declared fields**. Extra fields (those not explicitly declared in the model) are not persisted. This is intentional to avoid leaking internal attributes, but connector developers must declare every field they want to save.
+- **`save()` persists both declared and extra fields**. Extra fields (those not explicitly declared in the model) are persisted as-is. This is intentional to avoid data loss of unknown state fields, but typos or unintended extra attributes may also be persisted unless explicitly cleaned.
 
 - **Learning curve**. Developers unfamiliar with Pydantic will need to understand the model declaration pattern. This is the same trade-off already accepted for `BaseConnectorSettings` or OCTI models.
 
@@ -183,11 +190,11 @@ The `state_manager` module has no dependency on other SDK modules (`settings`, `
 
     **Considered**. This was one of the designs explored for this feature. It was ultimately set aside in favour of a simpler approach: having the manager _be_ the state (by inheriting from `BaseModel` directly) reduces the number of objects a connector developer must instantiate and reason about, and avoids the ergonomic overhead of passing a state object in and out of the manager on every call. The simpler design is easier to use correctly.
 
-4. **Abstract base class**
+4. **Abstract classes**
 
-    Make `ConnectorStateManager` abstract, forcing subclassing for every use.
+    Make `BaseConnectorState`'s subclasses abstract, forcing subclassing them for every use.
 
-    **Rejected**. Many connectors only need `last_run`. Forcing them to subclass adds friction with no benefit. The non-abstract design follows the principle of opinionated defaults, override hooks where needed.
+    **Rejected**. Many connectors only need common fields (e.g. `last_run` for external-import connectors). Forcing them to subclass adds friction with no benefit. The non-abstract design follows the principle of opinionated defaults, override hooks where needed.
 
 <br>
 

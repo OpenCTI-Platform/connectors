@@ -1,3 +1,4 @@
+import datetime
 import warnings
 from datetime import timedelta
 from pathlib import Path
@@ -9,7 +10,7 @@ from models.configs.connector_configs import (
     _ConfigLoaderConnector,
     _ConfigLoaderOCTI,
 )
-from pydantic import Field, model_validator
+from pydantic import Field, TypeAdapter, model_validator
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -121,6 +122,15 @@ class ConfigLoader(ConfigBaseSettings):
                 )
             else:
                 raise ValueError(f"Invalid value for CONNECTOR_RUN_EVERY: {run_every}")
+
+        duration_period = connector_data.get("duration_period")
+        if duration_period is None:
+            return data
+
+        timedelta_adapter = TypeAdapter(datetime.timedelta)
+        td = timedelta_adapter.validate_python(duration_period)
+        if td < timedelta(minutes=1):
+            raise ValueError("CONNECTOR_DURATION_PERIOD must at least 1 minute")
 
         return data
 
