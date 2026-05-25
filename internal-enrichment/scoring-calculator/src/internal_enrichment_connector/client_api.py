@@ -204,49 +204,96 @@ class ConnectorClient:
         """
         self.api = api
 
+    @staticmethod
+    def _check_graphql_errors(res: Any, operation: str) -> None:
+        """Raise ``RuntimeError`` with a clear message on a GraphQL error response.
+
+        The GraphQL spec allows partial-success responses where ``data``
+        is populated alongside an ``errors`` array; surfacing a clean
+        exception here lets ``ConnectorScoring.process_message``'s
+        ``except`` handler write the underlying error to the worker
+        log instead of failing later with an opaque ``KeyError`` /
+        ``TypeError`` when the pagination code tries to dereference a
+        missing field.
+        """
+        if isinstance(res, dict):
+            errors = res.get("errors")
+            if errors:
+                raise RuntimeError(f"GraphQL error in {operation}: {errors}")
+
     def _paginate_relations(self, entity_id, query) -> List[Dict[str, Any]]:
-        edges = []
+        # Defensive ``.get(...)`` rather than ``res["data"]["stixCoreRelationships"]``:
+        # a GraphQL error response (``{"errors": [...]}`` with no ``data`` key) or a
+        # payload that omits the field would otherwise raise ``KeyError`` /
+        # ``TypeError`` mid-pagination and surface as an opaque stack trace.
+        # ``_check_graphql_errors`` raises a clear, contextual exception on the
+        # error path; the missing-field path simply stops paginating.
+        edges: List[Dict[str, Any]] = []
         cursor = None
         filters = _build_filter_relations(entity_id)
         while True:
             res = self.api.query(
                 query, variables={"filters": filters, "cursor": cursor}
             )
-            data = res["data"]["stixCoreRelationships"]
-            edges.extend(data["edges"])
-            if not data["pageInfo"]["hasNextPage"]:
+            self._check_graphql_errors(res, "_paginate_relations")
+            page = ((res or {}).get("data") or {}).get("stixCoreRelationships")
+            if not page:
                 break
-            cursor = data["pageInfo"]["endCursor"]
+            edges.extend(page.get("edges") or [])
+            page_info = page.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
         return edges
 
     def _paginate_report(self, entity_id, query) -> List[Dict[str, Any]]:
-        edges = []
+        # Same defensive pattern as ``_paginate_relations`` — see docstring there
+        # for the rationale (error responses, missing fields, opaque
+        # ``KeyError``).
+        edges: List[Dict[str, Any]] = []
         cursor = None
         filters = _build_filter_reports(entity_id)
         while True:
             res = self.api.query(
                 query, variables={"filters": filters, "cursor": cursor}
             )
-            data = res["data"]["containers"]
-            edges.extend(data["edges"])
-            if not data["pageInfo"]["hasNextPage"]:
+            self._check_graphql_errors(res, "_paginate_report")
+            page = ((res or {}).get("data") or {}).get("containers")
+            if not page:
                 break
-            cursor = data["pageInfo"]["endCursor"]
+            edges.extend(page.get("edges") or [])
+            page_info = page.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
         return edges
 
     def _paginate_contained_entities(self, entity_id, query) -> List[Dict[str, Any]]:
-        edges = []
+        # Same defensive pattern as the other pagination helpers, with an
+        # extra guard on the intermediate ``container`` node: it can be
+        # ``None`` when the container was deleted between the report-list
+        # fetch and the contained-entities fetch (a legitimate race rather
+        # than a GraphQL error), so we stop paginating cleanly instead of
+        # raising.
+        edges: List[Dict[str, Any]] = []
         cursor = None
         filters = _build_filter_contained_entities()
         while True:
             res = self.api.query(
                 query, variables={"id": entity_id, "filters": filters, "cursor": cursor}
             )
-            data = res["data"]["container"]["objects"]
-            edges.extend(data["edges"])
-            if not data["pageInfo"]["hasNextPage"]:
+            self._check_graphql_errors(res, "_paginate_contained_entities")
+            container = ((res or {}).get("data") or {}).get("container")
+            if not container:
                 break
-            cursor = data["pageInfo"]["endCursor"]
+            page = container.get("objects")
+            if not page:
+                break
+            edges.extend(page.get("edges") or [])
+            page_info = page.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
         return edges
 
     def get_direct_relations(self, entity_id: str) -> List[Dict[str, Any]]:
@@ -257,7 +304,11 @@ class ConnectorClient:
 
         related_entities: List[Dict[str, Any]] = []
         for e in edges:
-            n = e["node"]
+            if not isinstance(e, dict):
+                continue
+            n = e.get("node")
+            if not isinstance(n, dict):
+                continue
             f, t = n.get("from"), n.get("to")
             if f and f.get("id") == entity_id and t:
                 related_entities.append(t)
@@ -271,9 +322,13 @@ class ConnectorClient:
         """
         report_list = self._paginate_report(entity_id=entity_id, query=GET_REPORT_QUERY)
 
-        related_containers = []
+        related_containers: List[Dict[str, Any]] = []
         for e in report_list:
-            related_containers.append(e["node"])
+            if not isinstance(e, dict):
+                continue
+            node = e.get("node")
+            if isinstance(node, dict) and node.get("id"):
+                related_containers.append(node)
 
         related_entities: List[Dict[str, Any]] = []
         for container in related_containers:
@@ -281,7 +336,11 @@ class ConnectorClient:
                 entity_id=container["id"], query=GET_CONTAINED_ENTITIES
             )
             for e in entities_list:
-                related_entities.append(e["node"])
+                if not isinstance(e, dict):
+                    continue
+                node = e.get("node")
+                if isinstance(node, dict):
+                    related_entities.append(node)
 
         return related_entities
 

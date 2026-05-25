@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
@@ -236,11 +238,21 @@ class ConnectorScoring:
 
         return entity_to_enrich
 
-    def entity_in_scope(self, data) -> bool:
-        """
-        Security to limit playbook triggers to something other than the initial scope
-        :param data: Dictionary of data
-        :return: boolean
+    def entity_in_scope(self, data) -> Tuple[bool, Optional[str]]:
+        """Decide whether the incoming entity should be enriched.
+
+        Returns a ``(in_scope, reason)`` tuple. ``reason`` is ``None``
+        on the happy path and a human-readable status string when
+        ``in_scope`` is ``False`` — the caller surfaces that reason
+        verbatim to the worker queue so the operator can tell an
+        entity-type-scope mismatch (e.g. a ``Report`` accidentally
+        routed to an Indicator connector) apart from an
+        observable-type-not-enrichable rejection (e.g. an ``Email-Addr``
+        Indicator while the connector is configured for IPs / domains
+        / files). The previous bare-``bool`` shape forced the caller
+        to assume one specific reason for the rejection and produced
+        misleading status strings like ``"... None is not in
+        indicator_type_enrichable"`` on the entity-type-scope path.
         """
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
         entity_split = data["entity_id"].split("--")
@@ -265,11 +277,15 @@ class ConnectorScoring:
         )
 
         if entity_type not in scopes:
-            self.helper.connector_logger.info(
-                "Object not enriched, entity type is not in the scope",
-                meta={"entity_type": entity_type},
+            reason = (
+                f"Object not enriched, entity type {entity_type!r} "
+                f"is not in the connector scope"
             )
-            return False
+            self.helper.connector_logger.info(
+                reason,
+                meta={"entity_type": entity_type, "scopes": scopes},
+            )
+            return False, reason
 
         pattern_type = entity.get("pattern_type")
         ioc_type = entity.get("x_opencti_main_observable_type")
@@ -279,13 +295,21 @@ class ConnectorScoring:
             and ioc_type.lower()
             in (v.lower() for v in self.config.indicator_type_enrichable)
         ):
-            return True
+            return True, None
 
-        self.helper.connector_logger.info(
-            "Indicator not enriched, observable type is not in indicator_type_enrichable",
-            meta={"observable_type": ioc_type},
+        reason = (
+            f"Indicator not enriched, observable type {ioc_type!r} "
+            f"is not in indicator_type_enrichable"
         )
-        return False
+        self.helper.connector_logger.info(
+            reason,
+            meta={
+                "observable_type": ioc_type,
+                "pattern_type": pattern_type,
+                "enrichable_types": self.config.indicator_type_enrichable,
+            },
+        )
+        return False, reason
 
     def process_message(self, data: dict) -> str:
         """
@@ -309,24 +333,22 @@ class ConnectorScoring:
                 meta={"entity_id": data.get("entity_id")},
             )
 
-            if not self.entity_in_scope(data):
+            in_scope, scope_reason = self.entity_in_scope(data)
+            if not in_scope:
                 # Out-of-scope path. For a non-playbook trigger
                 # (``event_type`` absent on a direct enrichment
                 # request) we forward the upstream bundle untouched so
                 # the work is recorded as completed; for a playbook
-                # trigger we simply skip. Either way return a
-                # human-readable status string so the connector
-                # callback never returns ``None`` (which would have
-                # made troubleshooting harder than necessary).
+                # trigger we simply return the rejection reason so
+                # the worker queue status reflects *why* the indicator
+                # was skipped (entity-type-scope mismatch vs.
+                # observable-type-not-enrichable). ``scope_reason`` is
+                # guaranteed non-empty by the contract on
+                # ``entity_in_scope``; fall back defensively just in
+                # case a future refactor regresses that.
                 if not data.get("event_type"):
                     return self._send_bundle(stix_objects_list)
-                indicator_type = indicator.get("x_opencti_main_observable_type")
-                msg = (
-                    f"Indicator not enriched, {indicator_type} is not "
-                    f"in indicator_type_enrichable"
-                )
-                self.helper.connector_logger.info(msg)
-                return msg
+                return scope_reason or "Indicator not enriched"
 
             # Calculate the score of the Indicator
             direct_relations = self.client.get_direct_relations(opencti_entity["id"])
@@ -345,8 +367,22 @@ class ConnectorScoring:
                     meta={"count": len(report_relations)},
                 )
 
+            # Dedupe direct and report-derived relations on ``id`` so an
+            # entity that participates both directly and via a Report
+            # only contributes once to the score. Defensive
+            # ``r.get("id")`` rather than ``r["id"]`` so a malformed /
+            # partially-populated edge (no ``id`` key, ``None`` id,
+            # non-dict) can never crash the whole enrichment before the
+            # scope check could short-circuit — the missing-id entry is
+            # silently skipped instead.
             all_relations = direct_relations + report_relations
-            merged = {r["id"]: r for r in all_relations}
+            merged: dict[str, dict] = {}
+            for r in all_relations:
+                if not isinstance(r, dict):
+                    continue
+                rid = r.get("id")
+                if rid and rid not in merged:
+                    merged[rid] = r
             indicator_context = list(merged.values())
 
             author_id = indicator.get("created_by_ref")
