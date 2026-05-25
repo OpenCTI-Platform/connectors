@@ -12,8 +12,8 @@ Runs on a configurable interval (default: 24 hours). For each `threat-actor-grou
 
 1. Lists every `Threat-Actor-Group` via `helper.api.threat_actor_group.list(getAll=True)`.
 2. For each actor, lists the `uses` relationships pointing at `Malware` (`helper.api.stix_core_relationship.list(fromId=..., relationship_type="uses", toTypes=["Malware"])`) and collects the related malware ids.
-3. Finds the latest indicator activity via `helper.api.indicator.list(filters=regardingOf(malware_ids, "indicates"), orderBy="valid_from", first=1)`. Falls back to the indicator's `created_at` when `valid_from` is missing or sentinel.
-4. Finds the latest report activity via `helper.api.report.list(filters=objects(malware_ids), orderBy="published", first=1)`.
+3. Finds the latest indicator activity via `helper.api.indicator.list(filters=regardingOf(malware_ids, "indicates"), orderBy="valid_from", orderMode="desc", first=1)`. Falls back to the indicator's `created_at` when `valid_from` is missing or sentinel.
+4. Finds the latest report activity via `helper.api.report.list(filters=objects(malware_ids), orderBy="published", orderMode="desc", first=1)`.
 5. Updates `last_seen` via `helper.api.stix_domain_object.update_field(...)` when either the computed date is newer than the current value, **or** the current value is missing, an epoch-zero/far-future sentinel, or otherwise unparseable (the connector also self-heals historical bad data on the next run).
 
 ## Configuration

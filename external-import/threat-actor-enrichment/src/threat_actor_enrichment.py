@@ -3,7 +3,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
-from typing import Any, Iterable
+from typing import Any
 
 import yaml
 from pycti import OpenCTIConnectorHelper, get_config_variable
@@ -148,14 +148,17 @@ class ThreatActorEnrichment:
     # OpenCTI API queries (read-side)                                    #
     # ------------------------------------------------------------------ #
 
-    def _iter_threat_actor_groups(self) -> Iterable[dict]:
-        """Yield every ``Threat-Actor-Group`` from the platform.
+    def _iter_threat_actor_groups(self) -> list[dict]:
+        """Return every ``Threat-Actor-Group`` from the platform.
 
         ``helper.api.threat_actor_group.list(getAll=True)`` paginates
-        under the hood (the default page size is server-controlled),
-        so a single call is enough to walk the full collection
+        under the hood (the default page size is server-controlled)
+        and materialises the full collection into a list before
+        returning, so a single call is enough to walk every entity
         without the per-cycle scroll bookkeeping a direct ES query
-        would need.
+        would need. Return type is the concrete ``list`` (rather
+        than ``Iterable``) so the caller can use ``len(...)`` for
+        the run-summary log without copying.
         """
         return (
             self.helper.api.threat_actor_group.list(
@@ -177,7 +180,15 @@ class ThreatActorEnrichment:
             )
             or []
         )
+        # Dedupe via a ``set`` for O(1) membership while still
+        # returning a ``list`` with insertion order preserved — a
+        # threat actor can carry many ``uses`` relationships
+        # pointing at the same malware (different ``confidence``,
+        # different reports) and the previous ``target_id not in
+        # malware_ids`` shape was O(n) per iteration → O(n²)
+        # overall.
         malware_ids: list[str] = []
+        seen_ids: set[str] = set()
         for rel in relationships:
             if not isinstance(rel, dict):
                 continue
@@ -185,7 +196,8 @@ class ThreatActorEnrichment:
             if not isinstance(target, dict):
                 continue
             target_id = target.get("id")
-            if target_id and target_id not in malware_ids:
+            if target_id and target_id not in seen_ids:
+                seen_ids.add(target_id)
                 malware_ids.append(target_id)
         return malware_ids
 
@@ -292,7 +304,7 @@ class ThreatActorEnrichment:
         """Main enrichment logic: scan every threat actor and update stale last_seen."""
         self.helper.log_info("Starting threat actor last_seen enrichment run")
 
-        threat_actors = list(self._iter_threat_actor_groups())
+        threat_actors = self._iter_threat_actor_groups()
         self.helper.log_info(f"Found {len(threat_actors)} threat-actor-group entities")
 
         updated = 0
@@ -427,10 +439,6 @@ class ThreatActorEnrichment:
                     message = "Connector run interrupted"
                     try:
                         self._process_enrichment()
-                        utc_time = calendar.timegm(
-                            datetime.now(timezone.utc).utctimetuple()
-                        )
-                        self.helper.set_state({"last_run": utc_time})
                         message = (
                             f"Connector ran successfully, next run in "
                             f"{self.interval} hours"
@@ -449,6 +457,22 @@ class ThreatActorEnrichment:
                         )
                         self.helper.log_error(message)
                     finally:
+                        # Persist ``last_run`` regardless of success
+                        # or failure so the scheduler backs off to
+                        # the configured interval instead of re-
+                        # running on the next 60-second tick. The
+                        # previous shape only set the state on the
+                        # success path, so a persistent failure
+                        # (bad token, platform unreachable, GraphQL
+                        # validation error) produced ≈1440 retry
+                        # works per day until the operator
+                        # intervened — clear failure indication once
+                        # per interval is more useful than per-
+                        # minute spam in the work log.
+                        utc_time = calendar.timegm(
+                            datetime.now(timezone.utc).utctimetuple()
+                        )
+                        self.helper.set_state({"last_run": utc_time})
                         self.helper.api.work.to_processed(work_id, message)
                 else:
                     next_in = interval_seconds - (timestamp - last_run)
