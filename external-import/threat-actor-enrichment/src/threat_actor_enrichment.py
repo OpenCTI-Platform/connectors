@@ -52,12 +52,18 @@ class ThreatActorEnrichment:
             False,
             "",
         )
+        # Default to ``True`` so a fresh deployment does TLS
+        # certificate verification out of the box (matches the
+        # convention used by ``cuckoo`` / ``cape`` / ``echocti`` /
+        # ``elastic-security-incidents``). Operators on self-signed
+        # ES clusters can still opt out explicitly via the env var
+        # / yaml flag.
         self.es_verify_ssl = get_config_variable(
             "THREAT_ACTOR_ENRICHMENT_ES_VERIFY_SSL",
             ["threat_actor_enrichment", "es_verify_ssl"],
             config,
             False,
-            False,
+            True,
         )
         self.sdo_index = get_config_variable(
             "THREAT_ACTOR_ENRICHMENT_SDO_INDEX",
@@ -116,7 +122,7 @@ class ThreatActorEnrichment:
             size=SCROLL_SIZE,
             query={"term": {"entity_type.keyword": "threat-actor-group"}},
             sort=["_doc"],
-            _source=["name", "internal_id", "last_seen", "first_seen"],
+            _source=["name", "internal_id", "last_seen"],
             fields=["rel_uses.internal_id"],
         )
         scroll_id = resp["_scroll_id"]
@@ -422,7 +428,11 @@ class ThreatActorEnrichment:
                 self.helper.log_info("Connector stop")
                 sys.exit(0)
             except Exception as e:
-                self.helper.log_error(str(e))
+                # Mirror the inner ``_process_enrichment`` handler:
+                # include the exception type so operators can tell a
+                # state-store error apart from a force-ping failure
+                # without enabling debug logging.
+                self.helper.log_error(f"{type(e).__name__}: {e}")
 
             if self.helper.connect_run_and_terminate:
                 self.helper.log_info("Connector stop")

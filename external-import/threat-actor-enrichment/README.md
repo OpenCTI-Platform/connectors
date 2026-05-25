@@ -13,7 +13,7 @@ Runs on a configurable interval (default: 24 hours). For each `threat-actor-grou
 1. Queries Elasticsearch for malware IDs linked via `rel_uses` relationships
 2. Finds the latest `valid_from` from **indicators** that indicate the linked malware
 3. Finds the latest `published` date from **reports** referencing the linked malware
-4. If the computed date is newer than the current `last_seen`, updates via the OpenCTI GraphQL API
+4. Updates `last_seen` via the OpenCTI GraphQL API when either the computed date is newer than the current value, **or** the current value is missing, an epoch-zero/far-future sentinel, or otherwise unparseable (so the connector also self-heals historical bad data on the next run)
 
 Reads use Elasticsearch for fast aggregations. Writes go through the OpenCTI API for proper cache invalidation, stream events, and audit logging.
 
@@ -24,7 +24,7 @@ Reads use Elasticsearch for fast aggregations. Writes go through the OpenCTI API
 | `es_host` | `THREAT_ACTOR_ENRICHMENT_ES_HOST` | — | Elasticsearch URL |
 | `es_user` | `THREAT_ACTOR_ENRICHMENT_ES_USER` | `""` | Elasticsearch username |
 | `es_password` | `THREAT_ACTOR_ENRICHMENT_ES_PASSWORD` | `""` | Elasticsearch password |
-| `es_verify_ssl` | `THREAT_ACTOR_ENRICHMENT_ES_VERIFY_SSL` | `false` | Verify ES SSL certificate |
+| `es_verify_ssl` | `THREAT_ACTOR_ENRICHMENT_ES_VERIFY_SSL` | `true` | Verify ES SSL certificate (set to `false` only for self-signed clusters in non-production environments) |
 | `sdo_index` | `THREAT_ACTOR_ENRICHMENT_SDO_INDEX` | `opencti_stix_domain_objects-*` | SDO index pattern |
 | `interval` | `THREAT_ACTOR_ENRICHMENT_INTERVAL` | `24` | Hours between runs |
 

@@ -13,6 +13,6 @@ threat_actor_enrichment:
   es_host: 'http://localhost:9200'
   es_user: ''
   es_password: ''
-  es_verify_ssl: false
+  es_verify_ssl: true
   sdo_index: 'opencti_stix_domain_objects-*'
   interval: 24 # hours
