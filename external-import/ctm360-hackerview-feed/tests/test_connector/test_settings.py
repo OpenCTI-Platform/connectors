@@ -2,7 +2,7 @@
 
 import pytest
 from connector.settings import ConnectorSettings
-from connectors_sdk.exceptions import ConfigValidationError
+from connectors_sdk import ConfigValidationError
 
 
 class TestConnectorSettingsInstantiation:
