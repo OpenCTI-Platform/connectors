@@ -383,13 +383,35 @@ class DataImporter:
                             }
                         )
 
-            # Process user-agents
+            # Process user-agents. Strip the value before storing in
+            # the observable dict so the SCO ``value`` carried into the
+            # converter is canonical and matches the same per-extraction
+            # normalisation already applied to ``ip`` / ``host`` /
+            # ``url`` above. Without the strip:
+            #
+            # * The per-alert ``unique_observables`` dedup below keys on
+            #   the raw value, so a single signal that carries the same
+            #   user-agent twice with whitespace padding (e.g. one in
+            #   the request and one in the upstream proxy's mirror of
+            #   it) would emit two ``{type, value}`` dict entries that
+            #   never collapse, even though they map to the same
+            #   ``CustomObservableUserAgent`` SCO downstream.
+            # * The converter's ``_create_observable_object`` does
+            #   strip again at the SCO-construction site (defence in
+            #   depth), but storing the canonical value here keeps the
+            #   importer-side dedup contract truthful and avoids
+            #   emitting duplicate dict entries that the converter
+            #   then has to collapse via deterministic id.
             all_user_agents = user_agents + useragents
             for ua in all_user_agents:
-                if isinstance(ua, str) and ua.strip():
-                    observables.append(
-                        {"type": "user-agent", "value": ua, "source": "field_search"}
-                    )
+                if not isinstance(ua, str):
+                    continue
+                ua = ua.strip()
+                if not ua:
+                    continue
+                observables.append(
+                    {"type": "user-agent", "value": ua, "source": "field_search"}
+                )
 
             # Emails were collected in the same traversal as the field
             # search above via the ``_scan_emails`` callback — no
