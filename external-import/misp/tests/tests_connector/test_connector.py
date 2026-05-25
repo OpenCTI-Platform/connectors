@@ -1,3 +1,4 @@
+import logging
 import time
 from copy import deepcopy
 from datetime import date, datetime, timedelta, timezone
@@ -5,6 +6,7 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pycti
+import pytest
 import stix2
 from api_client.models import EventRestSearchListItem
 from connector import ConnectorSettings, Misp
@@ -39,6 +41,7 @@ def fake_misp_connector(config_dict: dict) -> Misp:
 
     settings = StubConnectorSettings()
     helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    helper.connector_logger = logging.getLogger("misp")
 
     return Misp(config=settings, helper=helper)
 
@@ -1221,3 +1224,79 @@ def test_process_events_adds_one_second_after_loop_completion(
         ).isoformat()
         assert state.get("last_event_date") == expected
         assert result is None
+
+
+@pytest.mark.parametrize(
+    "import_from_date, expected_logs",
+    [
+        (
+            None,
+            [
+                "Retrieved state - {'prefix': '[Connector]', 'initial_state': {}}",
+                "Starting MISP full ingestion... - {'prefix': '[Connector]'}",
+                "Connector has never run - {'last_event_date': FakeDatetime(2025, 12, 22, 12, 0, tzinfo=datetime.timezone.utc)}",
+                "Fetching MISP events with filters: - {'prefix': '[Connector]', 'date_field_filter': 'timestamp', 'date_value_filter': FakeDatetime(2025, 12, 22, 12, 0, tzinfo=datetime.timezone.utc), 'datetime_attribute': 'publish_timestamp', 'keyword': None, 'included_tags': [], 'excluded_tags': [], 'included_org_creators': [], 'excluded_org_creators': [], 'enforce_warning_list': False, 'with_attachments': False, 'limit': 10}",
+                "MISP event found - Processing... - {'prefix': '[Connector]', 'event_id': '1', 'event_uuid': None}",
+                "Converted to STIX entities - {'prefix': '[Connector]', 'entities_count': 2}",
+                "Updating last event date (add 1 second) to avoid processing the same event again - {'prefix': '[Connector]', 'last_event_date': '2025-12-27T12:00:01+00:00'}",
+                "Batch processor: Flushed remaining items - {'prefix': '[Connector]'}",
+            ],
+        ),
+        (
+            "2026-01-01",
+            [
+                "Retrieved state - {'prefix': '[Connector]', 'initial_state': {}}",
+                "Starting MISP full ingestion... - {'prefix': '[Connector]'}",
+                "Connector has never run - {'last_event_date': FakeDatetime(2026, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)}",
+                "Fetching MISP events with filters: - {'prefix': '[Connector]', 'date_field_filter': 'timestamp', 'date_value_filter': FakeDatetime(2026, 1, 1, 0, 0, tzinfo=datetime.timezone.utc), 'datetime_attribute': 'publish_timestamp', 'keyword': None, 'included_tags': [], 'excluded_tags': [], 'included_org_creators': [], 'excluded_org_creators': [], 'enforce_warning_list': False, 'with_attachments': False, 'limit': 10}",
+                "MISP event found - Processing... - {'prefix': '[Connector]', 'event_id': '1', 'event_uuid': None}",
+                "Converted to STIX entities - {'prefix': '[Connector]', 'entities_count': 2}",
+                "Updating last event date (add 1 second) to avoid processing the same event again - {'prefix': '[Connector]', 'last_event_date': '2025-12-27T12:00:01+00:00'}",
+                "Batch processor: Flushed remaining items - {'prefix': '[Connector]'}",
+            ],
+        ),
+    ],
+)
+@freeze_time("2026-01-01 12:00:00")
+def test_process_events_first_run(
+    caplog, mock_opencti_connector_helper, mock_py_misp, import_from_date, expected_logs
+):
+    """
+    Test that if import_from_date is not set, last_event_date will be 10 days
+    before today. Else, use the import_from_date date.
+    """
+    caplog.set_level(logging.DEBUG)
+
+    # Given import_from_date
+    config_dict = deepcopy(minimal_config_dict)
+    config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+    config_dict["misp"]["import_from_date"] = import_from_date
+    connector = fake_misp_connector(config_dict)
+
+    # And an event
+    ts = int((datetime.now(tz=timezone.utc) - timedelta(days=5)).timestamp())
+    event = EventRestSearchListItem.model_validate(
+        {"Event": {"id": "1", "publish_timestamp": str(ts)}}
+    )
+
+    # And no previous run
+    patch.object(
+        connector.work_manager,
+        "get_state",
+        return_value={"last_event_date": None},
+    )
+
+    # When we call process_events
+    _run_process_events(connector, [event])
+
+    # Then process_events should complete successfully with expected logs
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    missing_messages = [
+        msg
+        for msg in expected_logs
+        if not any(msg in log_msg for log_msg in all_messages)
+    ]
+
+    assert (  # noqa: S101
+        not missing_messages
+    ), f"Missing expected log messages: {missing_messages}"
