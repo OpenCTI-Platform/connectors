@@ -52,9 +52,3 @@ def normalize_timestamp(ts) -> str:
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     except (ValueError, AttributeError):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def generate_deterministic_id(stix_type: str, *args: str) -> str:
-    """Generate a deterministic STIX ID from type and seed values."""
-    seed = "-".join(str(a) for a in args)
-    return f"{stix_type}--{uuid.uuid5(uuid.NAMESPACE_URL, seed)}"

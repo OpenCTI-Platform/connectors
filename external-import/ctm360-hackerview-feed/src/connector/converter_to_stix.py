@@ -1,19 +1,19 @@
 import re
-import uuid
 
+import pycti
 import stix2
-from connector.utils import generate_deterministic_id, normalize_timestamp
-from pycti import (
-    OpenCTIConnectorHelper,
-    Vulnerability,
-)
+from connector.utils import normalize_timestamp
+from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:
     def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.author = stix2.Identity(
-            id="identity--a8e035fc-6ac7-4e10-bc0a-6917e783c576",
+            id=pycti.Identity.generate_id(
+                name="HackerView",
+                identity_class="organization",
+            ),
             name="HackerView",
             identity_class="organization",
             description="CTM360 External Attack Surface Management platform",
@@ -232,7 +232,7 @@ class ConverterToStix:
             vuln_obj = None
             if cve_id:
                 vuln_obj = stix2.Vulnerability(
-                    id=Vulnerability.generate_id(cve_id),
+                    id=pycti.Vulnerability.generate_id(cve_id),
                     name=cve_id,
                     description=(
                         f"Vulnerability {cve_id} detected by HackerView. "
@@ -254,8 +254,9 @@ class ConverterToStix:
             system_id = None
             system = None
             if system_name:
-                system_seed = f"hv-system-{system_name}"
-                system_id = f"identity--{uuid.uuid5(uuid.NAMESPACE_URL, system_seed)}"
+                system_id = pycti.Identity.generate_id(
+                    name=system_name, identity_class="system"
+                )
                 system = stix2.Identity(
                     id=system_id,
                     name=system_name,
@@ -270,8 +271,10 @@ class ConverterToStix:
                 if vuln_obj:
                     objects.append(
                         stix2.Relationship(
-                            id=generate_deterministic_id(
-                                "relationship", "has", system_id, vuln_obj.id
+                            id=pycti.StixCoreRelationship.generate_id(
+                                relationship_type="has",
+                                source_ref=system_id,
+                                target_ref=vuln_obj.id,
                             ),
                             relationship_type="has",
                             source_ref=system_id,
@@ -287,8 +290,7 @@ class ConverterToStix:
             if system_id:
                 note_refs.append(system_id)
 
-            note_seed = f"hv-issue-note-{issue_id}"
-            note_id = f"note--{uuid.uuid5(uuid.NAMESPACE_URL, note_seed)}"
+            note_id = pycti.Note.generate_id(created=first_seen, content=description)
             note = stix2.Note(
                 id=note_id,
                 content=description,
@@ -320,10 +322,7 @@ class ConverterToStix:
                     if not cwe_id_val:
                         continue
 
-                    attack_seed = f"attack-pattern-{cwe_id_val}"
-                    attack_id = (
-                        f"attack-pattern--{uuid.uuid5(uuid.NAMESPACE_URL, attack_seed)}"
-                    )
+                    attack_id = pycti.AttackPattern.generate_id(name=cwe_id_val)
                     attack_pattern = stix2.AttackPattern(
                         id=attack_id,
                         name=cwe_id_val,
@@ -343,11 +342,10 @@ class ConverterToStix:
                     if vuln_obj:
                         objects.append(
                             stix2.Relationship(
-                                id=generate_deterministic_id(
-                                    "relationship",
-                                    "related-to",
-                                    vuln_obj.id,
-                                    attack_id,
+                                id=pycti.StixCoreRelationship.generate_id(
+                                    relationship_type="related-to",
+                                    source_ref=vuln_obj.id,
+                                    target_ref=attack_id,
                                 ),
                                 relationship_type="related-to",
                                 source_ref=vuln_obj.id,
@@ -369,13 +367,11 @@ class ConverterToStix:
                     if system_name and system_id:
                         objects.append(
                             stix2.Relationship(
-                                id=generate_deterministic_id(
-                                    "relationship",
-                                    "related-to",
-                                    system_id,
-                                    software.id,
+                                id=pycti.StixCoreRelationship.generate_id(
+                                    relationship_type="related-to",
+                                    source_ref=system_id,
+                                    target_ref=software.id,
                                 ),
-                                relationship_type="related-to",
                                 source_ref=system_id,
                                 target_ref=software.id,
                                 created_by_ref=self.author.id,
@@ -481,7 +477,7 @@ class ConverterToStix:
             vuln_obj = None
             if cve_id:
                 vuln_obj = stix2.Vulnerability(
-                    id=Vulnerability.generate_id(cve_id),
+                    id=pycti.Vulnerability.generate_id(cve_id),
                     name=cve_id,
                     description=(
                         f"Resolved vulnerability {cve_id} from CTM360 HackerView. "
@@ -502,8 +498,9 @@ class ConverterToStix:
             # --- System identity for affected asset ---
             system_name = host or domain or ""
             if system_name or resolved_ip:
-                system_seed = f"hv-system-{system_name or resolved_ip}"
-                system_id = f"identity--{uuid.uuid5(uuid.NAMESPACE_URL, system_seed)}"
+                system_id = pycti.Identity.generate_id(
+                    name=system_name, identity_class="system"
+                )
                 system_desc = f"HackerView asset: {system_name or resolved_ip}"
                 if resolved_ip and system_name:
                     system_desc += f" ({resolved_ip})"
@@ -518,8 +515,10 @@ class ConverterToStix:
                 if vuln_obj:
                     objects.append(
                         stix2.Relationship(
-                            id=generate_deterministic_id(
-                                "relationship", "has", system_id, vuln_obj.id
+                            id=pycti.StixCoreRelationship.generate_id(
+                                relationship_type="has",
+                                source_ref=system_id,
+                                target_ref=vuln_obj.id,
                             ),
                             relationship_type="has",
                             source_ref=system_id,
@@ -529,14 +528,14 @@ class ConverterToStix:
                     )
 
             # --- Note for resolved issue ---
-            note_seed = f"hv-resolved-note-{issue_id}"
-            note_id = f"note--{uuid.uuid5(uuid.NAMESPACE_URL, note_seed)}"
+            note_content = (
+                f"Resolved HackerView issue: {issue_name}. "
+                f"Severity: {severity}. CVE: {cve_id or 'N/A'}."
+            )
+            note_id = pycti.Note.generate_id(created=first_seen, content=note_content)
             note = stix2.Note(
                 id=note_id,
-                content=(
-                    f"Resolved HackerView issue: {issue_name}. "
-                    f"Severity: {severity}. CVE: {cve_id or 'N/A'}."
-                ),
+                content=note_content,
                 created=first_seen,
                 modified=last_updated or first_seen,
                 created_by_ref=self.author.id,
@@ -558,8 +557,7 @@ class ConverterToStix:
             domain = asset.get("domain", "") if isinstance(asset, dict) else str(asset)
             if not domain:
                 continue
-            system_seed = f"hv-asset-domain-{domain}"
-            system_id = f"identity--{uuid.uuid5(uuid.NAMESPACE_URL, system_seed)}"
+            system_id = pycti.Identity.generate_id(name=domain, identity_class="system")
             system = stix2.Identity(
                 id=system_id,
                 name=domain,
@@ -577,8 +575,7 @@ class ConverterToStix:
             host = asset.get("host", "") if isinstance(asset, dict) else str(asset)
             if not host:
                 continue
-            system_seed = f"hv-asset-host-{host}"
-            system_id = f"identity--{uuid.uuid5(uuid.NAMESPACE_URL, system_seed)}"
+            system_id = pycti.Identity.generate_id(name=host, identity_class="system")
             system = stix2.Identity(
                 id=system_id,
                 name=host,
@@ -598,8 +595,7 @@ class ConverterToStix:
             )
             if not ip_val:
                 continue
-            system_seed = f"hv-asset-ip-{ip_val}"
-            system_id = f"identity--{uuid.uuid5(uuid.NAMESPACE_URL, system_seed)}"
+            system_id = pycti.Identity.generate_id(name=ip_val, identity_class="system")
             system = stix2.Identity(
                 id=system_id,
                 name=ip_val,
