@@ -138,23 +138,21 @@ def collect_ipintel(
         return
 
     logger.info("[IP INTEL] Starting collection")
-    entities = client.get_ipintel()
-
-    # Initiate new work
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
-    stix_objects = _extract_stix_from_ipintel(
-        converter_to_stix=converter_to_stix,
-        entities=entities,
-        target_scope=target_scope,
-        logger=logger,
-    )
+    for page in client.iter_ipintel():
+        stix_objects = _extract_stix_from_ipintel(
+            converter_to_stix=converter_to_stix,
+            entities=page,
+            target_scope=target_scope,
+            logger=logger,
+        )
+        if stix_objects:
+            works.send_bundle(
+                helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
+            )
 
     works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
     logger.info("[IP INTEL] Data Source Completed!")
