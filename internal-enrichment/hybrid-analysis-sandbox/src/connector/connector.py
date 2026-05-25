@@ -325,11 +325,14 @@ class HybridAnalysis:
         self.helper.connector_logger.info("Analysis done, attaching knowledge...")
         return report
 
-    def _process_observable(self, stix_entity: dict, opencti_entity: dict) -> str:
+    def _process_observable(
+        self, stix_entity: dict, opencti_entity: dict
+    ) -> None | list[stix2.v21._STIXBase21]:
         """Process the observable based on its type and available data.
         :param stix_entity: The original STIX entity being enriched.
         :param opencti_entity: The OpenCTI representation of the entity being enriched.
-        :return: A message indicating the result of the operation."""
+        :return: None if the observable cannot be enriched, else a list of enriched STIX objects.
+        """
 
         self.helper.connector_logger.info(
             "Processing the observable ",
@@ -354,16 +357,9 @@ class HybridAnalysis:
             report = self._trigger_sandbox(opencti_entity)
 
         if report is None:
-            message = "Observable not found and no file to upload in the sandbox"
-            self.helper.connector_logger.info(message)
-            return message
+            return None
 
-        enriched_objects = self._create_knowledge(stix_entity, opencti_entity, report)
-        bundles_sent = self._send_bundle(enriched_objects)
-
-        message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
-        self.helper.connector_logger.info(message)
-        return message
+        return self._create_knowledge(stix_entity, opencti_entity, report)
 
     def _send_bundle(
         self, stix_objects: list[stix2.v21._STIXBase21] | list[dict]
@@ -404,7 +400,17 @@ class HybridAnalysis:
                 self.helper.connector_logger.info(f"[CONNECTOR] {message}")
                 return message
 
-            return self._process_observable(stix_entity, opencti_entity)
+            enriched_objects = self._process_observable(stix_entity, opencti_entity)
+            if enriched_objects:
+                bundles_sent = self._send_bundle(enriched_objects)
+                message = f"Sent {len(bundles_sent)} stix bundle(s) for worker import"
+                self.helper.connector_logger.info(message)
+                return message
+
+            message = "Observable not found and no file to upload in the sandbox"
+            self.helper.connector_logger.info(message)
+            self._send_bundle(original_stix_objects)
+            return message
 
         except (HybridAnalysisAPIError, HybridAnalysisReportError) as err:
             self.helper.connector_logger.error(
