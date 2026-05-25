@@ -347,11 +347,8 @@ class HybridAnalysis:
 
         if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
             report = self._search_hash(opencti_entity)
-            if report is None:
+            if report is None and opencti_entity.get("importFiles"):
                 trigger_sandbox = True
-
-        if opencti_entity.get("importFiles"):
-            trigger_sandbox = True
 
         if trigger_sandbox:
             report = self._trigger_sandbox(opencti_entity)

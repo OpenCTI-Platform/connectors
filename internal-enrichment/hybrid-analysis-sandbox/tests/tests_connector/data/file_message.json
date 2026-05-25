@@ -15,7 +15,12 @@
     "entity_type": "StixFile",
     "observable_value": "malware.exe",
     "hashes": [],
-    "importFiles": [],
+    "importFiles": [
+      {
+        "id": "test-file-id",
+        "name": "malware.exe"
+      }
+    ],
     "objectMarking": [
       {
         "definition_type": "TLP",
