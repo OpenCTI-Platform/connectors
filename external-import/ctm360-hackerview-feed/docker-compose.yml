@@ -1,8 +1,6 @@
 services:
-  connector-ctm360-hackerview:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  connector-ctm360-hackerview-feed:
+    image: opencti/connector-ctm360-hackerview-feed:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -23,15 +21,4 @@ services:
       - CTM360_HV_ENABLE_STATUS_TRACKING=true
       - CTM360_HV_STATUS_POLL_INTERVAL=3600
     restart: always
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
-    mem_limit: 512m
-    pids_limit: 100
-    depends_on:
-      opencti:
-        condition: service_healthy
+
