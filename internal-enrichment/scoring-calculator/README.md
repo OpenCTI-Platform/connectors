@@ -81,7 +81,7 @@ new_score = 88
 | Parameter             | Required | Description                            | Example                                |
 |-----------------------|----------|----------------------------------------|----------------------------------------|
 | `OPENCTI_URL`         | ✅        | URL of your OpenCTI platform           | `http://localhost`                     |
-| `OPENCTI_TOKEN`       | ✅        | OpenCTI API token                      | `CHANGEME`                             |
+| `OPENCTI_TOKEN`       | ✅        | OpenCTI API token                      | `ChangeMe`                             |
 | `CONNECTOR_ID`        | ✅        | Unique connector ID (UUIDv4)           | `12b22ff8-85fd-46e6-bb5f-d6c9b27e245d` |
 | `CONNECTOR_NAME`      | ✅        | Display name of the connector          | `Scoring calculator`                   |
 | `CONNECTOR_SCOPE`     | ✅        | Entity scope to enrich                 | `Indicator`                            |

@@ -1,9 +1,9 @@
 opencti:
   url: 'http://localhost:8080'
-  token: 'changeme'
+  token: 'ChangeMe'
 
 connector:
-  id: 'changeme'
+  id: 'ChangeMe'
   type: 'INTERNAL_ENRICHMENT'
   name: 'Scoring calculator'
   scope: 'Indicator'
