@@ -292,6 +292,13 @@ class ConnectorClient:
         ``created_by_ref`` whose target has been deleted) so the caller
         can skip the author-impact step instead of crashing on a
         ``None.get(...)``.
+
+        Uses chained ``.get(...)`` rather than bracket access so a
+        GraphQL error response (``{"errors": [...]}`` with no ``data``
+        key, or a payload that omits ``stixDomainObject`` entirely)
+        degrades to ``None`` instead of raising ``KeyError`` — the
+        caller already guards on ``if indicator_author`` so the
+        author-impact step is simply skipped in that case.
         """
         res = self.api.query(GET_AUTHOR_QUERY, variables={"id": author_id})
-        return res["data"]["stixDomainObject"]
+        return (res or {}).get("data", {}).get("stixDomainObject")

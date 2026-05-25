@@ -3,6 +3,31 @@ from pycti import OpenCTIApiClient, OpenCTIConnectorHelper
 from .client_api import ConnectorClient
 from .config_loader import ConfigConnector
 
+
+def _coerce_score(value, default: int = 0) -> int:
+    """Coerce an ``x_opencti_score`` payload into a clamped 0..100 ``int``.
+
+    OpenCTI treats ``x_opencti_score`` as optional on indicators; a stored
+    value can legitimately be ``None`` (key present, no score), a numeric
+    string (``"42"`` from a STIX-1 / legacy import), a float, or even
+    garbage from an upstream connector that wrote the wrong type.
+    ``dict.get(key, default)`` returns the actual stored value when the
+    key exists with ``None``, so the bare ``int(entity.get("x_opencti_score", 0))``
+    shape crashes the enrichment with ``TypeError`` (``int(None)``) or
+    ``ValueError`` (``int("foo")``). Coerce defensively, fall back to
+    ``default`` on any failure, and clamp to the platform's documented
+    0..100 range so a malformed upstream value can never push a downstream
+    update outside the valid range.
+    """
+    if value is None:
+        return default
+    try:
+        coerced = int(float(value))
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(100, coerced))
+
+
 THREAT_ENTITIES = [
     "Intrusion-Set",
     "Threat-Actor",
@@ -85,9 +110,18 @@ class ConnectorScoring:
 
     # In case labels of two different priorities are present, keep the highest priority
     def _priority_of(self, entity):
+        # Defensive ``.get(...) or []`` rather than ``entity["objectLabel"]``:
+        # the GraphQL query always requests ``objectLabel``, but a partially
+        # populated payload (e.g. a future schema change, a non-StixDomainObject
+        # node slipping through the inline fragment, or a future caller that
+        # forgets to fetch labels) would otherwise crash the entire enrichment
+        # via ``KeyError`` / ``TypeError`` before the scope check could
+        # short-circuit. Same reasoning for ``label.get("value", "")``.
         priority = []
-        for label in entity["objectLabel"]:
-            label_value = label["value"].lower()
+        for label in entity.get("objectLabel") or []:
+            label_value = (label.get("value") or "").lower()
+            if not label_value:
+                continue
             if label_value in self.config.high_priority_labels:
                 return "high"
             elif label_value in self.config.medium_priority_labels:
@@ -171,12 +205,24 @@ class ConnectorScoring:
                 },
             )
 
-        impact_ratio = min(1.0, total_impact / 100)
+        # Clamp on both sides: the connector's contract is forward-only
+        # (never reduces a score), so a misconfigured negative
+        # per-priority value would otherwise pull the score *down* via
+        # the relative-percentage formula. ``max(0.0, ...)`` upholds
+        # the contract regardless of how the operator configured the
+        # impact map.
+        impact_ratio = max(0.0, min(1.0, total_impact / 100))
 
-        actual_score = int(entity_to_enrich.get("x_opencti_score", 0))
+        # ``_coerce_score`` handles every edge case the bare
+        # ``int(entity.get("x_opencti_score", 0))`` would crash on:
+        # ``None`` (key present with no value), numeric strings, floats,
+        # and out-of-range upstream garbage. Pre-existing scores outside
+        # 0..100 are clamped before the formula runs so the resulting
+        # ``new_score`` is always a valid OpenCTI score.
+        actual_score = _coerce_score(entity_to_enrich.get("x_opencti_score"))
         new_score = actual_score + ((100 - actual_score) * impact_ratio)
 
-        entity_to_enrich["x_opencti_score"] = int(round(new_score))
+        entity_to_enrich["x_opencti_score"] = _coerce_score(round(new_score))
 
         self.helper.connector_logger.debug(
             "Score computation result",
