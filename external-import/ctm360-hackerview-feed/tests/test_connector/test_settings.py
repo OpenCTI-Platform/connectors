@@ -1,5 +1,7 @@
 """Tests for CTM360 HackerView Feed connector settings."""
 
+from datetime import timedelta
+
 import pytest
 from connector.settings import ConnectorSettings
 from connectors_sdk import ConfigValidationError
@@ -13,7 +15,9 @@ class TestConnectorSettingsInstantiation:
         settings = ConnectorSettings()
         assert settings.opencti.url is not None
         assert settings.connector.name == "CTM360-HackerView"
-        assert settings.ctm360_hv.api_key == "test-api-key"
+        assert (
+            settings.ctm360_hackerview_feed.api_key.get_secret_value() == "test-api-key"
+        )
 
     def test_opencti_url(self):
         """OpenCTI URL should match the environment variable."""
@@ -44,58 +48,56 @@ class TestCTM360HvConfigDefaults:
     def test_api_base_url_default(self):
         settings = ConnectorSettings()
         assert (
-            str(settings.ctm360_hv.api_base_url).rstrip("/")
+            str(settings.ctm360_hackerview_feed.api_base_url).rstrip("/")
             == "https://hackerview.ctm360.com"
         )
 
-    def test_import_interval_default(self):
-        settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_interval == 86400
-
     def test_import_issues_default(self):
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_issues is True
+        assert settings.ctm360_hackerview_feed.import_issues is True
 
     def test_import_resolved_issues_default(self):
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_resolved_issues is True
+        assert settings.ctm360_hackerview_feed.import_resolved_issues is True
 
     def test_import_domain_assets_default(self):
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_domain_assets is True
+        assert settings.ctm360_hackerview_feed.import_domain_assets is True
 
     def test_import_host_assets_default(self):
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_host_assets is True
+        assert settings.ctm360_hackerview_feed.import_host_assets is True
 
     def test_import_ip_assets_default(self):
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_ip_assets is True
+        assert settings.ctm360_hackerview_feed.import_ip_assets is True
 
 
 class TestCTM360HvConfigOverrides:
     """Test that default values can be overridden via env vars."""
 
     def test_override_import_interval(self, monkeypatch):
-        monkeypatch.setenv("CTM360_HV_IMPORT_INTERVAL", "3600")
+        monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_interval == 3600
+        assert settings.connector.duration_period == timedelta(hours=1)
 
     def test_override_import_issues(self, monkeypatch):
-        monkeypatch.setenv("CTM360_HV_IMPORT_ISSUES", "false")
+        monkeypatch.setenv("CTM360_HACKERVIEW_FEED_IMPORT_ISSUES", "false")
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_issues is False
+        assert settings.ctm360_hackerview_feed.import_issues is False
 
     def test_override_import_domain_assets(self, monkeypatch):
-        monkeypatch.setenv("CTM360_HV_IMPORT_DOMAIN_ASSETS", "false")
+        monkeypatch.setenv("CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS", "false")
         settings = ConnectorSettings()
-        assert settings.ctm360_hv.import_domain_assets is False
+        assert settings.ctm360_hackerview_feed.import_domain_assets is False
 
     def test_override_api_base_url(self, monkeypatch):
-        monkeypatch.setenv("CTM360_HV_API_BASE_URL", "https://custom.example.com")
+        monkeypatch.setenv(
+            "CTM360_HACKERVIEW_FEED_API_BASE_URL", "https://custom.example.com"
+        )
         settings = ConnectorSettings()
         assert (
-            str(settings.ctm360_hv.api_base_url).rstrip("/")
+            str(settings.ctm360_hackerview_feed.api_base_url).rstrip("/")
             == "https://custom.example.com"
         )
 
@@ -113,22 +115,7 @@ class TestRequiredFieldValidation:
         with pytest.raises(ConfigValidationError):
             ConnectorSettings()
 
-    def test_missing_connector_id(self, monkeypatch):
-        monkeypatch.delenv("CONNECTOR_ID")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
-
-    def test_missing_connector_scope(self, monkeypatch):
-        monkeypatch.delenv("CONNECTOR_SCOPE")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
-
     def test_missing_api_key(self, monkeypatch):
-        monkeypatch.delenv("CTM360_HV_API_KEY")
-        with pytest.raises(ConfigValidationError):
-            ConnectorSettings()
-
-    def test_missing_duration_period(self, monkeypatch):
-        monkeypatch.delenv("CONNECTOR_DURATION_PERIOD")
+        monkeypatch.delenv("CTM360_HACKERVIEW_FEED_API_KEY")
         with pytest.raises(ConfigValidationError):
             ConnectorSettings()

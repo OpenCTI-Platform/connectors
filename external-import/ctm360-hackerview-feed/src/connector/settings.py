@@ -1,24 +1,40 @@
+from datetime import timedelta
+
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
-    name: str = Field(default="CTM360-HackerView")
+    id: str = Field(
+        default="5f75b6cc-25a3-43aa-90ad-089beb2fd832",
+        description="A UUID v4 to identify the connector in OpenCTI.",
+    )
+    name: str = Field(
+        default="CTM360-HackerView",
+        description="Name of the connector.",
+    )
+    scope: ListFromString = Field(
+        default=["CTM360-HackerView"],
+        description="The scope of the connector.",
+    )
+    duration_period: timedelta = Field(
+        default=timedelta(hours=24),
+        description="The period of time to await between two runs of the connector.",
+    )
 
 
-class CTM360HvConfig(BaseConfigModel):
+class CTM360HackerviewFeedConfig(BaseConfigModel):
     api_base_url: HttpUrl = Field(
-        default="https://hackerview.ctm360.com",
+        default=HttpUrl("https://hackerview.ctm360.com"),
         description="HackerView API base URL.",
     )
-    api_key: str = Field(description="API key for HackerView authentication.")
-    import_interval: int = Field(
-        default=86400,
-        description="Interval in seconds between imports (default: 24h).",
+    api_key: SecretStr = Field(
+        description="API key for HackerView authentication.",
     )
     import_issues: bool = Field(
         default=True,
@@ -40,8 +56,8 @@ class CTM360HvConfig(BaseConfigModel):
         default=True,
         description="Enable importing IP address assets.",
     )
-    status_poll_interval: int = Field(
-        default=3600,
+    status_poll_interval: timedelta = Field(
+        default=timedelta(hours=1),
         description="Interval in seconds between status polling cycles (default: 1h).",
     )
     enable_status_tracking: bool = Field(
@@ -54,4 +70,6 @@ class ConnectorSettings(BaseConnectorSettings):
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    ctm360_hv: CTM360HvConfig = Field(default_factory=CTM360HvConfig)
+    ctm360_hackerview_feed: CTM360HackerviewFeedConfig = Field(
+        default_factory=CTM360HackerviewFeedConfig
+    )

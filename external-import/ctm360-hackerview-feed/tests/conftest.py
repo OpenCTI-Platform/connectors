@@ -28,4 +28,4 @@ def _set_required_env_vars(monkeypatch):
     monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT24H")
 
     # Connector-specific required settings
-    monkeypatch.setenv("CTM360_HV_API_KEY", "test-api-key")
+    monkeypatch.setenv("CTM360_HACKERVIEW_FEED_API_KEY", "test-api-key")

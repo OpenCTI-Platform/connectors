@@ -16,10 +16,14 @@
     },
     "CONNECTOR_NAME": {
       "default": "CTM360-HackerView",
+      "description": "Name of the connector.",
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "CTM360-HackerView"
+      ],
+      "description": "The scope of the connector.",
       "items": {
         "type": "string"
       },
@@ -43,58 +47,57 @@
       "type": "string"
     },
     "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
       "description": "The period of time to await between two runs of the connector.",
       "format": "duration",
       "type": "string"
     },
-    "CTM360_HV_API_BASE_URL": {
-      "default": "https://hackerview.ctm360.com",
+    "CTM360_HACKERVIEW_FEED_API_BASE_URL": {
+      "default": "https://hackerview.ctm360.com/",
       "description": "HackerView API base URL.",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
-    "CTM360_HV_API_KEY": {
+    "CTM360_HACKERVIEW_FEED_API_KEY": {
       "description": "API key for HackerView authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
-    "CTM360_HV_IMPORT_INTERVAL": {
-      "default": 86400,
-      "description": "Interval in seconds between imports (default: 24h).",
-      "type": "integer"
-    },
-    "CTM360_HV_IMPORT_ISSUES": {
+    "CTM360_HACKERVIEW_FEED_IMPORT_ISSUES": {
       "default": true,
       "description": "Enable importing security issues.",
       "type": "boolean"
     },
-    "CTM360_HV_IMPORT_RESOLVED_ISSUES": {
+    "CTM360_HACKERVIEW_FEED_IMPORT_RESOLVED_ISSUES": {
       "default": true,
       "description": "Enable importing resolved issues.",
       "type": "boolean"
     },
-    "CTM360_HV_IMPORT_DOMAIN_ASSETS": {
+    "CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS": {
       "default": true,
       "description": "Enable importing domain assets.",
       "type": "boolean"
     },
-    "CTM360_HV_IMPORT_HOST_ASSETS": {
+    "CTM360_HACKERVIEW_FEED_IMPORT_HOST_ASSETS": {
       "default": true,
       "description": "Enable importing hostname assets.",
       "type": "boolean"
     },
-    "CTM360_HV_IMPORT_IP_ASSETS": {
+    "CTM360_HACKERVIEW_FEED_IMPORT_IP_ASSETS": {
       "default": true,
       "description": "Enable importing IP address assets.",
       "type": "boolean"
     },
-    "CTM360_HV_STATUS_POLL_INTERVAL": {
-      "default": 3600,
+    "CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL": {
+      "default": "PT1H",
       "description": "Interval in seconds between status polling cycles (default: 1h).",
-      "type": "integer"
+      "format": "duration",
+      "type": "string"
     },
-    "CTM360_HV_ENABLE_STATUS_TRACKING": {
+    "CTM360_HACKERVIEW_FEED_ENABLE_STATUS_TRACKING": {
       "default": true,
       "description": "Enable background polling for issue status changes.",
       "type": "boolean"
@@ -103,9 +106,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
-    "CONNECTOR_DURATION_PERIOD",
-    "CTM360_HV_API_KEY"
+    "CTM360_HACKERVIEW_FEED_API_KEY"
   ],
   "additionalProperties": true
 }

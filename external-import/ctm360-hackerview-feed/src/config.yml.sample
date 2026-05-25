@@ -3,17 +3,15 @@ opencti:
   token: 'ChangeMe'
 
 connector:
-  type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'  # UUIDv4
   name: 'CTM360-HackerView'
   scope: 'CTM360-HackerView'
   log_level: 'info'
   duration_period: 'PT24H'
 
-ctm360_hv:
+ctm360_hackerview_feed:
   api_base_url: 'https://hackerview.ctm360.com'
   api_key: 'ChangeMe'
-  import_interval: 86400
   import_issues: true
   import_resolved_issues: true
   import_domain_assets: true

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from connector.case_status_tracker import CaseStatusTracker
 from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
 from ctm360_hv_client.api_client import CTM360HvClient
 from pycti import OpenCTIConnectorHelper
 
@@ -12,23 +13,28 @@ HV_SOURCE_NAME = "CTM360-HackerView"
 
 
 class CTM360HackerViewConnector:
-    def __init__(self, config, helper: OpenCTIConnectorHelper):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
+
         self.client = CTM360HvClient(
             helper=self.helper,
-            base_url=str(config.ctm360_hv.api_base_url),
-            api_key=config.ctm360_hv.api_key,
+            base_url=str(config.ctm360_hackerview_feed.api_base_url),
+            api_key=config.ctm360_hackerview_feed.api_key.get_secret_value(),
         )
         self.converter = ConverterToStix(self.helper)
-        self._interval = config.ctm360_hv.import_interval
-        self._import_issues = config.ctm360_hv.import_issues
-        self._import_resolved_issues = config.ctm360_hv.import_resolved_issues
-        self._import_domain_assets = config.ctm360_hv.import_domain_assets
-        self._import_host_assets = config.ctm360_hv.import_host_assets
-        self._import_ip_assets = config.ctm360_hv.import_ip_assets
+
+        self._interval = config.connector.duration_period.total_seconds()
+        self._import_issues = config.ctm360_hackerview_feed.import_issues
+        self._import_resolved_issues = (
+            config.ctm360_hackerview_feed.import_resolved_issues
+        )
+        self._import_domain_assets = config.ctm360_hackerview_feed.import_domain_assets
+        self._import_host_assets = config.ctm360_hackerview_feed.import_host_assets
+        self._import_ip_assets = config.ctm360_hackerview_feed.import_ip_assets
+
         self._lock = threading.Lock()
-        self._enable_tracking = config.ctm360_hv.enable_status_tracking
+        self._enable_tracking = config.ctm360_hackerview_feed.enable_status_tracking
         self._tracker = None
         self._author_opencti_id = None
 
@@ -68,7 +74,9 @@ class CTM360HackerViewConnector:
             self._tracker = CaseStatusTracker(
                 helper=self.helper,
                 client=self.client,
-                poll_interval=self.config.ctm360_hv.status_poll_interval,
+                poll_interval=int(
+                    self.config.ctm360_hackerview_feed.status_poll_interval.total_seconds()
+                ),
                 lock=self._lock,
             )
             self._tracker.start()
@@ -98,7 +106,7 @@ class CTM360HackerViewConnector:
             f"CTM360-HackerView import @ {now.strftime('%Y-%m-%dT%H:%M:%SZ')}"
         )
         work_id = self.helper.api.work.initiate_work(
-            self.helper.connect_id, friendly_name
+            self.config.connector.id, friendly_name
         )
 
         all_objects = []
