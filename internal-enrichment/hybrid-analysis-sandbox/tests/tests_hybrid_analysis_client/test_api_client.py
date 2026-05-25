@@ -19,7 +19,7 @@ def client(mock_helper):
     return HybridAnalysisClient(
         helper=mock_helper,
         token="test-token",
-        environment_id=110,
+        environment_id="110",
     )
 
 
@@ -28,12 +28,12 @@ def test_hybrid_analysis_client_init_sets_expected_attributes(client, mock_helpe
     # Given: valid arguments for client
     # When: the client is instantiated
     client = HybridAnalysisClient(
-        helper=mock_helper, token="any-token", environment_id=160
+        helper=mock_helper, token="any-token", environment_id="160"
     )
 
     # Then: the client has the expected attributes
     assert client.base_url == "https://hybrid-analysis.com/api/v2"
-    assert client.environment_id == 160
+    assert client.environment_id == "160"
     assert client.session.headers.get("api-key") == "any-token"
     assert client.session.headers.get("accept") == "application/json"
     assert "OpenCTI" in client.session.headers.get("user-agent", "")
@@ -188,7 +188,7 @@ def test_submit_url_succeeds(client):
         "/submit/url",
         data={
             "url": "http://malicious.example.com",
-            "environment_id": 110,
+            "environment_id": "110",
         },
     )
     assert result == {"job_id": "job-456"}
@@ -208,7 +208,7 @@ def test_submit_file_succeeds(client):
     client._submit_request.assert_called_once_with(
         "POST",
         "/submit/file",
-        data={"environment_id": 110},
+        data={"environment_id": "110"},
         files={"file": ("malware.exe", b"file_content_bytes")},
     )
     assert result == {"job_id": "job-789"}

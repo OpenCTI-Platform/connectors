@@ -24,9 +24,6 @@ class HybridAnalysis:
         self.config = config
         self.helper = helper
 
-        self.api_key = self.config.hybrid_analysis_sandbox.token.get_secret_value()
-        self.environment_id = self.config.hybrid_analysis_sandbox.environment_id
-
         self.client = HybridAnalysisClient(
             helper,
             token=self.config.hybrid_analysis_sandbox.token.get_secret_value(),

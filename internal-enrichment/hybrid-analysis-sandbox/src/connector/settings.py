@@ -38,19 +38,21 @@ class HybridAnalysisSandboxConfig(BaseConfigModel):
     token: SecretStr = Field(
         description="Hybrid Analysis API token.",
     )
-    environment_id: Literal[400, 310, 300, 200, 160, 120, 110, 100] = Field(
-        description=(
-            "Analysis environment ID. Available values: "
-            "400=Mac Catalina 64 bit (x86), "
-            "310=Linux (Ubuntu 20.04, 64 bit), "
-            "300=Linux (Ubuntu 16.04, 64 bit), "
-            "200=Android Static Analysis, "
-            "160=Windows 10 64 bit, "
-            "120=Windows 7 64 bit, "
-            "110=Windows 7 32 bit (HWP Support), "
-            "100=Windows 7 32 bit."
-        ),
-        default=110,
+    environment_id: Literal["400", "310", "300", "200", "160", "120", "110", "100"] = (
+        Field(
+            description=(
+                "Analysis environment ID. Available values: "
+                "400=Mac Catalina 64 bit (x86), "
+                "310=Linux (Ubuntu 20.04, 64 bit), "
+                "300=Linux (Ubuntu 16.04, 64 bit), "
+                "200=Android Static Analysis, "
+                "160=Windows 10 64 bit, "
+                "120=Windows 7 64 bit, "
+                "110=Windows 7 32 bit (HWP Support), "
+                "100=Windows 7 32 bit."
+            ),
+            default="110",
+        )
     )
     max_tlp: Literal[
         "TLP:CLEAR",

@@ -149,7 +149,7 @@ def hybrid_analysis_report() -> dict:
         "submit_name": "malware.exe",
         "size": 1024,
         "threat_score": 75,
-        "environment_id": 110,
+        "environment_id": "110",
         "environment_description": "Windows 7 32 bit",
         "type_short": ["trojan"],
         "mitre_attcks": [

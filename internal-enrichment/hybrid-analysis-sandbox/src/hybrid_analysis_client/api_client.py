@@ -16,7 +16,7 @@ class HybridAnalysisClient:
         self,
         helper: OpenCTIConnectorHelper,
         token: str,
-        environment_id: int = 110,
+        environment_id: str = "110",
     ):
         """
         Initialize the client with necessary configuration.
@@ -25,7 +25,7 @@ class HybridAnalysisClient:
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             token (str): The API token to authenticate the connector to the external API.
-            environment_id (int): The environment ID for the Hybrid Analysis API.
+            environment_id (str): The environment ID for the Hybrid Analysis API.
         """
         self.helper = helper
 

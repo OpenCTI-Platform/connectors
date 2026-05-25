@@ -10,6 +10,6 @@ opencti:
 #   log_level: 'error'
 
 hybrid_analysis:
-  api_key: 'ChangeMe'
-#  environment_id: 110
+  token: 'ChangeMe'
+#  environment_id: '110'
 #  max_tlp: 'TLP:AMBER'

@@ -20,9 +20,8 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 },
                 "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
-                    "environment_id": 160,
+                    "environment_id": "160",
                     "max_tlp": "TLP:AMBER",
-                    "token": "test-api-token",
                 },
             },
             id="full_valid_settings_dict",
@@ -78,7 +77,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
-                    "environment_id": 160,
+                    "environment_id": "160",
                     "max_tlp": "TLP:AMBER",
                 },
             },
@@ -96,7 +95,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 },
                 "hybrid_analysis_sandbox": {
                     "token": "test-api-token",
-                    "environment_id": 160,
+                    "environment_id": "160",
                     "max_tlp": "TLP:AMBER",
                 },
             },
