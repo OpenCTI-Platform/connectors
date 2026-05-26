@@ -89,7 +89,15 @@ class ConfigConnector:
             ["connector", "scope"],
             self.load_yml,
             required=False,
-            default="vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software",
+            # Includes ``report`` so the STIX Reports produced for
+            # advisory sources (threat actors, ransomware, botnets)
+            # are generated out of the box on a fresh deployment
+            # with no ``CONNECTOR_SCOPE`` override. Operators who
+            # set ``CONNECTOR_SCOPE`` explicitly are unaffected
+            # because env-var precedence applies in
+            # ``get_config_variable``. Matches the documented
+            # default in the connector README.
+            default="vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,report",
         )
 
         self.log_level = get_config_variable(
