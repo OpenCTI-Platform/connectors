@@ -12,12 +12,9 @@ from connector.src.stix.v21.models.cdts.external_reference_model import (
 )
 from connector.src.stix.v21.models.ovs.report_type_ov_enums import ReportTypeOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
-    OrganizationAuthor,
-    TLPMarking,
-)
+from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from markdown import markdown  # type: ignore[import-untyped]
-from stix2.v21 import Report  # type: ignore
+from stix2.v21 import Report
 
 
 class GTIReportToSTIXReport(BaseMapper):
@@ -41,7 +38,7 @@ class GTIReportToSTIXReport(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> Report:
+    def to_stix(self) -> ReportModel:
         """Convert the GTI report to a STIX report object.
 
         Returns:

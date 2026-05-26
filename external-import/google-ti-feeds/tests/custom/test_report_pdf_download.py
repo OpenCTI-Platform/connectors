@@ -42,6 +42,7 @@ class DummyConfig:
         self.import_malware_families = False
         self.import_vulnerabilities = False
         self.import_campaigns = False
+        self.import_indicators = False
         self.report_types = ["All"]
         self.report_origins = ["All"]
         self.report_download_pdf = report_download_pdf
@@ -298,8 +299,9 @@ class TestClientAPIDelegation:
     @pytest.mark.asyncio
     async def test_delegates_to_report_client(self, dummy_config, logger):
         """ClientAPI.download_report_pdf should delegate to report_client."""
-        with patch.object(ClientAPI, "_create_api_client"), patch.object(
-            ClientAPI, "_create_fetcher_factory"
+        with (
+            patch.object(ClientAPI, "_create_api_client"),
+            patch.object(ClientAPI, "_create_fetcher_factory"),
         ):
             client = ClientAPI(config=dummy_config, logger=logger)
 
