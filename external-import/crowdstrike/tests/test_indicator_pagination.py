@@ -1,17 +1,29 @@
 """Tests for the CrowdStrike indicator paginated fetch logic.
 
-These tests cover the pagination contract between
+These tests cover the marker-based deep-pagination contract between
 :class:`crowdstrike_feeds_services.client.indicators.IndicatorsAPI` and
 :class:`crowdstrike_feeds_connector.indicator.importer.IndicatorImporter`:
 
 * The importer drives marker-based deep pagination using the ``_marker``
   field carried by each indicator (the FQL clause ``_marker:>='...'``),
   per CrowdStrike's documented ``QueryIntelIndicatorEntities`` contract.
-* Pagination stops cleanly when the API returns an empty page, when
-  ``meta.pagination.total`` reaches ``0``, when the marker fails to
-  advance, or when ``max_records_per_run`` is reached.
+* Pagination stops cleanly when the API returns an empty page (the
+  authoritative end-of-iteration signal), when the last accepted
+  indicator is missing its ``_marker`` field (defensive guard against
+  malformed responses), when the marker fails to advance between two
+  consecutive pages (defensive anti-spin guard), or when
+  ``max_records_per_run`` is reached. The importer intentionally does
+  NOT branch on ``meta.pagination.total`` - that field is the count of
+  records matching the current request's FQL clause and is included
+  in the log line as ``matching_filter_total`` for diagnostics only.
 * Pagination is robust to ``meta.pagination`` being missing or ``None``.
 * ``exclude_types`` and the FQL marker clause are combined correctly.
+* Cross-run resume: the last accepted indicator's ``_marker`` is
+  persisted in importer state under ``latest_indicator_marker`` and
+  used verbatim as the first-page cursor on the next run; if the key
+  is absent (e.g. a deployment carrying only the legacy
+  ``latest_indicator_timestamp``), the state timestamp is used as the
+  initial cursor instead.
 """
 
 from typing import Any
