@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 from connector.src.custom.convert_to_stix.convert_to_stix_base import BaseConvertToSTIX
 from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaEntry,
-    IOCDeltaGTIAssessment,
     IOCDeltaRelationshipItem,
 )
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
@@ -99,30 +98,6 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         rel_objects = self._build_relationships(entry, ioc_entry)
 
         return rel_objects
-
-    @staticmethod
-    def _map_assessment(delta: IOCDeltaGTIAssessment, models: Any) -> Any:
-        """Map a delta GTI assessment to a target model's GTIAssessment.
-
-        Args:
-            delta: The IOC delta assessment to map.
-            models: The target model module (file_models, ip_models, etc.)
-                    which must expose GTIAssessment, Verdict, Severity,
-                    and ThreatScore classes.
-        """
-        return models.GTIAssessment(
-            verdict=(
-                models.Verdict(value=delta.verdict.value) if delta.verdict else None
-            ),
-            severity=(
-                models.Severity(value=delta.severity.value) if delta.severity else None
-            ),
-            threat_score=(
-                models.ThreatScore(value=delta.threat_score.value)
-                if delta.threat_score
-                else None
-            ),
-        )
 
     def _convert_file(self, entry: IOCDeltaEntry) -> Indicator | None:
         """Convert a file IOC delta entry to a STIX Indicator with file observable."""
