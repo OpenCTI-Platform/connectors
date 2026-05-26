@@ -1,0 +1,12 @@
+pycti>=7.260515.0,<8
+pydantic>=2.11,<3
+pydantic-settings>=2.11.0,<3
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+stix2>=3.0.0,<4.0.0
+polyswarm-api>=3.21.0,<4.0.0
+requests>=2.31.0,<3.0.0
+jsonschema>=4.20.0,<5.0.0
+python-dateutil>=2.8.0,<3.0.0
+validators>=0.22.0,<1.0.0
+pyyaml>=6.0.0,<7.0.0
+colorlog>=6.8.0

@@ -1,0 +1,87 @@
+services:
+  polyswarm_sandbox_connector:
+    image: polyswarm-scan-and-sandbox-v1.5:latest
+    environment:
+      # ═══════════════════════════════════════════════════════════════════════
+      # OpenCTI Configuration
+      # ═══════════════════════════════════════════════════════════════════════
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      
+      # ═══════════════════════════════════════════════════════════════════════
+      # Connector Configuration
+      # ═══════════════════════════════════════════════════════════════════════
+      - CONNECTOR_ID=${CONNECTOR_ID:-22119d8d-5297-41b1-aa31-b8e317e7144c}
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=polyswarm_scan_sandbox_connector
+      - CONNECTOR_SCOPE=Artifact
+      - CONNECTOR_AUTO=false
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_EXPOSE_METRICS=false
+      - CONNECTOR_ENRICHMENT_RESOLUTION=AUTHORIZED_AUTHORITIES
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # PolySwarm API Configuration
+      # ═══════════════════════════════════════════════════════════════════════
+      - POLYSWARM_API_KEY=${POLYSWARM_API_KEY}
+      - POLYSWARM_API_URL=https://api.polyswarm.network/v3
+      - POLYSWARM_COMMUNITY=default # Set to 'default' or your private community name based on your PolySwarm license
+      - POLYSWARM_TIMEOUT=300
+      
+      # ═══════════════════════════════════════════════════════════════════════
+      # Feature Toggles
+      # ═══════════════════════════════════════════════════════════════════════
+      # 
+      # By Default Scan (multi-engine AV analysis) is enabled
+      # Sandbox and Report generation can be toggled
+      #
+      # Enable/disable sandbox (dynamic behavioral analysis)
+      - POLYSWARM_SANDBOX_ENABLED=true
+      # Enable/disable report generation and attachment
+      - POLYSWARM_JSON_REPORT_ENABLED=true
+      - POLYSWARM_PDF_REPORT_ENABLED=true
+      - POLYSWARM_LLM_REPORT_ENABLED=true
+      - POLYSWARM_LLM_REPORT_TIMEOUT=120
+      
+      # ═══════════════════════════════════════════════════════════════════════
+      # Sandbox Configuration
+      # Provider: cape, triage, both
+      # ═══════════════════════════════════════════════════════════════════════
+      - POLYSWARM_SANDBOX_PROVIDER=both
+      
+      # VM slug: For Cape - win-10-build-19041
+      - POLYSWARM_SANDBOX_VM_CAPE=win-10-build-19041
+      # VM slug: For Triage - windows11-21h2-x64 or ubuntu-22.04-amd64 or android-11-x64
+      - POLYSWARM_SANDBOX_VM_TRIAGE=windows11-21h2-x64
+
+      # Enable internet access during sandbox execution
+      - POLYSWARM_SANDBOX_NETWORK_ENABLED=true
+      # Sandbox execution timeout in seconds
+      - POLYSWARM_SANDBOX_TIMEOUT=600
+      - POLYSWARM_POLL_INTERVAL=30
+      - POLYSWARM_POLL_TIMEOUT=900
+      
+      # ═══════════════════════════════════════════════════════════════════════
+      # File Settings
+      # ═══════════════════════════════════════════════════════════════════════
+      # Maximum file size to process (32MB default). To change contact PolySwarm.
+      - POLYSWARM_MAX_FILE_SIZE=33554432
+      # Download artifacts from OpenCTI for submission
+      - POLYSWARM_DOWNLOAD_ARTIFACTS=true
+      
+      # ═══════════════════════════════════════════════════════════════════════
+      # Enrichment Settings
+      # ═══════════════════════════════════════════════════════════════════════
+      # polykg REST API for malware profile enrichment (optional, empty = disabled)
+      # - POLYKG_API_URL=
+      # Minimum PolyScore (0-100) to create indicators
+      - POLYSWARM_MIN_POLYSCORE=50
+      # Create STIX Indicator objects for detected threats
+      - POLYSWARM_CREATE_INDICATORS=true
+      # Create observable objects (domains, IPs) from sandbox network data
+      - POLYSWARM_CREATE_OBSERVABLES=true
+      
+    restart: always
+    depends_on:
+      opencti:
+        condition: service_healthy

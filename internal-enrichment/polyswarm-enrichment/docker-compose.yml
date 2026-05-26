@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  connector-polyswarm-enrichment:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: opencti/connector-polyswarm-internal-enrichment:6.8.10
+    container_name: opencti-polyswarm-enrichment
+    environment:
+      # ========== OpenCTI Configuration ==========
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+
+      # ========== Connector Configuration ==========
+      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
+      - CONNECTOR_NAME=PolySwarm Hash Enrichment
+      - CONNECTOR_SCOPE=File,StixFile
+      - CONNECTOR_AUTO=${CONNECTOR_AUTO:-true}
+      - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL:-80}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
+
+      # ========== PolySwarm Configuration ==========
+      - POLYSWARM_API_KEY=${POLYSWARM_API_KEY}
+      - POLYSWARM_COMMUNITY=${POLYSWARM_COMMUNITY:-default}
+      - POLYSWARM_MAX_POLLING_TIME=${POLYSWARM_MAX_POLLING_TIME:-120}
+
+    restart: unless-stopped
+    networks:
+      - opencti-network
+
+networks:
+  opencti-network:
+    external: true
