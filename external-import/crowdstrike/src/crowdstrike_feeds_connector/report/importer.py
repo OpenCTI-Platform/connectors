@@ -292,9 +292,15 @@ class ReportImporter(BaseImporter):
             if self._missing_indicator_scope:
                 return related_indicators_with_related_entities
 
-            # Getting IOCs linked and based on report name
+            # Getting IOCs linked and based on report name.
+            # ``deep_pagination=True`` was previously passed here but
+            # FalconPy's ``QueryIntelIndicatorEntities`` doesn't expose
+            # such a keyword, so it was silently dropped. Drop it
+            # explicitly so this call survives the
+            # ``IndicatorsAPI.get_combined_indicator_entities`` signature
+            # change that removed the spurious kwarg.
             response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+                limit=_limit, sort=_sort, fql_filter=_fql_filter
             )
 
             # Check if response has resources or if it's an error response.

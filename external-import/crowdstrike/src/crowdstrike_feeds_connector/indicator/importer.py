@@ -143,61 +143,96 @@ class IndicatorImporter(BaseImporter):
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
+    # FalconPy / CrowdStrike caps a single ``QueryIntelIndicatorEntities``
+    # call at 5000 records. We pick 1000 by default to keep batches small
+    # enough to be processed-and-sent before the next page is fetched,
+    # which spreads memory & ingestion-queue pressure more evenly.
+    _PAGE_LIMIT = 1000
+
     def _fetch_indicators(self, fetch_timestamp: int) -> List[dict]:
         """Fetch all indicators updated since ``fetch_timestamp``.
 
-        Walks every page exposed by the CrowdStrike API (``Next-Page`` HTTP
-        header) up to the configured ``max_records_per_run`` cap (when set).
-        Returns the full list of resources in a single batch so the downstream
-        ``_process_indicators`` step can compute the latest ``last_updated``
-        timestamp across the whole run.
+        Walks the CrowdStrike indicator API using marker-based deep
+        pagination (the ``_marker`` FQL field, sorted ``_marker.asc``)
+        up to the configured ``max_records_per_run`` cap when set.
+        Returns the full list of resources in a single batch so the
+        downstream ``_process_indicators`` step can compute the latest
+        ``last_updated`` timestamp across the whole run.
         """
-        limit = 1000
-        sort = "last_updated|asc"
-        fql_filter = f"last_updated:>{fetch_timestamp}"
+        return self._paginated_query_indicators(
+            limit=self._PAGE_LIMIT, fetch_timestamp=fetch_timestamp
+        )
 
+    def _build_fql_filter(self, marker: str) -> str:
+        """Build the FQL filter used for a single indicator API call.
+
+        The base clause is ``_marker:>='<marker>'`` — CrowdStrike's
+        documented deep-pagination contract for ``QueryIntelIndicatorEntities``
+        (see https://www.falconpy.io/Usage/Response-Handling.html). For the
+        very first page ``marker`` is the importer state's
+        ``last_updated`` timestamp (Unix seconds), which equals the
+        timestamp prefix of every ``_marker`` value, so we resume exactly
+        where the previous run left off.
+        """
+        fql_filter = f"_marker:>='{marker}'"
         if self.exclude_types:
             fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
-
-        return self._paginated_query_indicators(limit, sort, fql_filter)
+        return fql_filter
 
     def _paginated_query_indicators(
-        self, limit: int, sort: str, fql_filter: str
+        self, limit: int, fetch_timestamp: int
     ) -> List[dict]:
         """Walk every page of the indicator API and return the aggregated list.
 
-        The continuation token is the ``next_page`` string returned by the
-        upstream API and forwarded as-is by :class:`IndicatorsAPI`. When
-        ``max_records_per_run`` is set, pagination stops as soon as that many
-        indicators have been collected; the cap is enforced at the resource
-        level by slicing the *last* page to exactly the remaining quota, so
-        the aggregated batch contains at most ``max_records_per_run`` records
-        and we never yield a record beyond the cap.
+        Pagination relies on CrowdStrike's documented marker-based deep
+        pagination: each indicator carries a monotonically-increasing
+        ``_marker`` field whose first 10 characters are a Unix timestamp
+        (in seconds). The first call filters with the importer state
+        timestamp; subsequent calls advance the marker using the last
+        indicator returned by the previous page. Pagination ends when:
+
+        * the API returns an empty page, OR
+        * ``meta.pagination.total`` drops to ``0`` (the API tells us no
+          more records remain past the current marker), OR
+        * the configured ``max_records_per_run`` cap is reached.
+
+        The cap is enforced at the resource level — the *last* page is
+        sliced down to the remaining quota — so the aggregated batch
+        contains at most ``max_records_per_run`` records and we never
+        yield a record beyond the cap.
+
+        NOTE: The previous implementation tried to paginate via a
+        ``Next-Page`` HTTP header / ``next_page`` continuation token,
+        but ``GET /intel/combined/indicators/v1`` does *not* expose
+        those (they are reserved for other CrowdStrike Service
+        Collections such as Hosts), so the loop only ever ran once and
+        every run capped at a single ``limit``-sized batch.
         """
+        # Sort ascending by ``_marker`` so the last indicator on a page
+        # always carries the largest ``_marker`` we have seen so far —
+        # the cursor that drives the next call.
+        sort = "_marker.asc"
         resources: List[dict] = []
-        next_page_token: Optional[str] = None
-        meta_total: Optional[int] = None
+        current_marker: str = str(fetch_timestamp)
+        last_seen_marker: Optional[str] = None
 
         while True:
+            fql_filter = self._build_fql_filter(current_marker)
+
             response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=limit,
-                sort=sort,
-                fql_filter=fql_filter,
-                deep_pagination=True,
-                next_page=next_page_token,
+                limit=limit, sort=sort, fql_filter=fql_filter
             )
 
             page_resources = response.get("resources") or []
             if not page_resources:
                 break
 
-            # ``meta.pagination`` can legitimately be missing or null - guard
-            # against both so we don't AttributeError on the .get() below.
+            # ``meta.pagination`` can legitimately be missing or null —
+            # guard against both so we don't AttributeError on the
+            # ``.get()`` below.
             meta = response.get("meta") or {}
             pagination = meta.get("pagination") or {}
-            page_total = pagination.get("total")
-            if page_total is not None:
-                meta_total = page_total
+            meta_total = pagination.get("total")
 
             remaining_cap = self._remaining_cap(len(resources))
             if remaining_cap is not None and remaining_cap <= 0:
@@ -209,18 +244,25 @@ class IndicatorImporter(BaseImporter):
 
             resources.extend(page_resources)
 
+            # Marker for the next page = ``_marker`` of the last indicator
+            # we accepted on this page. Fall back gracefully when the
+            # field is missing so a single malformed response cannot
+            # spin the loop forever on the same marker.
+            next_marker = page_resources[-1].get("_marker")
+
             self.helper.connector_logger.info(
                 "Fetched indicator batch",
                 {
                     "batch_size": len(page_resources),
                     "total_fetched": len(resources),
-                    "total_available": meta_total,
-                    "remaining": (
-                        max(0, meta_total - len(resources))
-                        if meta_total is not None
-                        else None
-                    ),
+                    # ``meta.pagination.total`` is the number of records
+                    # *remaining past the current marker*, not an
+                    # absolute total — surface it as "remaining" so the
+                    # log is unambiguous.
+                    "remaining": meta_total,
                     "max_records_per_run": self.max_records_per_run,
+                    "current_marker": current_marker,
+                    "next_marker": next_marker,
                 },
             )
 
@@ -231,12 +273,34 @@ class IndicatorImporter(BaseImporter):
                 self._log_run_cap_reached(len(resources))
                 break
 
-            # ``next_page`` is a single continuation token (string) returned by
-            # ``IndicatorsAPI.get_combined_indicator_entities``. An empty / None
-            # value marks the end of the iteration.
-            next_page_token = response.get("next_page")
-            if not next_page_token:
+            if not next_marker:
+                self.helper.connector_logger.warning(
+                    "Last indicator on page is missing '_marker' field; "
+                    "stopping pagination to avoid an infinite loop",
+                    {"indicator_id": page_resources[-1].get("id")},
+                )
                 break
+
+            # Defensive: if the marker doesn't advance (e.g. the API
+            # returns the same page again), break instead of looping
+            # forever. ``_marker`` is monotonically increasing per the
+            # API contract, so equality means we're stuck.
+            if last_seen_marker is not None and next_marker == last_seen_marker:
+                self.helper.connector_logger.warning(
+                    "Indicator pagination marker did not advance; "
+                    "stopping to avoid an infinite loop",
+                    {"marker": next_marker},
+                )
+                break
+
+            # ``meta.pagination.total`` reaching 0 means the upstream
+            # has signalled we're done — stop without another empty
+            # round-trip.
+            if meta_total is not None and meta_total <= 0:
+                break
+
+            last_seen_marker = next_marker
+            current_marker = next_marker
 
         return resources
 
