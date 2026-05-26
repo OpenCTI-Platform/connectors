@@ -347,17 +347,28 @@ class ConnectorClient:
     def get_author(self, author_id: str) -> Optional[Dict[str, Any]]:
         """Return the StixDomainObject behind ``created_by_ref``.
 
-        ``None`` when OpenCTI does not know the author (e.g. a dangling
-        ``created_by_ref`` whose target has been deleted) so the caller
-        can skip the author-impact step instead of crashing on a
-        ``None.get(...)``.
+        Two failure modes are deliberately distinguished:
 
-        Uses chained ``.get(...)`` rather than bracket access so a
-        GraphQL error response (``{"errors": [...]}`` with no ``data``
-        key, or a payload that omits ``stixDomainObject`` entirely)
-        degrades to ``None`` instead of raising ``KeyError`` — the
-        caller already guards on ``if indicator_author`` so the
-        author-impact step is simply skipped in that case.
+        * **OpenCTI returns no data for the author** (e.g. a dangling
+          ``created_by_ref`` whose target has been deleted between the
+          indicator fetch and the author lookup) - the GraphQL payload
+          is well-formed but ``data.stixDomainObject`` is ``null``.
+          Returns ``None`` here so the caller's ``if indicator_author``
+          guard can skip the author-impact step without raising.
+        * **GraphQL error response** (auth failure, query timeout,
+          schema mismatch, ...) - the response carries an ``errors``
+          array. Surface this through ``_check_graphql_errors`` (same
+          pattern as the pagination helpers above) so the underlying
+          failure shows up in the connector worker log instead of
+          being silently treated as "no author" and rolled into a
+          score computation that omits the author-impact step without
+          telling the operator why.
+
+        Defensive chained ``.get(...)`` keeps the deleted-author path
+        from raising ``KeyError`` on an exotic-but-still-well-formed
+        payload (e.g. ``{"data": {}}``) - the error path goes through
+        ``_check_graphql_errors``, not through ``KeyError``.
         """
         res = self.api.query(GET_AUTHOR_QUERY, variables={"id": author_id})
-        return (res or {}).get("data", {}).get("stixDomainObject")
+        self._check_graphql_errors(res, "get_author")
+        return ((res or {}).get("data") or {}).get("stixDomainObject")
