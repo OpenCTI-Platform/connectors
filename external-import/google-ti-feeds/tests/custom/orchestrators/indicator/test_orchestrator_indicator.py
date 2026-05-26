@@ -186,7 +186,6 @@ def expected_indicator_log_messages() -> list[str]:
         "Processing IOC delta packages - {'prefix': '[OrchestratorIndicator]'",
         "Processing IOC delta package - {'prefix': '[OrchestratorIndicator]'",
         "Fetched IOC delta entries - {'prefix': '[OrchestratorIndicator]'",
-        "Flushing remaining indicator batch - {'prefix': '[OrchestratorIndicator]'}",
         "Flushing remaining items - {'prefix': '[GenericBatchProcessor]'",
         "Processing batch - {'prefix': '[GenericBatchProcessor]'",
         "Sent batch to OpenCTI - {'prefix': '[GenericBatchProcessor]'",

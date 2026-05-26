@@ -59,7 +59,10 @@ class OrchestratorIndicator(BaseOrchestrator):
                         last_dt = last_dt.replace(tzinfo=timezone.utc)
                     return last_dt + timedelta(hours=1)
                 except ValueError:
-                    pass
+                    self.logger.warning(
+                        "Invalid last run datetime format in state, falling back to config",
+                        {"prefix": LOG_PREFIX, "last_run": last_run},
+                    )
 
         lookback = self.config.indicator_import_start_date
         return datetime.now(timezone.utc) - lookback
@@ -87,31 +90,24 @@ class OrchestratorIndicator(BaseOrchestrator):
             },
         )
 
-        try:
-            current_dt = start_dt
-            while current_dt < now:
-                package_id = current_dt.strftime("%Y%m%d%H")
+        current_dt = start_dt
+        while current_dt < now:
+            package_id = current_dt.strftime("%Y%m%d%H")
 
-                self.logger.info(
-                    "Processing IOC delta package",
-                    {"prefix": LOG_PREFIX, "package_id": package_id},
-                )
-
-                for ioc_type in self.config.indicator_types:
-                    await self._process_package(package_id, ioc_type)
-
-                self.work_manager.update_state(
-                    state_key="indicator_last_run_datetime",
-                    date_str=current_dt.isoformat(),
-                )
-
-                current_dt += timedelta(hours=1)
-                self.batch_processor.flush()
-
-        finally:
             self.logger.info(
-                "Flushing remaining indicator batch", {"prefix": LOG_PREFIX}
+                "Processing IOC delta package",
+                {"prefix": LOG_PREFIX, "package_id": package_id},
             )
+
+            for ioc_type in self.config.indicator_types:
+                await self._process_package(package_id, ioc_type)
+
+            self.work_manager.update_state(
+                state_key="indicator_last_run_datetime",
+                date_str=current_dt.isoformat(),
+            )
+
+            current_dt += timedelta(hours=1)
             self.batch_processor.flush()
 
     async def _process_package(self, package_id: str, ioc_type: str) -> None:
