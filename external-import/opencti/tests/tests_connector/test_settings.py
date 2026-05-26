@@ -176,12 +176,16 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_field)
         pytest.param("false", "", id="literal_string_false"),
         pytest.param("FALSE", "", id="uppercase_string_false"),
         pytest.param("  false  ", "", id="whitespace_string_false"),
-        # YAML ``null`` / a missing key (``sectors_file_url:`` with no
-        # value in ``config.yml``) surfaces as Python ``None`` after the
-        # YAML loader runs. Without normalisation Pydantic would reject
-        # ``None`` against the ``str`` field at validation time, which
-        # would block the connector from starting instead of honouring
-        # the README's "leave empty to disable" contract.
+        # Explicit YAML null value: key present with no value
+        # (``sectors_file_url:`` or ``sectors_file_url: null``) - both
+        # surface as Python ``None`` after the YAML loader runs and
+        # route into the validator. Without normalisation Pydantic
+        # would reject ``None`` against the ``str`` field at
+        # validation time, which would block the connector from
+        # starting instead of honouring the README's "leave empty to
+        # disable" contract. (Omitting the key entirely is a separate
+        # path that hits Pydantic's missing-key default and never
+        # reaches this validator.)
         pytest.param(None, "", id="real_none"),
         # The empty / whitespace-only strings are the operator-friendly
         # disable sentinels (UI input, env-var trimmed to nothing). All
@@ -211,7 +215,8 @@ def test_dataset_url_disable_sentinels_are_normalised(raw_value, expected):
     - typed ``str`` field stored the literal string ``"false"`` and the
       downstream URL filter never matched, so the connector issued an
       HTTP GET for the URL ``"false"`` and logged an error;
-    - YAML ``null`` (``sectors_file_url:`` with no value) raised a
+    - an explicit YAML null value (key present with no value -
+      ``sectors_file_url:`` or ``sectors_file_url: null``) raised a
       ``ConfigValidationError`` instead of honouring the README's
       "leave empty to disable" UX;
     - a whitespace-only string survived validation and crashed

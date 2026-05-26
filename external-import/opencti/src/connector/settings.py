@@ -19,8 +19,12 @@ def _normalize_dataset_url(v):
     - real YAML boolean ``false`` (``sectors_file_url: false``),
     - env-var / Docker string ``"false"`` (case-insensitive, surrounding
       whitespace tolerated),
-    - YAML ``null`` / a missing key (``sectors_file_url:`` with no
-      value, which PyYAML surfaces as Python ``None``),
+    - an explicit YAML null value (key present with no value -
+      ``sectors_file_url:`` or ``sectors_file_url: null`` - both of
+      which PyYAML surfaces as Python ``None`` and route into this
+      validator). Note: omitting the key entirely from ``config.yml``
+      uses the field's default URL via Pydantic's standard
+      missing-key handling and never reaches this validator.
     - the operator-friendly empty / whitespace-only string (UI input
       or env var trimmed to nothing).
 

@@ -28,9 +28,11 @@ class OpenCTI:
         # Drop disabled-by-config entries. Disabled URLs land as the
         # empty string ``""`` after the Pydantic ``BeforeValidator`` in
         # ``settings.py`` normalises every documented disable sentinel
-        # (real YAML ``false``, env-var ``"false"`` in any casing, YAML
-        # ``null`` / a missing key, and any empty / whitespace-only
-        # string), so a plain truthy filter is enough here.
+        # (real YAML ``false``, env-var ``"false"`` in any casing, an
+        # explicit YAML null value - key present with no value, which
+        # PyYAML surfaces as Python ``None`` - and any empty /
+        # whitespace-only string), so a plain truthy filter is enough
+        # here.
         self.urls = [url for url in urls if url]
         self.interval = days_to_seconds(self.config_interval)
 
