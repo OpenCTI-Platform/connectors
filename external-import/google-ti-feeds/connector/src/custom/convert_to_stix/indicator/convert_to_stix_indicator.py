@@ -391,8 +391,12 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         # TODO: TO BE CHANGED ONCE TOOL MODEL IS ADDED TO CONNECTORS-SDK
         software_toolkit = ToolModel(
+            type="tool",
+            spec_version="2.1",
             name=software_toolkit_name.upper(),
             tool_types=[ToolTypeOV.UNKNOWN],
+            created=datetime.now(timezone.utc),
+            modified=datetime.now(timezone.utc),
         )
 
         now = datetime.now(timezone.utc)

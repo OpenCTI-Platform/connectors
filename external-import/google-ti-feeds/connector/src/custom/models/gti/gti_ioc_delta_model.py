@@ -32,11 +32,6 @@ class IOCDeltaRelationshipItem(BaseModel):
     attributes: IOCDeltaRelationshipItemAttributes | None = Field(None)
 
 
-class IOCDeltaRelationshipAttackTechniqueItem(BaseModel):
-    type: str | None = Field(None)
-    id: str | None = Field(None)
-
-
 class IOCDeltaRelationshipData(BaseModel):
     data: list[IOCDeltaRelationshipItem] = Field(default_factory=list)
 
@@ -48,7 +43,7 @@ class IOCDeltaRelationships(BaseModel):
     reports: IOCDeltaRelationshipData | None = Field(None)
     software_toolkits: IOCDeltaRelationshipData | None = Field(None)
     vulnerabilities: IOCDeltaRelationshipData | None = Field(None)
-    attack_techniques: IOCDeltaRelationshipAttackTechniqueItem | None = Field(None)
+    attack_techniques: IOCDeltaRelationshipData | None = Field(None)
 
 
 class IOCDeltaAttributes(BaseModel):
