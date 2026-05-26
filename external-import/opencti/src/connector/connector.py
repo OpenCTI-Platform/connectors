@@ -25,13 +25,15 @@ class OpenCTI:
             self.config.config.geography_file_url,
             self.config.config.companies_file_url,
         ]
-        # Drop disabled-by-config entries (``False`` after the Pydantic
-        # ``BeforeValidator`` coercion in ``settings.py``, which translates
-        # the literal string ``"false"`` to ``False`` so the README's
-        # "set to ``false`` to disable" UX works regardless of whether the
-        # value arrives from ``config.yml`` (real YAML boolean) or an env
-        # var (``"false"`` string).
-        self.urls = [url for url in urls if url is not False]
+        # Drop disabled-by-config entries. Disabled URLs land as the
+        # empty string ``""`` after the Pydantic ``BeforeValidator`` in
+        # ``settings.py`` normalises the documented disable sentinels -
+        # real YAML ``false``, env-var ``"false"`` (any casing), and the
+        # operator-friendly empty value - so a plain truthy filter is
+        # enough here. ``None`` is also tolerated for the same reason
+        # (config-loader edge cases that surface a missing key as
+        # ``None`` rather than the default URL).
+        self.urls = [url for url in urls if url]
         self.interval = days_to_seconds(self.config_interval)
 
     def retrieve_data(self, url: str) -> dict:

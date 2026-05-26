@@ -69,9 +69,9 @@ There are a number of configuration options, which are set either in `docker-com
 |------------------------|------------------------------|-------------------------------|------------------------------------------------------------------------------------------|-----------|----------------------------------------------------------------------------------------------|
 | Interval               | config.interval              | `CONFIG_INTERVAL`             | 7                                                                                        | No        | Interval in days between connector runs.                                                     |
 | Remove Creator         | config.remove_creator        | `CONFIG_REMOVE_CREATOR`       | false                                                                                    | No        | Remove `created_by_ref` from every imported object before sending the bundle to OpenCTI.     |
-| Sectors File URL       | config.sectors_file_url      | `CONFIG_SECTORS_FILE_URL`     | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json     | No        | URL to sectors dataset (set to `false` to disable).                                          |
-| Geography File URL     | config.geography_file_url    | `CONFIG_GEOGRAPHY_FILE_URL`   | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json   | No        | URL to geography dataset (set to `false` to disable).                                        |
-| Companies File URL     | config.companies_file_url    | `CONFIG_COMPANIES_FILE_URL`   | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json   | No        | URL to companies dataset (set to `false` to disable).                                        |
+| Sectors File URL       | config.sectors_file_url      | `CONFIG_SECTORS_FILE_URL`     | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json     | No        | URL to sectors dataset (set to `false` or leave empty to disable).                           |
+| Geography File URL     | config.geography_file_url    | `CONFIG_GEOGRAPHY_FILE_URL`   | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json   | No        | URL to geography dataset (set to `false` or leave empty to disable).                         |
+| Companies File URL     | config.companies_file_url    | `CONFIG_COMPANIES_FILE_URL`   | https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json   | No        | URL to companies dataset (set to `false` or leave empty to disable).                         |
 
 ## Deployment
 
@@ -198,7 +198,10 @@ CONNECTOR_LOG_LEVEL=debug
 
 ## Additional information
 
-- **Disabling Datasets**: Set dataset URL to `false` to skip (e.g., `CONFIG_SECTORS_FILE_URL=false`)
+- **Disabling Datasets**: Set the dataset URL to `false` or leave it empty to skip
+  (e.g., `CONFIG_SECTORS_FILE_URL=false`). Both forms are normalised to "disabled"
+  by the connector; the field is exposed as a plain string in the connector
+  config schema so the OpenCTI Manager / XTM Composer UI renders it correctly.
 - **Update Frequency**: Datasets are updated infrequently; weekly polling is sufficient
 - **Foundation Data**: This connector provides reference data used by other connectors
 - **Reference**: [OpenCTI Datasets Repository](https://github.com/OpenCTI-Platform/datasets)

@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Annotated, Literal
+from typing import Annotated
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -10,35 +10,41 @@ from connectors_sdk import (
 from pydantic import BeforeValidator, Field
 
 
-def _coerce_false(v):
-    """Coerce the literal string ``"false"`` (case-insensitive) to the bool ``False``.
+def _normalize_dataset_url(v):
+    """Normalise the documented "set to ``false`` to disable" UX onto a plain ``str``.
 
-    The dataset URL fields document a "set to ``false`` to disable" toggle, but
-    Pydantic / Docker / YAML / env-var configuration delivers booleans as strings
-    in many setups (`CONFIG_SECTORS_FILE_URL=false` lands as the string
-    ``"false"``). Without this coercion the typed ``str`` field happily stores
-    the literal string ``"false"``, the downstream filter
-    ``url is not False`` never matches, and the connector then tries to fetch
-    the URL ``"false"`` and logs an error. Coerce up-front so the disable
-    contract works as documented.
+    The dataset URL fields are documented to accept the literal value
+    ``false`` (real YAML boolean or env-var string ``"false"``, case-
+    insensitive, surrounding whitespace tolerated) as a sentinel that
+    disables the dataset. Previously the field was typed
+    ``str | Literal[False]`` to model that contract directly, but the
+    resulting JSON Schema (``anyOf: [{"type": "string"}, {"const": false,
+    "type": "boolean"}]``) is rejected by the OpenCTI Manager / XTM
+    Composer UI - every URL field rendered as
+    "CONFIG_SECTORS_FILE_URL - Unsupported" and could not be edited.
+
+    Normalise both shapes to an empty string ``""``; the downstream
+    consumer (`OpenCTI.__init__`) then filters disabled URLs out with a
+    plain truthy check (``if url``). This preserves backwards
+    compatibility for every documented input - real YAML ``false``,
+    env-var ``"false"`` / ``"FALSE"`` / ``"  false  "`` - while exposing
+    a clean ``{"type": "string"}`` to the schema generator.
     """
+    if v is False:
+        return ""
     if isinstance(v, str) and v.strip().lower() == "false":
-        return False
+        return ""
     return v
 
 
-# Either a URL string (the active dataset endpoint) or the bool ``False``
-# (dataset disabled). The type is intentionally ``str | Literal[False]``
-# rather than ``str | bool`` so a real ``True`` (or the literal string
-# ``"true"`` after the upstream Docker / YAML coercion) fails Pydantic
-# validation up-front instead of silently surviving the typed field and
-# blowing up later in ``urllib.request.urlopen(True)``. The disable
-# contract is strictly "string URL OR ``false``" — there is no semantic
-# meaning to ``True`` here. The downstream filter
-# ``[url for url in urls if url is not False]`` only ever needs to
-# distinguish the disabled case from a real URL, so ``Literal[False]``
-# is exactly the right shape.
-FalsableUrl = Annotated[str | Literal[False], BeforeValidator(_coerce_false)]
+# Plain ``str`` field that accepts the documented "false to disable"
+# sentinels (real bool ``False`` and the case-insensitive string
+# ``"false"``) and normalises them to ``""``. Anything else passes
+# through to Pydantic's standard ``str`` validation, which rejects real
+# booleans (``True`` is not a string) - so a bogus ``True`` still fails
+# fast at startup instead of crashing inside ``urllib.request.urlopen``
+# on the first scheduled run.
+DatasetUrl = Annotated[str, BeforeValidator(_normalize_dataset_url)]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -70,16 +76,16 @@ class OpenctiConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `OpenctiConnector`.
     """
 
-    sectors_file_url: FalsableUrl = Field(
-        description="URL to sectors dataset (set to `false` to disable).",
+    sectors_file_url: DatasetUrl = Field(
+        description="URL to sectors dataset (set to `false` or leave empty to disable).",
         default="https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/sectors.json",
     )
-    geography_file_url: FalsableUrl = Field(
-        description="URL to geography dataset (set to `false` to disable).",
+    geography_file_url: DatasetUrl = Field(
+        description="URL to geography dataset (set to `false` or leave empty to disable).",
         default="https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/geography.json",
     )
-    companies_file_url: FalsableUrl = Field(
-        description="URL to companies dataset (set to `false` to disable).",
+    companies_file_url: DatasetUrl = Field(
+        description="URL to companies dataset (set to `false` or leave empty to disable).",
         default="https://raw.githubusercontent.com/OpenCTI-Platform/datasets/master/data/companies.json",
     )
     remove_creator: bool = Field(
