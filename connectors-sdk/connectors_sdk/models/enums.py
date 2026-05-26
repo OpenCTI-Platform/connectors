@@ -32,6 +32,7 @@ __all__ = [
     "ThreatActorSophistication",
     "ThreatActorTypes",
     "TLPLevel",
+    "ToolType",
 ]
 
 
