@@ -17,30 +17,24 @@ FAR_FUTURE = "5138-11-16T09:46:40.000Z"
 # wire-payload and serialisation cost for fields we never look at.
 _TA_ATTRIBUTES = """
     id
-    standard_id
     name
     last_seen
 """
 
 _USES_REL_ATTRIBUTES = """
-    id
     to {
         ... on BasicObject {
             id
-            standard_id
-            entity_type
         }
     }
 """
 
 _INDICATOR_LATEST_ATTRIBUTES = """
-    id
     valid_from
     created_at
 """
 
 _REPORT_LATEST_ATTRIBUTES = """
-    id
     published
 """
 
@@ -524,14 +518,3 @@ class ThreatActorEnrichment:
 
     def run(self) -> None:
         self.start()
-
-
-if __name__ == "__main__":
-    try:
-        connector = ThreatActorEnrichment()
-        connector.run()
-    except Exception:
-        import traceback
-
-        traceback.print_exc()
-        sys.exit(1)
