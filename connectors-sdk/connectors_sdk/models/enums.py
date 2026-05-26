@@ -585,3 +585,19 @@ class TLPLevel(StrEnum):
     AMBER = "amber"
     AMBER_STRICT = "amber+strict"
     RED = "red"
+
+
+class ToolType(_PermissiveEnum):
+    """Tool Type Open Vocabulary Enum.
+
+    See https://docs.oasis-open.org/cti/stix/v2.1/csprd01/stix-v2.1-csprd01.html#_Toc16070818
+    """
+
+    DENIAL_OF_SERVICE = "denial-of-service"
+    EXPLOITATION = "exploitation"
+    INFORMATION_GATHERING = "information-gathering"
+    NETWORK_CAPTURE = "network-capture"
+    CREDENTIAL_EXPLOITATION = "credential-exploitation"
+    REMOTE_ACCESS = "remote-access"
+    VULNERABILITY_SCANNING = "vulnerability-scanning"
+    UNKNOWN = "unknown"
