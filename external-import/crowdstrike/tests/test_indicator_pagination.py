@@ -156,15 +156,22 @@ def _fake_indicator(idx: int, *, marker: str | None = None) -> dict[str, Any]:
     }
 
 
-def test_pagination_walks_every_page_until_total_is_zero():
+def test_pagination_walks_every_page_until_empty_page():
     importer = _build_importer()
     indicators = [_fake_indicator(i) for i in range(5)]
-    # ``total`` is the *remaining* past the current marker. The last
-    # page reports 0 so the loop stops cleanly.
+    # Termination is driven by the empty-page check at the top of the
+    # loop (the authoritative end-of-iteration signal per CrowdStrike's
+    # contract). ``meta.pagination.total`` values shown here are
+    # illustrative of the "decreasing as the marker advances" pattern
+    # the API returns for marker-based queries (each page's total
+    # reflects records matching the *current request*'s FQL filter,
+    # which narrows as ``_marker`` advances), but the importer does
+    # NOT branch on those values for termination.
     importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
-        _make_page(indicators[:2], total=3),
-        _make_page(indicators[2:4], total=1),
-        _make_page(indicators[4:], total=0),
+        _make_page(indicators[:2], total=5),
+        _make_page(indicators[2:4], total=3),
+        _make_page(indicators[4:], total=1),
+        _make_page([], total=0),
     ]
 
     fetched = importer._paginated_query_indicators(
@@ -172,7 +179,7 @@ def test_pagination_walks_every_page_until_total_is_zero():
     )
 
     assert fetched == indicators
-    assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 3
+    assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 4
     call_args_list = (
         importer.indicators_api_cs.get_combined_indicator_entities.call_args_list
     )
@@ -187,6 +194,10 @@ def test_pagination_walks_every_page_until_total_is_zero():
     assert (
         call_args_list[2].kwargs["fql_filter"]
         == f"_marker:>='{indicators[3]['_marker']}'"
+    )
+    assert (
+        call_args_list[3].kwargs["fql_filter"]
+        == f"_marker:>='{indicators[4]['_marker']}'"
     )
     # Marker-based pagination requires sorting by ``_marker`` ascending.
     assert all(call.kwargs["sort"] == "_marker.asc" for call in call_args_list)
@@ -301,8 +312,9 @@ def test_pagination_cap_can_be_disabled(disabled_value):
     importer = _build_importer(max_records_per_run=disabled_value)
     indicators = [_fake_indicator(i) for i in range(5)]
     importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
-        _make_page(indicators[:2], total=3),
-        _make_page(indicators[2:], total=0),
+        _make_page(indicators[:2], total=5),
+        _make_page(indicators[2:], total=3),
+        _make_page([], total=0),
     ]
 
     fetched = importer._paginated_query_indicators(
@@ -317,16 +329,23 @@ def test_fql_filter_includes_exclude_types_clause():
     importer = _build_importer(exclude_types=["hash_md5", "hash_sha1"])
     indicators = [_fake_indicator(0)]
     importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
-        _make_page(indicators, total=0),
+        _make_page(indicators, total=1),
+        _make_page([], total=0),
     ]
 
     importer._paginated_query_indicators(limit=1000, fetch_timestamp=1_700_000_000)
 
-    call_kwargs = (
-        importer.indicators_api_cs.get_combined_indicator_entities.call_args.kwargs
+    # Assert on the FIRST call (the timestamp-based resume). The
+    # second call's filter uses the advanced ``_marker`` cursor from
+    # the first page and the test for that advance lives in
+    # ``test_pagination_walks_every_page_until_empty_page``.
+    first_call_kwargs = (
+        importer.indicators_api_cs.get_combined_indicator_entities.call_args_list[
+            0
+        ].kwargs
     )
     assert (
-        call_kwargs["fql_filter"]
+        first_call_kwargs["fql_filter"]
         == "_marker:>='1700000000'+type:!['hash_md5', 'hash_sha1']"
     )
 
@@ -392,7 +411,8 @@ def test_run_persists_last_observed_marker_in_state():
     importer._process_indicators = MagicMock(return_value=None)
     indicators = [_fake_indicator(i) for i in range(3)]
     importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
-        _make_page(indicators, total=0),
+        _make_page(indicators, total=3),
+        _make_page([], total=0),
     ]
 
     new_state = importer.run({"latest_indicator_timestamp": 1_700_000_000})

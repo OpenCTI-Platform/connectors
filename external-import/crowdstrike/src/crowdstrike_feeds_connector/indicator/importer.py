@@ -248,9 +248,16 @@ class IndicatorImporter(BaseImporter):
         timestamp; subsequent calls advance the marker using the last
         indicator returned by the previous page. Pagination ends when:
 
-        * the API returns an empty page, OR
-        * ``meta.pagination.total`` drops to ``0`` (the API tells us no
-          more records remain past the current marker), OR
+        * the API returns an empty page (the primary, authoritative
+          termination signal - when no indicators match the current
+          ``_marker:>='<cursor>'`` filter, the API returns an empty
+          ``resources`` list and we are done), OR
+        * the last accepted indicator on a page is missing its
+          ``_marker`` field (defensive - prevents an infinite loop on
+          a malformed response), OR
+        * the marker does not advance between two consecutive pages
+          (defensive - same anti-spin guard for an API that wedges on
+          one cursor), OR
         * the configured ``max_records_per_run`` cap is reached.
 
         The cap is enforced at the resource level — the *last* page is
@@ -316,11 +323,17 @@ class IndicatorImporter(BaseImporter):
                 {
                     "batch_size": len(page_resources),
                     "total_fetched": len(resources),
-                    # ``meta.pagination.total`` is the number of records
-                    # *remaining past the current marker*, not an
-                    # absolute total — surface it as "remaining" so the
-                    # log is unambiguous.
-                    "remaining": meta_total,
+                    # ``meta.pagination.total`` is the count of records
+                    # matching the *current request's* FQL filter
+                    # (``_marker:>='<cursor>'`` + any ``type:!<exclude>``
+                    # clause). It decreases as the marker advances
+                    # because the FQL changes per call, not because the
+                    # field has a special "remaining" semantics - so
+                    # surface it under a neutral name that does not
+                    # claim either contract. ``utils.paginate`` in this
+                    # repo uses the same field as the absolute total
+                    # for offset-based queries elsewhere.
+                    "matching_filter_total": meta_total,
                     "max_records_per_run": self.max_records_per_run,
                     "current_marker": current_marker,
                     "next_marker": next_marker,
@@ -354,11 +367,13 @@ class IndicatorImporter(BaseImporter):
                 )
                 break
 
-            # ``meta.pagination.total`` reaching 0 means the upstream
-            # has signalled we're done — stop without another empty
-            # round-trip.
-            if meta_total is not None and meta_total <= 0:
-                break
+            # NOTE: no ``meta_total <= 0`` early-stop. CrowdStrike's
+            # contract is that ``total`` reflects records matching the
+            # current request; when no records match, the API returns
+            # an empty ``resources`` list and the empty-page check at
+            # the top of the loop already breaks. A ``total == 0``
+            # response alongside non-empty ``resources`` would be an
+            # API inconsistency and is not a normal-flow termination.
 
             last_seen_marker = next_marker
             current_marker = next_marker
