@@ -58,16 +58,23 @@ def _normalize_dataset_url(v):
 
 # Plain ``str`` field that accepts the documented "false to disable"
 # sentinels (real bool ``False`` and the case-insensitive string
-# ``"false"``) and normalises them to ``""``. Anything else passes
-# through to Pydantic's standard ``str`` validation; the only boolean
-# that survives that step is ``True``, which is rejected (``True`` is
-# not a string and ``_normalize_dataset_url`` deliberately does not
-# coerce it) - so a bogus ``True`` still fails fast at startup
-# instead of crashing inside ``urllib.request.urlopen`` on the first
-# scheduled run. ``False`` is intentionally NOT rejected: the
-# ``BeforeValidator`` above intercepts it and rewrites it to ``""``
-# (the documented disable sentinel) before Pydantic's type check
-# runs.
+# ``"false"``) and normalises them to ``""``. The two booleans are
+# handled asymmetrically on purpose:
+#
+# * ``False`` is the documented disable sentinel. The
+#   ``BeforeValidator`` above catches it and rewrites it to ``""``
+#   before Pydantic's standard ``str`` check runs, so the value
+#   reaches the typed field as a valid string and the downstream
+#   ``if url`` filter drops it.
+# * ``True`` has no semantic meaning on a URL field ("enable the
+#   URL" is not a thing - either set a real URL or leave the
+#   default). ``_normalize_dataset_url`` deliberately does NOT catch
+#   it, so it flows through to Pydantic's ``str`` check and is
+#   rejected at validation time (``True`` is not a string). An
+#   operator who sets ``CONFIG_SECTORS_FILE_URL=True`` therefore
+#   gets a clear ``ConfigValidationError`` at startup instead of a
+#   confusing ``TypeError`` from inside
+#   ``urllib.request.urlopen(True)`` on the first scheduled run.
 DatasetUrl = Annotated[str, BeforeValidator(_normalize_dataset_url)]
 
 
