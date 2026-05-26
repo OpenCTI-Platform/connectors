@@ -10,6 +10,7 @@ from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaRelationshipItem,
 )
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
+from connector.src.stix.v21.models.ovs.tool_type_ov_enums import ToolTypeOV
 from connector.src.stix.v21.models.sdos.tool_model import ToolModel
 from connectors_sdk.models import (
     AttackPattern,
@@ -391,6 +392,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         # TODO: TO BE CHANGED ONCE TOOL MODEL IS ADDED TO CONNECTORS-SDK
         software_toolkit = ToolModel(
             name=software_toolkit_name.upper(),
+            tool_types=[ToolTypeOV.UNKNOWN],
         )
 
         now = datetime.now(timezone.utc)

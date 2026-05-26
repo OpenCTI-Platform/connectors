@@ -1,8 +1,9 @@
 """Validate the indicator orchestration workflow A-to-Z using IOC delta stubs."""
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from connector.src.custom.models.gti.gti_ioc_delta_model import (
@@ -289,3 +290,223 @@ def _then_state_updated_with_package_id(orchestrator: Any) -> None:
     # Must be a valid ISO datetime string
     parsed = datetime.fromisoformat(stored)
     assert parsed is not None  # noqa: S101
+
+
+# =====================
+# Additional Test Cases for Coverage
+# =====================
+
+
+def _get_indicator_orchestrator(gti_config: DummyConfig, caplog: Any) -> Any:
+    """Helper to get the OrchestratorIndicator instance from the main Orchestrator."""
+    orchestrator = _given_orchestrator_with_test_setup(gti_config, caplog)
+    return orchestrator.indicator_orchestrator
+
+
+# --- _get_start_datetime tests (orchestrator_indicator lines 54-65) ---
+
+
+def test_get_start_datetime_with_valid_state(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """Valid ISO datetime in state → returns that datetime + 1 hour."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    state = {"indicator_last_run_datetime": "2026-01-01T00:00:00+00:00"}
+    result = ind_orch._get_start_datetime(state)
+    expected = datetime(2026, 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+    assert result == expected  # noqa: S101
+
+
+def test_get_start_datetime_with_naive_datetime(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """Naive datetime in state → adds UTC then returns + 1 hour."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    state = {"indicator_last_run_datetime": "2026-01-01T00:00:00"}
+    result = ind_orch._get_start_datetime(state)
+    expected = datetime(2026, 1, 1, 1, 0, 0, tzinfo=timezone.utc)
+    assert result == expected  # noqa: S101
+
+
+def test_get_start_datetime_with_invalid_datetime(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """Invalid datetime string in state → logs warning and falls back to config."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    state = {"indicator_last_run_datetime": "not-a-date"}
+    result = ind_orch._get_start_datetime(state)
+    # Falls back to now() - lookback, so should be in the recent past
+    assert result <= datetime.now(timezone.utc)  # noqa: S101
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any(  # noqa: S101
+        "Invalid last run datetime format" in msg for msg in all_messages
+    )
+
+
+# --- run with start_dt >= now (orchestrator_indicator lines 78-82) ---
+
+
+@pytest.mark.asyncio
+async def test_run_with_future_state_returns_immediately(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """State with future datetime → logs 'No new packages' and returns."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    future_dt = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+    state = {"indicator_last_run_datetime": future_dt}
+    await ind_orch.run(state)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any(  # noqa: S101
+        "No new packages to process" in msg for msg in all_messages
+    )
+
+
+# --- _process_package with exception (orchestrator_indicator lines 142-143) ---
+
+
+@pytest.mark.asyncio
+async def test_process_package_with_exception_logs_warning(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """fetch raises an exception → logs warning without crashing."""
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+
+    async def _raise_on_fetch(self: Any, package_id: str, ioc_type: str) -> None:
+        raise RuntimeError("network failure")
+
+    monkeypatch.setattr(
+        ClientAPIIndicator, "fetch_ioc_delta_package", _raise_on_fetch, raising=True
+    )
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    await ind_orch._process_package("2025010100", "file")
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any(  # noqa: S101
+        "Error processing IOC delta package" in msg for msg in all_messages
+    )
+
+
+# --- _process_package with empty entries (orchestrator_indicator line 120) ---
+
+
+@pytest.mark.asyncio
+async def test_process_package_with_empty_entries_returns_early(
+    gti_config: DummyConfig, caplog: Any, monkeypatch: Any
+) -> None:
+    """fetch returns None → early return without processing."""
+    from connector.src.custom.client_api.indicator.client_api_indicator import (
+        ClientAPIIndicator,
+    )
+
+    async def _return_none(self: Any, package_id: str, ioc_type: str) -> None:
+        return None
+
+    monkeypatch.setattr(
+        ClientAPIIndicator, "fetch_ioc_delta_package", _return_none, raising=True
+    )
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    await ind_orch._process_package("2025010100", "file")
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    # Should NOT log "Fetched IOC delta entries" since entries were empty
+    assert not any(  # noqa: S101
+        "Fetched IOC delta entries" in msg for msg in all_messages
+    )
+
+
+# --- BaseOrchestrator._log_relationships_summary (base_orchestrator lines 55-57) ---
+
+
+def test_log_relationships_summary(gti_config: DummyConfig, caplog: Any) -> None:
+    """_log_relationships_summary logs when subentities_ids is non-empty."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    subentities_ids = {"malware": ["id1", "id2"], "campaign": ["id3"]}
+    ind_orch._log_relationships_summary(subentities_ids, 0, 5, "indicator")
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Found relationships" in msg for msg in all_messages)  # noqa: S101
+
+
+# --- BaseOrchestrator._log_entities_summary (base_orchestrator lines 79-87) ---
+
+
+def test_log_entities_summary(gti_config: DummyConfig, caplog: Any) -> None:
+    """_log_entities_summary logs entity type counts."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+
+    class FakeEntity:
+        def __init__(self, entity_type: str) -> None:
+            self.type = entity_type
+
+    entities = [FakeEntity("indicator"), FakeEntity("indicator"), FakeEntity("malware")]
+    ind_orch._log_entities_summary(entities, 0, 3, "indicator")
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any(
+        "Converted to STIX entities" in msg for msg in all_messages
+    )  # noqa: S101
+
+
+# --- BaseOrchestrator._check_batch_size_and_flush (base_orchestrator lines 111-115) ---
+
+
+def test_check_batch_size_and_flush_triggers_flush(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """When current_batch + entities >= batch_size*2, flush is called."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    mock_bp = MagicMock()
+    mock_bp.config.batch_size = 10
+    mock_bp.get_current_batch_size.return_value = 15
+    entities = list(range(6))  # 15 + 6 = 21 >= 10*2=20
+    ind_orch._check_batch_size_and_flush(mock_bp, entities)
+    mock_bp.flush.assert_called_once()
+
+
+def test_check_batch_size_and_flush_no_flush_needed(
+    gti_config: DummyConfig, caplog: Any
+) -> None:
+    """When current_batch + entities < batch_size*2, flush is NOT called."""
+    ind_orch = _get_indicator_orchestrator(gti_config, caplog)
+    mock_bp = MagicMock()
+    mock_bp.config.batch_size = 100
+    mock_bp.get_current_batch_size.return_value = 5
+    entities = list(range(3))  # 5 + 3 = 8 < 100*2=200
+    ind_orch._check_batch_size_and_flush(mock_bp, entities)
+    mock_bp.flush.assert_not_called()
+
+
+# --- GTIIndicatorFetchError tests (gti_indicator_fetch_error lines 19-28) ---
+
+
+def test_gti_indicator_fetch_error_basic() -> None:
+    """Basic creation stores error message and default package_id."""
+    from connector.src.custom.exceptions.fetch_errors.gti_indicator_fetch_error import (
+        GTIIndicatorFetchError,
+    )
+
+    err = GTIIndicatorFetchError(message="connection timeout")
+    assert "Error fetching IOC indicator delta: connection timeout" in str(
+        err
+    )  # noqa: S101
+    assert err.package_id is None  # noqa: S101
+
+
+def test_gti_indicator_fetch_error_with_package_id() -> None:
+    """When package_id is provided, it is stored in structured_data."""
+    from connector.src.custom.exceptions.fetch_errors.gti_indicator_fetch_error import (
+        GTIIndicatorFetchError,
+    )
+
+    err = GTIIndicatorFetchError(message="not found", package_id="2025010112")
+    assert err.package_id == "2025010112"  # noqa: S101
+    assert err.structured_data["package_id"] == "2025010112"  # noqa: S101
+
+
+def test_gti_indicator_fetch_error_without_package_id() -> None:
+    """When no package_id, structured_data exists but has no package_id key."""
+    from connector.src.custom.exceptions.fetch_errors.gti_indicator_fetch_error import (
+        GTIIndicatorFetchError,
+    )
+
+    err = GTIIndicatorFetchError(message="server error")
+    assert hasattr(err, "structured_data")  # noqa: S101
+    assert "package_id" not in err.structured_data  # noqa: S101
