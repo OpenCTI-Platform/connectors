@@ -92,3 +92,21 @@ def test_vulbearbility_finding_model_should_not_accept_not_to_have_scan_target_a
     vf = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
     # Then no ValidationError is raised
     assert vf.scan.target is None
+
+
+@pytest.mark.parametrize(
+    "tenable_api_response_1_report",
+    [
+        pytest.param(raw_report, id=raw_report["plugin"]["name"])
+        for raw_report in load_responses()
+    ],
+)
+def test_asset_without_operating_system_should_not_raise(
+    tenable_api_response_1_report,
+):
+    # Given a tenable api response without asset.operating_system field
+    del tenable_api_response_1_report["asset"]["operating_system"]
+    # When instantiating a vulnerability_finding
+    vf = VulnerabilityFinding.model_validate(tenable_api_response_1_report)
+    # Then no ValidationError is raised and operating_system is None
+    assert vf.asset.operating_system is None
