@@ -59,10 +59,15 @@ def _normalize_dataset_url(v):
 # Plain ``str`` field that accepts the documented "false to disable"
 # sentinels (real bool ``False`` and the case-insensitive string
 # ``"false"``) and normalises them to ``""``. Anything else passes
-# through to Pydantic's standard ``str`` validation, which rejects real
-# booleans (``True`` is not a string) - so a bogus ``True`` still fails
-# fast at startup instead of crashing inside ``urllib.request.urlopen``
-# on the first scheduled run.
+# through to Pydantic's standard ``str`` validation; the only boolean
+# that survives that step is ``True``, which is rejected (``True`` is
+# not a string and ``_normalize_dataset_url`` deliberately does not
+# coerce it) - so a bogus ``True`` still fails fast at startup
+# instead of crashing inside ``urllib.request.urlopen`` on the first
+# scheduled run. ``False`` is intentionally NOT rejected: the
+# ``BeforeValidator`` above intercepts it and rewrites it to ``""``
+# (the documented disable sentinel) before Pydantic's type check
+# runs.
 DatasetUrl = Annotated[str, BeforeValidator(_normalize_dataset_url)]
 
 
