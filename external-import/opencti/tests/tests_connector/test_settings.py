@@ -176,26 +176,48 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_field)
         pytest.param("false", "", id="literal_string_false"),
         pytest.param("FALSE", "", id="uppercase_string_false"),
         pytest.param("  false  ", "", id="whitespace_string_false"),
+        # YAML ``null`` / a missing key (``sectors_file_url:`` with no
+        # value in ``config.yml``) surfaces as Python ``None`` after the
+        # YAML loader runs. Without normalisation Pydantic would reject
+        # ``None`` against the ``str`` field at validation time, which
+        # would block the connector from starting instead of honouring
+        # the README's "leave empty to disable" contract.
+        pytest.param(None, "", id="real_none"),
+        # The empty / whitespace-only strings are the operator-friendly
+        # disable sentinels (UI input, env-var trimmed to nothing). All
+        # of them collapse to ``""`` so the connector filters them out
+        # the same way as the explicit ``false`` form. Without this a
+        # value like ``"   "`` would survive validation, pass the
+        # truthy filter, and crash the connector with
+        # ``urllib.request.urlopen("   ")`` on the first scheduled run.
+        pytest.param("", "", id="empty_string"),
+        pytest.param("   ", "", id="whitespace_only_string"),
+        pytest.param("\t\n  ", "", id="tab_newline_whitespace_string"),
         # Any other string is preserved as-is (still a real URL).
         pytest.param(
             "https://example.invalid/x.json",
             "https://example.invalid/x.json",
             id="url_string",
         ),
-        # An empty string is a valid disable sentinel too: the
-        # connector filters it out via a plain truthy check.
-        pytest.param("", "", id="empty_string"),
     ],
 )
 def test_dataset_url_disable_sentinels_are_normalised(raw_value, expected):
     """Disable sentinels normalise to ``""`` (the connector then filters truthy).
 
-    Pins the disable-via-config-false contract so a future refactor of
-    the ``BeforeValidator`` cannot silently re-introduce the bug where
-    the typed ``str`` field stored the literal string ``"false"`` and
-    the downstream URL filter never matched (leading the connector to
-    issue an HTTP GET for the URL ``"false"`` and log an error). Also
-    pins that we expose a plain ``str`` field to the JSON schema
+    Pins the full disable-via-config contract so a future refactor of
+    the ``BeforeValidator`` cannot silently re-introduce one of the
+    historical bugs:
+
+    - typed ``str`` field stored the literal string ``"false"`` and the
+      downstream URL filter never matched, so the connector issued an
+      HTTP GET for the URL ``"false"`` and logged an error;
+    - YAML ``null`` (``sectors_file_url:`` with no value) raised a
+      ``ConfigValidationError`` instead of honouring the README's
+      "leave empty to disable" UX;
+    - a whitespace-only string survived validation and crashed
+      ``urllib.request.urlopen`` on the first scheduled run.
+
+    Also pins that we expose a plain ``str`` field to the JSON schema
     generator - the previous ``str | Literal[False]`` union produced an
     ``anyOf`` schema that the OpenCTI Manager / XTM Composer UI tags as
     "Unsupported" and refuses to render.

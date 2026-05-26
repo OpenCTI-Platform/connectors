@@ -11,29 +11,44 @@ from pydantic import BeforeValidator, Field
 
 
 def _normalize_dataset_url(v):
-    """Normalise the documented "set to ``false`` to disable" UX onto a plain ``str``.
+    """Normalise every documented "disable this dataset" sentinel onto a plain ``str``.
 
-    The dataset URL fields are documented to accept the literal value
-    ``false`` (real YAML boolean or env-var string ``"false"``, case-
-    insensitive, surrounding whitespace tolerated) as a sentinel that
-    disables the dataset. Previously the field was typed
-    ``str | Literal[False]`` to model that contract directly, but the
-    resulting JSON Schema (``anyOf: [{"type": "string"}, {"const": false,
-    "type": "boolean"}]``) is rejected by the OpenCTI Manager / XTM
-    Composer UI - every URL field rendered as
-    "CONFIG_SECTORS_FILE_URL - Unsupported" and could not be edited.
+    The dataset URL fields are documented (README + ``config.yml.sample``)
+    to accept several equivalent ways of disabling a dataset:
 
-    Normalise both shapes to an empty string ``""``; the downstream
-    consumer (`OpenCTI.__init__`) then filters disabled URLs out with a
-    plain truthy check (``if url``). This preserves backwards
-    compatibility for every documented input - real YAML ``false``,
-    env-var ``"false"`` / ``"FALSE"`` / ``"  false  "`` - while exposing
-    a clean ``{"type": "string"}`` to the schema generator.
+    - real YAML boolean ``false`` (``sectors_file_url: false``),
+    - env-var / Docker string ``"false"`` (case-insensitive, surrounding
+      whitespace tolerated),
+    - YAML ``null`` / a missing key (``sectors_file_url:`` with no
+      value, which PyYAML surfaces as Python ``None``),
+    - the operator-friendly empty / whitespace-only string (UI input
+      or env var trimmed to nothing).
+
+    Previously the field was typed ``str | Literal[False]`` to model the
+    ``false`` contract directly, but the resulting JSON Schema
+    (``anyOf: [{"type": "string"}, {"const": false, "type": "boolean"}]``)
+    is rejected by the OpenCTI Manager / XTM Composer UI - every URL
+    field rendered as "CONFIG_SECTORS_FILE_URL - Unsupported" and could
+    not be edited. Normalise every disable shape to the empty string
+    ``""``; the downstream consumer (`OpenCTI.__init__`) then filters
+    disabled URLs out with a plain truthy check (``if url``). This
+    preserves backwards compatibility for every documented input while
+    exposing a clean ``{"type": "string"}`` to the schema generator.
+
+    Anything that is not a recognised disable sentinel falls through to
+    Pydantic's standard ``str`` validation - in particular real ``True``
+    is still rejected (``True`` is not a string and this validator does
+    not coerce it) so a bogus ``True`` fails fast at startup instead of
+    crashing inside ``urllib.request.urlopen`` on the first scheduled
+    run. Real URL strings are passed through unchanged (no stripping)
+    so an operator-supplied URL keeps its exact value.
     """
-    if v is False:
+    if v is None or v is False:
         return ""
-    if isinstance(v, str) and v.strip().lower() == "false":
-        return ""
+    if isinstance(v, str):
+        stripped = v.strip()
+        if not stripped or stripped.lower() == "false":
+            return ""
     return v
 
 
