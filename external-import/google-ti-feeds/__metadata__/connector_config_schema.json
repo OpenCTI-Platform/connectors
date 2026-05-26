@@ -90,6 +90,30 @@
       "minLength": 1,
       "type": "string"
     },
+    "GTI_IMPORT_INDICATORS": {
+      "default": false,
+      "description": "Whether to enable importing IOC indicator data from GTI via Steady-State IOC Deltas API",
+      "type": "boolean"
+    },
+    "GTI_INDICATOR_TYPES": {
+      "default": [
+        "file",
+        "ip",
+        "url",
+        "domain"
+      ],
+      "description": "Comma-separated list of IOC types to import. Allowed: file, ip, url, domain",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_INDICATOR_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import indicators on first run (e.g. P1D for 1 day, P7D for 7 days). Must be greater than 1 hour (the IOC delta package granularity).",
+      "format": "duration",
+      "type": "string"
+    },
     "GTI_CAMPAIGN_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
