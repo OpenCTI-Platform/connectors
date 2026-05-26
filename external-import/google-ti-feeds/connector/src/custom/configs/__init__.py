@@ -8,6 +8,9 @@ and batch processor configurations.
 from connector.src.custom.configs.campaign.batch_processor_config_campaign import (
     CAMPAIGN_BATCH_PROCESSOR_CONFIG,
 )
+from connector.src.custom.configs.indicator.batch_processor_config_indicator import (
+    INDICATOR_BATCH_PROCESSOR_CONFIG,
+)
 from connector.src.custom.configs.malware.batch_processor_config_malware import (
     MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG,
 )
@@ -34,4 +37,5 @@ __all__ = [
     "MALWARE_FAMILY_BATCH_PROCESSOR_CONFIG",
     "VULNERABILITY_BATCH_PROCESSOR_CONFIG",
     "CAMPAIGN_BATCH_PROCESSOR_CONFIG",
+    "INDICATOR_BATCH_PROCESSOR_CONFIG",
 ]
