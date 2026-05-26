@@ -281,7 +281,16 @@ class ReportImporter(BaseImporter):
         try:
             related_indicators = []
             related_indicators_with_related_entities = []
-            _limit = 10000
+            # ``QueryIntelIndicatorEntities`` (``GET /intel/combined/indicators/v1``)
+            # is hard-capped at 5000 records per call by FalconPy /
+            # CrowdStrike (see https://www.falconpy.io/Service-Collections/Intel.html#queryintelindicatorentities).
+            # The previous value (``10000``) exceeded the cap and would
+            # be silently truncated server-side, leaving reports with
+            # 5001-10000 IOCs missing entries. Reports with more than
+            # 5000 IOCs are exceedingly rare; if they ever surface here
+            # the right answer is marker-based pagination (mirroring
+            # the indicator importer), not a higher one-shot limit.
+            _limit = 5000
             _sort = "last_updated|asc"
             _fql_filter = f"reports:['{report_name}']"
 

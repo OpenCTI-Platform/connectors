@@ -56,6 +56,18 @@ class IndicatorImporter(BaseImporter):
     _NAME = "Indicator"
 
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
+    # Persisted last ``_marker`` value seen across runs. ``_marker`` is
+    # ``<unix_timestamp_10chars><unique_suffix>``, so resuming from the
+    # bare ``last_updated`` timestamp (the legacy state key, seconds
+    # granularity) makes the FQL ``_marker:>='1700000005'`` match every
+    # marker whose timestamp prefix is ``1700000005`` — including the
+    # indicators we already processed in the previous run. Persisting
+    # the exact last marker shrinks the boundary overlap to (at most)
+    # the single indicator whose marker we stored, which the downstream
+    # STIX-ID dedup already absorbs. Missing key is a normal state for
+    # deployments upgrading from a prior version of the connector — the
+    # importer falls back to the timestamp resume in that case.
+    _LATEST_INDICATOR_MARKER = "latest_indicator_marker"
 
     def __init__(self, config: IndicatorImporterConfig) -> None:
         """Initialize CrowdStrike indicator importer."""
@@ -113,10 +125,14 @@ class IndicatorImporter(BaseImporter):
         fetch_timestamp = state.get(
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
+        # Optional - older state shapes (pre-marker-resume) won't carry
+        # this key and the fetch falls back to the timestamp-based
+        # marker, which is correct for the very first run after upgrade.
+        fetch_marker = state.get(self._LATEST_INDICATOR_MARKER)
 
         latest_indicator_updated_datetime: datetime | None = None
 
-        indicator_batch = self._fetch_indicators(fetch_timestamp)
+        indicator_batch = self._fetch_indicators(fetch_timestamp, fetch_marker)
         if indicator_batch:
             latest_batch_updated_datetime = self._process_indicators(indicator_batch)
 
@@ -133,12 +149,32 @@ class IndicatorImporter(BaseImporter):
                 latest_indicator_updated_datetime
             )
 
+        # Persist the highest ``_marker`` actually observed during this
+        # run for exact cross-run continuation. We take the last item's
+        # ``_marker`` because ``_paginated_query_indicators`` sorts by
+        # ``_marker.asc`` and only extends ``resources`` with the
+        # (cap-sliced) accepted page, so the last item carries the
+        # highest accepted marker. When the field is missing on the
+        # last item, fall back to the previously-persisted marker
+        # rather than dropping the key — losing the marker would
+        # silently re-trigger the seconds-granularity overlap on the
+        # next run.
+        next_marker = (
+            indicator_batch[-1].get("_marker") if indicator_batch else None
+        ) or fetch_marker
+
+        new_state: Dict[str, Any] = {
+            self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_updated_timestamp,
+        }
+        if next_marker:
+            new_state[self._LATEST_INDICATOR_MARKER] = next_marker
+
         self._info(
             "Indicator importer completed, latest fetch {0}.",
             timestamp_to_datetime(latest_indicator_updated_timestamp),
         )
 
-        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_updated_timestamp}
+        return new_state
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
@@ -149,7 +185,9 @@ class IndicatorImporter(BaseImporter):
     # which spreads memory & ingestion-queue pressure more evenly.
     _PAGE_LIMIT = 1000
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict]:
+    def _fetch_indicators(
+        self, fetch_timestamp: int, fetch_marker: Optional[str] = None
+    ) -> List[dict]:
         """Fetch all indicators updated since ``fetch_timestamp``.
 
         Walks the CrowdStrike indicator API using marker-based deep
@@ -158,9 +196,18 @@ class IndicatorImporter(BaseImporter):
         Returns the full list of resources in a single batch so the
         downstream ``_process_indicators`` step can compute the latest
         ``last_updated`` timestamp across the whole run.
+
+        ``fetch_marker`` is the previously-persisted last ``_marker``
+        from the importer state and, when supplied, is preferred over
+        ``fetch_timestamp`` for the initial cursor (the persisted
+        marker carries the unique suffix and pins resume to the exact
+        boundary indicator). It is ``None`` on the first run after
+        upgrade.
         """
         return self._paginated_query_indicators(
-            limit=self._PAGE_LIMIT, fetch_timestamp=fetch_timestamp
+            limit=self._PAGE_LIMIT,
+            fetch_timestamp=fetch_timestamp,
+            fetch_marker=fetch_marker,
         )
 
     def _build_fql_filter(self, marker: str) -> str:
@@ -168,11 +215,18 @@ class IndicatorImporter(BaseImporter):
 
         The base clause is ``_marker:>='<marker>'`` — CrowdStrike's
         documented deep-pagination contract for ``QueryIntelIndicatorEntities``
-        (see https://www.falconpy.io/Usage/Response-Handling.html). For the
-        very first page ``marker`` is the importer state's
-        ``last_updated`` timestamp (Unix seconds), which equals the
-        timestamp prefix of every ``_marker`` value, so we resume exactly
-        where the previous run left off.
+        (see https://www.falconpy.io/Usage/Response-Handling.html).
+
+        On the first run / after a state migration, ``marker`` is the
+        importer state's ``last_updated`` timestamp (Unix seconds);
+        this matches the 10-character timestamp prefix of every
+        ``_marker`` so we pick up from that second onward. On every
+        subsequent run, ``marker`` is the exact ``_marker`` of the
+        last indicator we accepted in the previous run, persisted in
+        state under ``latest_indicator_marker`` — using the full
+        marker (with its unique suffix) pins the resume cursor to the
+        exact boundary indicator instead of all indicators that share
+        the same second.
         """
         fql_filter = f"_marker:>='{marker}'"
         if self.exclude_types:
@@ -180,7 +234,10 @@ class IndicatorImporter(BaseImporter):
         return fql_filter
 
     def _paginated_query_indicators(
-        self, limit: int, fetch_timestamp: int
+        self,
+        limit: int,
+        fetch_timestamp: int,
+        fetch_marker: Optional[str] = None,
     ) -> List[dict]:
         """Walk every page of the indicator API and return the aggregated list.
 
@@ -213,7 +270,11 @@ class IndicatorImporter(BaseImporter):
         # the cursor that drives the next call.
         sort = "_marker.asc"
         resources: List[dict] = []
-        current_marker: str = str(fetch_timestamp)
+        # Resume from the persisted ``_marker`` when available so the
+        # boundary doesn't re-fetch every indicator that shares the
+        # same second prefix; otherwise fall back to the seconds-
+        # granularity timestamp for the initial run.
+        current_marker: str = fetch_marker or str(fetch_timestamp)
         last_seen_marker: Optional[str] = None
 
         while True:

@@ -329,3 +329,122 @@ def test_fql_filter_includes_exclude_types_clause():
         call_kwargs["fql_filter"]
         == "_marker:>='1700000000'+type:!['hash_md5', 'hash_sha1']"
     )
+
+
+def test_pagination_prefers_fetch_marker_over_timestamp_when_provided():
+    """A persisted ``_marker`` (with its unique suffix) MUST drive the
+    initial resume cursor instead of the bare ``last_updated`` timestamp.
+
+    This pins the cross-run resume contract: without the persisted
+    marker, the FQL ``_marker:>='1700000005'`` matches every indicator
+    whose timestamp prefix is ``1700000005`` — including the ones we
+    already processed in the previous run. The unique-suffixed marker
+    pins resume to the exact boundary indicator.
+    """
+    importer = _build_importer()
+    persisted_marker = "1700000005aaa0042"
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([], total=0),
+    ]
+
+    importer._paginated_query_indicators(
+        limit=1000,
+        fetch_timestamp=1_700_000_000,
+        fetch_marker=persisted_marker,
+    )
+
+    call_kwargs = (
+        importer.indicators_api_cs.get_combined_indicator_entities.call_args.kwargs
+    )
+    assert call_kwargs["fql_filter"] == f"_marker:>='{persisted_marker}'"
+
+
+def test_pagination_falls_back_to_timestamp_when_fetch_marker_is_none():
+    """No persisted marker (pre-upgrade state) MUST fall back to the
+    timestamp-based resume so a deployment carrying only the legacy
+    ``latest_indicator_timestamp`` key keeps working without manual
+    state migration.
+    """
+    importer = _build_importer()
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([], total=0),
+    ]
+
+    importer._paginated_query_indicators(
+        limit=1000, fetch_timestamp=1_700_000_000, fetch_marker=None
+    )
+
+    call_kwargs = (
+        importer.indicators_api_cs.get_combined_indicator_entities.call_args.kwargs
+    )
+    assert call_kwargs["fql_filter"] == "_marker:>='1700000000'"
+
+
+def test_run_persists_last_observed_marker_in_state():
+    """``run()`` MUST persist the last observed ``_marker`` under
+    ``latest_indicator_marker`` so the next run resumes exactly from
+    the boundary indicator (and not from the seconds-granularity
+    timestamp that would re-fetch every indicator sharing that second).
+    """
+    importer = _build_importer()
+    # ``_process_indicators`` walks each indicator and runs the full
+    # bundle pipeline. Short-circuit it for this state-shape test.
+    importer._process_indicators = MagicMock(return_value=None)
+    indicators = [_fake_indicator(i) for i in range(3)]
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page(indicators, total=0),
+    ]
+
+    new_state = importer.run({"latest_indicator_timestamp": 1_700_000_000})
+
+    assert new_state["latest_indicator_marker"] == indicators[-1]["_marker"]
+    assert "latest_indicator_timestamp" in new_state
+
+
+def test_run_reads_persisted_marker_from_state_and_passes_to_fetch():
+    """``run()`` MUST pull ``latest_indicator_marker`` from incoming
+    state and use it (verbatim, suffix included) as the initial FQL
+    marker so the cross-run boundary is exact.
+    """
+    importer = _build_importer()
+    importer._process_indicators = MagicMock(return_value=None)
+    persisted_marker = "1700000005aaa0042"
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([], total=0),
+    ]
+
+    importer.run(
+        {
+            "latest_indicator_timestamp": 1_700_000_000,
+            "latest_indicator_marker": persisted_marker,
+        }
+    )
+
+    call_kwargs = (
+        importer.indicators_api_cs.get_combined_indicator_entities.call_args.kwargs
+    )
+    assert call_kwargs["fql_filter"] == f"_marker:>='{persisted_marker}'"
+
+
+def test_run_keeps_previous_marker_when_last_indicator_lacks_marker():
+    """When the last accepted indicator is missing its ``_marker``
+    field, the run MUST keep the previously-persisted marker rather
+    than drop the state key. Dropping it would silently re-trigger the
+    seconds-granularity overlap on the next run.
+    """
+    importer = _build_importer()
+    importer._process_indicators = MagicMock(return_value=None)
+    persisted_marker = "1700000005aaa0042"
+    bad_indicator = {"id": "ioc-x", "last_updated": 1_700_000_000, "type": "domain"}
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([bad_indicator], total=10),
+    ]
+
+    new_state = importer.run(
+        {
+            "latest_indicator_timestamp": 1_700_000_000,
+            "latest_indicator_marker": persisted_marker,
+        }
+    )
+
+    assert new_state["latest_indicator_marker"] == persisted_marker
