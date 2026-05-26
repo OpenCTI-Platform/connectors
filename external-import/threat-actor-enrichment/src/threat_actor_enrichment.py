@@ -439,7 +439,22 @@ class ThreatActorEnrichment:
                 # cleanup on the idle path, so any work we open here
                 # must be closed by ``to_processed`` on the same
                 # iteration.
-                if last_run is None or (timestamp - last_run) > interval_seconds:
+                #
+                # Run-and-terminate mode is typically invoked by an
+                # orchestrator (Kubernetes Job / one-shot Docker run /
+                # ad-hoc operator action) that explicitly wants a
+                # single enrichment pass right now, so bypass the
+                # interval gate — otherwise a recent ``last_run``
+                # would short-circuit the work, the outer
+                # ``connect_run_and_terminate`` exit at the bottom
+                # would still trigger, and the connector would exit
+                # with code 0 without doing anything.
+                should_run = (
+                    last_run is None
+                    or (timestamp - last_run) > interval_seconds
+                    or self.helper.connect_run_and_terminate
+                )
+                if should_run:
                     now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                     friendly_name = "Threat Actor Enrichment run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
@@ -455,6 +470,13 @@ class ThreatActorEnrichment:
                     # assigns it — otherwise the cleanup would mask
                     # the real exception with ``UnboundLocalError``.
                     message = "Connector run interrupted"
+                    # Track whether the inner run raised so the work
+                    # can be closed with ``in_error=True`` on failure.
+                    # The platform UI shows ``to_processed`` calls
+                    # without that flag as successful runs, so
+                    # without it operators can't reliably spot a
+                    # failed cycle by glancing at the work log.
+                    run_failed = False
                     try:
                         self._process_enrichment()
                         message = (
@@ -463,6 +485,7 @@ class ThreatActorEnrichment:
                         )
                         self.helper.log_info(message)
                     except Exception as run_err:
+                        run_failed = True
                         # Surface the failure on the work itself so
                         # OpenCTI doesn't show a permanently
                         # "in progress" entry and the operator sees
@@ -491,7 +514,9 @@ class ThreatActorEnrichment:
                             datetime.now(timezone.utc).utctimetuple()
                         )
                         self.helper.set_state({"last_run": utc_time})
-                        self.helper.api.work.to_processed(work_id, message)
+                        self.helper.api.work.to_processed(
+                            work_id, message, in_error=run_failed
+                        )
                 else:
                     next_in = interval_seconds - (timestamp - last_run)
                     self.helper.log_info(
