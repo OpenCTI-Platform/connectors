@@ -17,6 +17,7 @@ from connectors_sdk.models import (
     Campaign,
     ExternalReference,
     Indicator,
+    IntrusionSet,
     Malware,
     Relationship,
 )
@@ -64,7 +65,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             return []
 
         try:
-            self.logger.info(
+            self.logger.debug(
                 "Converting IOC delta entry to STIX",
                 {"prefix": LOG_PREFIX, "type": entry.type, "id": entry.id},
             )
@@ -325,7 +326,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
         malware_name = malware_data.attributes.name
 
         malware = Malware(
-            name=malware_name,
+            name=malware_name.upper(),
             is_family=True,
             author=self.organization,
             markings=[self.tlp_marking],
@@ -381,21 +382,21 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         threat_actor_name = threat_actor_data.attributes.name
 
-        threat_actor = ThreatActorGroup(
-            name=threat_actor_name,
+        intrusion_set = IntrusionSet(
+            name=threat_actor_name.upper(),
             author=self.organization,
             markings=[self.tlp_marking],
         )
         relationship = Relationship(
             type=RelationshipType.INDICATES,
             source=ioc_entry,
-            target=threat_actor,
+            target=intrusion_set,
             author=self.organization,
             markings=[self.tlp_marking],
         )
 
         return [
-            threat_actor.to_stix2_object(),
+            intrusion_set.to_stix2_object(),
             relationship.to_stix2_object(),
         ]
 
@@ -414,7 +415,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         # TODO: TO BE CHANGED ONCE TOOL MODEL IS ADDED TO CONNECTORS-SDK
         software_toolkit = ToolModel(
-            name=software_toolkit_name,
+            name=software_toolkit_name.upper(),
         )
 
         now = datetime.now(timezone.utc)
