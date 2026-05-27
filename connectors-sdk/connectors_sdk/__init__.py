@@ -3,14 +3,13 @@
 __version__ = "0.1.0"
 
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
-from connectors_sdk.logging.logger import Logger, logger
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
 from connectors_sdk.connectors.external_import.external_import_connector import (
     ExternalImportConnector,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logging.logger import Logger, logger
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -60,7 +59,6 @@ __all__ = [
     "ExternalImportConnectorState",
     # Connector base classes
     "ExternalImportConnector",
-    "ConnectorLogger",
     "BaseDataProcessor",
     "WorkManager",
 ]
