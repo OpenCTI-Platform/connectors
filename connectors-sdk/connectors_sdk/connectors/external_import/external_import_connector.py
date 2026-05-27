@@ -7,23 +7,30 @@ state management, scheduling, error handling, and running data processors.
 Architecture::
 
     ExternalImportConnector
-    ├── OpenCTIConnectorHelper → pycti bridge (created in _init_dependencies)
-    ├── ConnectorLogger        → Logging (wraps helper's AppLogger)
+    ├── OpenCTIConnectorHelper       → pycti bridge (created in _init_dependencies)
+    ├── Logger                       → Logging (wraps helper's AppLogger)
     ├── ExternalImportConnectorState → State persistence (last_run, custom fields)
-    └── BaseDataProcessor[]    → process(): with work_manager: send(transform(collect()))
-        └── WorkManager        → context manager: open work → send → close work
+    └── BaseDataProcessor[]          → process(): with work_manager: send(transform(collect()))
+        └── WorkManager              → context manager: open work → send → close work
 """
+
+from __future__ import annotations
 
 import sys
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logging.logger import Logger
+from connectors_sdk.logging.sdk_logger import sdk_logger
 from connectors_sdk.settings.base_settings import BaseConnectorSettings
 from connectors_sdk.states.states import ExternalImportConnectorState
 from pycti import OpenCTIConnectorHelper
+
+if TYPE_CHECKING:
+    from connectors_sdk.logging._base_logger import BaseLogger
 
 
 class ExternalImportConnector:
@@ -44,8 +51,8 @@ class ExternalImportConnector:
     (e.g. one for indicators, one for reports, one for vulnerabilities).
 
     Attributes:
+        logger(ClassVar): A ``Logger``'s child for logging, named after the connector class.
         settings: The connector configuration (subclass of ``BaseConnectorSettings``).
-        logger: The ``ConnectorLogger`` for logging without direct pycti dependency.
         state: The ``ExternalImportConnectorState`` for persisting connector state.
         data_processors: The list of ``BaseDataProcessor`` instances.
 
@@ -66,6 +73,15 @@ class ExternalImportConnector:
         >>> connector.start()
     """
 
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("ExternalImportConnector")
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `ExternalImportConnector` subclass."""
+        super().__init_subclass__(**kwargs)
+        package_name = cls.__module__.split(".")[0]
+        cls.logger = Logger(f"{package_name}.{cls.__name__}")
+
     def __init__(
         self,
         settings: BaseConnectorSettings,
@@ -85,8 +101,8 @@ class ExternalImportConnector:
         """
         if not data_processors:
             raise ValueError("At least one BaseDataProcessor must be provided.")
-        self.settings = settings
         self.data_processors = data_processors
+        self.settings = settings
         self.state = state if state is not None else ExternalImportConnectorState()
 
     def _init_dependencies(self) -> None:
@@ -94,12 +110,10 @@ class ExternalImportConnector:
 
         This method:
         1. Creates the ``OpenCTIConnectorHelper`` from the config
-        2. Creates the ``ConnectorLogger``
-        3. Initializes the state and injects dependencies
-        4. Calls ``inject_dependencies()`` on each data processor
+        2. Initializes the state and injects dependencies
+        3. Calls ``inject_dependencies()`` on each data processor
         """
         self._helper = OpenCTIConnectorHelper(config=self.settings.to_helper_config())
-        self.logger = ConnectorLogger(self._helper)
         self.state.inject_dependencies(self._helper)
         for processor in self.data_processors:
             processor.inject_dependencies(

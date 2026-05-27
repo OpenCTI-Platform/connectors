@@ -19,6 +19,8 @@ from abc import ABC
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from connectors_sdk.logging.logger import Logger
+from connectors_sdk.logging.sdk_logger import sdk_logger
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_serializer
 
 if TYPE_CHECKING:
@@ -77,15 +79,16 @@ class BaseConnectorState(BaseModel, ABC):
         validate_assignment=True,
     )
 
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("BaseConnectorState")
+
     _client: _StateClient | None = PrivateAttr(default=None)
     _can_be_loaded: bool = PrivateAttr(default=False)
 
-    @field_serializer("*", mode="wrap", when_used="json")
-    def _serialize_datetimes(self, value: Any, handler: Any) -> Any:
-        """Replace the default JSON serializer, in order to use +00:00 offset instead of Z prefix.
-        This is convenient so `assert self.model_dump(mode="json")["last_run"] == self.last_run.isoformat()`
-        is `True` across both codebase and tests (using the same serializer).
-        Consistent with `DatetimeFromIsoString` in `connectors_sdk.settings.annotated_types` module too.
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `BaseConnectorState` subclass."""
+        super().__init_subclass__(**kwargs)
+        package_name = cls.__module__.split(".")[0]
+        cls.logger = Logger(f"{package_name}.{cls.__name__}")
 
         Arguments:
             value: The value to serialize.

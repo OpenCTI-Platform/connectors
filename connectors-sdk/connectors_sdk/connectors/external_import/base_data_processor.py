@@ -21,12 +21,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Generator
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logging.logger import Logger
+from connectors_sdk.logging.sdk_logger import sdk_logger
 
 if TYPE_CHECKING:
+    from connectors_sdk.logging._base_logger import BaseLogger
     from connectors_sdk.settings.base_settings import BaseConnectorSettings
     from connectors_sdk.states.states import ExternalImportConnectorState
     from pycti import OpenCTIConnectorHelper
@@ -44,7 +46,7 @@ class BaseDataProcessor(ABC):
     ``transform()`` can either return a list (single bundle) or yield
     multiple lists (streaming). ``send()`` detects this and acts accordingly.
 
-    The ``work_manager``, ``logger`` and ``state`` attributes are injected by
+    The ``settings``, ``state`` and ``work_manager`` attributes are injected by
     ``ExternalImportConnector`` via ``inject_dependencies()``.
 
     The processor can read and write state fields (e.g. cursors, checkpoints)
@@ -61,43 +63,49 @@ class BaseDataProcessor(ABC):
         4. ``process()`` — called by the base connector (runs the pipeline)
 
     Attributes:
+        _logger: A child of ``Logger``, named after the processor class.
+        settings: The connector settings, injected via ``inject_dependencies()``.
+        state: The ``ExternalImportConnectorState`` instance, injected via ``inject_dependencies()``.
+        work_manager: The ``WorkManager`` instance, created in ``inject_dependencies()``.
         work_name: A human-readable name for the work created by this processor.
             Changing ``work_name`` between calls to ``send()`` (or between iterations
             in a generator-based ``transform()``) will close the current work and
             open a new one with the updated name.
-        settings: The connector settings, injected via ``inject_dependencies()``.
-        work_manager: The ``WorkManager`` instance, created in ``inject_dependencies()``.
-        logger: The ``ConnectorLogger`` instance, injected via ``inject_dependencies()``.
-        state: The ``ExternalImportConnectorState`` instance, injected via ``inject_dependencies()``.
     """
 
-    work_name: str
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("BaseDataProcessor")
+
     settings: BaseConnectorSettings
-    work_manager: WorkManager
-    logger: ConnectorLogger
     state: ExternalImportConnectorState
+    work_manager: WorkManager
+    work_name: str
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `BaseDataProcessor` subclass."""
+        super().__init_subclass__(**kwargs)
+        package_name = cls.__module__.split(".")[0]
+        cls.logger = Logger(f"{package_name}.{cls.__name__}")
 
     def inject_dependencies(
         self,
         settings: BaseConnectorSettings,
-        helper: OpenCTIConnectorHelper,
         state: ExternalImportConnectorState,
+        helper: OpenCTIConnectorHelper,
     ) -> None:
         """Inject dependencies from the base connector and create the WorkManager.
 
         Called by ``ExternalImportConnector`` after helper initialization.
-        Sets ``settings``, ``logger`` and ``state``, and creates the ``WorkManager``
-        for this processor.
+        Sets ``settings``, ``state``, and creates the ``WorkManager`` for this processor.
 
         Args:
             settings: The connector configuration settings.
-            helper: The ``OpenCTIConnectorHelper`` instance.
             state: The ``ExternalImportConnectorState`` instance.
+            helper: The ``OpenCTIConnectorHelper`` instance.
         """
         self.settings = settings
-        self.work_manager = WorkManager(helper)
-        self.logger = ConnectorLogger(helper)
         self.state = state
+        self.work_manager = WorkManager(helper)
 
     def post_init(self) -> None:  # noqa: B027
         """Hook called after ``inject_dependencies()`` wires up dependencies.
