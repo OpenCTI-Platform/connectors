@@ -16,6 +16,19 @@ These tests cover the marker-based deep-pagination contract between
   NOT branch on ``meta.pagination.total`` - that field is the count of
   records matching the current request's FQL clause and is included
   in the log line as ``matching_filter_total`` for diagnostics only.
+* Cross-run inclusive-boundary strip: when the importer resumes
+  with a persisted ``fetch_marker``, the first row of the very
+  first page is dropped when its ``_marker`` equals
+  ``fetch_marker``. FQL ``_marker:>='<cursor>'`` is inclusive, so
+  the persisted boundary indicator is returned again on resume;
+  stripping it up-front keeps a tight ``max_records_per_run``
+  from being consumed entirely by the duplicate boundary (which
+  would freeze ``latest_indicator_marker`` and starve the loop of
+  forward progress) and avoids paying for one idempotent
+  re-process of the boundary indicator on every resume. The
+  strip is deliberately scoped to iteration one and to the
+  cross-run case; within-run repeats are handled by the
+  marker-didn't-advance anti-spin guard.
 * Pagination is robust to ``meta.pagination`` being missing or ``None``.
 * ``exclude_types`` and the FQL marker clause are combined correctly.
 * Cross-run resume: the last accepted indicator's ``_marker`` is
@@ -458,30 +471,23 @@ def test_run_reads_persisted_marker_from_state_and_passes_to_fetch():
     assert call_kwargs["fql_filter"] == f"_marker:>='{persisted_marker}'"
 
 
-def test_pagination_stops_on_first_iter_when_only_boundary_returned():
-    """Resume + no new indicators must NOT re-issue the same query.
+def test_pagination_strips_inclusive_boundary_when_only_boundary_returned():
+    """Resume + no new indicators must NOT re-process the boundary row.
 
     The FQL clause ``_marker:>='<cursor>'`` is *inclusive*, so resuming
     with the persisted ``_marker`` and no newer indicators since
     returns the boundary indicator itself on the first call (page
     contains the indicator whose marker we persisted last time). The
-    paginator must detect this on the first iteration and stop after
-    that single API call - the previous shape seeded
-    ``last_seen_marker = None`` and only tripped the
-    marker-didn't-advance guard on iteration 2, which meant the
-    boundary indicator was appended twice and the connector issued
-    the identical query twice on every "no new data" resume.
-
-    The fix seeds ``last_seen_marker = fetch_marker`` so the guard
-    fires on iteration 1 if ``next_marker == fetch_marker``.
+    paginator strips the duplicate boundary row up-front, so the
+    aggregated batch is empty, exactly one API call is issued, and
+    we avoid paying for one idempotent re-process of the
+    already-seen indicator on every "no new data" resume.
     """
     importer = _build_importer()
     persisted_marker = "1700000005aaa0042"
     boundary_indicator = _fake_indicator(0, marker=persisted_marker)
     importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
-        # API returns the boundary indicator under inclusive ``:>=``.
         _make_page([boundary_indicator], total=1),
-        # Should never be called - guard must fire on iter 1.
         _make_page([_fake_indicator(1)], total=1),
     ]
 
@@ -491,15 +497,43 @@ def test_pagination_stops_on_first_iter_when_only_boundary_returned():
         fetch_marker=persisted_marker,
     )
 
-    # Exactly one API call: the guard fires on iter 1.
     assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 1
-    # The boundary indicator is appended once (it is in ``page_resources``
-    # at the time the extend runs, and the marker-didn't-advance guard
-    # only catches the duplicate at the NEXT iteration boundary - that's
-    # acceptable because (a) the per-run duplicate is bounded at one
-    # record and (b) the OpenCTI platform's STIX-ID dedup absorbs it on
-    # the bundle ingest side).
-    assert fetched == [boundary_indicator]
+    assert fetched == []
+
+
+def test_pagination_strips_inclusive_boundary_under_tight_cap():
+    """Tight ``max_records_per_run`` + persisted boundary must still
+    advance.
+
+    Regression for the case where a small per-run cap (e.g. ``1``)
+    combined with the FQL ``_marker:>='<cursor>'`` inclusive boundary
+    used to let the boundary row consume the entire quota: the page
+    was sliced down to ``[boundary]``, the cap break fired, and
+    ``next_marker`` resolved back to the persisted cursor - so the
+    importer state never advanced and subsequent runs repeated the
+    same row forever, never reaching the newer indicators. With the
+    inclusive-boundary strip the boundary row is dropped BEFORE the
+    cap slice, the quota is spent on the first newer indicator
+    instead, and the persisted marker advances out of the boundary.
+    """
+    importer = _build_importer(max_records_per_run=1)
+    persisted_marker = "1700000005aaa0042"
+    boundary_indicator = _fake_indicator(0, marker=persisted_marker)
+    newer_one = _fake_indicator(1, marker="1700000006aaa0001")
+    newer_two = _fake_indicator(2, marker="1700000007aaa0002")
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([boundary_indicator, newer_one, newer_two], total=3),
+    ]
+
+    fetched = importer._paginated_query_indicators(
+        limit=1000,
+        fetch_timestamp=1_700_000_000,
+        fetch_marker=persisted_marker,
+    )
+
+    assert fetched == [newer_one]
+    assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 1
+    assert fetched[-1]["_marker"] != persisted_marker
 
 
 def test_run_keeps_previous_marker_when_last_indicator_lacks_marker():

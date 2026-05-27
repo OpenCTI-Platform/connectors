@@ -289,20 +289,14 @@ class IndicatorImporter(BaseImporter):
         # same second prefix; otherwise fall back to the seconds-
         # granularity timestamp for the initial run.
         current_marker: str = fetch_marker or str(fetch_timestamp)
-        # Seed ``last_seen_marker`` with the persisted cursor (when
-        # we have one) so the marker-didn't-advance guard fires on
-        # the first iteration if the API returns only the boundary
-        # indicator. The FQL clause ``_marker:>='<cursor>'`` is
-        # inclusive, so resuming with the persisted marker and no
-        # newer indicators since would otherwise (a) append the
-        # boundary indicator a first time, (b) re-issue the exact
-        # same query, (c) append the boundary indicator a second
-        # time, then trip the guard - both the duplicate append and
-        # the extra round-trip are avoided by seeding the guard up
-        # front. On the very first run there is no persisted marker
-        # and ``fetch_marker`` is ``None``, so the seed is ``None``
-        # and the loop behaves exactly as before for that path.
-        last_seen_marker: Optional[str] = fetch_marker
+        # Tracks the ``_marker`` of the last row we accepted on the
+        # previous iteration so the anti-spin guard below catches
+        # an API that returns the same trailing marker twice in a
+        # row. Left ``None`` on iteration one - the cross-run
+        # inclusive-boundary case (the persisted cursor row showing
+        # up again because FQL ``_marker:>='<cursor>'`` matches the
+        # cursor itself) is handled explicitly by the strip below.
+        last_seen_marker: Optional[str] = None
 
         while True:
             fql_filter = self._build_fql_filter(current_marker)
@@ -314,6 +308,54 @@ class IndicatorImporter(BaseImporter):
             page_resources = response.get("resources") or []
             if not page_resources:
                 break
+
+            # Cross-run inclusive-boundary strip: the FQL clause
+            # ``_marker:>='<cursor>'`` is *inclusive*, so when we
+            # resume with a persisted ``fetch_marker`` the very
+            # first page may include the boundary indicator we
+            # already accepted (and persisted) on the previous run.
+            # Drop it BEFORE applying the per-run cap or extending
+            # the aggregate. Two reasons this matters:
+            #
+            # * Without the strip, a tight ``max_records_per_run``
+            #   (e.g. ``1``) lets the duplicate boundary row
+            #   consume the entire quota on every run - the page is
+            #   sliced down to ``[boundary]``, ``next_marker``
+            #   resolves back to the same persisted cursor, state
+            #   never advances and the connector never reaches
+            #   newer indicators.
+            # * Without the strip we always pay for one idempotent
+            #   re-process of the boundary indicator on every
+            #   resume. The OpenCTI side absorbs the duplicate via
+            #   STIX-ID dedup, but the bundle still pays the
+            #   ingest cost.
+            #
+            # The strip is intentionally scoped to iteration one
+            # (``not resources``) and to the cross-run case
+            # (``fetch_marker is not None``):
+            #
+            # * On a fresh run ``fetch_marker`` is ``None`` and
+            #   the strip is a no-op.
+            # * Within a run we do NOT strip rows whose ``_marker``
+            #   happens to equal the previous iteration's
+            #   ``current_marker`` because, per CrowdStrike's
+            #   contract, ``_marker`` is unique per indicator and
+            #   sorted ascending, so a within-run repeat marker
+            #   identifies a different indicator that happens to
+            #   share a (rare) collision - the marker-didn't-advance
+            #   anti-spin guard further down catches the
+            #   pathological case where two consecutive pages share
+            #   the same trailing marker.
+            if (
+                fetch_marker is not None
+                and not resources
+                and page_resources[0].get("_marker") == fetch_marker
+            ):
+                page_resources = page_resources[1:]
+                if not page_resources:
+                    # The only row on the page was the duplicate
+                    # boundary - nothing new since the previous run.
+                    break
 
             # ``meta.pagination`` can legitimately be missing or null —
             # guard against both so we don't AttributeError on the
