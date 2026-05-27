@@ -289,27 +289,46 @@ class ConnectorScoring:
 
         pattern_type = entity.get("pattern_type")
         ioc_type = entity.get("x_opencti_main_observable_type")
-        if (
-            pattern_type == "stix"
-            and ioc_type
-            and ioc_type.lower()
-            in (v.lower() for v in self.config.indicator_type_enrichable)
-        ):
-            return True, None
 
-        reason = (
-            f"Indicator not enriched, observable type {ioc_type!r} "
-            f"is not in indicator_type_enrichable"
-        )
-        self.helper.connector_logger.info(
-            reason,
-            meta={
-                "observable_type": ioc_type,
-                "pattern_type": pattern_type,
-                "enrichable_types": self.config.indicator_type_enrichable,
-            },
-        )
-        return False, reason
+        # Distinguish the two rejection causes so the operator-facing
+        # status string reflects the real reason. The previous shape
+        # collapsed both checks into a single ``observable type ... is
+        # not in indicator_type_enrichable`` reason, which was misleading
+        # for non-STIX indicators (e.g. YARA / Sigma / SNORT) — those
+        # would surface as ``observable type None ...`` even though the
+        # actual blocker was the ``pattern_type``.
+        if pattern_type != "stix":
+            reason = (
+                f"Indicator not enriched, pattern_type {pattern_type!r} "
+                f"is not supported (only 'stix' indicators are enriched)"
+            )
+            self.helper.connector_logger.info(
+                reason,
+                meta={
+                    "pattern_type": pattern_type,
+                    "observable_type": ioc_type,
+                },
+            )
+            return False, reason
+
+        if not ioc_type or ioc_type.lower() not in (
+            v.lower() for v in self.config.indicator_type_enrichable
+        ):
+            reason = (
+                f"Indicator not enriched, observable type {ioc_type!r} "
+                f"is not in indicator_type_enrichable"
+            )
+            self.helper.connector_logger.info(
+                reason,
+                meta={
+                    "observable_type": ioc_type,
+                    "pattern_type": pattern_type,
+                    "enrichable_types": self.config.indicator_type_enrichable,
+                },
+            )
+            return False, reason
+
+        return True, None
 
     def process_message(self, data: dict) -> str:
         """
