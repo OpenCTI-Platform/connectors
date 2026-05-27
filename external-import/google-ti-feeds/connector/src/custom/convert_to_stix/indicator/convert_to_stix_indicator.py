@@ -9,8 +9,6 @@ from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaEntry,
     IOCDeltaRelationshipItem,
 )
-from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
-from connector.src.stix.v21.models.sdos.tool_model import ToolModel
 from connectors_sdk.models import (
     AttackPattern,
     Campaign,
@@ -19,6 +17,7 @@ from connectors_sdk.models import (
     IntrusionSet,
     Malware,
     Relationship,
+    Tool,
 )
 from connectors_sdk.models.enums import HashAlgorithm, RelationshipType
 from stix2.base import _STIXBase
@@ -388,25 +387,18 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         software_toolkit_name = software_toolkit_data.attributes.name
 
-        # TODO: TO BE CHANGED ONCE TOOL MODEL IS ADDED TO CONNECTORS-SDK
-        software_toolkit = ToolModel(
-            type="tool",
-            spec_version="2.1",
+        software_toolkit = Tool(
             name=software_toolkit_name.upper(),
-            created=datetime.now(timezone.utc),
-            modified=datetime.now(timezone.utc),
+            author=self.organization,
+            markings=[self.tlp_marking],
         )
 
-        now = datetime.now(timezone.utc)
-
-        relationship = OctiRelationshipModel.create(
-            relationship_type=RelationshipType.INDICATES.value,
-            source_ref=ioc_entry.id,
-            target_ref=software_toolkit.id,
-            organization_id=self.organization.id,
-            marking_ids=[self.tlp_marking.id],
-            created=now,
-            modified=now,
+        relationship = Relationship(
+            type=RelationshipType.INDICATES,
+            source=ioc_entry,
+            target=software_toolkit,
+            author=self.organization,
+            markings=[self.tlp_marking],
         )
 
         return [
