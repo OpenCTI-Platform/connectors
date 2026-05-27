@@ -537,9 +537,14 @@ class BeaconBeagle:
                                     for one_seenin in urls_json["Endpoints"][
                                         one_endpoint
                                     ]["seen_in"]:
-                                        hash = one_seenin["config_hash"]
+                                        # Local variable name was ``hash`` which
+                                        # shadowed Python's built-in ``hash()`` and
+                                        # made debugging / linting noisier. Renamed
+                                        # to ``config_hash`` to match the upstream
+                                        # field name and avoid the shadow.
+                                        config_hash = one_seenin["config_hash"]
                                         try:
-                                            url_config = f"https://beaconbeagle.com/api/v1/configs/{hash}"
+                                            url_config = f"https://beaconbeagle.com/api/v1/configs/{config_hash}"
                                             config_ok = False
                                             self.helper.connector_logger.debug(
                                                 f" Add useragent 1 > Retreiving raw config at : {url_config}."
@@ -645,7 +650,7 @@ class BeaconBeagle:
                                                     config_ok = True
                                         except Exception as inst:
                                             self.helper.connector_logger.error(
-                                                f" No way to retreive config {hash}  ({str(inst)})."
+                                                f" No way to retreive config {config_hash}  ({str(inst)})."
                                             )
                     except Exception as inst:
                         self.helper.connector_logger.error(
@@ -975,9 +980,21 @@ class BeaconBeagle:
                         # ``(name, location_type)``; passing a STIX
                         # pattern string here would produce unstable IDs
                         # and break Location deduplication across runs.
+                        #
+                        # ``name`` / ``object_marking_refs`` /
+                        # ``created_by_ref`` are added so the SDO carries
+                        # the same provenance + marking as every other
+                        # object the connector emits: ``stix2.Location``
+                        # requires a non-empty ``name`` (the constructor
+                        # raises ``MissingPropertiesError`` otherwise),
+                        # and unmarked / unattributed location objects
+                        # break the platform's TLP-gating + audit trail.
                         country_host = stix2.Location(
                             id=Location.generate_id(target["Country"], "Country"),
+                            name=target["Country"],
                             country=target["Country"],
+                            created_by_ref=identity_id,
+                            object_marking_refs=[self.beaconbeagle_marking],
                             custom_properties={
                                 "x_opencti_score": 50,
                             },
@@ -1852,6 +1869,13 @@ class BeaconBeagle:
                 else:
                     _ap_mitre_id = None
                     _ap_name = _ap_raw
+                # ``created_by_ref`` + ``object_marking_refs`` mirror
+                # the convention every other SDO this connector emits
+                # follows (`Identity`, `Tool`, `Indicator`, …). Without
+                # them the AttackPattern lands in the bundle as a
+                # marker-free / author-less object, which breaks TLP
+                # gating on the platform side and loses the
+                # connector-provenance audit trail.
                 ddos_attack = stix2.AttackPattern(
                     id=AttackPattern.generate_id(_ap_name, _ap_mitre_id),
                     name=_ap_name,
@@ -1859,6 +1883,8 @@ class BeaconBeagle:
                         f"Attack pattern linked to {self.beaconbeagle_link_tool} "
                         "traffic seen by BeaconBeagle."
                     ),
+                    created_by_ref=identity_id,
+                    object_marking_refs=[self.beaconbeagle_marking],
                 )
                 stix_objects.append(ddos_attack)
                 self.beaconbeagle_link_ap_id = ddos_attack["id"]

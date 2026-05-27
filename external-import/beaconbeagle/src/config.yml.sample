@@ -23,6 +23,12 @@ beaconbeagle:
   link_ap: 'T1071 Standard Application Layer Protocol'
   link_country: true
   link_bgpas: true
+  # When true, the connector falls back to a ``whois -h bgp.tools -v <ip>``
+  # lookup whenever the BeaconBeagle payload itself does not carry an
+  # ``asn`` / ``country`` for a C2 entry. Disable if outbound traffic
+  # to ``bgp.tools`` is not allowed in your deployment (BGP / AS / country
+  # linking will then only fire on entries that already carry the data).
+  search_bgpas: false
   links_duration: 24
   interval: 2 # In hours
   marking_definition: 'TLP:GREEN'
