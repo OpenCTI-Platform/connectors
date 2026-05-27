@@ -362,7 +362,15 @@ class BeaconBeagle:
                     self.helper.connector_logger.debug(
                         f"Reading 'key' error: {str(inst)}"
                     )
-                    C2_key = "None"
+                    # Use the ``None`` sentinel (not the literal string
+                    # ``"None"``): downstream ``create_stix_object``
+                    # creates a ``DomainName`` observable whenever
+                    # ``target["key"] != target["ip"]``, which would
+                    # otherwise emit a ``DomainName(value="None")``
+                    # SCO (invalid + noisy data in the platform).
+                    C2_key = None
+                if isinstance(C2_key, str) and not C2_key.strip():
+                    C2_key = None
                 try:
                     # ``datetime`` is imported as the module (``import datetime``),
                     # so ``fromtimestamp`` lives on ``datetime.datetime``, not on
@@ -401,27 +409,48 @@ class BeaconBeagle:
                         f"Reading 'endpoints' error: {str(inst)}"
                     )
                     C2_endpoints = 0
+                # Normalise every "missing or junk" upstream value to the
+                # ``None`` sentinel here so the downstream branches in
+                # ``create_stix_object`` (BGP whois fallback, country
+                # linking, AS linking) have a single condition to test
+                # (``is None``) instead of having to special-case ``0``,
+                # ``""`` and the literal string ``"None"`` separately.
+                # The previous shape mapped missing values to ``0`` /
+                # ``""`` then later compared ``str(...) == "None"``, so
+                # the BGP / country / AS branches silently never ran on
+                # the common "missing key" case and BeaconBeagle payloads
+                # without those fields produced ``AutonomousSystem(number=0)``
+                # / ``Location(country="")`` SCOs.
                 try:
                     C2_asn = one_C2["asn"]
                 except Exception as inst:
                     self.helper.connector_logger.debug(
                         f"Reading 'asn' error: {str(inst)}"
                     )
-                    C2_asn = 0
+                    C2_asn = None
+                try:
+                    C2_asn_int = int(C2_asn) if C2_asn is not None else None
+                except (TypeError, ValueError):
+                    C2_asn_int = None
+                C2_asn = C2_asn_int if (C2_asn_int and C2_asn_int > 0) else None
                 try:
                     C2_asn_org = one_C2["asn_org"]
                 except Exception as inst:
                     self.helper.connector_logger.debug(
                         f"Reading 'asn_org' error: {str(inst)}"
                     )
-                    C2_asn_org = ""
+                    C2_asn_org = None
+                if isinstance(C2_asn_org, str) and not C2_asn_org.strip():
+                    C2_asn_org = None
                 try:
                     C2_country = one_C2["country"]
                 except Exception as inst:
                     self.helper.connector_logger.debug(
                         f"Reading 'country' error: {str(inst)}"
                     )
-                    C2_country = ""
+                    C2_country = None
+                if isinstance(C2_country, str) and not C2_country.strip():
+                    C2_country = None
 
                 One_C2 = {
                     "ip": C2_ip,
@@ -793,10 +822,21 @@ class BeaconBeagle:
             stix_objects.append(observable_ip)
             master_observable_id = observable_ip["id"]
 
-            # We have to deal with case key is a domain
-            if not target["key"] == target["ip"]:
+            # We have to deal with case key is a domain.
+            # Skip when ``key`` is missing (``None`` sentinel from the
+            # normalised fetch path) or equals the IP — the previous
+            # ``if not target["key"] == target["ip"]`` shape would
+            # emit a ``DomainName(value=None)`` SCO on the
+            # "missing key" path (which the worker then rejects).
+            target_key = target.get("key")
+            if (
+                target_key
+                and isinstance(target_key, str)
+                and target_key.strip()
+                and target_key != target["ip"]
+            ):
                 # we have a domain to add
-                domain = target["key"]
+                domain = target_key
                 observable_dom = stix2.DomainName(
                     value=domain,
                     object_marking_refs=[self.beaconbeagle_marking],
@@ -812,10 +852,15 @@ class BeaconBeagle:
                 master_observable_id = observable_dom["id"]
                 del observable_dom
 
-            # IF requested, we make a BGP Whois lookup to get more infos for ASN and Country
+            # IF requested, we make a BGP Whois lookup to get more infos for ASN and Country.
+            # Use truthy ``None`` / ``0`` / ``""`` checks against the
+            # values produced by the normalised fetch path — the previous
+            # ``str(...) == "None"`` shape never fired on the common
+            # "missing key" case where missing ``asn`` / ``country``
+            # were ``0`` / ``""`` (now ``None`` after normalisation).
             if self.beaconbeagle_search_bgpas:
                 try:
-                    if str(target["asn"]) == "None" or str(target["Country"]) == "None":
+                    if not target.get("asn") or not target.get("Country"):
                         self.helper.connector_logger.debug(
                             f"     > Infos does not include AS ou Country, Whois bgp tool for {target["ip"]}"
                         )
@@ -846,9 +891,20 @@ class BeaconBeagle:
 
             if self.beaconbeagle_link_country:
                 try:
-                    if str(target["Country"]) == "None":
+                    # Skip when Country is missing (``None`` sentinel)
+                    # or whitespace — the previous ``str(...) == "None"``
+                    # shape silently created ``Location(country="")``
+                    # SCOs whenever the BeaconBeagle payload had no
+                    # country field (now normalised to ``None`` upstream)
+                    # *and* the BGP whois fallback also failed.
+                    country_val = target.get("Country")
+                    if (
+                        not country_val
+                        or not isinstance(country_val, str)
+                        or not country_val.strip()
+                    ):
                         self.helper.connector_logger.warning(
-                            f"     > Target IP's Country is {target["Country"]}, we skip this one."
+                            f"     > Target IP's Country is {country_val}, we skip this one."
                         )
                     else:
                         self.helper.connector_logger.debug(
@@ -902,19 +958,42 @@ class BeaconBeagle:
                     )
 
             if self.beaconbeagle_link_bgpas:
-                if str(target["asn"]) == "None":
+                # Skip when ASN is missing or non-positive — the previous
+                # ``str(...) == "None"`` shape silently created
+                # ``AutonomousSystem(number=0)`` (reserved / invalid)
+                # whenever the BeaconBeagle payload had no ``asn``
+                # field (now normalised to ``None`` upstream) *and* the
+                # BGP whois fallback also failed.
+                asn_val = target.get("asn")
+                try:
+                    asn_int = int(asn_val) if asn_val is not None else None
+                except (TypeError, ValueError):
+                    asn_int = None
+                if not asn_int or asn_int <= 0:
                     self.helper.connector_logger.warning(
-                        f"     > Target IP's ASN is {target["asn"]}, we skip this one."
+                        f"     > Target IP's ASN is {asn_val}, we skip this one."
                     )
                 else:
                     try:
+                        # ``asn_int`` is the validated, positive int from
+                        # the guard above; reuse it instead of re-casting
+                        # ``target["asn"]`` (the latter could in theory
+                        # have been mutated to something non-castable
+                        # between the guard and the construction).
+                        # ``as_org`` may legitimately be unknown (the
+                        # bgp.tools whois call can return only ASN), so
+                        # fall back to ``"AS<n>"`` instead of passing
+                        # ``None`` / ``""`` as the SCO ``name``.
+                        as_org_val = target.get("as_org")
+                        if not as_org_val or not str(as_org_val).strip():
+                            as_org_val = f"AS{asn_int}"
                         self.helper.connector_logger.debug(
-                            f"     > Target IP is in AS {target["asn"]} {target["as_org"]}, linking AS BGP."
+                            f"     > Target IP is in AS {asn_int} {as_org_val}, linking AS BGP."
                         )
-                        description_as = f"This AS {target["asn"]} {target["as_org"]} was hosting a {self.beaconbeagle_link_tool} Configuration at {ip_add}"
+                        description_as = f"This AS {asn_int} {as_org_val} was hosting a {self.beaconbeagle_link_tool} Configuration at {ip_add}"
                         as_stix = stix2.AutonomousSystem(
-                            number=int(target["asn"]),
-                            name=target["as_org"],
+                            number=asn_int,
+                            name=as_org_val,
                             object_marking_refs=[self.beaconbeagle_marking],
                             custom_properties={
                                 "x_opencti_description": description_as,
@@ -1217,7 +1296,17 @@ class BeaconBeagle:
                             custom_properties={
                                 "x_opencti_score": 60,
                                 "x_opencti_description": description_ua,
-                                "x_opencti_main_observable_type": "Software",
+                                # The indicator pattern is
+                                # ``[user-agent:value = ...]`` and the
+                                # SCO is a ``CustomObservableUserAgent``;
+                                # the canonical OpenCTI observable-type
+                                # label is ``"User-Agent"`` (see
+                                # ``pycti/utils/constants.py``
+                                # ``StixCyberObservableTypes.USER_AGENT``).
+                                # The previous ``"Software"`` value
+                                # broke any UI filter / playbook step
+                                # that keys off ``x_opencti_main_observable_type``.
+                                "x_opencti_main_observable_type": "User-Agent",
                             },
                         )
                         # ``Indicator based-on Observable`` for the UA
