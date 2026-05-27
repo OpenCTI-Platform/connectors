@@ -1,0 +1,21 @@
+{
+  "title": "Scoring Calculator",
+  "slug": "scoring-calculator",
+  "description": "An internal enrichment connector that dynamically adjusts Indicator scores based on the entities they are linked with (Threat Actors, Malware, Locations, Sectors, Attack Patterns, Authors). Operators apply priority labels to the entities that matter to their organisation; when an Indicator is enriched, the connector aggregates the priority of every linked entity (and, optionally, of every entity contained in the Reports that reference the Indicator) and applies a relative-percentage update to x_opencti_score so the score never exceeds 100 and reflects the operator's own threat-landscape priorities.",
+  "short_description": "Recalculates an Indicator's x_opencti_score from the priorities of its linked entities (threats, malware, locations, sectors, TTPs, authors), driven by label-based per-category impact configuration.",
+  "logo": null,
+  "use_cases": [
+    "Enrichment & Analysis"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 75,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/scoring-calculator",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-scoring-calculator",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
