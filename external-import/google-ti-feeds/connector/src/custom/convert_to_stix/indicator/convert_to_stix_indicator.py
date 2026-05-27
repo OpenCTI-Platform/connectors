@@ -394,7 +394,6 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             type="tool",
             spec_version="2.1",
             name=software_toolkit_name.upper(),
-            tool_types=[ToolTypeOV.UNKNOWN],
             created=datetime.now(timezone.utc),
             modified=datetime.now(timezone.utc),
         )
