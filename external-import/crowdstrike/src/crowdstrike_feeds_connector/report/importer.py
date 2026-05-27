@@ -281,7 +281,16 @@ class ReportImporter(BaseImporter):
         try:
             related_indicators = []
             related_indicators_with_related_entities = []
-            _limit = 10000
+            # ``QueryIntelIndicatorEntities`` (``GET /intel/combined/indicators/v1``)
+            # is hard-capped at 5000 records per call by FalconPy /
+            # CrowdStrike (see https://www.falconpy.io/Service-Collections/Intel.html#queryintelindicatorentities).
+            # The previous value (``10000``) exceeded the cap and would
+            # be silently truncated server-side, leaving reports with
+            # 5001-10000 IOCs missing entries. Reports with more than
+            # 5000 IOCs are exceedingly rare; if they ever surface here
+            # the right answer is marker-based pagination (mirroring
+            # the indicator importer), not a higher one-shot limit.
+            _limit = 5000
             _sort = "last_updated|asc"
             _fql_filter = f"reports:['{report_name}']"
 
@@ -292,9 +301,15 @@ class ReportImporter(BaseImporter):
             if self._missing_indicator_scope:
                 return related_indicators_with_related_entities
 
-            # Getting IOCs linked and based on report name
+            # Getting IOCs linked and based on report name.
+            # ``deep_pagination=True`` was previously passed here but
+            # FalconPy's ``QueryIntelIndicatorEntities`` doesn't expose
+            # such a keyword, so it was silently dropped. Drop it
+            # explicitly so this call survives the
+            # ``IndicatorsAPI.get_combined_indicator_entities`` signature
+            # change that removed the spurious kwarg.
             response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+                limit=_limit, sort=_sort, fql_filter=_fql_filter
             )
 
             # Check if response has resources or if it's an error response.
