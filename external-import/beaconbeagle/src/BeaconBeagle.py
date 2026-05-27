@@ -1132,6 +1132,16 @@ class BeaconBeagle:
                         f"Cannot create an indicator for {ip_add!r}: "
                         "value is not a valid IPv4 or IPv6 address."
                     )
+                # ``valid_from`` / ``valid_until`` are the STIX 2.1
+                # fields that describe the *observation window* of an
+                # Indicator (when its pattern is expected to match
+                # malicious activity). ``created`` / ``modified`` are
+                # SDO-lifecycle timestamps and are set by the
+                # ``stix2`` library / OpenCTI automatically. Using
+                # ``modified=stop_time`` was forcing a new SDO version
+                # on every run whose ``stop_time`` shifted (which is
+                # every run for a still-active C2), causing needless
+                # indicator churn in OpenCTI's history.
                 indicator_ip = stix2.Indicator(
                     id=Indicator.generate_id(ip_pattern),
                     name=ip_add,
@@ -1139,8 +1149,8 @@ class BeaconBeagle:
                     pattern_type="stix",
                     description=description,
                     created_by_ref=identity_id,
-                    created=start_time,
-                    modified=stop_time,
+                    valid_from=start_time,
+                    valid_until=stop_time,
                     # confidence=60,
                     object_marking_refs=[self.beaconbeagle_marking],
                     custom_properties={
@@ -1257,6 +1267,11 @@ class BeaconBeagle:
                                     # stays valid and ``Indicator.generate_id``
                                     # produces a stable, deduplicating id.
                                     _url_pattern = f"[url:value = '{_stix_pattern_escape(one_url)}']"
+                                    # See the IP Indicator block above
+                                    # for the ``valid_from`` /
+                                    # ``valid_until`` rationale (STIX
+                                    # 2.1 observation window, not SDO
+                                    # lifecycle).
                                     indicator_url = stix2.Indicator(
                                         id=Indicator.generate_id(_url_pattern),
                                         name=one_url,
@@ -1264,8 +1279,8 @@ class BeaconBeagle:
                                         pattern_type="stix",
                                         description=description,
                                         created_by_ref=identity_id,
-                                        created=start_time,
-                                        modified=stop_time,
+                                        valid_from=start_time,
+                                        valid_until=stop_time,
                                         # confidence=60,
                                         object_marking_refs=[self.beaconbeagle_marking],
                                         custom_properties={
@@ -1360,6 +1375,10 @@ class BeaconBeagle:
                         _ua_pattern = (
                             f"[user-agent:value = '{_stix_pattern_escape(UserAgent)}']"
                         )
+                        # See the IP Indicator block above for the
+                        # ``valid_from`` / ``valid_until`` rationale
+                        # (STIX 2.1 observation window, not SDO
+                        # lifecycle).
                         indicator_ua = stix2.Indicator(
                             id=Indicator.generate_id(_ua_pattern),
                             name=UserAgent,
@@ -1367,8 +1386,8 @@ class BeaconBeagle:
                             pattern_type="stix",
                             description=description_ua,
                             created_by_ref=identity_id,
-                            created=start_time,
-                            modified=stop_time,
+                            valid_from=start_time,
+                            valid_until=stop_time,
                             # confidence=60,
                             object_marking_refs=[self.beaconbeagle_marking],
                             custom_properties={
@@ -1554,6 +1573,14 @@ class BeaconBeagle:
                                         f"[process:command_line = "
                                         f"'{_stix_pattern_escape(process)}']"
                                     )
+                                    # Same ``valid_from`` /
+                                    # ``valid_until`` convention as the
+                                    # IP / URL / UA indicators above
+                                    # so every Indicator this connector
+                                    # emits carries the same STIX 2.1
+                                    # observation-window shape and
+                                    # produces stable SDO history in
+                                    # OpenCTI across runs.
                                     indicator_proc = stix2.Indicator(
                                         id=Indicator.generate_id(_proc_pattern),
                                         name=f"Spawned process by {self.beaconbeagle_link_tool}",
@@ -1563,8 +1590,7 @@ class BeaconBeagle:
                                         indicator_types=["malicious-activity"],
                                         created_by_ref=identity_id,
                                         valid_from=start_time,
-                                        # created=target['Firsttime'],
-                                        # modified=target['lasttime'],
+                                        valid_until=stop_time,
                                         # confidence=60,
                                         object_marking_refs=[self.beaconbeagle_marking],
                                         custom_properties={
