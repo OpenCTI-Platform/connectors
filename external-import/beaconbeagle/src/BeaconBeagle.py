@@ -254,7 +254,19 @@ class BeaconBeagle:
 
         self.beaconbeagle_marking = marking
 
-    def beaconbeagle_api_get_list(self):
+    def beaconbeagle_api_get_list(self) -> list:
+        """Return the list of normalised C2 dicts to ingest this cycle.
+
+        Always returns a ``list``. The empty-list return covers every
+        "no targets" / recoverable-error path (HTTP non-200, payload
+        unchanged since last run, exception during fetch / normalisation),
+        so the ``opencti_bundle`` caller has a single contract to test
+        against (``if not targeted: ...``) instead of distinguishing
+        ``{}`` from ``[]`` from ``None``. The previous shape mixed
+        ``return {}`` and ``return [...]`` and relied on ``len(...)``
+        coincidentally working for both, which made the function easy
+        to misuse from any new call site.
+        """
         try:
             headers = {
                 "User-Agent": "OpenCTI-BeaconBeagle-Connector/1.1",
@@ -285,7 +297,7 @@ class BeaconBeagle:
                 self.helper.connector_logger.error(
                     f"Error while getting data from BeaconBeagle API: {Raw_Data.status_code}, let's get out of here without data :("
                 )
-                return {}
+                return []
             _json = Raw_Data.json()
             # Skip processing when the payload has not changed since the
             # previous run. Use the OpenCTI connector state instead of a
@@ -305,7 +317,7 @@ class BeaconBeagle:
                 self.helper.connector_logger.info(
                     "No new data from BeaconBeagle since last run, skipping processing."
                 )
-                return {}
+                return []
             if last_payload_hash is None:
                 self.helper.connector_logger.info(
                     "First BeaconBeagle run — no previous state to compare against."
@@ -376,14 +388,31 @@ class BeaconBeagle:
                     # ``datetime`` is imported as the module (``import datetime``),
                     # so ``fromtimestamp`` lives on ``datetime.datetime``, not on
                     # the module itself.
-                    C2_Firsttime = datetime.datetime.fromtimestamp(one_C2["Firsttime"])
+                    #
+                    # ``tz=datetime.timezone.utc`` is mandatory: the
+                    # BeaconBeagle API exposes ``Firsttime`` / ``lasttime``
+                    # as Unix epoch seconds (UTC by definition), and the
+                    # downstream ``create_stix_object`` calls
+                    # ``.replace(tzinfo=datetime.timezone.utc)`` on the
+                    # parsed value. Without ``tz=`` here ``fromtimestamp``
+                    # returns a *naive* local-time datetime, the bare
+                    # ``replace(tzinfo=...)`` then mis-labels it as UTC,
+                    # and every relationship / indicator the connector
+                    # emits ends up off by the container's UTC offset.
+                    # All sibling ``datetime.now()`` fallbacks are
+                    # tz-aware for the same reason.
+                    C2_Firsttime = datetime.datetime.fromtimestamp(
+                        one_C2["Firsttime"], tz=datetime.timezone.utc
+                    )
                 except Exception as inst:
-                    C2_Firsttime = datetime.datetime.now()
+                    C2_Firsttime = datetime.datetime.now(datetime.timezone.utc)
                     self.helper.connector_logger.debug(
                         f"Reading 'Firsttime' error: {str(inst)}"
                     )
                 try:
-                    C2_lasttime = datetime.datetime.fromtimestamp(one_C2["lasttime"])
+                    C2_lasttime = datetime.datetime.fromtimestamp(
+                        one_C2["lasttime"], tz=datetime.timezone.utc
+                    )
                 except Exception as inst:
                     self.helper.connector_logger.debug(
                         f"Reading 'lasttime' error: {str(inst)}"
@@ -398,7 +427,7 @@ class BeaconBeagle:
                     fallback_start = (
                         C2_Firsttime
                         if C2_Firsttime is not None
-                        else datetime.datetime.now()
+                        else datetime.datetime.now(datetime.timezone.utc)
                     )
                     C2_lasttime = fallback_start + datetime.timedelta(
                         hours=int(self.beaconbeagle_links_duration)
@@ -630,7 +659,7 @@ class BeaconBeagle:
             self.helper.connector_logger.error(
                 f"Error while getting intelligence from BeaconBeagle: {e}"
             )
-        return {}
+        return []
 
     def DictToText(self, DictObj, ret="\r\n"):
         output = ""
@@ -676,8 +705,20 @@ class BeaconBeagle:
             # entries. The previous shape concatenated them into a single
             # argument with a leading space, which ``whois`` parses as an
             # unknown query string and rejects.
+            #
+            # ``timeout=30`` matches the HTTP read timeout used by the
+            # BeaconBeagle ``requests.get`` calls (``(10, 60)``) and
+            # bounds the per-IP lookup so a hung ``bgp.tools`` or a
+            # network partition cannot stall the entire run loop
+            # indefinitely. ``TimeoutExpired`` is funneled into the
+            # ``"Process error"`` sentinel below so the caller's
+            # existing recoverable-error path (skip the BGP enrichment
+            # for this target, keep going with the rest of the bundle)
+            # already handles it without further changes.
             cmd = ["whois", "-h", "bgp.tools", "-v", str(ip_to_check)]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, check=True, timeout=30
+            )
 
             lines = result.stdout.strip().splitlines()
 
@@ -710,7 +751,12 @@ class BeaconBeagle:
                 "package in the image or disable BEACONBEAGLE_SEARCH_BGPAS."
             )
             return "Process error"
-        except (subprocess.CalledProcessError, StopIteration, IndexError):
+        except (
+            subprocess.CalledProcessError,
+            subprocess.TimeoutExpired,
+            StopIteration,
+            IndexError,
+        ):
             return "Process error"
         except Exception as e:
             self.helper.connector_logger.error(
@@ -754,7 +800,7 @@ class BeaconBeagle:
         # We generate STIX objects from each domain entry
         description = (
             "Imported from BeaconBeagle API at "
-            + datetime.datetime.now().strftime("%Y-%m-%d")
+            + datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
             + ".  \n"
         )
         description += "All informations:  \n"
@@ -1827,14 +1873,16 @@ class BeaconBeagle:
         # describe (e.g. if the next ``beaconbeagle_api_get_list`` call
         # short-circuits on an empty payload).
         self._pending_payload_hash = None
+        # ``beaconbeagle_api_get_list`` now always returns a ``list``
+        # (empty list on any "no targets" / error / unchanged-payload
+        # path), so a single truthy check covers every short-circuit
+        # branch. The previous ``is None`` / ``len(...) == 0`` split
+        # only existed because the function used to mix ``return {}``
+        # and ``return [...]``.
         targeted = self.beaconbeagle_api_get_list()
-        if targeted is None:
+        if not targeted:
             self.helper.connector_logger.info(
-                "No data retrieved from BeaconBeagle API (None), skipping bundle creation."
-            )
-        elif len(targeted) == 0:
-            self.helper.connector_logger.info(
-                "No data retrieved from BeaconBeagle API (empty), skipping bundle creation."
+                "No data retrieved from BeaconBeagle API, skipping bundle creation."
             )
         else:
             try:
