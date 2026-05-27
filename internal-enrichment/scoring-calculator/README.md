@@ -8,7 +8,7 @@ The connector evaluates its relationships with labeled entities (threats, locati
 
 1. Label your entities. Apply priority labels to the entities in your platform that should influence Indicator scores (e.g., specific Threat Actors, Countries, Sectors).
 2. When triggered, the connector evaluates relationships. It looks at the entities attached to the Indicator and checks whether they carry a priority label.
-3. The score is impacted. For each matching category, a relative percentage is added to the Indicator's current score based on the priority level and your configuration.
+3. The score is impacted. Every matching entity contributes its category + priority impact percentage to a combined impact ratio (summed across all matching entities, then capped at 100%); the relative-percentage formula below is applied once to the Indicator's current score using that combined ratio.
 
 Example of label name for the three available priority levels:
 
@@ -42,6 +42,8 @@ The impact on the score is relative — a percentage is applied to the remaining
 ```
 new_score = ((100 - current_score) * calculated_impact) + current_score
 ```
+
+Where `calculated_impact` is the combined ratio of all matching entities (e.g. a single Threat-High at +40% gives `0.40`; a Threat-High at +40% combined with a Location-High at +30% gives `0.70`). Combined ratios above `1.0` are capped so the formula never reduces the remaining margin below zero.
 
 Key properties:
 
@@ -182,10 +184,13 @@ When an Indicator is created, the connector evaluates its relationships and adju
 **Calculation:**
 
 ```
-After Threat:    ((100 - 20) * 0.40) + 20 = 52
-After Location:  ((100 - 52) * 0.30) + 52 = 66.4
+Combined impact:  40% (Threat - High) + 30% (Location - High) = 70%  →  ratio 0.70
+new_score:        ((100 - 20) * 0.70) + 20
+                = (80 * 0.70) + 20
+                = 56 + 20
+                = 76
 ```
 
-**Final score: ~66**
+**Final score: 76**
 
 The Indicator's score has been automatically updated based on your organization's context.
