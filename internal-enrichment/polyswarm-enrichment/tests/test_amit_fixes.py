@@ -260,5 +260,8 @@ class TestFamilyDescriptionText:
         del data["x_opencti_description"]
         obs = _make_observable()
         indicator = converter.create_indicator_from_polyswarm(obs, data)
-        if indicator:
-            assert indicator["description"] == "File analyzed by PolySwarm"
+        # Pin the indicator-non-None precondition so an upstream
+        # ``return None`` regression on the missing-family / low-score
+        # path can't silently turn this into a no-op assertion.
+        assert indicator is not None
+        assert indicator["description"] == "File analyzed by PolySwarm"

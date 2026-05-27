@@ -5,5 +5,4 @@ connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#s
 pyyaml==6.0.2
 requests==2.32.3
 python-dateutil==2.9.0
-validators==0.34.0
 polyswarm-api>=3.21.0,<4.0.0

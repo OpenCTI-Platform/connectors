@@ -7,11 +7,11 @@ def __getattr__(name):
         from connector.models.configs.settings import ConnectorSettings
 
         return ConnectorSettings
-    if name == "PolySwarmSandboxConnector":
+    if name == "PolySwarmConnector":
         from connector.polyswarm_connector import PolySwarmConnector
 
         return PolySwarmConnector
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-__all__ = ["ConnectorSettings", "PolySwarmSandboxConnector"]
+__all__ = ["ConnectorSettings", "PolySwarmConnector"]

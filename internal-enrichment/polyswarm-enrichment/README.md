@@ -344,7 +344,7 @@ polyswarm-enrichment/
 │       ├── attack_pattern_handler.py    # MITRE ATT&CK patterns from polykg
 │       ├── malware_profile_loader.py    # Family profiles from polykg
 │       ├── polyswarm_client.py          # Thin wrapper over polyswarm-api PyPI SDK
-│       ├── config_loader.py             # YAML / env var configuration
+│       ├── settings.py                  # Pydantic configuration (connectors-sdk)
 │       └── utils.py                     # Shared utilities
 └── tests/
     ├── conftest.py

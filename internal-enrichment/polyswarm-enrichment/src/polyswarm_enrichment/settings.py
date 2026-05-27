@@ -74,9 +74,13 @@ class PolySwarmConfig(BaseConfigModel):
         description="Which IOC types to create (comma-separated: ip,domain,url).",
     )
 
-    # polykg (optional enrichment)
+    # polykg (optional enrichment).
+    # Default is empty (disabled) so an out-of-the-box deployment never
+    # silently points at a staging environment. Operators who want
+    # malware-profile enrichment must supply their production polykg URL
+    # explicitly via ``POLYKG_API_URL`` / the ``polykg.api_url`` YAML key.
     polykg_api_url: str = Field(
-        default="https://grti.stage-v3.polyswarm.network",
+        default="",
         description="polykg REST API URL for malware profile enrichment (empty = disabled).",
     )
 

@@ -25,9 +25,6 @@ class TestModuleImports:
     def test_import_settings(self):
         import polyswarm_enrichment.settings  # noqa: F401
 
-    def test_import_config_loader(self):
-        import polyswarm_enrichment.config_loader  # noqa: F401
-
     def test_import_polyswarm_client(self):
         import polyswarm_enrichment.polyswarm_client  # noqa: F401
 

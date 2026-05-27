@@ -1,6 +1,6 @@
 services:
-  polyswarm_sandbox_connector:
-    image: polyswarm-scan-and-sandbox-v1.5:latest
+  connector-polyswarm-sandbox:
+    image: opencti/connector-polyswarm-sandbox:rolling
     environment:
       # ═══════════════════════════════════════════════════════════════════════
       # OpenCTI Configuration
@@ -24,7 +24,10 @@ services:
       # PolySwarm API Configuration
       # ═══════════════════════════════════════════════════════════════════════
       - POLYSWARM_API_KEY=${POLYSWARM_API_KEY}
-      - POLYSWARM_API_URL=https://api.polyswarm.network/v3
+      # PolySwarm API base URL — the polyswarm-api SDK appends the
+      # ``/v3`` version segment internally, so configure the bare host
+      # (matches PolySwarmConfig.api_url default in src/connector/models/configs/settings.py).
+      - POLYSWARM_API_URL=https://api.polyswarm.network
       - POLYSWARM_COMMUNITY=default # Set to 'default' or your private community name based on your PolySwarm license
       - POLYSWARM_TIMEOUT=300
       

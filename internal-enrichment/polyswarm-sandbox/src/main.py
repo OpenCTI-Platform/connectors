@@ -7,7 +7,7 @@ Runs as a long-lived process inside Docker or locally during development.
 
 import traceback
 
-from connector import ConnectorSettings, PolySwarmSandboxConnector
+from connector import ConnectorSettings, PolySwarmConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -20,7 +20,7 @@ if __name__ == "__main__":
             config=settings.to_helper_config(),
             playbook_compatible=True,
         )
-        connector = PolySwarmSandboxConnector(config=settings, helper=helper)
+        connector = PolySwarmConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
