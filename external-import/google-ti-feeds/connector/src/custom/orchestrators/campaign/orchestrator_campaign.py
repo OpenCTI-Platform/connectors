@@ -90,7 +90,7 @@ class OrchestratorCampaign(BaseOrchestrator):
                         "malware_families",
                         "attack_techniques",
                         "vulnerabilities",
-                        "threat_actors"
+                        "threat_actors",
                     ]
 
                     # prevents to search for IOCs (quota limitation) if the campaign is not associated to urls, domains, ip addresses, files (counters)
