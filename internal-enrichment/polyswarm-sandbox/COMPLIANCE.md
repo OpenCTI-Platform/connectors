@@ -140,7 +140,7 @@
 | T9.5 | Type hints on public methods | ✅ | `__init__` methods have typed params |
 | T9.6 | Docstrings on public methods | ✅ | All public methods documented |
 | T9.7 | No hardcoded secrets | ✅ | Zero hardcoded keys/tokens |
-| T9.8 | Requirements pinned/ranged | ✅ | `pycti>=6.8.9,<6.10` etc. |
+| T9.8 | Requirements pinned/ranged | ✅ | `pycti==7.260522.0` etc. |
 
 ### 10. Resource Management — 4/4 ✅
 
