@@ -87,8 +87,16 @@ class ConnectorScoring:
             ALL connectors have to instantiate the connector helper with configurations.
             Doing this will do a lot of operations behind the scene.
 
-        - `converter_to_stix (ConnectorConverter(helper))`:
-            Provide methods for converting various types of input data into STIX 2.1 objects.
+        - `client (ConnectorClient(api))`:
+            Thin wrapper around the OpenCTI GraphQL API exposing the
+            helpers ``process_message`` needs to compute the score
+            (``get_direct_relations``, ``get_report_relations``,
+            ``get_author``). Defined in ``client_api.py``. The
+            previous docstring referenced a ``converter_to_stix``
+            attribute copied from the generic internal-enrichment
+            template that this connector never instantiates — the
+            scoring-calculator mutates the indicator in place rather
+            than building a fresh STIX object graph.
 
     ---
 
