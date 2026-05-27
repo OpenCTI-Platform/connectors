@@ -17,7 +17,9 @@ sys.path.insert(0, os.path.abspath(SRC_DIR))
 # Fetch them once into a cache dir and patch ValidationOptions so every
 # validate_string() call has a schema_dir to consult.
 _SCHEMA_REPO = "https://github.com/oasis-open/cti-stix2-json-schemas.git"
-_SCHEMA_CACHE = os.path.expanduser("~/.cache/polyswarm-stix-tests/cti-stix2-json-schemas")
+_SCHEMA_CACHE = os.path.expanduser(
+    "~/.cache/polyswarm-stix-tests/cti-stix2-json-schemas"
+)
 
 
 def _ensure_stix21_schemas():
@@ -47,7 +49,9 @@ def _patch_stix_validator_schema_dir():
             sd = schema_dir
         if version is None:
             return original_get_error_generator(name, obj, sd, default=default)
-        return original_get_error_generator(name, obj, sd, version=version, default=default)
+        return original_get_error_generator(
+            name, obj, sd, version=version, default=default
+        )
 
     validator_module._get_error_generator = patched
     yield
