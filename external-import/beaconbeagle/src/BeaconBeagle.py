@@ -1934,6 +1934,16 @@ class BeaconBeagle:
         return bundle
 
     def opencti_bundle(self, work_id):
+        """Build + send the BeaconBeagle bundle for the current run.
+
+        Raises on bundle-build / send failure so the caller
+        (``process_data``) can mark the work as in-error AND
+        avoid advancing ``last_run`` — the previous shape
+        swallowed exceptions here and the caller then reported
+        success + advanced state regardless, hiding failed runs
+        from operators and from the platform's connector-health
+        monitor.
+        """
         # Reset the pending dedup hash so a previous run's value can
         # never accidentally be committed against a payload it did not
         # describe (e.g. if the next ``beaconbeagle_api_get_list`` call
@@ -1950,32 +1960,29 @@ class BeaconBeagle:
             self.helper.connector_logger.info(
                 "No data retrieved from BeaconBeagle API, skipping bundle creation."
             )
-        else:
-            try:
-                stix_bundle = self.create_stix_bundle(targeted)
-                # ``Bundle.serialize()`` already returns a valid STIX 2.1
-                # JSON string. The previous ``json.loads`` /
-                # ``json.dumps(..., indent=4)`` round-trip multiplied the
-                # CPU + memory cost on every send (potentially hundreds of
-                # MB for a busy BeaconBeagle payload) without changing
-                # what the worker actually ingests.
-                serialized_bundle = stix_bundle.serialize()
-                self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
-                # Only commit the dedup cursor *after* a successful send;
-                # a bundle-build / send failure must leave the previous
-                # cursor intact so the next run retries the same payload
-                # instead of skipping it as "already seen".
-                if self._pending_payload_hash is not None:
-                    current_state = self.helper.get_state() or {}
-                    self.helper.set_state(
-                        {
-                            **current_state,
-                            "last_payload_hash": self._pending_payload_hash,
-                        }
-                    )
-                    self._pending_payload_hash = None
-            except Exception as e:
-                self.helper.connector_logger.error(str(e))
+            return
+        stix_bundle = self.create_stix_bundle(targeted)
+        # ``Bundle.serialize()`` already returns a valid STIX 2.1
+        # JSON string. The previous ``json.loads`` /
+        # ``json.dumps(..., indent=4)`` round-trip multiplied the
+        # CPU + memory cost on every send (potentially hundreds of
+        # MB for a busy BeaconBeagle payload) without changing
+        # what the worker actually ingests.
+        serialized_bundle = stix_bundle.serialize()
+        self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
+        # Only commit the dedup cursor *after* a successful send;
+        # a bundle-build / send failure must leave the previous
+        # cursor intact so the next run retries the same payload
+        # instead of skipping it as "already seen".
+        if self._pending_payload_hash is not None:
+            current_state = self.helper.get_state() or {}
+            self.helper.set_state(
+                {
+                    **current_state,
+                    "last_payload_hash": self._pending_payload_hash,
+                }
+            )
+            self._pending_payload_hash = None
 
     def send_bundle(self, work_id, serialized_bundle: str):
         try:
@@ -1988,11 +1995,25 @@ class BeaconBeagle:
             self.helper.connector_logger.error(f"Error while sending bundle: {e}")
 
     def process_data(self):
+        work_id = None
         try:
             self.helper.connector_logger.info("Synchronizing with BeaconBeagle APIs...")
             timestamp = int(time.time())
             now = datetime.datetime.fromtimestamp(timestamp, datetime.timezone.utc)
-            friendly_name = "BeaconBeagle run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+            # ``now`` is tz-aware UTC, so ``isoformat()`` yields
+            # ``"2026-05-27T18:00:00+00:00"`` directly. Use this same
+            # canonical form for ``friendly_name``, the bootstrap
+            # ``last_run`` write, and the post-run ``last_run`` write
+            # so the state file and the work-list display agree on a
+            # single UTC ISO-8601 representation. The previous shape
+            # mixed three formats: ``strftime("%Y-%m-%d %H:%M:%S")``
+            # (no tz) for the friendly name + bootstrap state, and
+            # ``now.astimezone().isoformat()`` (converted to *local*
+            # tz despite ``now`` already being UTC) on subsequent
+            # runs — a confusing audit trail and a real footgun for
+            # any future filter that parses ``last_run``.
+            now_iso = now.isoformat()
+            friendly_name = "BeaconBeagle run @ " + now_iso
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
@@ -2003,19 +2024,22 @@ class BeaconBeagle:
             # dedup cursor and silently re-ingesting unchanged payloads.
             current_state = self.helper.get_state() or {}
             if "last_run" not in current_state:
-                current_state = {
-                    **current_state,
-                    "last_run": str(now.strftime("%Y-%m-%d %H:%M:%S")),
-                }
+                current_state = {**current_state, "last_run": now_iso}
                 self.helper.set_state(current_state)
             self.helper.connector_logger.info(
                 "Get IOC since " + current_state["last_run"]
             )
+            # ``opencti_bundle`` now re-raises on bundle-build / send
+            # failure so the ``except`` below can flag the work as
+            # in-error AND skip the ``last_run`` advance — the
+            # previous swallow-and-log shape silently advanced state
+            # on failed runs, hiding the failure from operators and
+            # from the platform's connector-health monitor while
+            # still letting the next run skip the un-ingested
+            # payload as "already seen" (via ``last_run``).
             self.opencti_bundle(work_id)
             current_state = self.helper.get_state() or {}
-            self.helper.set_state(
-                {**current_state, "last_run": now.astimezone().isoformat()}
-            )
+            self.helper.set_state({**current_state, "last_run": now_iso})
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
@@ -2028,7 +2052,24 @@ class BeaconBeagle:
             self.helper.connector_logger.info("Connector stop")
             sys.exit(0)
         except Exception as e:
-            self.helper.connector_logger.error(str(e))
+            error_message = f"BeaconBeagle run failed: {e}"
+            self.helper.connector_logger.error(error_message)
+            # Mark the work as failed on the platform so it shows up
+            # red in the connector-status UI and the platform's
+            # heartbeat / alerting can trigger. Best-effort — if
+            # ``work_id`` is ``None`` (initiate_work itself failed)
+            # there is nothing to flag, and the secondary
+            # ``to_processed`` call is wrapped so any platform-side
+            # error doesn't mask the original exception in the log.
+            if work_id is not None:
+                try:
+                    self.helper.api.work.to_processed(
+                        work_id, error_message, in_error=True
+                    )
+                except Exception as flag_err:
+                    self.helper.connector_logger.error(
+                        f"Failed to mark work {work_id} as in_error: {flag_err}"
+                    )
 
     def run(self):
         self.helper.connector_logger.info("Fetching BeaconBeagle datasets...")
