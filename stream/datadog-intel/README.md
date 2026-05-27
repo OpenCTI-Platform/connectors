@@ -54,7 +54,7 @@ There are a number of configuration options, which are set either in `docker-com
 
 | Parameter | config.yml | Docker env var | Default | Mandatory | Description |
 |---|---|---|---|---|---|
-| API Base URL | `datadog_intel.integration_api_url` | `DATADOG_INTEL_INTEGRATION_API_URL` | — | Yes | Datadog endpoint URL provided by the integration |
+| API Base URL | `datadog_intel.integration_api_url` | `DATADOG_INTEL_INTEGRATION_API_URL` | — | Yes | Your Datadog site URL appended with `/api/v2/security/threat-intel-feed`. Example: if your Datadog site is `https://app.datadoghq.com`, use `https://app.datadoghq.com/api/v2/security/threat-intel-feed`. |
 | Indicator Types | `datadog_intel.indicator_type` | `DATADOG_INTEL_INDICATOR_TYPE` | `["ip_address"]` | No | List of indicator types to forward. Accepted values: `ip_address`, `domain`, `sha256`. In config.yml use a YAML list; via env var use a JSON array (e.g. `["ip_address","domain"]`) |
 | Datadog API Key | `datadog_intel.dd_api_key` | `DATADOG_INTEL_DD_API_KEY` | — | Yes | Datadog API key. Sent on every request as the `dd-api-key` header to authenticate against `integration_api_url` |
 | Datadog Application Key | `datadog_intel.dd_application_key` | `DATADOG_INTEL_DD_APPLICATION_KEY` | — | Yes | Datadog application key. Sent on every request as the `dd-application-key` header to authenticate against `integration_api_url` |
