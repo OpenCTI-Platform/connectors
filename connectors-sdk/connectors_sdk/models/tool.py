@@ -11,7 +11,7 @@ from stix2.v21 import Tool as Stix2Tool
 class Tool(BaseIdentifiedEntity):
     """Represent a tool entity.
 
-    STIX2.1 Tool: https://docs.oasis-open.org/cti/stix/v2.1/csprd01/stix-v2.1-csprd01.html#_Toc16070666
+    STIX2.1 Tool: https://docs.oasis-open.org/cti/stix/v2.1/stix-v2.1.html#tool
     """
 
     name: str = Field(
@@ -22,7 +22,8 @@ class Tool(BaseIdentifiedEntity):
         default=None,
         description="Description of the tool.",
     )
-    tool_types: list[ToolType] = Field(
+    tool_types: list[ToolType] | None = Field(
+        default=None,
         description="Kind of tool(s) being described, values SHOULD come from "
         "the tool-type-ov vocabulary",
     )
