@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import time
+import traceback
 
 import requests
 import stix2
@@ -1920,10 +1921,18 @@ class BeaconBeagle:
 
 
 if __name__ == "__main__":
+    # Match the connector-template entrypoint convention
+    # (``templates/external-import/src/main.py:16-24``): print the full
+    # traceback to stderr and exit non-zero on any unhandled exception,
+    # so Docker / Kubernetes restart policies and the platform's
+    # connector-health checks see the crash for what it is. The previous
+    # shape (``print(e)`` + ``time.sleep(10)`` + ``sys.exit(0)``) hid the
+    # stack trace, masked the failure as "successful exit" to the
+    # orchestrator, and added a confusing ten-second pause that delayed
+    # restarts without helping diagnose anything.
     try:
         BeaconBeagleConnector = BeaconBeagle()
         BeaconBeagleConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
+    except Exception:
+        traceback.print_exc()
+        sys.exit(1)

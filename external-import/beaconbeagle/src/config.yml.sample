@@ -7,7 +7,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'BeaconBeagle'
-  scope: 'BeaconBeagle'
+  scope: 'beaconbeagle'
   log_level: 'info'
 
 

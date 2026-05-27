@@ -15,6 +15,7 @@ It creates **Observables** and **Indicators** in OpenCTI from the C2 configurati
 | `connector_id`                  | `CONNECTOR_ID`                      | A valid arbitrary `UUIDv4` that must be unique for this connector.                                                                                |
 | `connector_type`                | `CONNECTOR_TYPE`                    | Must be `EXTERNAL_IMPORT`.                                                                                                                        |
 | `connector_name`                | `CONNECTOR_NAME`                    | The name of the connector, e.g. `BeaconBeagle`.                                                                                                   |
+| `connector_scope`               | `CONNECTOR_SCOPE`                   | The connector scope. Use `beaconbeagle` (recommended); aligned with the rest of `external-import/` connectors and with `templates/external-import/docker-compose.yml`. |
 | `connector_log_level`           | `CONNECTOR_LOG_LEVEL`               | The log level for this connector — one of `debug`, `info`, `warn`, `error` (less verbose).                                                        |
 | `beaconbeagle_url`              | `BEACONBEAGLE_URL`                  | The BeaconBeagle C2 list URL (default: `https://beaconbeagle.com/api/v1/c2?...&sort=firsttime&order=desc`).                                       |
 | `beaconbeagle_add_urls`         | `BEACONBEAGLE_ADD_URLS`             | Save URLs from BeaconBeagle into OpenCTI (`true`/`false`).                                                                                        |
@@ -62,6 +63,7 @@ export OPENCTI_TOKEN="YOUR-USER-TOKEN"
 export CONNECTOR_ID="beaconbeagle-ID"
 export CONNECTOR_TYPE="EXTERNAL_IMPORT"
 export CONNECTOR_NAME="BeaconBeagle Connector"
+export CONNECTOR_SCOPE="beaconbeagle"
 export CONNECTOR_LOG_LEVEL="info"
 
 export BEACONBEAGLE_URL="https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc"

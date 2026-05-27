@@ -8,6 +8,7 @@ services:
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_NAME=BEACONBEAGLE
+      - CONNECTOR_SCOPE=beaconbeagle
       - CONNECTOR_LOG_LEVEL=error
       - BEACONBEAGLE_URL=https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc
       - BEACONBEAGLE_ADD_URLS=true
