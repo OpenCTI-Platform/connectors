@@ -63,11 +63,15 @@ class ConnectorScoring:
     """
     Specifications of the internal enrichment connector
 
-    This class encapsulates the main actions, expected to be run by any internal enrichment connector.
-    Note that the attributes defined below will be complemented per each connector type.
-    This type of connector aim to enrich a data (Observables) created or modified in the OpenCTI core platform.
-    It will create a STIX bundle and send it in a RabbitMQ queue.
-    The STIX bundle in the queue will be processed by the workers.
+    This class encapsulates the main actions of the scoring-calculator
+    internal-enrichment connector. It enriches Indicators created or
+    modified in the OpenCTI core platform (the only entity type the
+    connector advertises in ``CONNECTOR_SCOPE`` and the only type
+    ``entity_in_scope`` accepts), recomputes their ``x_opencti_score``
+    from the priorities of the entities they are linked with, and
+    sends the mutated Indicator back as a one-SDO STIX bundle on the
+    RabbitMQ queue. The STIX bundle in the queue will be processed
+    by the workers.
     This type of connector uses the basic methods of the helper.
     Ingesting a bundle allow the connector to be compatible with the playbook automation feature.
 
@@ -332,7 +336,10 @@ class ConnectorScoring:
 
     def process_message(self, data: dict) -> str:
         """
-        Get the observable created/modified in OpenCTI and check which type to send for process
+        Handle the Indicator created/modified in OpenCTI and recompute
+        its ``x_opencti_score`` from the priorities of its linked
+        entities (and, if ``CONNECTOR_SCORING_BROWSE_REPORT`` is on,
+        the entities contained in the Reports that reference it).
         The data passed in the data parameter is a dictionary with the following structure as shown in
         https://docs.opencti.io/latest/development/connectors/#additional-implementations
         :param data: dict of data to process
@@ -354,13 +361,19 @@ class ConnectorScoring:
 
             in_scope, scope_reason = self.entity_in_scope(data)
             if not in_scope:
-                # Out-of-scope path. For a non-playbook trigger
-                # (``event_type`` absent on a direct enrichment
-                # request) we forward the upstream bundle untouched so
-                # the work is recorded as completed; for a playbook
-                # trigger we simply return the rejection reason so
-                # the worker queue status reflects *why* the indicator
-                # was skipped (entity-type-scope mismatch vs.
+                # Out-of-scope path. The repo convention (see
+                # ``internal-enrichment/censys-enrichment/src/censys_enrichment/connector.py:129``
+                # and ``internal-enrichment/criminal-ip/src/connector/connector.py:139``)
+                # is: ``event_type`` *absent* on the message means the
+                # connector was triggered from a playbook, while
+                # ``event_type`` *present* (typically ``"INTERNAL_ENRICHMENT"``)
+                # means a direct enrichment trigger from the UI / API.
+                # On the playbook path we forward the upstream bundle
+                # untouched so the playbook pipeline keeps flowing
+                # past the out-of-scope skip; on the direct path we
+                # surface the rejection reason verbatim so the worker
+                # queue status reflects *why* the indicator was
+                # skipped (entity-type-scope mismatch vs.
                 # observable-type-not-enrichable). ``scope_reason`` is
                 # guaranteed non-empty by the contract on
                 # ``entity_in_scope``; fall back defensively just in

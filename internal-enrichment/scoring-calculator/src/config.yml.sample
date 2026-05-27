@@ -8,7 +8,7 @@ connector:
   name: 'Scoring calculator'
   scope: 'Indicator'
   log_level: 'error'
-  auto: true # Enable/disable auto-enrichment of observables
+  auto: true # Enable/disable auto-enrichment of indicators
 
 connector_scoring:
   high_priority_labels: ["[Scoring] High priority"]
