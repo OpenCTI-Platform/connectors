@@ -68,13 +68,30 @@ class ThreatActorEnrichment:
 
         self.helper = OpenCTIConnectorHelper(config)
 
-        self.interval = get_config_variable(
+        # ``isNumber=True`` would route the value through
+        # ``int(result)`` inside ``get_config_variable`` (see
+        # pycti.connector.opencti_connector_helper), which silently
+        # truncates fractional hours — a YAML ``interval: 0.5``
+        # becomes ``0`` and the scheduler then loops continuously
+        # because ``interval_seconds`` collapses to zero. Read the
+        # raw value and ``float()``-coerce here so both env-var
+        # strings (``"0.5"``) and YAML floats (``0.5``) are
+        # preserved, with a guarded fallback to the default when
+        # the value is missing or non-numeric.
+        raw_interval = get_config_variable(
             "THREAT_ACTOR_ENRICHMENT_INTERVAL",
             ["threat_actor_enrichment", "interval"],
             config,
-            True,
-            24,
+            default=24,
         )
+        try:
+            self.interval = float(raw_interval)
+        except (TypeError, ValueError):
+            self.helper.log_error(
+                f"Invalid THREAT_ACTOR_ENRICHMENT_INTERVAL value "
+                f"{raw_interval!r}, falling back to default (24h)"
+            )
+            self.interval = 24.0
 
     # ------------------------------------------------------------------ #
     # Date helpers                                                       #
@@ -429,7 +446,12 @@ class ThreatActorEnrichment:
                     last_run = None
                     self.helper.log_info("Connector has never run")
 
-                interval_seconds = int(self.interval) * 60 * 60
+                # Compute seconds from the float-valued ``self.interval``
+                # first, then truncate. The previous ``int(self.interval)
+                # * 60 * 60`` shape truncated the fractional part before
+                # multiplying, so ``interval: 0.5`` (half an hour)
+                # collapsed to zero and the scheduler ran continuously.
+                interval_seconds = int(self.interval * 3600)
                 # Only initiate a work when we're actually going to
                 # process — creating a work on every 60-second loop
                 # tick regardless of the interval check would leave a
