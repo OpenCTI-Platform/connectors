@@ -14,6 +14,9 @@ from connector.src.custom.client_api.indicator.client_api_indicator import (
 )
 from connector.src.custom.client_api.malware.client_api_malware import ClientAPIMalware
 from connector.src.custom.client_api.report.client_api_report import ClientAPIReport
+from connector.src.custom.client_api.software_toolkit.client_api_software_toolkit import (
+    ClientAPISoftwareToolkit,
+)
 from connector.src.custom.client_api.threat_actor.client_api_threat_actor import (
     ClientAPIThreatActor,
 )
@@ -67,6 +70,10 @@ class ClientAPI:
             self.indicator_client = ClientAPIIndicator(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
             )
+        if self.config.import_software_toolkits:
+            self.software_toolkit_client = ClientAPISoftwareToolkit(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
         self.shared_client = ClientAPIShared(
             config, logger, self._shared_api_client, self._shared_fetcher_factory
         )
@@ -95,6 +102,11 @@ class ClientAPI:
     def real_total_campaigns(self) -> int:
         """Get the real total number of campaigns from the campaign client."""
         return self.campaign_client.real_total_campaigns
+
+    @property
+    def real_total_software_toolkits(self) -> int:
+        """Get the real total number of software toolkits from the software toolkit client."""
+        return self.software_toolkit_client.real_total_software_toolkits
 
     async def fetch_reports(
         self, initial_state: dict[str, Any] | None
@@ -226,6 +238,24 @@ class ClientAPI:
 
         """
         return await self.indicator_client.fetch_ioc_delta_package(package_id, ioc_type)
+
+    async def fetch_software_toolkits(
+        self, initial_state: dict[str, Any] | None = None
+    ) -> AsyncGenerator[dict[Any, Any], None]:
+        """Fetch software toolkits from the API.
+
+        Args:
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
+
+        Yields:
+            dict[str, Any]: The fetched software toolkits.
+
+        """
+        self.logger.info("Starting software toolkit fetching", {"prefix": LOG_PREFIX})
+        async for (
+            software_toolkit_data
+        ) in self.software_toolkit_client.fetch_software_toolkits(initial_state):
+            yield software_toolkit_data
 
     def _create_fetcher_factory(self) -> GenericFetcherFactory:
         """Create and configure the fetcher factory with all configurations."""
