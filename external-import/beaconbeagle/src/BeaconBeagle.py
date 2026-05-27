@@ -863,7 +863,7 @@ class BeaconBeagle:
                 try:
                     if not target.get("asn") or not target.get("Country"):
                         self.helper.connector_logger.debug(
-                            f"     > Infos does not include AS ou Country, Whois bgp tool for {target["ip"]}"
+                            f"     > Infos does not include AS ou Country, Whois bgp tool for {target['ip']}"
                         )
                         whoisdata = self.get_infos_whois(target["ip"])
                         if "Process error" in str(whoisdata):
@@ -909,7 +909,7 @@ class BeaconBeagle:
                         )
                     else:
                         self.helper.connector_logger.debug(
-                            f"     > Target IP is in {target["Country"]}, linking country."
+                            f"     > Target IP is in {target['Country']}, linking country."
                         )
                         # ``pycti.Location.generate_id`` expects
                         # ``(name, location_type)``; passing a STIX
@@ -923,11 +923,11 @@ class BeaconBeagle:
                             },
                         )
                         self.helper.connector_logger.debug(
-                            f"     > Target TLD {target["Country"]} is {country_host['country']}."
+                            f"     > Target TLD {target['Country']} is {country_host['country']}."
                         )
                         # STIX: StixCoreRelationship country --> IP
                         self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Country and IP ({country_host['country']} > {observable_ip["value"]})."
+                            f"    [+] StixCoreRelationship creation between Country and IP ({country_host['country']} > {observable_ip['value']})."
                         )
                         relation_TC = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -1006,7 +1006,7 @@ class BeaconBeagle:
 
                         # STIX: StixCoreRelationship AS BGP --> Targeted Country
                         self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between AS BGP and IP ({as_stix['number']} > {observable_ip["value"]})."
+                            f"    [+] StixCoreRelationship creation between AS BGP and IP ({as_stix['number']} > {observable_ip['value']})."
                         )
                         relation_TAS = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -1412,11 +1412,20 @@ class BeaconBeagle:
                                     description_process = (
                                         f"This process is used in {Full_Version}"
                                     )
-                                    # # Using STIX2 Process creation
+                                    # ``stix2.Process`` SCO: only ``command_line``
+                                    # is known from the BeaconBeagle config (the
+                                    # ``SETTING_SPAWNTO`` value is the spawned
+                                    # process's command line). Previously this
+                                    # also set ``cwd=process`` (semantically
+                                    # wrong — ``cwd`` is the working directory,
+                                    # not the command line) and ``pid=0`` (a
+                                    # reserved / invalid PID value). Both are
+                                    # omitted now so the SCO carries only
+                                    # information that is actually known and
+                                    # accurate; STIX 2.1 makes every
+                                    # ``process`` field optional individually.
                                     process_stix = stix2.Process(
                                         object_marking_refs=[self.beaconbeagle_marking],
-                                        cwd=process,
-                                        pid=0,
                                         command_line=process,
                                         custom_properties={
                                             "x_opencti_created_by_ref": identity_id,
@@ -1520,7 +1529,7 @@ class BeaconBeagle:
                         # We have two kind of observable in that list
                         if "standard_id" in observable_l.keys():
                             self.helper.connector_logger.debug(
-                                f" [+] StixCoreRelationship creation between MasterObservable and Observable ({master_observable_id} > {observable_l["standard_id"]})."
+                                f" [+] StixCoreRelationship creation between MasterObservable and Observable ({master_observable_id} > {observable_l['standard_id']})."
                             )
                             relation_OO = stix2.Relationship(
                                 id=StixCoreRelationship.generate_id(
@@ -1537,13 +1546,13 @@ class BeaconBeagle:
                                 start_time=start_time,
                                 stop_time=stop_time,
                                 object_marking_refs=[self.beaconbeagle_marking],
-                                description=f"Link between IP and {observable_l['entity_type']} at {datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")}. (Link )",
+                                description=f"Link between IP and {observable_l['entity_type']} at {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}. (Link )",
                             )
                             stix_objects.append(relation_OO)
                             del relation_OO
                         else:
                             self.helper.connector_logger.debug(
-                                f" [+] StixCoreRelationship creation between MasterObservable and Observable ({master_observable_id} > {observable_l["id"]})."
+                                f" [+] StixCoreRelationship creation between MasterObservable and Observable ({master_observable_id} > {observable_l['id']})."
                             )
                             relation_OO = stix2.Relationship(
                                 id=StixCoreRelationship.generate_id(
@@ -1560,7 +1569,7 @@ class BeaconBeagle:
                                 start_time=start_time,
                                 stop_time=stop_time,
                                 object_marking_refs=[self.beaconbeagle_marking],
-                                description=f"Link between IP and {observable_l['type']} at {datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")}. (Link )",
+                                description=f"Link between IP and {observable_l['type']} at {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}. (Link )",
                             )
                             stix_objects.append(relation_OO)
                             del relation_OO
@@ -1600,7 +1609,7 @@ class BeaconBeagle:
                     # We have two kind of observable in that list
                     if "standard_id" in observable.keys():
                         self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable["standard_id"]})."
+                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable['standard_id']})."
                         )
                         relation_OT = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -1623,7 +1632,7 @@ class BeaconBeagle:
                         del relation_OT
                     else:
                         self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable["id"]})."
+                            f"    [+] StixCoreRelationship creation between Tool and Observable ({self.beaconbeagle_link_tool} > {observable['id']})."
                         )
                         relation_OT = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -1659,7 +1668,7 @@ class BeaconBeagle:
                     # We have two kind of observable in that list
                     if "standard_id" in observable.keys():
                         self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable["standard_id"]})."
+                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable['standard_id']})."
                         )
                         relation_OAP = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
@@ -1682,7 +1691,7 @@ class BeaconBeagle:
                         del relation_OAP
                     else:
                         self.helper.connector_logger.debug(
-                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable["id"]})."
+                            f"    [+] StixCoreRelationship creation between Attack-Pattern and Observable ({self.beaconbeagle_link_ap} > {observable['id']})."
                         )
                         relation_OAP = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(

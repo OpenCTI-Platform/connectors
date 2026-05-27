@@ -13,12 +13,16 @@ connector:
 
 beaconbeagle:
   url: 'https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc'
-  add_urls: 'true'
-  add_useragent: 'true'
+  # Boolean fields must be real YAML booleans (``true`` / ``false`` without
+  # quotes). Quoted ``'true'`` / ``'false'`` are YAML *strings*, and Python's
+  # truthiness rules treat any non-empty string as ``True`` — so a
+  # quoted ``'false'`` would silently enable the feature.
+  add_urls: true
+  add_useragent: true
   link_tool: 'CobaltStrike'
   link_ap: 'T1071 Standard Application Layer Protocol'
-  link_country: 'true'
-  link_bgpas: 'true'
+  link_country: true
+  link_bgpas: true
   links_duration: 24
   interval: 2 # In hours
   marking_definition: 'TLP:GREEN'
