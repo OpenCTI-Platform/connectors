@@ -21,10 +21,14 @@ def _normalize_dataset_url(v):
       whitespace tolerated),
     - an explicit YAML null value (key present with no value -
       ``sectors_file_url:`` or ``sectors_file_url: null`` - both of
-      which PyYAML surfaces as Python ``None`` and route into this
-      validator). Note: omitting the key entirely from ``config.yml``
-      uses the field's default URL via Pydantic's standard
-      missing-key handling and never reaches this validator.
+      which PyYAML surfaces as Python ``None``). The ``None`` -> ``""``
+      branch below covers this case. (When the key is omitted
+      entirely, Pydantic substitutes the field's default URL; that
+      default still flows through this validator because
+      ``BaseConfigModel`` sets ``validate_default=True``, but the
+      default is a real URL string that simply passes through
+      unchanged - it is not a disable sentinel and the dataset
+      stays enabled.)
     - the operator-friendly empty / whitespace-only string (UI input
       or env var trimmed to nothing).
 

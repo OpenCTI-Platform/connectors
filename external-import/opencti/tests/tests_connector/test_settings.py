@@ -184,8 +184,11 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_field)
         # validation time, which would block the connector from
         # starting instead of honouring the README's "leave empty to
         # disable" contract. (Omitting the key entirely is a separate
-        # path that hits Pydantic's missing-key default and never
-        # reaches this validator.)
+        # path: Pydantic substitutes the field's default URL, which
+        # also goes through this validator because ``BaseConfigModel``
+        # sets ``validate_default=True`` - but the default is a real
+        # URL string, not a disable sentinel, so it just passes
+        # through unchanged and the dataset stays enabled.)
         pytest.param(None, "", id="real_none"),
         # The empty / whitespace-only strings are the operator-friendly
         # disable sentinels (UI input, env-var trimmed to nothing). All
