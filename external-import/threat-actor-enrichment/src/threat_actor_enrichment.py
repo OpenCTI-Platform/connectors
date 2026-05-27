@@ -92,6 +92,23 @@ class ThreatActorEnrichment:
                 f"{raw_interval!r}, falling back to default (24h)"
             )
             self.interval = 24.0
+        # Reject ``<= 0`` explicitly. Without this guard,
+        # ``interval_seconds = int(self.interval * 3600)`` collapses
+        # to ``0`` (continuous re-run, one Work + API roundtrip per
+        # 60-second loop tick) for ``interval: 0`` and goes
+        # negative for ``interval: -1`` (the "Connector will run
+        # in Xh Ym" log line then prints a nonsensical negative
+        # duration AND the ``(timestamp - last_run) > interval_seconds``
+        # gate fires on every tick because the right-hand side is
+        # negative). Fail-soft to the documented 24h default with a
+        # loud log line so the operator can spot and correct the
+        # misconfiguration.
+        if self.interval <= 0:
+            self.helper.log_error(
+                f"THREAT_ACTOR_ENRICHMENT_INTERVAL must be > 0, got "
+                f"{self.interval!r}; falling back to default (24h)"
+            )
+            self.interval = 24.0
 
     # ------------------------------------------------------------------ #
     # Date helpers                                                       #
