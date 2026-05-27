@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'BeaconBeagle'
+  scope: 'BeaconBeagle'
+  log_level: 'info'
+
+
+beaconbeagle:
+  url: 'https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc'
+  add_urls: 'true'
+  add_useragent: 'true'
+  link_tool: 'CobaltStrike'
+  link_ap: 'T1071 Standard Application Layer Protocol'
+  link_country: 'true'
+  link_bgpas: 'true'
+  links_duration: 24
+  interval: 2 # In hours
+  marking_definition: 'TLP:GREEN'
