@@ -9,7 +9,7 @@ opencti:
 #   auto: false # Enable/disable auto-enrichment of observables
 #   log_level: 'error'
 
-hybrid_analysis:
+hybrid_analysis_sandbox:
   token: 'ChangeMe'
 #  environment_id: '110'
 #  max_tlp: 'TLP:AMBER'
