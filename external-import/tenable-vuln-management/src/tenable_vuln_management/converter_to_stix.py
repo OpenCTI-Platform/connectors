@@ -252,11 +252,10 @@ class ConverterToStix:
             asset (Asset): The asset containing the fully qualified domain name (FQDN).
 
         Returns:
-            DomainName | None: A DomainName object for the asset if an FQDN is available, otherwise None.
+            DomainName | None: A DomainName object for the asset if a valid FQDN is available, otherwise None.
         """
-
-        return (
-            DomainName(
+        if asset.fqdn and validators.domain(asset.fqdn):
+            return DomainName(
                 author=self.author,
                 object_marking_refs=self.object_marking_refs,
                 value=asset.fqdn,
@@ -264,9 +263,12 @@ class ConverterToStix:
                 resolves_to_ips=[self._make_ipv4_address(asset)]
                 + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
             )
-            if asset.fqdn and validators.domain(asset.fqdn)
-            else None
-        )
+        else:
+            self.helper.connector_logger.warning(
+                "fqdn empty or non-RFC-compliant. It will be ignored.",
+                {"fqdn_value": asset.fqdn},
+            )
+            return None
 
     def process_asset(self, asset: Asset) -> dict[str, Any]:
         system = self._make_system(asset=asset)
