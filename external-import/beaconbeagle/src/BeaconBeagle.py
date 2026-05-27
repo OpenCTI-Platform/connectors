@@ -704,22 +704,33 @@ class BeaconBeagle:
         return text_raw.split("/")[-1]
 
     def get_infos_whois(self, ip_to_check):
-        """Run ``whois -h bgp.tools -v <ip>`` and parse the data line into a dict."""
+        """Run ``whois -h bgp.tools -v <ip>`` and parse the data line.
+
+        Returns a dict ``{"asn": int|None, "as_org": str|None,
+        "country": str|None}`` on success, or ``None`` on any failure
+        (missing ``whois`` binary, timeout, non-zero exit, malformed
+        output, unexpected exception). The single ``Dict-or-None``
+        contract removes the previous brittle string-sentinel shape
+        (``"Process error"`` / ``"Unknown error"``) that forced the
+        caller into ``if "Process error" in str(whoisdata)`` checks
+        and made it easy to misuse from any new call site.
+
+        ``timeout=30`` matches the HTTP read timeout used by the
+        BeaconBeagle ``requests.get`` calls (``(10, 60)``) and
+        bounds the per-IP lookup so a hung ``bgp.tools`` or a
+        network partition cannot stall the entire run loop
+        indefinitely. ``TimeoutExpired`` is funneled into the
+        ``None`` return below so the caller's existing
+        recoverable-error path (skip the BGP enrichment for this
+        target, keep going with the rest of the bundle) handles
+        it without further changes.
+
+        ``-v`` and the IP are passed as separate ``subprocess`` argv
+        entries — the previous shape concatenated them into a single
+        argument with a leading space, which ``whois`` parses as an
+        unknown query string and rejects.
+        """
         try:
-            # ``-v`` and the IP must be passed as separate ``subprocess`` argv
-            # entries. The previous shape concatenated them into a single
-            # argument with a leading space, which ``whois`` parses as an
-            # unknown query string and rejects.
-            #
-            # ``timeout=30`` matches the HTTP read timeout used by the
-            # BeaconBeagle ``requests.get`` calls (``(10, 60)``) and
-            # bounds the per-IP lookup so a hung ``bgp.tools`` or a
-            # network partition cannot stall the entire run loop
-            # indefinitely. ``TimeoutExpired`` is funneled into the
-            # ``"Process error"`` sentinel below so the caller's
-            # existing recoverable-error path (skip the BGP enrichment
-            # for this target, keep going with the rest of the bundle)
-            # already handles it without further changes.
             cmd = ["whois", "-h", "bgp.tools", "-v", str(ip_to_check)]
             result = subprocess.run(
                 cmd, capture_output=True, text=True, check=True, timeout=30
@@ -748,26 +759,27 @@ class BeaconBeagle:
             return output
 
         except FileNotFoundError:
-            # ``whois`` binary not in the container — surface a distinct
-            # sentinel so the caller can disable BGP lookups gracefully
-            # without crashing the run.
+            # ``whois`` binary not in the container — log once at error
+            # level so the operator can install it (or disable
+            # ``BEACONBEAGLE_SEARCH_BGPAS``); return ``None`` so the
+            # caller's recoverable-error path skips BGP for this target.
             self.helper.connector_logger.error(
                 "`whois` command not found in PATH — install the `whois` "
                 "package in the image or disable BEACONBEAGLE_SEARCH_BGPAS."
             )
-            return "Process error"
+            return None
         except (
             subprocess.CalledProcessError,
             subprocess.TimeoutExpired,
             StopIteration,
             IndexError,
         ):
-            return "Process error"
+            return None
         except Exception as e:
             self.helper.connector_logger.error(
                 f"Unexpected error during whois lookup for {ip_to_check}: {e}"
             )
-            return "Unknown error"
+            return None
 
     def get_type_pure_regex(self, text):
         text = text.strip()
@@ -930,26 +942,34 @@ class BeaconBeagle:
                         self.helper.connector_logger.debug(
                             f"     > Infos does not include AS ou Country, Whois bgp tool for {target['ip']}"
                         )
+                        # ``get_infos_whois`` returns a dict on success
+                        # and ``None`` on any failure (missing binary,
+                        # timeout, non-zero exit, malformed output, …)
+                        # so the caller has a single contract to test
+                        # against instead of brittle ``str(...)`` matching
+                        # against ``"Process error"`` / ``"Unknown error"``
+                        # sentinels. ``get_infos_whois`` already logged the
+                        # failure at error level for the FileNotFoundError /
+                        # generic Exception paths; the silent ``CalledProcessError``
+                        # / ``TimeoutExpired`` / parsing-failure path gets
+                        # a debug log here so an operator chasing missing
+                        # BGP enrichment can still see why it was skipped.
                         whoisdata = self.get_infos_whois(target["ip"])
-                        if "Process error" in str(whoisdata):
-                            self.helper.connector_logger.error(
-                                f"     > Whois bgp tool said ouch {whoisdata}"
-                            )
-                        elif "Unknown error" in str(whoisdata):
-                            self.helper.connector_logger.error(
-                                f"     > Whois bgp tool said ouch unknown err {whoisdata}"
+                        if whoisdata is None:
+                            self.helper.connector_logger.debug(
+                                f"     > Whois bgp tool returned no data for {target['ip']}, "
+                                "skipping BGP enrichment for this target."
                             )
                         else:
                             self.helper.connector_logger.debug(
                                 f"     > Whois bgp tool said {whoisdata}"
                             )
-                            if not whoisdata["asn"] is None:
+                            if whoisdata["asn"] is not None:
                                 target["asn"] = whoisdata["asn"]
-                            if not whoisdata["as_org"] is None:
+                            if whoisdata["as_org"] is not None:
                                 target["as_org"] = whoisdata["as_org"]
-                            if not whoisdata["country"] is None:
+                            if whoisdata["country"] is not None:
                                 target["Country"] = whoisdata["country"]
-                        del whoisdata
                 except Exception as inst:
                     self.helper.connector_logger.error(
                         f"Error no way to make whois bgp for {target['ip']} with error {inst}"
@@ -1983,16 +2003,6 @@ class BeaconBeagle:
                 }
             )
             self._pending_payload_hash = None
-
-    def send_bundle(self, work_id, serialized_bundle: str):
-        try:
-            self.helper.send_stix2_bundle(
-                serialized_bundle,
-                entities_types=self.helper.connect_scope,
-                work_id=work_id,
-            )
-        except Exception as e:
-            self.helper.connector_logger.error(f"Error while sending bundle: {e}")
 
     def process_data(self):
         work_id = None
