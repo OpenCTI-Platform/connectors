@@ -12,6 +12,8 @@ import stix2
 import yaml
 from pycti import (
     AttackPattern,
+    CustomObservableText,
+    CustomObservableUserAgent,
     Identity,
     Indicator,
     Location,
@@ -42,14 +44,27 @@ class BeaconBeagle:
         # ==============================================================
         # This part is common to all connectors, it loads the config file, and the parameters to local variables
         # ==============================================================
-        # Instantiate the connector helper from config
+        # Tracks the dedup hash for the *currently-being-processed*
+        # payload. Populated by ``beaconbeagle_api_get_list`` and
+        # committed to connector state by ``opencti_bundle`` only after
+        # a successful ``send_stix2_bundle`` so a build / send failure
+        # never silently advances the cursor and drops data on the next
+        # run.
+        self._pending_payload_hash = None
+
+        # Instantiate the connector helper from config.
+        # Use a context manager so the file handle is closed deterministically
+        # (the previous ``yaml.load(open(...))`` shape leaked the handle on
+        # error paths) and ``yaml.safe_load`` so the connector cannot be
+        # tricked into instantiating arbitrary Python objects from a
+        # malicious / tampered config file.
         config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
         config_file_path = config_file_path.replace("\\", "/")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            with open(config_file_path, encoding="utf-8") as config_file:
+                config = yaml.safe_load(config_file) or {}
+        else:
+            config = {}
         self.helper = OpenCTIConnectorHelper(config)
 
         # Extra config
@@ -118,7 +133,12 @@ class BeaconBeagle:
             config,
             default="",
         )
-        # links_duration: 24h
+        # links_duration: hours used as the fallback relationship
+        # window when BeaconBeagle does not provide a ``lasttime`` for a
+        # given C2 entry. The fallback is wired into
+        # ``beaconbeagle_api_get_list`` below — the previous shape loaded
+        # this config but never consulted it, so operators changing the
+        # value got no effect.
         self.beaconbeagle_links_duration = get_config_variable(
             "BEACONBEAGLE_LINKS_DURATION",
             ["beaconbeagle", "links_duration"],
@@ -133,14 +153,6 @@ class BeaconBeagle:
             config,
             isNumber=True,
             default=2,
-        )
-        #   interval: 2
-        self.beaconbeagle_shifthour = get_config_variable(
-            "BEACONBEAGLE_SHIFTHOUR",
-            ["beaconbeagle", "shifthour"],
-            config,
-            isNumber=True,
-            default=6,
         )
         #   Marking: TLP:GREEN
         self.beaconbeagle_marking = get_config_variable(
@@ -214,10 +226,26 @@ class BeaconBeagle:
         elif self.beaconbeagle_marking == "TLP:RED":
             marking = stix2.TLP_RED
         else:
+            # Unknown configured value — keep the same custom-marking
+            # shape (``definition_type="statement"`` /
+            # ``definition={"statement": "custom"}``) as the
+            # ``TLP:CLEAR`` / ``TLP:AMBER+STRICT`` branches above so
+            # the marking is a well-formed object the platform
+            # actually ingests, and fall back to ``TLP:AMBER+STRICT``
+            # (the most restrictive sensible default) rather than
+            # silently downgrading to ``TLP:WHITE``. The previous
+            # ``definition_type="TLP"`` / ``definition={"TLP": ...}``
+            # shape diverged from the documented STIX 2.1 marking
+            # contract and could be silently ignored by stricter
+            # consumers.
+            self.helper.connector_logger.warning(
+                f"Unknown BEACONBEAGLE_MARKING value {self.beaconbeagle_marking!r}; "
+                f"falling back to TLP:AMBER+STRICT."
+            )
             marking = stix2.MarkingDefinition(
                 id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="TLP",
-                definition={"TLP": "AMBER+STRICT"},
+                definition_type="statement",
+                definition={"statement": "custom"},
                 allow_custom=True,
                 x_opencti_definition_type="TLP",
                 x_opencti_definition="TLP:AMBER+STRICT",
@@ -235,7 +263,11 @@ class BeaconBeagle:
                 # canonical name.
                 "Accept": "application/json",
             }
-            # Get the full list of IOC from BeaconBeagle
+            # Get the full list of IOC from BeaconBeagle.
+            # 10 s connect / 60 s read keeps the worker responsive on
+            # a hanging endpoint. The previous ``(80000, 80000)``
+            # (~22 hours each) effectively disabled the timeout and
+            # let a stuck connection block the connector indefinitely.
             self.helper.connector_logger.debug(
                 f"Retrieving raw data at : {self.beaconbeagle_url}."
             )
@@ -243,7 +275,7 @@ class BeaconBeagle:
                 self.beaconbeagle_url,
                 headers=headers,
                 verify=True,
-                timeout=(80000, 80000),
+                timeout=(10, 60),
             )
             self.helper.connector_logger.debug(
                 f"We get a response from BeaconBeagle API: {Raw_Data.status_code}."
@@ -281,7 +313,13 @@ class BeaconBeagle:
                 self.helper.connector_logger.debug(
                     "BeaconBeagle payload changed since last run, processing."
                 )
-            self.helper.set_state({**current_state, "last_payload_hash": payload_hash})
+            # Stash the candidate hash on the instance so the caller
+            # (``opencti_bundle``) can persist it *after* a successful
+            # ``send_stix2_bundle``. Persisting it here would mean a
+            # bundle-build / send failure skips ingestion of the same
+            # payload on the next run because the dedup cursor already
+            # advanced.
+            self._pending_payload_hash = payload_hash
             # Process the data
             C2s_json = _json["items"]
             self.helper.connector_logger.info(f"We retrieve: {len(C2s_json)} C2 infos.")
@@ -341,9 +379,21 @@ class BeaconBeagle:
                     self.helper.connector_logger.debug(
                         f"Reading 'lasttime' error: {str(inst)}"
                     )
-                    # Mirror the ``Firsttime`` fallback so the downstream
-                    # ``lasttime`` consumers see a real datetime instead of None.
-                    C2_lasttime = datetime.datetime.now()
+                    # Honour ``BEACONBEAGLE_LINKS_DURATION`` as the
+                    # documented fallback window when the BeaconBeagle
+                    # payload omits ``lasttime`` — the relationships
+                    # downstream get a bounded ``stop_time = start_time +
+                    # links_duration`` instead of an arbitrary ``now()``
+                    # that would silently expand every relationship's
+                    # validity window past the operator's configured limit.
+                    fallback_start = (
+                        C2_Firsttime
+                        if C2_Firsttime is not None
+                        else datetime.datetime.now()
+                    )
+                    C2_lasttime = fallback_start + datetime.timedelta(
+                        hours=int(self.beaconbeagle_links_duration)
+                    )
                 try:
                     C2_endpoints = one_C2["endpoints"]
                 except Exception as inst:
@@ -401,7 +451,7 @@ class BeaconBeagle:
                             url_more_info,
                             headers=headers,
                             verify=True,
-                            timeout=(80000, 80000),
+                            timeout=(10, 60),
                         )
                         self.helper.connector_logger.debug(
                             f"We get a response from BeaconBeagle API c2: {More_Data.status_code}."
@@ -439,7 +489,7 @@ class BeaconBeagle:
                                                 url_config,
                                                 headers=headers,
                                                 verify=True,
-                                                timeout=(80000, 80000),
+                                                timeout=(10, 60),
                                             )
                                             self.helper.connector_logger.debug(
                                                 f"We get a response from BeaconBeagle API c2: {Config_Data.status_code}."
@@ -492,7 +542,7 @@ class BeaconBeagle:
                                                     url_config,
                                                     headers=headers,
                                                     verify=True,
-                                                    timeout=(80000, 80000),
+                                                    timeout=(10, 60),
                                                 )
                                                 self.helper.connector_logger.debug(
                                                     f"We get a response from BeaconBeagle API c2: {Config_Data.status_code}."
@@ -718,7 +768,7 @@ class BeaconBeagle:
                     custom_properties={
                         "x_opencti_score": 60,
                         "x_opencti_description": description,
-                        "created_by_ref": identity_id,
+                        "x_opencti_created_by_ref": identity_id,
                         "x_opencti_labels": ["CobaltStrike", "BeaconBeagle"],
                     },
                 )
@@ -730,7 +780,7 @@ class BeaconBeagle:
                     custom_properties={
                         "x_opencti_score": 60,
                         "x_opencti_description": description,
-                        "created_by_ref": identity_id,
+                        "x_opencti_created_by_ref": identity_id,
                         "x_opencti_labels": ["CobaltStrike", "BeaconBeagle"],
                     },
                 )
@@ -753,7 +803,7 @@ class BeaconBeagle:
                     custom_properties={
                         "x_opencti_score": 80,
                         "x_opencti_description": description,
-                        "created_by_ref": identity_id,
+                        "x_opencti_created_by_ref": identity_id,
                         "x_opencti_labels": ["CobaltStrike", "BeaconBeagle"],
                     },
                 )
@@ -870,7 +920,7 @@ class BeaconBeagle:
                                 "x_opencti_description": description_as,
                                 "x_opencti_score": 60,
                                 "x_opencti_labels": [],
-                                "created_by_ref": identity_id,
+                                "x_opencti_created_by_ref": identity_id,
                             },
                         )
 
@@ -961,9 +1011,19 @@ class BeaconBeagle:
                 stix_objects.append(indicator_ip)
                 stix_objects.append(relationship_indobsip)
             except Exception as inst:
+                # Surface the failure but make sure ``indicator_ip`` /
+                # ``relationship_indobsip`` are at least bound so the
+                # downstream ``del`` block (left from the original
+                # tight-memory shape) cannot ``UnboundLocalError``.
+                # The ``stix_objects`` list is the single source of
+                # truth for what ends up in the bundle, so this only
+                # affects the local lifetime; we already failed to
+                # append both objects above.
                 self.helper.connector_logger.error(
                     f"Error no way create Indicator for {target['ip']} with error {inst}"
                 )
+                indicator_ip = None
+                relationship_indobsip = None
 
             if len(self.beaconbeagle_link_watermark) > 1:
                 try:
@@ -975,37 +1035,34 @@ class BeaconBeagle:
                             f"      Adding {self.beaconbeagle_link_tool} Licence {one_licence}"
                         )
                         description_licence = f"This {self.beaconbeagle_link_tool} licence {one_licence} was seen used on {ip_add} {domain}"
-                        observable_txt = self.helper.api.stix_cyber_observable.create(
-                            observableData={
-                                "type": "Text",
-                                "value": str(one_licence)
-                                + str(self.beaconbeagle_link_watermark),
+                        # ``pycti.CustomObservableText`` is the
+                        # deterministic-id STIX SCO equivalent for the
+                        # OpenCTI ``Text`` observable type. The previous
+                        # ``self.helper.api.stix_cyber_observable.create``
+                        # shape (a) made a live GraphQL write
+                        # mid-bundle-build (so an error on the next line
+                        # would leave a half-written platform state with
+                        # no bundle to retry against), (b) bypassed
+                        # deterministic id generation so re-runs created
+                        # duplicates rather than deduplicating, and
+                        # (c) mutated the GraphQL response dict to
+                        # impersonate a STIX object which is fragile
+                        # against any pycti schema change. The
+                        # ``CustomObservableText`` form is the
+                        # canonical pattern every other connector in
+                        # the repo uses (see ``onyphe`` /
+                        # ``recorded-future`` / ``misp``).
+                        observable_txt = CustomObservableText(
+                            value=str(one_licence)
+                            + str(self.beaconbeagle_link_watermark),
+                            object_marking_refs=[self.beaconbeagle_marking],
+                            custom_properties={
+                                "x_opencti_created_by_ref": identity_id,
                                 "x_opencti_score": 60,
                                 "x_opencti_description": description_licence,
-                                "created_by_ref": identity_id,
                                 "x_opencti_labels": ["CobaltStrike"],
                             },
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            update=True,
-                            custom_properties={"x_opencti_labels": ["CobaltStrike"]},
                         )
-                        observable_txt["type"] = "Text"
-                        observable_txt["value"] = str(one_licence) + str(
-                            self.beaconbeagle_link_watermark
-                        )
-                        observable_txt["id"] = observable_txt["standard_id"]
-                        observable_txt["createdById"] = identity_id
-                        # OneDay It will be possible to use directly stix2.Text ?
-                        # = stix2.Text(
-                        #     value=str(one_licence)+str(self.beaconbeagle_link_watermark),
-                        #     object_marking_refs=[self.beaconbeagle_marking],
-                        #     custom_properties={
-                        #         "x_opencti_score": 60,
-                        #         "x_opencti_description": description_licence,
-                        #         "created_by_ref": identity_id,
-                        #         "x_opencti_labels": ["CobaltStrike", "C2"],
-                        #     },
-                        # )
                         Observables.append(observable_txt)
                         stix_objects.append(observable_txt)
                 except Exception as inst:
@@ -1031,7 +1088,7 @@ class BeaconBeagle:
                                         custom_properties={
                                             "x_opencti_score": 60,
                                             "x_opencti_description": description_url,
-                                            "created_by_ref": identity_id,
+                                            "x_opencti_created_by_ref": identity_id,
                                             "x_opencti_labels": ["CobaltStrike", "C2"],
                                         },
                                     )
@@ -1120,23 +1177,25 @@ class BeaconBeagle:
                         UserAgent = one_config["config"]["settings"][
                             "SETTING_USERAGENT"
                         ]  # "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0"
-                        user_agent_stix = self.helper.api.stix_cyber_observable.create(
-                            observableData={
-                                "type": "user-agent",
-                                "value": UserAgent,
+                        # ``pycti.CustomObservableUserAgent`` produces a
+                        # deterministic-id STIX SCO for the OpenCTI
+                        # ``User-Agent`` observable type. Replaces the
+                        # previous ``self.helper.api.stix_cyber_observable.create``
+                        # call (see the watermark-Text block above for
+                        # the same rationale: avoid mid-bundle GraphQL
+                        # writes, restore deterministic dedup, stop
+                        # impersonating a STIX dict by mutating the
+                        # GraphQL response shape).
+                        user_agent_stix = CustomObservableUserAgent(
+                            value=UserAgent,
+                            object_marking_refs=[self.beaconbeagle_marking],
+                            custom_properties={
+                                "x_opencti_created_by_ref": identity_id,
                                 "x_opencti_score": 60,
                                 "x_opencti_description": description_ua,
-                                "created_by_ref": identity_id,
                                 "x_opencti_labels": ["CobaltStrike"],
                             },
-                            object_marking_refs=[self.beaconbeagle_marking],
-                            update=True,
                         )
-                        # Weird necessary overload
-                        user_agent_stix["value"] = UserAgent
-                        user_agent_stix["type"] = "user-agent"
-                        user_agent_stix["id"] = user_agent_stix["standard_id"]
-                        user_agent_stix["createdById"] = identity_id
                         # Indicator Creation for User Agent — UA strings
                         # frequently contain quotes / backslashes that
                         # would otherwise break the STIX pattern and
@@ -1203,10 +1262,14 @@ class BeaconBeagle:
                         else:
                             Observables.append(software_stix)
 
-                        # Add User Agent if not existing in Observables (can be linked to multiple indicators)
+                        # Add User Agent if not existing in Observables (can be linked to multiple indicators).
+                        # ``CustomObservableUserAgent`` carries the UA
+                        # string under ``value``, not ``name`` — the
+                        # previous ``user_agent_stix['name']`` would
+                        # ``KeyError`` on the new SCO shape.
                         if self.search_id_in_list(Observables, user_agent_stix["id"]):
                             self.helper.connector_logger.debug(
-                                f"     > User Agent {user_agent_stix['name']} already in Observables"
+                                f"     > User Agent {user_agent_stix['value']} already in Observables"
                             )
                         else:
                             Observables.append(user_agent_stix)
@@ -1218,10 +1281,10 @@ class BeaconBeagle:
                             )
                         else:
                             stix_objects.append(software_stix)
-                        # Add User Agent if not existing in bundles (can be linked to multiple indicators)
+                        # Add User Agent if not existing in bundles (can be linked to multiple indicators).
                         if self.search_id_in_list(stix_objects, user_agent_stix["id"]):
                             self.helper.connector_logger.debug(
-                                f"     > User Agent {user_agent_stix['name']} already in Stix bundle"
+                                f"     > User Agent {user_agent_stix['value']} already in Stix bundle"
                             )
                         else:
                             stix_objects.append(user_agent_stix)
@@ -1266,7 +1329,7 @@ class BeaconBeagle:
                                         pid=0,
                                         command_line=process,
                                         custom_properties={
-                                            "created_by_ref": identity_id,
+                                            "x_opencti_created_by_ref": identity_id,
                                             "x_opencti_score": 60,
                                             "x_opencti_description": description_process,
                                             "x_opencti_labels": [
@@ -1578,7 +1641,11 @@ class BeaconBeagle:
             modified="2026-01-01T00:00:00.000Z",
             identity_class="organization",
             type="identity",
-            object_marking_refs=stix2.TLP_WHITE,
+            # ``object_marking_refs`` must be a list of marking-definition
+            # refs/objects per STIX 2.1; the bare ``stix2.TLP_WHITE``
+            # shape was accepted by some validators but rejected by
+            # others and would have intermittently broken serialization.
+            object_marking_refs=[stix2.TLP_WHITE],
         )
         stix_objects = [identity, self.beaconbeagle_marking]
         # Creating the tool (CobaltStrike) if needed
@@ -1586,7 +1653,7 @@ class BeaconBeagle:
         try:
             if len(self.beaconbeagle_link_tool) > 0:
                 self.helper.connector_logger.debug(
-                    f"Tool dreation: {self.beaconbeagle_link_tool}."
+                    f"Tool creation: {self.beaconbeagle_link_tool}."
                 )
                 # ``pycti.Tool.generate_id`` is name-keyed elsewhere in
                 # the repo; passing a STIX pattern string here would
@@ -1656,6 +1723,11 @@ class BeaconBeagle:
         return bundle
 
     def opencti_bundle(self, work_id):
+        # Reset the pending dedup hash so a previous run's value can
+        # never accidentally be committed against a payload it did not
+        # describe (e.g. if the next ``beaconbeagle_api_get_list`` call
+        # short-circuits on an empty payload).
+        self._pending_payload_hash = None
         targeted = self.beaconbeagle_api_get_list()
         if targeted is None:
             self.helper.connector_logger.info(
@@ -1668,11 +1740,27 @@ class BeaconBeagle:
         else:
             try:
                 stix_bundle = self.create_stix_bundle(targeted)
-                # Convert the bundle to a dictionary
-                stix_bundle_dict = json.loads(stix_bundle.serialize())
-
-                stix_bundle_dict = json.dumps(stix_bundle_dict, indent=4)
-                self.helper.send_stix2_bundle(stix_bundle_dict, work_id=work_id)
+                # ``Bundle.serialize()`` already returns a valid STIX 2.1
+                # JSON string. The previous ``json.loads`` /
+                # ``json.dumps(..., indent=4)`` round-trip multiplied the
+                # CPU + memory cost on every send (potentially hundreds of
+                # MB for a busy BeaconBeagle payload) without changing
+                # what the worker actually ingests.
+                serialized_bundle = stix_bundle.serialize()
+                self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
+                # Only commit the dedup cursor *after* a successful send;
+                # a bundle-build / send failure must leave the previous
+                # cursor intact so the next run retries the same payload
+                # instead of skipping it as "already seen".
+                if self._pending_payload_hash is not None:
+                    current_state = self.helper.get_state() or {}
+                    self.helper.set_state(
+                        {
+                            **current_state,
+                            "last_payload_hash": self._pending_payload_hash,
+                        }
+                    )
+                    self._pending_payload_hash = None
             except Exception as e:
                 self.helper.connector_logger.error(str(e))
 
@@ -1695,17 +1783,26 @@ class BeaconBeagle:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-            current_state = self.helper.get_state()
-            if current_state is None:
-                self.helper.set_state(
-                    {"last_run": str(now.strftime("%Y-%m-%d %H:%M:%S"))}
-                )
-            current_state = self.helper.get_state()
+            # Read-modify-write the state dict so we never clobber
+            # ``last_payload_hash`` (set inside ``opencti_bundle``).
+            # The previous ``self.helper.set_state({"last_run": ...})``
+            # shape replaced the whole state on every run, dropping the
+            # dedup cursor and silently re-ingesting unchanged payloads.
+            current_state = self.helper.get_state() or {}
+            if "last_run" not in current_state:
+                current_state = {
+                    **current_state,
+                    "last_run": str(now.strftime("%Y-%m-%d %H:%M:%S")),
+                }
+                self.helper.set_state(current_state)
             self.helper.connector_logger.info(
                 "Get IOC since " + current_state["last_run"]
             )
             self.opencti_bundle(work_id)
-            self.helper.set_state({"last_run": now.astimezone().isoformat()})
+            current_state = self.helper.get_state() or {}
+            self.helper.set_state(
+                {**current_state, "last_run": now.astimezone().isoformat()}
+            )
             message = "End of synchronization"
             self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)

@@ -16,7 +16,7 @@ services:
       - BEACONBEAGLE_LINK_AP=T1071 Standard Application Layer Protocol
       - BEACONBEAGLE_LINK_COUNTRY=true
       - BEACONBEAGLE_LINK_BGPAS=true
-      - BEACONBEAGLE_LINKS_DURATION=240
+      - BEACONBEAGLE_LINKS_DURATION=24
       - BEACONBEAGLE_INTERVAL=2 # In hours
       - BEACONBEAGLE_MARKING=TLP:GREEN
     restart: always
