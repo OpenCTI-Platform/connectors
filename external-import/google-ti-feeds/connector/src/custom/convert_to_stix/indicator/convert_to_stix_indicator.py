@@ -10,7 +10,6 @@ from connector.src.custom.models.gti.gti_ioc_delta_model import (
     IOCDeltaRelationshipItem,
 )
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
-from connector.src.stix.v21.models.ovs.tool_type_ov_enums import ToolTypeOV
 from connector.src.stix.v21.models.sdos.tool_model import ToolModel
 from connectors_sdk.models import (
     AttackPattern,
@@ -47,7 +46,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         self._relation_mappings = {
             "malware_families": self._create_relation_malware_family,
-            "campaigns": self._create_relation_campaign,
+            # "campaigns": self._create_relation_campaign,
             "threat_actors": self._create_relation_threat_actor,
             "software_toolkits": self._create_relation_software_toolkit,
             "attack_techniques": self._create_relation_attack_technique,
@@ -394,7 +393,6 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
             type="tool",
             spec_version="2.1",
             name=software_toolkit_name.upper(),
-            tool_types=[ToolTypeOV.UNKNOWN],
             created=datetime.now(timezone.utc),
             modified=datetime.now(timezone.utc),
         )
