@@ -8,14 +8,13 @@ from connector.src.custom.models.gti.gti_software_toolkit_model import (
     SoftwareToolkitModel,
 )
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
-from connector.src.stix.octi.models.tool_model import OctiToolModel
-from connector.src.stix.v21.models.ovs.tool_type_ov_enums import ToolTypeOV
 from connector.src.utils.converters.generic_converter_config import BaseMapper
+from connectors_sdk.models import ExternalReference, Tool
 from connectors_sdk.models.octi import (
     OrganizationAuthor,
     TLPMarking,
 )
-from stix2.v21 import Tool
+from stix2.v21 import Tool as Stix2Tool
 
 
 class GTISoftwareToolkitToSTIXTool(BaseMapper):
@@ -70,7 +69,7 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
         self.organization = organization
         self.tlp_marking = tlp_marking
 
-    def to_stix(self) -> Tool:
+    def to_stix(self) -> Stix2Tool:
         """Convert the GTI software toolkit to a STIX Tool object.
 
         Returns:
@@ -83,22 +82,17 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
         attributes = self.software_toolkit.attributes
 
         created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
-        modified = datetime.fromtimestamp(
-            attributes.last_modification_date, tz=timezone.utc
-        )
 
         aliases = self._extract_aliases(attributes)
         external_references = self._create_external_references()
 
-        tool_model = OctiToolModel.create(
+        tool_model = Tool(
             name=attributes.name,
-            organization_id=self.organization.id,
-            marking_ids=[self.tlp_marking.id],
-            tool_types=[ToolTypeOV.UNKNOWN],
+            author=self.organization,
+            markings=[self.tlp_marking],
             description=attributes.description,
             aliases=aliases,
             created=created,
-            modified=modified,
             external_references=external_references,
         )
 
@@ -119,11 +113,11 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
             return None
         return [detail.value for detail in attributes.alt_names_details if detail.value]
 
-    def _create_external_references(self) -> list[dict[str, str]] | None:
+    def _create_external_references(self) -> list[ExternalReference] | None:
         """Create external references pointing to the GTI software toolkit page.
 
         Returns:
-            list[dict[str, str]] | None: External references or None if no ID available
+            list[ExternalReference] | None: External references or None if no ID available
 
         """
         toolkit_id = self.software_toolkit.id
@@ -131,9 +125,9 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
             return None
 
         return [
-            {
-                "source_name": "Google Threat Intelligence",
-                "url": f"https://www.virustotal.com/gui/collection/{toolkit_id}",
-                "external_id": toolkit_id,
-            }
+            ExternalReference(
+                source_name="Google Threat Intelligence",
+                url=f"https://www.virustotal.com/gui/collection/{toolkit_id}",
+                external_id=toolkit_id,
+            )
         ]
