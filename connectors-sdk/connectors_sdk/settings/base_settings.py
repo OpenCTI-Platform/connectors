@@ -11,6 +11,8 @@ from datetime import timedelta
 from types import UnionType
 from typing import Any, ClassVar, Literal, Self, Union, get_args, get_origin
 
+from connectors_sdk.logging.logger import Logger
+from connectors_sdk.logging.sdk_logger import sdk_logger
 from connectors_sdk.settings._settings_loader import _SettingsLoader
 from connectors_sdk.settings.annotated_types import ListFromString
 from connectors_sdk.settings.deprecations import (
@@ -195,6 +197,15 @@ class BaseConnectorSettings(BaseConfigModel, ABC):
         default_factory=_BaseConnectorConfig,  # type: ignore[arg-type]
         description="Connector configurations.",
     )
+
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("BaseConnectorSettings")
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `BaseConnectorSettings` subclass."""
+        super().__init_subclass__(**kwargs)
+        package_name = cls.__module__.split(".")[0]
+        cls.logger = Logger(f"{package_name}.{cls.__name__}")
 
     def __init__(self) -> None:
         """Initialize the configuration model and handle validation errors."""

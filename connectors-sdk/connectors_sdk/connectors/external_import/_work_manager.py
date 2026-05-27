@@ -19,10 +19,13 @@ Architecture::
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logging.sdk_logger import sdk_logger
 from pycti import OpenCTIConnectorHelper
+
+if TYPE_CHECKING:
+    from connectors_sdk.logging._base_logger import BaseLogger
 
 
 class _Work:
@@ -37,35 +40,29 @@ class _Work:
         name: The human-readable name of the work, displayed in the OpenCTI UI.
     """
 
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("WorkManager._Work")
+
     def __init__(
         self,
+        helper: OpenCTIConnectorHelper,
         work_id: str,
         work_name: str,
-        helper: OpenCTIConnectorHelper,
-        logger: ConnectorLogger,
     ) -> None:
         """Initialize the work context.
 
         Args:
+            helper: The ``OpenCTIConnectorHelper`` instance.
             work_id: The work ID returned by OpenCTI.
             work_name: The human-readable name of the work, displayed in the OpenCTI UI.
-            helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance for logging.
         """
         self.id = work_id
         self.name = work_name
         self._helper = helper
-        self._logger = logger
         self._closed = False
         self._has_sent_bundles = False
 
     @classmethod
-    def create(
-        cls,
-        helper: OpenCTIConnectorHelper,
-        logger: ConnectorLogger,
-        work_name: str,
-    ) -> _Work:
+    def create(cls, helper: OpenCTIConnectorHelper, work_name: str) -> _Work:
         """Create a new work in OpenCTI and return a ``_Work`` instance.
 
         This classmethod encapsulates the OpenCTI API call to initiate a work,
@@ -73,7 +70,6 @@ class _Work:
 
         Args:
             helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance for logging.
             work_name: The name of the work, displayed in the OpenCTI UI.
 
         Returns:
@@ -84,7 +80,7 @@ class _Work:
             f"Work '{work_id}' initiated",
             {"work_name": work_name},
         )
-        return cls(work_id, work_name, helper, logger)
+        return cls(helper, work_id, work_name)
 
     def send_bundle(self, bundle_objects: list[Any], **kwargs: Any) -> None:
         """Create a STIX bundle from objects and send it to OpenCTI.
@@ -168,7 +164,7 @@ class WorkManager:
 
     Example::
 
-        work_manager = WorkManager(helper, logger)
+        work_manager = WorkManager(helper)
         with work_manager:
             work_manager.send(stix_objects, "Import indicators")
             work_manager.send(more_objects, "Import indicators")  # same work
@@ -176,18 +172,15 @@ class WorkManager:
         # work auto-closed
     """
 
-    def __init__(
-        self,
-        helper: OpenCTIConnectorHelper,
-    ) -> None:
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("WorkManager")
+
+    def __init__(self, helper: OpenCTIConnectorHelper) -> None:
         """Initialize the work manager.
 
         Args:
             helper: The ``OpenCTIConnectorHelper`` instance.
-            logger: The ``ConnectorLogger`` instance.
         """
         self._helper = helper
-        self._logger = ConnectorLogger(helper)
         self._current_work: _Work | None = None
         self._active = False
 
