@@ -744,7 +744,16 @@ class StixBuilder:
             update["hashes"] = entity["hashes"]
         if entity.get("name"):
             update["name"] = entity["name"]
-        update["created_by_ref"] = self.author_id
+        # The entity being enriched here is a ``file`` SCO (or
+        # equivalent ``entity.get("type", "file")`` SCO). Author goes
+        # on ``x_opencti_created_by_ref``, not the SDO/SRO-only
+        # ``created_by_ref`` property — same SCO contract as the
+        # ``domain-name`` / ``ipv4-addr`` / ``url`` blocks below and
+        # the corresponding sibling sites in ``polyswarm-enrichment``.
+        # ``test_created_by_refs_valid`` (extended in this PR) pins
+        # the SCO-vs-SDO/SRO author contract end-to-end so a future
+        # refactor cannot silently regress it.
+        update["x_opencti_created_by_ref"] = self.author_id
 
         # #39: replace_with_lower_score — protect higher existing scores
         replace = True

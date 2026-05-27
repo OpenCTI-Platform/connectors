@@ -574,13 +574,20 @@ class ConverterToStix:
             software_id = f"software--{str(uuid.uuid5(SOFTWARE_NAMESPACE, os_name))}"
             current_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
+            # ``software`` is a STIX 2.1 SCO. Author goes on the
+            # OpenCTI extension ``x_opencti_created_by_ref``; the
+            # SDO/SRO-only ``created_by_ref`` property would break
+            # strict STIX validation when the platform re-emits the
+            # bundle. Same SCO-author contract as the IP / domain /
+            # URL helpers below in this module and as the file
+            # observable in ``polyswarm-sandbox``'s ``stix_builder``.
             software = {
                 "type": "software",
                 "spec_version": "2.1",
                 "id": software_id,
                 "created": current_time,
                 "modified": current_time,
-                "created_by_ref": self.author["id"],
+                "x_opencti_created_by_ref": self.author["id"],
                 "name": os_name.capitalize(),
                 "x_opencti_type": "Software",  # Ensure OpenCTI knows what this is
                 "confidence": 75,
