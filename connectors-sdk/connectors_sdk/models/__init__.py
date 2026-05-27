@@ -43,6 +43,7 @@ from connectors_sdk.models.software import Software
 from connectors_sdk.models.text import Text
 from connectors_sdk.models.threat_actor_group import ThreatActorGroup
 from connectors_sdk.models.tlp_marking import TLPMarking
+from connectors_sdk.models.tool import Tool
 from connectors_sdk.models.url import URL
 from connectors_sdk.models.user_account import UserAccount
 from connectors_sdk.models.vulnerability import Vulnerability
@@ -93,6 +94,7 @@ __all__ = [
     "Software",
     "Text",
     "ThreatActorGroup",
+    "Tool",
     "TLPMarking",
     "URL",
     "UserAccount",
