@@ -87,6 +87,10 @@ class BaseDataProcessor(ABC):
         package_name = cls.__module__.split(".")[0]
         cls.logger = Logger(f"{package_name}.{cls.__name__}")
 
+    def __init__(self) -> None:
+        """Initialize the processor."""
+        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+
     def inject_dependencies(
         self,
         settings: BaseConnectorSettings,
@@ -106,6 +110,10 @@ class BaseDataProcessor(ABC):
         self.settings = settings
         self.state = state
         self.work_manager = WorkManager(helper)
+
+        self.logger.debug(
+            f"Dependencies injected into `{self.__class__.__name__}` instance. `WorkManager` set up."
+        )
 
     def post_init(self) -> None:  # noqa: B027
         """Hook called after ``inject_dependencies()`` wires up dependencies.

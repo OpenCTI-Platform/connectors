@@ -17,13 +17,14 @@ from __future__ import annotations
 import warnings
 from abc import ABC
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from connectors_sdk.logging.logger import Logger
 from connectors_sdk.logging.sdk_logger import sdk_logger
 from pydantic import BaseModel, ConfigDict, PrivateAttr, field_serializer
 
 if TYPE_CHECKING:
+    from connectors_sdk.logging._base_logger import BaseLogger
     from pycti import OpenCTIConnectorHelper
 
 
@@ -32,6 +33,8 @@ class _StateClient:
     It is used internally by `BaseConnectorState` to handle the actual communication with OpenCTI.
     Connector developers should not interact with this class directly.
     """
+
+    logger: ClassVar[BaseLogger] = sdk_logger.get_child("_StateClient")
 
     _helper: OpenCTIConnectorHelper
 
@@ -45,22 +48,25 @@ class _StateClient:
         """
         self._helper = helper
 
+        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+
     def load_state(self) -> dict[str, Any]:
         """Get connector's state stored on OpenCTI."""
-        return self._helper.get_state() or {}
+        state = self._helper.get_state() or {}
+
+        self.logger.debug("Raw state loaded from OpenCTI", {"state": state})
+
+        return state
 
     def save_state(self, state: BaseConnectorState) -> None:
         """Save state's fields as connector's state on OpenCTI."""
-        declared_fields = set(type(state).model_fields)
-
-        state_dump = state.model_dump(mode="json", include=declared_fields)
-        # Send both declared _and_ extra fields to not delete any connector state's attributes on OpenCTI
-        if state.model_extra:
-            state_dump.update(state.model_extra)
-
-        self._helper.set_state(state_dump)
+        # Send both declared and extra fields (but not private attributes)
+        state_dict = state.to_json()
+        self._helper.set_state(state_dict)
         # Ensure the state is updated immediately on OpenCTI (instead of waiting for the next ping)
         self._helper.force_ping()
+
+        self.logger.debug("State saved to OpenCTI", {"state": state_dict})
 
 
 class BaseConnectorState(BaseModel, ABC):
@@ -90,17 +96,6 @@ class BaseConnectorState(BaseModel, ABC):
         package_name = cls.__module__.split(".")[0]
         cls.logger = Logger(f"{package_name}.{cls.__name__}")
 
-        Arguments:
-            value: The value to serialize.
-            handler: The default JSON serializer to use for non-datetime values.
-
-        Returns:
-            The serialized value.
-        """
-        if isinstance(value, datetime):
-            return value.isoformat()  # Override default JSON serializer
-        return handler(value)
-
     def model_post_init(self, context: Any) -> None:
         """Enable loading the state from OpenCTI after the model is initialized.
 
@@ -120,6 +115,23 @@ class BaseConnectorState(BaseModel, ABC):
         """
         # Wrap the helper to prepare state API calls properly
         self._client = _StateClient(helper)
+
+        self.logger.debug(
+            f"Dependencies injected into `{self.__class__.__name__}` instance. `_StateClient` set up."
+        )
+
+    def to_json(self) -> dict[str, Any]:
+        """Get the state as a JSON-serializable dict.
+        Used before saving the state to OpenCTI, or for logging purposes.
+        """
+        # Include declared and extra fields (but not private attributes)
+        declared_fields = set(type(self).model_fields)
+
+        state_dump = self.model_dump(mode="json", include=declared_fields)
+        if self.model_extra:
+            state_dump.update(self.model_extra)
+
+        return state_dump
 
     def load(self, force: bool = False) -> None:
         """Load the state from OpenCTI.
@@ -167,3 +179,21 @@ class BaseConnectorState(BaseModel, ABC):
 
         self._client.save_state(self)
         self._can_be_loaded = True
+
+    @field_serializer("*", mode="wrap", when_used="json")
+    def _serialize_datetimes(self, value: Any, handler: Any) -> Any:
+        """Replace the default JSON serializer, in order to use +00:00 offset instead of Z prefix.
+        This is convenient so `assert self.model_dump(mode="json")["last_run"] == self.last_run.isoformat()`
+        is `True` across both codebase and tests (using the same serializer).
+        Consistent with `DatetimeFromIsoString` in `connectors_sdk.settings.annotated_types` module too.
+
+        Arguments:
+            value: The value to serialize.
+            handler: The default JSON serializer to use for non-datetime values.
+
+        Returns:
+            The serialized value.
+        """
+        if isinstance(value, datetime):
+            return value.isoformat()  # Override default JSON serializer
+        return handler(value)
