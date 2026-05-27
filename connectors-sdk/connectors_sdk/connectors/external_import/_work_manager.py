@@ -61,6 +61,8 @@ class _Work:
         self._closed = False
         self._has_sent_bundles = False
 
+        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+
     @classmethod
     def create(cls, helper: OpenCTIConnectorHelper, work_name: str) -> _Work:
         """Create a new work in OpenCTI and return a ``_Work`` instance.
@@ -76,9 +78,9 @@ class _Work:
             A new ``_Work`` instance wrapping the created work.
         """
         work_id: str = helper.api.work.initiate_work(helper.connect_id, work_name)
-        logger.info(
-            f"Work '{work_id}' initiated",
-            {"work_name": work_name},
+        cls.logger.debug(
+            "Work created",
+            {"work_name": work_name, "work_id": work_id},
         )
         return cls(helper, work_id, work_name)
 
@@ -92,11 +94,19 @@ class _Work:
         """
         stix_objects = self._to_stix(bundle_objects)
         bundle = self._helper.stix2_create_bundle(stix_objects)
-        bundles_sent = self._helper.send_stix2_bundle(bundle, work_id=self.id, **kwargs)
+        bundles_sent = self._helper.send_stix2_bundle(
+            bundle,
+            work_id=self.id,
+            **kwargs,
+        )
         self._has_sent_bundles = True
-        self._logger.info(
+        self.logger.info(
             "Sent STIX objects to OpenCTI",
-            {"bundles_sent": str(len(bundles_sent))},
+            {
+                "bundles_sent": len(bundles_sent),
+                "work_name": self.name,
+                "work_id": self.id,
+            },
         )
 
     def success(self, message: str) -> None:
@@ -106,7 +116,10 @@ class _Work:
             message: A completion message stored alongside the work.
         """
         self._helper.api.work.to_processed(self.id, message)
-        self._logger.info(message)
+        self.logger.debug(
+            "Work marked as completed on OpenCTI",
+            {"work_name": self.name, "work_id": self.id, "message": message},
+        )
         self._closed = True
 
     def fail(self, message: str) -> None:
@@ -116,7 +129,10 @@ class _Work:
             message: An error message stored alongside the work.
         """
         self._helper.api.work.to_processed(self.id, message, in_error=True)
-        self._logger.error(message)
+        self.logger.debug(
+            "Work marked as failed on OpenCTI",
+            {"work_name": self.name, "work_id": self.id, "message": message},
+        )
         self._closed = True
 
     def _delete(self) -> None:
@@ -127,9 +143,9 @@ class _Work:
             the ``WorkManager`` to clean up orphaned or invalid works.
         """
         self._helper.api.work.delete(id=self.id)
-        self._logger.info(
-            "Work deleted",
-            {"work_id": self.id},
+        self.logger.debug(
+            "Work deleted on OpenCTI",
+            {"work_name": self.name, "work_id": self.id},
         )
         self._closed = True
 
@@ -184,6 +200,8 @@ class WorkManager:
         self._current_work: _Work | None = None
         self._active = False
 
+        self.logger.debug(f"{self.__class__.__name__} instantiated succesfully")
+
     def __enter__(self) -> WorkManager:
         """Enter the context manager."""
         self._current_work = None
@@ -204,11 +222,34 @@ class WorkManager:
         """
         if self._current_work is not None and not self._current_work._closed:
             if not self._current_work._has_sent_bundles:
+                self.logger.info(
+                    "Zero bundles were sent, deleting work",
+                    {
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
                 self._current_work._delete()
             elif exc_type is not None:
-                self._current_work.fail(f"Work failed with error: {exc_val}")
+                message = f"Work failed with error: {exc_val}"
+                self.logger.error(
+                    message,
+                    {
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
+                self._current_work.fail(message)
             else:
-                self._current_work.success("Work completed successfully")
+                message = "Work completed successfully"
+                self.logger.info(
+                    message,
+                    {
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
+                self._current_work.success(message)
         self._current_work = None
         self._active = False
 
@@ -230,19 +271,53 @@ class WorkManager:
                 (e.g. ``cleanup_inconsistent_bundle``, ``update``, ``entities_types``).
         """
         if not bundle_objects:
+            self.logger.info(
+                "No objects to send",
+                {"work_name": work_name},
+            )
             return
+
         if not self._active:
             msg = "WorkManager.send() must be called inside a 'with' block."
             raise RuntimeError(msg)
+
         if self._current_work is None or self._current_work.name != work_name:
             self._close_current_work()
-            self._current_work = _Work.create(self._helper, self._logger, work_name)
+
+            self.logger.info(
+                "Creating a new work",
+                {
+                    "new_work_name": work_name,
+                    "previous_work_name": (
+                        self._current_work.name
+                        if self._current_work is not None
+                        else None
+                    ),
+                },
+            )
+            self._current_work = _Work.create(self._helper, work_name)
+
         self._current_work.send_bundle(bundle_objects, **kwargs)
 
     def _close_current_work(self) -> None:
         """Close the current work if it exists and is not already closed."""
         if self._current_work is not None and not self._current_work._closed:
             if not self._current_work._has_sent_bundles:
+                self.logger.info(
+                    "Zero bundles were sent, deleting work",
+                    {
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
                 self._current_work._delete()
             else:
-                self._current_work.success("Work completed successfully")
+                message = "Work completed successfully"
+                self.logger.info(
+                    message,
+                    {
+                        "work_name": self._current_work.name,
+                        "work_id": self._current_work.id,
+                    },
+                )
+                self._current_work.success(message)
