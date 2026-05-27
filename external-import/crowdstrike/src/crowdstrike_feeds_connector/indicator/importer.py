@@ -297,6 +297,10 @@ class IndicatorImporter(BaseImporter):
         # up again because FQL ``_marker:>='<cursor>'`` matches the
         # cursor itself) is handled explicitly by the strip below.
         last_seen_marker: Optional[str] = None
+        # Tracks the ``id`` of the last row we accepted, used to
+        # strip the within-run inclusive-boundary duplicate on
+        # subsequent pages. See the within-run strip block below.
+        last_accepted_id: Optional[str] = None
 
         while True:
             fql_filter = self._build_fql_filter(current_marker)
@@ -330,22 +334,11 @@ class IndicatorImporter(BaseImporter):
             #   STIX-ID dedup, but the bundle still pays the
             #   ingest cost.
             #
-            # The strip is intentionally scoped to iteration one
-            # (``not resources``) and to the cross-run case
-            # (``fetch_marker is not None``):
-            #
-            # * On a fresh run ``fetch_marker`` is ``None`` and
-            #   the strip is a no-op.
-            # * Within a run we do NOT strip rows whose ``_marker``
-            #   happens to equal the previous iteration's
-            #   ``current_marker`` because, per CrowdStrike's
-            #   contract, ``_marker`` is unique per indicator and
-            #   sorted ascending, so a within-run repeat marker
-            #   identifies a different indicator that happens to
-            #   share a (rare) collision - the marker-didn't-advance
-            #   anti-spin guard further down catches the
-            #   pathological case where two consecutive pages share
-            #   the same trailing marker.
+            # On the first iteration we don't yet have a
+            # ``last_accepted_id`` from this run, so the cross-run
+            # boundary is identified by marker comparison instead.
+            # On a fresh run ``fetch_marker`` is ``None`` and the
+            # strip is a no-op.
             if (
                 fetch_marker is not None
                 and not resources
@@ -355,6 +348,39 @@ class IndicatorImporter(BaseImporter):
                 if not page_resources:
                     # The only row on the page was the duplicate
                     # boundary - nothing new since the previous run.
+                    break
+
+            # Within-run inclusive-boundary strip: on iterations 2+
+            # the same FQL ``_marker:>='<cursor>'`` clause returns
+            # the previous iteration's last row again as the first
+            # row of the new page. Identify the duplicate by ``id``
+            # rather than ``_marker`` because two *different*
+            # indicators can pathologically share a marker (the
+            # anti-spin test ``test_pagination_stops_when_marker_does_not_advance``
+            # pins that case) - matching on ``id`` is the only
+            # signal that the row is truly the same indicator we
+            # just accepted, not a coincidental marker collision
+            # between two distinct indicators.
+            #
+            # Stripping here matters because without it the
+            # duplicate row would (a) be counted against
+            # ``max_records_per_run`` once per continuation page,
+            # which inflates the apparent fetch volume and starves
+            # the genuine forward progress at the tail of a tight
+            # cap, and (b) be re-processed downstream (idempotent
+            # on the OpenCTI side via STIX-ID dedup, but the
+            # bundle still pays the ingest cost).
+            if (
+                last_accepted_id is not None
+                and page_resources[0].get("id") == last_accepted_id
+            ):
+                page_resources = page_resources[1:]
+                if not page_resources:
+                    # The page was just the duplicate boundary - no
+                    # forward progress here. The anti-spin guard
+                    # below would also fire on the next iteration
+                    # with the same marker, but breaking now saves
+                    # a round-trip.
                     break
 
             # ``meta.pagination`` can legitimately be missing or null —
@@ -373,6 +399,12 @@ class IndicatorImporter(BaseImporter):
                 page_resources = page_resources[:remaining_cap]
 
             resources.extend(page_resources)
+            # Capture the last accepted row's ``id`` for the
+            # within-run inclusive-boundary strip on the next
+            # iteration. Use the post-cap-slice ``page_resources``
+            # so we record the actual last row in ``resources``,
+            # not the original last row from the API response.
+            last_accepted_id = page_resources[-1].get("id")
 
             # Marker for the next page = ``_marker`` of the last indicator
             # we accepted on this page. Fall back gracefully when the

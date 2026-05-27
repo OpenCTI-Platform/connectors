@@ -16,19 +16,26 @@ These tests cover the marker-based deep-pagination contract between
   NOT branch on ``meta.pagination.total`` - that field is the count of
   records matching the current request's FQL clause and is included
   in the log line as ``matching_filter_total`` for diagnostics only.
-* Cross-run inclusive-boundary strip: when the importer resumes
-  with a persisted ``fetch_marker``, the first row of the very
-  first page is dropped when its ``_marker`` equals
-  ``fetch_marker``. FQL ``_marker:>='<cursor>'`` is inclusive, so
-  the persisted boundary indicator is returned again on resume;
-  stripping it up-front keeps a tight ``max_records_per_run``
-  from being consumed entirely by the duplicate boundary (which
-  would freeze ``latest_indicator_marker`` and starve the loop of
-  forward progress) and avoids paying for one idempotent
-  re-process of the boundary indicator on every resume. The
-  strip is deliberately scoped to iteration one and to the
-  cross-run case; within-run repeats are handled by the
-  marker-didn't-advance anti-spin guard.
+* Inclusive-boundary strips (cross-run + within-run): FQL
+  ``_marker:>='<cursor>'`` is inclusive, so the cursor row is
+  expected back on every iteration. The paginator strips the
+  leading row in two complementary ways:
+  - Cross-run (iteration one): when ``fetch_marker`` is set and
+    the first page's first row's ``_marker`` equals
+    ``fetch_marker``, drop it. Marker comparison is the only
+    signal available on iteration one because we don't yet have
+    a previous-iteration ``id``.
+  - Within-run (iterations 2+): track the ``id`` of the last
+    accepted row and drop the next page's first row when its
+    ``id`` matches. Matching on ``id`` (not ``_marker``) is the
+    only signal that distinguishes "same indicator returned
+    again because of the inclusive ``>=`` clause" from "two
+    different indicators that happen to share a marker" - the
+    latter is a pathological case still caught by the
+    marker-didn't-advance anti-spin guard.
+  Stripping up-front keeps duplicates from being counted against
+  ``max_records_per_run`` and avoids paying for one idempotent
+  re-process of the boundary indicator per iteration / run.
 * Pagination is robust to ``meta.pagination`` being missing or ``None``.
 * ``exclude_types`` and the FQL marker clause are combined correctly.
 * Cross-run resume: the last accepted indicator's ``_marker`` is
@@ -534,6 +541,72 @@ def test_pagination_strips_inclusive_boundary_under_tight_cap():
     assert fetched == [newer_one]
     assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 1
     assert fetched[-1]["_marker"] != persisted_marker
+
+
+def test_pagination_strips_inclusive_boundary_within_run():
+    """Continuation pages must NOT re-process the previous page's last row.
+
+    FQL ``_marker:>='<cursor>'`` is inclusive within a single run too:
+    after page one returns ``[ind_a, ind_b]``, ``current_marker`` is set
+    to ``ind_b._marker`` and page two's query is
+    ``_marker:>='ind_b._marker'``, which returns ``ind_b`` again as the
+    first row. The paginator strips that duplicate (matching by ``id``,
+    not by ``_marker``, so a coincidental marker collision between two
+    *different* indicators is not eaten - that case lives in
+    ``test_pagination_stops_when_marker_does_not_advance``).
+
+    Without the strip the duplicate row would be appended a second time
+    *and* counted against ``max_records_per_run``, which both inflates
+    the apparent fetch volume and erodes the genuine forward progress
+    at the tail of a tight cap.
+    """
+    importer = _build_importer()
+    ind_a = _fake_indicator(0, marker="1700000001aaa0000")
+    ind_b = _fake_indicator(1, marker="1700000002aaa0001")
+    ind_c = _fake_indicator(2, marker="1700000003aaa0002")
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([ind_a, ind_b], total=3),
+        _make_page([ind_b, ind_c], total=1),
+        _make_page([], total=0),
+    ]
+
+    fetched = importer._paginated_query_indicators(
+        limit=1000, fetch_timestamp=1_700_000_000
+    )
+
+    assert fetched == [ind_a, ind_b, ind_c]
+    assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 3
+
+
+def test_pagination_within_run_strip_does_not_consume_cap():
+    """The within-run strip must not let the duplicate boundary row
+    consume ``max_records_per_run`` quota.
+
+    Regression: with ``max_records_per_run=3`` and the inclusive-boundary
+    duplicate on every continuation page, page one returns two indicators
+    (cap left = 1), page two returns ``[duplicate, ind_c]``. Without the
+    strip the cap-slice would keep ``[duplicate]``, the cap break would
+    fire and the importer state would advance to the duplicate's marker -
+    in effect, the connector would never reach ``ind_c`` despite having a
+    quota slot left for it. With the strip, the duplicate is dropped
+    first, the cap-slice keeps ``[ind_c]`` and the run ends with the
+    expected three unique indicators.
+    """
+    importer = _build_importer(max_records_per_run=3)
+    ind_a = _fake_indicator(0, marker="1700000001aaa0000")
+    ind_b = _fake_indicator(1, marker="1700000002aaa0001")
+    ind_c = _fake_indicator(2, marker="1700000003aaa0002")
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        _make_page([ind_a, ind_b], total=3),
+        _make_page([ind_b, ind_c], total=1),
+    ]
+
+    fetched = importer._paginated_query_indicators(
+        limit=1000, fetch_timestamp=1_700_000_000
+    )
+
+    assert fetched == [ind_a, ind_b, ind_c]
+    assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 2
 
 
 def test_run_keeps_previous_marker_when_last_indicator_lacks_marker():
