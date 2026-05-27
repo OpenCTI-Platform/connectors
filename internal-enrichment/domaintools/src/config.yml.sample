@@ -13,4 +13,5 @@ connector:
 domaintools:
   api_username: 'ChangeMe'
   api_key: 'ChangeMe'
+  enrichment_method: 'enrich'     # enrich or investigate
   #max_tlp: 'TLP:AMBER'
