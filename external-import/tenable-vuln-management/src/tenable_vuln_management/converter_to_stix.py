@@ -6,6 +6,7 @@ import re
 from typing import TYPE_CHECKING, Any, Literal
 
 import stix2
+import validators
 
 from .config_variables import ConfigConnector
 from .models.opencti import (
@@ -263,7 +264,7 @@ class ConverterToStix:
                 resolves_to_ips=[self._make_ipv4_address(asset)]
                 + ([self._make_ipv6_address(asset)] if asset.ipv6 is not None else []),
             )
-            if asset.fqdn
+            if asset.fqdn and validators.domain(asset.fqdn)
             else None
         )
 
