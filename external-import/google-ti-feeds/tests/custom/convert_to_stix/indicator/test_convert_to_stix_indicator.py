@@ -735,7 +735,7 @@ class TestRelationCampaignValid:
         data = _given_file_entry(relationships=rels)
         # When
         result = _when_convert(converter, data)
-        # Then – indicator + campaign + relationship = 3
+        # Then – indicator = 1 (no relation with campaign created)
         _then_returns_n_objects(result, 1)
         _then_stix_type_present(result, "indicator")
 
