@@ -1,39 +1,38 @@
 name: Build UBI9 Images
 
 on:
-  push:
-    branches:
-      - master
-      - 'release/*'
-      - 'lts/*'
-    tags:
-      - '[0-9]*.[0-9]*.[0-9]*'
-
-concurrency:
-  group: build-ubi9-${{ github.ref_name }}
-  cancel-in-progress: false
+  workflow_call:
+    inputs:
+      platforms:
+        description: "Target platforms for docker buildx"
+        required: false
+        type: string
+        default: "linux/amd64,linux/arm64"
+      push:
+        description: "Whether to push images to registries"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_PASSWORD:
+        required: true
+      GHCR_USERNAME:
+        required: true
+      GHCR_TOKEN:
+        required: true
 
 permissions:
   contents: read
 
 jobs:
-  lint:
-    uses: ./.github/workflows/lint.yml
-    permissions:
-      contents: read
-
-  tests:
-    uses: ./.github/workflows/tests-connectors.yml
-    permissions:
-      contents: read
-    secrets: inherit
-
   build-matrix:
     name: Generate build matrix
-    needs: [lint, tests]
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      image-tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -52,6 +51,19 @@ jobs:
               f.write('matrix=' + json.dumps(matrix) + '\n')
           "
 
+      - name: Compute image tag
+        id: meta
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            IMAGE_TAG="${{ github.ref_name }}"
+          elif [[ "${{ github.ref_name }}" == "master" ]]; then
+            IMAGE_TAG="latest"
+          else
+            # Sanitize branch name for Docker tag (e.g. release/6.9.x -> release-6.9.x)
+            IMAGE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          fi
+          echo "tag=${IMAGE_TAG}-ubi9" >> "$GITHUB_OUTPUT"
+
   build:
     name: Build ${{ matrix.name }}-ubi9
     needs: build-matrix
@@ -66,7 +78,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      # Set up QEMU for multi-arch builds
       - name: Set up QEMU
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
 
@@ -76,8 +87,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
-          password: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
@@ -85,19 +96,6 @@ jobs:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
-
-      - name: Compute image tag
-        id: meta
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            IMAGE_TAG="${{ github.ref_name }}"
-          elif [[ "${{ github.ref_name }}" == "master" ]]; then
-            IMAGE_TAG="latest"
-          else
-            # Sanitize branch name for Docker tag (e.g. release/6.9.x -> release-6.9.x)
-            IMAGE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-')
-          fi
-          echo "tag=${IMAGE_TAG}-ubi9" >> "$GITHUB_OUTPUT"
 
       - name: Parse build configuration
         id: config
@@ -138,9 +136,9 @@ jobs:
         with:
           context: ${{ matrix.path }}
           file: ./Dockerfile_ubi9
-          push: true # Set to true to enable pushing
-          platforms: linux/amd64,linux/arm64
+          push: ${{ inputs.push }}
+          platforms: ${{ inputs.platforms }}
           build-args: ${{ steps.config.outputs.build_args }}
           tags: |
-            opencti/connector-${{ matrix.name }}:${{ steps.meta.outputs.tag }}
-            ghcr.io/opencti-platform/opencti/connector-${{ matrix.name }}:${{ steps.meta.outputs.tag }}
+            opencti/connector-${{ matrix.name }}:${{ needs.build-matrix.outputs.image-tag }}
+            ghcr.io/opencti-platform/opencti/connector-${{ matrix.name }}:${{ needs.build-matrix.outputs.image-tag }}
