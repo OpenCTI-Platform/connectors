@@ -180,9 +180,16 @@ class IndicatorImporter(BaseImporter):
         self.report_fetcher.clear_cache()
 
     # FalconPy / CrowdStrike caps a single ``QueryIntelIndicatorEntities``
-    # call at 5000 records. We pick 1000 by default to keep batches small
-    # enough to be processed-and-sent before the next page is fetched,
-    # which spreads memory & ingestion-queue pressure more evenly.
+    # call at 5000 records. We pick 1000 over the maximum to keep each
+    # API response's wire payload and in-memory dict list bounded - the
+    # connector aggregates every page into a single list before
+    # ``_process_indicators`` runs (so a single 5000-record response
+    # would otherwise pin ~5x the per-request memory) - and to keep
+    # individual request times short enough that a transient
+    # 5xx / timeout loses one round-trip of progress rather than a
+    # large one. Smaller pages also produce more frequent
+    # "Fetched indicator batch" log lines, which is useful for
+    # progress visibility on a long sweep.
     _PAGE_LIMIT = 1000
 
     def _fetch_indicators(
@@ -282,7 +289,20 @@ class IndicatorImporter(BaseImporter):
         # same second prefix; otherwise fall back to the seconds-
         # granularity timestamp for the initial run.
         current_marker: str = fetch_marker or str(fetch_timestamp)
-        last_seen_marker: Optional[str] = None
+        # Seed ``last_seen_marker`` with the persisted cursor (when
+        # we have one) so the marker-didn't-advance guard fires on
+        # the first iteration if the API returns only the boundary
+        # indicator. The FQL clause ``_marker:>='<cursor>'`` is
+        # inclusive, so resuming with the persisted marker and no
+        # newer indicators since would otherwise (a) append the
+        # boundary indicator a first time, (b) re-issue the exact
+        # same query, (c) append the boundary indicator a second
+        # time, then trip the guard - both the duplicate append and
+        # the extra round-trip are avoided by seeding the guard up
+        # front. On the very first run there is no persisted marker
+        # and ``fetch_marker`` is ``None``, so the seed is ``None``
+        # and the loop behaves exactly as before for that path.
+        last_seen_marker: Optional[str] = fetch_marker
 
         while True:
             fql_filter = self._build_fql_filter(current_marker)

@@ -458,6 +458,50 @@ def test_run_reads_persisted_marker_from_state_and_passes_to_fetch():
     assert call_kwargs["fql_filter"] == f"_marker:>='{persisted_marker}'"
 
 
+def test_pagination_stops_on_first_iter_when_only_boundary_returned():
+    """Resume + no new indicators must NOT re-issue the same query.
+
+    The FQL clause ``_marker:>='<cursor>'`` is *inclusive*, so resuming
+    with the persisted ``_marker`` and no newer indicators since
+    returns the boundary indicator itself on the first call (page
+    contains the indicator whose marker we persisted last time). The
+    paginator must detect this on the first iteration and stop after
+    that single API call - the previous shape seeded
+    ``last_seen_marker = None`` and only tripped the
+    marker-didn't-advance guard on iteration 2, which meant the
+    boundary indicator was appended twice and the connector issued
+    the identical query twice on every "no new data" resume.
+
+    The fix seeds ``last_seen_marker = fetch_marker`` so the guard
+    fires on iteration 1 if ``next_marker == fetch_marker``.
+    """
+    importer = _build_importer()
+    persisted_marker = "1700000005aaa0042"
+    boundary_indicator = _fake_indicator(0, marker=persisted_marker)
+    importer.indicators_api_cs.get_combined_indicator_entities.side_effect = [
+        # API returns the boundary indicator under inclusive ``:>=``.
+        _make_page([boundary_indicator], total=1),
+        # Should never be called - guard must fire on iter 1.
+        _make_page([_fake_indicator(1)], total=1),
+    ]
+
+    fetched = importer._paginated_query_indicators(
+        limit=1000,
+        fetch_timestamp=1_700_000_000,
+        fetch_marker=persisted_marker,
+    )
+
+    # Exactly one API call: the guard fires on iter 1.
+    assert importer.indicators_api_cs.get_combined_indicator_entities.call_count == 1
+    # The boundary indicator is appended once (it is in ``page_resources``
+    # at the time the extend runs, and the marker-didn't-advance guard
+    # only catches the duplicate at the NEXT iteration boundary - that's
+    # acceptable because (a) the per-run duplicate is bounded at one
+    # record and (b) the OpenCTI platform's STIX-ID dedup absorbs it on
+    # the bundle ingest side).
+    assert fetched == [boundary_indicator]
+
+
 def test_run_keeps_previous_marker_when_last_indicator_lacks_marker():
     """When the last accepted indicator is missing its ``_marker``
     field, the run MUST keep the previously-persisted marker rather
