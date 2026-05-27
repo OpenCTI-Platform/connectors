@@ -807,24 +807,38 @@ class BeaconBeagle:
 
         description += self.DictToText(target, "  \n")
 
+        # ``target["Firsttime"]`` / ``target["lasttime"]`` are already
+        # tz-aware ``datetime`` objects produced by the fetch path
+        # (``beaconbeagle_api_get_list`` uses
+        # ``datetime.fromtimestamp(epoch, tz=datetime.timezone.utc)``).
+        # Use them as-is rather than round-tripping through
+        # ``str(...)`` + ``fromisoformat(...)`` + ``replace(tzinfo=...)``,
+        # which (a) does extra work for no gain on the happy path and
+        # (b) used to silently mis-label naive local-time values as
+        # UTC back when the upstream `fromtimestamp` had no `tz=`.
+        # Fall back to the `target.get(...)` value only for the
+        # exotic case of an upstream caller passing in something
+        # unexpected; an `isinstance` guard keeps the contract
+        # explicit so non-`datetime` payloads do not slip through
+        # to STIX as raw strings.
         if start_time is None:
-            try:
-                start_time = datetime.datetime.fromisoformat(
-                    str(target.get("Firsttime"))
-                ).replace(tzinfo=datetime.timezone.utc)
-            except Exception as inst:
+            value = target.get("Firsttime")
+            if isinstance(value, datetime.datetime):
+                start_time = value
+            else:
                 self.helper.connector_logger.error(
-                    f"Error while parsing Firsttime for start_time, we set it to None ({str(inst)})."
+                    f"Firsttime is not a datetime ({type(value).__name__}), "
+                    "start_time set to None."
                 )
 
         if stop_time is None:
-            try:
-                stop_time = datetime.datetime.fromisoformat(
-                    str(target.get("lasttime"))
-                ).replace(tzinfo=datetime.timezone.utc)
-            except Exception as inst:
+            value = target.get("lasttime")
+            if isinstance(value, datetime.datetime):
+                stop_time = value
+            else:
                 self.helper.connector_logger.error(
-                    f"Error while parsing lasttime for stop_time, we set it to None ({str(inst)})."
+                    f"lasttime is not a datetime ({type(value).__name__}), "
+                    "stop_time set to None."
                 )
 
         # STIX: Create Observables
