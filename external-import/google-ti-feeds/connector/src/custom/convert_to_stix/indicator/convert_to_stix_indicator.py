@@ -47,7 +47,7 @@ class ConvertToSTIXIndicator(BaseConvertToSTIX):
 
         self._relation_mappings = {
             "malware_families": self._create_relation_malware_family,
-            "campaigns": self._create_relation_campaign,
+            #"campaigns": self._create_relation_campaign,
             "threat_actors": self._create_relation_threat_actor,
             "software_toolkits": self._create_relation_software_toolkit,
             "attack_techniques": self._create_relation_attack_technique,
