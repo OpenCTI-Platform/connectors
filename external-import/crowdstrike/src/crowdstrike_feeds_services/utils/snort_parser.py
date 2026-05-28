@@ -72,7 +72,9 @@ class SnortParser:
             if rule_buffer is not None:
                 rule_buffer.write(line)
 
-            if rule_buffer is not None and line.endswith(cls._RULE_ENDS):
+            if rule_buffer is not None and (
+                line.endswith(cls._RULE_ENDS) or line.rstrip("\n").endswith(";)")
+            ):
                 rule = rule_buffer.getvalue()
                 result.append(rule)
 
