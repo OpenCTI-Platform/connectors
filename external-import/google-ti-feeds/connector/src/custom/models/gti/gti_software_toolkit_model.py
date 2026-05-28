@@ -432,7 +432,7 @@ class SoftwareToolkitModel(BaseModel):
         default=None,
         description="Counters of related objects (IoCs, techniques, subscribers, etc.).",
     )
-    summary_stats: list[SummaryStats] | None = Field(
+    summary_stats: list[SummaryStats] | SummaryStats | None = Field(
         default=None,
         description="Stats associated with the software and toolkit's IoCs.",
     )
