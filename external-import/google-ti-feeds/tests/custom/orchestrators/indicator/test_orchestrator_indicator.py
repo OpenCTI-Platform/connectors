@@ -442,7 +442,9 @@ def test_log_entities_summary(gti_config: DummyConfig, caplog: Any) -> None:
     entities = [FakeEntity("indicator"), FakeEntity("indicator"), FakeEntity("malware")]
     ind_orch._log_entities_summary(entities, 0, 3, "indicator")
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Converted to STIX entities" in msg for msg in all_messages)  # noqa: S101
+    assert any(
+        "Converted to STIX entities" in msg for msg in all_messages
+    )  # noqa: S101
 
 
 # --- BaseOrchestrator._check_batch_size_and_flush (base_orchestrator lines 111-115) ---
@@ -484,7 +486,9 @@ def test_gti_indicator_fetch_error_basic() -> None:
     )
 
     err = GTIIndicatorFetchError(message="connection timeout")
-    assert "Error fetching IOC indicator delta: connection timeout" in str(err)  # noqa: S101
+    assert "Error fetching IOC indicator delta: connection timeout" in str(
+        err
+    )  # noqa: S101
     assert err.package_id is None  # noqa: S101
 
 
