@@ -57,6 +57,7 @@ Configuration can be provided through Docker environment variables or through `s
 |---|---|---|---|---|---|
 | OpenCTI URL | `opencti.url` | `OPENCTI_URL` | none | yes | OpenCTI platform URL. |
 | OpenCTI token | `opencti.token` | `OPENCTI_TOKEN` | none | yes | Token used by the connector. |
+| OpenCTI SSL verify | `opencti.ssl_verify` | `OPENCTI_SSL_VERIFY` | `false` | no | Verify TLS certificates for OpenCTI API requests. |
 
 ### Connector
 
@@ -68,6 +69,9 @@ Configuration can be provided through Docker environment variables or through `s
 | Connector scope | `connector.scope` | `CONNECTOR_SCOPE` | `Indicator` | yes | Must include `Indicator`. |
 | Log level | `connector.log_level` | `CONNECTOR_LOG_LEVEL` | `info` | no | Log verbosity. |
 | Auto enrichment | `connector.auto` | `CONNECTOR_AUTO` | `false` | no | Whether OpenCTI should trigger enrichment automatically. |
+| Queue protocol | `connector.queue_protocol` | `CONNECTOR_QUEUE_PROTOCOL` | `amqp` | no | Delivery protocol used to send bundles back to OpenCTI (`amqp` or `api`). |
+| Listen protocol | `connector.listen_protocol` | `CONNECTOR_LISTEN_PROTOCOL` | `AMQP` | no | Callback listener protocol for enrichment requests (`AMQP` or `API`). |
+| API callback URI | `connector.listen_protocol_api_uri` | `CONNECTOR_LISTEN_PROTOCOL_API_URI` | `http://127.0.0.1:7070` | no | Public base URI OpenCTI calls when `CONNECTOR_LISTEN_PROTOCOL=API`. |
 
 ### Splunk
 
@@ -106,6 +110,15 @@ export CONNECTOR_SPLUNK_SEARCH_ID=...
 export SPLUNK_TOKEN=...
 ```
 
+Recommended optional variables for production:
+
+```shell
+export OPENCTI_SSL_VERIFY=true
+export CONNECTOR_QUEUE_PROTOCOL=api
+export CONNECTOR_LISTEN_PROTOCOL=api
+export CONNECTOR_LISTEN_PROTOCOL_API_URI=http://127.0.0.1:7070
+```
+
 Review `docker-compose.yml` for all available variables.
 
 ## Manual Deployment
@@ -134,5 +147,7 @@ The connector sends a single STIX bundle per enrichment request. The bundle incl
 - Search time range seems wrong: check the Search Parameters Note attached to the SPL Indicator. Note values override connector defaults.
 - Splunk authentication fails: verify `SPLUNK_HOST`, `SPLUNK_PORT`, `SPLUNK_SCHEME`, `SPLUNK_TOKEN`, and `SPLUNK_VERIFY_SSL`.
 - Nothing happens automatically: `CONNECTOR_AUTO=false` means enrichment must be triggered manually or by a playbook.
+- OpenCTI TLS warnings appear in logs: set `OPENCTI_SSL_VERIFY=true` and ensure the OpenCTI certificate chain is trusted by the container.
+- API callback registration looks wrong: set `CONNECTOR_LISTEN_PROTOCOL=API` and a reachable `CONNECTOR_LISTEN_PROTOCOL_API_URI` value for your deployment.
 
 For more detail, set `CONNECTOR_LOG_LEVEL=debug`.

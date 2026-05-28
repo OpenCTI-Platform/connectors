@@ -1,31 +1,34 @@
-version: "3"
 services:
   connector-splunk-search:
     image: opencti-connector-splunk-search:dev
     build:
-      context: ./connectors/internal-enrichment/splunk-search
+      context: .
+    ports:
+      - ${CONNECTOR_API_HOST_PORT:-7070}:7070
     environment:
-      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_URL=${OPENCTI_URL:-http://opencti:8080}
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - OPENCTI_SSL_VERIFY=${OPENCTI_SSL_VERIFY:-true}
       - CONNECTOR_ID=${CONNECTOR_SPLUNK_SEARCH_ID}
-      - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
-      - CONNECTOR_NAME=SplunkSearch
-      - CONNECTOR_SCOPE=Indicator
-      - CONNECTOR_LOG_LEVEL=info
-      - CONNECTOR_AUTO=false
-      - SPLUNK_HOST=splunk.example.com
-      - SPLUNK_PORT=8089
+      - CONNECTOR_TYPE=${CONNECTOR_TYPE:-INTERNAL_ENRICHMENT}
+      - CONNECTOR_NAME=${CONNECTOR_NAME:-SplunkSearch}
+      - CONNECTOR_SCOPE=${CONNECTOR_SCOPE:-Indicator}
+      - CONNECTOR_LOG_LEVEL=${CONNECTOR_LOG_LEVEL:-info}
+      - CONNECTOR_AUTO=${CONNECTOR_AUTO:-false}
+      - CONNECTOR_QUEUE_PROTOCOL=api
+      - CONNECTOR_LISTEN_PROTOCOL=api
+      - CONNECTOR_LISTEN_PROTOCOL_API_URI=${CONNECTOR_LISTEN_PROTOCOL_API_URI:-http://127.0.0.1:7070}
+      - SPLUNK_HOST=${SPLUNK_HOST:-splunk.example.com}
+      - SPLUNK_PORT=${SPLUNK_PORT:-8089}
       - SPLUNK_TOKEN=${SPLUNK_TOKEN}
-      - SPLUNK_APP=search
-      - SPLUNK_SCHEME=https
-      - SPLUNK_VERIFY_SSL=true
-      - SPLUNK_SEARCH_EARLIEST=-30d@d
-      - SPLUNK_SEARCH_LATEST=now
-      - SPLUNK_SEARCH_TIMEOUT=60
-      - SPLUNK_WAIT_SECONDS=2
-      - SPLUNK_MAX_RESULTS=1000
-      - SPLUNK_SIGHTING_TLP=TLP:AMBER
-      - SPLUNK_OBSERVABLE_TLP=TLP:AMBER
-    depends_on:
-      opencti:
-        condition: service_healthy
+      - SPLUNK_APP=${SPLUNK_APP:-search}
+      - SPLUNK_SCHEME=${SPLUNK_SCHEME:-https}
+      - SPLUNK_VERIFY_SSL=${SPLUNK_VERIFY_SSL:-true}
+      - SPLUNK_SEARCH_EARLIEST=${SPLUNK_SEARCH_EARLIEST:--30d@d}
+      - SPLUNK_SEARCH_LATEST=${SPLUNK_SEARCH_LATEST:-now}
+      - SPLUNK_SEARCH_TIMEOUT=${SPLUNK_SEARCH_TIMEOUT:-60}
+      - SPLUNK_WAIT_SECONDS=${SPLUNK_WAIT_SECONDS:-2}
+      - SPLUNK_MAX_RESULTS=${SPLUNK_MAX_RESULTS:-1000}
+      - SPLUNK_SIGHTING_TLP=${SPLUNK_SIGHTING_TLP:-TLP:AMBER}
+      - SPLUNK_OBSERVABLE_TLP=${SPLUNK_OBSERVABLE_TLP:-TLP:AMBER}
+    restart: always
