@@ -40,7 +40,7 @@ class DomaintoolsConfig(BaseConfigModel):
     )
     enrichment_method: str = Field(
         description="Which method to use for the enrichment: Iris Enrich (enrich) or Iris Investigate (investigate)",
-        default="enrich",
+        default="investigate",
     )
     max_tlp: str = Field(
         description="The maximal TLP of the observable being enriched.",
