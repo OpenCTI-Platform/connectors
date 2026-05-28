@@ -1279,13 +1279,6 @@ def test_process_events_first_run(
         {"Event": {"id": "1", "publish_timestamp": str(ts)}}
     )
 
-    # And no previous run
-    patch.object(
-        connector.work_manager,
-        "get_state",
-        return_value={"last_event_date": None},
-    )
-
     # When we call process_events
     _run_process_events(connector, [event])
 
