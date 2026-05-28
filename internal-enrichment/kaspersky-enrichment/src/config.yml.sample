@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+#  type: 'INTERNAL_ENRICHMENT'
+#  id: 'ChangeMe'
+#  name: 'Kaspersky Enrichment'
+#  scope: 'StixFile,IPv4-Addr,Domain-Name,Hostname,Url'
+#  log_level: 'error'
+#  auto: true # Enable/disable auto-enrichment of observables
+
+kaspersky:
+#  api_base_url: 'https://tip.kaspersky.com'
+  api_key: 'ChangeMe'
+#  max_tlp: 'TLP:AMBER'
+#  zone_octi_score_mapping: 'red:100,orange:80,yellow:60,gray:20,green:0'
+#  file_sections: 'LicenseInfo,Zone,FileGeneralInfo'
+#  ipv4_sections: 'LicenseInfo,Zone,IpGeneralInfo'
+#  domain_sections: 'LicenseInfo,Zone,DomainGeneralInfo'
+#  url_sections: 'LicenseInfo,Zone,UrlGeneralInfo'

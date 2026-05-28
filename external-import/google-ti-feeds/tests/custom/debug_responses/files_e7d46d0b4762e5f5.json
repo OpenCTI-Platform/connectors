@@ -1,0 +1,71 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/files/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "query_params": {},
+    "entity_type": "files",
+    "method": "GET"
+  },
+  "response": {
+    "id": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    "type": "file",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/files/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
+    },
+    "attributes": {
+      "capabilities_tags": null,
+      "creation_date": null,
+      "downloadable": true,
+      "first_submission_date": 1749542414,
+      "gti_assessment": null,
+      "last_analysis_date": 1750126508,
+      "last_analysis_results": {},
+      "last_analysis_stats": {
+        "confirmed_timeout": null,
+        "failure": 0,
+        "harmless": 0,
+        "malicious": 27,
+        "suspicious": 0,
+        "timeout": 0,
+        "type_unsupported": null,
+        "undetected": 41
+      },
+      "last_modification_date": 1749050676,
+      "last_submission_date": 1750041592,
+      "main_icon": {
+        "raw_md5": "cbeb82c4d7dd4a47d22db3a0a0cf2846",
+        "dhash": "dde5e5d5dde5343434"
+      },
+      "md5": "a7f690e2b1b2a0bcde5e119c782cf1ec",
+      "meaningful_name": "download-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2.apk",
+      "names": [
+        "download-a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2.apk",
+        "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2.apk",
+        "AaBbCc.apk"
+      ],
+      "permhash": "b8d2377f5e45f1c8beee0f9436b6effb813bbf87ff2e2b27fab25f5335585f7a",
+      "reputation": -72,
+      "sandbox_verdicts": null,
+      "sha1": "e536b703ef8ff2b1146840598eb67f66aae727dd",
+      "sha256": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+      "sigma_analysis_results": null,
+      "sigma_analysis_stats": null,
+      "sigma_analysis_summary": null,
+      "size": 1962183,
+      "tags": ["apk", "android"],
+      "tlsh": "T28G06F294FC56B97FD5F4D4479C87573C66539DBB9854E894606684498ECCBD16F96FD9",
+      "times_submitted": 5,
+      "total_votes": {
+        "harmless": 0,
+        "malicious": 5
+      },
+      "type_description": "Android",
+      "type_extension": "apk",
+      "type_tag": "android",
+      "unique_sources": 5,
+      "vhash": "15697f7f9a2f2231377110f726ff0f26",
+      "crowdsourced_ids_results": null,
+      "crowdsourced_ids_stats": null,
+      "crowdsourced_yara_results": null
+    }
+  }
+}

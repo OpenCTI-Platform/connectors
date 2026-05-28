@@ -1,0 +1,46 @@
+[
+    {
+        "issuer_ca_id": 185756,
+        "issuer_name": "C=US, O=DigiCert Inc, CN=DigiCert TLS RSA SHA256 2020 CA1",
+        "common_name": "www.example.org",
+        "name_value": "example.com\nwww.example.com",
+        "id": 8913351873,
+        "entry_timestamp": "2023-03-17T16:26:38.016",
+        "not_before": "2023-01-13T00:00:00",
+        "not_after": "2024-02-13T23:59:59",
+        "serial_number": "0c1fcb184518c7e3866741236d6b73f1"
+    },
+    {
+        "issuer_ca_id": 185756,
+        "issuer_name": "C=US, O=DigiCert Inc, CN=DigiCert TLS RSA SHA256 2020 CA1",
+        "common_name": "www.example.org",
+        "name_value": "example.com\nwww.example.com",
+        "id": 8396709327,
+        "entry_timestamp": "2023-01-13T13:18:21.987",
+        "not_before": "2023-01-13T00:00:00",
+        "not_after": "2024-02-13T23:59:59",
+        "serial_number": "0c1fcb184518c7e3866741236d6b73f1"
+    },
+    {
+        "issuer_ca_id": 272971,
+        "issuer_name": "C=GB, ST=Cymru, O=AS207960 Cyfyngedig, OU=AS207960 Department of Random Numbers, CN=AS207960 Test CA",
+        "common_name": "AS207960 Test Intermediate - example.com",
+        "name_value": "AS207960 Test Intermediate - example.com",
+        "id": 10570508844,
+        "entry_timestamp": null,
+        "not_before": "2021-08-31T15:55:23",
+        "not_after": "2031-08-29T15:55:23",
+        "serial_number": "1000"
+    },
+    {
+        "issuer_ca_id": -1,
+        "issuer_name": "Issuer Not Found",
+        "common_name": "example.com",
+        "name_value": "example.com\nuser@example.com",
+        "id": 8506962125,
+        "entry_timestamp": null,
+        "not_before": "2023-01-27T01:21:18",
+        "not_after": "2033-01-24T01:21:18",
+        "serial_number": "1ac1e693c87d36563a92ca145c87bbc26fd49f4c"
+    }
+]

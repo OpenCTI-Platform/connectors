@@ -1,0 +1,31 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'MISP Feed' # Optional (default: 'Misp Feed')
+  scope: 'misp-feed'
+  log_level: 'error' # Optional (default: 'error)
+  duration_period: PT5M # Optional (default: 5 minutes)
+
+misp_feed:
+  source_type: 'url' # Optional (default: 'url')
+  url: 'https://changeme.com/misp-feed' # Required only if `source_type` is 'url'
+  ssl_verify: true # Optional (default: true)
+  bucket_name: '' # Required only if `source_type` is 's3'
+  bucket_prefix: '' # Required only if `source_type` is 's3'
+  create_reports: true # Optional (default: true)
+  report_type: 'misp-event' # Optional (default: "misp-event")
+  import_from_date: '2010-01-01' # Optional (default: null)
+  create_indicators: true # Optional (default: false)
+  create_observables: true # Optional (default: false)
+  create_object_observables: true # Optional (default: false)
+  create_tags_as_labels: true # Optional (default: true)
+  guess_threats_from_tags: false # Optional (default: false)
+  author_from_tags: false # Optional (default: false)
+  import_to_ids_no_score: 40 # Optional (default: null)
+  import_unsupported_observables_as_text: false # Optional (default: false)
+  import_unsupported_observables_as_text_transparent: true # Optional (default: true)
+  import_with_attachments: false # Optional (default: false)

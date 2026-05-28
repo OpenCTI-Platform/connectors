@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Abuse.ch URLhaus'
+  scope: 'urlhaus'
+  confidence_level: 40 # From 0 (Unknown) to 100 (Fully trusted)
+  update_existing_data: false
+  log_level: 'info'
+
+urlhaus:
+  csv_url: 'https://urlhaus.abuse.ch/downloads/csv_recent/'
+  default_x_opencti_score: 80  # Optional: Defaults to 80
+  import_offline: true
+  interval: 3
+  threats_from_labels: true

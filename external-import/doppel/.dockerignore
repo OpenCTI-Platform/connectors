@@ -1,0 +1,21 @@
+# Ignore compiled Python files and virtual env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore sample config
+src/config.yml.sample
+
+# Ignore logs (if created later)
+src/logs/
+*.log
+
+# Ignore virtual environments (if any)
+.venv/
+venv/
+
+# Git and editor-specific ignores
+.git/
+.gitignore
+*.swp

@@ -1,0 +1,292 @@
+{
+    "event_type": "INTERNAL_ENRICHMENT",
+    "entity_id": "report--8133d9f2-79ad-52bf-9541-cde65d175ce0",
+    "entity_type": "Report",
+    "enrichment_entity": {
+        "id": "50e57249-6919-41d9-8741-89c178d849d0",
+        "standard_id": "report--8133d9f2-79ad-52bf-9541-cde65d175ce0",
+        "entity_type": "Report",
+        "parent_types": [
+            "Basic-Object",
+            "Stix-Object",
+            "Stix-Core-Object",
+            "Stix-Domain-Object",
+            "Container"
+        ],
+        "spec_version": "2.1",
+        "created_at": "2025-02-25T09:31:22.193Z",
+        "updated_at": "2025-02-25T09:31:22.222Z",
+        "status": {
+            "id": "66f564b4-e278-4a43-991f-d48b937d9a86",
+            "template": {
+                "id": "3f9727e4-5f11-496d-8297-f3b29fe3b7d2",
+                "name": "NEW",
+                "color": "#ff9800"
+            }
+        },
+        "createdBy": {
+            "id": "identity--eb481938-f652-5a05-b1a5-9323d3d958bb",
+            "spec_version": "2.1",
+            "identity_class": "organization",
+            "name": "ESET",
+            "description": null,
+            "roles": null,
+            "contact_information": null,
+            "x_opencti_aliases": null,
+            "x_opencti_reliability": null,
+            "created": "2025-02-25T08:38:33.424Z",
+            "modified": "2025-02-25T08:38:33.424Z",
+            "x_opencti_organization_type": null,
+            "x_opencti_id": "75212652-a30e-4240-a2e2-1a4968c5bbaa",
+            "x_opencti_type": "Organization",
+            "type": "identity"
+        },
+        "objectOrganization": [],
+        "objectMarking": [
+            {
+                "id": "3e99692e-229f-47c1-95d1-c0bdd0a7012d",
+                "standard_id": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
+                "entity_type": "Marking-Definition",
+                "definition_type": "TLP",
+                "definition": "TLP:AMBER+STRICT",
+                "created": "2025-02-25T08:33:06.197Z",
+                "modified": "2025-02-25T08:39:26.702Z",
+                "x_opencti_order": 3,
+                "x_opencti_color": "#d84315",
+                "createdById": null
+            }
+        ],
+        "objectLabel": [
+            {
+                "id": "e2528867-8a15-423e-909c-744eb1007c61",
+                "value": "activity summary",
+                "color": "#95b717",
+                "createdById": null
+            },
+            {
+                "id": "4aa66244-3479-4821-8ed7-38d5aa7b65c5",
+                "value": "eset",
+                "color": "#dda52f",
+                "createdById": null
+            },
+            {
+                "id": "01f2a141-d306-4f6d-a982-9861aa798845",
+                "value": "tlp:amber+strict",
+                "color": "#b337f5",
+                "createdById": null
+            }
+        ],
+        "externalReferences": [
+            {
+                "id": "bd5309a3-0acb-41fd-8ac0-eb320bbb39c1",
+                "standard_id": "external-reference--98f37c68-41d1-5c3d-989a-5cbe5267e00c",
+                "entity_type": "External-Reference",
+                "source_name": "MISP",
+                "description": "AS-2024-0005 Report",
+                "url": "https://misp.eset.com//events/view/d32975d4-a020-4ca9-b799-c0142010651d",
+                "hash": null,
+                "external_id": "d32975d4-a020-4ca9-b799-c0142010651d",
+                "created": "2025-02-25T09:31:22.144Z",
+                "modified": "2025-02-25T09:31:22.144Z",
+                "importFiles": [],
+                "createdById": null,
+                "importFilesIds": []
+            }
+        ],
+        "revoked": false,
+        "x_opencti_reliability": null,
+        "confidence": 100,
+        "created": "2024-03-11T23:00:00.000Z",
+        "modified": "2025-02-25T09:31:22.222Z",
+        "name": "AS-2024-0005 Report",
+        "description": "AS-2024-0005 Report",
+        "report_types": [
+            "misp-event"
+        ],
+        "published": "2024-03-11T23:00:00.000Z",
+        "objects": [
+            {
+                "id": "e246058b-f58f-4f8f-8df5-02e0caa81d82",
+                "entity_type": "ExternalReference",
+                "parent_types": [
+                    "Basic-Object",
+                    "Stix-Object",
+                    "Stix-Core-Object",
+                    "Stix-Cyber-Observable"
+                ],
+                "standard_id": "external-reference--e246058b-f58f-4f8f-8df5-02e0caa81d82",
+                "spec_version": "2.1",
+                "created_at": "2025-02-25T09:31:22.144Z",
+                "updated_at": "2025-02-25T09:31:22.165Z",
+                "createdById": null
+            },
+            {
+                "id": "2414c15e-a215-466e-ab18-cda704edb33a",
+                "entity_type": "Text",
+                "parent_types": [
+                    "Basic-Object",
+                    "Stix-Object",
+                    "Stix-Core-Object",
+                    "Stix-Cyber-Observable"
+                ],
+                "standard_id": "text--2414c15e-a215-466e-ab18-cda704edb33a",
+                "spec_version": "2.1",
+                "created_at": "2025-02-25T09:31:22.144Z",
+                "updated_at": "2025-02-25T09:31:22.165Z",
+                "createdById": null
+            },
+            {
+                "id": "382c38e4-0afc-402e-8f3a-96acacf3a3a2",
+                "entity_type": "Text",
+                "parent_types": [
+                    "Basic-Object",
+                    "Stix-Object",
+                    "Stix-Core-Object",
+                    "Stix-Cyber-Observable"
+                ],
+                "standard_id": "text--382c38e4-0afc-402e-8f3a-96acacf3a3a2",
+                "spec_version": "2.1",
+                "created_at": "2025-02-25T09:31:22.144Z",
+                "updated_at": "2025-02-25T09:31:22.165Z",
+                "observable_value": "https://test.com/test",
+                "createdById": null
+            },
+            {
+                "id": "682afa5c-cea1-48ba-80d7-8d7f3eacd3e3",
+                "entity_type": "Text",
+                "parent_types": [
+                    "Basic-Object",
+                    "Stix-Object",
+                    "Stix-Core-Object",
+                    "Stix-Cyber-Observable"
+                ],
+                "standard_id": "text--6afe002e-b2b4-5897-ba43-948f56393186",
+                "spec_version": "2.1",
+                "created_at": "2025-02-25T09:31:22.144Z",
+                "updated_at": "2025-02-25T09:31:22.165Z",
+                "observable_value": "https://preview-eti.eset.com/reports/apt/40121508-c3ad-4430-adc8-a2a406ab61d3/download",
+                "createdById": null
+            }
+        ],
+        "importFiles": [],
+        "createdById": "75212652-a30e-4240-a2e2-1a4968c5bbaa",
+        "objectMarkingIds": [
+            "3e99692e-229f-47c1-95d1-c0bdd0a7012d"
+        ],
+        "objectLabelIds": [
+            "e2528867-8a15-423e-909c-744eb1007c61",
+            "4aa66244-3479-4821-8ed7-38d5aa7b65c5",
+            "01f2a141-d306-4f6d-a982-9861aa798845"
+        ],
+        "externalReferencesIds": [
+            "bd5309a3-0acb-41fd-8ac0-eb320bbb39c1"
+        ],
+        "objectsIds": [
+            "e246058b-f58f-4f8f-8df5-02e0caa81d82",
+            "2414c15e-a215-466e-ab18-cda704edb33a",
+            "382c38e4-0afc-402e-8f3a-96acacf3a3a2",
+            "682afa5c-cea1-48ba-80d7-8d7f3eacd3e3"
+        ],
+        "importFilesIds": []
+    },
+    "stix_objects": [
+        {
+            "id": "identity--eb481938-f652-5a05-b1a5-9323d3d958bb",
+            "spec_version": "2.1",
+            "identity_class": "organization",
+            "name": "ESET",
+            "created": "2025-02-25T08:38:33.424Z",
+            "modified": "2025-02-25T08:38:33.424Z",
+            "x_opencti_id": "75212652-a30e-4240-a2e2-1a4968c5bbaa",
+            "x_opencti_type": "Organization",
+            "type": "identity"
+        },
+        {
+            "type": "marking-definition",
+            "spec_version": "2.1",
+            "id": "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
+            "created": "2017-01-20T00:00:00.000Z",
+            "definition_type": "tlp",
+            "name": "TLP:AMBER+STRICT",
+            "definition": {
+                "tlp": "amber+strict"
+            }
+        },
+        {
+            "id": "report--8133d9f2-79ad-52bf-9541-cde65d175ce0",
+            "spec_version": "2.1",
+            "revoked": false,
+            "confidence": 100,
+            "created": "2024-03-11T23:00:00.000Z",
+            "modified": "2025-02-25T09:31:22.222Z",
+            "name": "AS-2024-0005 Report",
+            "description": "AS-2024-0005 Report",
+            "report_types": [
+                "misp-event"
+            ],
+            "published": "2024-03-11T23:00:00.000Z",
+            "x_opencti_workflow_id": "66f564b4-e278-4a43-991f-d48b937d9a86",
+            "labels": [
+                "activity summary",
+                "eset",
+                "tlp:amber+strict"
+            ],
+            "external_references": [
+                {
+                    "source_name": "MISP",
+                    "description": "AS-2024-0005 Report",
+                    "url": "https://misp.eset.com//events/view/d32975d4-a020-4ca9-b799-c0142010651d",
+                    "external_id": "d32975d4-a020-4ca9-b799-c0142010651d"
+                }
+            ],
+            "x_opencti_id": "50e57249-6919-41d9-8741-89c178d849d0",
+            "x_opencti_type": "Report",
+            "type": "report",
+            "created_by_ref": "identity--eb481938-f652-5a05-b1a5-9323d3d958bb",
+            "object_marking_refs": [
+                "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
+            ],
+            "object_refs": [
+                "text--6afe002e-b2b4-5897-ba43-948f56393186"
+            ]
+        }
+    ],
+    "stix_entity": {
+        "id": "report--8133d9f2-79ad-52bf-9541-cde65d175ce0",
+        "spec_version": "2.1",
+        "revoked": false,
+        "confidence": 100,
+        "created": "2024-03-11T23:00:00.000Z",
+        "modified": "2025-02-25T09:31:22.222Z",
+        "name": "AS-2024-0005 Report",
+        "description": "AS-2024-0005 Report",
+        "report_types": [
+            "misp-event"
+        ],
+        "published": "2024-03-11T23:00:00.000Z",
+        "x_opencti_workflow_id": "66f564b4-e278-4a43-991f-d48b937d9a86",
+        "labels": [
+            "activity summary",
+            "eset",
+            "tlp:amber+strict"
+        ],
+        "external_references": [
+            {
+                "source_name": "MISP",
+                "description": "AS-2024-0005 Report",
+                "url": "https://misp.eset.com//events/view/d32975d4-a020-4ca9-b799-c0142010651d",
+                "external_id": "d32975d4-a020-4ca9-b799-c0142010651d"
+            }
+        ],
+        "x_opencti_id": "50e57249-6919-41d9-8741-89c178d849d0",
+        "x_opencti_type": "Report",
+        "type": "report",
+        "created_by_ref": "identity--eb481938-f652-5a05-b1a5-9323d3d958bb",
+        "object_marking_refs": [
+            "marking-definition--826578e1-40ad-459f-bc73-ede076f81f37"
+        ],
+        "object_refs": [
+            "text--6afe002e-b2b4-5897-ba43-948f56393186"
+        ]
+    }
+}

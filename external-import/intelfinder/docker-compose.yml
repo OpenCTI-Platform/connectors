@@ -1,0 +1,18 @@
+version: '3'
+services:
+  connector-intelfinder:
+    image: opencti/connector-intelfinder:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Intelfinder
+      - CONNECTOR_SCOPE=intelfinder
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_RUN_EVERY=5m
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      - INTELFINDER_TOKEN=ChangeMe
+      - INTELFINDER_LABELS=intelfinder
+      - INTELFINDER_MARKING_REFS=TLP:AMBER
+      - INTELFINDER_SEED_ALERT_ID=ChangeMe
+    restart: always

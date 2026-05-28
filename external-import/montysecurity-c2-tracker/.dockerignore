@@ -1,0 +1,14 @@
+.git
+.gitignore
+.vscode
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.pytest_cache/
+.mypy_cache/
+tests/
+README.md
+config.yml.sample

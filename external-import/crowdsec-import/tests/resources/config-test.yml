@@ -1,0 +1,13 @@
+# This file overrides the default configuration file for test purposes.
+connector:
+  log_level: 'info' # Log level (debug, info, warn, error)
+  duration_period: 'PT24H'
+
+crowdsec:
+  indicator_create_from: 'malicious,suspicious,known'
+  last_enrichment_date_in_description: true # Enable/disable saving the last enrichment date in observable description
+  min_delay_between_enrichments: 3600 # Minimum delay between two CrowdSec enrichments in seconds. (Use last enrichment date saved in description.)
+  create_targeted_countries_sightings: true # Enable/disable creating sightings for targeted countries
+  enrichment_threshold_per_import: 400
+  import_query: 'behaviors.label:"SSH Bruteforce" AND reputation:"malicious"'
+  import_query_since: 24 # Range in hours of fetched CrowdSec data. Default is 24 hours.

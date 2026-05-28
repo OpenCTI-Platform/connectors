@@ -1,0 +1,25 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'ProofPoint ET Reputation'
+  scope: 'IPv4-Addr,Domain-Name'
+  log_level: 'error'
+  duration_period: 'PT24H' # Interval given for scheduler process in ISO-8601 format (Default : PT24H)
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: 'False'
+  #send_to_queue: 'True'
+  #send_to_directory: 'False'
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+proofpoint_et_reputation:
+  api_token: 'ChangeMe'
+  create_indicator: ChangeMe # Default: True
+  min_score: ChangeMe # Default: 20

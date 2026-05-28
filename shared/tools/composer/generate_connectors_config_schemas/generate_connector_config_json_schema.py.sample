@@ -1,0 +1,157 @@
+"""
+This script is used for generating a JSON schema model purpose.
+Make sure to define or import ConfigLoader or ConnectorSettings and ensure it is compatible (i.e. a Pydantic model).
+The code assumes that the __metadata__ directory exists and contains the necessary JSON files.
+All methods are documented for clarity and maintainability.
+The print statement in create_config_json_schema provides positive feedback when the contract is generated.
+The connector configuration MUST use `pydantic` or `pydantic-settings` Python libraries.
+"""
+
+import errno
+import json
+import os
+import sys
+import traceback
+from typing import Any
+
+from connectors_sdk.settings.json_schema_generator import ConnectorConfigJsonSchemaGenerator
+from pydantic import BaseModel
+
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
+__CONNECTOR_METADATA_DIRECTORY__ = "__metadata__"
+__CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__ = "connector_config_schema.json"
+
+class ConnectorConfigJsonSchemaBuilder:
+    """
+    Specifications of the build
+
+    This class encapsulates the main actions to build a connector config JSON Schema.
+    """
+
+    def __init__(self):
+        try:
+            # Try with ConfigLoader first
+            self.config_model = self._load_config_loader()
+        except ImportError:
+            # If not found, try with ConnectorSettings
+            self.config_model = self._load_connector_settings()
+
+        self.connector_name = os.path.basename(os.path.dirname(__file__))
+        self._create_metadata_directory()
+
+    @staticmethod
+    def _load_config_loader() -> BaseModel:
+        try:  # Import from a packaged connector (with `src/__main__.py`)
+            from src import ConfigLoader
+
+            return ConfigLoader
+        except ImportError as err:
+            try:  # Import from a connector following our templates (with `src/main.py`)
+                from src.main import ConfigLoader
+
+                return ConfigLoader
+            except ImportError as e:
+                raise e from err
+
+    @staticmethod
+    def _load_connector_settings() -> BaseModel:
+        try:  # Import from a packaged connector (with `src/__main__.py`)
+            from src import ConnectorSettings
+
+            return ConnectorSettings
+        except ImportError as err:
+            try:  # Import from a connector following our templates (with `src/main.py`)
+                from src.main import ConnectorSettings
+
+                return ConnectorSettings
+            except ImportError as e:
+                raise e from err
+
+    @staticmethod
+    def _create_metadata_directory():
+        """
+        Ensure __metadata__ directory exists to write the config JSON schema in it.
+        """
+        path = os.path.join(os.path.dirname(__file__), __CONNECTOR_METADATA_DIRECTORY__)
+
+        try:
+            os.makedirs(path)
+        except OSError as exc:
+            if exc.errno == errno.EEXIST and os.path.isdir(path):
+                pass  # do not raise error if the directory already exists
+            else:
+                raise
+
+    def build_config_schema(self):
+        """
+        Generates the complete connector schema using a custom schema generator compatible with Pydantic.
+        Isolate custom class generator, Pydantic expects a class, not an instance
+        Always subclass GenerateJsonSchema and pass the class to Pydantic, not an instance
+        :return: The generated connector schema as a dictionary.
+        """
+
+        # Check if the model use the base connector setting and has config_json_schema, if not, create the method.
+        if not callable(getattr(self.config_model, "config_json_schema", None)):
+
+            @classmethod
+            def config_json_schema(
+                cls,
+                *,
+                connector_name: str,
+                by_alias: bool = False,
+                mode: str = "validation",
+            ) -> dict[str, Any]:
+                """Generate the connector-specific environment variable JSON schema used for metadata contracts."""
+
+                def make_schema_generator(
+                    name: str,
+                ) -> type[ConnectorConfigJsonSchemaGenerator]:
+                    return type(
+                        "GeneratedSchemaGen",
+                        (ConnectorConfigJsonSchemaGenerator,),
+                        {"connector_name": name},
+                    )
+
+                return cls.model_json_schema(
+                    by_alias=by_alias,
+                    schema_generator=make_schema_generator(connector_name),
+                    mode=mode,
+                )
+
+            self.config_model.config_json_schema = config_json_schema
+
+        return self.config_model.config_json_schema(
+            by_alias=False,
+            connector_name=self.connector_name,
+            mode="validation",
+        )
+
+    def create_config_json_schema(self):
+        """
+        Generates the connector contract and writes it to a JSON file.
+        """
+        config_json_schema = self.build_config_schema()
+
+        filepath = os.path.join(
+            os.path.dirname(__file__),
+            __CONNECTOR_METADATA_DIRECTORY__,
+            __CONNECTOR_CONFIG_JSON_SCHEMA_FILENAME__,
+        )
+        with open(filepath, "w") as file:
+            config_json_schema_json = json.dumps(config_json_schema, indent=2)
+            file.write(config_json_schema_json)
+
+        print(f"✅ Connector config JSON schema written to {filepath}")
+
+
+if __name__ == "__main__":
+    """
+    Entry point of the script
+    """
+    try:
+        connector_config_json_schema_builder = ConnectorConfigJsonSchemaBuilder()
+        connector_config_json_schema_builder.create_config_json_schema()
+    except Exception:
+        traceback.print_exc()
+        exit(1)

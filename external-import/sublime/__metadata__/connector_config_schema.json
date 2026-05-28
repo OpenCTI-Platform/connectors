@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/sublime_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Sublime Security",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "sublime"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT3M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "SUBLIME_URL": {
+      "default": "https://platform.sublime.security",
+      "description": "Sublime platform URL for API connections.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "SUBLIME_TOKEN": {
+      "description": "Sublime Security API authentication token.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SUBLIME_INCIDENT_TYPE": {
+      "default": "phishing",
+      "description": "Label to apply to incident type.",
+      "type": "string"
+    },
+    "SUBLIME_INCIDENT_PREFIX": {
+      "default": "Sublime Incident - ",
+      "description": "Prefix for incident object names.",
+      "type": "string"
+    },
+    "SUBLIME_CASE_PREFIX": {
+      "default": "Case - ",
+      "description": "Prefix for case object names.",
+      "type": "string"
+    },
+    "SUBLIME_AUTO_CREATE_CASES": {
+      "default": false,
+      "description": "Automatically create investigation cases.",
+      "type": "boolean"
+    },
+    "SUBLIME_VERDICTS": {
+      "default": [
+        "malicious"
+      ],
+      "description": "Comma-separated attack score verdicts to process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "SUBLIME_SET_PRIORITY": {
+      "default": true,
+      "description": "Enable priority mapping from attack score.",
+      "type": "boolean"
+    },
+    "SUBLIME_SET_SEVERITY": {
+      "default": true,
+      "description": "Enable severity mapping from attack score.",
+      "type": "boolean"
+    },
+    "SUBLIME_FIRST_RUN_DURATION": {
+      "default": "PT8H",
+      "description": "ISO 8601 duration for initial data fetch on first run.",
+      "format": "duration",
+      "type": "string"
+    },
+    "SUBLIME_FORCE_HISTORICAL": {
+      "default": false,
+      "description": "Force historical fetch ignoring existing state for correcting improper states.",
+      "type": "boolean"
+    },
+    "SUBLIME_BATCH_SIZE": {
+      "default": 100,
+      "description": "Number of messages per processing batch.",
+      "type": "integer"
+    },
+    "SUBLIME_TLP_LEVEL": {
+      "description": "TLP marking level applied to created STIX entities.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string",
+      "default": "amber"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SUBLIME_TOKEN"
+  ],
+  "additionalProperties": true
+}

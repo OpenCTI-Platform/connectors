@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'VMRay'
+  type: 'EXTERNAL_IMPORT'
+  name: 'VMRay Platform'
+  scope: 'report, malware, indicator, attack-pattern, location'
+  log_level: 'info'
+  duration_period: 'PT30M' # Interval given for scheduler process in ISO-8601 format
+
+vmray:
+  server: 'https://cloud.vmray.com'
+  api_key: 'ChangeMe'
+  sample_verdict: 'malicious'
+  iocs_verdict: 'malicious'
+  threat_names_color: '#d60904'
+  classifications_color: '#f76928'
+  vti_color:  '#40f5ef'
+  mitre_color:  '#a9f723'
+  default_tlp: 'TLP:AMBER'
+  initial_fetch_date: '2025-11-13'
+

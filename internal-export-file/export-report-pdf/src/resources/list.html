@@ -1,0 +1,111 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link href="list.css" rel="stylesheet">
+        <title>Intelligence Export_{{ list_report_date }}</title>
+        <meta name="description" content="Intelligence Export_{{ list_report_date }}">
+    </head>
+
+    <body>
+        <article id="cover">
+            <div id="list-marking">{{ list_marking }}</div>
+            <div id="list-date">{{ list_report_date }}</div>
+            <h1>Intelligence Export</h1>
+            <div id="list-name">{{ list_name }}</div>
+            <div id="list-address">
+                <address>
+                    {{ company_address_line_1 }}
+                    {{ company_address_line_2 }}
+                    {{ company_address_line_3 }}
+                    {{ company_phone_number }}
+                </address>
+                <address>
+                    {{ company_email }}
+                    {{ company_website }}
+                </address>
+            </div>
+        </article>
+
+        <article id="contents">
+            <h2>Table of contents</h2>
+            <h3>Overview</h3>
+            <ul>
+                <li><a href="#search-title"></a></li>
+                <li><a href="#filters-title"></a></li>
+            </ul>
+            {% if entities %}
+            <h3>Entities</h3>
+            <ul>
+                {% for entity_type in entities %}
+                <li><a href="#{{ entity_type }}-title"></a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+
+            {% if observables %}
+            <h3>Observables</h3>
+            <ul>
+                {% for observable_type in observables %}
+                <li><a href="#{{ observable_type }}-title"></a></li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </article>
+        <article id="columns">
+            <h2>Overview</h2>
+            <section>
+                <h3 id="search-title">Search</h3>
+                <p>{{ list_search }}</p>
+            </section>
+            <section>
+                <h3 id="filters-title">Filters</h3>
+                <p>{{ list_filters }}</p>
+            </section>
+        </article>
+        <article id="entities">
+            {% for entity_type in entities %}
+            <h2 id="{{ entity_type }}-title">{{ entity_type }}</h2>
+            <section id="{{ entity_type }}">
+                <table>
+                    <tr>
+                        <th>Value</th>
+                    </tr>
+                     {% for entity in entities[entity_type] %}
+                    <tr>
+                        <td>
+                            {% if entity_type == 'Indicator' %}
+                                {{ entity.pattern }}
+                            {% elif entity_type == 'Attack-Pattern' %}
+                                {{ entity.name }} {% if entity.x_mitre_id %}({{ entity.x_mitre_id }}){% endif %}
+                            {% else %}
+                                {{ entity.name }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </section>
+            {% endfor %}
+            </section>
+        </article>
+        <article id="observables">
+            {% for observable_type in observables %}
+            <h2 id="{{ observable_type }}-title">{{ observable_type }}</h2>
+            <section id="{{ observable_type }}">
+                <table>
+                    <tr>
+                        <th>Value</th>
+                    </tr>
+                    {% for observable in observables[observable_type] %}
+                    <tr>
+                        <td>
+                            {{ observable.observable_value }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </section>
+            {% endfor %}
+        </article>
+    </body>
+</html>

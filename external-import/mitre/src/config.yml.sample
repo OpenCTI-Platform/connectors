@@ -1,0 +1,12 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+
+# Options available
+# mitre:
+  # remove_statement_marking: false # Optional - default: False
+  # interval: 7 # In days - default: 7

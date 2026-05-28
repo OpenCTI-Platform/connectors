@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'DISARM Framework'
+  scope: 'marking-definition,identity,attack-pattern,course-of-action,intrusion-set,campaign,malware,tool,report,narrative,event,channel'
+  run_and_terminate: false
+  log_level: 'info'
+
+disarm_framework:
+  url: 'https://raw.githubusercontent.com/DISARMFoundation/DISARMframeworks/main/generated_files/DISARM_STIX/DISARM.json'

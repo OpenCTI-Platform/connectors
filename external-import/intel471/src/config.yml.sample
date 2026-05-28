@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Intel471'
+  scope: 'malware,vulnerability,indicator'
+  confidence_level: 70
+  update_existing_data: False
+  log_level: 'info'
+
+intel471:
+  api_username: ChangeMe
+  api_key: ChangeMe
+  interval_indicators: 60
+  initial_history_indicators: 0
+  interval_yara: 60
+  initial_history_yara: 0
+  interval_cves: 120
+  initial_history_cves: 0
+  interval_iocs: 120
+  initial_history_iocs: 0

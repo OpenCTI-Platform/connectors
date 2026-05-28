@@ -1,0 +1,291 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections",
+    "query_params": {
+      "filter": "collection_type:report last_modification_date:2024-06-03T09:30:31+",
+      "limit": 40,
+      "order": "last_modification_date+"
+    },
+    "entity_type": "reports",
+    "method": "GET"
+  },
+  "response": {
+    "data": [
+      {
+        "id": "campaign--1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+        "type": "collection",
+        "links": {
+          "self": "https://www.virustotal.com/api/v3/collections/campaign--1a2b3c4d-5e6f-7890-abcd-ef1234567890"
+        },
+        "attributes": {
+          "targeted_industries": [],
+          "collection_type": "campaign",
+          "last_seen_details": [
+            {
+              "description": null,
+              "confidence": "unconfirmed",
+              "value": "2024-02-14T00:00:00Z",
+              "last_seen": null,
+              "first_seen": null
+            }
+          ],
+          "references_count": 9,
+          "name": "Exploitation of CVE-2024-1234 in Lorem Ipsum Gateway Appliances",
+          "tags_details": [],
+          "version_history": [],
+          "targeted_informations": [],
+          "merged_actors": [],
+          "motivations": [
+            {
+              "description": null,
+              "confidence": "confirmed",
+              "value": "Financial Gain",
+              "last_seen": null,
+              "first_seen": null
+            },
+            {
+              "description": null,
+              "confidence": "confirmed",
+              "value": "Espionage",
+              "last_seen": null,
+              "first_seen": null
+            }
+          ],
+          "risk_factors": [],
+          "description": "In February 2024, a fictitious research team initiated a Global Event in response to the exploitation of a zero-day vulnerability in Lorem Ipsum Gateway and Access products. Exploitation involves an Improper Restriction of Operations within the Bounds of a Memory Buffer vulnerability (CVE-2024-1234) that allows an attacker to collect potentially sensitive information. A failed attempt at exploitation could potentially cause a crash of the application, resulting in a denial-of-service condition. This vulnerability was first disclosed to the public in February 2024, when the fictitious national cybersecurity agency also added the vulnerability to their Exploited Catalog. The vendor has released a patch to mitigate this issue, and the research team suggests prioritizing these patches. \n\nResearchers have confirmed that multiple threat clusters driven by unknown motivations have exploited this vulnerability to gather data and gain initial access since September 2023. Impacted organizations have included both public and private sector entities based in the U.S. and Belgium, although targeting is likely opportunistic and broader than directly observed, and subject to the geographic distribution of affected products. The targeting of edge infrastructure and technologies that do not support endpoint detection and response (EDR) solutions to gain persistence and traverse a victim's environment enables threat actors to avoid detection and complicate attribution.",
+          "domains_count": 1,
+          "malware_roles": [],
+          "field_sources": [],
+          "recent_activity_summary": [7, 7, 7, 14, 3, 2, 7, 6, 3, 6, 4, 3, 3, 5],
+          "targeted_regions": ["US", "AU", "BE", "CA"],
+          "targeted_regions_hierarchy": [
+            {
+              "region": "Oceania",
+              "sub_region": "Australia and New Zealand",
+              "country": "Australia",
+              "country_iso2": "AU",
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "region": "Europe",
+              "sub_region": "Western Europe",
+              "country": "Belgium",
+              "country_iso2": "BE",
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "region": "Americas",
+              "sub_region": "Northern America",
+              "country": "Canada",
+              "country_iso2": "CA",
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "region": "Americas",
+              "sub_region": "Northern America",
+              "country": "United States",
+              "country_iso2": "US",
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            }
+          ],
+          "first_seen_details": [
+            {
+              "description": "Lorem Ipsum Observed First Activity of Campaign",
+              "confidence": "unconfirmed",
+              "value": "2023-09-12T00:00:00Z",
+              "last_seen": null,
+              "first_seen": null
+            }
+          ],
+          "subscribers_count": 1,
+          "affected_systems": [],
+          "autogenerated_tags": [],
+          "source_regions_hierarchy": [
+            {
+              "region": "Americas",
+              "sub_region": "Northern America",
+              "country": "United States",
+              "country_iso2": "US",
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "region": "Asia",
+              "sub_region": "Eastern Asia",
+              "country": "China",
+              "country_iso2": "CN",
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            }
+          ],
+          "ip_addresses_count": 27,
+          "source_region": "US",
+          "origin": "Lorem Ipsum Threat Intelligence",
+          "exploitation_vectors": [],
+          "targeted_industries_tree": [
+            {
+              "industry_group": "Agriculture",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Construction & Engineering",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Financial Services",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Government",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Healthcare",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Legal & Professional Services",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Manufacturing",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Technology",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            },
+            {
+              "industry_group": "Telecommunications",
+              "industry": null,
+              "confidence": "confirmed",
+              "first_seen": null,
+              "last_seen": null,
+              "description": null,
+              "source": null
+            }
+          ],
+          "campaign_type": "GLOBAL",
+          "counters": {
+            "files": 0,
+            "domains": 1,
+            "ip_addresses": 27,
+            "urls": 0,
+            "iocs": 28,
+            "subscribers": 1,
+            "attack_techniques": 106
+          },
+          "tags": [],
+          "last_modification_date": 1753912865,
+          "mitigations": [],
+          "vulnerable_products": "",
+          "urls_count": 0,
+          "detection_names": [],
+          "capabilities": [],
+          "files_count": 0,
+          "status": "COMPUTED",
+          "technologies": [],
+          "available_mitigation": [],
+          "is_content_translated": false,
+          "collection_links": [],
+          "operating_systems": [],
+          "last_seen": 1701547509,
+          "workarounds": [],
+          "first_seen": 1692648309,
+          "private": true,
+          "alt_names": ["GLOBAL.24.007"],
+          "vendor_fix_references": [],
+          "threat_scape": [],
+          "recent_activity_relative_change": 0.14925373134328357,
+          "intended_effects": [],
+          "top_icon_md5": [],
+          "alt_names_details": [
+            {
+              "description": null,
+              "confidence": "confirmed",
+              "value": "GLOBAL.24.007",
+              "last_seen": null,
+              "first_seen": null
+            }
+          ],
+          "creation_date": 1699987925,
+          "aggregations": {}
+        },
+        "context_attributes": {
+          "shared_with_me": false,
+          "role": "viewer"
+        }
+      }
+    ],
+    "meta": {
+      "count": 1,
+      "cursor": null
+    },
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/collections?limit=1&filter=collection_type:campaign",
+      "next": null
+    }
+  }
+}

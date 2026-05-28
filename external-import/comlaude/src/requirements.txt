@@ -1,0 +1,3 @@
+pycti==7.260527.0
+pyjwt
+requests<=2.33.0

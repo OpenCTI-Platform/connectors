@@ -1,0 +1,21 @@
+{
+  "title": "Silobreaker",
+  "slug": "Silobreaker",
+  "description": "Silobreaker is an AI-native intelligence engine that unifies open-source, dark web, finished intelligence and internal data with advanced analytics to produce decision-grade intelligence that security teams can use to identify threats and risks faster, accelerate decisions and build resilience with confidence.The OpenCTI Silobreaker connector facilitates the import of Silobreaker threat data into OpenCTI. You will be prompted to specify a start date, and the connector will retrieve all documents from that date onwards.\n",
+  "short_description": "Silobreaker is an AI-native intelligence engine that unifies open-source, dark web, finished intelligence and internal data with advanced analytics to produce decision-grade intelligence",
+  "logo": "external-import/silobreaker/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": "2025-03-06",
+  "playbook_supported": false,
+  "max_confidence_level": 55,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.silobreaker.com/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/silobreaker",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-silobreaker",
+  "container_type": "EXTERNAL_IMPORT"
+}

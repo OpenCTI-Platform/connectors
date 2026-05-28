@@ -1,0 +1,22 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+#connector:
+#  type: 'EXTERNAL_IMPORT'
+#  id: 'email-intel-imap--ee2beb6c-4e99-47e6-ab5b-f3eea350f601'
+#  name: 'Email Intel IMAP'
+#  scope: 'email-intel-imap'
+#  log_level: 'error'
+#  duration_period: 'PT1H'
+
+email_intel_imap:
+#  tlp_level: 'amber+strict'
+#  relative_import_start_date: 'P30D'
+  host: 'ChangeMe'
+  port: 'ChangeMe'
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+#  mailbox: 'INBOX'
+#  attachments_mime_types: 'application/pdf,text/csv,text/plain'
+  google_token_json: '{"token": "ChangeMe", ...}'

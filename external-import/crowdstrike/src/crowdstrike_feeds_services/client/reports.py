@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Dict, List, cast
+
+from .base_api import BaseCrowdstrikeClient
+
+if TYPE_CHECKING:
+    from crowdstrike_feeds_connector import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
+
+class ReportsAPI(BaseCrowdstrikeClient):
+
+    def __init__(self, config: "ConnectorSettings", helper: "OpenCTIConnectorHelper"):
+        super().__init__(config, helper)
+
+    def get_combined_report_entities(
+        self,
+        limit: int,
+        offset: int,
+        sort: str,
+        fql_filter: str,
+        fields: List[Any],
+    ) -> Dict[str, Any]:
+        """
+        Get info about reports that match provided FQL filters
+        :param limit: Maximum number of records to return (Max: 5000) in integer
+        :param offset: Starting index of overall result set from which to return ids in integer
+        :param sort: The property to sort by. (Ex: created_date|desc) in str
+        :param fql_filter: FQL query expression that should be used to limit the results in str
+        :param fields: The fields to return, or a predefined set of fields in the form of the collection name
+        surrounded by two underscores like: __<collection>__. Ex: slug __full__. Defaults to __basic__.
+        :return: Dict object containing API response
+        """
+
+        response = cast(
+            Dict[str, Any],
+            self.cs_intel.query_report_entities(
+                limit=limit,
+                offset=offset,
+                sort=sort,
+                filter=fql_filter,
+                fields=fields,
+            ),
+        )
+        self.handle_api_error(response)
+        self.helper.connector_logger.info("Getting combined report entities...")
+
+        return cast(Dict[str, Any], response.get("body", {}))
+
+    def get_report_entities(self, ids: List[Any], fields: List[Any]) -> Dict[str, Any]:
+        """
+        Retrieve specific reports using their report IDs
+        :param ids: List of IDs
+        :param fields: List of fields
+        :return: Dict object containing API response
+        """
+
+        response = cast(
+            Dict[str, Any],
+            self.cs_intel.get_report_entities(ids=ids, fields=fields),
+        )
+
+        self.handle_api_error(response)
+        self.helper.connector_logger.info("Getting report entities...")
+
+        return cast(Dict[str, Any], response.get("body", {}))
+
+    def get_report_pdf(self, report_id: str) -> Any:
+        """
+        Return a Report PDF attachment
+        :param report_id: ID of a report in string
+        :return: Binary object on SUCCESS, dict object containing API response on FAILURE
+        """
+        response = self.cs_intel.get_report_pdf(id=report_id)
+
+        if isinstance(response, dict):
+            self.handle_api_error(response)
+
+        self.helper.connector_logger.info("Getting report PDF...")
+
+        return response

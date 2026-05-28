@@ -1,0 +1,7 @@
+[flake8]
+ignore = C812, I100, E203, W503, G200
+max-line-length = 88
+max_complexity = 30
+inline-quotes = double
+docstring-quotes = """
+enable-extensions = G

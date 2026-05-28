@@ -1,0 +1,11 @@
+^0\.
+# Broadcast IPs
+\.0$
+# Localhost and local network IPs
+^127\.0\.0\.1
+^192\.168\.
+^10\.
+^::1$
+# Google DNS
+^8\.8\.8\.8$
+^8\.8\.4\.4$

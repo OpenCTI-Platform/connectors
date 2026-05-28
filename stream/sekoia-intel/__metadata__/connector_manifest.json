@@ -1,0 +1,21 @@
+{
+  "title": "Sekoia.io Intel Stream",
+  "slug": "sekoia-intel",
+  "description": "Sekoia.io Cyber Threat Intelligence provides assimilable and relevant reports on the evolving threat landscape, accessible to a broader audience. Sekoia.io's threat intelligence is contextual, actionable, and precise. Sekoia.io Intelligence (CTI) consists of exclusive data produced by Sekoia.io, sourced from C2 trackers, VirusTotal trackers, honeypots, and more, as well as refined data from open sources.\n\nThe integration of Sekoia.io with OpenCTI facilitates the collection of Sekoia.io CTI data within an existing OpenCTI instance, supporting various operational purposes like CTI aggregation, dissemination, and threat hunting.",
+  "short_description": "Sekoia.io Cyber Threat Intelligence provides assimilable and relevant reports on the evolving threat landscape, accessible to a broader audience.",
+  "logo": "stream/sekoia-intel/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 70,
+  "support_version": ">= 6.5.1",
+  "subscription_link": "https://www.sekoia.io/en/product/cti/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/sekoia-intel",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-sekoia-intel",
+  "container_type": "STREAM"
+}

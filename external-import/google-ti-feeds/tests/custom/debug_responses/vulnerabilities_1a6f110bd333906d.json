@@ -1,0 +1,427 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections/vulnerability--cve-2022-13579",
+    "query_params": {},
+    "entity_type": "vulnerabilities",
+    "method": "GET"
+  },
+  "response": {
+    "id": "vulnerability--cve-2022-13579",
+    "type": "collection",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/collections/vulnerability--cve-2022-13579"
+    },
+    "attributes": {
+      "alt_names_details": [
+        {
+          "first_seen": null,
+          "value": "LoremRelay",
+          "last_seen": null,
+          "confidence": "possible",
+          "description": null
+        }
+      ],
+      "collection_type": "vulnerability",
+      "cvss": {
+        "cvssv3_x": {
+          "temporal_score": 9.8,
+          "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+          "base_score": 9.8
+        },
+        "cvssv2_0": {
+          "temporal_score": 7.8,
+          "vector": "AV:N/AC:L/Au:N/C:C/I:C/A:N/E:F/RL:OF/RC:C",
+          "base_score": 9.4
+        }
+      },
+      "status": "COMPUTED",
+      "cpes": [
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_16:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate16",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_11:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate11",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2013:cumulative_update_21:*:*:*:*:*:*",
+            "version": "2013 Cumulativeupdate21",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_3:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate3",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_18:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate18",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_19:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate19",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_4:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate4",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_9:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate9",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_7:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate7",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_2:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate2",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_17:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate17",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2013:cumulative_update_23:*:*:*:*:*:*",
+            "version": "2013 Cumulativeupdate23",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2013:cumulative_update_22:*:*:*:*:*:*",
+            "version": "2013 Cumulativeupdate22",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:-:*:*:*:*:*:*",
+            "version": "2019",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_8:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate8",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_12:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate12",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_14:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate14",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_15:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate15",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_8:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate8",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_13:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate13",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_6:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate6",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_5:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate5",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_10:*:*:*:*:*:*",
+            "version": "2016 Cumulativeupdate10",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        },
+        {
+          "end_rel": null,
+          "end_cpe": null,
+          "start_cpe": {
+            "vendor": "Lorem Corp",
+            "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_1:*:*:*:*:*:*",
+            "version": "2019 Cumulativeupdate1",
+            "product": "Messaging Server"
+          },
+          "start_rel": "="
+        }
+      ],
+      "priority": "P0",
+      "merged_actors": [],
+      "motivations": [],
+      "subscribers_count": 3,
+      "targeted_regions_hierarchy": [],
+      "top_icon_md5": [],
+      "exploitation": {
+        "tech_details_release_date": 1616357111,
+        "exploit_release_date": 1615838711,
+        "first_exploitation": 1610741111
+      },
+      "targeted_regions": [],
+      "counters": {
+        "files": 15,
+        "domains": 0,
+        "ip_addresses": 0,
+        "urls": 0,
+        "iocs": 15,
+        "subscribers": 3,
+        "attack_techniques": 0
+      },
+      "threat_scape": [],
+      "date_of_disclosure": 1615752311,
+      "alt_names": ["LoremRelay"],
+      "workarounds": [
+        "<p>Lorem Corp recommends the following mitigation technique to offset the possibility of exploitation:</p>\n<p>&nbsp;</p>\n<p><strong>Backend Cookie Mitigation</strong></p>\n<p>&nbsp;</p>\n<p>Description:&nbsp;This mitigation will filter https requests that contain malicious X-AnonResource-Backend and malformed X-BEResource cookies which were found to be used in the SSRF attacks in the wild.</p>\n"
+      ],
+      "recent_activity_summary": [0, 3, 4, 9, 7, 4, 12, 14, 8, 6, 4, 8, 16, 6],
+      "operating_systems": [],
+      "available_mitigation": ["Patch", "Workaround"],
+      "executive_summary": "\n\n* A Server-Side Request Forgery (SSRF) vulnerability exists that, when exploited, allows a remote attacker to execute arbitrary code.\n* This vulnerability has been confirmed to be widely exploited in the wild. Non-weaponized and proof-of-concept code is publicly available.\n* Lorem Ipsum Threat Intelligence Group (LITIG) considers this a Critical-risk vulnerability due to the potential for arbitrary code execution.\n* Mitigation options include a patch and a workaround.\n",
+      "exploit_availability": "Publicly Available",
+      "name": "CVE-2022-13579",
+      "tags": [
+        "was_zero_day",
+        "has_exploits",
+        "observed_in_the_wild",
+        "media_attention"
+      ],
+      "vendor_fix_references": [],
+      "capabilities": [],
+      "private": true,
+      "risk_factors": [],
+      "predicted_risk_rating": "",
+      "analysis": "\n\nAn attacker could exploit this vulnerability to execute arbitrary code. The attacker needs to send a specially crafted HTTP request to the target server running Lorem Messaging with knowledge of the account from which they want to extract information.\n\n",
+      "technologies": [],
+      "creation_date": 1615832219,
+      "last_seen_details": [],
+      "cisa_known_exploited": {
+        "ransomware_use": "Known",
+        "added_date": 1637006711,
+        "due_date": 1619640311
+      },
+      "domains_count": 0,
+      "summary_stats": {
+        "first_submission_date": {
+          "min": 1616323375.0,
+          "max": 1697878300.0,
+          "avg": 1634677227.5
+        },
+        "last_submission_date": {
+          "min": 1616418544.0,
+          "max": 1735243996.0,
+          "avg": 1655268250.625
+        },
+        "files_detections": {
+          "min": 0.0,
+          "max": 31.0,
+          "avg": 9.0
+        }
+      },
+      "targeted_industries_tree": [],
+      "exploitation_vectors": ["General Network Connectivity", "Web"],
+      "recent_activity_relative_change": 100.0,
+      "cve_id": "CVE-2022-13579",
+      "autogenerated_tags": ["cve-2022-14176", "cve-2022-13579", "cve-2022-43584"],
+      "epss": {
+        "score": 0.94346,
+        "percentile": 0.99951
+      },
+      "collection_links": [],
+      "origin": "Lorem Ipsum Threat Intelligence",
+      "risk_rating": "CRITICAL",
+      "urls_count": 0,
+      "sources": [],
+      "detection_names": [],
+      "targeted_industries": [],
+      "malware_roles": [],
+      "exploitation_consequence": "Code Execution",
+      "source_regions_hierarchy": [],
+      "mve_id": "MVE-2022-20465",
+      "last_modification_date": 1751948886,
+      "vulnerable_products": "",
+      "mitigations": [],
+      "affected_systems": [],
+      "ip_addresses_count": 0,
+      "intended_effects": [],
+      "references_count": 0,
+      "exploitation_state": "Wide",
+      "targeted_informations": [],
+      "is_content_translated": false,
+      "cwe": {
+        "title": "Server-Side Request Forgery (SSRF)",
+        "id": "CWE-918"
+      },
+      "first_seen_details": [],
+      "files_count": 15,
+      "description": "\n\nA remote code execution vulnerability exists in Lorem Messaging Server 2019 Cumulative Update 8.  \nAn attacker who successfully exploited the vulnerability could run arbitrary code on the affected system.\n\n",
+      "version_history": [],
+      "field_sources": [],
+      "mati_genids_dict": {
+        "cve_id": "vulnerability--6e2c2460-b56b-6cfd-963c-161143bb75d9",
+        "report_id": "report--902f8132-9259-66b1-c47f-8ab680f6d445",
+        "mve_id": "vulnerability--c3967ea9-ce5c-6bd1-95cc-5c9e66f6c351"
+      },
+      "tags_details": [],
+      "aggregations": {}
+    },
+    "context_attributes": {
+      "shared_with_me": false,
+      "role": "viewer"
+    }
+  }
+}

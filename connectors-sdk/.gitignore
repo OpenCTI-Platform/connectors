@@ -1,0 +1,18 @@
+# Python-related caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Coverage and HTML reports
+*.html
+htmlcov/
+.coverage

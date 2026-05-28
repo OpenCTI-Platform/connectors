@@ -1,0 +1,70 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/urls/59741d26daf1a7667b7a9333243d6aef7186dee2f4c6de2e8b211fe1ac291447",
+    "query_params": {},
+    "entity_type": "urls",
+    "method": "GET"
+  },
+  "response": {
+    "id": "59741d26daf1a7667b7a9333243d6aef7186dee2f4c6de2e8b211fe1ac291447",
+    "type": "url",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/urls/59741d26daf1a7667b7a9333243d6aef7186dee2f4c6de2e8b211fe1ac291447"
+    },
+    "attributes": {
+      "categories": {
+        "BitDefender": "misc",
+        "Sophos": "information technology",
+        "Forcepoint ThreatSeeker": "information technology",
+        "Xcitium Verdict Cloud": "software-hardware"
+      },
+      "favicon": null,
+      "first_submission_date": 1488862273,
+      "gti_assessment": null,
+      "html_meta": null,
+      "last_analysis_date": 1750214303,
+      "last_analysis_results": {},
+      "last_analysis_stats": {
+        "harmless": 67,
+        "malicious": 0,
+        "suspicious": 1,
+        "timeout": 0,
+        "undetected": 29
+      },
+      "last_final_url": "https://lorem.ipsum.li/~doloramt/loremtool/0.92/w64/loremtool.exe",
+      "last_http_response_code": 200,
+      "last_http_response_content_length": 1710783,
+      "last_http_response_content_sha256": "27dca51fc35df3e533beecb6ab1b6912def43f63d33d3fdce6ea0ba2948239be",
+      "last_http_response_cookies": null,
+      "last_http_response_headers": {
+        "Date": "Fri, 06 Jul 2025 07:34:16 GMT",
+        "Server": "Nginx",
+        "Last-Modified": "Sun, 02 Mar 2025 12:33:37 GMT",
+        "ETag": "\"2b2779-73e24152bcb69\"",
+        "Accept-Ranges": "bytes",
+        "Content-Length": "1710783",
+        "Keep-Alive": "timeout=5, max=100",
+        "Connection": "Keep-Alive",
+        "Content-Type": "application/x-msdos-program"
+      },
+      "last_modification_date": 1750214313,
+      "last_submission_date": 1750214303,
+      "outgoing_links": null,
+      "redirection_chain": [
+        "https://lorem.ipsum.li/~doloramt/loremtool/latest/w64/loremtool.exe"
+      ],
+      "reputation": -74,
+      "tags": ["downloads-pe"],
+      "targeted_brand": null,
+      "times_submitted": 3471,
+      "title": "",
+      "total_votes": {
+        "harmless": 1,
+        "malicious": 2
+      },
+      "trackers": null,
+      "url": "https://lorem.ipsum.li/~doloramt/loremtool/latest/w64/loremtool.exe",
+      "has_content": false
+    }
+  }
+}

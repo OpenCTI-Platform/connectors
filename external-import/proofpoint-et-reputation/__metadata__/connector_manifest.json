@@ -1,0 +1,21 @@
+{
+  "title": "Proofpoint ET Reputation",
+  "slug": "proofpoint-et-reputation",
+  "description": "Information coming soon",
+  "short_description": "Information coming soon",
+  "logo": "external-import/proofpoint-et-reputation/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.4.11",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/proofpoint-et-reputation",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-proofpoint-et-reputation",
+  "container_type": "EXTERNAL_IMPORT"
+}

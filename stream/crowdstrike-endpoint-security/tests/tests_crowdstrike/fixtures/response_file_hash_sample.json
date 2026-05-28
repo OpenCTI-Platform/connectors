@@ -1,0 +1,17 @@
+{
+  "meta": {
+    "query_time": 0.010777001,
+    "pagination": {
+      "limit": 100,
+      "total": 1,
+      "offset": 1,
+      "after": "WzE3MTE2MjQzOTYzMDEsImI2YTFiY2RmMmZhNzY5YmY4ZGRhNGRlOTgzYWMzMTJlOGIzZjdlYTY2YjE1NGQ4ZTE3MjY3ODFiYzkzMzg4YjgiXQ=="
+    },
+    "powered_by": "ioc-manager",
+    "trace_id": "e67bb111-ff1b-4801-a67f-e36c03f5f0aa"
+  },
+  "errors": null,
+  "resources": [
+    "b6a1bcdf2fa769bf8dda4de983ac312e8b3f7ea66b154d8e1726781bc93388b8"
+  ]
+}

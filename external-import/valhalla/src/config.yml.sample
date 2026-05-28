@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+# connector:
+#   id: '6528cf33-6059-4927-bc08-db52f4cfbb5a'
+#   name: 'Valhalla'
+#   scope: 'valhalla'
+#   log_level: 'error'
+#   duration_period: 'P1D'
+
+# valhalla:
+#   api_key: ''  # Empty key fetches only public/demo rules.

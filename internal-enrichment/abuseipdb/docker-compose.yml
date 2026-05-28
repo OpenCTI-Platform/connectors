@@ -1,0 +1,9 @@
+version: '3'
+services:
+  connector-abuseipdb:
+    image: opencti/connector-abuseipdb:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - ABUSEIPDB_API_KEY=ChangeMe
+    restart: always

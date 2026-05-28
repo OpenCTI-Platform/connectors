@@ -1,0 +1,20 @@
+version: '3'
+services:
+  connector-proofpoint-et-intelligence:
+    image: opencti/connector-proofpoint-et-intelligence:latest
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ChangeMe
+      - CONNECTOR_SCOPE=ChangeMe
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_AUTO=true
+
+      # Connector's custom execution parameters
+      - PROOFPOINT_ET_INTELLIGENCE_API_BASE_URL=ChangeMe
+      - PROOFPOINT_ET_INTELLIGENCE_API_KEY=ChangeMe
+      - PROOFPOINT_ET_INTELLIGENCE_MAX_TLP=TLP:CLEAR # Available values: TLP:CLEAR, TLP:WHITE, TLP:GREEN, TLP:AMBER, TLP:AMBER+STRICT, TLP:RED
+    restart: always

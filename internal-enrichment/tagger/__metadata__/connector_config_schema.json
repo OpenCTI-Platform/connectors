@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/tagger_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Tagger",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "report",
+        "malware",
+        "tool"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": true,
+      "description": "If True, the connector will automatically import data from the API.",
+      "type": "boolean"
+    },
+    "TAGGER_DEFINITIONS": {
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "items": {
+          "properties": {
+            "scopes": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Scopes",
+              "type": "array"
+            },
+            "rules": {
+              "items": {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              "title": "Rules",
+              "type": "array"
+            }
+          },
+          "required": [
+            "scopes",
+            "rules"
+          ],
+          "title": "Definition",
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "default": "[{\"scopes\":[\"Report\",\"Tool\"],\"rules\":[{\"label\":\"cloud\",\"search\":\"[Cc]loud\",\"attributes\":[\"name\",\"description\"]},{\"label\":\"mobile\",\"search\":\"mobile|android|apk\",\"flags\":[\"IGNORECASE\"],\"attributes\":[\"name\",\"description\"]}]},{\"scopes\":[\"Malware\"],\"rules\":[{\"label\":\"windows\",\"search\":\"registry|regkey\",\"flags\":[\"IGNORECASE\"],\"attributes\":[\"description\"]}]}]",
+      "description": "Definitions array in JSON format",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

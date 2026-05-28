@@ -1,0 +1,508 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/collections/threat-actor--a493b916-d682-66c5-cf1f-438fab1bd398",
+    "query_params": {},
+    "entity_type": "threat_actors",
+    "method": "GET"
+  },
+  "response": {
+    "id": "threat-actor--a493b916-d682-66c5-cf1f-438fab1bd398",
+    "type": "collection",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/collections/threat-actor--a493b916-d682-66c5-cf1f-438fab1bd398"
+    },
+    "attributes": {
+      "name": "UNC2180",
+      "collection_type": "threat-actor",
+      "creation_date": 1524719123,
+      "last_modification_date": 1750028923,
+      "description": "UNC2180 is a suspected Eastern European financial crime group, which may be related to APT49 with low confidence. UNC2180 has targeted a variety of financial services firms and cryptocurrency exchanges. UNC2180 commonly uses spearphishing that leads to a LONEWALKER shortcut file, which can lead to UNC2180's non-public implants such as LONEDRIFTER, COLDHAUL, or POWERVAULT. UNC2180 has been active since at least 2019.",
+      "status": "COMPUTED",
+      "private": true,
+      "origin": "Lorem Ipsum Threat Intelligence",
+      "recent_activity_relative_change": 1.9457420050305427,
+      "recent_activity_summary": [
+        59, 316, 540, 507, 951, 709, 469, 779, 549, 831, 656, 694, 746, 392
+      ],
+      "top_icon_md5": [
+        "cc9eeb893dc964f82bd6d3e9dce1074f2",
+        "6f3f962d6cf6638f0d41ff539166ff29f",
+        "4676bc6c1bb4ff9ff282cd7fffe87d44"
+      ],
+      "counters": {
+        "attack_techniques": 146,
+        "domains": 2670,
+        "files": 709,
+        "iocs": 4776,
+        "ip_addresses": 214,
+        "subscribers": 13,
+        "urls": 1183
+      },
+      "aggregations": {},
+      "alt_names_details": [
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "LoremNoroff (Kasperky)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "DolorCore (ClearSky)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "DolorCore (PwC)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Ipsumpassword (JPCERT)"
+        },
+        {
+          "confidence": "possible",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Amet Sleet (Microsoft)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Consectetur (F-Secure)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Consectetur (Group-IB)"
+        },
+        {
+          "confidence": "suspected",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Consectetur (Kaspersky)"
+        },
+        {
+          "confidence": "suspected",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Consectetur (Lexfo)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Consectetur (Qianxin)"
+        },
+        {
+          "confidence": "suspected",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Consectetur (Qihoo)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Ref8246 (Elastic)"
+        },
+        {
+          "confidence": "possible",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Adipiscing (Palo Alto Networks)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "TA555 (Proofpoint)"
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Tag-82 (Recorded Future)"
+        },
+        {
+          "confidence": "possible",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "SitAmet (CISA)"
+        }
+      ],
+      "first_seen_details": [
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "2019-05-14T10:01:13Z"
+        }
+      ],
+      "last_seen_details": [
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "2026-02-18T11:46:47Z"
+        }
+      ],
+      "merged_actors": [
+        {
+          "confidence": "confirmed",
+          "description": "threat-actor--62105133-8bf4-6354-a779-fbe07d72b62d",
+          "first_seen": 1685360738,
+          "last_seen": 1685360738,
+          "value": "UNC3666"
+        },
+        {
+          "confidence": "confirmed",
+          "description": "threat-actor--a46461e9-7844-6774-a436-ffdf3dfeccb5",
+          "first_seen": 1700992982,
+          "last_seen": 1700992982,
+          "value": "UNC6036"
+        },
+        {
+          "confidence": "confirmed",
+          "description": "threat-actor--ba25ff72-b6d4-6d8a-9bc9-c8755bf962777",
+          "first_seen": 1684774994,
+          "last_seen": 1684774994,
+          "value": "UNC5825"
+        },
+        {
+          "confidence": "confirmed",
+          "description": "threat-actor--b19e620f-152b-6db6-a349-27e7940252d5",
+          "first_seen": 1674042478,
+          "last_seen": 1674042478,
+          "value": "UNC5561"
+        },
+        {
+          "confidence": "confirmed",
+          "description": "threat-actor--ff56fc65-1dfb-637e-9559-37933d15741e",
+          "first_seen": 1749983692,
+          "last_seen": 1749983692,
+          "value": "UNC7319"
+        },
+        {
+          "confidence": "confirmed",
+          "description": "threat-actor--a4b7bd13-d288-62bb-a859-961c379de628",
+          "first_seen": 1728377675,
+          "last_seen": 1728377675,
+          "value": "UNC6673"
+        }
+      ],
+      "motivations": [
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "value": "Espionage"
+        }
+      ],
+      "source_regions_hierarchy": [
+        {
+          "confidence": "confirmed",
+          "country": "Belarus",
+          "country_iso2": "BY",
+          "description": null,
+          "first_seen": null,
+          "last_seen": null,
+          "region": "Europe",
+          "source": null,
+          "sub_region": "Eastern Europe"
+        }
+      ],
+      "tags_details": [],
+      "targeted_industries_tree": [
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": 1687896311,
+          "industry": null,
+          "industry_group": "Automotive",
+          "last_seen": 1687896311,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": 1524719123,
+          "industry": null,
+          "industry_group": "Financial Services",
+          "last_seen": 1742720008,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "industry": null,
+          "industry_group": "Government",
+          "last_seen": null,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": 1710213261,
+          "industry": null,
+          "industry_group": "Hospitality",
+          "last_seen": 1710213261,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "industry": null,
+          "industry_group": "Legal & Professional Services",
+          "last_seen": null,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": 1660833131,
+          "industry": null,
+          "industry_group": "Manufacturing",
+          "last_seen": 1687896311,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": 1660833131,
+          "industry": null,
+          "industry_group": "Technology",
+          "last_seen": 1687896311,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": null,
+          "industry": null,
+          "industry_group": "Telecommunications",
+          "last_seen": null,
+          "source": null
+        },
+        {
+          "confidence": "confirmed",
+          "description": null,
+          "first_seen": 1687896311,
+          "industry": null,
+          "industry_group": "Transportation",
+          "last_seen": 1710213261,
+          "source": null
+        }
+      ],
+      "targeted_regions_hierarchy": [
+        {
+          "confidence": "confirmed",
+          "country": "Portugal",
+          "country_iso2": "PT",
+          "description": null,
+          "first_seen": 1698318191,
+          "last_seen": 1698318191,
+          "region": "Europe",
+          "source": null,
+          "sub_region": "Western Europe"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Kuwait",
+          "country_iso2": "KW",
+          "description": null,
+          "first_seen": 1693905731,
+          "last_seen": 1715485401,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "Western Asia"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Mexico",
+          "country_iso2": "MX",
+          "description": null,
+          "first_seen": 1623147292,
+          "last_seen": 1625846310,
+          "region": "Americas",
+          "source": null,
+          "sub_region": "Central America"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Netherlands",
+          "country_iso2": "NL",
+          "description": null,
+          "first_seen": 1524719123,
+          "last_seen": 1526444127,
+          "region": "Europe",
+          "source": null,
+          "sub_region": "Western Europe"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Taiwan",
+          "country_iso2": "TW",
+          "description": null,
+          "first_seen": 1710213261,
+          "last_seen": 1710213261,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "Eastern Asia"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Pakistan",
+          "country_iso2": "PK",
+          "description": null,
+          "first_seen": 1647726491,
+          "last_seen": 1647726491,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "Southern Asia"
+        },
+        {
+          "confidence": "possible",
+          "country": "Malaysia",
+          "country_iso2": "MY",
+          "description": null,
+          "first_seen": 1726714447,
+          "last_seen": 1730698137,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "South-eastern Asia"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Philippines",
+          "country_iso2": "PH",
+          "description": null,
+          "first_seen": 1538256826,
+          "last_seen": 1538378015,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "South-eastern Asia"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Denmark",
+          "country_iso2": "DK",
+          "description": null,
+          "first_seen": 1660833131,
+          "last_seen": 1664979088,
+          "region": "Europe",
+          "source": null,
+          "sub_region": "Northern Europe"
+        },
+        {
+          "confidence": "possible",
+          "country": "Maldives",
+          "country_iso2": "MV",
+          "description": null,
+          "first_seen": 1678612371,
+          "last_seen": 1701787075,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "Southern Asia"
+        },
+        {
+          "confidence": "possible",
+          "country": "Thailand",
+          "country_iso2": "TH",
+          "description": null,
+          "first_seen": 1727899511,
+          "last_seen": 1730294028,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "South-eastern Asia"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Vietnam",
+          "country_iso2": "VN",
+          "description": null,
+          "first_seen": 1687896311,
+          "last_seen": 1687896311,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "South-eastern Asia"
+        },
+        {
+          "confidence": "possible",
+          "country": "Sweden",
+          "country_iso2": "SE",
+          "description": null,
+          "first_seen": 1739571867,
+          "last_seen": 1741526132,
+          "region": "Europe",
+          "source": null,
+          "sub_region": "Northern Europe"
+        },
+        {
+          "confidence": "possible",
+          "country": "Qatar",
+          "country_iso2": "QA",
+          "description": null,
+          "first_seen": 1740996896,
+          "last_seen": 1741266586,
+          "region": "Asia",
+          "source": null,
+          "sub_region": "Western Asia"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "Ireland",
+          "country_iso2": "IE",
+          "description": null,
+          "first_seen": 1538280587,
+          "last_seen": 1538280587,
+          "region": "Europe",
+          "source": null,
+          "sub_region": "Northern Europe"
+        },
+        {
+          "confidence": "confirmed",
+          "country": "United States",
+          "country_iso2": "US",
+          "description": null,
+          "first_seen": 1605533171,
+          "last_seen": 1742720008,
+          "region": "Americas",
+          "source": null,
+          "sub_region": "Northern America"
+        }
+      ]
+    },
+    "context_attributes": {
+      "shared_with_me": false,
+      "role": "viewer"
+    }
+  }
+}

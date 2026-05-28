@@ -1,0 +1,9 @@
+version: '3'
+services:
+  connector-group-ib:
+    image: opencti/connector-group-ib:latest
+    env_file:
+      - .env
+    volumes:
+      - ./docs/:/opt/connector/docs/
+    restart: always

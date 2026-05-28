@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+# Connector definition parameters - OPTIONAL
+#connector:
+  #type: 'INTERNAL_ENRICHMENT'
+  #id: 'ChangeMe'
+  #name: 'ChangeMe' # Default: 'IPInfo'
+  #scope: 'ChangeMe' # Default: 'ServiceNow'
+  #log_level: 'ChangeMe' # Default: 'error'
+
+ipinfo:
+  token: 'ChangeMe'
+  # max_tlp: 'TLP:AMBER' # optional - default: 'TLP:AMBER' (available: "TLP:CLEAR", "TLP:GREEN", "TLP:AMBER", "TLP:AMBER+STRICT", "TLP:RED")
+  # use_asn_name: true # default: true // Set false if you want ASN name to be just the number e.g. AS8075

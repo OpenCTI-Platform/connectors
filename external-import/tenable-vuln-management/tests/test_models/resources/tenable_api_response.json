@@ -1,0 +1,243 @@
+[
+  {
+    "asset": {
+      "bios_uuid": "1fa02642-5b8e-8f27-42a9-debde798d957",
+      "device_type": "general-purpose",
+      "fqdn": "sharepoint2016.target.example.com",
+      "hostname": "sharepoint2016",
+      "uuid": "53ed0fa2-ccd5-4d2e-92ee-c072635889e3",
+      "ipv4": "203.0.113.71",
+      "ipv6": "2001:db8:199e:6fb9:2edd:67f0:3f30:c7",
+      "last_authenticated_results": "2023-05-04T05:03:13.737Z",
+      "mac_address": "00:50:56:a6:22:93",
+      "netbios_name": "SHAREPOINT2016",
+      "operating_system": [
+        "Microsoft Windows Server 2016 Standard"
+      ],
+      "network_id": "00000000-0000-0000-0000-000000000000",
+      "tracked": true,
+      "last_scan_target": "192.0.0.1"
+    },
+    "output": "\n\n  Produact : Microsoft SharePoint Enterprise Server 2016\n  KB : 5002113\n  - C:\\Program Files\\Microsoft Office Servers\\16.0\\bin\\ascalc.dll has not been patched.\n    Remote version : 16.0.4342.1000\n    Should be      : 16.0.5266.1000\n\n",
+    "plugin": {
+      "bid": [
+        156641
+      ],
+      "checks_for_default_account": false,
+      "checks_for_malware": false,
+      "cpe": [
+        "cpe:/a:microsoft:sharepoint_server"
+      ],
+      "cvss3_base_score": 8.8,
+      "cvss3_temporal_score": 7.7,
+      "cvss3_temporal_vector": {
+        "exploitability": "Unproven",
+        "remediation_level": "Official Fix",
+        "report_confidence": "Confirmed",
+        "raw": "E:U/RL:O/RC:C"
+      },
+      "cvss3_vector": {
+        "access_complexity": "Low",
+        "access_vector": "Network",
+        "availability_impact": "High",
+        "confidentiality_impact": "High",
+        "integrity_impact": "High",
+        "raw": "AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H"
+      },
+      "cvss_base_score": 9,
+      "cvss_temporal_score": 6.7,
+      "cvss_temporal_vector": {
+        "exploitability": "Unproven",
+        "remediation_level": "Official Fix",
+        "report_confidence": "Confirmed",
+        "raw": "E:U/RL:OF/RC:C"
+      },
+      "cvss_vector": {
+        "access_complexity": "Low",
+        "access_vector": "Network",
+        "authentication": "Single",
+        "availability_impact": "Complete",
+        "confidentiality_impact": "Complete",
+        "integrity_impact": "Complete",
+        "raw": "AV:N/AC:L/Au:S/C:C/I:C/A:C"
+      },
+      "description": "The Microsoft SharePoint Server 2013 installation on the remote host is missing security updates. It is, therefore, affected by a remote code execution vulnerability. An attacker can exploit this to bypass authentication and execute unauthorized arbitrary commands. (CVE-2022-21837, CVE-2022-21840, CVE-2022-21842)",
+      "exploit_available": false,
+      "exploit_framework_canvas": false,
+      "exploit_framework_core": false,
+      "exploit_framework_d2_elliot": false,
+      "exploit_framework_exploithub": false,
+      "exploit_framework_metasploit": false,
+      "exploitability_ease": "No known exploits are available",
+      "exploited_by_malware": false,
+      "exploited_by_nessus": false,
+      "family": "Windows : Microsoft Bulletins",
+      "family_id": 41,
+      "has_patch": true,
+      "has_workaround": false,
+      "id": 156641,
+      "in_the_news": false,
+      "ms_bulletin": [
+        "5002113"
+      ],
+      "name": "Security Updates for Microsoft SharePoint Server 2016 (January 2022)",
+      "patch_publication_date": "2022-01-11T00:00:00Z",
+      "modification_date": "2022-05-06T00:00:00Z",
+      "publication_date": "2022-01-12T00:00:00Z",
+      "risk_factor": "high",
+      "see_also": [
+        "https://support.microsoft.com/en-us/help/5002113"
+      ],
+      "solution": "Microsoft has released security update KB5002113 to address this issue.",
+      "stig_severity": "I",
+      "synopsis": "The Microsoft SharePoint Server 2016 installation on the remote host is missing security updates.",
+      "unsupported_by_vendor": false,
+      "version": "1.6",
+      "vuln_publication_date": "2022-01-11T00:00:00Z",
+      "xrefs": [
+        {
+          "type": "CVE",
+          "id": "2022-21837"
+        },
+        {
+          "type": "CVE",
+          "id": "2022-21840"
+        },
+        {
+          "type": "CVE",
+          "id": "2022-21842"
+        },
+        {
+          "type": "IAVA",
+          "id": "2022-A-0007-S"
+        },
+        {
+          "type": "MSFT",
+          "id": "MS22-5002113"
+        },
+        {
+          "type": "MSKB",
+          "id": "5002113"
+        }
+      ],
+      "vpr": {
+        "score": 6.7,
+        "drivers": {
+          "age_of_vuln": {
+            "lower_bound": 731
+          },
+          "exploit_code_maturity": "UNPROVEN",
+          "cvss_impact_score_predicted": false,
+          "cvss3_impact_score": 5.9,
+          "threat_intensity_last28": "VERY_LOW",
+          "threat_sources_last28": [
+            "No recorded events"
+          ],
+          "product_coverage": "LOW"
+        },
+        "updated": "2024-02-04T06:03:56Z"
+      },
+      "cve": [
+        "CVE-2022-21837",
+        "CVE-2022-21840",
+        "CVE-2022-21842"
+      ],
+      "type": "local"
+    },
+    "port": {
+      "port": 445,
+      "protocol": "TCP",
+      "service": "cifs"
+    },
+    "scan": {
+      "schedule_uuid": "461e4ebc-b309-face-6fa1-afa4ba163cb6d84b9dc0a0dc5020",
+      "started_at": "2023-05-03T14:14:02.387Z",
+      "uuid": "270b911b-1fe6-4760-8c49-88d315cb764e",
+      "target": "192.0.0.1"
+    },
+    "severity": "high",
+    "severity_id": 3,
+    "severity_default_id": 3,
+    "severity_modification_type": "NONE",
+    "first_found": "2022-11-08T19:18:10.472Z",
+    "last_found": "2023-05-04T05:03:13.737Z",
+    "state": "OPEN",
+    "indexed": "2023-05-04T05:13:40.809406Z",
+    "source": "NESSUS"
+  },
+  {
+    "asset": {
+      "device_type": "hypervisor",
+      "fqdn": "vcsa8.target.example.com",
+      "hostname": "vcsa8.target.example.com",
+      "uuid": "1babf006-b1f0-4dee-86a1-7a55888336c3",
+      "ipv4": "192.0.2.246",
+      "operating_system": [
+        "VMware vCenter Server 8.0.0 build-20037386"
+      ],
+      "network_id": "00000000-0000-0000-0000-000000000000",
+      "tracked": true,
+      "last_scan_target": "192.0.0.1"
+    },
+    "output": "\nThe following pages do not set a Content-Security-Policy frame-ancestors response header or set a permissive policy:\n\n  - https://vcsa8.target.example.com/\n  - https://vcsa8.target.example.com/ui/\n",
+    "plugin": {
+      "bid": [
+        50344
+      ],
+      "checks_for_default_account": false,
+      "checks_for_malware": false,
+      "cpe": [],
+      "description": "The remote web server in some responses sets a permissive Content-Security-Policy (CSP) frame-ancestors response header or does not set one at all.\n\nThe CSP frame-ancestors header has been proposed by the W3C Web Application Security Working Group as a way to mitigate cross-site scripting and clickjacking attacks.",
+      "exploit_available": false,
+      "exploit_framework_canvas": false,
+      "exploit_framework_core": false,
+      "exploit_framework_d2_elliot": false,
+      "exploit_framework_exploithub": false,
+      "exploit_framework_metasploit": false,
+      "exploited_by_malware": false,
+      "exploited_by_nessus": false,
+      "family": "CGI abuses",
+      "family_id": 3,
+      "has_patch": false,
+      "has_workaround": false,
+      "id": 50344,
+      "in_the_news": false,
+      "name": "Missing or Permissive Content-Security-Policy frame-ancestors HTTP Response Header",
+      "modification_date": "2021-01-19T00:00:00Z",
+      "publication_date": "2010-10-26T00:00:00Z",
+      "risk_factor": "info",
+      "see_also": [
+        "http://www.nessus.org/u?55aa8f57",
+        "http://www.nessus.org/u?07cc2a06",
+        "https://content-security-policy.com/",
+        "https://www.w3.org/TR/CSP2/"
+      ],
+      "solution": "Set a non-permissive Content-Security-Policy frame-ancestors header for all requested resources.",
+      "synopsis": "The remote web server does not take steps to mitigate a class of web application vulnerabilities.",
+      "unsupported_by_vendor": false,
+      "version": "1.6",
+      "xrefs": [],
+      "type": "remote"
+    },
+    "port": {
+      "port": 443,
+      "protocol": "TCP",
+      "service": "www"
+    },
+    "scan": {
+      "schedule_uuid": "16cf08d3-3f94-79f4-8038-996376eabd4f186741fe15533e70",
+      "started_at": "2023-05-03T14:13:56.983Z",
+      "uuid": "e86252a3-8dc0-43b6-8ddd-afb219d040ed",
+      "target": "192.0.0.1"
+    },
+    "severity": "info",
+    "severity_id": 0,
+    "severity_default_id": 0,
+    "severity_modification_type": "NONE",
+    "first_found": "2022-11-08T06:12:27.940Z",
+    "last_found": "2023-05-04T09:39:26.415Z",
+    "state": "OPEN",
+    "indexed": "2023-05-04T09:44:55.673359Z",
+    "source": "NESSUS"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "title": "IronNet",
+  "slug": "ironnet",
+  "description": "The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.\nNote: Requires subscription to the IronRadar threat intel feed.",
+  "short_description": "The OpenCTI IronNet connector can be used to import knowledge from the IronNet IronRadar threat intel feed.\nNote: Requires subscription to the IronRadar threat intel feed.",
+  "logo": "external-import/ironnet/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.5.4",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/ironnet",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-ironnet",
+  "container_type": "EXTERNAL_IMPORT"
+}

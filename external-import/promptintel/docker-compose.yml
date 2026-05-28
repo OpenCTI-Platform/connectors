@@ -1,0 +1,23 @@
+version: '3'
+services:
+  connector-promptintel:
+    image: opencti/connector-promptintel:latest
+    environment:
+      # OpenCTI
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=PromptIntel
+      - CONNECTOR_SCOPE=promptintel
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT1H # ISO-8601 format
+      # PromptIntel
+      - PROMPTINTEL_API_URL=https://api.promptintel.novahunting.ai/api/v1
+      - PROMPTINTEL_API_KEY=ChangeMe
+      - PROMPTINTEL_TLP_LEVEL=clear
+      - PROMPTINTEL_SEVERITY_FILTER=
+      - PROMPTINTEL_CATEGORY_FILTER=
+      - PROMPTINTEL_IMPORT_START_LIMIT=5000
+      - PROMPTINTEL_IMPORT_LIMIT=1000
+    restart: always

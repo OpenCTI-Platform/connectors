@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+
+gti:
+  api_key: 'ChangeMe'
+  # import_indicators: false
+  # indicator_types: file,ip,url,domain
+  # indicator_import_start_date: PT1H

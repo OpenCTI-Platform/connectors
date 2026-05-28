@@ -1,0 +1,16 @@
+version: '3'
+services:
+  connector-yara:
+    image: opencti/connector-yara:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=840210d2-cb25-4841-81c2-850b431918ee
+      - CONNECTOR_NAME=YARA
+      - CONNECTOR_SCOPE=Artifact # MIME type or Stix Object
+      - CONNECTOR_AUTO=true
+      - CONNECTOR_LOG_LEVEL=error
+      #- YARA_TLP_LEVEL=clear
+      #- YARA_PROPAGATE_MALWARE_RELATIONSHIP=false # follow ``indicates`` Malware from matching YARA Indicators
+      #- YARA_PROPAGATE_LABELS=false               # copy YARA Indicator labels onto the matching Artifact
+    restart: always

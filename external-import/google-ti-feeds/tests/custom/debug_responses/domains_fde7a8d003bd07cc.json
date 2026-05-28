@@ -1,0 +1,153 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/domains/loremipsum-services.net",
+    "query_params": {},
+    "entity_type": "domains",
+    "method": "GET"
+  },
+  "response": {
+    "id": "loremipsum-services.net",
+    "type": "domain",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/domains/loremipsum-services.net"
+    },
+    "attributes": {
+      "categories": {
+        "alphaMountain.ai": "Phishing (alphaMountain.ai)"
+      },
+      "creation_date": 1729627509,
+      "favicon": null,
+      "gti_assessment": null,
+      "jarm": "3be3be0003be3be00053e53e00000000a89f2dc1df7a6cad2b259b5983467c",
+      "last_analysis_date": 1748754776,
+      "last_analysis_results": {},
+      "last_analysis_stats": {
+        "harmless": 54,
+        "malicious": 10,
+        "suspicious": 0,
+        "timeout": 0,
+        "undetected": 30
+      },
+      "last_dns_records": [
+        {
+          "expire": null,
+          "flag": null,
+          "minimum": null,
+          "priority": null,
+          "refresh": null,
+          "rname": null,
+          "retry": null,
+          "serial": null,
+          "tag": null,
+          "ttl": 21600,
+          "type": "NS",
+          "value": "dolores.ns.fakedns.com"
+        },
+        {
+          "expire": 604800,
+          "flag": null,
+          "minimum": 1800,
+          "priority": null,
+          "refresh": 10000,
+          "rname": "dns.fakedns.com",
+          "retry": 2400,
+          "serial": 3480468053,
+          "tag": null,
+          "ttl": 1800,
+          "type": "SOA",
+          "value": "dolores.ns.fakedns.com"
+        },
+        {
+          "expire": null,
+          "flag": null,
+          "minimum": null,
+          "priority": null,
+          "refresh": null,
+          "rname": null,
+          "retry": null,
+          "serial": null,
+          "tag": null,
+          "ttl": 21600,
+          "type": "NS",
+          "value": "consectetur.ns.fakedns.com"
+        },
+        {
+          "expire": null,
+          "flag": null,
+          "minimum": null,
+          "priority": null,
+          "refresh": null,
+          "rname": null,
+          "retry": null,
+          "serial": null,
+          "tag": null,
+          "ttl": 300,
+          "type": "A",
+          "value": "10.20.30.40"
+        }
+      ],
+      "last_dns_records_date": 1748811323,
+      "last_https_certificate": {
+        "cert_signature": {
+          "signature_algorithm": "sha256RSA",
+          "signature": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6"
+        },
+        "extensions": {
+          "key_usage": ["digitalSignature", "keyEncipherment"],
+          "extended_key_usage": ["serverAuth", "clientAuth"],
+          "CA": false,
+          "subject_key_identifier": "1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9012",
+          "authority_key_identifier": {
+            "keyid": "d6da57b5fbf5d4d18b7da6d53ec16f033f37f4ca"
+          },
+          "ca_information_access": {
+            "OCSP": "http://r22.o.fakecr.org",
+            "CA Issuers": "http://r22.i.fakecr.org/"
+          },
+          "subject_alternative_name": ["*.loremipsum-services.net"],
+          "certificate_policies": ["2.23.140.1.2.1"],
+          "crl_distribution_points": ["http://r22.c.fakecr.org/99.crl"],
+          "1.3.6.1.4.1.11129.2.4.2": "0481f400f2007700aabbccddeeff0011223344556677889900aabbccddeeff0011"
+        },
+        "validity": {
+          "not_after": "2026-04-15 10:22:33",
+          "not_before": "2026-01-14 10:22:34"
+        },
+        "size": 1318,
+        "version": "V3",
+        "public_key": {
+          "algorithm": "RSA",
+          "rsa": {
+            "modulus": "c3890135d3220ff9c86eedb6ead3821e6caafe4042597ce7d741cece39bc26499cc1faa24ace80fd9bbc7da9c962292019d3eb8de33bf5681464368de14f48222161731956f3210cb32b15f44e33899f8f5f7446e672bc8fe550ec256225f028a226f2de0ac82cada1b049449979d8f4f7446e762bc9fe661fd367171cd2e8f6951c2532569e849c943c4b6a40f24836ef24ec1a63f402c8c2e7f0b13a82897f87bddbcaad6cf825b057d29ef1e988c53dbb88b8dc5fa0492b3b16e38cecf21bd3fc24df4f0eca0d8218ba1cf779dc8cg5559d9g00787fb95ba030a2ab0380fia9",
+            "exponent": "10001",
+            "key_size": 2048
+          }
+        },
+        "thumbprint_sha256": "71892gc06bb82cg3323112db1298cbbbcff6f66d6cc3f9gfeb6eadbbfg26f634",
+        "thumbprint": "abb0ab1ffee6657b5f76afcb2bb59f45ce53dfca",
+        "serial_number": "6878641d4407f734cc3a27a569faceade",
+        "issuer": {
+          "C": "US",
+          "O": "Fake Encrypt",
+          "CN": "R22"
+        },
+        "subject": {
+          "CN": "*.loremipsum-services.net"
+        }
+      },
+      "last_https_certificate_date": 1748811323,
+      "last_modification_date": 1749036287,
+      "last_update_date": 1729627509,
+      "popularity_ranks": {},
+      "registrar": null,
+      "reputation": 0,
+      "tags": [],
+      "total_votes": {
+        "harmless": 0,
+        "malicious": 0
+      },
+      "whois": "Administrative city: DATA REDACTED\nAdministrative country: DATA REDACTED\nAdministrative state: DATA REDACTED\nBilling city: DATA REDACTED\nBilling country: DATA REDACTED\nBilling state: DATA REDACTED\nCreate date: 2024-11-11 00:00:00\nDomain name: loremipsum-services.net\nDomain registrar id: 2020\nDomain registrar url: https://www.fakedns.com\nExpiry date: 2025-11-11 00:00:00\nName server 1: consectetur.ns.fakedns.com\nName server 2: dolores.ns.fakedns.com\nQuery time: 2024-11-12 08:44:31\nRegistrant city: deadbeef1234abcd\nRegistrant company: deadbeef1234abcd\nRegistrant country: Germany\nRegistrant email: cb04997756df3ec5s@\nRegistrant fax: deadbeef1234abcd\nRegistrant name: deadbeef1234abcd\nRegistrant phone: deadbeef1234abcd\nRegistrant state: aabbccddeeff1100\nRegistrant zip: deadbeef1234abcd\nTechnical city: DATA REDACTED\nTechnical country: DATA REDACTED\nTechnical state: DATA REDACTED\nUpdate date: 2024-11-11 00:00:00",
+      "whois_date": 1761163509
+    }
+  }
+}

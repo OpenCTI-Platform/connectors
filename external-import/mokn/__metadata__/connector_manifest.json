@@ -1,0 +1,19 @@
+{
+  "title": "MokN",
+  "slug": "mokn",
+  "description": "MokN provides intelligence on credential compromise attempts captured through deception-based authentication systems. By deploying bait login portals that mimic legitimate services, MokN records attacker login attempts and identifies when stolen credentials are used. This helps organizations detect potential account compromises early in the attack lifecycle.\n\nWhen attackers interact with bait systems, MokN captures contextual information such as the source IP address, targeted username/password, and authentication outcome. This allows security teams to distinguish between credential harvesting attempts and cases where attackers possess valid credentials that may enable unauthorized access.\n\nThe MokN connector retrieves login attempt events from the MokN Bait platform and converts them into STIX objects within OpenCTI. It processes attacker infrastructure, targeted accounts, and credential validation status to generate observables, indicators, sightings, and incidents, enabling analysts to correlate credential compromise activity with existing threat intelligence and investigations.",
+  "short_description": "The MokN connector retrieves login attempt events from the MokN Bait platform and converts them into STIX objects within OpenCTI. It processes attacker infrastructure, targeted accounts, and credential validation status to generate observables, indicators, sightings, and incidents, enabling analysts to correlate credential compromise activity with existing threat intelligence and investigations",
+  "logo": "external-import/mokn/__metadata__/logo.png",
+  "use_cases": ["Threat Intel Feed", "Credential Compromise"],
+  "verified": true,
+  "last_verified_date": "2026-02-27",
+  "playbook_supported": false,
+  "max_confidence_level": 80,
+  "support_version": ">=7.260227.0",
+  "subscription_link": "https://mokn.io",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mokn",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-mokn",
+  "container_type": "EXTERNAL_IMPORT"
+}

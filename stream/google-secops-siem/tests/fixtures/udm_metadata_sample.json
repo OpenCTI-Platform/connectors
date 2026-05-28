@@ -1,0 +1,20 @@
+{
+  "collected_timestamp": "2024-12-16T13:12:53.152293Z",
+  "description": "Fake description",
+  "interval": {
+    "end_time": "2025-07-13T09:14:20.754Z",
+    "start_time": "2024-12-10T09:19:46.528Z"
+  },
+  "product_entity_id": "indicator--f2a0f638-a65b-5283-9c34-4e6140f51e15",
+  "product_name": "OPENCTI",
+  "threat": {
+    "category_details": [
+      "chronicle"
+    ],
+    "confidence_details": "100",
+    "confidence_score": 100,
+    "risk_score": 35,
+    "url_back_to_product": "http://localhost:8080/dashboard/observations/indicators/52dfd627-a875-4c05-bb21-12302ed66220"
+  },
+  "vendor_name": "FILIGRAN"
+}

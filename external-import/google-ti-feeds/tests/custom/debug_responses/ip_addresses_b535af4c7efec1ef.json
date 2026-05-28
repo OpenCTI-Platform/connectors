@@ -1,0 +1,43 @@
+{
+  "request_info": {
+    "endpoint": "https://www.virustotal.com/api/v3/ip_addresses/198.51.100.42",
+    "query_params": {},
+    "entity_type": "ip_addresses",
+    "method": "GET"
+  },
+  "response": {
+    "id": "198.51.100.42",
+    "type": "ip_address",
+    "links": {
+      "self": "https://www.virustotal.com/api/v3/ip_addresses/198.51.100.42"
+    },
+    "attributes": {
+      "as_owner": "LOREM B.V.",
+      "asn": 2202,
+      "continent": "EU",
+      "country": "DE",
+      "gti_assessment": null,
+      "jarm": "3be3be27e3be3be33d53e53e111111e453e6077b68250ffbaff0bd5952dc36",
+      "last_analysis_date": 1750176190,
+      "last_analysis_results": {},
+      "last_analysis_stats": {
+        "harmless": 48,
+        "malicious": 16,
+        "suspicious": 2,
+        "timeout": 0,
+        "undetected": 28
+      },
+      "last_modification_date": 1749113857,
+      "network": "198.51.100.0/22",
+      "regional_internet_registry": "RIPE NCC",
+      "reputation": -7,
+      "tags": ["tor"],
+      "total_votes": {
+        "harmless": 0,
+        "malicious": 7
+      },
+      "whois": "inetnum: 198.51.100.183 - 198.51.100.234\nnetname: TOR-EXIT-LIP\ndescr: https://loremipsumhide.nl\ndescr: Lorem City\ncountry: DE\norg: ORG-LIP3-RIPE\nadmin-c: LIP23-RIPE\ntech-c: LIP23-RIPE\nstatus: LEGACY\nmnt-by: AS2202-MNT\nmnt-by: NOTLOREMNET-MNT\ncreated: 2023-03-07T22:40:03Z\nlast-modified: 2023-03-07T22:40:03Z\nsource: RIPE\norganisation: ORG-LIP3-RIPE\norg-name: Lorem Ipsum to hide\norg-type: OTHER\naddress: Dolorstraat 34\naddress: 4538 LI Lipsumstad\ncountry: DE\nabuse-c: LIP23-RIPE\nmnt-ref: NOTLOREMNET-MNT\nmnt-by: AS2202-MNT\nmnt-by: NOTLOREMNET-MNT\ncreated: 2023-03-07T22:33:04Z\nlast-modified: 2023-03-07T23:52:46Z\nsource: RIPE # Filtered\nrole: Lorem Ipsum to hide (Abuse)\naddress: Dolorstraat 34\naddress: 4538 LI Lipsumstad\naddress: the Netherlands\nremarks: https://www.loremipsumhide.nl/\nabuse-mailbox: abuse@loremipsumhide.nl\nnic-hdl: LIP23-RIPE\nmnt-by: AS2202-MNT\nmnt-by: NOTLOREMNET-MNT\ncreated: 2023-03-07T22:23:12Z\nlast-modified: 2023-03-07T23:57:00Z\nsource: RIPE # Filtered\nroute: 198.51.100.0/22\ndescr: IP-DOLOR-IP\norigin: AS2202\nmnt-by: AS2204-MNT\ncreated: 2008-01-20T22:21:54Z\nlast-modified: 2008-01-20T22:21:54Z\nsource: RIPE\n",
+      "whois_date": 1748766204
+    }
+  }
+}

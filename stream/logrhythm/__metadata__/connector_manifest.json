@@ -1,0 +1,19 @@
+{
+  "title": "LogRhythm",
+  "slug": "logrhythm",
+  "description": "This connector allows organizations to feed a LogRhythm lists using OpenCTI knowledge.\nNote:For a performance reasons, the connector designed to create multiple lists using the base name provided in the configuration LOGRHYTHM_LIST_NAME: opencti and the list in LogRhythm will be like that opencti_Url.It will be better to build a use case for each type.",
+  "short_description": "This connector allows organizations to feed a LogRhythm lists using OpenCTI knowledge.\nNote:For a performance reasons, the connector designed to create multiple lists using the base name provided in the configuration LOGRHYTHM_LIST_NAME: opencti and the list in LogRhythm will be like that opencti_Url.It will be better to build a use case for each type.",
+  "logo": "stream/logrhythm/__metadata__/logo.png",
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=5.10.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/stream/logrhythm",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-logrhythm",
+  "container_type": "STREAM"
+}

@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/splunk-soar-push_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Splunk SOAR Push",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "splunk-soar-push",
+      "description": "The scope or type of data the connector is processing.",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "STREAM",
+      "description": "Should always be set to STREAM for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 100,
+      "description": "The default confidence level for created entities (0-100).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "default": "ChangeMe",
+      "description": "The ID of the live stream to listen to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Listen to delete events in the stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": false,
+      "description": "Do not auto-resolve dependencies.",
+      "type": "boolean"
+    },
+    "SPLUNK_SOAR_URL": {
+      "description": "The Splunk SOAR platform URL.",
+      "type": "string"
+    },
+    "SPLUNK_SOAR_API_TOKEN": {
+      "default": null,
+      "description": "API token for Splunk SOAR authentication (preferred).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SPLUNK_SOAR_USERNAME": {
+      "default": null,
+      "description": "Username for Splunk SOAR (if not using token).",
+      "type": "string"
+    },
+    "SPLUNK_SOAR_PASSWORD": {
+      "default": null,
+      "description": "Password for Splunk SOAR (if not using token).",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SPLUNK_SOAR_VERIFY_SSL": {
+      "default": true,
+      "description": "Verify SSL certificates when connecting to SOAR.",
+      "type": "boolean"
+    },
+    "SPLUNK_SOAR_PROXY_URL": {
+      "default": null,
+      "description": "Proxy URL if needed for SOAR connection.",
+      "type": "string"
+    },
+    "SPLUNK_SOAR_DELETE_ON_REMOVAL": {
+      "default": false,
+      "description": "Close SOAR entities when removed from stream.",
+      "type": "boolean"
+    },
+    "SPLUNK_SOAR_DEFAULT_SEVERITY": {
+      "default": "medium",
+      "description": "Default severity for SOAR entities.",
+      "type": "string"
+    },
+    "SPLUNK_SOAR_DEFAULT_STATUS": {
+      "default": "new",
+      "description": "Default status for SOAR entities.",
+      "type": "string"
+    },
+    "SPLUNK_SOAR_MAX_ARTIFACTS_PER_CONTAINER": {
+      "default": 1000,
+      "description": "Maximum artifacts per container.",
+      "type": "integer"
+    },
+    "SPLUNK_SOAR_BATCH_SIZE": {
+      "default": 100,
+      "description": "Batch size for bulk operations.",
+      "type": "integer"
+    },
+    "PROXY_HTTP": {
+      "default": null,
+      "description": "HTTP proxy URL.",
+      "type": "string"
+    },
+    "PROXY_HTTPS": {
+      "default": null,
+      "description": "HTTPS proxy URL.",
+      "type": "string"
+    },
+    "PROXY_NO_PROXY": {
+      "default": null,
+      "description": "Comma-separated list of hosts that should not use proxy.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "SPLUNK_SOAR_URL"
+  ],
+  "additionalProperties": true
+}

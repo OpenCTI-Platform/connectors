@@ -1,0 +1,5 @@
+pycti==7.260527.0
+markdownify
+validators
+pandas==2.3.3
+tabulate # Required for Pandas to Markdown

@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: '8a277536-ca52-4d87-9f8e-4f77e3e6512c' # Optional (default: '8a277536-ca52-4d87-9f8e-4f77e3e6512c')
+  name: 'Malpedia' # Optional (default: 'Malpedia')
+  scope: 'malpedia' # Optional (default: ['malpedia'])
+  log_level: 'info' # Optional (default: 'error')
+  duration_period: 'PT24H' # Optional (default: 24 hours)
+
+malpedia:
+  auth_key: '' # Optional (default: none)
+  import_intrusion_sets: false # Optional (default: true)
+  import_yara: true # Optional (default: true)
+  create_indicators: true # Optional (default: true)
+  create_observables: true # Optional (default: true)
+  default_marking: "TLP:WHITE" # Optional (default: 'TLP:AMBER' if auth_key is provided, otherwise 'TLP:WHITE')

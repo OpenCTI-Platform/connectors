@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'MISP Feed (Botvrij)'
+  scope: 'misp-feed-botvrij'
+  log_level: 'info'
+  duration_period: PT60M
+
+misp_feed:
+  url: 'https://www.botvrij.eu/data/feed-osint/'
+  ssl_verify: true # Optional (default: true)
+  create_reports: true # Optional (default: true)
+  report_type: 'misp-event' # Optional (default: "misp-event")
+  import_from_date: '2010-01-01' # Optional (default: null)
+  create_indicators: true # Optional (default: false)
+  create_observables: true # Optional (default: false)
+  create_object_observables: true # Optional (default: false)
+  import_to_ids_no_score: 40 # Optional (default: null)
+  import_unsupported_observables_as_text: false # Optional (default: false)
+  import_with_attachments: false # Optional (default: false)
+  

@@ -1,0 +1,26 @@
+[
+    {
+        "tlp_level": "AMBER",
+        "title": "Example Title",
+        "executive_summary": "Complete summary",
+        "updated_at": "2024-05-15T18:09:57.000Z",
+        "threat_level": 3,
+        "serial": "DEMO_SERIAL",
+        "ioc_count": 1,
+        "tags": [
+            {
+            "text": "Energy",
+            "tag_type": "Industry"
+            },
+            {
+            "text": "Europe",
+            "tag_type": "GeographicLocation"
+            }
+        ],
+        "release_date": "2024-03-01T01:31:09.000Z",
+        "type": "Suspect Domain Report",
+        "report_link": "http://example.com/api/v1/products/DEMO_SERIAL/report",
+        "ioc_csv_link": "http://example.com/api/v1/products/DEMO_SERIAL/csv",
+        "ioc_stix2_link": "http://example.com/api/v1/products/DEMO_SERIAL/stix2"
+    }
+]

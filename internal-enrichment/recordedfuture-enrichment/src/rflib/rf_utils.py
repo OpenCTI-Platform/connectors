@@ -1,0 +1,102 @@
+import ipaddress
+import re
+from typing import Literal
+
+
+def extract_and_combine_links(dict_list):
+    """
+    Extracts 'links' lists from a list of dictionaries and combines them into a single list.
+
+    Args:
+        dict_list (list): A list of dictionaries, each potentially containing a 'links' key.
+
+    Returns:
+        list: A combined list of all 'links' from the dictionaries.
+    """
+    combined_links = []
+
+    for d in dict_list:
+        links = d.get("links", [])
+        combined_links.extend(links)
+
+    return combined_links
+
+
+def validate_ip_or_cidr(input_str):
+    """
+    Validate whether a string is a valid IPv4 or IPv6 address, or a CIDR notation.
+
+    Args:
+        input_str (str): The IP address or CIDR to validate.
+
+    Returns:
+        str: 'IPv4 Address', 'IPv6 Address', 'IPv4 CIDR', 'IPv6 CIDR' if valid,
+             'Invalid' if it's neither.
+    """
+    try:
+        # Attempt to parse as an IP address
+        ip_addr = ipaddress.ip_address(input_str)
+        if isinstance(ip_addr, ipaddress.IPv4Address):
+            return "IPv4 Address"
+        elif isinstance(ip_addr, ipaddress.IPv6Address):
+            return "IPv6 Address"
+    except ValueError:
+        try:
+            # If the above fails, attempt to parse as a network (CIDR)
+            network = ipaddress.ip_network(input_str, strict=False)
+            if isinstance(network, ipaddress.IPv4Network):
+                return "IPv4 CIDR"
+            elif isinstance(network, ipaddress.IPv6Network):
+                return "IPv6 CIDR"
+        except ValueError:
+            return "Invalid"
+
+
+def parse_cpe(cpe_string: str) -> dict[str, str]:
+    """
+    Parse a CPE 2.3 string and return its attributes.
+
+    Args:
+        cpe_ctring (str): The CPE 2.3 string to parse
+
+    Returns:
+        dict: A dictionnary of CPE attributes
+
+    Notes:
+        - CPE 2.3 format:
+            "cpe:<cpe_version>:<part>:<vendor>:<product>:<version>:<update>:<edition>:<language>:<sw_edition>:<target_sw>:<target_hw>:<other>"
+    """
+    attributes_names = [
+        "cpe",
+        "cpe_version",
+        "part",
+        "vendor",
+        "product",
+        "version",
+        "update",
+        "edition",
+        "language",
+        "sw_edition",
+        "target_sw",
+        "target_hw",
+        "other",
+    ]
+
+    # split on non-escaped colon (:)
+    attributes_values = re.split(r"(?<!\\):", cpe_string)
+    if len(attributes_values) != len(attributes_names):
+        raise ValueError("Could not parse CPE 2.3 string")
+
+    return {
+        attribute_name: attributes_values[index] or "*"
+        for index, attribute_name in enumerate(attributes_names)
+    }
+
+
+def get_hash_algorithm(hash: str) -> Literal["SHA-256", "SHA-1", "MD5"] | None:
+    if len(hash) == 64:
+        return "SHA-256"
+    elif len(hash) == 40:
+        return "SHA-1"
+    elif len(hash) == 32:
+        return "MD5"

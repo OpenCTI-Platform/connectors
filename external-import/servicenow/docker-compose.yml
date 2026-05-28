@@ -1,0 +1,50 @@
+version: '3'
+services:
+  connector-servicenow:
+    image: opencti/connector-servicenow:latest
+    environment:
+      # OpenCTI parameters - REQUIRED
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+
+      # Connector's definition parameters - REQUIRED
+      - CONNECTOR_ID=ChangeMe
+
+      # Connector's definition parameters - OPTIONAL
+      #- CONNECTOR_NAME=ServiceNow
+      #- CONNECTOR_SCOPE=ServiceNow
+      #- CONNECTOR_LOG_LEVEL=error
+      #- CONNECTOR_DURATION_PERIOD=PT24H
+      #- CONNECTOR_QUEUE_THRESHOLD=500
+      #- CONNECTOR_RUN_AND_TERMINATE=False
+      #- CONNECTOR_SEND_TO_QUEUE=True
+      #- CONNECTOR_SEND_TO_DIRECTORY_RETENTION=7
+      #- CONNECTOR_SEND_TO_DIRECTORY=False
+      # (if CONNECTOR_SEND_TO_DIRECTORY is True, you must specify a path for CONNECTOR_SEND_TO_DIRECTORY_PATH)
+      #- CONNECTOR_SEND_TO_DIRECTORY_PATH=ChangeMe
+
+      # ServiceNow definition parameters - REQUIRED
+      - SERVICENOW_INSTANCE_NAME=ChangeMe
+      - SERVICENOW_API_KEY=ChangeMe
+
+      # ServiceNow definition parameters - OPTIONAL
+      #- SERVICENOW_IMPORT_START_DATE=P30D
+      #- SERVICENOW_API_VERSION=v2
+      #- SERVICENOW_API_LEAKY_BUCKET_RATE=10
+      #- SERVICENOW_API_LEAKY_BUCKET_CAPACITY=10
+      #- SERVICENOW_API_RETRY=5
+      #- SERVICENOW_API_BACKOFF=PT30S
+      #- SERVICENOW_STATE_TO_EXCLUDE=
+      #- SERVICENOW_SEVERITY_TO_EXCLUDE=
+      #- SERVICENOW_PRIORITY_TO_EXCLUDE=
+      #- SERVICENOW_COMMENT_TO_EXCLUDE=
+      #- SERVICENOW_TLP_LEVEL=red
+      #- SERVICENOW_OBSERVABLES_DEFAULT_SCORE=50
+      #- SERVICENOW_PROMOTE_OBSERVABLES_AS_INDICATORS=True
+      # Forwards ``sysparm_display_value`` to every ServiceNow Table
+      # API call. Default ``true`` matches ServiceNow's REST default
+      # (human-readable display strings); set to ``false`` on
+      # instances that return non-ISO 8601 datetimes when display
+      # values are enabled, which the connector cannot parse.
+      #- SERVICENOW_SYSPARM_DISPLAY_VALUE=True
+    restart: always

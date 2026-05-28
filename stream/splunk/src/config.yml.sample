@@ -1,0 +1,29 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true
+  live_stream_no_dependencies: true
+  name: 'Splunk'
+  scope: 'splunk' # Reserved
+  log_level: 'info'
+  consumer_count: 5 # number of consumer/worker used to push data to splunk
+
+splunk:
+  url: 'https://splunk1.changeme.com:8089'
+  token: 'ChangeMe'
+  auth_type: 'Bearer'
+  owner: 'nobody'
+  ssl_verify: true
+  app: 'search'
+  kv_store_name: 'opencti'
+  ignore_types: 'attack-pattern,campaign,course-of-action,data-component,data-source,external-reference,identity,intrusion-set,kill-chain-phase,label,location,malware,marking-definition,relationship,threat-actor,tool,vocabulary,vulnerability'
+
+metrics:
+  enable: true # set to true to expose prometheus metrics
+  port: 9113 # port on which metrics should be exposed
+  addr: 0.0.0.0 # ip on which metrics should be exposed

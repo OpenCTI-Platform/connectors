@@ -1,0 +1,597 @@
+"""OpenCTI CrowdStrike indicator builder module."""
+
+from collections.abc import Mapping
+from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Set, cast
+
+from crowdstrike_feeds_connector.related_actors.builder import RelatedActorBundleBuilder
+from crowdstrike_feeds_services.utils import (
+    OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
+    OBSERVATION_FACTORY_DOMAIN_NAME,
+    OBSERVATION_FACTORY_EMAIL_ADDRESS,
+    OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT,
+    OBSERVATION_FACTORY_FILE_MD5,
+    OBSERVATION_FACTORY_FILE_NAME,
+    OBSERVATION_FACTORY_FILE_SHA1,
+    OBSERVATION_FACTORY_FILE_SHA256,
+    OBSERVATION_FACTORY_IP_ADDRESS,
+    OBSERVATION_FACTORY_IP_ADDRESS_BLOCK,
+    OBSERVATION_FACTORY_MUTEX,
+    OBSERVATION_FACTORY_URL,
+    OBSERVATION_FACTORY_USER_AGENT,
+    ObservableProperties,
+    ObservationFactory,
+    create_attack_pattern,
+    create_based_on_relationships,
+    create_indicates_relationships,
+    create_indicator,
+    create_kill_chain_phase,
+    create_malware,
+    create_object_refs,
+    create_sector,
+    create_targets_relationships,
+    create_uses_relationships,
+    create_vulnerability,
+    timestamp_to_datetime,
+)
+from crowdstrike_feeds_services.utils.constants import (
+    CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN,
+)
+from crowdstrike_feeds_services.utils.labels import extract_label_names
+from pycti import OpenCTIConnectorHelper
+from stix2 import Bundle
+from stix2.v21 import (
+    AttackPattern,
+    Identity,
+)
+from stix2.v21 import Indicator as STIXIndicator
+from stix2.v21 import (
+    KillChainPhase,
+    Malware,
+    MarkingDefinition,
+    Relationship,
+    Vulnerability,
+    _DomainObject,
+    _Observable,
+    _RelationshipObject,
+)
+
+
+class Observation(NamedTuple):
+    """Observation."""
+
+    observable: Optional[_Observable]
+    indicator: Optional[STIXIndicator]
+    relationship: Optional[Relationship]
+
+
+class IndicatorBundleBuilderConfig(NamedTuple):
+    """Indicator bundle builder configuration."""
+
+    indicator: dict
+    author: Identity
+    source_name: str
+    object_markings: List[MarkingDefinition]
+    confidence_level: int
+    create_observables: bool
+    create_indicators: bool
+    default_x_opencti_score: int
+    indicator_low_score: int
+    indicator_low_score_labels: Set[str]
+    indicator_medium_score: int
+    indicator_medium_score_labels: Set[str]
+    indicator_high_score: int
+    indicator_high_score_labels: Set[str]
+    indicator_unwanted_labels: Set[str]
+    scopes: set[str]
+
+
+class IndicatorBundleBuilder:
+    """Indicator bundle builder."""
+
+    _INDICATOR_TYPE_TO_OBSERVATION_FACTORY = {
+        # "binary_string": "",  # Ignore.
+        # "compile_time": "",  # Ignore.
+        # "device_name": "",  # Ignore.
+        "domain": OBSERVATION_FACTORY_DOMAIN_NAME,
+        "email_address": OBSERVATION_FACTORY_EMAIL_ADDRESS,
+        "email_subject": OBSERVATION_FACTORY_EMAIL_MESSAGE_SUBJECT,
+        # "event_name": "",  # Ignore.
+        # "file_mapping": "",  # Ignore.
+        "file_name": OBSERVATION_FACTORY_FILE_NAME,
+        "file_path": OBSERVATION_FACTORY_FILE_NAME,
+        # "hash_ion": "",  # Ignore.
+        "hash_md5": OBSERVATION_FACTORY_FILE_MD5,
+        "hash_sha1": OBSERVATION_FACTORY_FILE_SHA1,
+        "hash_sha256": OBSERVATION_FACTORY_FILE_SHA256,
+        "ip_address": OBSERVATION_FACTORY_IP_ADDRESS,
+        "ip_address_block": OBSERVATION_FACTORY_IP_ADDRESS_BLOCK,
+        "mutex_name": OBSERVATION_FACTORY_MUTEX,
+        # "password": "",  # Ignore.
+        # "persona_name": "",  # Ignore.
+        # "phone_number": "",  # Ignore.
+        # "port": "",  # Ignore.
+        # "registry": "",  # Ignore.
+        # "semaphore_name": "",  # Ignore.
+        # XXX: service_name currently not supported by pycti/OpenCTI.
+        # "service_name": OBSERVATION_FACTORY_WINDOWS_SERVICE_NAME,
+        "url": OBSERVATION_FACTORY_URL,
+        "user_agent": OBSERVATION_FACTORY_USER_AGENT,
+        # "username": "",  # Ignore.
+        # XXX: x509_serial and x509_subject currently not supported by pycti/OpenCTI.
+        # "x509_serial": OBSERVATION_FACTORY_X509_CERTIFICATE_SERIAL_NUMBER,
+        # "x509_subject": OBSERVATION_FACTORY_X509_CERTIFICATE_SUBJECT,
+        "bitcoin_address": OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
+        "coin_address": OBSERVATION_FACTORY_CRYPTOCURRENCY_WALLET,
+    }
+
+    _INDICATOR_PATTERN_TYPE_STIX = "stix"
+
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, config: IndicatorBundleBuilderConfig
+    ) -> None:
+        """Initialize indicator bundle builder."""
+        self.helper = helper
+        self.indicator = config.indicator
+        self.author = config.author
+        self.source_name = config.source_name
+        self.object_markings = config.object_markings
+        self.confidence_level = config.confidence_level
+        self.create_observables = config.create_observables
+        self.create_indicators = config.create_indicators
+        self.default_x_opencti_score = config.default_x_opencti_score
+        self.indicator_low_score = config.indicator_low_score
+        self.indicator_low_score_labels = config.indicator_low_score_labels
+        self.indicator_medium_score = config.indicator_medium_score
+        self.indicator_medium_score_labels = config.indicator_medium_score_labels
+        self.indicator_high_score = config.indicator_high_score
+        self.indicator_high_score_labels = config.indicator_high_score_labels
+        self.indicator_unwanted_labels = config.indicator_unwanted_labels
+        self.scopes = config.scopes
+
+        self.observation_factory = self._get_observation_factory(self.indicator["type"])
+
+    @classmethod
+    def _get_observation_factory(cls, indicator_type: str) -> ObservationFactory:
+        factory = cls._INDICATOR_TYPE_TO_OBSERVATION_FACTORY.get(indicator_type)
+        if factory is None:
+            raise TypeError(f"Unsupported indicator type: {indicator_type}")
+        return factory
+
+    def _create_kill_chain_phases(self) -> List[KillChainPhase]:
+        kill_chain_phases = []
+
+        for kill_chain in self.indicator["kill_chains"]:
+            lh_kill_chain = CS_KILL_CHAIN_TO_LOCKHEED_MARTIN_CYBER_KILL_CHAIN.get(
+                kill_chain
+            )
+            if lh_kill_chain is None:
+                self.helper.connector_logger.warning(
+                    "[WARNING] Unknown kill chain...",
+                    {"kill_chain": kill_chain},
+                )
+                continue
+
+            kill_chain_phase = self._create_kill_chain_phase(lh_kill_chain)
+            kill_chain_phases.append(kill_chain_phase)
+
+        return kill_chain_phases
+
+    @staticmethod
+    def _create_kill_chain_phase(phase_name: str) -> KillChainPhase:
+        return create_kill_chain_phase("lockheed-martin-cyber-kill-chain", phase_name)
+
+    def _create_malwares(self) -> List[Malware]:
+        indicator_malware_families = self.indicator["malware_families"]
+        if not indicator_malware_families:
+            return []
+
+        malwares = []
+
+        for indicator_malware_family in indicator_malware_families:
+            malware = self._create_malware(indicator_malware_family)
+            malwares.append(malware)
+
+        return malwares
+
+    def _create_malware(self, name: str) -> Malware:
+        return create_malware(
+            name,
+            created_by=self.author,
+            is_family=True,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
+        )
+
+    def _create_attack_patterns(self) -> List[AttackPattern]:
+        # Prefer resolved ATT&CK techniques (name + mitre_id) provided by the importer.
+        attack_patterns_resolved = self.indicator.get("attack_patterns_resolved") or []
+        attack_patterns_raw = self.indicator.get("attack_patterns") or []
+
+        if attack_patterns_resolved:
+            attack_patterns: List[AttackPattern] = []
+            for item in attack_patterns_resolved:
+                if not isinstance(item, Mapping):
+                    continue
+                ap_name = str(item.get("name") or "").strip()
+                mitre_id = str(item.get("mitre_id") or "").strip()
+                if not ap_name or not mitre_id:
+                    continue
+                attack_patterns.append(self._create_attack_pattern(ap_name, mitre_id))
+            return attack_patterns
+
+        # If we have ATT&CK labels but no technique resolution available, do not create name-only
+        # AttackPattern objects (they would not match the MITRE connector IDs and would create duplicates).
+        if attack_patterns_raw:
+            self.helper.connector_logger.debug(
+                "ATT&CK technique resolution unavailable; skipping Attack Pattern creation to avoid duplicates.",
+                {
+                    "indicator_id": self.indicator.get("id"),
+                    "attack_pattern_count": len(attack_patterns_raw),
+                },
+            )
+        return []
+
+    def _create_attack_pattern(self, name: str, mitre_id: str) -> AttackPattern:
+        # Create a minimal AttackPattern using canonical MITRE technique ID so deterministic IDs match
+        # the MITRE ATT&CK connector (source of truth).
+        return create_attack_pattern(
+            name=name,
+            mitre_id=mitre_id,
+            created_by=self.author.id,
+            confidence=self.confidence_level,
+            object_markings=[m.id for m in self.object_markings],
+        )
+
+    def _create_uses_relationships(
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> List[Relationship]:
+        return create_uses_relationships(
+            self.author,
+            list(sources),
+            list(targets),
+            self.confidence_level,
+            self.object_markings,
+        )
+
+    def _create_targeted_sectors(self) -> List[Identity]:
+        target_sectors = []
+        for target in self.indicator["targets"]:
+            target_sector = create_sector(target, self.author)
+            target_sectors.append(target_sector)
+        return target_sectors
+
+    def _create_targets_relationships(
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> List[Relationship]:
+        return create_targets_relationships(
+            self.author,
+            list(sources),
+            list(targets),
+            self.confidence_level,
+            self.object_markings,
+        )
+
+    def _create_vulnerability(self, name: str):
+        return create_vulnerability(
+            name,
+            created_by=self.author,
+            confidence=self.confidence_level,
+            object_markings=self.object_markings,
+        )
+
+    def _create_vulnerabilities(self) -> List[Vulnerability]:
+        vulnerabilities = []
+
+        for vulnerability_name in self.indicator["vulnerabilities"]:
+            vulnerability = self._create_vulnerability(vulnerability_name)
+            vulnerabilities.append(vulnerability)
+
+        return vulnerabilities
+
+    def _create_observation(
+        self, kill_chain_phases: List[KillChainPhase]
+    ) -> Optional[Observation]:
+        if not (self.create_observables or self.create_indicators):
+            self.helper.connector_logger.warning(
+                "[WARNING] The user configuration does not activate the creation of observables or indicators. "
+                "The creation process is therefore ignored.",
+            )
+            return None
+
+        # Get the labels.
+        labels = self._get_labels()
+
+        # Skip indicators with labels entered in config (case-insensitive)
+        unwanted_labels = {lbl.lower() for lbl in self.indicator_unwanted_labels}
+        for label in labels:
+            if str(label).lower() in unwanted_labels:
+                self.helper.connector_logger.warning(
+                    "[WARNING] The indicator contains a label which is one of the excluded labels defined in the "
+                    "configuration. Processing of this indicator is therefore ignored.",
+                    {
+                        "indicator_unwanted_labels": self.indicator_unwanted_labels,
+                        "current_indicator_labels": labels,
+                    },
+                )
+                return None
+
+        # Determine the score based on the labels.
+        score = self._determine_score_by_labels(labels)
+
+        # Create an observable.
+        observable = self._create_observable(labels, score)
+
+        # Create an indicator.
+        indicator = self._create_indicator(kill_chain_phases, labels, score)
+
+        # Create a based on relationship.
+        indicator_based_on_observable = None
+        if indicator is not None and observable is not None:
+            based_on_relationship = self._create_based_on_relationships(
+                [indicator], [observable]
+            )
+            indicator_based_on_observable = based_on_relationship[0]
+
+        return Observation(observable, indicator, indicator_based_on_observable)
+
+    def _get_labels(self) -> List[str]:
+        # Prefer normalized label names when provided by the importer.
+        label_names = self.indicator.get("label_names")
+        if isinstance(label_names, list) and label_names:
+            return [str(x) for x in label_names if x]
+
+        # Fallback: tolerate legacy raw label objects (list[dict]) or list[str].
+        return extract_label_names(self.indicator.get("labels") or [])
+
+    def _create_observable(
+        self, labels: List[str], score: int
+    ) -> Optional[_Observable]:
+        if not self.create_observables:
+            return None
+
+        try:
+            indicator_value = self.indicator["indicator"]
+
+            observable_properties = self._create_observable_properties(
+                indicator_value, labels, score
+            )
+            observable = self.observation_factory.create_observable(
+                observable_properties
+            )
+
+            return observable
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "[WARNING] Observable creation failed.",
+                {
+                    "error": str(e),
+                    "indicator_id": self.indicator.get("id"),
+                    "indicator_type": self.indicator.get("type"),
+                },
+            )
+            return None
+
+    def _create_observable_properties(
+        self,
+        value: str,
+        labels: List[str],
+        score: int,
+    ) -> ObservableProperties:
+        return ObservableProperties(
+            value=value,
+            created_by=self.author,
+            labels=labels,
+            score=score,
+            object_markings=self.object_markings,
+        )
+
+    def _determine_score_by_labels(self, labels: List[str]) -> int:
+        label_score = None
+
+        low = {lbl.lower() for lbl in self.indicator_low_score_labels}
+        medium = {lbl.lower() for lbl in self.indicator_medium_score_labels}
+        high = {lbl.lower() for lbl in self.indicator_high_score_labels}
+
+        # Score will be given floored at lowest score label found.
+        for label in labels:
+            lbl = str(label).lower()
+
+            if lbl in low:
+                label_score = self.indicator_low_score
+                break
+
+            if lbl in medium:
+                if label_score is None or label_score > self.indicator_medium_score:
+                    label_score = self.indicator_medium_score
+
+            elif lbl in high:
+                if label_score is None:
+                    label_score = self.indicator_high_score
+
+        return label_score if label_score is not None else self.default_x_opencti_score
+
+    def _create_indicator(
+        self,
+        kill_chain_phases: List[KillChainPhase],
+        labels: List[str],
+        score: int,
+    ) -> Optional[STIXIndicator]:
+        if not self.create_indicators:
+            return None
+        try:
+            indicator_value = self.indicator["indicator"]
+            indicator_pattern = self.observation_factory.create_indicator_pattern(
+                indicator_value
+            )
+            indicator_pattern_type = self._INDICATOR_PATTERN_TYPE_STIX
+            indicator_published = timestamp_to_datetime(
+                self.indicator["published_date"]
+            )
+
+            return create_indicator(
+                indicator_pattern.pattern,
+                indicator_pattern_type,
+                created_by=self.author,
+                name=indicator_value,
+                valid_from=indicator_published,
+                created=indicator_published,
+                kill_chain_phases=kill_chain_phases,
+                labels=labels,
+                confidence=self.confidence_level,
+                object_markings=self.object_markings,
+                x_opencti_main_observable_type=indicator_pattern.main_observable_type,
+                x_opencti_score=score,
+                indicator_types=self.indicator.get("indicator_types", []),
+            )
+        except Exception as e:
+            self.helper.connector_logger.warning(
+                "[WARNING] Indicator creation failed.",
+                {
+                    "error": str(e),
+                    "indicator_id": self.indicator.get("id"),
+                    "indicator_type": self.indicator.get("type"),
+                },
+            )
+            return None
+
+    def _create_based_on_relationships(
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> List[Relationship]:
+        return create_based_on_relationships(
+            self.author,
+            list(sources),
+            list(targets),
+            self.confidence_level,
+            self.object_markings,
+        )
+
+    def _create_indicates_relationships(
+        self, sources: Sequence[_DomainObject], targets: Sequence[_DomainObject]
+    ) -> List[Relationship]:
+        return create_indicates_relationships(
+            self.author,
+            list(sources),
+            list(targets),
+            self.confidence_level,
+            self.object_markings,
+        )
+
+    def build(self) -> Optional[Dict]:
+        """Build indicator bundle."""
+        # Create bundle with author.
+        bundle_objects = [self.author]
+
+        # Add object marking definitions to bundle.
+        bundle_objects.extend(self.object_markings)
+
+        # Create intrusion sets and add to bundle.
+        intrusion_sets = []
+        if "actor" in self.scopes:
+            for actor_entity in self.indicator.get("actors", []):
+                # Indicators may provide related actors as strings (e.g., "SALTYSPIDER")
+                # while reports provide full actor objects. Normalize here.
+                if isinstance(actor_entity, str):
+                    actor_entity = {"name": actor_entity}
+
+                if not isinstance(actor_entity, Mapping):
+                    self.helper.connector_logger.warning(
+                        "[WARNING] Skipping unresolved actor entry (expected mapping or string).",
+                        {
+                            "indicator_id": self.indicator.get("id"),
+                            "actor_entry_type": type(actor_entity).__name__,
+                            "actor_entry": cast(Any, actor_entity),
+                        },
+                    )
+                    continue
+
+                actor_builder = RelatedActorBundleBuilder(
+                    actor=cast(Dict[str, Any], actor_entity),
+                    author=self.author,
+                    source_name=self.source_name,
+                    object_markings=self.object_markings,
+                    confidence_level=self.confidence_level,
+                )
+
+                intrusion_sets.extend(actor_builder.build())
+            bundle_objects.extend(intrusion_sets)
+
+        # Create kill chain phases.
+        kill_chain_phases = self._create_kill_chain_phases()
+
+        # Create malwares and add to bundle.
+        malwares = self._create_malwares()
+        bundle_objects.extend(malwares)
+
+        # Create attack patterns (parsed from labels) and add to bundle.
+        attack_patterns = self._create_attack_patterns()
+        bundle_objects.extend(attack_patterns)
+
+        # Create target sectors and add to bundle.
+        target_sectors = self._create_targeted_sectors()
+        bundle_objects.extend(target_sectors)
+
+        # Create vulnerabilities and add to bundle.
+        vulnerabilities = self._create_vulnerabilities()
+        bundle_objects.extend(vulnerabilities)
+
+        # Create observations.
+        observation = self._create_observation(kill_chain_phases)
+        if observation is None:
+            self.helper.connector_logger.warning(
+                "[WARNING] Observation creation will be ignored.",
+                {
+                    "indicator_id": self.indicator.get("id"),
+                    "indicator_type": self.indicator.get("type"),
+                },
+            )
+            return None
+
+        # Get observables and add to bundle.
+        observables = []
+        if observation.observable is not None:
+            observables.append(observation.observable)
+        bundle_objects.extend(observables)
+
+        # Get indicators and add to bundle.
+        indicators = []
+        if observation.indicator is not None:
+            indicators.append(observation.indicator)
+        bundle_objects.extend(indicators)
+
+        # Get observation relationships and add to bundle.
+        indicators_based_on_observables = []
+        if observation.relationship is not None:
+            indicators_based_on_observables.append(observation.relationship)
+        bundle_objects.extend(indicators_based_on_observables)
+
+        # Indicator(s) indicate entities and add to bundle.
+        indicator_indicates = (
+            intrusion_sets + malwares + vulnerabilities + attack_patterns
+        )
+
+        indicator_indicates_entities = self._create_indicates_relationships(
+            indicators, indicator_indicates
+        )
+        bundle_objects.extend(indicator_indicates_entities)
+
+        # Create object references for the report.
+        object_refs = create_object_refs(
+            cast(List[_DomainObject], intrusion_sets),
+            cast(List[_DomainObject], malwares),
+            cast(List[_DomainObject], attack_patterns),
+            cast(List[_DomainObject], target_sectors),
+            cast(List[_DomainObject], vulnerabilities),
+            cast(List[_DomainObject], observables),
+            cast(List[_DomainObject], indicators),
+            cast(List[_RelationshipObject], indicators_based_on_observables),
+            cast(List[_RelationshipObject], indicator_indicates_entities),
+        )
+
+        # XXX: Without allow_custom=True the observable with the custom property
+        # will cause an unexpected property (x_opencti_score) error.
+        objects = {
+            "indicator_bundle": Bundle(objects=bundle_objects, allow_custom=True),
+            "object_refs": object_refs,
+        }
+
+        return objects

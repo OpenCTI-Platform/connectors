@@ -1,0 +1,9 @@
+version: '3'
+services:
+  connector-virustotal-downloader:
+    image: opencti/connector-virustotal-downloader:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - VIRUSTOTAL_DOWNLOADER_API_KEY=ChangeMe
+    restart: always

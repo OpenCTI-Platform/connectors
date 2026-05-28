@@ -1,0 +1,1 @@
+"""OpenCTI CrowdStrike actor module."""

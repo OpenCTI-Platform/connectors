@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'SentinelOne Incident External Import Connector'
+  scope: 'ChangeMe'
+  log_level: 'info'
+  duration_period: 'PT5M' # Interval given for scheduler process in ISO-8601 format
+
+sentinelone_incidents:
+  api_key: 'ChangeMe'
+  account_id: 'ChangeMe'
+  url: 'ChangeMe'
+  max_api_attempts: 5
+  import_start_date: '2026-01-01T00:00:00Z' # ISO-8601 format for the date to start fetching incidents from

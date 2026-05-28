@@ -1,0 +1,14 @@
+opencti:
+  url: "http://localhost:4242"
+  token: "opencti-token"
+
+connector:
+  id: "connector-uuid"
+  name: "Test connector"
+  scope: "domain-name,url"
+  log_level: "error"
+
+recorded_future:
+  token: "recorded-future-token"
+  create_indicator_threshold: 0
+  info_max_tlp: "TLP:CLEAR"

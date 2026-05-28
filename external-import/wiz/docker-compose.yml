@@ -1,0 +1,17 @@
+version: '3'
+services:
+  connector-wiz:
+    image: opencti/connector-wiz:latest
+    environment:
+      # Connector's generic execution parameters
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Connector's definition parameters REQUIRED
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Wiz Cloud Threat LandScape
+      - CONNECTOR_SCOPE=wiz
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=ChangeMe # ISO8601 format in String, start with 'P...' for Period
+      - WIZ_THREAT_ACTOR_AS_INTRUSION_SET=False
+      - WIZ_TLP_LEVEL=clear
+    restart: always

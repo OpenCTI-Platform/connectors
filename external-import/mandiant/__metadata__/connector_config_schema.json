@@ -1,0 +1,375 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/mandiant_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Mandiant",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "mandiant"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs. Options are debug, info, warn, warning or error.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "MANDIANT_API_V4_KEY_ID": {
+      "description": "Mandiant API v4 Key ID for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MANDIANT_API_V4_KEY_SECRET": {
+      "description": "Mandiant API v4 Key Secret for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MANDIANT_MARKING": {
+      "default": "amber+strict",
+      "description": "TLP Marking for data imported, possible values: white, clear, green, amber, amber+strict, red. NB: Some of the entities retrieved from the Mandiant portal already have a marking. We do not modify the marking on these entities. The marking defined by this parameter only takes into account entities created by the connector, or entities retrieved without marking.",
+      "enum": [
+        "white",
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "MANDIANT_REMOVE_STATEMENT_MARKING": {
+      "default": false,
+      "description": "Whether to remove statement markings from imported data.",
+      "type": "boolean"
+    },
+    "MANDIANT_CREATE_NOTES": {
+      "default": false,
+      "description": "Whether to create notes from imported data.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_START_DATE": {
+      "description": "Date to start collect data (Format: YYYY-MM-DD). Defaults to 30 days ago before first run the connector.",
+      "type": "string"
+    },
+    "MANDIANT_IMPORT_PERIOD": {
+      "default": 1,
+      "description": "Number of days to fetch in one round trip.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_INDICATOR_IMPORT_START_DATE": {
+      "description": "Date to start collect indicators (Format: YYYY-MM-DD). Defaults to 30 days ago before first run the connector.",
+      "type": "string"
+    },
+    "MANDIANT_INDICATOR_MINIMUM_SCORE": {
+      "default": 80,
+      "description": "Minimum score (based on mscore) that an indicator must have to be processed.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_IMPORT_INDICATORS": {
+      "default": true,
+      "description": "Enable to collect indicators.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_INDICATORS_INTERVAL": {
+      "default": 1,
+      "description": "Interval in hours to check and collect new indicators.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_IMPORT_ACTORS": {
+      "default": true,
+      "description": "Enable to collect actors.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_ACTORS_INTERVAL": {
+      "default": 1,
+      "description": "Interval in hours to check and collect new actors.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_IMPORT_ACTORS_ALIASES": {
+      "default": false,
+      "description": "Import actors aliases.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_MALWARES": {
+      "default": true,
+      "description": "Enable to collect malwares.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_MALWARES_INTERVAL": {
+      "default": 1,
+      "description": "Interval in hours to check and collect new malwares.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_IMPORT_MALWARES_ALIASES": {
+      "default": false,
+      "description": "Import malwares aliases.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_CAMPAIGNS": {
+      "default": true,
+      "description": "Enable to collect campaigns.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_CAMPAIGNS_INTERVAL": {
+      "default": 1,
+      "description": "Interval in hours to check and collect new campaigns.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_IMPORT_INDICATORS_WITH_FULL_CAMPAIGNS": {
+      "default": false,
+      "description": "Enable to collect campaigns with related entities when importing IOC linked to this campaign.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_VULNERABILITIES": {
+      "default": false,
+      "description": "Enable to collect vulnerabilities.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_VULNERABILITIES_INTERVAL": {
+      "default": 1,
+      "description": "Interval in hours to check and collect new vulnerabilities.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_IMPORT_REPORTS": {
+      "default": true,
+      "description": "Enable to collect reports.",
+      "type": "boolean"
+    },
+    "MANDIANT_IMPORT_REPORTS_INTERVAL": {
+      "default": 1,
+      "description": "Interval in hours to check and collect new reports.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_ACTOR_PROFILE_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'actor_profile'.",
+      "type": "boolean"
+    },
+    "MANDIANT_ACTOR_PROFILE_REPORT_TYPE": {
+      "default": "actor-profile",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_COUNTRY_PROFILE_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'country_profile'.",
+      "type": "boolean"
+    },
+    "MANDIANT_COUNTRY_PROFILE_REPORT_TYPE": {
+      "default": "country-profile",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'event_coverage_implication'.",
+      "type": "boolean"
+    },
+    "MANDIANT_EVENT_COVERAGE_IMPLICATION_REPORT_TYPE": {
+      "default": "event-coverage",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'executive_perspective'.",
+      "type": "boolean"
+    },
+    "MANDIANT_EXECUTIVE_PERSPECTIVE_REPORT_TYPE": {
+      "default": "executive-perspective",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'ics_security_roundup'.",
+      "type": "boolean"
+    },
+    "MANDIANT_ICS_SECURITY_ROUNDUP_REPORT_TYPE": {
+      "default": "ics-security-roundup",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_INDUSTRY_REPORTING_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'industry_reporting'.",
+      "type": "boolean"
+    },
+    "MANDIANT_INDUSTRY_REPORTING_REPORT_TYPE": {
+      "default": "industry",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_MALWARE_PROFILE_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'malware_profile'.",
+      "type": "boolean"
+    },
+    "MANDIANT_MALWARE_PROFILE_REPORT_TYPE": {
+      "default": "malware-profile",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_NETWORK_ACTIVITY_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'network_activity_reports'.",
+      "type": "boolean"
+    },
+    "MANDIANT_NETWORK_ACTIVITY_REPORT_TYPE": {
+      "default": "network-activity",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_PATCH_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'patch_report'.",
+      "type": "boolean"
+    },
+    "MANDIANT_PATCH_REPORT_TYPE": {
+      "default": "patch",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_TTP_DEEP_DIVE_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'ttp_deep_dive'.",
+      "type": "boolean"
+    },
+    "MANDIANT_TTP_DEEP_DIVE_REPORT_TYPE": {
+      "default": "ttp-deep-dive",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_THREAT_ACTIVITY_ALERT_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'news_analysis'.",
+      "type": "boolean"
+    },
+    "MANDIANT_THREAT_ACTIVITY_ALERT_REPORT_TYPE": {
+      "default": "threat-alert",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_THREAT_ACTIVITY_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'threat_activity_report'.",
+      "type": "boolean"
+    },
+    "MANDIANT_THREAT_ACTIVITY_REPORT_TYPE": {
+      "default": "threat-activity",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_TRENDS_AND_FORECASTING_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'trends_and_forecasting'.",
+      "type": "boolean"
+    },
+    "MANDIANT_TRENDS_AND_FORECASTING_REPORT_TYPE": {
+      "default": "trends-forecasting",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_VULNERABILITY_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'vulnerability_report'.",
+      "type": "boolean"
+    },
+    "MANDIANT_VULNERABILITY_REPORT_TYPE": {
+      "default": "vulnerability",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_VULNERABILITY_IMPORT_SOFTWARE_CPE": {
+      "default": true,
+      "description": "Enable to import CPE and version or not.",
+      "type": "boolean"
+    },
+    "MANDIANT_VULNERABILITY_MAX_CPE_RELATIONSHIP": {
+      "default": 200,
+      "description": "Enable to define a maximum number of relationships created for a vulnerability.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'weekly_vulnerability_exploitation_report'.",
+      "type": "boolean"
+    },
+    "MANDIANT_WEEKLY_VULNERABILITY_EXPLOITATION_REPORT_TYPE": {
+      "default": "vulnerability-exploitation",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_NEWS_ANALYSIS_REPORT": {
+      "default": true,
+      "description": "Enable to collect report type 'news_analysis'.",
+      "type": "boolean"
+    },
+    "MANDIANT_NEWS_ANALYSIS_REPORT_TYPE": {
+      "default": "news-analysis",
+      "description": "Report type on vocabulary 'report_types_ov'.",
+      "type": "string"
+    },
+    "MANDIANT_GUESS_RELATIONSHIPS_REPORTS": {
+      "default": "Actor Profile, Malware Profile, Vulnerability Report",
+      "description": "Enable the capability to guess the relationships in selected reports type. Valid values: 'All, None, Actor Profile, Country Profile, Event Coverage/Implication, Executive Perspective, ICS Security Roundup, Industry Reporting, Malware Profile, Network Activity Reports, Patch Report, TTP Deep Dive, Threat Activity Alert, Threat Activity Report, Trends and Forecasting, Vulnerability Report, Weekly Vulnerability Exploitation Report, News Analysis'. Multiple values can be given in a string comma separated. If All or None is in the string it will override any other values. None is used before All.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "MANDIANT_API_V4_KEY_ID",
+    "MANDIANT_API_V4_KEY_SECRET"
+  ],
+  "additionalProperties": true
+}

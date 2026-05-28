@@ -1,0 +1,337 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/crowdstrike_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "CrowdStrike",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "crowdstrike"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'PT30M' for 30 minutes).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_BASE_URL": {
+      "default": "https://api.crowdstrike.com/",
+      "description": "CrowdStrike API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CROWDSTRIKE_CLIENT_ID": {
+      "description": "CrowdStrike API client ID for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CROWDSTRIKE_CLIENT_SECRET": {
+      "description": "CrowdStrike API client secret for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CROWDSTRIKE_TLP": {
+      "default": "amber+strict",
+      "description": "Default Traffic Light Protocol (TLP) marking for imported data.",
+      "enum": [
+        "red",
+        "amber+strict",
+        "amber",
+        "green",
+        "clear",
+        "white"
+      ],
+      "type": "string"
+    },
+    "CROWDSTRIKE_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Whether to create observables in OpenCTI.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Whether to create indicators in OpenCTI.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_SCOPES": {
+      "default": [
+        "actor",
+        "report",
+        "indicator",
+        "malware",
+        "yara_master",
+        "snort_suricata_master"
+      ],
+      "description": "Comma-separated list of scopes to enable. Available: actor, report, indicator, malware, vulnerability, yara_master, snort_suricata_master.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_ATTACK_VERSION": {
+      "default": "17.1",
+      "description": "MITRE ATT&CK Enterprise version to use for technique ID resolution (e.g., 17.1). Should match the version imported by the MITRE ATT&CK external import connector.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_ATTACK_ENTERPRISE_URL": {
+      "default": null,
+      "description": "Optional override URL for the MITRE ATT&CK Enterprise STIX dataset. If set, this URL is used instead of constructing one from attack_version. Useful for air-gapped environments or internal mirrors.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CROWDSTRIKE_ACTOR_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing actors. Default is 30 days ago. BEWARE: 0 means ALL actors!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_MALWARE_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing malware. Default is 30 days ago. BEWARE: 0 means ALL malware!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_REPORT_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing reports. Default is 30 days ago. BEWARE: 0 means ALL reports!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_REPORT_STATUS": {
+      "default": "new",
+      "description": "Report status filter.",
+      "enum": [
+        "new",
+        "in progress",
+        "analyzed",
+        "closed"
+      ],
+      "type": "string"
+    },
+    "CROWDSTRIKE_REPORT_INCLUDE_TYPES": {
+      "default": [
+        "notice",
+        "tipper",
+        "intelligence report",
+        "periodic report"
+      ],
+      "description": "Comma-separated list of report types to include.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_REPORT_TYPE": {
+      "default": "threat-report",
+      "description": "OpenCTI report type for imported reports.",
+      "type": "string"
+    },
+    "CROWDSTRIKE_REPORT_TARGET_INDUSTRIES": {
+      "default": [],
+      "description": "Comma-separated list of target industries to filter reports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_REPORT_GUESS_MALWARE": {
+      "default": false,
+      "description": "Whether to use report tags to guess related malware.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_REPORT_GUESS_RELATIONS": {
+      "default": false,
+      "description": "Whether to automatically guess and create relationships in reports.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_REPORT_EXTRACT_IOCS": {
+      "default": [],
+      "description": "Comma-separated list of IOC types to extract from report text content via regex. Extracted IOCs are created as Observables (not Indicators) and linked to the report. Supported types: ipv4, ipv6, domain, url, md5, sha1, sha256. Leave empty to disable.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing indicators. Default is 30 days ago. BEWARE: 0 means ALL indicators!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_EXCLUDE_TYPES": {
+      "default": [
+        "hash_ion",
+        "hash_md5",
+        "hash_sha1",
+        "password",
+        "username"
+      ],
+      "description": "Comma-separated list of indicator types to exclude from import.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_IP_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P90D' for 90 days). Covers both IPv4 and IPv6.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_DOMAIN_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P365D' for 365 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_URL_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P60D' for 60 days).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_HASH_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P730D' for 730 days). Covers MD5, SHA1, and SHA256 hashes.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_INDICATOR_DEFAULT_MAX_AGE": {
+      "default": null,
+      "description": "ISO8601 Duration format starting with 'P' for Period (e.g., 'P30D' for 30 days). Default threshold for any other indicator type.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CROWDSTRIKE_DEFAULT_X_OPENCTI_SCORE": {
+      "default": 50,
+      "description": "Default confidence score for entities without explicit score.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_LOW_SCORE": {
+      "default": 40,
+      "description": "Score assigned to indicators with low confidence labels.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_LOW_SCORE_LABELS": {
+      "default": [
+        "MaliciousConfidence/Low"
+      ],
+      "description": "Comma-separated list of labels indicating low confidence.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE": {
+      "default": 60,
+      "description": "Score assigned to indicators with medium confidence labels.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_MEDIUM_SCORE_LABELS": {
+      "default": [
+        "MaliciousConfidence/Medium"
+      ],
+      "description": "Comma-separated list of labels indicating medium confidence.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_HIGH_SCORE": {
+      "default": 80,
+      "description": "Score assigned to indicators with high confidence labels.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS": {
+      "default": [
+        "MaliciousConfidence/High"
+      ],
+      "description": "Comma-separated list of labels indicating high confidence.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_UNWANTED_LABELS": {
+      "default": [],
+      "description": "Comma-separated list of unwanted labels to filter out indicators. Can be used to filter low confidence indicators: 'MaliciousConfidence/Low,MaliciousConfidence/Medium'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CROWDSTRIKE_INDICATOR_MAX_RECORDS_PER_RUN": {
+      "default": 20000,
+      "description": "Maximum number of indicators ingested in a single run of the connector. CrowdStrike can return up to ~1.5M IoCs for the last 30 days, which would overwhelm the OpenCTI ingestion pipeline; pagination stops when this cap is reached. Set to 0 (or a negative number) to disable the cap and fetch every available indicator.",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT": {
+      "default": true,
+      "description": "Whether to trigger import without file dependencies.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_VULNERABILITY_START_TIMESTAMP": {
+      "description": "Unix timestamp from which to start importing vulnerabilities. Default is 30 days ago. BEWARE: 0 means ALL vulnerabilities!",
+      "type": "integer"
+    },
+    "CROWDSTRIKE_VULNERABILITY_IMPORT_AFFECTED_PRODUCTS": {
+      "default": false,
+      "description": "Whether to import affected products from vulnerability data. When enabled, creates STIX Software observables and 'has' relationships linking each product to its parent vulnerability.",
+      "type": "boolean"
+    },
+    "CROWDSTRIKE_INTERVAL_SEC": {
+      "default": null,
+      "deprecated": true,
+      "exclusiveMinimum": 0,
+      "type": "integer",
+      "description": "Use CONNECTOR_DURATION_PERIOD instead."
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CROWDSTRIKE_CLIENT_ID",
+    "CROWDSTRIKE_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}

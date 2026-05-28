@@ -1,0 +1,21 @@
+{
+  "title": "SOCRadar",
+  "slug": "socradar",
+  "description": "OpenCTI connector for importing threat intelligence feeds from SOCRadar platform.\n\nThis connector imports threat intelligence data from SOCRadar into OpenCTI. It processes various types of indicators including:\n\n- IP addresses (IPv4 and IPv6)\n- Domain names\n- URLs\n- File hashes (MD5, SHA1, SHA256)",
+  "short_description": "OpenCTI connector for importing threat intelligence feeds from SOCRadar platform.",
+  "logo": "external-import/socradar/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": true,
+  "last_verified_date": "2025-09-23",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.5.0",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/socradar",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-socradar",
+  "container_type": "EXTERNAL_IMPORT"
+}

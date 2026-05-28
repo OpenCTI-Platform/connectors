@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ransomwarelive_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Ransomware Connector",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "identity",
+        "attack-pattern",
+        "course-of-action",
+        "intrusion-set",
+        "malware",
+        "tool",
+        "report"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "EXTERNAL_IMPORT",
+      "description": "Should always be set to EXTERNAL_IMPORT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT10M",
+      "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_PULL_HISTORY": {
+      "default": false,
+      "description": "Whether to pull historic data. It is not recommended to set it to ``true`` as there will be a large influx of data.",
+      "type": "boolean"
+    },
+    "CONNECTOR_HISTORY_START_YEAR": {
+      "default": 2023,
+      "description": "Year (or ``YYYYMM``) to start the historical backfill from. Accepts the four-digit year shape (``2023``) \u2014 backfill begins on January 1st of that year \u2014 or the six-digit year-month shape (``202306``) \u2014 backfill begins on the first of that month. The ransomware.live feed only goes back to 2020; values older than 2020 are clamped to ``2020-01`` at runtime.",
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "CONNECTOR_CREATE_THREAT_ACTOR": {
+      "default": false,
+      "description": "Whether to create a Threat Actor object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_INTRUSION_SET": {
+      "default": false,
+      "description": "Whether to create an Intrusion Set object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_CAMPAIGN": {
+      "default": false,
+      "description": "Whether to create a Campaign object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_REPORT": {
+      "default": false,
+      "description": "Whether to create a Report object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_MARKING_VALUE": {
+      "default": "TLP:CLEAR",
+      "description": "TLP marking attached to every emitted STIX object. ``TLP:CLEAR`` (default) is the OpenCTI-specific modern label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

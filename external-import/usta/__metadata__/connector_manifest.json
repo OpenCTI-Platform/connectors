@@ -1,0 +1,23 @@
+{
+  "title": "USTA",
+  "slug": "usta",
+  "description": "The USTA connector leverages the USTA Threat Stream API to import comprehensive cyber threat intelligence, including malicious URLs, phishing sites, malware hashes, compromised credentials, credit card fraud alerts, and Deep Sight tickets.",
+  "short_description": "Import malicious URLs, phishing sites, malware hashes, compromised credentials, credit card fraud alerts and Deep Sight tickets from USTA",
+  "logo": "external-import/usta/__metadata__/logo.png",
+  "use_cases": [
+    "Commercial Threat Intel"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.6.4",
+  "subscription_link": "mailto:integration@prodaft.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/usta",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-usta",
+  "container_type": "EXTERNAL_IMPORT",
+  "config_schema": "external-import/usta/__metadata__/connector_config_schema.json",
+  "config_documentation": "external-import/usta/__metadata__/CONNECTOR_CONFIG_DOC.md"
+}

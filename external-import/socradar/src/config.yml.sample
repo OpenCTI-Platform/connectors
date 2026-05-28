@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'OPENCTI_TOKEN'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'CONNECTOR_ID'
+  name: 'SOCRadar'
+  scope: 'socradar'
+  log_level: 'error'
+  duration_period: 'PT10M'
+
+radar:
+  base_feed_url: "https://platform.socradar.com/api/threat/intelligence/feed_list/" # Required
+  socradar_key: "SOCRADAR_KEY"
+  feed_lists:
+    feed_list_1: 'COLLECTION_ID'
+    feed_list_2: 'COLLECTION_ID'

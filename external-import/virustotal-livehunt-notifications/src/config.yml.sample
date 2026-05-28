@@ -1,0 +1,39 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'virustotal_livehunt_notifications'
+  name: 'VirusTotal Livehunt Notifications'
+  scope: 'StixFile,Indicator,Incident,Domain-Name,Url,IPv4-Addr,IPv6-Addr'
+  create_indicator: False
+  log_level: 'info'
+  duration_period: 'PT5M'
+
+virustotal_livehunt_notifications:
+  api_key: 'ChangeMe' # Private API Key
+  # tlp_level: clear # TLP Marking
+  create_alert: True # If True, create alerts (incident) from the notification
+  extensions: 'exe,dll' # (Optional) Comma separated filter to only download files matching these extensions
+  min_file_size: 1000 # (Optional) Don't download files smaller than this many bytes
+  max_file_size: 52428800 # (Optional) Don't download files larger than this many bytes
+  max_age_days: 3  # Create the alert only if the first submission is not older than `max_old_days` to avoid creating alerts with re-submissions
+  min_positives: 5 # (Optional) Don't download files with less than this many vendors marking malicious
+  create_file: True # If True, create a file object and link it to the alert
+  upload_artifact: False # If True, upload the artifact to opencti
+  create_yara_rule: True # If True, create a yara indicator and link it to the alert and the file
+  delete_notification: False # If True, remove the notification on VT
+  filter_with_tag: "" # (Optional) Tag to filter the notifications, empty = no filtering
+  alert_prefix: 'VT' # Prefix that is added in alert title
+  av_list: 'Avast,BitDefender,ClamAV,CrowdStrike,Cybereason,ESET-NOD32,FireEye,Fortinet,Kaspersky,Paloalto,Symantec,TrendMicro' # List of AVs to add in description
+  yara_label_prefix: 'vt:yara:' # Prefix that is added in yara label
+  livehunt_label_prefix: 'vt:lh:' # Prefix that is added in livehunt label
+  livehunt_tag_prefix: '' # Prefix used to state that the tag is imported from Livehunt
+  enable_label_enrichment: True # Add livehunt name and matched yara rules label to the alert
+  get_malware_config: False # (optional) Set to true to extract C2 infrastructure (domains, IPs, URLs) from the VirusTotal malware configuration analysis. Only effective when create_file is True.
+  create_file_indicators: False # (optional) Set to true to create a File Indicator (SHA-256 pattern) for each matched file. Only effective when create_file is true. Default is false.
+  create_domain_name_indicators: False # (optional) Set to true to create Domain-Name Indicators for domains extracted from the malware configuration. Default is false.
+  create_ip_indicators: False # (optional) Set to true to create IPv4/IPv6 Indicators for IP addresses extracted from the malware configuration. Default is false.
+  create_url_indicators: False # (optional) Set to true to create URL Indicators for URLs extracted from the malware configuration. Default is false.
+  # limit: 100 # (optional) Maximum number of notifications to process per run. Leave unset to process every available notification.

@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+# connector:
+  # id: '34936E68-9C5B-4AA9-A1DE-372D9134C534'
+  # name: 'Microsoft Sentinel Incidents'
+  # scope: 'sentinel'
+  # log_level: 'error'
+  # duration_period: 'PT1H' # Interval given for scheduler process in ISO-8601 format
+
+microsoft_sentinel_incidents:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  subscription_id: 'ChangeMe'
+  workspace_id: 'ChangeMe'
+  # import_start_date: '2020-01-01T00:00:00Z'
+  # filter_labels: 'ChangeMe,OrDeleteMe'

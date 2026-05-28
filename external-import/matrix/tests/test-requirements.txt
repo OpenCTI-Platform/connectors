@@ -1,0 +1,10 @@
+# Tests only exercise pure-Python helpers from ``src/lib/helpers.py``
+# (``TLP_MAP``, ``resolve_tlp``, ``media_content_id``,
+# ``channel_display_name``, ``publication_date_from_event``). The
+# helpers are intentionally dependency-free of ``matrix-nio`` so the
+# suite can run on CI runners that do not have ``libolm`` installed;
+# the only runtime imports are ``stix2`` and ``pycti``, which we pin
+# to the same versions used by the connector at runtime.
+pycti==7.260527.0
+stix2==3.0.1
+pytest

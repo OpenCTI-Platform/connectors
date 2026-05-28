@@ -1,0 +1,15 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: '18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6' # Optional (default: '18f1a9e6-a82b-4ef4-9699-ae406fe4a1a6')
+  name: 'Internal Enrichment Connector FIRST' # Optional (default: 'First EPSS') 
+  scope: 'vulnerability' # Optional (default: ['vulnerability'])
+  log_level: 'info' # Optional (default: 'error')
+  auto: false # Optional (default: false)
+
+first_epss:
+  api_base_url: 'https://api.first.org/data/v1/epss' # Optional (default: 'https://api.first.org/data/v1/epss')
+  max_tlp: "TLP:AMBER" # Optional (default: 'TLP:AMBER')

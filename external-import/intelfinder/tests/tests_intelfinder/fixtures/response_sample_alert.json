@@ -1,0 +1,295 @@
+{
+    "code": 0,
+    "error": "",
+    "alerts_number": 2,
+    "alerts": [
+        {
+            "_id": "6564772a80467d7447057cc3",
+            "subscription": "Domain Hijacking",
+            "priority": 2,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "6564772a80467d7447057cc3",
+            "last_update": "2023-11-27 11:02:02",
+            "keyword": "company.biz",
+            "added_on": "2023-11-27 11:02:02",
+            "title": "Potential Domain Hijacking - company.biz",
+            "description": "The domain <strong><u>company.biz</strong></u> is pointing to unfamiliar IP addresses which do not  appear within the IP ranges provided as assets.<br>This may indicate that the domain has been hijacked by cybercriminals, who altered the A records associated with the domain, resulting in the domain pointing to a different website such as a Phishing attack. Alternatively, the website may have been legitimately moved to a new hosting provider, a CDN (Content Distribution Network) may host company's website on a new location, or the domain has expired.",
+            "details": "The domain is pointing to 3 suspected IP addresses, the details of which are provided below.<br>%elements%Following is a current screenshot of the site.",
+            "recommendation": "We recommend investigating whether the suspected IP addresses associated with the domain are legitimately used by company or its service providers. If the IP addresses are unfamiliar, we recommend checking whether the domain has expired.<br>If the domain is still owned by company, but it is pointing to an unfamiliar IP address, we recommend investigating the site now pointed to by the domain to determine the nature and severity of the threat. If a threat is identified, it is recommended to contact the domain registrar.<br>The details of the hosting providers that control the IP addresses are also provided in the details above in the event you wish to attempt to takedown the site.",
+            "base_elements": [
+                {
+                    "label": "Domain",
+                    "value": "company.biz"
+                },
+                {
+                    "label": "IP Address",
+                    "value": "1.1.1.1"
+                },
+                {
+                    "label": "IP Address 1",
+                    "value": "8.8.8.8"
+                },
+                {
+                    "label": "Hosting Company 1",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 1",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 1",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 1",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 2",
+                    "value": "8.8.4.4"
+                },
+                {
+                    "label": "Hosting Company 2",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "2001:4860:4860::8888"
+                },
+                {
+                    "label": "Abuse Info 2",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 2",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 2",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "1.1.1.1"
+                },
+                {
+                    "label": "Hosting Company 3",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 3",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 3",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 3",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "Domain WHOIS",
+                    "value": "company.biz domain lookup results from whois.biz server:\n\nDomain Name: company.biz\nRegistry Domain ID: D43912762-BIZ\nRegistrar WHOIS Server: whois.comlaude.com\nRegistrar URL: www.comlaude.com\nUpdated Date: 2023-02-04T23:07:40Z\nCreation Date: 2011-03-02T22:09:18Z\nRegistry Expiry Date: 2024-03-01T23:59:59Z\nRegistrar: Nom-iq Ltd. dba COM LAUDE\nRegistrar IANA ID: 470\nRegistrar Abuse Contact Email: abuse@comlaude.com\nRegistrar Abuse Contact Phone: +44.2074218250\nDomain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\nDomain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\nDomain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\nRegistry Registrant ID: REDACTED FOR PRIVACY\nRegistrant Name: REDACTED FOR PRIVACY\nRegistrant Organization: Whois Privacy - Com Laude\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant City: REDACTED FOR PRIVACY\nRegistrant State/Province:\nRegistrant Postal Code: REDACTED FOR PRIVACY\nRegistrant Country: GB\nRegistrant Phone: REDACTED FOR PRIVACY\nRegistrant Phone Ext: REDACTED FOR PRIVACY\nRegistrant Fax: REDACTED FOR PRIVACY\nRegistrant Fax Ext: REDACTED FOR PRIVACY\nRegistrant Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Admin ID: REDACTED FOR PRIVACY\nAdmin Name: REDACTED FOR PRIVACY\nAdmin Organization: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin City: REDACTED FOR PRIVACY\nAdmin State/Province: REDACTED FOR PRIVACY\nAdmin Postal Code: REDACTED FOR PRIVACY\nAdmin Country: REDACTED FOR PRIVACY\nAdmin Phone: REDACTED FOR PRIVACY\nAdmin Phone Ext: REDACTED FOR PRIVACY\nAdmin Fax: REDACTED FOR PRIVACY\nAdmin Fax Ext: REDACTED FOR PRIVACY\nAdmin Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Tech ID: REDACTED FOR PRIVACY\nTech Name: REDACTED FOR PRIVACY\nTech Organization: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech City: REDACTED FOR PRIVACY\nTech State/Province: REDACTED FOR PRIVACY\nTech Postal Code: REDACTED FOR PRIVACY\nTech Country: REDACTED FOR PRIVACY\nTech Phone: REDACTED FOR PRIVACY\nTech Phone Ext: REDACTED FOR PRIVACY\nTech Fax: REDACTED FOR PRIVACY\nTech Fax Ext: REDACTED FOR PRIVACY\nTech Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nName Server: nssui.comlaude.ch\nName Server: nsgbr.comlaude.co.uk\nName Server: nsusa.comlaude.net\nDNSSEC: unsigned\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\n&gt;&gt;&gt; Last update of WHOIS database: 2023-11-27T11:00:33Z &lt;&lt;&lt;\nFor more information on Whois status codes, please visit https://icann.org/epp\nThe Service is provided so that you may look up certain information in relation to domain names that we store in our database.\nUse of the Service is subject to our policies, in particular you should familiarise yourself with our Acceptable Use Policy and our Privacy Policy.\nThe information provided by this Service is 'as is' and we make no guarantee of it its accuracy.\nYou agree that by your use of the Service you will not use the information provided by us in a way which is:\n* inconsistent with any applicable laws,\n* inconsistent with any policy issued by us,\n* to generate, distribute, or facilitate unsolicited mass email, promotions, advertisings or other solicitations, or\n* to enable high volume, automated, electronic processes that apply to the Service.\nYou acknowledge that:\n* a response from the Service that a domain name is 'available', does not guarantee that is able to be registered,\n* we may restrict, suspend or terminate your access to the Service at any time, and\n* the copying, compilation, repackaging, dissemination or other use of the information provided by the Service is not permitted, without our express written consent.\nThis information has been prepared and published in order to represent administrative and technical management of the TLD.\nWe may discontinue or amend any part or the whole of these Terms of Service from time to time at our absolute discretion."
+                }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                    "label": "Domain",
+                    "value": "company.biz"
+                },
+                {
+                    "label": "IP Address",
+                    "value": "1.1.1.1"
+                },
+                {
+                    "label": "IP Address 1",
+                    "value": "8.8.8.8"
+                },
+                {
+                    "label": "Hosting Company 1",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 1",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 1",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 1",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 2",
+                    "value": "8.8.4.4"
+                },
+                {
+                    "label": "Hosting Company 2",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 2",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 2",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 2",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "1.1.1.1"
+                },
+                {
+                    "label": "Hosting Company 3",
+                    "value": "Amazon Technologies Inc."
+                },
+                {
+                    "label": "Abuse Info 3",
+                    "value": "Amazon EC2 Abuse\n+1-206-555-0000\nabuse@amazonaws.com"
+                },
+                {
+                    "label": "Tech Info 3",
+                    "value": "Amazon EC2 Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "NOC Info 3",
+                    "value": "Amazon AWS Network Operations\n+1-206-555-0000\namzn-noc-contact@amazon.com"
+                },
+                {
+                    "label": "IP Address 3",
+                    "value": "2001:4860:4860::8888"
+                },
+                {
+                    "label": "URL",
+                    "value": "https://google.com"
+                },
+                {
+                    "label": "Domain WHOIS",
+                    "value": "company.biz domain lookup results from whois.biz server:\n\nDomain Name: company.biz\nRegistry Domain ID: D43912762-BIZ\nRegistrar WHOIS Server: whois.comlaude.com\nRegistrar URL: www.comlaude.com\nUpdated Date: 2023-02-04T23:07:40Z\nCreation Date: 2011-03-02T22:09:18Z\nRegistry Expiry Date: 2024-03-01T23:59:59Z\nRegistrar: Nom-iq Ltd. dba COM LAUDE\nRegistrar IANA ID: 470\nRegistrar Abuse Contact Email: abuse@comlaude.com\nRegistrar Abuse Contact Phone: +44.2074218250\nDomain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\nDomain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\nDomain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\nRegistry Registrant ID: REDACTED FOR PRIVACY\nRegistrant Name: REDACTED FOR PRIVACY\nRegistrant Organization: Whois Privacy - Com Laude\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant City: REDACTED FOR PRIVACY\nRegistrant State/Province:\nRegistrant Postal Code: REDACTED FOR PRIVACY\nRegistrant Country: GB\nRegistrant Phone: REDACTED FOR PRIVACY\nRegistrant Phone Ext: REDACTED FOR PRIVACY\nRegistrant Fax: REDACTED FOR PRIVACY\nRegistrant Fax Ext: REDACTED FOR PRIVACY\nRegistrant Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Admin ID: REDACTED FOR PRIVACY\nAdmin Name: REDACTED FOR PRIVACY\nAdmin Organization: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin City: REDACTED FOR PRIVACY\nAdmin State/Province: REDACTED FOR PRIVACY\nAdmin Postal Code: REDACTED FOR PRIVACY\nAdmin Country: REDACTED FOR PRIVACY\nAdmin Phone: REDACTED FOR PRIVACY\nAdmin Phone Ext: REDACTED FOR PRIVACY\nAdmin Fax: REDACTED FOR PRIVACY\nAdmin Fax Ext: REDACTED FOR PRIVACY\nAdmin Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Tech ID: REDACTED FOR PRIVACY\nTech Name: REDACTED FOR PRIVACY\nTech Organization: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech City: REDACTED FOR PRIVACY\nTech State/Province: REDACTED FOR PRIVACY\nTech Postal Code: REDACTED FOR PRIVACY\nTech Country: REDACTED FOR PRIVACY\nTech Phone: REDACTED FOR PRIVACY\nTech Phone Ext: REDACTED FOR PRIVACY\nTech Fax: REDACTED FOR PRIVACY\nTech Fax Ext: REDACTED FOR PRIVACY\nTech Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nName Server: nssui.comlaude.ch\nName Server: nsgbr.comlaude.co.uk\nName Server: nsusa.comlaude.net\nDNSSEC: unsigned\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\n&gt;&gt;&gt; Last update of WHOIS database: 2023-11-27T11:00:33Z &lt;&lt;&lt;\nFor more information on Whois status codes, please visit https://icann.org/epp\nThe Service is provided so that you may look up certain information in relation to domain names that we store in our database.\nUse of the Service is subject to our policies, in particular you should familiarise yourself with our Acceptable Use Policy and our Privacy Policy.\nThe information provided by this Service is 'as is' and we make no guarantee of it its accuracy.\nYou agree that by your use of the Service you will not use the information provided by us in a way which is:\n* inconsistent with any applicable laws,\n* inconsistent with any policy issued by us,\n* to generate, distribute, or facilitate unsolicited mass email, promotions, advertisings or other solicitations, or\n* to enable high volume, automated, electronic processes that apply to the Service.\nYou acknowledge that:\n* a response from the Service that a domain name is 'available', does not guarantee that is able to be registered,\n* we may restrict, suspend or terminate your access to the Service at any time, and\n* the copying, compilation, repackaging, dissemination or other use of the information provided by the Service is not permitted, without our express written consent.\nThis information has been prepared and published in order to represent administrative and technical management of the TLD.\nWe may discontinue or amend any part or the whole of these Terms of Service from time to time at our absolute discretion."
+                },
+                {
+                    "label": "Paste",
+                    "value": "company.biz domain lookup results from whois.biz server:\n\nDomain Name: company.biz\nRegistry Domain ID: D43912762-BIZ\nRegistrar WHOIS Server: whois.comlaude.com\nRegistrar URL: www.comlaude.com\nUpdated Date: 2023-02-04T23:07:40Z\nCreation Date: 2011-03-02T22:09:18Z\nRegistry Expiry Date: 2024-03-01T23:59:59Z\nRegistrar: Nom-iq Ltd. dba COM LAUDE\nRegistrar IANA ID: 470\nRegistrar Abuse Contact Email: abuse@comlaude.com\nRegistrar Abuse Contact Phone: +44.2074218250\nDomain Status: clientUpdateProhibited https://icann.org/epp#clientUpdateProhibited\nDomain Status: clientTransferProhibited https://icann.org/epp#clientTransferProhibited\nDomain Status: clientDeleteProhibited https://icann.org/epp#clientDeleteProhibited\nRegistry Registrant ID: REDACTED FOR PRIVACY\nRegistrant Name: REDACTED FOR PRIVACY\nRegistrant Organization: Whois Privacy - Com Laude\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant Street: REDACTED FOR PRIVACY\nRegistrant City: REDACTED FOR PRIVACY\nRegistrant State/Province:\nRegistrant Postal Code: REDACTED FOR PRIVACY\nRegistrant Country: GB\nRegistrant Phone: REDACTED FOR PRIVACY\nRegistrant Phone Ext: REDACTED FOR PRIVACY\nRegistrant Fax: REDACTED FOR PRIVACY\nRegistrant Fax Ext: REDACTED FOR PRIVACY\nRegistrant Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Admin ID: REDACTED FOR PRIVACY\nAdmin Name: REDACTED FOR PRIVACY\nAdmin Organization: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin Street: REDACTED FOR PRIVACY\nAdmin City: REDACTED FOR PRIVACY\nAdmin State/Province: REDACTED FOR PRIVACY\nAdmin Postal Code: REDACTED FOR PRIVACY\nAdmin Country: REDACTED FOR PRIVACY\nAdmin Phone: REDACTED FOR PRIVACY\nAdmin Phone Ext: REDACTED FOR PRIVACY\nAdmin Fax: REDACTED FOR PRIVACY\nAdmin Fax Ext: REDACTED FOR PRIVACY\nAdmin Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nRegistry Tech ID: REDACTED FOR PRIVACY\nTech Name: REDACTED FOR PRIVACY\nTech Organization: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech Street: REDACTED FOR PRIVACY\nTech City: REDACTED FOR PRIVACY\nTech State/Province: REDACTED FOR PRIVACY\nTech Postal Code: REDACTED FOR PRIVACY\nTech Country: REDACTED FOR PRIVACY\nTech Phone: REDACTED FOR PRIVACY\nTech Phone Ext: REDACTED FOR PRIVACY\nTech Fax: REDACTED FOR PRIVACY\nTech Fax Ext: REDACTED FOR PRIVACY\nTech Email: Please query the RDDS service of the Registrar of Record identified in this output for information on how to contact the Registrant, Admin, or Tech contact of the queried domain name.\nName Server: nssui.comlaude.ch\nName Server: nsgbr.comlaude.co.uk\nName Server: nsusa.comlaude.net\nDNSSEC: unsigned\nURL of the ICANN Whois Inaccuracy Complaint Form: https://www.icann.org/wicf/\n&gt;&gt;&gt; Last update of WHOIS database: 2023-11-27T11:00:33Z &lt;&lt;&lt;\nFor more information on Whois status codes, please visit https://icann.org/epp\nThe Service is provided so that you may look up certain information in relation to domain names that we store in our database.\nUse of the Service is subject to our policies, in particular you should familiarise yourself with our Acceptable Use Policy and our Privacy Policy.\nThe information provided by this Service is 'as is' and we make no guarantee of it its accuracy.\nYou agree that by your use of the Service you will not use the information provided by us in a way which is:\n* inconsistent with any applicable laws,\n* inconsistent with any policy issued by us,\n* to generate, distribute, or facilitate unsolicited mass email, promotions, advertisings or other solicitations, or\n* to enable high volume, automated, electronic processes that apply to the Service.\nYou acknowledge that:\n* a response from the Service that a domain name is 'available', does not guarantee that is able to be registered,\n* we may restrict, suspend or terminate your access to the Service at any time, and\n* the copying, compilation, repackaging, dissemination or other use of the information provided by the Service is not permitted, without our express written consent.\nThis information has been prepared and published in order to represent administrative and technical management of the TLD.\nWe may discontinue or amend any part or the whole of these Terms of Service from time to time at our absolute discretion."
+                }
+            ]
+        },
+        {
+            "_id": "6320b38f049d5917014ab792",
+            "subscription": "Leaked Employee E-mails",
+            "priority": 2,
+            "status": 1,
+            "status_change": null,
+            "status_changer": null,
+            "update_id": "6320b38f049d5917014ab792",
+            "last_update": "2022-09-13 16:45:03",
+            "keyword": "company.com",
+            "added_on": "2022-09-13 16:45:03",
+            "title": "11 Corporate E-mail Addresses Found via Search Engine - company.com",
+            "description": "IntelFinder has identified 11 company E-mail addresses which can be found via search engines.<br>Threat actors use search engines in order to harvest E-mail addresses of employees during the reconnaissance stage in order to identify potential victims of spear phishing and other types of scams.<br>This finding does not indicate that the E-mail addresses were compromised in any way. However, it is important to note that the employees who use these addresses are more susceptible to receiving threats via E-mail.",
+            "details": "<strong>IMPORTANT NOTICE: Please note that websites may contain vulnerabilities that can put your device, network and organization at risk. If you need to access the URLs below, we recommend doing so from a secure device that is not connected to the rest of the organization. Access the URLs at your own risk.</strong><br>%elements%",
+            "recommendation": "As the above E-mail addresses are discoverable to attackers who are performing reconnaissance on company, and as some reconnaissance tools are known to look for corporate E-mails using the same techniques we have used to extract the addresses above, the employees using these E-mail addresses should be considered at a higher risk of receiving E-mail threats. We recommend ensuring that the employees recently underwent cyber risk awareness training and that they are familiar with potential cyber threats.<br><br>If you prefer the E-mail addresses above would not be discoverable to threat actors, consider reaching out to the website owners.",
+            "base_elements": [
+              {
+                "label": "Record 1",
+                "value": "URL: https://company.com/purchasing\nTitle: Purchasing - company\nE-mails: insurancesupport@company.com, customerservice@company.com"
+              },
+              {
+                "label": "Record 2",
+                "value": "URL: https://www.linkedin.com/company/company\nTitle: company - LinkedIn\nE-mails: insurancesupport@company.com, test@company.com"
+              },
+              {
+                "label": "Record 3",
+                "value": "URL: https://www.sec.gov/\nTitle: asdf- SEC.gov\nE-mail: asdf@company.com"
+              },
+              {
+                "label": "Record 4",
+                "value": "URL: https://www.investing.com/equities/\nTitle: About company Inc (ASDF) - Investing.com\nE-mail: test@company.com"
+              },
+              {
+                "label": "Record 5",
+                "value": "URL: https://company.com/experience/insurance\nTitle: Insurance - company\nE-mails: insurancesupport@company.com, customerservice@company.com\ncustomerservice@company.com has been observed in at least one other URL."
+              },
+              {
+                "label": "Record 6",
+                "value": "URL: https://twitter.com/\nTitle: company - Twitter\nE-mails: test@company.com, ttest@company.com\nttest@company.com has been observed in at least one other URL."
+              },
+              {
+                "label": "Record 7",
+                "value": "URL: https://www.google.com\nTitle: Big Title...\nE-mails: georgia@company.com, ir@company.com, test@company.com, wikimedia@company.com"
+              },
+              {
+                "label": "Record 8",
+                "value": "URL: https://www.google.com/\nTitle: Random Company (ASDF) Stock Price & News - Google Finance\nE-mails: test@company.com, georgia@company.com\njtest@company.com has been observed in at least one other URL."
+              },
+              {
+                "label": "Record 9",
+                "value": "URL: https://google.com/\nTitle: company announces it will\nE-mails: ir@company.com, wikimedia@company.com, accessibility@company.com, georgia@company.com\nwikimedia@company.com, georgia@company.com have been observed in at least one other URL."
+              },
+              {
+                "label": "Record 10",
+                "value": "URL: https://www.stillgoogle.com/\nTitle: Random Forum\nE-mails: test@company.com, ir@company.com, wikimedia@company.com\ntest@company.com, wikimedia@company.com have been observed in at least one other URL."
+              }
+            ],
+            "comments": [],
+            "updates": [],
+            "elements": [
+                {
+                  "label": "Record 1",
+                  "value": "URL: https://company.com/purchasing\nTitle: Purchasing - company\nE-mails: insurancesupport@company.com, customerservice@company.com"
+                },
+                {
+                  "label": "Record 2",
+                  "value": "URL: https://www.linkedin.com/company/company\nTitle: company - LinkedIn\nE-mails: insurancesupport@company.com, test@company.com"
+                },
+                {
+                  "label": "Record 3",
+                  "value": "URL: https://www.sec.gov/\nTitle: asdf- SEC.gov\nE-mail: asdf@company.com"
+                },
+                {
+                  "label": "Record 4",
+                  "value": "URL: https://www.investing.com/equities/\nTitle: About company Inc (ASDF) - Investing.com\nE-mail: test@company.com"
+                },
+                {
+                  "label": "Record 5",
+                  "value": "URL: https://company.com/experience/insurance\nTitle: Insurance - company\nE-mails: insurancesupport@company.com, customerservice@company.com\ncustomerservice@company.com has been observed in at least one other URL."
+                },
+                {
+                  "label": "Record 6",
+                  "value": "URL: https://twitter.com/\nTitle: company - Twitter\nE-mails: test@company.com, ttest@company.com\nttest@company.com has been observed in at least one other URL."
+                },
+                {
+                  "label": "Record 7",
+                  "value": "URL: https://www.google.com\nTitle: Big Title...\nE-mails: georgia@company.com, ir@company.com, test@company.com, wikimedia@company.com"
+                },
+                {
+                  "label": "Record 8",
+                  "value": "URL: https://www.google.com/\nTitle: Random Company (ASDF) Stock Price & News - Google Finance\nE-mails: test@company.com, georgia@company.com\njtest@company.com has been observed in at least one other URL."
+                },
+                {
+                  "label": "Record 9",
+                  "value": "URL: https://google.com/\nTitle: company announces it will\nE-mails: ir@company.com, wikimedia@company.com, accessibility@company.com, georgia@company.com\nwikimedia@company.com, georgia@company.com have been observed in at least one other URL."
+                },
+                {
+                  "label": "Record 10",
+                  "value": "URL: https://www.stillgoogle.com/\nTitle: Random Forum\nE-mails: test@company.com, ir@company.com, wikimedia@company.com\ntest@company.com, wikimedia@company.com have been observed in at least one other URL."
+                },
+                {
+                  "label": "Record 10",
+                  "value": "URL: https://www.stillgoogle.com/\nTitle: Random Forum\nuser: test@company.com"
+                }
+            ]
+          }
+    ]
+}

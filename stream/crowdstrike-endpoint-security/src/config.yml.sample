@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'STREAM'
+  id: 'ChangeMe'
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+#   name: 'CrowdStrike Endpoint Security'
+#   scope: 'crowdstrike-endpoint-security'
+#   live_stream_listen_delete: true
+#   live_stream_no_dependencies: true
+#   log_level: 'error'
+
+crowdstrike:
+#   api_base_url: 'https://api.crowdstrike.com'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+#   permanent_delete: false
+#   falcon_for_mobile_active: false
+#   action_on_ip: 'detect' # optional (no_action, detect)
+#   action_on_domain: 'detect' # optional (no_action, detect)
+#   action_on_hash: 'detect' # optional (no_action, allow, detect, prevent)
+
+# metrics:
+#   enable: false # set to true to expose prometheus metrics
+#   port: 9113 # port on which metrics should be exposed
+#   addr: 0.0.0.0 # ip on which metrics should be exposed

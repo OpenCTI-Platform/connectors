@@ -1,0 +1,16 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  #name: 'DomainTools'
+  #scope: 'Domain-Name,Ipv4-Addr'
+  #auto: false # Enable/disable auto-enrichment of observables
+  #log_level: 'info'
+
+domaintools:
+  api_username: 'ChangeMe'
+  api_key: 'ChangeMe'
+  #max_tlp: 'TLP:AMBER'

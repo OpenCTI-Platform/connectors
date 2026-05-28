@@ -1,0 +1,38 @@
+{
+    "ip": "2607:fb91:2a0:80af:11ad:f056:42f2:b8c2",
+    "city": "Los Angeles",
+    "region": "California",
+    "country": "US",
+    "loc": "34.0522,-118.2437",
+    "org": "AS21928 T-Mobile USA, Inc.",
+    "postal": "90009",
+    "timezone": "America/Los_Angeles",
+    "asn": {
+      "asn": "AS21928",
+      "name": "T-Mobile USA, Inc.",
+      "domain": "t-mobile.com",
+      "route": "2607:fb91:200::/40",
+      "type": "isp"
+    },
+    "company": {
+      "name": "T-Mobile USA, Inc.",
+      "domain": "t-mobile.com",
+      "type": ""
+    },
+    "privacy": {
+      "vpn": false,
+      "proxy": false,
+      "tor": false,
+      "relay": false,
+      "hosting": false,
+      "service": ""
+    },
+    "abuse": {
+      "address": "US, WA, Bellevue, 12920 SE 38th Street, 98006",
+      "country": "US",
+      "email": "abuse@t-mobile.com",
+      "name": "abuse",
+      "network": "2607:fb90::/28",
+      "phone": "+1-888-662-4662"
+    }
+  }
