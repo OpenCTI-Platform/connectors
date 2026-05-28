@@ -136,6 +136,7 @@ jobs:
         with:
           context: ${{ matrix.path }}
           file: ./Dockerfile_ubi9
+          pull: true
           push: ${{ inputs.push }}
           platforms: ${{ inputs.platforms }}
           build-args: ${{ steps.config.outputs.build_args }}
