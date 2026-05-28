@@ -55,7 +55,7 @@ else
     RUNTIME=docker
 fi
 
-${RUNTIME} build "$@"
+${RUNTIME} build --pull "$@"
 
 if [ "${PUSH}" = true ]; then
     echo "Pushing ${IMAGE}..."
