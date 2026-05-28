@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 import traceback
+import uuid
 
 import requests
 import stix2
@@ -24,6 +25,15 @@ from pycti import (
     Tool,
     get_config_variable,
 )
+from stix2.canonicalization.Canonicalize import canonicalize
+
+# OpenCTI's namespace UUID for deterministic STIX object IDs (matches the
+# ``uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")`` namespace used by
+# every ``pycti.X.generate_id`` helper). Reused here for SCO types pycti
+# does not expose a ``generate_id`` helper for (currently ``Process``)
+# so the generated IDs deduplicate against the same objects emitted by
+# pycti-using connectors and against each other across runs.
+_OPENCTI_NAMESPACE_UUID = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 
 
 def _stix_pattern_escape(value):
@@ -35,6 +45,26 @@ def _stix_pattern_escape(value):
     invalid patterns and non-deterministic indicator IDs.
     """
     return str(value).replace("\\", "\\\\").replace("'", "\\'")
+
+
+def _generate_process_id(command_line):
+    """Build a deterministic ``process--`` STIX id from a command line.
+
+    ``stix2.Process`` does not define ``id_contributing_properties`` (the
+    STIX 2.1 spec leaves processes inherently transient), so the
+    ``stix2`` library otherwise generates a fresh random UUIDv4 on every
+    construction. That defeats OpenCTI dedup (the same ``notepad.exe``
+    command line keeps being re-created every run) and breaks the
+    ``search_id_in_list`` checks below since the id never matches
+    across runs.
+
+    Mirror the same UUIDv5(namespace, canonicalize({...})) shape that
+    every ``pycti.X.generate_id`` helper uses so the resulting id is
+    stable for a given command line and consistent with how the rest
+    of the bundle is built.
+    """
+    data = canonicalize({"command_line": str(command_line)}, utf8=False)
+    return "process--" + str(uuid.uuid5(_OPENCTI_NAMESPACE_UUID, data))
 
 
 class BeaconBeagle:
@@ -196,6 +226,21 @@ class BeaconBeagle:
         )
 
     def set_marking(self):
+        # Make ``set_marking`` idempotent. ``self.beaconbeagle_marking`` is
+        # a configured TLP *string* on entry and the parsed
+        # ``stix2.MarkingDefinition`` (or one of the ``stix2.TLP_*``
+        # singletons, which are also ``MarkingDefinition`` instances) on
+        # exit. Any subsequent invocation — e.g. a future retry loop, a
+        # re-entrant ``run()``, or a unit-test fixture exercising the
+        # connector more than once — would otherwise hit the ``else``
+        # branch (the value is no longer a recognised TLP string) and
+        # silently downgrade the operator-configured marking to the
+        # ``TLP:AMBER+STRICT`` fallback. Early-return when the marking
+        # has already been parsed so the resolved value stays stable
+        # across calls.
+        if isinstance(self.beaconbeagle_marking, stix2.v21.MarkingDefinition):
+            return
+
         if self.beaconbeagle_marking == "TLP:WHITE":
             marking = stix2.TLP_WHITE
         elif self.beaconbeagle_marking == "TLP:CLEAR":
@@ -1258,80 +1303,89 @@ class BeaconBeagle:
                     )
 
             del observable_ip, indicator_ip, relationship_indobsip
-            # We create URLs Observables if any
+            # We create URLs Observables if any.
+            # The previous shape was a four-level
+            # ``if not None is target: if target.get("FullData"): if not
+            # None is target.get("FullData"): if target.get("FullData").get(
+            # "URLs"):`` guard chain — confusing, partially redundant
+            # (``target.get("FullData")`` truthy already implies it is
+            # not ``None``) and noisy in tracebacks. Collapse to two
+            # explicit ``or`` defaults so the intent is obvious:
+            # "iterate over ``target["FullData"]["URLs"]`` if present,
+            # otherwise skip the block".
             try:
-                if not None is target:
-                    if target.get("FullData"):
-                        if not None is target.get("FullData"):
-                            if target.get("FullData").get("URLs"):
-                                for one_url in target.get("FullData").get("URLs"):
-                                    description_url = f"This URL was used by {self.beaconbeagle_link_tool} on {ip_add}"
-                                    self.helper.connector_logger.debug(
-                                        f" > Target has a url: {one_url}."
-                                    )
-                                    observable_url = stix2.URL(
-                                        value=one_url,
-                                        object_marking_refs=[self.beaconbeagle_marking],
-                                        custom_properties={
-                                            "x_opencti_score": 60,
-                                            "x_opencti_description": description_url,
-                                            "x_opencti_created_by_ref": identity_id,
-                                            "x_opencti_labels": ["CobaltStrike", "C2"],
-                                        },
-                                    )
-                                    Observables.append(observable_url)
-                                    # Indicator Creation — URLs frequently
-                                    # carry single quotes or backslashes
-                                    # (e.g. encoded query strings); escape
-                                    # them so the resulting STIX pattern
-                                    # stays valid and ``Indicator.generate_id``
-                                    # produces a stable, deduplicating id.
-                                    _url_pattern = f"[url:value = '{_stix_pattern_escape(one_url)}']"
-                                    # See the IP Indicator block above
-                                    # for the ``valid_from`` /
-                                    # ``valid_until`` rationale (STIX
-                                    # 2.1 observation window, not SDO
-                                    # lifecycle).
-                                    indicator_url = stix2.Indicator(
-                                        id=Indicator.generate_id(_url_pattern),
-                                        name=one_url,
-                                        pattern=_url_pattern,
-                                        pattern_type="stix",
-                                        description=description,
-                                        created_by_ref=identity_id,
-                                        valid_from=start_time,
-                                        valid_until=stop_time,
-                                        # confidence=60,
-                                        object_marking_refs=[self.beaconbeagle_marking],
-                                        custom_properties={
-                                            "x_opencti_score": 60,
-                                            "x_opencti_description": description_url,
-                                            "x_opencti_main_observable_type": "Url",
-                                        },
-                                    )
-                                    # ``Indicator based-on Observable``
-                                    # — see the IP indicator-relationship
-                                    # block above for rationale.
-                                    relationship_indobsurl = stix2.Relationship(
-                                        id=StixCoreRelationship.generate_id(
-                                            "based-on",
-                                            indicator_url["id"],
-                                            observable_url["id"],
-                                        ),
-                                        relationship_type="based-on",
-                                        source_ref=indicator_url["id"],
-                                        target_ref=observable_url["id"],
-                                        created_by_ref=identity_id,
-                                        object_marking_refs=[self.beaconbeagle_marking],
-                                    )
-                                    stix_objects.append(observable_url)
-                                    stix_objects.append(indicator_url)
-                                    stix_objects.append(relationship_indobsurl)
-                                    del (
-                                        observable_url,
-                                        indicator_url,
-                                        relationship_indobsurl,
-                                    )
+                full_data = target.get("FullData") or {}
+                for one_url in full_data.get("URLs") or []:
+                    description_url = (
+                        f"This URL was used by {self.beaconbeagle_link_tool} "
+                        f"on {ip_add}"
+                    )
+                    self.helper.connector_logger.debug(
+                        f" > Target has a url: {one_url}."
+                    )
+                    observable_url = stix2.URL(
+                        value=one_url,
+                        object_marking_refs=[self.beaconbeagle_marking],
+                        custom_properties={
+                            "x_opencti_score": 60,
+                            "x_opencti_description": description_url,
+                            "x_opencti_created_by_ref": identity_id,
+                            "x_opencti_labels": ["CobaltStrike", "C2"],
+                        },
+                    )
+                    Observables.append(observable_url)
+                    # Indicator Creation — URLs frequently
+                    # carry single quotes or backslashes
+                    # (e.g. encoded query strings); escape
+                    # them so the resulting STIX pattern
+                    # stays valid and ``Indicator.generate_id``
+                    # produces a stable, deduplicating id.
+                    _url_pattern = f"[url:value = '{_stix_pattern_escape(one_url)}']"
+                    # See the IP Indicator block above
+                    # for the ``valid_from`` /
+                    # ``valid_until`` rationale (STIX
+                    # 2.1 observation window, not SDO
+                    # lifecycle).
+                    indicator_url = stix2.Indicator(
+                        id=Indicator.generate_id(_url_pattern),
+                        name=one_url,
+                        pattern=_url_pattern,
+                        pattern_type="stix",
+                        description=description,
+                        created_by_ref=identity_id,
+                        valid_from=start_time,
+                        valid_until=stop_time,
+                        # confidence=60,
+                        object_marking_refs=[self.beaconbeagle_marking],
+                        custom_properties={
+                            "x_opencti_score": 60,
+                            "x_opencti_description": description_url,
+                            "x_opencti_main_observable_type": "Url",
+                        },
+                    )
+                    # ``Indicator based-on Observable``
+                    # — see the IP indicator-relationship
+                    # block above for rationale.
+                    relationship_indobsurl = stix2.Relationship(
+                        id=StixCoreRelationship.generate_id(
+                            "based-on",
+                            indicator_url["id"],
+                            observable_url["id"],
+                        ),
+                        relationship_type="based-on",
+                        source_ref=indicator_url["id"],
+                        target_ref=observable_url["id"],
+                        created_by_ref=identity_id,
+                        object_marking_refs=[self.beaconbeagle_marking],
+                    )
+                    stix_objects.append(observable_url)
+                    stix_objects.append(indicator_url)
+                    stix_objects.append(relationship_indobsurl)
+                    del (
+                        observable_url,
+                        indicator_url,
+                        relationship_indobsurl,
+                    )
 
             except Exception as inst:
                 self.helper.connector_logger.error(
@@ -1540,7 +1594,25 @@ class BeaconBeagle:
                                     # information that is actually known and
                                     # accurate; STIX 2.1 makes every
                                     # ``process`` field optional individually.
+                                    #
+                                    # ``id=`` is set explicitly via
+                                    # ``_generate_process_id`` so re-runs
+                                    # against the same ``command_line``
+                                    # produce the same ``process--<uuid>``
+                                    # id (UUIDv5 of the canonicalised
+                                    # ``{"command_line": ...}`` against the
+                                    # OpenCTI namespace UUID, matching the
+                                    # pycti ``generate_id`` convention).
+                                    # ``stix2.Process`` otherwise emits a
+                                    # fresh random UUIDv4 every call,
+                                    # which (a) defeated OpenCTI dedup,
+                                    # (b) broke the
+                                    # ``search_id_in_list(stix_objects, …)``
+                                    # checks immediately below, and
+                                    # (c) leaked Process churn into
+                                    # OpenCTI's history on every run.
                                     process_stix = stix2.Process(
+                                        id=_generate_process_id(process),
                                         object_marking_refs=[self.beaconbeagle_marking],
                                         command_line=process,
                                         custom_properties={
@@ -1554,7 +1626,6 @@ class BeaconBeagle:
                                         },
                                     )
                                     process_stix_id = process_stix["id"]
-                                    # process_stix_id = "process--"+str(process_stix["id"])
                                     # We test if this one is already in bundle list (can be linked to multiple indicators)
                                     if self.search_id_in_list(
                                         stix_objects, process_stix["id"]
@@ -1850,24 +1921,31 @@ class BeaconBeagle:
         #     hours=self.beaconbeagle_links_duration
         # )
 
-        # Create the Identity for BeaconBeagle Import
+        # Create the Identity for BeaconBeagle Import.
+        # - ``id`` is the deterministic pycti id so every connector run
+        #   resolves to the same Identity in OpenCTI.
+        # - ``created`` / ``modified`` are *not* hardcoded any more:
+        #   ``stix2.Identity`` sets sensible defaults (the SDO's
+        #   construction timestamp) and OpenCTI deduplicates on ``id``
+        #   regardless, so the previous frozen ``"2026-01-01T00:00:00.000Z"``
+        #   literals are unnecessary and confusing in audit history.
+        # - ``object_marking_refs`` reuses ``self.beaconbeagle_marking``
+        #   to stay consistent with every other SDO this connector
+        #   emits (Indicator, Tool, AttackPattern, …). Previously this
+        #   was hardcoded to ``stix2.TLP_WHITE`` even when the operator
+        #   configured a different marking, which silently leaked the
+        #   author Identity to ``TLP:WHITE``.
+        # - Redundant ``spec_version="2.1"`` / ``type="identity"`` are
+        #   dropped: ``stix2`` sets both automatically for ``Identity``
+        #   so passing them explicitly is dead noise.
         identity_id = Identity.generate_id(
             name="BeaconBeagle", identity_class="organization"
         )
         identity = stix2.Identity(
             id=identity_id,
-            spec_version="2.1",
             name="BeaconBeagle",
-            # confidence=60,
-            created="2026-01-01T00:00:00.000Z",
-            modified="2026-01-01T00:00:00.000Z",
             identity_class="organization",
-            type="identity",
-            # ``object_marking_refs`` must be a list of marking-definition
-            # refs/objects per STIX 2.1; the bare ``stix2.TLP_WHITE``
-            # shape was accepted by some validators but rejected by
-            # others and would have intermittently broken serialization.
-            object_marking_refs=[stix2.TLP_WHITE],
+            object_marking_refs=[self.beaconbeagle_marking],
         )
         stix_objects = [identity, self.beaconbeagle_marking]
         # Creating the tool (CobaltStrike) if needed
