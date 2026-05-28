@@ -12,7 +12,6 @@ from connectors_sdk.client.exceptions import (
     ApiUnauthorizedError,
 )
 from connectors_sdk.client.rate_limit import RateLimit
-from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
@@ -44,6 +43,9 @@ from connectors_sdk.settings.exceptions import (
 from connectors_sdk.states.states import ExternalImportConnectorState
 
 __all__ = [
+    # Base Connectors
+    "BaseDataProcessor",
+    "ExternalImportConnector",
     # Logger
     "Logger",  # mostly for typing purposes
     # HTTP Client
@@ -75,8 +77,4 @@ __all__ = [
     "DeprecatedField",
     # Connector States
     "ExternalImportConnectorState",
-    # Connector base classes
-    "ExternalImportConnector",
-    "BaseDataProcessor",
-    "WorkManager",
 ]

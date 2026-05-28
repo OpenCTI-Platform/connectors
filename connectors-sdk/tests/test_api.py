@@ -11,6 +11,7 @@ def test_root_public_api_is_valid():
     imports = {
         "BaseConnectorSettings",
         "BaseConfigModel",
+        "BaseDataProcessor",
         "BaseExternalImportConnectorConfig",
         "BaseInternalEnrichmentConnectorConfig",
         "BaseInternalExportFileConnectorConfig",
@@ -23,8 +24,6 @@ def test_root_public_api_is_valid():
         "DeprecatedField",
         "ExternalImportConnector",
         "ExternalImportConnectorState",
-        "BaseDataProcessor",
-        "WorkManager",
         "ListFromString",
         "Logger",
         "logger",
