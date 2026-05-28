@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logging.logger import Logger
 
 
 class ListProcessor(BaseDataProcessor):
@@ -64,11 +64,11 @@ class EmptyChunkGeneratorProcessor(BaseDataProcessor):
 
 
 class TestBaseDataProcessor:
+
     def _attach_deps(
         self,
         processor: BaseDataProcessor,
         mock_helper: MagicMock,
-        mock_logger: ConnectorLogger,
     ) -> None:
         processor.inject_dependencies(
             settings=MagicMock(),
@@ -77,46 +77,42 @@ class TestBaseDataProcessor:
         )
         processor.post_init()
 
-    def test_process_list(self, mock_helper: MagicMock, mock_logger: ConnectorLogger):
+    def test_init_subclass(self):
+        assert isinstance(ListProcessor.logger, Logger)
+        assert ListProcessor.logger._logger.name.endswith(".ListProcessor")
+
+    def test_process_list(self, mock_helper: MagicMock):
         proc = ListProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         mock_helper.api.work.initiate_work.assert_called_once()
         mock_helper.send_stix2_bundle.assert_called_once()
 
-    def test_process_generator(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_generator(self, mock_helper: MagicMock):
         proc = GeneratorProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         mock_helper.api.work.initiate_work.assert_called_once()
         # 3 chunks → 3 send calls
         assert mock_helper.send_stix2_bundle.call_count == 3
 
-    def test_process_empty_list(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_empty_list(self, mock_helper: MagicMock):
         proc = EmptyListProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         # Empty list → no work created
         mock_helper.api.work.initiate_work.assert_not_called()
 
-    def test_process_generator_skips_empty_chunks(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_process_generator_skips_empty_chunks(self, mock_helper: MagicMock):
         proc = EmptyChunkGeneratorProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         proc.process()
         # Only 2 non-empty chunks sent
         assert mock_helper.send_stix2_bundle.call_count == 2
 
-    def test_send_passes_work_name(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_send_passes_work_name(self, mock_helper: MagicMock):
         proc = ListProcessor()
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         # Call send directly to verify work_name is passed
         with proc.work_manager:
             proc.send(["obj1", "obj2"])
@@ -124,9 +120,7 @@ class TestBaseDataProcessor:
             "test-connector-id", "List Import"
         )
 
-    def test_post_init_called(
-        self, mock_helper: MagicMock, mock_logger: ConnectorLogger
-    ):
+    def test_post_init_called(self, mock_helper: MagicMock):
         """post_init is called by _init_infrastructure after inject_dependencies."""
 
         class TrackedProcessor(BaseDataProcessor):
@@ -144,5 +138,5 @@ class TestBaseDataProcessor:
 
         proc = TrackedProcessor()
         assert not proc.post_init_called
-        self._attach_deps(proc, mock_helper, mock_logger)
+        self._attach_deps(proc, mock_helper)
         assert proc.post_init_called

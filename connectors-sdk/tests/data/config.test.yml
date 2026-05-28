@@ -6,6 +6,6 @@ connector:
   id: connector-poc--uid
   name: Test Connector
   scope: test
-  log_level: error
+  log_level: debug
   duration_period: PT5M
             
