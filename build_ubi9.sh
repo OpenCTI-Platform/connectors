@@ -46,6 +46,7 @@ if [ -f "${ENV_FILE}" ]; then
     eval set -- '"$@"' $(sed '/^$/d; /^#/d; s/^/--build-arg /' "${ENV_FILE}")
 fi
 
+set -- "$@" --platform "linux/amd64"
 set -- "$@" -t "${IMAGE}"
 set -- "$@" "${CONNECTOR_DIR}"
 
