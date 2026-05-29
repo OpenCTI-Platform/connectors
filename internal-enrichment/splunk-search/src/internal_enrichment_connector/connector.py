@@ -463,6 +463,12 @@ class SplunkSearchConnector:
                 total_count = 1
             representative = group[0]
 
+            # Preserve where_sighted_refs from the original sightings.
+            # Priority: SecurityPlatform/vendor identity from the original sighting →
+            # Splunk System identity (passed in) → author.
+            orig_where = getattr(representative, "where_sighted_refs", [])
+            effective_where_id = orig_where[0] if orig_where else splunk_identity_id
+
             merged = create_sighting(
                 observable_id=getattr(representative, "x_opencti_sighting_of_ref", "")
                 or getattr(representative, "sighting_of_ref", ""),
@@ -475,7 +481,7 @@ class SplunkSearchConnector:
                 sighting_marking_id=self.config.sighting_tlp,
                 count=total_count,
                 observable_value=obs_value,
-                splunk_identity_id=splunk_identity_id,
+                splunk_identity_id=effective_where_id,
             )
             merged_sightings.append(merged)
 

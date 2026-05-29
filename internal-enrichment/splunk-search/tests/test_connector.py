@@ -6,6 +6,7 @@ from internal_enrichment_connector.connector import (
     SPLUNK_TEMPLATE_LABEL,
     SplunkSearchConnector,
 )
+from internal_enrichment_connector.splunk_result_parser import create_sighting
 
 
 def _helper(existing_indicators=None):
@@ -309,3 +310,58 @@ def test_enrich_stix_indicator_sightings_have_splunk_system_created_by_ref():
             f"Sighting created_by_ref {sighting.get('created_by_ref')!r} "
             f"!= expected system identity {splunk_system_id!r}"
         )
+
+
+def test_merge_sightings_preserves_platform_where_sighted_refs():
+    """_merge_sightings must keep where_sighted_refs from the original sightings.
+
+    When a SecurityPlatform identity is the where_sighted_refs of the original
+    sightings, the merged sighting must preserve that identity — NOT replace it
+    with the Splunk System identity.
+    """
+    import datetime
+
+    import pytz
+    from pycti import Identity, StixSightingRelationship
+
+    helper = _helper()
+    connector = _connector(helper)
+
+    author = connector.author
+    platform_id = Identity.generate_id("OISF Suricata", "securityplatform")
+    splunk_system_id = Identity.generate_id("Splunk", "system")
+
+    now = datetime.datetime.now(pytz.UTC)
+    obs_id = "ipv4-addr--aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    indicator_id = "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
+
+    # Two sightings for the same observable, both attributed to the SecurityPlatform
+    def _make_sighting(t_offset: int):
+        ts = now + datetime.timedelta(minutes=t_offset)
+        return stix2.Sighting(
+            id=StixSightingRelationship.generate_id(obs_id, platform_id, ts, ts),
+            sighting_of_ref=indicator_id,
+            where_sighted_refs=[platform_id],
+            first_seen=ts,
+            last_seen=ts,
+            created_by_ref=platform_id,
+            allow_custom=True,
+            custom_properties={
+                "x_opencti_sighting_of_ref": obs_id,
+                "x_opencti_observable_value": "10.0.0.1",
+            },
+        )
+
+    s1 = _make_sighting(0)
+    s2 = _make_sighting(5)
+
+    merged_objects = connector._merge_sightings(
+        [s1, s2], splunk_identity_id=splunk_system_id
+    )
+    assert len(merged_objects) == 1
+    merged = merged_objects[0]
+    assert isinstance(merged, stix2.Sighting)
+    assert merged.where_sighted_refs == [platform_id], (
+        f"Expected where_sighted_refs=[platform_id], got {merged.where_sighted_refs!r}. "
+        "Merging must not replace SecurityPlatform identity with Splunk System identity."
+    )
