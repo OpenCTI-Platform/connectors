@@ -30,7 +30,7 @@ class SplunkIndicator:
     def __init__(self, indicator: dict, obs_type: str) -> None:
         self.indicator = indicator
         self.id = indicator.get("id", "")
-        self.opencti_id = indicator.get("x_opencti_id", "")
+        self.opencti_id = indicator.get("x_opencti_id") or indicator.get("id", "")
         self.name = indicator.get("name", "(unnamed indicator)")
         self.pattern = indicator.get("pattern", "")
         self.pattern_type = indicator.get("pattern_type", "")
@@ -47,6 +47,10 @@ class SplunkIndicator:
         { "earliest": "-7d@d", "latest": "now", "index_scope": "index=security" }
         ```
         """
+        helper.connector_logger.debug(
+            "[PARAMS] Indicator OpenCTI ID resolved",
+            {"opencti_id": self.opencti_id, "stix_id": self.id},
+        )
         try:
             notes = (
                 helper.api.note.list(
