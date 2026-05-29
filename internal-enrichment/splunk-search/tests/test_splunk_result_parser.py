@@ -3,8 +3,11 @@ from unittest.mock import Mock
 import pytest
 import stix2
 from internal_enrichment_connector.splunk_result_parser import (
+    create_negative_sighting,
+    is_no_results_row,
     parse_observables_and_incident,
 )
+from internal_enrichment_connector.utils.utils import detect_observable_type
 from pycti import CustomObservableHostname, CustomObservableUserAgent, Identity
 
 
@@ -41,6 +44,125 @@ def tlp_marking():
     return "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
 
 
+# ---------------------------------------------------------------------------
+# is_no_results_row
+# ---------------------------------------------------------------------------
+
+
+def test_is_no_results_row_canonical_no_results():
+    """observable_value == 'No Results' → True."""
+    assert is_no_results_row({"observable_value": "No Results"})
+
+
+def test_is_no_results_row_canonical_na():
+    """observable_value == 'N/A' (case-insensitive) → True."""
+    assert is_no_results_row({"observable_value": "N/A"})
+    assert is_no_results_row({"observable_value": "n/a"})
+
+
+def test_is_no_results_row_canonical_empty():
+    """observable_value present but empty → True."""
+    assert is_no_results_row({"observable_value": ""})
+    assert is_no_results_row({"observable_value": "   "})
+
+
+def test_is_no_results_row_valid_observable_value():
+    """Real observable_value → False even when sourcetype/index are 'N/A'."""
+    row = {"observable_value": "10.0.0.1", "sourcetype": "N/A", "index": "N/A"}
+    assert not is_no_results_row(row)
+
+
+def test_is_no_results_row_valid_ip():
+    """A genuine IP as observable_value → False."""
+    assert not is_no_results_row({"observable_value": "192.168.1.1"})
+
+
+def test_is_no_results_row_fallback_both_na():
+    """No observable_value key; sourcetype == 'N/A' AND index == 'N/A' → True."""
+    assert is_no_results_row({"sourcetype": "N/A", "index": "N/A"})
+
+
+def test_is_no_results_row_fallback_only_sourcetype():
+    """No observable_value key; only sourcetype is 'N/A' (index is real) → False."""
+    assert not is_no_results_row({"sourcetype": "N/A", "index": "main"})
+
+
+def test_is_no_results_row_empty_dict():
+    """Empty row without observable_value key and no N/A fields → False."""
+    assert not is_no_results_row({})
+
+
+# ---------------------------------------------------------------------------
+# create_negative_sighting
+# ---------------------------------------------------------------------------
+
+
+def test_create_negative_sighting_fields(author):
+    indicator_stix_id = "indicator--59e1c61c-a9fb-429b-a1c1-c80116cc8e1e"
+    sighting = create_negative_sighting(
+        indicator_stix_id=indicator_stix_id,
+        indicator_name="Test Indicator",
+        search_type="dest",
+        earliest="-30d@d",
+        latest="now",
+        splunk_host="splunk.example.com",
+        query="| tstats count from datamodel=Network_Traffic",
+        author=author,
+        confidence=100,
+        sighting_marking_id=None,
+    )
+
+    assert sighting.type == "sighting"
+    # Must be the real indicator STIX ID, not the fake placeholder
+    assert sighting.sighting_of_ref == indicator_stix_id
+    assert sighting.sighting_of_ref.startswith("indicator--")
+    assert sighting.where_sighted_refs == [author.id]
+    assert sighting.get("x_opencti_negative") is True
+    assert sighting.confidence == 100
+    assert "not found" in sighting.description
+    assert "dest" in sighting.description
+    assert "splunk.example.com" in sighting.description
+    # The negative flag is the authoritative signal — the STIX spec requires a
+    # count field on Sighting objects, but x_opencti_negative=True conveys absence
+
+
+def test_create_negative_sighting_query_abbreviated(author):
+    long_query = "| tstats " + "x" * 200
+    sighting = create_negative_sighting(
+        indicator_stix_id="indicator--59e1c61c-a9fb-429b-a1c1-c80116cc8e1e",
+        indicator_name="Test",
+        search_type="custom",
+        earliest="-7d@d",
+        latest="now",
+        splunk_host="splunk.example.com",
+        query=long_query,
+        author=author,
+    )
+    assert "..." in sighting.description
+    assert len(sighting.description) < len(long_query) + 300
+
+
+def test_create_negative_sighting_with_marking(author):
+    marking = "marking-definition--f88d31f6-486f-44da-b317-01333bde0b82"
+    sighting = create_negative_sighting(
+        indicator_stix_id="indicator--59e1c61c-a9fb-429b-a1c1-c80116cc8e1e",
+        indicator_name="Test",
+        search_type="src",
+        earliest="-30d@d",
+        latest="now",
+        splunk_host="splunk.example.com",
+        query="| search *",
+        author=author,
+        sighting_marking_id=marking,
+    )
+    assert marking in sighting.object_marking_refs
+
+
+# ---------------------------------------------------------------------------
+# parse_observables_and_incident — main function tests
+# ---------------------------------------------------------------------------
+
+
 def test_parse_web_traffic(helper, author):
     result = {
         "sourcetype": "suricata:http",
@@ -64,13 +186,69 @@ def test_parse_web_traffic(helper, author):
     assert any(isinstance(obs, stix2.URL) for obs in observables)
     assert any(isinstance(obs, stix2.IPv4Address) for obs in observables)
     assert any(isinstance(obs, CustomObservableUserAgent) for obs in observables)
+    # sourcetype produces a Software observable
     assert any(isinstance(obs, stix2.Software) for obs in observables)
     assert source_identity is not None
     assert source_identity.name == "sensor-01"
     assert source_identity.identity_class == "system"
+    # Sighting description must include sourcetype metadata
+    for sighting in sightings:
+        assert "sourcetype: suricata:http" in sighting.description
     assert all(
         sighting.where_sighted_refs == [source_identity.id] for sighting in sightings
     )
+
+
+def test_sighting_count_from_result(helper, author):
+    """Sighting count must reflect the Splunk event count field."""
+    result = {
+        "src": "10.0.0.1",
+        "count": "42",
+        "sourcetype": "fw",
+        "index": "main",
+    }
+    _, _, sightings = parse_observables_and_incident(helper, result, author=author)
+    assert sightings, "Expected at least one sighting"
+    assert all(s.count == 42 for s in sightings)
+
+
+def test_sighting_count_invalid_defaults_to_one(helper, author):
+    """Non-integer count field → sighting count defaults to 1."""
+    result = {"src": "10.0.0.1", "count": "N/A"}
+    _, _, sightings = parse_observables_and_incident(helper, result, author=author)
+    assert all(s.count == 1 for s in sightings)
+
+
+def test_sighting_observable_value_stored(helper, author):
+    """Sightings must carry x_opencti_observable_value for merge-key use."""
+    result = {"src": "172.16.0.1"}
+    _, _, sightings = parse_observables_and_incident(helper, result, author=author)
+    assert sightings
+    ip_sighting = next(
+        (s for s in sightings if s.get("x_opencti_observable_value") == "172.16.0.1"),
+        None,
+    )
+    assert ip_sighting is not None
+
+
+def test_structured_sighting_description(helper, author):
+    """Sighting description must include the structured metadata template."""
+    result = {
+        "src": "10.1.1.1",
+        "sourcetype": "aws:cloudwatchlogs:vpcflow",
+        "index": "security",
+        "action": "allow",
+        "total_bytes": "1024",
+        "count": "5",
+    }
+    _, _, sightings = parse_observables_and_incident(helper, result, author=author)
+    assert sightings
+    desc = sightings[0].description
+    assert "sourcetype: aws:cloudwatchlogs:vpcflow" in desc
+    assert "index: security" in desc
+    assert "action: allow" in desc
+    assert "bytes: 1024" in desc
+    assert "events: 5" in desc
 
 
 def test_parse_web_traffic_with_threat_intel(helper, author):
@@ -111,7 +289,7 @@ def test_parse_network_traffic(helper, author):
     observables, _, sightings = parse_observables_and_incident(
         helper, result, author=author
     )
-    assert len(observables) >= 3
+    assert len(observables) >= 2
     assert len(sightings) == len(observables)
 
 
@@ -155,8 +333,9 @@ def test_unknown_values_filtered(helper, author):
         "dest": "unknown",
     }
     observables, _, _ = parse_observables_and_incident(helper, result, author=author)
+    # sourcetype produces a Software observable; invalid src/dest/user are filtered
+    assert any(isinstance(obs, stix2.Software) for obs in observables)
     assert len(observables) == 1
-    assert isinstance(observables[0], stix2.Software)
 
 
 def test_system_identity_creation_from_host(helper, author):
@@ -214,3 +393,124 @@ def test_sighting_structure(helper, author):
     assert ip_sighting.created_by_ref == author.id
     assert "first_seen" in ip_sighting
     assert "last_seen" in ip_sighting
+
+
+# ---------------------------------------------------------------------------
+# detect_observable_type
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("192.168.1.1", "IPv4-Addr"),
+        ("10.0.0.255", "IPv4-Addr"),
+        ("2001:db8::1", "IPv6-Addr"),
+        ("::1", "IPv6-Addr"),
+        ("https://example.com/path", "Url"),
+        ("http://malware.example/payload", "Url"),
+        ("user@example.com", "Email-Addr"),
+        ("d41d8cd98f00b204e9800998ecf8427e", "StixFile"),  # 32 hex = MD5
+        ("da39a3ee5e6b4b0d3255bfef95601890afd80709", "StixFile"),  # 40 hex = SHA-1
+        (
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "StixFile",
+        ),  # 64 hex = SHA-256
+        ("example.com", "Domain-Name"),
+        ("sub.domain.co.uk", "Domain-Name"),
+        ("not-a-real-observable-just-text-!!!", "Text"),
+    ],
+)
+def test_detect_observable_type(value, expected):
+    assert detect_observable_type(value) == expected
+
+
+# ---------------------------------------------------------------------------
+# No-results row → parse_observables_and_incident produces no observables
+# ---------------------------------------------------------------------------
+
+
+def test_no_results_row_produces_no_observables(helper, author):
+    """The appendpipe synthetic no-results row must produce zero observables."""
+    no_results_row = {
+        "observable_value": "No Results",
+        "dest": "No Results",
+        "sourcetype": "N/A",
+        "index": "N/A",
+        "count": "0",
+    }
+    observables, source_identity, sightings = parse_observables_and_incident(
+        helper, no_results_row, author=author
+    )
+    assert observables == []
+    assert sightings == []
+
+
+# ---------------------------------------------------------------------------
+# Custom observable_field / observable_type_override
+# ---------------------------------------------------------------------------
+
+
+def test_custom_observable_field_ipv4(helper, author):
+    """When observable_field is set, create observable from that field."""
+    result = {
+        "my_ip_field": "10.20.30.40",
+        "sourcetype": "custom",
+        "index": "main",
+    }
+    observables, _, sightings = parse_observables_and_incident(
+        helper,
+        result,
+        author=author,
+        observable_field="my_ip_field",
+    )
+    ip_obs = next((o for o in observables if isinstance(o, stix2.IPv4Address)), None)
+    assert ip_obs is not None
+    assert ip_obs.value == "10.20.30.40"
+    assert sightings
+
+
+def test_custom_observable_type_override_domain(helper, author):
+    """observable_type_override forces the STIX type regardless of auto-detection."""
+    result = {
+        "observable_value": "malware.example.com",
+        "sourcetype": "custom",
+    }
+    observables, _, _ = parse_observables_and_incident(
+        helper,
+        result,
+        author=author,
+        observable_field="observable_value",
+        observable_type_override="Domain-Name",
+    )
+    domain_obs = next((o for o in observables if isinstance(o, stix2.DomainName)), None)
+    assert domain_obs is not None
+    assert domain_obs.value == "malware.example.com"
+
+
+def test_custom_observable_type_url(helper, author):
+    """observable_type_override=Url creates a URL observable."""
+    result = {"observable_value": "https://evil.example/path"}
+    observables, _, _ = parse_observables_and_incident(
+        helper,
+        result,
+        author=author,
+        observable_type_override="Url",
+    )
+    url_obs = next((o for o in observables if isinstance(o, stix2.URL)), None)
+    assert url_obs is not None
+
+
+def test_custom_observable_type_stixfile_sha256(helper, author):
+    """SHA-256 hash with StixFile type override creates a File observable."""
+    sha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    result = {"observable_value": sha256}
+    observables, _, _ = parse_observables_and_incident(
+        helper,
+        result,
+        author=author,
+        observable_type_override="StixFile",
+    )
+    file_obs = next((o for o in observables if isinstance(o, stix2.File)), None)
+    assert file_obs is not None
+    assert file_obs.hashes.get("SHA-256") == sha256

@@ -152,7 +152,7 @@ def test_enrich_stix_indicator_runs_templates_and_sends_bundle():
         "IPv4-Addr",
     )
 
-    assert message.startswith("Ran 1 searches, 1 results")
+    assert message.startswith("Ran 1 searches, 1 rows")
     connector.splunk_client.run_search.assert_called_once()
     assert '"type": "bundle"' in helper.send_stix2_bundle.call_args.args[0]
 
@@ -199,7 +199,7 @@ def test_enrich_spl_indicator_runs_direct_search_and_sends_bundle():
 
     message = connector._enrich_spl_indicator(entity, [], "")
 
-    assert message.startswith("SPL direct: 1 results")
+    assert message.startswith("SPL direct: 1 rows")
     connector.splunk_client.run_search.assert_called_once()
     connector.helper.send_stix2_bundle.assert_called_once()
 

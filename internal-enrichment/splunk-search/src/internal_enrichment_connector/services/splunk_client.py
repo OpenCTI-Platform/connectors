@@ -51,6 +51,12 @@ class SplunkClient:
                 raise TimeoutError(f"Splunk search timed out after {timeout}s")
             job.refresh()
 
+        # If Splunk reports zero events matched (e.g. custom searches without
+        # the appendpipe no-results pattern), return an empty list so callers
+        # can produce a negative sighting without reading the results stream.
+        if str(job.get("resultCount", "1")) == "0":
+            return []
+
         reader = results.JSONResultsReader(
             job.results(output_mode="json", count=max_results)
         )

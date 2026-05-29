@@ -20,6 +20,7 @@ from pycti import (
 )
 
 from .utils import (
+    detect_observable_type,
     get_hash_type,
     is_domain_name,
     is_hostname,
@@ -60,6 +61,8 @@ def create_sighting(
     confidence: Optional[int] = None,
     description: Optional[str] = None,
     sighting_marking_id: Optional[str] = None,
+    count: int = 1,
+    observable_value: str = "",
 ) -> stix2.Sighting:
     """
     Create a STIX Sighting object for a given observable.
@@ -72,6 +75,9 @@ def create_sighting(
         last_seen: When the observable was last seen
         confidence: Optional confidence score
         description: Optional description
+        sighting_marking_id: Optional TLP marking-definition ID
+        count: Number of raw Splunk events aggregated into this sighting
+        observable_value: String value of the observable (used as merge key by _merge_sightings)
     """
     now = datetime.now(pytz.UTC)
     # Use provided timestamps or default to now
@@ -94,11 +100,12 @@ def create_sighting(
         "sighting_of_ref": "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",
         "first_seen": first_seen_time,
         "last_seen": last_seen_time,
-        "count": 1,
+        "count": max(1, count),
         "allow_custom": True,
         "x_opencti_sighting_of_ref": observable_id,
         "x_opencti_detection": True,
         "x_opencti_created_by_ref": author.id,
+        "x_opencti_observable_value": observable_value,
     }
 
     if confidence is not None:
@@ -116,6 +123,151 @@ def create_sighting(
         sighting_props["object_marking_refs"] = [sighting_marking_id]
 
     return stix2.Sighting(**sighting_props)
+
+
+def is_no_results_row(row: dict) -> bool:
+    """Return True when a Splunk result row is the appendpipe synthetic no-results row.
+
+    The ``observable_value`` field is the canonical signal because it is
+    explicitly set by the appendpipe pattern.  The sourcetype/index fallback
+    is only used for custom queries that may not include the appendpipe pattern
+    and therefore won't have an ``observable_value`` field at all.
+
+    This design avoids false positives: a real row where sourcetype happens to
+    be 'N/A' but observable_value is a genuine IP address is NOT treated as
+    a no-results row.
+    """
+    if "observable_value" in row:
+        ov = str(row["observable_value"] or "").strip().lower()
+        return ov in ("no results", "n/a", "")
+    # Fallback: custom queries without appendpipe; both fields must be N/A
+    st = str(row.get("sourcetype") or "").strip().lower()
+    ix = str(row.get("index") or "").strip().lower()
+    return st == "n/a" and ix == "n/a"
+
+
+def create_negative_sighting(
+    indicator_stix_id: str,
+    indicator_name: str,
+    search_type: str,
+    earliest: str,
+    latest: str,
+    splunk_host: str,
+    query: str,
+    author: Identity,
+    confidence: int = 100,
+    sighting_marking_id: Optional[str] = None,
+) -> stix2.Sighting:
+    """Create a STIX negative sighting expressing confirmed absence of an indicator.
+
+    Per STIX 2.1, a Sighting 'denotes the belief that something was seen.'  A
+    count of 0 contradicts this definition.  Instead we use OpenCTI's
+    ``x_opencti_negative`` extension to express 'actively searched, confirmed
+    absent.'  The ``count`` field is intentionally omitted.
+
+    Args:
+        indicator_stix_id: Full STIX ID of the indicator (``indicator--...``)
+        indicator_name: Human-readable name for the description
+        search_type: Label for the search type (e.g. 'dest', 'src', 'custom')
+        earliest: Splunk earliest_time used in the search
+        latest: Splunk latest_time used in the search
+        splunk_host: Hostname of the Splunk instance
+        query: SPL query that was executed
+        author: Organization Identity for the Splunk instance
+        confidence: Confidence score (default 100 — certain absence)
+        sighting_marking_id: Optional TLP marking-definition ID
+    """
+    now = datetime.now(pytz.UTC)
+    abbreviated_query = query[:100] + "..." if len(query) > 100 else query
+    description = (
+        f"Indicator {indicator_name} not found in Splunk ({search_type} search). "
+        f"Search window: {earliest} to {latest}. "
+        f"Splunk instance: {splunk_host}. "
+        f"Query: {abbreviated_query}"
+    )
+
+    sighting_props = {
+        "id": StixSightingRelationship.generate_id(
+            indicator_stix_id,
+            author.id,
+            now,
+            now,
+        ),
+        "type": "sighting",
+        "created": now,
+        "modified": now,
+        "created_by_ref": author.id,
+        "sighting_of_ref": indicator_stix_id,
+        "where_sighted_refs": [author.id],
+        "first_seen": now,
+        "last_seen": now,
+        "allow_custom": True,
+        "x_opencti_negative": True,
+        "x_opencti_detection": True,
+        "x_opencti_created_by_ref": author.id,
+        "confidence": confidence,
+        "description": description,
+    }
+
+    if (
+        sighting_marking_id
+        and isinstance(sighting_marking_id, str)
+        and sighting_marking_id.startswith("marking-definition--")
+    ):
+        sighting_props["object_marking_refs"] = [sighting_marking_id]
+
+    return stix2.Sighting(**sighting_props)
+
+
+def _build_observable(
+    obs_type: str, value: str, custom_props: dict, result: dict
+) -> Optional[stix2.base._STIXBase]:
+    """Create a STIX observable of the given type from a string value.
+
+    Returns None if the type is not supported or the value is unusable.
+    """
+    try:
+        if obs_type == "IPv4-Addr":
+            return stix2.IPv4Address(value=value, allow_custom=True, **custom_props)
+        if obs_type == "IPv6-Addr":
+            return stix2.IPv6Address(value=value, allow_custom=True, **custom_props)
+        if obs_type == "Domain-Name":
+            return stix2.DomainName(value=value, allow_custom=True, **custom_props)
+        if obs_type == "Url":
+            return stix2.URL(value=value, allow_custom=True, **custom_props)
+        if obs_type == "Email-Addr":
+            return stix2.EmailAddress(value=value, allow_custom=True, **custom_props)
+        if obs_type == "StixFile":
+            hash_type = get_hash_type(value)
+            if hash_type:
+                return stix2.File(
+                    hashes={hash_type: value}, allow_custom=True, **custom_props
+                )
+            return stix2.File(name=value, allow_custom=True, **custom_props)
+        if obs_type == "Hostname":
+            from pycti import CustomObservableHostname as _HostnameObs
+
+            return _HostnameObs(value=value, allow_custom=True, **custom_props)
+        if obs_type == "Text":
+            # OpenCTI Text observable — skip if not supported in this env
+            return None
+    except Exception:
+        return None
+    return None
+
+
+def _extract_observable_string_value(observable: stix2.base._STIXBase) -> str:
+    """Return the primary string value from a STIX observable for use as a merge key."""
+    for attr in ("value", "name", "account_login", "path"):
+        val = getattr(observable, attr, None)
+        if val:
+            return str(val)
+    # File: try first hash value
+    hashes = getattr(observable, "hashes", None)
+    if hashes:
+        for v in hashes.values():
+            return str(v)
+    return str(getattr(observable, "id", ""))
 
 
 def create_sourcetype_identity(
@@ -194,6 +346,8 @@ def parse_observables_and_incident(
     author: stix2.Identity,
     marking_id: str = None,
     sighting_marking_id: str = None,
+    observable_field: str = "observable_value",
+    observable_type_override: Optional[str] = None,
 ) -> Tuple[List[stix2.base._Observable], Optional[Identity], List[stix2.Sighting]]:
     """
     Parse Splunk search results into STIX observables and incidents.
@@ -296,25 +450,32 @@ def parse_observables_and_incident(
             }
         )
 
-    # Handle Sourcetype as Software and (optionally) bind to a System (host)
+    # Handle Sourcetype — create a Software observable and embed metadata in sighting description
     sourcetype_val = result.get("sourcetype")
     vendor_product = result.get("vendor_product")
     if sourcetype_val:
         helper.connector_logger.debug(
             f"[PARSER] Processing sourcetype: {sourcetype_val}"
         )
-        # Always create a Software observable representing the sourcetype
-        observables.append(
-            stix2.Software(
-                name=sourcetype_val,
-                allow_custom=True,
-                created_by_ref=author.id,
-                **custom_props,
+        # Create a Software observable for the sourcetype/vendor_product
+        try:
+            software_name = vendor_product if vendor_product else sourcetype_val
+            if software_name.lower() not in invalid_values:
+                software = stix2.Software(
+                    name=software_name,
+                    allow_custom=True,
+                    **custom_props,
+                )
+                observables.append(software)
+                helper.connector_logger.debug(
+                    f"[PARSER] Created Software observable: {software_name}"
+                )
+        except Exception as e:
+            helper.connector_logger.error(
+                f"[PARSER] Failed to create Software observable for sourcetype '{sourcetype_val}': {e}"
             )
-        )
-
-        # If we also have a host, upsert a System Identity for that host and
-        # attach a normalized sourcetype label for fast filtering in OpenCTI
+        # If we have a host, create a System Identity for it and attach a
+        # normalized sourcetype label for fast filtering in OpenCTI
         if host_val and str(host_val).lower() not in invalid_values:
             try:
                 st_label = f"sourcetype::{sourcetype_val}"
@@ -375,6 +536,33 @@ def parse_observables_and_incident(
                 **custom_props,
             )
         )
+
+    # Custom observable: when observable_field or observable_type_override is set,
+    # create a single typed observable from the specified result field instead of
+    # (or in addition to) the built-in src/dest/url multi-field logic.
+    if observable_field != "observable_value" or observable_type_override:
+        custom_obs_value = str(
+            result.get(observable_field) or result.get("observable_value") or ""
+        ).strip()
+        if custom_obs_value and custom_obs_value.lower() not in invalid_values:
+            obs_type = observable_type_override or detect_observable_type(
+                custom_obs_value
+            )
+            if obs_type == "Text":
+                helper.connector_logger.warning(
+                    "[PARSER] Could not auto-detect observable type — falling back to Text",
+                    {"value": custom_obs_value},
+                )
+            custom_obs = _build_observable(
+                obs_type, custom_obs_value, custom_props, result
+            )
+            if custom_obs is not None:
+                observables.append(custom_obs)
+        # When a custom field/type is explicitly set, skip the built-in field logic below
+        # by clearing src/dest so those blocks are no-ops (already appended custom obs above)
+        result = dict(result)  # shallow copy so we don't mutate the caller's dict
+        result["src"] = ""
+        result["dest"] = ""
 
     # Handle source IP/hostname
     if result.get("src") and result["src"].lower() not in invalid_values:
@@ -467,15 +655,31 @@ def parse_observables_and_incident(
                 stix2.File(allow_custom=True, **file_props, **custom_props)
             )
     helper.connector_logger.debug(f"[PARSER] Created {len(observables)} observables")
-    # Use the system identity (if created) as the source of the sighting; falls back to author otherwise
-    # Create sightings
+
+    # Build structured sighting description including sourcetype/index metadata
+    st = str(result.get("sourcetype") or "unknown")
+    idx = str(result.get("index") or "unknown")
+    action = str(result.get("action") or "unknown")
+    total_bytes = str(result.get("total_bytes") or result.get("bytes") or "0")
+    # Parse Splunk event count — fall back to 1 for invalid values
+    try:
+        event_count = int(result.get("count") or 1)
+        if event_count < 1:
+            event_count = 1
+    except (ValueError, TypeError):
+        event_count = 1
+
     if result.get("threat_description"):
         description = result["threat_description"]
     elif result.get("description"):
         description = result["description"]
     else:
-        description = f"{json.dumps(result)}"
-    # Prefer standardized names if present; fall back to your e_time/l_time; finally _time
+        description = (
+            f"Observed in Splunk | sourcetype: {st} | index: {idx} | "
+            f"action: {action} | bytes: {total_bytes} | events: {event_count}"
+        )
+
+    # Prefer standardized names if present; fall back to e_time/l_time; finally _time
     first_seen = (
         _parse_ts(result.get("first_seen"))
         or _parse_ts(result.get("e_time"))
@@ -487,9 +691,11 @@ def parse_observables_and_incident(
         or _parse_ts(result.get("l_time"))
         or first_seen
     )
+
     for observable in observables:
-        if isinstance(observable, SIGHTABLE_TYPES):  # Fixed the condition
+        if isinstance(observable, SIGHTABLE_TYPES):
             confidence = int(result.get("confidence", 80))
+            obs_str_value = _extract_observable_string_value(observable)
             sighting = create_sighting(
                 observable_id=observable.id,
                 author=author,
@@ -499,6 +705,8 @@ def parse_observables_and_incident(
                 confidence=confidence,
                 description=description,
                 sighting_marking_id=sighting_marking_id,
+                count=event_count,
+                observable_value=obs_str_value,
             )
             sightings.append(sighting)
     helper.connector_logger.debug(f"[PARSER] Created {len(sightings)} sightings")

@@ -16,6 +16,11 @@ class SplunkSearchPlan:
     latest: str
     index_scope: Optional[str] = None
     tokens_used: Dict[str, str] = field(default_factory=dict)
+    # Custom search fields (set when Note contains a "search" param)
+    custom: bool = False
+    observable_field: str = "observable_value"
+    observable_type_override: Optional[str] = None
+    indicator_value: str = ""
 
 
 class SplunkIndicator:
@@ -120,11 +125,49 @@ class SplunkIndicator:
         helper.connector_logger.debug("[PARAMS] Merged params", {"params": self.params})
 
     # ---------------------------- Rendering ---------------------------- #
-    def render(self, values: List[str]) -> SplunkSearchPlan:
+    def render(
+        self, values: List[str], helper: Optional[OpenCTIConnectorHelper] = None
+    ) -> SplunkSearchPlan:
         safe_vals = [self._escape(str(v)) for v in values if v is not None]
         value_str = safe_vals[0] if safe_vals else ""
         values_csv = ",".join([f'"{v}"' for v in safe_vals]) if safe_vals else ""
 
+        earliest = self.params.get("earliest", "-30d@d")
+        latest = self.params.get("latest", "now")
+        observable_field = self.params.get("observable_field", "observable_value")
+        observable_type_override = self.params.get("observable_type") or None
+
+        # --- Custom search path: Note contains a "search" param ---
+        custom_spl = self.params.get("search")
+        if custom_spl:
+            q = custom_spl
+            # Substitute {indicator_value} and {indicator_id} placeholders
+            q = q.replace("{indicator_value}", value_str)
+            q = q.replace("{indicator_id}", self.id)
+            # Warn if any braces remain (likely a typo in a placeholder name)
+            if "{" in q or "}" in q:
+                log_fn = helper.connector_logger.warning if helper else None
+                if log_fn:
+                    log_fn(
+                        "[CUSTOM] Rendered SPL still contains braces — possible unresolved placeholder",
+                        {"query_preview": q[:200]},
+                    )
+            return SplunkSearchPlan(
+                indicator_id=self.id,
+                name=self.name,
+                obs_type=(self.obs_type or ""),
+                query=q,
+                earliest=earliest,
+                latest=latest,
+                index_scope=self.params.get("index_scope"),
+                tokens_used={"value": value_str, "values_csv": values_csv},
+                custom=True,
+                observable_field=observable_field,
+                observable_type_override=observable_type_override,
+                indicator_value=value_str,
+            )
+
+        # --- Built-in template path ---
         q = self.pattern or ""
         # Angle-bracket substitutions
         angle_map = {
@@ -156,8 +199,6 @@ class SplunkIndicator:
 
         self._assert_no_unresolved(q)
 
-        earliest = self.params.get("earliest", "-30d@d")
-        latest = self.params.get("latest", "now")
         index_scope = self.params.get("index_scope")
         if index_scope:
             # Prepend scope to the leftmost search segment
@@ -176,6 +217,10 @@ class SplunkIndicator:
             latest=latest,
             index_scope=index_scope,
             tokens_used={"value": value_str, "values_csv": values_csv},
+            custom=False,
+            observable_field=observable_field,
+            observable_type_override=observable_type_override,
+            indicator_value=value_str,
         )
 
     # ---------------------------- helpers ---------------------------- #
