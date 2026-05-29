@@ -6,12 +6,17 @@ This module defines configuration settings specific to GTI software toolkit impo
 from datetime import timedelta
 
 from connector.src.custom.configs.gti_config_common import (
-    ALLOWED_ORIGINS,
     GTIBaseConfig,
     validate_origins_list,
 )
 from connectors_sdk import ListFromString
 from pydantic import Field, field_validator
+
+ALLOWED_ORIGINS = [
+    "All",
+    "partner",
+    "google threat intelligence",
+]
 
 
 class GTISoftwareToolkitConfig(GTIBaseConfig):
@@ -31,7 +36,7 @@ class GTISoftwareToolkitConfig(GTIBaseConfig):
         default=["google threat intelligence"],
         description="Comma-separated list of software toolkit origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
-        examples=["All", "partner", "google threat intelligence", "crowdsourced"],
+        examples=["All", "partner", "google threat intelligence"],
     )
 
     software_toolkit_extra_filters: ListFromString = Field(
