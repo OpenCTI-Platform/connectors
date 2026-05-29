@@ -317,6 +317,13 @@ class SplunkSearchConnector:
             id=Identity.generate_id("Splunk", "system"),
             name="Splunk",
             identity_class="system",
+            description=(
+                "Splunk SIEM platform. When this identity appears as the "
+                "observing platform in a sighting, it indicates the sourcetype "
+                "could not be mapped to a specific security platform. Review "
+                "the sighting description for the raw sourcetype value."
+            ),
+            allow_custom=True,
         )
 
         # Check for a custom search in the indicator's Note params first
@@ -397,6 +404,13 @@ class SplunkSearchConnector:
             id=Identity.generate_id("Splunk", "system"),
             name="Splunk",
             identity_class="system",
+            description=(
+                "Splunk SIEM platform. When this identity appears as the "
+                "observing platform in a sighting, it indicates the sourcetype "
+                "could not be mapped to a specific security platform. Review "
+                "the sighting description for the raw sourcetype value."
+            ),
+            allow_custom=True,
         )
         plan, indicator = self._build_search_plan(entity, obs_type, values)
         rows = self._execute_plan(plan, indicator.params)

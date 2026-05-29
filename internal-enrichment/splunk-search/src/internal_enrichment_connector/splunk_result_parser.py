@@ -68,6 +68,7 @@ def create_sighting(
     count: int = 1,
     observable_value: str = "",
     splunk_identity_id: Optional[str] = None,
+    labels: Optional[List[str]] = None,
 ) -> stix2.Sighting:
     """
     Create a STIX Sighting object for a given observable.
@@ -136,6 +137,9 @@ def create_sighting(
         and sighting_marking_id.startswith("marking-definition--")
     ):
         sighting_props["object_marking_refs"] = [sighting_marking_id]
+
+    if labels:
+        sighting_props["labels"] = labels
 
     return stix2.Sighting(**sighting_props)
 
@@ -485,10 +489,12 @@ def parse_observables_and_incident(
     vendor_product = result.get("vendor_product")
     mapping: Optional[dict] = None
     _effective_creator_id: Optional[str] = splunk_identity_id
+    _is_unmapped: bool = False
     if sourcetype_val and sourcetype_val.lower() not in invalid_values:
         helper.connector_logger.debug(
             f"[PARSER] Processing sourcetype: {sourcetype_val}"
         )
+        _is_unmapped = not _resolver.is_mapped(sourcetype_val)
         mapping = _resolver.resolve(sourcetype_val)
         if mapping.get("skip"):
             helper.connector_logger.debug(
@@ -531,6 +537,11 @@ def parse_observables_and_incident(
             # identityAdd / System path.
             platform_name = f"{vendor} {product}"
             infra_types = mapping.get("infrastructure_types", [])
+            platform_type = infra_types[0] if infra_types else None
+            platform_desc = mapping.get("description") or (
+                f"{product} is a security platform by {vendor}."
+                + (f" Platform type: {platform_type}." if platform_type else "")
+            )
             try:
                 platform_identity = stix2.Identity(
                     id=Identity.generate_id(
@@ -538,9 +549,10 @@ def parse_observables_and_incident(
                     ),
                     name=platform_name,
                     identity_class="securityplatform",
+                    description=platform_desc,
                     allow_custom=True,
                     custom_properties={
-                        "security_platform_type": infra_types[0] if infra_types else None,
+                        "security_platform_type": platform_type,
                         "x_opencti_type": "SecurityPlatform",
                     },
                     created_by_ref=vendor_identity.id,
@@ -824,6 +836,15 @@ def parse_observables_and_incident(
         else:
             description = "\n".join(header_lines)
 
+    # Prefix description for unmapped sourcetypes so analysts can filter easily
+    if _is_unmapped and sourcetype_val:
+        description = (
+            f"[UNMAPPED SOURCETYPE: {sourcetype_val}] "
+            f"No platform mapping found for sourcetype '{sourcetype_val}'. "
+            f"Defaulting to Splunk as the observing platform.\n\n"
+            + description
+        )
+
     # Prefer standardized names if present; fall back to e_time/l_time; finally _time
     first_seen = (
         _parse_ts(result.get("first_seen"))
@@ -837,6 +858,7 @@ def parse_observables_and_incident(
         or first_seen
     )
 
+    sighting_labels = ["unmapped-sourcetype"] if _is_unmapped else None
     for observable in observables:
         if isinstance(observable, SIGHTABLE_TYPES):
             confidence = int(result.get("confidence", 80))
@@ -853,6 +875,7 @@ def parse_observables_and_incident(
                 count=event_count,
                 observable_value=obs_str_value,
                 splunk_identity_id=_effective_creator_id,
+                labels=sighting_labels,
             )
             sightings.append(sighting)
     helper.connector_logger.debug(f"[PARSER] Created {len(sightings)} sightings")

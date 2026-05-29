@@ -34,6 +34,11 @@ sourcetype_map:
     infrastructure_types:
       - "cloud-service"
     datamodels: []
+    description: >-
+      AWS Systems Manager Agent runs on EC2 instances to enable remote
+      management, patch enforcement, and command execution. It produces
+      session, run-command, and patch-compliance telemetry relevant to
+      endpoint security monitoring.
     skip: false
 
   "aws:cloudfront:accesslogs":
@@ -44,6 +49,11 @@ sourcetype_map:
       - "cloud-service"
     datamodels:
       - "Web"
+    description: >-
+      Amazon CloudFront access logs record HTTP/HTTPS requests served by
+      the CDN, including client IP, URI, response code, and bytes
+      transferred. They support web threat detection, abuse analysis,
+      and traffic pattern investigation.
     skip: false
 
   "aws:cloudtrail":
@@ -55,6 +65,11 @@ sourcetype_map:
     datamodels:
       - "Authentication"
       - "Change"
+    description: >-
+      AWS CloudTrail captures API call history across AWS services,
+      recording who made each request, when, and from where. It is the
+      primary source for cloud audit, compliance, and account-level
+      threat detection.
     skip: false
 
   "aws:cloudwatchlogs:vpcflow":
@@ -65,6 +80,11 @@ sourcetype_map:
       - "cloud-service"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      AWS VPC Flow Logs capture IP traffic metadata for VPC network
+      interfaces, recording accepted and rejected connections. They
+      support network threat detection, lateral movement analysis, and
+      compliance auditing.
     skip: false
 
   "aws:config:rule":
@@ -75,6 +95,11 @@ sourcetype_map:
       - "cloud-service"
     datamodels:
       - "Change"
+    description: >-
+      AWS Config Rule evaluation results record whether AWS resources
+      comply with organizational policies. They support change
+      management, compliance reporting, and detecting cloud resource
+      misconfigurations.
     skip: false
 
   "aws:guardduty":
@@ -85,6 +110,11 @@ sourcetype_map:
       - "cloud-security"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Amazon GuardDuty analyzes VPC Flow Logs, CloudTrail, and DNS logs
+      to detect threats such as compromised instances, reconnaissance,
+      and data exfiltration. Its findings are pre-scored anomalies and
+      known-bad-IP detections.
     skip: false
 
   "aws:s3:accesslogs":
@@ -95,6 +125,11 @@ sourcetype_map:
       - "cloud-service"
     datamodels:
       - "Web"
+    description: >-
+      Amazon S3 server access logs record bucket-level request details
+      including requester, operation, response code, and bytes
+      transferred. They support data exfiltration detection and storage
+      access auditing.
     skip: false
 
   "aws:waf":
@@ -105,6 +140,10 @@ sourcetype_map:
       - "cloud-security"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      AWS WAF logs HTTP request evaluations by web ACL rules, recording
+      rule matches, allow/block decisions, and matched conditions. They
+      support web application attack detection and WAF rule tuning.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -118,6 +157,11 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Endpoint"
+    description: >-
+      Carbon Black (Bit9) provides application control and endpoint
+      detection telemetry via file-integrity and process-execution
+      events. This JSON sourcetype covers the event stream from legacy
+      Bit9/Carbon Black deployments.
     skip: false
 
   "carbonblack:defense:json":
@@ -128,6 +172,11 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Endpoint"
+    description: >-
+      VMware Carbon Black Defense delivers cloud-native endpoint
+      protection telemetry including process events, network
+      connections, and policy verdicts. This JSON sourcetype covers its
+      prevention and detection event stream.
     skip: false
 
   "carbonblack:response:json":
@@ -138,6 +187,11 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Endpoint"
+    description: >-
+      VMware Carbon Black Response provides EDR telemetry including
+      process tree data, file modifications, registry changes, and
+      network connections. This JSON sourcetype is used for threat
+      hunting and incident response.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -152,6 +206,10 @@ sourcetype_map:
     datamodels:
       - "Network_Traffic"
       - "Intrusion_Detection"
+    description: >-
+      Cisco ASA logs cover firewall policy decisions, NAT translations,
+      VPN session events, and IPS alerts. They are a primary source for
+      network perimeter threat detection and access policy auditing.
     skip: false
 
   "cisco:estreamer:data":
@@ -162,6 +220,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Cisco Firepower eStreamer provides a real-time event stream from
+      the Firepower Management Center including IPS alerts, connection
+      events, file events, and security intelligence matches. It
+      delivers deep network security telemetry for threat detection.
     skip: false
 
   "cisco:firepower:syslog":
@@ -172,6 +235,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Cisco Firepower syslog output covers IPS alert notifications,
+      connection events, and security intelligence blocks in standard
+      syslog format. It provides network intrusion detection telemetry
+      for environments using syslog-based collection.
     skip: false
 
   "cisco:ios":
@@ -183,6 +251,11 @@ sourcetype_map:
     datamodels:
       - "Network_Traffic"
       - "Change"
+    description: >-
+      Cisco IOS logs cover routing, switching, and network
+      infrastructure events including interface state changes, ACL hits,
+      authentication events, and configuration changes. They support
+      network infrastructure monitoring and change auditing.
     skip: false
 
   "cisco:meraki":
@@ -193,6 +266,11 @@ sourcetype_map:
       - "network"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Cisco Meraki cloud-managed networking logs cover firewall events,
+      content filtering, wireless association, and VPN session
+      telemetry. They provide unified network visibility for branch and
+      campus environments.
     skip: false
 
   "snort":
@@ -203,6 +281,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Snort IDS generates alert events when traffic matches detection
+      rules, producing records containing rule metadata,
+      source/destination, protocol, and payload details. It is a widely
+      deployed open-source intrusion detection sensor.
     skip: false
 
   "snort:alert:json":
@@ -213,6 +296,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Snort IDS JSON alert output provides structured intrusion
+      detection events with rule metadata, classification, and network
+      context. This format enables richer automated parsing compared to
+      legacy syslog format.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -225,6 +313,12 @@ sourcetype_map:
     infrastructure_types:
       - "endpoint-security"
     datamodels: []
+    description: >-
+      CrowdStrike Falcon Streaming API delivers real-time endpoint
+      telemetry and detection events in JSON format, covering process,
+      network, registry, and file-system activity from the Falcon
+      sensor. It is the primary high-fidelity EDR data source for
+      CrowdStrike deployments.
     skip: false
 
   "crowdstrike:events:incident":
@@ -235,6 +329,11 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      CrowdStrike Falcon incident events represent aggregated detection
+      activity linked to an adversary behavior pattern. They provide
+      context-rich incident records useful for tracking threat actor
+      campaign activity.
     skip: false
 
   "crowdstrike:events:sensor":
@@ -245,6 +344,11 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Endpoint"
+    description: >-
+      CrowdStrike Falcon sensor events cover low-level endpoint
+      telemetry including process execution, network connections, and
+      file writes. They support endpoint threat hunting and behavioral
+      analysis.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -258,6 +362,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Change"
+    description: >-
+      FortiGate event logs capture system and administrative events
+      including configuration changes, VPN tunnel state, and
+      administrator authentication. They support operational auditing
+      and change management for Fortinet firewall deployments.
     skip: false
 
   "fgt_traffic":
@@ -268,6 +377,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      FortiGate traffic logs record network flow data including
+      source/destination IPs, ports, policy actions (allow/deny), and
+      bytes transferred. They are the primary source for network
+      visibility and threat detection in FortiGate environments.
     skip: false
 
   "fgt_utm":
@@ -278,6 +392,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      FortiGate UTM logs cover security profile verdicts including
+      antivirus detections, web filtering blocks, application control
+      decisions, and IPS alerts. They provide layered security telemetry
+      for detecting multi-vector attacks.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -288,6 +407,11 @@ sourcetype_map:
     product: "update-alternatives"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Debian update-alternatives logs record changes to symbolic links
+      that define default system commands (e.g., default Python or
+      editor). They are useful for detecting unauthorized binary
+      substitution or persistence via command aliasing.
     skip: false
 
   "apport.log":
@@ -295,6 +419,11 @@ sourcetype_map:
     product: "Apport"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Ubuntu Apport crash reporter logs capture application crash events
+      including the faulting binary, signal, and crash file path. They
+      support host stability monitoring and forensic analysis of
+      crashing processes.
     skip: false
 
   "bootstrap.log":
@@ -302,6 +431,11 @@ sourcetype_map:
     product: "Ubuntu"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Ubuntu bootstrap logs capture package installation and
+      configuration events during system initialization. They provide
+      insight into the installed software baseline at system
+      provisioning time.
     skip: false
 
   "cloud-init":
@@ -311,6 +445,12 @@ sourcetype_map:
     infrastructure_types:
       - "cloud-service"
     datamodels: []
+    description: >-
+      cloud-init logs capture instance initialization events including
+      user-data script execution, package installation, and network
+      configuration. They are critical for auditing cloud instance
+      bootstrap behavior and detecting unauthorized initialization
+      commands.
     skip: false
 
   "cloud-init-output":
@@ -320,6 +460,11 @@ sourcetype_map:
     infrastructure_types:
       - "cloud-service"
     datamodels: []
+    description: >-
+      cloud-init-output captures stdout/stderr from cloud-init
+      execution, providing verbose detail about commands run during
+      instance startup. It complements cloud-init log data with raw
+      output for forensic investigation of bootstrap activities.
     skip: false
 
   "dpkg.log":
@@ -327,6 +472,11 @@ sourcetype_map:
     product: "dpkg"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Debian package manager (dpkg) logs record package installation,
+      removal, and upgrade events with timestamps and package versions.
+      They support software inventory auditing and detection of
+      unauthorized package changes.
     skip: false
 
   "kern.log":
@@ -334,6 +484,11 @@ sourcetype_map:
     product: "Kernel"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      The Linux kernel log records low-level system events including
+      hardware errors, module loading, security policy decisions (e.g.,
+      SELinux/AppArmor denials), and OOM killer activity. It provides
+      foundational host telemetry for incident investigation.
     skip: false
 
   "linux:audit":
@@ -345,6 +500,11 @@ sourcetype_map:
     datamodels:
       - "Authentication"
       - "Change"
+    description: >-
+      Linux auditd generates security-relevant kernel events including
+      system calls, file access, authentication events, and privilege
+      escalation. It is the primary host-based audit data source for
+      Linux security monitoring and compliance.
     skip: false
 
   "linux_secure":
@@ -355,6 +515,11 @@ sourcetype_map:
       - "endpoint"
     datamodels:
       - "Authentication"
+    description: >-
+      The Linux secure log (PAM/sshd) records authentication events
+      including SSH logins, sudo usage, and PAM module outcomes. It is
+      the primary source for detecting brute-force attacks, credential
+      abuse, and unauthorized access on Linux hosts.
     skip: false
 
   "syslog":
@@ -365,6 +530,11 @@ sourcetype_map:
       - "endpoint"
     datamodels:
       - "Endpoint"
+    description: >-
+      The Linux syslog captures general system and application log
+      messages from the kernel and daemon processes. It provides broad
+      host telemetry useful for correlating events across endpoint
+      security investigations.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -378,6 +548,11 @@ sourcetype_map:
       - "endpoint"
     datamodels:
       - "Endpoint"
+    description: >-
+      Windows Application Event Log records events generated by
+      applications and services installed on the system. It supports
+      monitoring for application errors, crashes, and security-relevant
+      application behavior.
     skip: false
 
   "WinEventLog:Security":
@@ -388,6 +563,12 @@ sourcetype_map:
       - "endpoint"
     datamodels:
       - "Authentication"
+    description: >-
+      Windows Security Event Log captures authentication, authorization,
+      and audit policy events including logon/logoff, privilege use,
+      object access, and process creation. It is the primary source for
+      identity threat detection and compliance monitoring on Windows
+      endpoints.
     skip: false
 
   "WinEventLog:System":
@@ -399,6 +580,11 @@ sourcetype_map:
     datamodels:
       - "Endpoint"
       - "Change"
+    description: >-
+      Windows System Event Log records OS-level events including service
+      start/stop, driver loading, hardware errors, and system
+      configuration changes. It supports endpoint monitoring and
+      detection of persistence via service manipulation.
     skip: false
 
   "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational":
@@ -409,6 +595,12 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Endpoint"
+    description: >-
+      Microsoft Sysmon generates detailed endpoint telemetry including
+      process creation with full command lines, network connections,
+      file creation time changes, and registry modifications. It is a
+      widely used endpoint security sensor for threat hunting and
+      detection.
     skip: false
 
   "XmlWinEventLog:Security":
@@ -419,6 +611,11 @@ sourcetype_map:
       - "endpoint"
     datamodels:
       - "Authentication"
+    description: >-
+      Windows Security Event Log in XML format provides the same
+      authentication and audit telemetry as WinEventLog:Security with
+      richer structured field parsing. It is preferred for modern Splunk
+      deployments requiring full event detail.
     skip: false
 
   "azure:monitor:aad":
@@ -429,6 +626,12 @@ sourcetype_map:
       - "identity-provider"
     datamodels:
       - "Authentication"
+    description: >-
+      Azure Monitor Azure Active Directory logs capture sign-in and
+      audit events from Microsoft Entra ID, including user
+      authentication, MFA outcomes, and directory changes. They are the
+      primary source for identity threat detection in Azure
+      environments.
     skip: false
 
   "azure:security:center":
@@ -439,6 +642,11 @@ sourcetype_map:
       - "cloud-security"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Microsoft Defender for Cloud generates security alerts and
+      recommendations for Azure workloads, covering misconfigurations,
+      anomalous activity, and known attack patterns. These findings
+      integrate cloud workload protection telemetry.
     skip: false
 
   "ms:aad:audit":
@@ -450,6 +658,11 @@ sourcetype_map:
     datamodels:
       - "Authentication"
       - "Change"
+    description: >-
+      Microsoft Entra ID audit logs record directory change events
+      including user creation/deletion, group membership changes, role
+      assignments, and application registration. They support identity
+      governance monitoring and insider threat detection.
     skip: false
 
   "ms:aad:signin":
@@ -460,6 +673,12 @@ sourcetype_map:
       - "identity-provider"
     datamodels:
       - "Authentication"
+    description: >-
+      Microsoft Entra ID sign-in logs capture authentication events
+      including interactive and non-interactive user logins, service
+      principal authentications, and conditional access policy outcomes.
+      They are essential for detecting credential abuse and account
+      takeover.
     skip: false
 
   "ms:o365:management":
@@ -470,6 +689,11 @@ sourcetype_map:
       - "cloud-service"
     datamodels:
       - "Change"
+    description: >-
+      Microsoft 365 Management Activity API logs cover audit events
+      across Exchange, SharePoint, Teams, and Entra ID. They provide
+      unified cloud productivity telemetry for detecting data
+      exfiltration and account compromise.
     skip: false
 
   "o365:management:activity":
@@ -482,6 +706,11 @@ sourcetype_map:
       - "Change"
       - "Email"
       - "Web"
+    description: >-
+      Microsoft 365 Management Activity logs record user and
+      administrator actions across Office 365 services including email
+      access, file sharing, and configuration changes. They support
+      compliance monitoring and insider threat detection.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -495,6 +724,11 @@ sourcetype_map:
       - "vulnerability-scanner"
     datamodels:
       - "Vulnerabilities"
+    description: >-
+      Tenable Nessus vulnerability scan results contain discovered
+      vulnerabilities, their CVSS scores, affected hosts, and
+      remediation guidance. They provide vulnerability posture telemetry
+      for correlating threat activity with exploitable weaknesses.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -508,6 +742,11 @@ sourcetype_map:
       - "identity-provider"
     datamodels:
       - "Authentication"
+    description: >-
+      Okta Identity Management logs capture identity lifecycle events
+      including user provisioning, group membership changes, and
+      application assignments. They support identity governance
+      monitoring and detection of unauthorized account changes.
     skip: false
 
   "okta:log2":
@@ -519,6 +758,12 @@ sourcetype_map:
     datamodels:
       - "Authentication"
       - "Change"
+    description: >-
+      Okta system log records authentication, authorization, and
+      administrative events across the Okta Identity Cloud, including
+      MFA challenges, policy evaluations, and suspicious activity flags.
+      It is the primary source for identity threat detection in Okta-
+      managed environments.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -534,6 +779,12 @@ sourcetype_map:
     infrastructure_types:
       - "endpoint-security"
     datamodels: []
+    description: >-
+      OSQuery differential and snapshot query results provide endpoint
+      state telemetry including running processes, open network
+      connections, installed packages, and user accounts. This case-
+      sensitive sourcetype captures result data used for threat hunting
+      and compliance checks.
     skip: false
 
   "osquery:info":
@@ -541,6 +792,11 @@ sourcetype_map:
     product: "OSQuery"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      OSQuery informational logs capture the OSQuery agent's operational
+      status including configuration updates, schedule execution, and
+      daemon health. These are diagnostic logs not directly useful for
+      threat detection.
     skip: false
 
   "osquery:results":
@@ -550,6 +806,11 @@ sourcetype_map:
     infrastructure_types:
       - "endpoint-security"
     datamodels: []
+    description: >-
+      OSQuery differential and snapshot query results (lowercase
+      variant) provide the same endpoint state telemetry as
+      OSQuery:results. Both sourcetypes may appear depending on Splunk
+      forwarder configuration.
     skip: false
 
   "osquery:warning":
@@ -557,6 +818,11 @@ sourcetype_map:
     product: "OSQuery"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      OSQuery warning logs record non-fatal agent issues such as query
+      performance problems and configuration warnings. They are
+      primarily operational and diagnostic rather than security
+      telemetry.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -570,6 +836,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Change"
+    description: >-
+      Palo Alto Networks PAN-OS configuration logs record administrative
+      changes to firewall policy, objects, and settings. They support
+      change management auditing and detection of unauthorized
+      configuration modifications.
     skip: false
 
   "pan:system":
@@ -579,6 +850,11 @@ sourcetype_map:
     infrastructure_types:
       - "firewall"
     datamodels: []
+    description: >-
+      Palo Alto Networks PAN-OS system logs capture device-level events
+      including HA state changes, interface status, and administrator
+      authentication. They support operational monitoring of PAN-OS
+      firewall infrastructure.
     skip: false
 
   "pan:threat":
@@ -589,6 +865,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Palo Alto Networks PAN-OS threat logs record security profile
+      verdicts including IPS alerts, URL filtering blocks, antivirus
+      detections, and anti-spyware matches. They are the primary source
+      for network threat detection in Palo Alto Networks environments.
     skip: false
 
   "pan:traffic":
@@ -599,6 +880,11 @@ sourcetype_map:
       - "firewall"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Palo Alto Networks PAN-OS traffic logs record network flow data
+      including source/destination, application identification, security
+      policy action, and bytes transferred. They provide deep network
+      visibility with application-layer context.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -612,6 +898,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Suricata IDS/IPS generates alert events when traffic matches
+      detection rules, providing rule metadata, network context, and
+      payload details. It is a high-performance open-source network
+      security monitoring engine.
     skip: false
 
   "suricata:alert":
@@ -622,6 +913,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      Suricata alert events in JSON (EVE) format contain structured
+      intrusion detection records with rule metadata, flow context, and
+      network fields. They are the primary threat detection output from
+      Suricata deployments.
     skip: false
 
   "suricata:dns":
@@ -632,6 +928,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Network_Resolution"
+    description: >-
+      Suricata DNS log events capture DNS query and response telemetry
+      including queried domains, record types, and answers. They support
+      domain-based threat detection, DNS tunneling analysis, and C2
+      infrastructure identification.
     skip: false
 
   "suricata:flow":
@@ -642,6 +943,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Suricata flow logs record NetFlow-equivalent connection metadata
+      including IP/port tuples, protocol, bytes, and packet counts. They
+      provide network traffic baseline data useful for anomaly
+      detection.
     skip: false
 
   "suricata:http":
@@ -652,6 +958,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Web"
+    description: >-
+      Suricata HTTP log events capture HTTP request and response
+      metadata including URI, user agent, status code, and content type.
+      They support web-based threat detection and HTTP-based C2 traffic
+      analysis.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -666,6 +977,11 @@ sourcetype_map:
     datamodels:
       - "Endpoint"
       - "Malware"
+    description: >-
+      Symantec Endpoint Protection risk file logs record malware
+      detection events including the detected file name, threat
+      classification, and remediation action taken. They provide
+      endpoint antivirus telemetry for malware incident response.
     skip: false
 
   "symantec:ep:security:file":
@@ -677,6 +993,11 @@ sourcetype_map:
     datamodels:
       - "Endpoint"
       - "Malware"
+    description: >-
+      Symantec Endpoint Protection security logs record endpoint
+      security policy events including IPS alerts, application control
+      decisions, and host firewall actions. They provide multi-layer
+      endpoint protection telemetry.
     skip: false
 
   "symantec:ep:traffic:file":
@@ -687,6 +1008,11 @@ sourcetype_map:
       - "endpoint-security"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Symantec Endpoint Protection traffic logs capture network
+      connection events from the endpoint firewall including
+      source/destination IPs, ports, and allow/block decisions. They
+      support network threat detection from the endpoint perspective.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -700,6 +1026,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Zeek (Bro) connection logs record complete network flow metadata
+      including IP tuples, protocol, duration, bytes, and connection
+      state. They are the foundational network visibility data source
+      for Zeek-based network security monitoring.
     skip: false
 
   "bro:dns:json":
@@ -710,6 +1041,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Network_Resolution"
+    description: >-
+      Zeek DNS logs capture DNS query/response pairs including queried
+      name, record type, answers, and timing. They support domain-based
+      threat detection, DNS anomaly analysis, and C2 infrastructure
+      identification.
     skip: false
 
   "bro:files:json":
@@ -720,6 +1056,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Endpoint"
+    description: >-
+      Zeek file analysis logs record file transfers observed on the
+      network including MIME type, hash values, and extraction details.
+      They support malware delivery detection and data exfiltration
+      analysis.
     skip: false
 
   "bro:http:json":
@@ -730,6 +1071,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Web"
+    description: >-
+      Zeek HTTP logs capture HTTP transaction details including URI,
+      method, user agent, status code, and response size. They provide
+      rich web traffic visibility for threat detection and web-based
+      attack analysis.
     skip: false
 
   "bro:ssl:json":
@@ -740,6 +1086,11 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Certificates"
+    description: >-
+      Zeek SSL/TLS logs record TLS handshake metadata including
+      certificate details, cipher suites, and validation outcomes. They
+      support detection of malicious encrypted traffic, certificate
+      abuse, and protocol anomalies.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -751,6 +1102,11 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Web"
+    description: >-
+      Apache HTTP Server combined access logs record HTTP requests
+      including client IP, request method, URI, status code, and bytes.
+      They support web application threat detection and access pattern
+      analysis.
     skip: false
 
   "bandwidth":
@@ -758,6 +1114,11 @@ sourcetype_map:
     product: "Bandwidth Monitor"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Generic bandwidth monitoring data captures network throughput
+      metrics per interface or endpoint. It provides network utilization
+      context useful for detecting anomalous data transfer volumes that
+      may indicate exfiltration.
     skip: false
 
   # fwsnort bridges iptables rules with Snort IDS signatures — it functions as
@@ -771,6 +1132,12 @@ sourcetype_map:
       - "ids"
     datamodels:
       - "Intrusion_Detection"
+    description: >-
+      fwsnort translates Snort IDS rules into iptables firewall rules,
+      generating logs that combine host-based firewall enforcement with
+      IDS rule classification. It functions as both a firewall and IDS,
+      providing telemetry for network access control and intrusion
+      detection.
     skip: false
 
   "interfaces":
@@ -779,6 +1146,11 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Linux network interface statistics capture throughput, error, and
+      packet drop counters per interface. They provide network health
+      telemetry useful for detecting performance anomalies and potential
+      DoS conditions.
     skip: false
 
   "openports":
@@ -787,6 +1159,10 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Open port scanner results enumerate listening ports and associated
+      services on scanned hosts. They support asset inventory and
+      detection of unauthorized or unexpected network services.
     skip: false
 
   "protocol":
@@ -795,6 +1171,10 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Network_Traffic"
+    description: >-
+      Generic network protocol analyzer data captures protocol-level
+      traffic details. It provides foundational network visibility for
+      protocol anomaly detection and traffic classification.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -806,6 +1186,11 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Performance"
+    description: >-
+      Linux CPU utilization metrics capture per-core usage across user,
+      system, and idle states. They support detection of cryptominer
+      activity and resource abuse through anomalous CPU consumption
+      patterns.
     skip: false
 
   "df":
@@ -814,6 +1199,10 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Performance"
+    description: >-
+      Linux disk filesystem utilization metrics capture space usage per
+      mounted filesystem. They support detection of disk-based denial of
+      service conditions and log tampering via disk exhaustion.
     skip: false
 
   "hardware":
@@ -821,6 +1210,11 @@ sourcetype_map:
     product: "Hardware Inventory"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Generic hardware inventory data captures system hardware
+      configuration including CPU, memory, and storage. It provides
+      asset context useful for vulnerability assessment and
+      configuration management.
     skip: false
 
   "lsof":
@@ -828,6 +1222,11 @@ sourcetype_map:
     product: "lsof"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Linux lsof (list open files) output captures open file descriptors
+      and network connections per process. It provides forensic endpoint
+      telemetry for detecting suspicious process network activity and
+      unauthorized file access.
     skip: false
 
   "ps":
@@ -835,6 +1234,10 @@ sourcetype_map:
     product: "ps"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Linux process status (ps) output captures running processes with
+      PID, user, and command. It provides endpoint process inventory
+      useful for detecting unauthorized or suspicious processes.
     skip: false
 
   "top":
@@ -843,6 +1246,11 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Performance"
+    description: >-
+      Linux top process monitor output captures real-time CPU and memory
+      utilization per process. It provides resource consumption context
+      useful for detecting anomalous process behavior such as
+      cryptomining.
     skip: false
 
   "vmstat":
@@ -851,6 +1259,10 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Performance"
+    description: >-
+      Linux virtual memory statistics capture memory, swap, and I/O
+      performance metrics. They provide system resource context useful
+      for detecting resource exhaustion and performance anomalies.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -861,6 +1273,11 @@ sourcetype_map:
     product: "Bash Shell"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Bash shell command history logs capture commands executed by users
+      in interactive shell sessions. They are a high-value forensic data
+      source for detecting attacker actions and insider threat behavior
+      on Linux endpoints.
     skip: false
 
   "package":
@@ -868,6 +1285,11 @@ sourcetype_map:
     product: "Package Manager"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Generic package manager output captures software package
+      installation and removal events. It provides software change
+      tracking useful for detecting unauthorized package modifications
+      and software supply chain risks.
     skip: false
 
   "script:getendpointinfo":
@@ -875,6 +1297,11 @@ sourcetype_map:
     product: "BOTS Script"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Splunk BOTS endpoint information collection script output captures
+      endpoint configuration and state data. This is a custom script-
+      based collection sourcetype used in Splunk BOTS competition
+      datasets.
     skip: false
 
   "usersWithLoginPrivs":
@@ -882,6 +1309,10 @@ sourcetype_map:
     product: "User Management"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      User login privilege enumeration captures accounts with
+      interactive login rights on the system. It supports access reviews
+      and detection of unauthorized privilege escalation.
     skip: false
 
   "who":
@@ -890,6 +1321,11 @@ sourcetype_map:
     entity_type: "Software"
     datamodels:
       - "Authentication"
+    description: >-
+      Linux who command output captures currently logged-in users
+      including login time and terminal. It provides session context
+      useful for correlating authentication events with active user
+      sessions.
     skip: false
 
   # ---------------------------------------------------------------------------
@@ -902,6 +1338,11 @@ sourcetype_map:
     product: "Splunk Enterprise"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Splunk internal performance metrics cover indexing throughput,
+      search concurrency, and resource utilization. These are Splunk
+      platform operational logs that do not contain external threat-
+      relevant security telemetry.
     skip: true
 
   "scheduler":
@@ -909,6 +1350,11 @@ sourcetype_map:
     product: "Splunk Enterprise"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Splunk scheduled search execution logs record search job
+      scheduling, execution times, and completion status. These are
+      Splunk platform operational logs not relevant to external threat
+      detection.
     skip: true
 
   "splunk_web_access":
@@ -916,6 +1362,10 @@ sourcetype_map:
     product: "Splunk Enterprise"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Splunk Web server access logs record HTTP requests to the Splunk
+      Web UI. They may be relevant for auditing Splunk administrative
+      access but are primarily platform operational logs.
     skip: true
 
   "splunkd":
@@ -923,6 +1373,11 @@ sourcetype_map:
     product: "Splunk Enterprise"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Splunk daemon logs record Splunk Enterprise operational events
+      including indexer activity, forwarder connections, and license
+      usage. These are platform diagnostic logs not relevant to external
+      threat detection.
     skip: true
 
   "splunkd_access":
@@ -930,4 +1385,8 @@ sourcetype_map:
     product: "Splunk Enterprise"
     entity_type: "Software"
     datamodels: []
+    description: >-
+      Splunk daemon access logs record connections to the Splunk REST
+      API and management port. They may be relevant for auditing Splunk
+      API usage but are primarily platform operational logs.
     skip: true

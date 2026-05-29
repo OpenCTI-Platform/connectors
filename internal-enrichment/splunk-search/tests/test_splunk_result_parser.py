@@ -420,7 +420,13 @@ def test_sighting_structure(helper, author):
         ip_sighting.sighting_of_ref == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
     )
     assert ip_sighting.confidence == 90
-    assert ip_sighting.description == "Test description"
+    # Unmapped sourcetype: prefix is prepended to the threat_description
+    assert ip_sighting.description == (
+        "[UNMAPPED SOURCETYPE: test] No platform mapping found for sourcetype 'test'. "
+        "Defaulting to Splunk as the observing platform.\n\n"
+        "Test description"
+    )
+    assert ip_sighting.labels == ["unmapped-sourcetype"]
     assert source_identity is None
     unknown_vendor_id = _Identity.generate_id("Unknown", "organization")
     assert ip_sighting.where_sighted_refs == [unknown_vendor_id]

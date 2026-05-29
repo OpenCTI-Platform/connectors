@@ -92,6 +92,14 @@ class SourcetypeResolver:
             }
         return entry
 
+    def is_mapped(self, sourcetype: str) -> bool:
+        """Return True if *sourcetype* has an explicit entry in the map.
+
+        Returns False for sourcetypes that fall through to the default
+        fallback, meaning no YAML entry was found for them.
+        """
+        return sourcetype in self._map
+
     def get_all_sourcetypes(self) -> List[str]:
         """Return all known sourcetype keys (for debugging / logging)."""
         return list(self._map.keys())
