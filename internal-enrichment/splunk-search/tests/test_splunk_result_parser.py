@@ -119,7 +119,7 @@ def test_create_negative_sighting_fields(author):
     assert sighting.where_sighted_refs == [author.id]
     assert sighting.get("x_opencti_negative") is True
     assert sighting.confidence == 100
-    assert "not found" in sighting.description
+    assert "No results found" in sighting.description
     assert "dest" in sighting.description
     assert "splunk.example.com" in sighting.description
     # The negative flag is the authoritative signal — the STIX spec requires a
@@ -127,6 +127,7 @@ def test_create_negative_sighting_fields(author):
 
 
 def test_create_negative_sighting_query_abbreviated(author):
+    """Negative sighting description follows the new structured format; query is omitted."""
     long_query = "| tstats " + "x" * 200
     sighting = create_negative_sighting(
         indicator_stix_id="indicator--59e1c61c-a9fb-429b-a1c1-c80116cc8e1e",
@@ -137,9 +138,15 @@ def test_create_negative_sighting_query_abbreviated(author):
         splunk_host="splunk.example.com",
         query=long_query,
         author=author,
+        template_name="My Search Template",
     )
-    assert "..." in sighting.description
-    assert len(sighting.description) < len(long_query) + 300
+    # Query is no longer embedded in the description
+    assert long_query not in sighting.description
+    # Template name must appear
+    assert "My Search Template" in sighting.description
+    # Time range must appear
+    assert "-7d@d" in sighting.description
+    assert "now" in sighting.description
 
 
 def test_create_negative_sighting_with_marking(author):
@@ -186,10 +193,13 @@ def test_parse_web_traffic(helper, author):
     assert any(isinstance(obs, stix2.URL) for obs in observables)
     assert any(isinstance(obs, stix2.IPv4Address) for obs in observables)
     assert any(isinstance(obs, CustomObservableUserAgent) for obs in observables)
-    # sourcetype produces a Software observable
-    assert any(isinstance(obs, stix2.Software) for obs in observables)
+    # sourcetype (suricata:http → Infrastructure) produces vendor + SecurityPlatform identities
+    assert any(
+        isinstance(obs, stix2.Identity) and obs.identity_class == "organization"
+        for obs in observables
+    )
     assert source_identity is not None
-    assert source_identity.name == "sensor-01"
+    assert source_identity.name == "OISF Suricata"  # vendor + product from YAML
     assert source_identity.identity_class == "system"
     # Sighting description must include sourcetype metadata
     for sighting in sightings:
@@ -241,9 +251,14 @@ def test_structured_sighting_description(helper, author):
         "total_bytes": "1024",
         "count": "5",
     }
-    _, _, sightings = parse_observables_and_incident(helper, result, author=author)
+    _, _, sightings = parse_observables_and_incident(
+        helper, result, author=author, template_name="VPC Flow Search"
+    )
     assert sightings
     desc = sightings[0].description
+    # Vendor/product header replaces the old "Observed in Splunk" header
+    assert "Observed in Amazon Web Services VPC Flow Logs" in desc
+    assert "Search template: VPC Flow Search" in desc
     assert "sourcetype: aws:cloudwatchlogs:vpcflow" in desc
     assert "index: security" in desc
     assert "action: allow" in desc
@@ -290,7 +305,9 @@ def test_parse_network_traffic(helper, author):
         helper, result, author=author
     )
     assert len(observables) >= 2
-    assert len(sightings) == len(observables)
+    # Each sightable observable (IPv4 addresses) gets a sighting; Identity objects do not
+    ip_observables = [o for o in observables if isinstance(o, stix2.IPv4Address)]
+    assert len(sightings) == len(ip_observables)
 
 
 def test_parse_dns_traffic(helper, author):
@@ -304,7 +321,12 @@ def test_parse_dns_traffic(helper, author):
         helper, result, author=author
     )
     assert len(observables) >= 3
-    assert len(sightings) == len(observables)
+    # Sightings are created for sightable observables only (Identity objects excluded)
+    sightable = [
+        o for o in observables
+        if isinstance(o, (stix2.IPv4Address, stix2.DomainName))
+    ]
+    assert len(sightings) == len(sightable)
 
 
 def test_with_tlp_marking(helper, author, tlp_marking):
@@ -333,35 +355,44 @@ def test_unknown_values_filtered(helper, author):
         "dest": "unknown",
     }
     observables, _, _ = parse_observables_and_incident(helper, result, author=author)
-    # sourcetype produces a Software observable; invalid src/dest/user are filtered
-    assert any(isinstance(obs, stix2.Software) for obs in observables)
+    # sourcetype (unknown) produces a vendor Organization Identity; invalid src/dest/user are filtered
+    assert any(
+        isinstance(obs, stix2.Identity) and obs.identity_class == "organization"
+        for obs in observables
+    )
     assert len(observables) == 1
 
 
 def test_system_identity_creation_from_host(helper, author):
+    # suricata:http is mapped as Infrastructure (OISF/Suricata) in sourcetype_map.yaml;
+    # this should produce a SecurityPlatform Identity as source_identity.
     result = {
-        "sourcetype": "zeek:conn",
-        "vendor_product": "Zeek Network Monitor",
-        "host": "zeek-sensor",
+        "sourcetype": "suricata:http",
+        "src": "10.0.0.1",
     }
     _, source_identity, _ = parse_observables_and_incident(
         helper, result, author=author
     )
     assert source_identity is not None
-    assert source_identity.name == "zeek-sensor"
+    assert source_identity.name == "OISF Suricata"
     assert source_identity.identity_class == "system"
-    assert "sourcetype::zeek:conn" in source_identity.objectLabel
+    assert source_identity.x_opencti_identity_type == "SecurityPlatform"
 
 
 def test_sighting_attribution(helper, author):
+    # sourcetype="test" (not in YAML) → vendor Identity "Unknown" (organization) created;
+    # entity_type=Software → source_identity stays None → where_sighted_refs=[author.id].
+    # created_by_ref is overridden to the vendor Identity ID.
+    from pycti import Identity as _Identity
     result = {"sourcetype": "test", "src": "192.168.1.1"}
     _, source_identity, sightings = parse_observables_and_incident(
         helper, result=result, author=author
     )
     assert source_identity is None
+    unknown_vendor_id = _Identity.generate_id("Unknown", "organization")
     for sighting in sightings:
         assert sighting.where_sighted_refs == [author.id]
-        assert sighting.created_by_ref == author.id
+        assert sighting.created_by_ref == unknown_vendor_id
 
 
 def test_sighting_structure(helper, author):
@@ -383,6 +414,7 @@ def test_sighting_structure(helper, author):
         for sighting in sightings
         if sighting.get("x_opencti_sighting_of_ref") == ip_observable.id
     )
+    from pycti import Identity as _Identity
     assert (
         ip_sighting.sighting_of_ref == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
     )
@@ -390,9 +422,62 @@ def test_sighting_structure(helper, author):
     assert ip_sighting.description == "Test description"
     assert source_identity is None
     assert ip_sighting.where_sighted_refs == [author.id]
-    assert ip_sighting.created_by_ref == author.id
+    # Vendor Identity ("Unknown" org) overrides created_by_ref when sourcetype is present
+    assert ip_sighting.created_by_ref == _Identity.generate_id("Unknown", "organization")
     assert "first_seen" in ip_sighting
     assert "last_seen" in ip_sighting
+
+
+def test_splunk_identity_id_sets_created_by_ref(helper, author):
+    """When splunk_identity_id is provided and no sourcetype is present,
+    sightings carry it as created_by_ref (fallback path)."""
+    from pycti import Identity
+
+    splunk_id = Identity.generate_id("Splunk", "system")
+    # No sourcetype → resolver not invoked → splunk_identity_id is the fallback
+    result = {"src": "10.10.10.10"}
+    _, _, sightings = parse_observables_and_incident(
+        helper, result, author=author, splunk_identity_id=splunk_id
+    )
+    assert sightings
+    for sighting in sightings:
+        assert sighting.created_by_ref == splunk_id
+
+
+def test_negative_sighting_splunk_identity_id(author):
+    """Negative sightings carry splunk_identity_id as created_by_ref when provided."""
+    from pycti import Identity
+
+    splunk_id = Identity.generate_id("Splunk", "system")
+    sighting = create_negative_sighting(
+        indicator_stix_id="indicator--59e1c61c-a9fb-429b-a1c1-c80116cc8e1e",
+        indicator_name="Test",
+        search_type="dest",
+        earliest="-30d@d",
+        latest="now",
+        splunk_host="splunk.example.com",
+        query="| search *",
+        author=author,
+        splunk_identity_id=splunk_id,
+    )
+    assert sighting.created_by_ref == splunk_id
+
+
+def test_negative_sighting_template_name_in_description(author):
+    """template_name appears in the negative sighting description."""
+    sighting = create_negative_sighting(
+        indicator_stix_id="indicator--59e1c61c-a9fb-429b-a1c1-c80116cc8e1e",
+        indicator_name="Test Indicator",
+        search_type="src",
+        earliest="-7d@d",
+        latest="now",
+        splunk_host="splunk.example.com",
+        query="| search *",
+        author=author,
+        template_name="IP Source Search",
+    )
+    assert "Search template: IP Source Search" in sighting.description
+    assert "Time range: -7d@d" in sighting.description
 
 
 # ---------------------------------------------------------------------------

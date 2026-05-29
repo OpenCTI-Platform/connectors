@@ -7,9 +7,9 @@ from typing import Any, Optional
 
 import pytz
 import stix2
-from pycti import OpenCTIConnectorHelper
+from pycti import Identity, OpenCTIConnectorHelper
 
-from .services import SplunkClient
+from .services import SourcetypeResolver, SplunkClient
 from .splunk_bundle import spl_indicators
 from .splunk_indicators import SplunkIndicator, SplunkSearchPlan
 from .splunk_result_parser import (
@@ -36,15 +36,19 @@ class SplunkSearchConnector:
             verify=config.splunk_verify_ssl,
         )
         self.author = self._load_author_identity()
+        _startup_resolver = SourcetypeResolver()
+        self.helper.connector_logger.info(
+            f"Loaded {_startup_resolver.count()} sourcetype mappings"
+        )
 
-    def _load_author_identity(self):
+    def _load_author_identity(self) -> stix2.Identity:
         for obj in spl_indicators:
             if (
                 obj.get("type") == "identity"
                 and obj.get("identity_class") == "organization"
                 and obj.get("name") == "Splunk"
             ):
-                return stix2.parse(obj, allow_custom=True)
+                return stix2.Identity(**{k: v for k, v in obj.items() if k != "type"}, allow_custom=True)  # type: ignore[return-value]
         raise ValueError("Splunk author identity not found in default bundle")
 
     @staticmethod
@@ -173,6 +177,8 @@ class SplunkSearchConnector:
         rows: list[dict],
         observable_field: str = "observable_value",
         observable_type_override: Optional[str] = None,
+        splunk_identity_id: Optional[str] = None,
+        template_name: Optional[str] = None,
     ) -> list:
         all_objects = [self.author]
         for row in rows:
@@ -184,6 +190,8 @@ class SplunkSearchConnector:
                 sighting_marking_id=self.config.sighting_tlp,
                 observable_field=observable_field,
                 observable_type_override=observable_type_override,
+                template_name=template_name,
+                splunk_identity_id=splunk_identity_id,
             )
             all_objects.extend(observables)
             all_objects.extend(sightings)
@@ -252,6 +260,8 @@ class SplunkSearchConnector:
         search_type: str,
         observable_field: str = "observable_value",
         observable_type_override: Optional[str] = None,
+        splunk_identity_id: Optional[str] = None,
+        template_name: Optional[str] = None,
     ) -> list:
         """Route search results to either a negative sighting or parsed observables.
 
@@ -280,10 +290,16 @@ class SplunkSearchConnector:
                 author=self.author,
                 confidence=100,
                 sighting_marking_id=self.config.sighting_tlp,
+                template_name=template_name,
+                splunk_identity_id=splunk_identity_id,
             )
             return [neg_sighting]
         return self._parse_result_rows(
-            real_rows, observable_field, observable_type_override
+            real_rows,
+            observable_field,
+            observable_type_override,
+            splunk_identity_id=splunk_identity_id,
+            template_name=template_name,
         )[1:]
 
     def _run_search_for_indicator(self, indicator: dict, obs_type: str, values: list):
@@ -295,6 +311,13 @@ class SplunkSearchConnector:
         values = self._extract_observable_values(entity, stix_objects, obs_type)
         if not values:
             return f"No observable values found for {obs_type}"
+
+        # Splunk platform system identity — added to every bundle exactly once
+        splunk_identity = stix2.Identity(
+            id=Identity.generate_id("Splunk", "system"),
+            name="Splunk",
+            identity_class="system",
+        )
 
         # Check for a custom search in the indicator's Note params first
         plan, indicator = self._build_search_plan(entity, obs_type, values)
@@ -308,12 +331,17 @@ class SplunkSearchConnector:
                 search_type="custom",
                 observable_field=plan.observable_field,
                 observable_type_override=plan.observable_type_override,
+                splunk_identity_id=splunk_identity.id,
+                template_name=plan.name,
             )
-            all_objects = self._merge_sightings([self.author] + result_objects)
+            all_objects = self._merge_sightings(
+                [self.author, splunk_identity] + result_objects,
+                splunk_identity_id=splunk_identity.id,
+            )
             self._send_results(all_objects)
             return (
                 f"Custom search: {len(rows)} rows, "
-                f"{len(all_objects) - 1} STIX objects"
+                f"{len(all_objects) - 2} STIX objects"
             )
 
         # Built-in template path
@@ -321,7 +349,7 @@ class SplunkSearchConnector:
         if not templates:
             return f"No SPL search templates found for observable type {obs_type}"
 
-        all_objects = [self.author]
+        all_objects = [self.author, splunk_identity]
         searches_run = 0
         total_rows = 0
         for template in templates:
@@ -339,6 +367,8 @@ class SplunkSearchConnector:
                     search_type=t_plan.obs_type or "built-in",
                     observable_field=t_plan.observable_field,
                     observable_type_override=t_plan.observable_type_override,
+                    splunk_identity_id=splunk_identity.id,
+                    template_name=t_plan.name,
                 )
                 all_objects.extend(result_objects)
             except Exception as exc:
@@ -347,11 +377,13 @@ class SplunkSearchConnector:
                 )
                 continue
 
-        all_objects = self._merge_sightings(all_objects)
+        all_objects = self._merge_sightings(
+            all_objects, splunk_identity_id=splunk_identity.id
+        )
         self._send_results(all_objects)
         return (
             f"Ran {searches_run} searches, {total_rows} rows, "
-            f"{len(all_objects) - 1} STIX objects"
+            f"{len(all_objects) - 2} STIX objects"
         )
 
     def _enrich_spl_indicator(self, entity, stix_objects, obs_type) -> str:
@@ -378,7 +410,9 @@ class SplunkSearchConnector:
     #  Sighting deduplication                                             #
     # ------------------------------------------------------------------ #
 
-    def _merge_sightings(self, stix_objects: list) -> list:
+    def _merge_sightings(
+        self, stix_objects: list, splunk_identity_id: Optional[str] = None
+    ) -> list:
         """Merge duplicate sightings that reference the same observable + indicator.
 
         Groups by (sighting_of_ref, where_sighted_refs, observable_value) so that
@@ -431,6 +465,7 @@ class SplunkSearchConnector:
                 sighting_marking_id=self.config.sighting_tlp,
                 count=total_count,
                 observable_value=obs_value,
+                splunk_identity_id=splunk_identity_id,
             )
             merged_sightings.append(merged)
 

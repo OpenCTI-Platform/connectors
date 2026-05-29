@@ -1,0 +1,933 @@
+# sourcetype_map.yaml
+# Maps Splunk sourcetypes to vendor/product metadata and STIX entity classification.
+# Used by the Splunk Search connector to create proper STIX entities when enriching
+# OpenCTI indicators with Splunk search results.
+#
+# Schema per entry:
+#   vendor: str              — Vendor/organization name
+#   product: str             — Product/service name
+#   entity_type: str         — "Infrastructure" or "Software"
+#   infrastructure_types:    — Only present when entity_type is "Infrastructure"
+#     - str                  — e.g. firewall, ids, endpoint-security, cloud-service
+#   datamodels:              — Splunk CIM data model(s) this sourcetype maps to
+#     - str
+#   skip: bool               — true for Splunk-internal sourcetypes that should
+#                              not produce STIX entities
+
+_metadata:
+  version: "1.0.0"
+  description: "Static sourcetype to platform mapping for STIX entity creation"
+  last_updated: "2026-05-29"
+  sources:
+    - "Splunk BOTS datasets"
+    - "Common production sourcetypes"
+
+sourcetype_map:
+
+  # ---------------------------------------------------------------------------
+  # Amazon Web Services
+  # ---------------------------------------------------------------------------
+  "amazon-ssm-agent":
+    vendor: "Amazon Web Services"
+    product: "Systems Manager Agent"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels: []
+    skip: false
+
+  "aws:cloudfront:accesslogs":
+    vendor: "Amazon Web Services"
+    product: "CloudFront"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Web"
+    skip: false
+
+  "aws:cloudtrail":
+    vendor: "Amazon Web Services"
+    product: "CloudTrail"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Authentication"
+      - "Change"
+    skip: false
+
+  "aws:cloudwatchlogs:vpcflow":
+    vendor: "Amazon Web Services"
+    product: "VPC Flow Logs"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "aws:config:rule":
+    vendor: "Amazon Web Services"
+    product: "AWS Config"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Change"
+    skip: false
+
+  "aws:guardduty":
+    vendor: "Amazon Web Services"
+    product: "GuardDuty"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-security"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "aws:s3:accesslogs":
+    vendor: "Amazon Web Services"
+    product: "S3"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Web"
+    skip: false
+
+  "aws:waf":
+    vendor: "Amazon Web Services"
+    product: "WAF"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-security"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Carbon Black / Bit9
+  # ---------------------------------------------------------------------------
+  "bit9:carbonblack:json":
+    vendor: "VMware Carbon Black"
+    product: "Carbon Black"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  "carbonblack:defense:json":
+    vendor: "VMware Carbon Black"
+    product: "Carbon Black Defense"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  "carbonblack:response:json":
+    vendor: "VMware Carbon Black"
+    product: "Carbon Black Response"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Cisco (including Snort)
+  # ---------------------------------------------------------------------------
+  "cisco:asa":
+    vendor: "Cisco"
+    product: "Adaptive Security Appliance"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Network_Traffic"
+      - "Intrusion_Detection"
+    skip: false
+
+  "cisco:estreamer:data":
+    vendor: "Cisco"
+    product: "Firepower"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "cisco:firepower:syslog":
+    vendor: "Cisco"
+    product: "Firepower"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "cisco:ios":
+    vendor: "Cisco"
+    product: "IOS"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "network"
+    datamodels:
+      - "Network_Traffic"
+      - "Change"
+    skip: false
+
+  "cisco:meraki":
+    vendor: "Cisco"
+    product: "Meraki"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "network"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "snort":
+    vendor: "Cisco"
+    product: "Snort"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "snort:alert:json":
+    vendor: "Cisco"
+    product: "Snort"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # CrowdStrike
+  # ---------------------------------------------------------------------------
+  "CrowdStrike:Event:Streams:JSON":
+    vendor: "CrowdStrike"
+    product: "Falcon"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels: []
+    skip: false
+
+  "crowdstrike:events:incident":
+    vendor: "CrowdStrike"
+    product: "Falcon"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "crowdstrike:events:sensor":
+    vendor: "CrowdStrike"
+    product: "Falcon"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Fortinet
+  # ---------------------------------------------------------------------------
+  "fgt_event":
+    vendor: "Fortinet"
+    product: "FortiGate"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Change"
+    skip: false
+
+  "fgt_traffic":
+    vendor: "Fortinet"
+    product: "FortiGate"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "fgt_utm":
+    vendor: "Fortinet"
+    product: "FortiGate"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Linux / Unix System
+  # ---------------------------------------------------------------------------
+  "alternatives.log":
+    vendor: "Debian"
+    product: "update-alternatives"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "apport.log":
+    vendor: "Canonical"
+    product: "Apport"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "bootstrap.log":
+    vendor: "Canonical"
+    product: "Ubuntu"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "cloud-init":
+    vendor: "Canonical"
+    product: "cloud-init"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels: []
+    skip: false
+
+  "cloud-init-output":
+    vendor: "Canonical"
+    product: "cloud-init"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels: []
+    skip: false
+
+  "dpkg.log":
+    vendor: "Debian"
+    product: "dpkg"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "kern.log":
+    vendor: "Linux"
+    product: "Kernel"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "linux:audit":
+    vendor: "Linux"
+    product: "auditd"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Authentication"
+      - "Change"
+    skip: false
+
+  "linux_secure":
+    vendor: "Linux"
+    product: "PAM / sshd"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  "syslog":
+    vendor: "Linux"
+    product: "syslog"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Microsoft Windows, Azure & Microsoft 365
+  # ---------------------------------------------------------------------------
+  "WinEventLog:Application":
+    vendor: "Microsoft"
+    product: "Windows"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  "WinEventLog:Security":
+    vendor: "Microsoft"
+    product: "Windows"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  "WinEventLog:System":
+    vendor: "Microsoft"
+    product: "Windows"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Endpoint"
+      - "Change"
+    skip: false
+
+  "XmlWinEventLog:Microsoft-Windows-Sysmon/Operational":
+    vendor: "Microsoft"
+    product: "Sysmon"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  "XmlWinEventLog:Security":
+    vendor: "Microsoft"
+    product: "Windows"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  "azure:monitor:aad":
+    vendor: "Microsoft"
+    product: "Azure Monitor"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "identity-provider"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  "azure:security:center":
+    vendor: "Microsoft"
+    product: "Azure Security Center"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-security"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "ms:aad:audit":
+    vendor: "Microsoft"
+    product: "Entra ID"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "identity-provider"
+    datamodels:
+      - "Authentication"
+      - "Change"
+    skip: false
+
+  "ms:aad:signin":
+    vendor: "Microsoft"
+    product: "Entra ID"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "identity-provider"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  "ms:o365:management":
+    vendor: "Microsoft"
+    product: "Microsoft 365"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Change"
+    skip: false
+
+  "o365:management:activity":
+    vendor: "Microsoft"
+    product: "Microsoft 365"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "cloud-service"
+    datamodels:
+      - "Change"
+      - "Email"
+      - "Web"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Nessus / Tenable
+  # ---------------------------------------------------------------------------
+  "nessus:scan":
+    vendor: "Tenable"
+    product: "Nessus"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "vulnerability-scanner"
+    datamodels:
+      - "Vulnerabilities"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Okta
+  # ---------------------------------------------------------------------------
+  "okta:im":
+    vendor: "Okta"
+    product: "Okta Identity Cloud"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "identity-provider"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  "okta:log2":
+    vendor: "Okta"
+    product: "Okta Identity Cloud"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "identity-provider"
+    datamodels:
+      - "Authentication"
+      - "Change"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # OSQuery
+  # Note: OSQuery:results / osquery:results are distinct sourcetypes (case differs).
+  # osquery:info and osquery:warning are OSQuery's own diagnostic logs (Software);
+  # OSQuery:results / osquery:results contain endpoint query data (Infrastructure).
+  # ---------------------------------------------------------------------------
+  "OSQuery:results":
+    vendor: "OSQuery"
+    product: "OSQuery"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels: []
+    skip: false
+
+  "osquery:info":
+    vendor: "OSQuery"
+    product: "OSQuery"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "osquery:results":
+    vendor: "OSQuery"
+    product: "OSQuery"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels: []
+    skip: false
+
+  "osquery:warning":
+    vendor: "OSQuery"
+    product: "OSQuery"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Palo Alto Networks
+  # ---------------------------------------------------------------------------
+  "pan:config":
+    vendor: "Palo Alto Networks"
+    product: "PAN-OS"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Change"
+    skip: false
+
+  "pan:system":
+    vendor: "Palo Alto Networks"
+    product: "PAN-OS"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels: []
+    skip: false
+
+  "pan:threat":
+    vendor: "Palo Alto Networks"
+    product: "PAN-OS"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "pan:traffic":
+    vendor: "Palo Alto Networks"
+    product: "PAN-OS"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Suricata
+  # ---------------------------------------------------------------------------
+  "suricata":
+    vendor: "OISF"
+    product: "Suricata"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "suricata:alert":
+    vendor: "OISF"
+    product: "Suricata"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "suricata:dns":
+    vendor: "OISF"
+    product: "Suricata"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Network_Resolution"
+    skip: false
+
+  "suricata:flow":
+    vendor: "OISF"
+    product: "Suricata"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "suricata:http":
+    vendor: "OISF"
+    product: "Suricata"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Web"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Symantec / Broadcom
+  # ---------------------------------------------------------------------------
+  "symantec:ep:risk:file":
+    vendor: "Broadcom"
+    product: "Symantec Endpoint Protection"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+      - "Malware"
+    skip: false
+
+  "symantec:ep:security:file":
+    vendor: "Broadcom"
+    product: "Symantec Endpoint Protection"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Endpoint"
+      - "Malware"
+    skip: false
+
+  "symantec:ep:traffic:file":
+    vendor: "Broadcom"
+    product: "Symantec Endpoint Protection"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "endpoint-security"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Zeek / Bro
+  # ---------------------------------------------------------------------------
+  "bro:conn:json":
+    vendor: "Zeek Project"
+    product: "Zeek"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "bro:dns:json":
+    vendor: "Zeek Project"
+    product: "Zeek"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Network_Resolution"
+    skip: false
+
+  "bro:files:json":
+    vendor: "Zeek Project"
+    product: "Zeek"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Endpoint"
+    skip: false
+
+  "bro:http:json":
+    vendor: "Zeek Project"
+    product: "Zeek"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Web"
+    skip: false
+
+  "bro:ssl:json":
+    vendor: "Zeek Project"
+    product: "Zeek"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "ids"
+    datamodels:
+      - "Certificates"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Web / Network
+  # ---------------------------------------------------------------------------
+  "access_combined":
+    vendor: "Apache Software Foundation"
+    product: "Apache HTTP Server"
+    entity_type: "Software"
+    datamodels:
+      - "Web"
+    skip: false
+
+  "bandwidth":
+    vendor: "Generic"
+    product: "Bandwidth Monitor"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  # fwsnort bridges iptables rules with Snort IDS signatures — it functions as
+  # both a host-based firewall and an IDS, hence two infrastructure_types.
+  "fwsnort":
+    vendor: "Open Source"
+    product: "fwsnort"
+    entity_type: "Infrastructure"
+    infrastructure_types:
+      - "firewall"
+      - "ids"
+    datamodels:
+      - "Intrusion_Detection"
+    skip: false
+
+  "interfaces":
+    vendor: "Linux"
+    product: "Network Interfaces"
+    entity_type: "Software"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "openports":
+    vendor: "Generic"
+    product: "Port Scanner"
+    entity_type: "Software"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  "protocol":
+    vendor: "Generic"
+    product: "Network Protocol Analyzer"
+    entity_type: "Software"
+    datamodels:
+      - "Network_Traffic"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # System Metrics & Performance
+  # ---------------------------------------------------------------------------
+  "cpu":
+    vendor: "Linux"
+    product: "System Metrics"
+    entity_type: "Software"
+    datamodels:
+      - "Performance"
+    skip: false
+
+  "df":
+    vendor: "Linux"
+    product: "df"
+    entity_type: "Software"
+    datamodels:
+      - "Performance"
+    skip: false
+
+  "hardware":
+    vendor: "Generic"
+    product: "Hardware Inventory"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "lsof":
+    vendor: "Linux"
+    product: "lsof"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "ps":
+    vendor: "Linux"
+    product: "ps"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "top":
+    vendor: "Linux"
+    product: "top"
+    entity_type: "Software"
+    datamodels:
+      - "Performance"
+    skip: false
+
+  "vmstat":
+    vendor: "Linux"
+    product: "vmstat"
+    entity_type: "Software"
+    datamodels:
+      - "Performance"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # General OS / System Telemetry
+  # ---------------------------------------------------------------------------
+  "history-2":
+    vendor: "Generic"
+    product: "Bash Shell"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "package":
+    vendor: "Generic"
+    product: "Package Manager"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "script:getendpointinfo":
+    vendor: "Splunk"
+    product: "BOTS Script"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "usersWithLoginPrivs":
+    vendor: "Generic"
+    product: "User Management"
+    entity_type: "Software"
+    datamodels: []
+    skip: false
+
+  "who":
+    vendor: "Linux"
+    product: "who"
+    entity_type: "Software"
+    datamodels:
+      - "Authentication"
+    skip: false
+
+  # ---------------------------------------------------------------------------
+  # Splunk Internal (skip: true)
+  # These sourcetypes are Splunk's own internal logs and should not produce
+  # STIX entities when encountered in search results.
+  # ---------------------------------------------------------------------------
+  "metrics":
+    vendor: "Splunk"
+    product: "Splunk Enterprise"
+    entity_type: "Software"
+    datamodels: []
+    skip: true
+
+  "scheduler":
+    vendor: "Splunk"
+    product: "Splunk Enterprise"
+    entity_type: "Software"
+    datamodels: []
+    skip: true
+
+  "splunk_web_access":
+    vendor: "Splunk"
+    product: "Splunk Enterprise"
+    entity_type: "Software"
+    datamodels: []
+    skip: true
+
+  "splunkd":
+    vendor: "Splunk"
+    product: "Splunk Enterprise"
+    entity_type: "Software"
+    datamodels: []
+    skip: true
+
+  "splunkd_access":
+    vendor: "Splunk"
+    product: "Splunk Enterprise"
+    entity_type: "Software"
+    datamodels: []
+    skip: true

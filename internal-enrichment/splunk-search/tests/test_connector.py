@@ -220,3 +220,92 @@ def test_author_identity_loaded_from_seed_bundle():
 
     assert isinstance(connector.author, stix2.Identity)
     assert connector.author.name == "Splunk"
+
+
+def test_enrich_stix_indicator_bundle_contains_splunk_system_identity():
+    """The Splunk system identity must appear exactly once in the sent bundle."""
+    import json
+
+    helper = _helper()
+    connector = _connector(helper)
+    connector.splunk_client.run_search.return_value = [
+        {"sourcetype": "test", "src": "1.2.3.4"}
+    ]
+    template = {
+        "id": "indicator--00000000-0000-4000-8000-000000000010",
+        "x_opencti_id": "template-opencti-id",
+        "name": "IP Search",
+        "pattern_type": "spl",
+        "pattern": "index=main src IN (<IP_LIST>)",
+        "x_opencti_main_observable_type": "IPv4-Addr",
+    }
+    helper.api.indicator.list.return_value = [template]
+
+    connector._enrich_stix_indicator(
+        {
+            "pattern_type": "stix",
+            "pattern": "[ipv4-addr:value = '1.2.3.4']",
+            "x_opencti_main_observable_type": "IPv4-Addr",
+        },
+        [],
+        "IPv4-Addr",
+    )
+
+    serialized = helper.send_stix2_bundle.call_args.args[0]
+    bundle = json.loads(serialized)
+    system_identities = [
+        obj
+        for obj in bundle["objects"]
+        if obj.get("type") == "identity"
+        and obj.get("identity_class") == "system"
+        and obj.get("name") == "Splunk"
+    ]
+    assert (
+        len(system_identities) == 1
+    ), f"Expected exactly 1 Splunk system identity, got {len(system_identities)}"
+
+
+def test_enrich_stix_indicator_sightings_have_splunk_system_created_by_ref():
+    """Sightings produced by _enrich_stix_indicator use the Splunk system identity
+    as created_by_ref when no sourcetype is present in the result (fallback path)."""
+    import json
+
+    from pycti import Identity
+
+    helper = _helper()
+    connector = _connector(helper)
+    # No sourcetype in result → vendor identity override not triggered → splunk system
+    # identity flows through as created_by_ref (the original fallback behavior).
+    connector.splunk_client.run_search.return_value = [
+        {"src": "5.6.7.8"}
+    ]
+    template = {
+        "id": "indicator--00000000-0000-4000-8000-000000000011",
+        "x_opencti_id": "template-opencti-id",
+        "name": "IP Src Search",
+        "pattern_type": "spl",
+        "pattern": "index=main src IN (<IP_LIST>)",
+        "x_opencti_main_observable_type": "IPv4-Addr",
+    }
+    helper.api.indicator.list.return_value = [template]
+
+    connector._enrich_stix_indicator(
+        {
+            "pattern_type": "stix",
+            "pattern": "[ipv4-addr:value = '5.6.7.8']",
+            "x_opencti_main_observable_type": "IPv4-Addr",
+        },
+        [],
+        "IPv4-Addr",
+    )
+
+    splunk_system_id = Identity.generate_id("Splunk", "system")
+    serialized = helper.send_stix2_bundle.call_args.args[0]
+    bundle = json.loads(serialized)
+    sightings = [obj for obj in bundle["objects"] if obj.get("type") == "sighting"]
+    assert sightings, "Expected at least one sighting in the bundle"
+    for sighting in sightings:
+        assert sighting.get("created_by_ref") == splunk_system_id, (
+            f"Sighting created_by_ref {sighting.get('created_by_ref')!r} "
+            f"!= expected system identity {splunk_system_id!r}"
+        )

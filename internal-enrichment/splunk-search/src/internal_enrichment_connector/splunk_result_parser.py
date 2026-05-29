@@ -19,6 +19,7 @@ from pycti import (
     StixSightingRelationship,
 )
 
+from .services.sourcetype_resolver import SourcetypeResolver as _SourcetypeResolver
 from .utils import (
     detect_observable_type,
     get_hash_type,
@@ -27,6 +28,9 @@ from .utils import (
     is_ipv4,
     is_ipv6,
 )
+
+# Module-level resolver — loaded once at import time, shared across all calls.
+_resolver = _SourcetypeResolver()
 
 
 def _parse_ts(val) -> Optional[datetime]:
@@ -63,6 +67,7 @@ def create_sighting(
     sighting_marking_id: Optional[str] = None,
     count: int = 1,
     observable_value: str = "",
+    splunk_identity_id: Optional[str] = None,
 ) -> stix2.Sighting:
     """
     Create a STIX Sighting object for a given observable.
@@ -84,6 +89,7 @@ def create_sighting(
     first_seen_time = first_seen or now
     last_seen_time = last_seen or now
 
+    creator_id = splunk_identity_id if splunk_identity_id else author.id
     sighting_props = {
         "id": StixSightingRelationship.generate_id(
             observable_id,
@@ -94,7 +100,7 @@ def create_sighting(
         "type": "sighting",
         "created": now,
         "modified": now,
-        "created_by_ref": author.id,
+        "created_by_ref": creator_id,
         "where_sighted_refs": [source_identity.id if source_identity else author.id],
         # Use fake indicator ID in sighting_of_ref as per OpenCTI pattern
         "sighting_of_ref": "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",
@@ -104,7 +110,7 @@ def create_sighting(
         "allow_custom": True,
         "x_opencti_sighting_of_ref": observable_id,
         "x_opencti_detection": True,
-        "x_opencti_created_by_ref": author.id,
+        "x_opencti_created_by_ref": creator_id,
         "x_opencti_observable_value": observable_value,
     }
 
@@ -157,6 +163,8 @@ def create_negative_sighting(
     author: Identity,
     confidence: int = 100,
     sighting_marking_id: Optional[str] = None,
+    template_name: Optional[str] = None,
+    splunk_identity_id: Optional[str] = None,
 ) -> stix2.Sighting:
     """Create a STIX negative sighting expressing confirmed absence of an indicator.
 
@@ -178,13 +186,14 @@ def create_negative_sighting(
         sighting_marking_id: Optional TLP marking-definition ID
     """
     now = datetime.now(pytz.UTC)
-    abbreviated_query = query[:100] + "..." if len(query) > 100 else query
-    description = (
-        f"Indicator {indicator_name} not found in Splunk ({search_type} search). "
-        f"Search window: {earliest} to {latest}. "
-        f"Splunk instance: {splunk_host}. "
-        f"Query: {abbreviated_query}"
-    )
+    creator_id = splunk_identity_id if splunk_identity_id else author.id
+    desc_lines = [f"No results found in Splunk for {indicator_name}"]
+    if template_name:
+        desc_lines.append(f"Search template: {template_name}")
+    desc_lines.append(f"Search type: {search_type}")
+    desc_lines.append(f"Time range: {earliest} \u2192 {latest}")
+    desc_lines.append(f"Splunk instance: {splunk_host}")
+    description = "\n".join(desc_lines)
 
     sighting_props = {
         "id": StixSightingRelationship.generate_id(
@@ -196,7 +205,7 @@ def create_negative_sighting(
         "type": "sighting",
         "created": now,
         "modified": now,
-        "created_by_ref": author.id,
+        "created_by_ref": creator_id,
         "sighting_of_ref": indicator_stix_id,
         "where_sighted_refs": [author.id],
         "first_seen": now,
@@ -204,7 +213,7 @@ def create_negative_sighting(
         "allow_custom": True,
         "x_opencti_negative": True,
         "x_opencti_detection": True,
-        "x_opencti_created_by_ref": author.id,
+        "x_opencti_created_by_ref": creator_id,
         "confidence": confidence,
         "description": description,
     }
@@ -340,6 +349,16 @@ def create_system_identity(
     )
 
 
+def _splunk_field(result: dict, *keys: str) -> Optional[str]:
+    """Return first non-empty/non-dash field value from result, or None."""
+    _MISSING = frozenset({"-", "n/a", "none", "unknown", "", "0.0.0.0", "::"})
+    for k in keys:
+        v = str(result.get(k) or "").strip()
+        if v and v.lower() not in _MISSING:
+            return v
+    return None
+
+
 def parse_observables_and_incident(
     helper,
     result: dict,
@@ -348,7 +367,9 @@ def parse_observables_and_incident(
     sighting_marking_id: str = None,
     observable_field: str = "observable_value",
     observable_type_override: Optional[str] = None,
-) -> Tuple[List[stix2.base._Observable], Optional[Identity], List[stix2.Sighting]]:
+    template_name: Optional[str] = None,
+    splunk_identity_id: Optional[str] = None,
+) -> Tuple[List[stix2.base._Observable], Optional[stix2.Identity], List[stix2.Sighting]]:
     """
     Parse Splunk search results into STIX observables and incidents.
 
@@ -450,57 +471,80 @@ def parse_observables_and_incident(
             }
         )
 
-    # Handle Sourcetype — create a Software observable and embed metadata in sighting description
+    # Handle Sourcetype — resolve via mapping, create vendor + platform identities
     sourcetype_val = result.get("sourcetype")
     vendor_product = result.get("vendor_product")
-    if sourcetype_val:
+    mapping: Optional[dict] = None
+    _effective_creator_id: Optional[str] = splunk_identity_id
+    if sourcetype_val and sourcetype_val.lower() not in invalid_values:
         helper.connector_logger.debug(
             f"[PARSER] Processing sourcetype: {sourcetype_val}"
         )
-        # Create a Software observable for the sourcetype/vendor_product
+        mapping = _resolver.resolve(sourcetype_val)
+        if mapping.get("skip"):
+            helper.connector_logger.debug(
+                f"[PARSER] Skipping sourcetype '{sourcetype_val}' (skip=True in mapping)"
+            )
+            return [], None, []
+
+        vendor = mapping["vendor"]
+        product = mapping["product"]
+        entity_type = mapping.get("entity_type", "Software")
+
+        # Always create a vendor Organization Identity
         try:
-            software_name = vendor_product if vendor_product else sourcetype_val
-            if software_name.lower() not in invalid_values:
-                software = stix2.Software(
-                    name=software_name,
-                    allow_custom=True,
-                    **custom_props,
-                )
-                observables.append(software)
-                helper.connector_logger.debug(
-                    f"[PARSER] Created Software observable: {software_name}"
-                )
+            vendor_identity = stix2.Identity(
+                id=Identity.generate_id(name=vendor, identity_class="organization"),
+                name=vendor,
+                identity_class="organization",
+                allow_custom=True,
+                created_by_ref=author.id,
+                x_opencti_created_by_ref=author.id,
+                **({
+                    "object_marking_refs": marking_refs
+                } if marking_refs else {}),
+            )
+            observables.append(vendor_identity)
+            _effective_creator_id = vendor_identity.id
+            helper.connector_logger.debug(
+                f"[PARSER] Created vendor Identity: {vendor}"
+            )
         except Exception as e:
             helper.connector_logger.error(
-                f"[PARSER] Failed to create Software observable for sourcetype '{sourcetype_val}': {e}"
+                f"[PARSER] Failed to create vendor Identity for '{vendor}': {e}"
             )
-        # If we have a host, create a System Identity for it and attach a
-        # normalized sourcetype label for fast filtering in OpenCTI
-        if host_val and str(host_val).lower() not in invalid_values:
+            vendor_identity = None
+
+        if entity_type == "Infrastructure" and vendor_identity is not None:
+            # SecurityPlatform Identity goes into where_sighted_refs (Identity SDO required)
+            platform_name = f"{vendor} {product}"
+            infra_types = mapping.get("infrastructure_types", [])
             try:
-                st_label = f"sourcetype::{sourcetype_val}"
-                system_identity = create_system_identity(
-                    hostname=host_val,
-                    author=author,
-                    labels=[st_label],
-                    marking_id=marking_id,
-                    description=(
-                        f"System '{host_val}' observed emitting sourcetype '{sourcetype_val}'"
-                        + (
-                            f" for vendor/product '{vendor_product}'"
-                            if vendor_product
-                            else ""
-                        )
+                platform_identity = stix2.Identity(
+                    id=Identity.generate_id(
+                        name=platform_name, identity_class="system"
                     ),
+                    name=platform_name,
+                    identity_class="system",
+                    allow_custom=True,
+                    x_opencti_identity_type="SecurityPlatform",
+                    x_opencti_identity_subtype=infra_types[0] if infra_types else None,
+                    created_by_ref=vendor_identity.id,
+                    x_opencti_created_by_ref=vendor_identity.id,
+                    **({
+                        "object_marking_refs": marking_refs
+                    } if marking_refs else {}),
                 )
-                source_identity = system_identity
+                observables.append(platform_identity)
+                source_identity = platform_identity
                 helper.connector_logger.debug(
-                    f"[PARSER] Created/selected system identity for host: {host_val} with label {st_label}"
+                    f"[PARSER] Created SecurityPlatform Identity: {platform_name}"
                 )
             except Exception as e:
                 helper.connector_logger.error(
-                    f"[PARSER] Failed to create system identity for host '{host_val}': {e}"
+                    f"[PARSER] Failed to create SecurityPlatform Identity for '{platform_name}': {e}"
                 )
+        # Software case: vendor Identity already added; no platform Identity needed
 
     # Handle URL
     if result.get("url"):
@@ -656,11 +700,6 @@ def parse_observables_and_incident(
             )
     helper.connector_logger.debug(f"[PARSER] Created {len(observables)} observables")
 
-    # Build structured sighting description including sourcetype/index metadata
-    st = str(result.get("sourcetype") or "unknown")
-    idx = str(result.get("index") or "unknown")
-    action = str(result.get("action") or "unknown")
-    total_bytes = str(result.get("total_bytes") or result.get("bytes") or "0")
     # Parse Splunk event count — fall back to 1 for invalid values
     try:
         event_count = int(result.get("count") or 1)
@@ -669,15 +708,107 @@ def parse_observables_and_incident(
     except (ValueError, TypeError):
         event_count = 1
 
+    # Build human-readable sighting description
     if result.get("threat_description"):
         description = result["threat_description"]
     elif result.get("description"):
         description = result["description"]
     else:
-        description = (
-            f"Observed in Splunk | sourcetype: {st} | index: {idx} | "
-            f"action: {action} | bytes: {total_bytes} | events: {event_count}"
-        )
+        # Header: platform + optional template name
+        if mapping and not mapping.get("skip"):
+            dm_str = ", ".join(mapping.get("datamodels", [])) or "N/A"
+            header_lines = [
+                f"Observed in {mapping['vendor']} {mapping['product']}",
+                f"sourcetype: {sourcetype_val}, data models: {dm_str}",
+            ]
+        else:
+            header_lines = ["Observed in Splunk"]
+        if template_name:
+            header_lines.append(f"Search template: {template_name}")
+
+        # sourcetype | index line
+        # When mapping is set, sourcetype is already in the first header line;
+        # only add index if present to avoid redundancy.
+        st_val = _splunk_field(result, "sourcetype")
+        idx_val = _splunk_field(result, "index")
+        si_parts = []
+        if not mapping and st_val:
+            si_parts.append(f"sourcetype: {st_val}")
+        if idx_val:
+            si_parts.append(f"index: {idx_val}")
+        if si_parts:
+            header_lines.append(" | ".join(si_parts))
+
+        # Detail fields — only lines where at least one value is present
+        detail_lines = []
+
+        # src → dest
+        src_val = _splunk_field(result, "src", "src_ip")
+        dest_val = _splunk_field(result, "dest", "dest_ip")
+        if src_val or dest_val:
+            sd_parts = []
+            if src_val:
+                sd_parts.append(f"src: {src_val}")
+            if dest_val:
+                sd_parts.append(f"dest: {dest_val}")
+            _arrow = " \u2192 "
+            detail_lines.append(_arrow.join(sd_parts))
+
+        # action | direction
+        action_val = _splunk_field(result, "action")
+        direction_val = _splunk_field(result, "direction")
+        ad_parts = []
+        if action_val:
+            ad_parts.append(f"action: {action_val}")
+        if direction_val:
+            ad_parts.append(f"direction: {direction_val}")
+        if ad_parts:
+            detail_lines.append(" | ".join(ad_parts))
+
+        # bytes | bytes_in | bytes_out
+        bytes_total = _splunk_field(result, "total_bytes", "bytes")
+        bytes_in = _splunk_field(result, "total_bytes_in", "bytes_in")
+        bytes_out = _splunk_field(result, "total_bytes_out", "bytes_out")
+        b_parts = []
+        if bytes_total:
+            b_parts.append(f"bytes: {bytes_total}")
+        if bytes_in:
+            b_parts.append(f"bytes_in: {bytes_in}")
+        if bytes_out:
+            b_parts.append(f"bytes_out: {bytes_out}")
+        if b_parts:
+            detail_lines.append(" | ".join(b_parts))
+
+        # app | user
+        app_val = _splunk_field(result, "app")
+        user_val = _splunk_field(result, "user")
+        au_parts = []
+        if app_val:
+            au_parts.append(f"app: {app_val}")
+        if user_val:
+            au_parts.append(f"user: {user_val}")
+        if au_parts:
+            detail_lines.append(" | ".join(au_parts))
+
+        # events
+        detail_lines.append(f"events: {event_count}")
+
+        # window
+        e_time_val = _splunk_field(result, "e_time", "first_seen")
+        l_time_val = _splunk_field(result, "l_time", "last_seen")
+        if e_time_val or l_time_val:
+            w_parts = []
+            if e_time_val:
+                w_parts.append(e_time_val)
+            if l_time_val:
+                w_parts.append(l_time_val)
+            _arrow = " \u2192 "
+            detail_lines.append(f"window: {_arrow.join(w_parts)}")
+
+        if detail_lines:
+            description = "\n".join(header_lines) + "\n\n" + "\n".join(detail_lines)
+        else:
+            description = "\n".join(header_lines)
 
     # Prefer standardized names if present; fall back to e_time/l_time; finally _time
     first_seen = (
@@ -707,6 +838,7 @@ def parse_observables_and_incident(
                 sighting_marking_id=sighting_marking_id,
                 count=event_count,
                 observable_value=obs_str_value,
+                splunk_identity_id=_effective_creator_id,
             )
             sightings.append(sighting)
     helper.connector_logger.debug(f"[PARSER] Created {len(sightings)} sightings")
