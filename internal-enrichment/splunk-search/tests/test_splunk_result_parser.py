@@ -381,7 +381,8 @@ def test_system_identity_creation_from_host(helper, author):
 
 def test_sighting_attribution(helper, author):
     # sourcetype="test" (not in YAML) → vendor Identity "Unknown" (organization) created;
-    # entity_type=Software → source_identity stays None → where_sighted_refs=[author.id].
+    # entity_type=Software → source_identity stays None.
+    # where_sighted_refs uses the vendor identity (as splunk_identity_id fallback).
     # created_by_ref is overridden to the vendor Identity ID.
     from pycti import Identity as _Identity
     result = {"sourcetype": "test", "src": "192.168.1.1"}
@@ -391,7 +392,7 @@ def test_sighting_attribution(helper, author):
     assert source_identity is None
     unknown_vendor_id = _Identity.generate_id("Unknown", "organization")
     for sighting in sightings:
-        assert sighting.where_sighted_refs == [author.id]
+        assert sighting.where_sighted_refs == [unknown_vendor_id]
         assert sighting.created_by_ref == unknown_vendor_id
 
 
@@ -421,7 +422,8 @@ def test_sighting_structure(helper, author):
     assert ip_sighting.confidence == 90
     assert ip_sighting.description == "Test description"
     assert source_identity is None
-    assert ip_sighting.where_sighted_refs == [author.id]
+    unknown_vendor_id = _Identity.generate_id("Unknown", "organization")
+    assert ip_sighting.where_sighted_refs == [unknown_vendor_id]
     # Vendor Identity ("Unknown" org) overrides created_by_ref when sourcetype is present
     assert ip_sighting.created_by_ref == _Identity.generate_id("Unknown", "organization")
     assert "first_seen" in ip_sighting

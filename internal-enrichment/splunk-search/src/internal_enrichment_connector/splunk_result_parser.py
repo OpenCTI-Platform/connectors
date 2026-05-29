@@ -90,10 +90,19 @@ def create_sighting(
     last_seen_time = last_seen or now
 
     creator_id = splunk_identity_id if splunk_identity_id else author.id
+    # where_sighted_refs must be an Identity SDO. Priority:
+    #   1. source_identity  — vendor SecurityPlatform from sourcetype map
+    #   2. splunk_identity_id — Splunk System identity (identity_class="system")
+    #   3. author.id       — last-resort fallback
+    where_sighted_id = (
+        source_identity.id
+        if source_identity
+        else (splunk_identity_id or author.id)
+    )
     sighting_props = {
         "id": StixSightingRelationship.generate_id(
             observable_id,
-            source_identity.id if source_identity else author.id,
+            source_identity.id if source_identity else (splunk_identity_id or author.id),
             first_seen_time,
             last_seen_time,
         ),
@@ -101,7 +110,7 @@ def create_sighting(
         "created": now,
         "modified": now,
         "created_by_ref": creator_id,
-        "where_sighted_refs": [source_identity.id if source_identity else author.id],
+        "where_sighted_refs": [where_sighted_id],
         # Use fake indicator ID in sighting_of_ref as per OpenCTI pattern
         "sighting_of_ref": "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",
         "first_seen": first_seen_time,
@@ -198,7 +207,7 @@ def create_negative_sighting(
     sighting_props = {
         "id": StixSightingRelationship.generate_id(
             indicator_stix_id,
-            author.id,
+            splunk_identity_id or author.id,
             now,
             now,
         ),
@@ -207,7 +216,7 @@ def create_negative_sighting(
         "modified": now,
         "created_by_ref": creator_id,
         "sighting_of_ref": indicator_stix_id,
-        "where_sighted_refs": [author.id],
+        "where_sighted_refs": [splunk_identity_id or author.id],
         "first_seen": now,
         "last_seen": now,
         "allow_custom": True,

@@ -392,6 +392,12 @@ class SplunkSearchConnector:
             if obs_type
             else []
         )
+        # Splunk System identity — included in every bundle as a reference target
+        splunk_identity = stix2.Identity(
+            id=Identity.generate_id("Splunk", "system"),
+            name="Splunk",
+            identity_class="system",
+        )
         plan, indicator = self._build_search_plan(entity, obs_type, values)
         rows = self._execute_plan(plan, indicator.params)
         result_objects = self._process_search_results(
@@ -401,10 +407,14 @@ class SplunkSearchConnector:
             search_type="spl-direct",
             observable_field=plan.observable_field,
             observable_type_override=plan.observable_type_override,
+            splunk_identity_id=splunk_identity.id,
         )
-        all_objects = self._merge_sightings([self.author] + result_objects)
+        all_objects = self._merge_sightings(
+            [self.author, splunk_identity] + result_objects,
+            splunk_identity_id=splunk_identity.id,
+        )
         self._send_results(all_objects)
-        return f"SPL direct: {len(rows)} rows, {len(all_objects) - 1} STIX objects"
+        return f"SPL direct: {len(rows)} rows, {len(all_objects) - 2} STIX objects"
 
     # ------------------------------------------------------------------ #
     #  Sighting deduplication                                             #
