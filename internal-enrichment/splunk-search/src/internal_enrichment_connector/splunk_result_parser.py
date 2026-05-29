@@ -516,19 +516,24 @@ def parse_observables_and_incident(
             vendor_identity = None
 
         if entity_type == "Infrastructure" and vendor_identity is not None:
-            # SecurityPlatform Identity goes into where_sighted_refs (Identity SDO required)
+            # SecurityPlatform Identity goes into where_sighted_refs (Identity SDO required).
+            # identity_class MUST be "securityplatform" (all-lowercase) — this is what
+            # triggers OpenCTI's securityPlatformAdd mutation instead of the generic
+            # identityAdd / System path.
             platform_name = f"{vendor} {product}"
             infra_types = mapping.get("infrastructure_types", [])
             try:
                 platform_identity = stix2.Identity(
                     id=Identity.generate_id(
-                        name=platform_name, identity_class="system"
+                        name=platform_name, identity_class="securityplatform"
                     ),
                     name=platform_name,
-                    identity_class="system",
+                    identity_class="securityplatform",
                     allow_custom=True,
-                    x_opencti_identity_type="SecurityPlatform",
-                    x_opencti_identity_subtype=infra_types[0] if infra_types else None,
+                    custom_properties={
+                        "security_platform_type": infra_types[0] if infra_types else None,
+                        "x_opencti_type": "SecurityPlatform",
+                    },
                     created_by_ref=vendor_identity.id,
                     x_opencti_created_by_ref=vendor_identity.id,
                     **({

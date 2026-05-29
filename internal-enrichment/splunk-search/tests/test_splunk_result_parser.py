@@ -200,7 +200,7 @@ def test_parse_web_traffic(helper, author):
     )
     assert source_identity is not None
     assert source_identity.name == "OISF Suricata"  # vendor + product from YAML
-    assert source_identity.identity_class == "system"
+    assert source_identity.identity_class == "securityplatform"
     # Sighting description must include sourcetype metadata
     for sighting in sightings:
         assert "sourcetype: suricata:http" in sighting.description
@@ -375,8 +375,8 @@ def test_system_identity_creation_from_host(helper, author):
     )
     assert source_identity is not None
     assert source_identity.name == "OISF Suricata"
-    assert source_identity.identity_class == "system"
-    assert source_identity.x_opencti_identity_type == "SecurityPlatform"
+    assert source_identity.identity_class == "securityplatform"
+    assert source_identity.get("security_platform_type") == "ids"
 
 
 def test_sighting_attribution(helper, author):
