@@ -26,7 +26,7 @@ It creates **Observables** and **Indicators** in OpenCTI from the C2 configurati
 | `beaconbeagle_link_bgpas`       | `BEACONBEAGLE_LINK_BGPAS`           | Create an Autonomous-System observable for each C2 IP and link it (`true`/`false`).                                                               |
 | `beaconbeagle_search_bgpas`     | `BEACONBEAGLE_SEARCH_BGPAS`         | Fall back to `whois -h bgp.tools` when BeaconBeagle's payload is missing the AS / country fields. **Generates traffic to bgp.tools** (`true`/`false`). |
 | `beaconbeagle_link_watermark`   | `BEACONBEAGLE_LINK_WATERMARK_TXT`   | Suffix appended to the Text observable that tracks CobaltStrike licence watermarks (leave empty to disable).                                      |
-| `beaconbeagle_links_duration`   | `BEACONBEAGLE_LINKS_DURATION`       | Duration in hours used as the relationship `stop_time`–`start_time` window when BeaconBeagle does not provide one.                                |
+| `beaconbeagle_links_duration`   | `BEACONBEAGLE_LINKS_DURATION`       | Duration in hours used as the indicator `valid_from`–`valid_until` window when BeaconBeagle does not provide a `lasttime` for a C2 entry.         |
 | `beaconbeagle_interval`         | `BEACONBEAGLE_INTERVAL`             | Run frequency in hours.                                                                                                                           |
 | `beaconbeagle_marking`          | `BEACONBEAGLE_MARKING`              | Marking definition on every produced object (`TLP:CLEAR`, `TLP:WHITE`, `TLP:GREEN`, `TLP:AMBER`, `TLP:AMBER+STRICT`, `TLP:RED`).                  |
 

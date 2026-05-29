@@ -12,12 +12,11 @@ COPY src /opt/opencti-connector-beaconbeagle
 # rebuilds against the same ``python:3.12-alpine`` base produce
 # reproducible images instead of silently pulling in whichever Alpine
 # package versions happen to be current at build time.
+WORKDIR /opt/opencti-connector-beaconbeagle
 RUN apk --no-cache add git build-base libmagic libxslt libxslt-dev libxml2 libxml2-dev whois && \
-    cd /opt/opencti-connector-beaconbeagle && \
     pip install --no-cache-dir -r requirements.txt && \
     apk del git build-base libxslt-dev libxml2-dev
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Run the connector directly as PID 1 so it receives SIGTERM/SIGINT and Docker
+# can perform a graceful shutdown (no shell wrapper to forward signals through).
+ENTRYPOINT ["python3", "BeaconBeagle.py"]

@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import ipaddress
 import json
 import os
 import re
@@ -83,6 +84,15 @@ class BeaconBeagle:
         # run.
         self._pending_payload_hash = None
 
+        # Linked Tool / Attack-Pattern ids are resolved in
+        # ``create_stix_bundle`` (only when the corresponding config is set)
+        # but read back in ``create_stix_object``. Initialise them here so the
+        # read sites are always safe even if ``create_stix_object`` is ever
+        # called before ``create_stix_bundle`` (e.g. from a unit test or a
+        # future call-order change) instead of raising ``AttributeError``.
+        self.beaconbeagle_link_tool_id = None
+        self.beaconbeagle_link_ap_id = None
+
         # Instantiate the connector helper from config.
         # Use a context manager so the file handle is closed deterministically
         # (the previous ``yaml.load(open(...))`` shape leaked the handle on
@@ -164,12 +174,12 @@ class BeaconBeagle:
             config,
             default="",
         )
-        # links_duration: hours used as the fallback relationship
-        # window when BeaconBeagle does not provide a ``lasttime`` for a
-        # given C2 entry. The fallback is wired into
-        # ``beaconbeagle_api_get_list`` below — the previous shape loaded
-        # this config but never consulted it, so operators changing the
-        # value got no effect.
+        # links_duration: hours used as the fallback indicator-validity
+        # window (``valid_from`` → ``valid_until``) when BeaconBeagle does
+        # not provide a ``lasttime`` for a given C2 entry. The fallback is
+        # wired into ``beaconbeagle_api_get_list`` below — the previous
+        # shape loaded this config but never consulted it, so operators
+        # changing the value got no effect.
         self.beaconbeagle_links_duration = get_config_variable(
             "BEACONBEAGLE_LINKS_DURATION",
             ["beaconbeagle", "links_duration"],
@@ -464,10 +474,10 @@ class BeaconBeagle:
                     )
                     # Honour ``BEACONBEAGLE_LINKS_DURATION`` as the
                     # documented fallback window when the BeaconBeagle
-                    # payload omits ``lasttime`` — the relationships
-                    # downstream get a bounded ``stop_time = start_time +
+                    # payload omits ``lasttime`` — the indicators
+                    # downstream get a bounded ``valid_until = valid_from +
                     # links_duration`` instead of an arbitrary ``now()``
-                    # that would silently expand every relationship's
+                    # that would silently expand every indicator's
                     # validity window past the operator's configured limit.
                     fallback_start = (
                         C2_Firsttime
@@ -829,17 +839,23 @@ class BeaconBeagle:
     def get_type_pure_regex(self, text):
         text = text.strip()
 
-        # Dictionnaire des motifs (Patterns)
+        # IP detection uses the standard-library ``ipaddress`` module rather
+        # than hand-written regexes: it exhaustively recognises every valid
+        # IPv4 / IPv6 shape (including compressed and IPv4-mapped IPv6) and
+        # removes a whole class of false-negative bugs the previous regexes
+        # were prone to.
+        try:
+            return "IPv4" if ipaddress.ip_address(text).version == 4 else "IPv6"
+        except ValueError:
+            pass
+
+        # Non-IP values keep the regex classifier for hashes / domains.
         patterns = {
-            # IPv4 : 4 groupes de 1 à 3 chiffres séparés par des points
-            "IPv4": r"^(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",
-            # IPv6 : Format simplifié (8 groupes de hexa séparés par :) ou formats compressés ::
-            "IPv6": r"^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$",
-            # Hashes (Hexadécimal strict)
+            # Hashes (strict hexadecimal)
             "MD5": r"^[a-fA-F0-9]{32}$",
             "SHA256": r"^[a-fA-F0-9]{64}$",
             "SHA512": r"^[a-fA-F0-9]{128}$",
-            # Domain : Lettres/chiffres/tirets, se terminant par une extension de 2+ lettres
+            # Domain: labels of letters/digits/hyphens ending in a 2+ char TLD
             "Domain": r"^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$",
         }
 
@@ -1077,20 +1093,18 @@ class BeaconBeagle:
                                 country_host["id"],
                                 observable_ip["id"],
                                 start_time=start_time,
-                                stop_time=stop_time,
                             ),
                             source_ref=country_host["id"],
                             target_ref=observable_ip["id"],
                             relationship_type="related-to",
                             created_by_ref=identity_id,
                             start_time=start_time,
-                            stop_time=stop_time,
                             object_marking_refs=[self.beaconbeagle_marking],
                             custom_properties={
                                 "x_opencti_score": 50,
                                 "x_opencti_labels": ["BeaconBeagle"],
                             },
-                            description=f"Has hosted a CobaltStrike between {start_time} and {stop_time}. (Link IPCountry)",
+                            description=f"Has hosted a CobaltStrike since {start_time}. (Link IPCountry)",
                         )
                         stix_objects.append(country_host)
                         stix_objects.append(relation_TC)
@@ -1156,20 +1170,18 @@ class BeaconBeagle:
                                 as_stix["id"],
                                 observable_ip["id"],
                                 start_time=start_time,
-                                stop_time=stop_time,
                             ),
                             source_ref=as_stix["id"],
                             target_ref=observable_ip["id"],
                             relationship_type="related-to",
                             created_by_ref=identity_id,
                             start_time=start_time,
-                            stop_time=stop_time,
                             object_marking_refs=[self.beaconbeagle_marking],
                             custom_properties={
                                 "x_opencti_score": 50,
                                 "x_opencti_labels": ["BeaconBeagle"],
                             },
-                            description=f"Has hosted a CobaltStrike between {start_time} and {stop_time}. (Link IP AS)",
+                            description=f"Has hosted a CobaltStrike since {start_time}. (Link IP AS)",
                         )
                         stix_objects.append(as_stix)
                         stix_objects.append(relation_TAS)
@@ -1731,14 +1743,12 @@ class BeaconBeagle:
                                     master_observable_id,
                                     observable_l["standard_id"],
                                     start_time=start_time,
-                                    stop_time=stop_time,
                                 ),
                                 source_ref=master_observable_id,
                                 target_ref=observable_l["standard_id"],
                                 relationship_type="related-to",
                                 created_by_ref=identity_id,
                                 start_time=start_time,
-                                stop_time=stop_time,
                                 object_marking_refs=[self.beaconbeagle_marking],
                                 description=f"Link between IP and {observable_l['entity_type']} at {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}. (Link )",
                             )
@@ -1754,14 +1764,12 @@ class BeaconBeagle:
                                     master_observable_id,
                                     observable_l["id"],
                                     start_time=start_time,
-                                    stop_time=stop_time,
                                 ),
                                 source_ref=master_observable_id,
                                 target_ref=observable_l["id"],
                                 relationship_type="related-to",
                                 created_by_ref=identity_id,
                                 start_time=start_time,
-                                stop_time=stop_time,
                                 object_marking_refs=[self.beaconbeagle_marking],
                                 description=f"Link between IP and {observable_l['type']} at {datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%d')}. (Link )",
                             )
@@ -1811,16 +1819,14 @@ class BeaconBeagle:
                                 self.beaconbeagle_link_tool_id,
                                 observable["standard_id"],
                                 start_time=start_time,
-                                stop_time=stop_time,
                             ),
                             source_ref=self.beaconbeagle_link_tool_id,
                             target_ref=observable["standard_id"],
                             relationship_type="related-to",
                             created_by_ref=identity_id,
                             start_time=start_time,
-                            stop_time=stop_time,
                             object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_tool} between {start_time} and {stop_time}. (Link ObsTool)",
+                            description=f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
                         )
                         stix_objects.append(relation_OT)
                         del relation_OT
@@ -1834,16 +1840,14 @@ class BeaconBeagle:
                                 self.beaconbeagle_link_tool_id,
                                 observable["id"],
                                 start_time=start_time,
-                                stop_time=stop_time,
                             ),
                             source_ref=self.beaconbeagle_link_tool_id,
                             target_ref=observable["id"],
                             relationship_type="related-to",
                             created_by_ref=identity_id,
                             start_time=start_time,
-                            stop_time=stop_time,
                             object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_tool} between {start_time} and {stop_time}. (Link ObsTool)",
+                            description=f"Was used by {self.beaconbeagle_link_tool} since {start_time}. (Link ObsTool)",
                         )
                         stix_objects.append(relation_OT)
                         del relation_OT
@@ -1870,16 +1874,14 @@ class BeaconBeagle:
                                 self.beaconbeagle_link_ap_id,
                                 observable["standard_id"],
                                 start_time=start_time,
-                                stop_time=stop_time,
                             ),
                             source_ref=self.beaconbeagle_link_ap_id,
                             target_ref=observable["standard_id"],
                             relationship_type="related-to",
                             created_by_ref=identity_id,
                             start_time=start_time,
-                            stop_time=stop_time,
                             object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_ap} between {start_time} and {stop_time}. (Link ObsAttackPattern)",
+                            description=f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
                         )
                         stix_objects.append(relation_OAP)
                         del relation_OAP
@@ -1893,16 +1895,14 @@ class BeaconBeagle:
                                 self.beaconbeagle_link_ap_id,
                                 observable["id"],
                                 start_time=start_time,
-                                stop_time=stop_time,
                             ),
                             source_ref=self.beaconbeagle_link_ap_id,
                             target_ref=observable["id"],
                             relationship_type="related-to",
                             created_by_ref=identity_id,
                             start_time=start_time,
-                            stop_time=stop_time,
                             object_marking_refs=[self.beaconbeagle_marking],
-                            description=f"Was used by {self.beaconbeagle_link_ap} between {start_time} and {stop_time}. (Link ObsAttackPattern)",
+                            description=f"Was used by {self.beaconbeagle_link_ap} since {start_time}. (Link ObsAttackPattern)",
                         )
                         stix_objects.append(relation_OAP)
                         del relation_OAP
@@ -2067,7 +2067,15 @@ class BeaconBeagle:
         # MB for a busy BeaconBeagle payload) without changing
         # what the worker actually ingests.
         serialized_bundle = stix_bundle.serialize()
-        self.helper.send_stix2_bundle(serialized_bundle, work_id=work_id)
+        # ``cleanup_inconsistent_bundle=True`` lets the worker drop dangling
+        # relationships whose target is absent from the bundle instead of
+        # rejecting the whole bundle on MISSING_REFERENCE_ERROR — the
+        # repo-wide convention for external-import connectors.
+        self.helper.send_stix2_bundle(
+            serialized_bundle,
+            work_id=work_id,
+            cleanup_inconsistent_bundle=True,
+        )
         # Only commit the dedup cursor *after* a successful send;
         # a bundle-build / send failure must leave the previous
         # cursor intact so the next run retries the same payload
@@ -2162,14 +2170,16 @@ class BeaconBeagle:
     def run(self):
         self.helper.connector_logger.info("Fetching BeaconBeagle datasets...")
         self.set_marking()
-        get_run_and_terminate = getattr(self.helper, "get_run_and_terminate", None)
-        if callable(get_run_and_terminate) and self.helper.get_run_and_terminate():
-            self.process_data()
-            self.helper.force_ping()
-        else:
-            while True:
-                self.process_data()
-                time.sleep(self.beaconbeagle_interval * 60 * 60)
+        # Delegate scheduling to the helper rather than a manual
+        # ``while True`` / ``time.sleep`` loop (linter rule VC314).
+        # ``schedule_process`` runs ``process_data`` immediately, re-runs it
+        # every ``duration_period`` seconds with automatic queue
+        # backpressure, and transparently handles run-and-terminate mode
+        # (single run, then ping + exit).
+        self.helper.schedule_process(
+            message_callback=self.process_data,
+            duration_period=self.beaconbeagle_interval * 60 * 60,
+        )
 
 
 if __name__ == "__main__":

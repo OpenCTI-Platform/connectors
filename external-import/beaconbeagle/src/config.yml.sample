@@ -29,6 +29,9 @@ beaconbeagle:
   # to ``bgp.tools`` is not allowed in your deployment (BGP / AS / country
   # linking will then only fire on entries that already carry the data).
   search_bgpas: false
+  # Suffix appended to the Text observable that tracks CobaltStrike licence
+  # watermarks. Leave empty (or omit) to disable watermark tracking.
+  link_watermark: ''
   links_duration: 24
   interval: 2 # In hours
   marking_definition: 'TLP:GREEN'
