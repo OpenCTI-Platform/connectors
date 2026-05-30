@@ -3,7 +3,7 @@ import os
 import re
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 from urllib.parse import urljoin
 
@@ -174,7 +174,8 @@ class AttributionTools:
                 bundle_objects.append(relationship)
 
         # Create a note from the prediction results
-        timestamp_str = f"{datetime.utcnow().isoformat(timespec='seconds')}Z"
+        # Format as ...Z (without offset) to keep the legacy format consumed elsewhere.
+        timestamp_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         note_contents = (
             f"Attribution-tools enrichment performed on {timestamp_str}."
             f"\n\nModel version: {self.attribution_model.db_version}"
@@ -280,8 +281,8 @@ class AttributionTools:
     def fetch_data_and_train_model(self):
         self.helper.log_info("Starting data fetch for model training...")
         # Announce upcoming training work
-        now = datetime.utcnow()
-        friendly_name = f"Model training @ {now.isoformat(timespec='seconds')}Z"
+        now = datetime.now(tz=timezone.utc)
+        friendly_name = f"Model training @ {now.strftime('%Y-%m-%dT%H:%M:%SZ')}"
         work_id = self.helper.api.work.initiate_work(
             self.helper.connect_id,
             friendly_name,
@@ -300,8 +301,10 @@ class AttributionTools:
             else self.attribution_model.db_version
         )
         self.train_model(training_data, db_version)
-        finished_time = datetime.utcnow()
-        timestamp_str = f"{finished_time.isoformat(timespec='seconds')}Z"
+        finished_time = datetime.now(tz=timezone.utc)
+        # Use a Z-suffixed UTC timestamp (no offset) so dataset filenames remain
+        # parsable by ``get_dataset_files()`` which expects ``%Y-%m-%dT%H:%M:%SZ``.
+        timestamp_str = finished_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
         # Save most recent training data
         training_data_object = {
@@ -324,18 +327,33 @@ class AttributionTools:
         self.helper.api.work.to_processed(work_id, message)
         self.helper.log_info("Model training successfully finished.")
 
+    @staticmethod
+    def _utc_now_naive() -> datetime:
+        """Return the current UTC time as a naive ``datetime``.
+
+        ``cron_converter`` works with naive datetimes that it interprets in
+        the local timezone of the values it is fed.  The cron expression
+        consumed by this loop comes from the ``..._CRON_UTC`` config key, so
+        we feed it a naive value that already represents UTC instead of the
+        host's local time.
+        """
+        return datetime.now(tz=timezone.utc).replace(tzinfo=None)
+
     def scheduled_model_training_loop(self):
-        # Create a retraining schedule based on provided cron expression
-        schedule = self.cron.schedule(datetime.utcnow())
+        # Create a retraining schedule based on provided cron expression. The
+        # expression is configured as UTC (``..._CRON_UTC``), so we feed
+        # ``cron_converter`` naive datetimes that already represent UTC.
+        schedule = self.cron.schedule(self._utc_now_naive())
         while True:
             # Find next time matching schedule and wait
             next_datetime = schedule.next()
-            time_difference = next_datetime - datetime.utcnow()
+            time_difference = next_datetime - self._utc_now_naive()
             while time_difference.total_seconds() < 0:
                 next_datetime = schedule.next()
-                time_difference = next_datetime - datetime.utcnow()
+                time_difference = next_datetime - self._utc_now_naive()
             self.helper.log_info(
-                f"Next model training will happen in {time_difference} at {next_datetime.isoformat()}Z"
+                "Next model training will happen in "
+                f"{time_difference} at {next_datetime.isoformat()}Z"
             )
             time.sleep(time_difference.total_seconds())
 

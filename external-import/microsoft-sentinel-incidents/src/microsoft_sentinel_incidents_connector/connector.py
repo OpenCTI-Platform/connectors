@@ -185,7 +185,10 @@ class MicrosoftSentinelIncidentsConnector:
                             )
                             stix_objects.append(stix_relationship_account)
                     case "ip":
-                        version = detect_ip_version(entity.get("Address"))
+                        address = entity.get("Address")
+                        if not address:
+                            continue
+                        version = detect_ip_version(address)
                         if version == "ipv4":
                             stix_ip = self.converter_to_stix.create_evidence_ipv4(
                                 entity

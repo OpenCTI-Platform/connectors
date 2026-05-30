@@ -1,6 +1,6 @@
 import os
 import warnings
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Literal, Optional
 
@@ -12,7 +12,6 @@ from pydantic import (
     HttpUrl,
     PlainSerializer,
     SecretStr,
-    TypeAdapter,
     model_validator,
 )
 from pydantic_core.core_schema import SerializationInfo
@@ -66,30 +65,6 @@ def comma_separated_list_validator(value: str | list[str]) -> list[str]:
     return value
 
 
-def iso_string_validator(value: str) -> datetime:
-    """
-    Convert ISO string into a datetime object.
-
-    Example:
-        > value = iso_string_validator("2023-10-01T00:00:00Z")
-        > print(value) # 2023-10-01 00:00:00+00:00
-
-        # If today is 2023-10-01:
-        > value = iso_string_validator("P30D")
-        > print(value) # 2023-09-01 00:00:00+00:00
-    """
-    if isinstance(value, str):
-        try:
-            # Convert presumed ISO string to datetime object
-            return datetime.fromisoformat(value).astimezone(tz=timezone.utc)
-        except ValueError:
-            # If not a datetime ISO string, try to parse it as timedelta with pydantic first
-            duration = TypeAdapter(timedelta).validate_python(value)
-            # Then return a datetime minus the value
-            return datetime.now(timezone.utc) - duration
-    return value
-
-
 def pycti_list_serializer(value: list[str], info: SerializationInfo) -> str | list[str]:
     """
     Serialize list of values as comma-separated string.
@@ -107,13 +82,6 @@ ListFromString = Annotated[
     list[str],
     BeforeValidator(comma_separated_list_validator),
     PlainSerializer(pycti_list_serializer, when_used="json"),
-]
-
-DatetimeFromIsoString = Annotated[
-    datetime,
-    BeforeValidator(iso_string_validator),
-    # Replace the default serializer as it uses Z prefix instead of +00:00 offset
-    PlainSerializer(datetime.isoformat, when_used="json"),
 ]
 
 

@@ -14,16 +14,37 @@ IOC_ENDPOINT_URL = "/web/api/v2.1/threat-intelligence/iocs/stix"
 
 
 # SentinelOne can only accept Patterns with single elements of the types:
-#   - File hashes (MD5, SHA1, SHA256)
+#   - File hashes (MD5, SHA-1, SHA-256)
 #   - Domain names
 #   - URLs
 #   - IPv4 addresses
 #
 # Such regex patterns allow the connector to thus filter for valid Indicators.
 # More details can be found in the connector's documentation.
+#
+# The file-hash pattern accepts every shape OpenCTI is known to emit
+# for file-hash indicators (issue #5428):
+#   - the STIX 2.1 canonical form  ``[file:hashes.SHA-256 = '...']``;
+#   - the single-quoted algorithm  ``[file:hashes.'SHA-256' = '...']``
+#     that OpenCTI uses when the algorithm key is not a valid
+#     ``hash-algorithm-ov`` literal;
+#   - lowercase variants           ``[file:hashes.sha-256 = '...']``;
+#   - the legacy non-hyphenated form ``[file:hashes.SHA256 = '...']``.
+# The ``('?)`` capture group holds an optional opening quote and the
+# ``\1`` backreference requires the closing quote to match it, so
+# unbalanced shapes such as ``[file:hashes.'SHA-256 = ...]`` or
+# ``[file:hashes.SHA-256' = ...]`` are rejected (would otherwise be
+# matched by the previous independent-``'?`` form). ``SHA-?1`` /
+# ``SHA-?256`` make the hyphen optional, and the inline ``(?i:...)``
+# local flag makes only the algorithm token case-insensitive — the
+# surrounding ``[file:hashes...]`` object key stays case-sensitive
+# because STIX object types are lower-case-only per spec.
 
 SUPPORTED_STIX_PATTERNS = [
-    re.compile(r"^\s*\[file:hashes\.(MD5|SHA1|SHA256)\s*=\s*\'[^\']+\'\s*\]\s*$"),
+    re.compile(
+        r"^\s*\[file:hashes\.(?i:('?)(?:MD5|SHA-?1|SHA-?256)\1)"
+        r"\s*=\s*\'[^\']+\'\s*\]\s*$"
+    ),
     re.compile(r"^\s*\[domain-name:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[url:value\s*=\s*\'[^\']+\'\s*\]\s*$"),
     re.compile(r"^\s*\[ipv4-addr:value\s*=\s*\'[^\']+\'\s*\]\s*$"),

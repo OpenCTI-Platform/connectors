@@ -11,6 +11,9 @@ from connector.src.custom.configs import GTIConfig
 from connector.src.custom.orchestrators.campaign.orchestrator_campaign import (
     OrchestratorCampaign,
 )
+from connector.src.custom.orchestrators.indicator.orchestrator_indicator import (
+    OrchestratorIndicator,
+)
 from connector.src.custom.orchestrators.malware.orchestrator_malware import (
     OrchestratorMalware,
 )
@@ -113,7 +116,17 @@ class Orchestrator:
             self.vulnerability_orchestrator = OrchestratorVulnerability(
                 work_manager, logger, config, tlp_level
             )
-            self.logger.info("Orchestrator initialized", {"prefix": LOG_PREFIX})
+        if self.config.import_indicators:
+            self.logger.info(
+                "Indicator import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.indicator_import_start_date,
+                },
+            )
+            self.indicator_orchestrator = OrchestratorIndicator(
+                work_manager, logger, config, tlp_level
+            )
 
     async def run_report(self, initial_state: dict[str, Any] | None) -> None:
         """Run the report orchestrator.
@@ -166,3 +179,13 @@ class Orchestrator:
         """
         self.logger.info("Starting vulnerability orchestration", {"prefix": LOG_PREFIX})
         await self.vulnerability_orchestrator.run(initial_state)
+
+    async def run_indicators(self, initial_state: dict[str, Any] | None) -> None:
+        """Run the indicator orchestrator.
+
+        Args:
+            initial_state: Initial state for the orchestrator
+
+        """
+        self.logger.info("Starting indicator orchestration", {"prefix": LOG_PREFIX})
+        await self.indicator_orchestrator.run(initial_state)

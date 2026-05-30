@@ -10,6 +10,6 @@ class BaseRequestStrategy(ABC):
     """Base class for request strategies."""
 
     @abstractmethod
-    async def execute(self, request: BaseRequestModel) -> Any:
+    async def execute(self, request: BaseRequestModel, as_bytes: bool = False) -> Any:
         """Execute the request strategy."""
         raise NotImplementedError("Subclasses must implement this method")

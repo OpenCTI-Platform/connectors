@@ -6,7 +6,7 @@ connector:
   type: 'INTERNAL_ENRICHMENT'
   id: 'scout-search-connector'
   name: 'Scout Search Connector'
-  scope: 'Text'
+  scope: 'Indicator'
   log_level: 'error'
 
 pure_signal_scout:

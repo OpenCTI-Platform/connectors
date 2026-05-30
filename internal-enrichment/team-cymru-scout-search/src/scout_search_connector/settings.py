@@ -23,7 +23,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["Text"],
+        default=["Indicator"],
     )
 
 
@@ -43,6 +43,14 @@ class TeamCymruScoutSearchConfig(BaseConfigModel):
     )
     search_interval: int = Field(
         description="Search interval in days (default: 1)", default=1
+    )
+    indicator_pattern_type: str = Field(
+        description="Pattern type for Scout indicators",
+        default="pure-signal-scout",
+    )
+    pattern_description: str = Field(
+        description="Description for the Scout pattern type",
+        default="Scout Search Query Pattern",
     )
 
 

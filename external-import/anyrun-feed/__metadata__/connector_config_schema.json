@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/anyrun-feed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ANY.RUN TI Feed",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "stix2"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_UPDATE_EXISTING_DATA": {
+      "default": false,
+      "description": "Whether to update data already ingested into the platform.",
+      "type": "boolean"
+    },
+    "ANYRUN_API_KEY": {
+      "description": "ANY.RUN TI Feeds API key. See 'Generate your API key' section in the README file.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ANYRUN_FEED_FETCH_INTERVAL": {
+      "default": 120,
+      "type": "integer",
+      "description": "Specify feed fetch interval in minutes."
+    },
+    "ANYRUN_FEED_FETCH_DEPTH": {
+      "default": 90,
+      "type": "integer",
+      "description": "Specify feed fetch depth in days."
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ANYRUN_API_KEY"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,34 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - polyswarm_api/3.16.0 (x86_64-Linux-CPython-3.13.5)
+    method: GET
+    uri: https://api.polyswarm.network/v3/ioc/sha256/0000000000000000000000000000000000000000000000000000000000000000?hide_known_good=True&community=default
+  response:
+    body:
+      string: ''
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Type:
+      - text/html; charset=utf-8
+      Date:
+      - Tue, 10 Mar 2026 14:00:26 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+    status:
+      code: 204
+      message: NO CONTENT
+version: 1

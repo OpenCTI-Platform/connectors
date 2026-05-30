@@ -1,5 +1,5 @@
 import pytest
-from src.main import parse_version
+from src.taxii_post_connector.connector import parse_version
 
 
 @pytest.mark.parametrize(

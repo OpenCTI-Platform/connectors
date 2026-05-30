@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Intel 471 Darknet'
+  scope: 'intel471-darknet'
+  log_level: 'info'
+  run_every: '10m' # <int><d|h|m|s>
+  update_existing_data: false
+
+intel471:
+  api_url: 'https://api.intel471.com/v1'
+  api_username: 'ChangeMe'
+  api_key: 'ChangeMe'
+
+intel471_darknet:
+  # Unix epoch (seconds) of the earliest alert to import on the first run.
+  initial_history_alerts: 0
+  # TLP marking applied to created entities: CLEAR, GREEN, AMBER,
+  # AMBER_STRICT, RED.
+  tlp: 'AMBER'

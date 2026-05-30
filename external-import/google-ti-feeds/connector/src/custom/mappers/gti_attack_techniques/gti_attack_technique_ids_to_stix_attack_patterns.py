@@ -22,10 +22,7 @@ from connector.src.custom.models.gti.gti_attack_technique_id_model import (
 from connector.src.stix.octi.models.attack_pattern_model import OctiAttackPatternModel
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
-    OrganizationAuthor,
-    TLPMarking,
-)
+from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from stix2.v21 import AttackPattern  # type: ignore
 
 
@@ -100,8 +97,6 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
 
             name = technique_id
 
-            external_references = self._create_minimal_external_references(technique_id)
-
             attack_pattern_model = OctiAttackPatternModel.create(
                 name=name,
                 mitre_id=technique_id,
@@ -112,7 +107,6 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
                 first_seen=None,
                 last_seen=None,
                 kill_chain_phases=None,
-                external_references=external_references,
                 created=current_time,
                 modified=current_time,
             )
@@ -120,26 +114,3 @@ class GTIAttackTechniqueIDsToSTIXAttackPatterns(BaseMapper):
             attack_patterns.append(attack_pattern_model)
 
         return attack_patterns
-
-    def _create_minimal_external_references(
-        self, technique_id: str
-    ) -> list[dict[str, str]] | None:
-        """Create minimal external references with only MITRE reference.
-
-        Args:
-            technique_id: The attack technique ID
-
-        Returns:
-            list[dict[str, str]] | None: Minimal external references with MITRE reference
-
-        """
-        if not technique_id:
-            return None
-
-        mitre_reference = {
-            "source_name": "mitre-attack",
-            "external_id": technique_id,
-            "url": f"https://attack.mitre.org/techniques/{technique_id}/",
-        }
-
-        return [mitre_reference]
