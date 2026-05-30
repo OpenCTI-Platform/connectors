@@ -28,4 +28,5 @@ services:
       - MISP_PUBLISH_ALERT=false
       - MISP_TAG_OPENCTI=true
       - MISP_TAG_PREFIX=opencti:
+      - MISP_DETECT_ROUND_TRIP=false
     restart: always

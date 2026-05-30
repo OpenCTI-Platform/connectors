@@ -538,3 +538,45 @@ def test_converter_to_stix_process_vuln_finding(
         has_relationships[0].source_ref == systems[0].id
         and has_relationships[0].target_ref == vulnerabilities[0].id
     )
+
+
+def test_converter_to_stix_make_operating_systems_with_none(
+    mock_helper, mock_config, fake_asset
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # And an asset without operating_system (e.g. network device, bare IP host)
+    asset_without_os = fake_asset.model_copy(update={"operating_system": None})
+
+    # When calling make_operating_systems
+    operating_systems = converter_to_stix.make_operating_systems(asset=asset_without_os)
+
+    # Then it should return an empty list
+    assert operating_systems == []
+
+
+def test_converter_to_stix_process_asset_without_operating_system(
+    mock_helper, mock_config, fake_asset
+):
+    # Given a converter to stix instance
+    converter_to_stix = ConverterToStix(
+        helper=mock_helper, config=mock_config, default_marking="TLP:CLEAR"
+    )
+
+    # And an asset without operating_system
+    asset_without_os = fake_asset.model_copy(update={"operating_system": None})
+
+    # When calling process_asset
+    result = converter_to_stix.process_asset(asset=asset_without_os)
+
+    # Then the system object should still be created
+    assert result["system"].name == "sharepoint2016"
+    # Observables should not include operating_system
+    assert (
+        len(result["observables"]) == 5
+    )  # ipv4, hostname, mac, ipv6, domain_name (no operating_system)
+    # Relationships should match observables count
+    assert len(result["relationships"]) == 5

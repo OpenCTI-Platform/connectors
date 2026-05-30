@@ -74,6 +74,7 @@
       "writeOnly": true
     },
     "DRAGOS_IMPORT_START_DATE": {
+      "default": "P30D",
       "description": "Start date of first import (ISO format). Can be a relative or an absolute date.",
       "format": "date-time",
       "type": "string"

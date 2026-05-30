@@ -1,8 +1,8 @@
 {
   "title": "ANY.RUN Task",
   "slug": "anyrun-task",
-  "description": "Analyze URL or Artifact in ANY.RUN Interactive Online Malware Sandbox",
-  "short_description": "Analyze Url or Artifact in ANY.RUN Interactive Online Malware Sandbox",
+  "description": "ANY.RUN's Interactive Sandbox is a cloud-based service that provides SOC teams with a simple way to analyze cyber threats, enabling rapid threat intelligence and deep analysis in a secure environment.",
+  "short_description": "Analyze Url or StixFile in ANY.RUN Interactive Sandbox",
   "logo": "internal-enrichment/anyrun-task/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis",
@@ -12,7 +12,7 @@
   "verified": true,
   "last_verified_date": null,
   "playbook_supported": false,
-  "max_confidence_level": 75,
+  "max_confidence_level": 100,
   "support_version": ">=6.0.0",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/anyrun-task",

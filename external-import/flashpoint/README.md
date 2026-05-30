@@ -30,6 +30,7 @@ See [Flashpoint API Documentation](https://flashpoint.io/resources/datasheets/ig
 
 The Flashpoint Connector for OpenCTI imports threat intelligence data from Flashpoint and maps it to relevant entities in the OpenCTI ecosystem.
 This includes alerts, indicators, malware reports, vulnerabilities, and other intelligence, enhancing threat detection and response capabilities.  
+Indicators are imported from Flashpoint Technical Intelligence API v2 (`/technical-intelligence/v2/indicators`).
 See [Behavior](#behavior) for more details.
 
 ## Installation
@@ -224,6 +225,30 @@ graph LR
 #### Relevant documentation:
 
 - https://docs.flashpoint.io/flashpoint/reference/context_view_handler_v1_communities__id__context_get
+
+### Indicators
+
+Indicators are collected from Flashpoint Technical Intelligence API v2 endpoint `/technical-intelligence/v2/indicators`.
+The connector performs incremental ingestion using `modified_at` and maps each compatible IoC to STIX Indicators and observables in OpenCTI.
+
+> **Note — Migration from MISP-based ingestion:**  
+> Previous versions of this connector used a MISP-feed approach to ingest indicators, storing state under `misp_last_run` / `misp_last_event` keys.
+> The connector now automatically migrates: on first run after upgrade, if no `indicators_last_modified` state exists, it falls back to the legacy `misp_last_run` value to avoid re-importing all indicators from `import_start_date`.
+> Legacy state keys are cleaned up after the first successful run.
+
+#### Indicators Score Mapping
+
+Flashpoint Indicators are ingested into OpenCTI with the following score mapping applied to the `x_opencti_score` field:
+
+| Flashpoint Score | OpenCTI Score |
+|------------------|---------------|
+| Informational    | `60`          |
+| Suspicious       | `80`          |
+| Malicious        | `100`         |
+
+#### Relevant documentation:
+
+- https://docs.flashpoint.io/flashpoint/reference/list_indicators_technical_intelligence_v2_indicators_get
 
 ### CCM Alerts
 

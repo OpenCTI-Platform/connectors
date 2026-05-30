@@ -262,8 +262,8 @@ class Asset(FrozenBaseModelWithWarnedExtra):
     """
 
     bios_uuid: Optional[str] = Field(None, description="The BIOS UUID of the asset.")
-    device_type: str = Field(
-        ..., description="The type of device (e.g., hypervisor, general-purpose)."
+    device_type: Optional[str] = Field(
+        None, description="The type of device (e.g., hypervisor, general-purpose)."
     )
     fqdn: Optional[str] = Field(
         None, description="The fully qualified domain name of the asset."
@@ -281,8 +281,8 @@ class Asset(FrozenBaseModelWithWarnedExtra):
     netbios_name: Optional[str] = Field(
         None, description="The NetBIOS name of the asset."
     )
-    operating_system: list[str] = Field(
-        ..., description="List of operating systems running on the asset."
+    operating_system: Optional[list[str]] = Field(
+        None, description="List of operating systems running on the asset."
     )
     network_id: str = Field(
         ..., description="The ID of the network the asset belongs to."

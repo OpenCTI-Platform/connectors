@@ -1,0 +1,48 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'Scoring calculator'
+  scope: 'Indicator'
+  log_level: 'error'
+  auto: true # Enable/disable auto-enrichment of indicators
+
+connector_scoring:
+  high_priority_labels: ["[Scoring] High priority"]
+  medium_priority_labels: ["[Scoring] Medium priority"]
+  low_priority_labels: ["[Scoring] Low priority"]
+  indicator_type_enrichable: 'IPv4-Addr,IPv6-Addr,Domain-Name,StixFile' # The main_observable_type to enrich
+  browse_report: true # True/False to take into account the entities contained in the reports containing the Indicator
+
+  threat_impact_score: true # Defines whether the threats (Intrusion sets/Threat actors) related impacts the score
+  threat_high_priority: "20" # Impact on the score for a threat (Intrusion set/Threat actor) categorized as "high priority"
+  threat_medium_priority: "10" # Impact on the score for a threat (Intrusion set/Threat actor) categorized as "medium priority"
+  threat_low_priority: "5" # Impact on the score for a threat (Intrusion set/Threat actor) categorized as "low priority"
+
+  toolbox_impact_score: true # Defines whether the toolbox (Malware/Tools) related impacts the score
+  toolbox_high_priority: "20" # Impact on the score for a toolbox (Malware/Tool) categorized as "high priority"
+  toolbox_medium_priority: "10" # Impact on the score for a toolbox (Malware/Tool) categorized as "medium priority"
+  toolbox_low_priority: "5" # Impact on the score for a toolbox (Malware/Tool) categorized as "low priority"
+
+  location_impact_score: false # Defines whether the locations (Countries/Regions) related impacts the score
+  location_high_priority: "20" # Impact on the score for a location (Country/Region) categorized as "high priority"
+  location_medium_priority: "10" # Impact on the score for a location (Country/Region) categorized as "medium priority"
+  location_low_priority: "5" # Impact on the score for a location (Country/Region) categorized as "low priority"
+
+  sector_impact_score: false # Defines whether the sectors (Sectors) related impacts the score
+  sector_high_priority: "20" # Impact on the score for a sector (Sectors) categorized as "high priority"
+  sector_medium_priority: "10" # Impact on the score for a sector (Sectors) categorized as "medium priority"
+  sector_low_priority: "5" # Impact on the score for a sector (Sectors) categorized as "low priority"
+
+  ttp_impact_score: false # Defines whether the TTPs (Attack patterns) related impacts the score
+  ttp_high_priority: "20" # Impact on the score for a TTP (Attack pattern) categorized as "high priority"
+  ttp_medium_priority: "10" # Impact on the score for a TTP (Attack pattern) categorized as "medium priority"
+  ttp_low_priority: "5" # Impact on the score for a TTP (Attack pattern) categorized as "low priority"
+
+  author_impact_score: false # Defines whether the author (Organizations) related impacts the score
+  author_high_priority: "20" # Impact on the score for an author (Organization) categorized as "high priority"
+  author_medium_priority: "10" # Impact on the score for an author (Organization) categorized as "medium priority"
+  author_low_priority: "5" # Impact on the score for an author (Organization) categorized as "low priority"

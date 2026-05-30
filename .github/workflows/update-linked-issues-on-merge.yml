@@ -1,0 +1,89 @@
+name: "Update linked issues on PR merge"
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  update-linked-issues:
+    name: Add solved label and milestone
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update linked issues with label and milestone
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = context.payload.pull_request.number;
+
+            const query = `query($owner:String!, $repo:String!, $number:Int!) {
+              repository(owner:$owner, name:$repo) {
+                pullRequest(number:$number) {
+                  closingIssuesReferences(first:10) {
+                    nodes { number }
+                  }
+                }
+              }
+            }`;
+
+            const variables = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: prNumber,
+            };
+
+            const result = await github.graphql(query, variables);
+            const issues = result.repository.pullRequest.closingIssuesReferences.nodes;
+
+            // Fetch milestone numbers once
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              per_page: 100,
+            });
+            const milestonesMap = Object.fromEntries(
+              milestones.data.map((m) => [m.title, m.number])
+            );
+
+            for (const issue of issues) {
+              core.info(`Adding "solved" label to issue #${issue.number}`);
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: ["solved"],
+              });
+
+              // Fetch issue details to check labels
+              const { data: issueData } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+              });
+              const labelNames = issueData.labels.map((l) => l.name);
+
+              let milestoneName = null;
+              if (labelNames.includes("bug")) {
+                milestoneName = "Bugs backlog";
+              } else if (labelNames.includes("feature")) {
+                milestoneName = "1. Now";
+              }
+
+              if (milestoneName && milestonesMap[milestoneName]) {
+                core.info(`Setting milestone "${milestoneName}" on issue #${issue.number}`);
+                await github.rest.issues.update({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  milestone: milestonesMap[milestoneName],
+                });
+              } else if (milestoneName) {
+                core.warning(`Milestone "${milestoneName}" not found in repo`);
+              }
+            }

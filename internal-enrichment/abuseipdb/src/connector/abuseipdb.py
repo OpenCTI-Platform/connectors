@@ -119,7 +119,7 @@ class ConnectorAbuseIPDB:
             found = []
             cl = defaultdict(dict)
             for report in data["reports"]:
-                countryN = report["reporterCountryCode"]
+                countryN = report.get("reporterCountryCode")
                 if countryN in cl:
                     cl[countryN]["count"] += 1
                     cl[countryN]["firstseen"] = report["reportedAt"]

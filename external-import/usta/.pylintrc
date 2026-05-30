@@ -1,0 +1,7 @@
+[MASTER]
+init-hook=
+    import sys;
+    sys.path.insert(0, 'src')
+
+[FORMAT]
+max-line-length=100

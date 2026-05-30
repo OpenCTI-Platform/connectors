@@ -233,6 +233,8 @@ class ConverterToStix:
         )
 
     def make_operating_systems(self, asset: Asset) -> list[OperatingSystem]:
+        if asset.operating_system is None:
+            return []
         return [
             OperatingSystem(
                 author=self.author,

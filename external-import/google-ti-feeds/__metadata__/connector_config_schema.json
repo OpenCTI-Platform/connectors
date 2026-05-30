@@ -90,6 +90,30 @@
       "minLength": 1,
       "type": "string"
     },
+    "GTI_IMPORT_INDICATORS": {
+      "default": false,
+      "description": "Whether to enable importing IOC indicator data from GTI via Steady-State IOC Deltas API",
+      "type": "boolean"
+    },
+    "GTI_INDICATOR_TYPES": {
+      "default": [
+        "file",
+        "ip",
+        "url",
+        "domain"
+      ],
+      "description": "Comma-separated list of IOC types to import. Allowed: file, ip, url, domain",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_INDICATOR_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import indicators on first run (e.g. P1D for 1 day, P7D for 7 days). Must be greater than 1 hour (the IOC delta package granularity).",
+      "format": "duration",
+      "type": "string"
+    },
     "GTI_CAMPAIGN_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import campaigns (e.g., P1D for 1 day, P7D for 7 days)",
@@ -110,6 +134,17 @@
         "All",
         "partner,google threat intelligence",
         "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_CAMPAIGN_EXTRA_FILTERS": {
+      "default": [],
+      "description": "Optional List of additional filters to add to query when fetching campaigns",
+      "examples": [
+        "name:Operation Shadow"
       ],
       "items": {
         "type": "string"
@@ -147,6 +182,17 @@
       },
       "type": "array"
     },
+    "GTI_VULNERABILITY_EXTRA_FILTERS": {
+      "default": [],
+      "description": "Optional List of additional filters to add to query when fetching vulnerabilities.",
+      "examples": [
+        "name:CVE-2024"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "GTI_MALWARE_FAMILY_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import malware families (e.g., P1D for 1 day, P7D for 7 days)",
@@ -177,6 +223,17 @@
       "default": false,
       "description": "Whether to enable importing malware family aliases from GTI",
       "type": "boolean"
+    },
+    "GTI_MALWARE_FAMILY_EXTRA_FILTERS": {
+      "default": [],
+      "description": "Optional List of additional filters to add to query when fetching malware families.",
+      "examples": [
+        "name:Emote"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "GTI_THREAT_ACTOR_IMPORT_START_DATE": {
       "default": "P1D",
@@ -209,6 +266,17 @@
       "description": "Whether to enable importing threat actor aliases from GTI",
       "type": "boolean"
     },
+    "GTI_THREAT_ACTOR_EXTRA_FILTERS": {
+      "default": [],
+      "description": "Optional List of additional filters to add to query when fetching threat actors.",
+      "examples": [
+        "name:APT28"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "GTI_REPORT_IMPORT_START_DATE": {
       "default": "P1D",
       "description": "ISO 8601 duration string specifying how far back to import reports (e.g., P1D for 1 day, P7D for 7 days)",
@@ -235,6 +303,11 @@
       },
       "type": "array"
     },
+    "GTI_REPORT_DOWNLOAD_PDF": {
+      "default": false,
+      "description": "Whether to download report PDFs from the GTI API and attach them to the STIX Report objects in OpenCTI",
+      "type": "boolean"
+    },
     "GTI_REPORT_ORIGINS": {
       "default": [
         "google threat intelligence"
@@ -244,6 +317,17 @@
         "All",
         "partner,google threat intelligence",
         "crowdsourced"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_REPORT_EXTRA_FILTERS": {
+      "default": [],
+      "description": "Optional List of additional filters to add to query when fetching reports.",
+      "examples": [
+        "name:phishing"
       ],
       "items": {
         "type": "string"

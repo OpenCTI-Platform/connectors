@@ -7,11 +7,11 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=Virustotal_Livehunt_Notifications
       - "CONNECTOR_NAME=VirusTotal Livehunt Notifications"
-      - CONNECTOR_SCOPE=StixFile,Indicator,Incident
+      - CONNECTOR_SCOPE=StixFile,Indicator,Incident,Domain-Name,Url,IPv4-Addr,IPv6-Addr
       - CONNECTOR_LOG_LEVEL=error
       - CONNECTOR_DURATION_PERIOD=PT5M # ISO-8601 duration format, e.g., PT5M for 5 minutes
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_API_KEY=ChangeMe # Private API Key
-      # - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_TLP_LEVEL=clear # TLP Marking
+      # - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_TLP_LEVEL=clear # (Optional) TLP marking applied to every created entity. Supported values: clear, white, green, amber, amber+strict, red.
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_ALERT=True # Set to true to create alerts
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_EXTENSIONS='exe,dll' # (Optional) Comma separated filter to only download files matching these extensions
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_MIN_FILE_SIZE=1000 # (Optional) Don't download files smaller than this many bytes
@@ -23,4 +23,11 @@ services:
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_YARA_RULE=True # Set to true to create yara rule linked to the alert and the file
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_DELETE_NOTIFICATION=False # Set to true to remove livehunt notifications
       - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_FILTER_WITH_TAG="mytag" # Filter livehunt notifications with this tag
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_GET_MALWARE_CONFIG=False # (Optional) Set to true to extract C2 infrastructure (domains, IPs, URLs) from the VirusTotal malware configuration analysis. Only effective when VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE is True.
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE_INDICATORS=False # (Optional) Set to true to create a File Indicator (SHA-256 pattern) for each matched file. Only effective when VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_FILE is True. Default is false.
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_DOMAIN_NAME_INDICATORS=False # (Optional) Set to true to create Domain-Name Indicators for domains extracted from the malware configuration. Default is false.
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_IP_INDICATORS=False # (Optional) Set to true to create IPv4/IPv6 Indicators for IP addresses extracted from the malware configuration. Default is false.
+      - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_CREATE_URL_INDICATORS=False # (Optional) Set to true to create URL Indicators for URLs extracted from the malware configuration. Default is false.
+      # - VIRUSTOTAL_LIVEHUNT_NOTIFICATIONS_LIMIT=100 # (Optional) Maximum number of notifications to process per run. Leave unset to process every available notification.
+
     restart: always

@@ -264,24 +264,52 @@ workflows:
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
+                - /release\/.*/
+                - /lts\/.*/
       - base_linter:
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
+                - /release\/.*/
+                - /lts\/.*/
       - linter:
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
+                - /release\/.*/
+                - /lts\/.*/
       - test:
           filters:
             tags:
               only: /.*/
+            branches:
+              only:
+                - master
+                - /release\/.*/
+                - /lts\/.*/
       - build_manifest:
           requires:
             - ensure_formatting
             - base_linter
             - linter
             - test
+          filters:
+            tags:
+              only: /.*/
+            branches:
+              only:
+                - master
+                - /release\/.*/
+                - /lts\/.*/
       - build:
           name: "build_release"
           ci_executor:

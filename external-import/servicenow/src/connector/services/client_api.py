@@ -18,6 +18,15 @@ class ServiceNowClient:
         self.severity_to_exclude = self.config.servicenow.severity_to_exclude
         self.priority_to_exclude = self.config.servicenow.priority_to_exclude
         self.import_start_date = self.config.servicenow.import_start_date
+        # ``sysparm_display_value`` is sent on every ServiceNow Table API
+        # call. Pre-format the bool as the lowercase ``"true"`` / ``"false"``
+        # string ServiceNow expects — interpolating a Python ``bool``
+        # directly in an f-string produces ``"True"`` / ``"False"`` (capitalised),
+        # which some ServiceNow Table API endpoints treat as truthy strings
+        # and which goes against ServiceNow's documented contract.
+        self.sysparm_display_value = (
+            "true" if self.config.servicenow.sysparm_display_value else "false"
+        )
 
         # Limiter config
         self.rate_limiter = Limiter(
@@ -244,7 +253,14 @@ class ServiceNowClient:
         if sysparm_query:
             filter_query_parameters.append(f"sysparm_query={sysparm_query}")
 
-        filter_query_parameters.append("sysparm_display_value=true")
+        # ``sysparm_display_value`` is configurable because forcing it to
+        # ``true`` on some ServiceNow instances returns non-ISO 8601
+        # datetimes that the connector cannot parse. ``self.sysparm_display_value``
+        # is already the lowercase ``"true"`` / ``"false"`` string ServiceNow
+        # expects (see ``__init__``).
+        filter_query_parameters.append(
+            f"sysparm_display_value={self.sysparm_display_value}"
+        )
         filter_query_parameters.append("sysparm_exclude_reference_link=true")
         filter_query_parameters.append(f"sysparm_fields={sysparm_fields}")
 
@@ -278,9 +294,13 @@ class ServiceNowClient:
         ]
         sysparm_fields = ",".join(list_sysparm_fields)
 
+        # Apply the configured ``sysparm_display_value`` here too so the
+        # non-ISO-8601 datetime issue does not resurface on the
+        # observables endpoint when the operator disables display
+        # values to work around it on ``get_security_incidents``.
         query_parameters = (
             f"sysparm_query=task={sys_id}"
-            "&sysparm_display_value=true"
+            f"&sysparm_display_value={self.sysparm_display_value}"
             "&sysparm_exclude_reference_link=true"
             f"&sysparm_fields={sysparm_fields}"
         )
@@ -315,9 +335,12 @@ class ServiceNowClient:
         ]
         sysparm_fields = ",".join(list_sysparm_fields)
 
+        # Same rationale as ``get_observables`` — apply the configured
+        # ``sysparm_display_value`` so all three Table API endpoints stay
+        # consistent on instances that need ``false``.
         query_parameters = (
             f"sysparm_query=parent={security_incident_id}"
-            "&sysparm_display_value=true"
+            f"&sysparm_display_value={self.sysparm_display_value}"
             "&sysparm_exclude_reference_link=true"
             f"&sysparm_fields={sysparm_fields}"
         )

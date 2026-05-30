@@ -79,6 +79,8 @@ There are a number of configuration options, which are set either in `docker-com
 | Password         | taxii.password      | `TAXII_PASSWORD`            |         | No        | Password for Basic authentication.                         |
 | TAXII Version    | taxii.version       | `TAXII_VERSION`             | 2.1     | No        | TAXII protocol version (2.0 or 2.1).                       |
 | STIX Version     | taxii.stix_version  | `TAXII_STIX_VERSION`        | 2.1     | No        | STIX output version (2.0 or 2.1).                          |
+| Delete Created By Ref  | taxii.delete_created_by_ref  | `TAXII_DELETE_CREATED_BY_REF` | true | No | Strip `created_by_ref` from objects before posting. |
+| Delete Marking Definition | taxii.delete_marking_definition | `TAXII_DELETE_MARKING_DEFINITION` | true | No | Strip `object_marking_refs` from objects before posting. |
 
 ## Deployment
 

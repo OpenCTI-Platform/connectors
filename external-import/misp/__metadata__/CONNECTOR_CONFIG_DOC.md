@@ -42,6 +42,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_IMPORT_KEYWORD | `string` |  | string | `null` | Keyword to use as filter to import MISP events. |
 | MISP_IMPORT_DISTRIBUTION_LEVELS | `array` |  | string | `[]` | List of distribution levels to filter MISP events to import, **including** only events with these distribution levels. |
 | MISP_IMPORT_THREAT_LEVELS | `array` |  | string | `[]` | List of threat levels to filter MISP events to import, **including** only events with these threat levels. |
+| MISP_THREAT_LEVEL_SCORE_MAPPING | `string` |  | string | `"1:90;2:60;3:30;4:50"` | Mapping of MISP threat levels (1=High, 2=Medium, 3=Low, 4=Undefined) to OpenCTI scores. Format: '<level>:<score>;<level>:<score>'. Each score must be an integer between 0 and 100; level '4' must be defined and is also used as the fallback score for events with an unrecognized threat level. |
 | MISP_IMPORT_ONLY_PUBLISHED | `boolean` |  | boolean | `false` | Whether to only import published MISP events or not. |
 | MISP_IMPORT_WITH_ATTACHMENTS | `boolean` |  | boolean | `false` | Whether to import attachment attribute content as a file (works only with PDF). |
 | MISP_IMPORT_TO_IDS_NO_SCORE | `integer` |  | integer | `null` | A score value for the indicator/observable if the attribute `to_ids` value is no. |
@@ -51,3 +52,4 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | MISP_BATCH_COUNT | `integer` |  | integer | `9999` | The max number of items per batch when splitting STIX bundles. |
 | MISP_BATCH_SIZE_LIMIT | `string` |  | string | `null` | Max size of batches (in human-readable file size, e.g., '10MB', '500KB', '1.5GB') when splitting STIX bundles. `None` means no limit. |
 | MISP_REQUEST_TIMEOUT | `number` |  | number | `null` | The timeout for the requests to the MISP API in seconds. None means no timeout. |
+| MISP_SEARCH_LIMIT | `integer` |  | integer | `10` | Limit the number of results returned per page request to MISP server. |

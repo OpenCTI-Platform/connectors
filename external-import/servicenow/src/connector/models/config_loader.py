@@ -197,6 +197,18 @@ class _ConfigLoaderServiceNow(ConfigBaseSettings):
         default=True,
         description="Boolean to promote observables into indicators.",
     )
+    sysparm_display_value: Optional[bool] = Field(
+        alias="SERVICENOW_SYSPARM_DISPLAY_VALUE",
+        default=True,
+        description=(
+            "Boolean controlling the ``sysparm_display_value`` query parameter "
+            "sent to ServiceNow on every Table API call. Defaults to ``true`` "
+            "(backwards-compatible — ServiceNow returns human-readable "
+            "display strings). Set to ``false`` on instances that return "
+            "non-ISO 8601 datetimes when ``sysparm_display_value=true`` is "
+            "in effect, which the connector cannot parse."
+        ),
+    )
 
     @field_validator(
         "state_to_exclude",

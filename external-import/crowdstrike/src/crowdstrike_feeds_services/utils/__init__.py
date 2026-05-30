@@ -430,6 +430,82 @@ def create_attack_pattern(
     )
 
 
+def extract_actor_intrusion_set_labels(
+    actor: Mapping[str, Any],
+) -> Optional[List[str]]:
+    """Extract IntrusionSet labels from a CrowdStrike actor's raw fields.
+
+    Both the ``ActorBundleBuilder`` (full-actor path) and the
+    ``RelatedActorBundleBuilder`` (cross-feed actor reference path)
+    surface the actor's raw ``motivations`` values *and* the
+    ``actor_type`` string as IntrusionSet labels so analysts can
+    filter / pivot by motivation or adversary type without opening
+    the detail view. The two extraction paths used to live as
+    duplicated inline code in each builder; this helper centralises
+    them so any future change (e.g. accepting an additional source
+    field, normalising a new shape) only has to land in one place.
+    The name reflects the full output contract — both motivations
+    AND ``actor_type`` flow into the returned labels list — rather
+    than just one of the two source fields.
+
+    Input shape:
+
+    * ``actor.motivations`` is a list of objects from the
+      CrowdStrike Intel API, e.g.
+      ``[{"id": 1, "slug": "criminal", "value": "Criminal"}, ...]``;
+      bare strings are also tolerated. Each entry's ``value`` is
+      preferred over ``slug`` so the label matches what an analyst
+      sees in the CrowdStrike UI. Non-list values (None, dict,
+      string) are skipped — the API contract is "list of
+      motivations", anything else is upstream noise rather than
+      a single-element shorthand.
+    * ``actor.actor_type`` is a free-form string (e.g.
+      ``"Nation State"``, ``"eCrime"``); empty / whitespace-only
+      values are dropped.
+
+    Output:
+
+    * Returns the deduped list of labels in input order, or ``None``
+      when neither field produced any value (so the caller can pass
+      the result straight into ``create_intrusion_set(labels=...)``
+      without a separate empty-list guard). Dedup uses a seen-set
+      against the post-strip values, so a duplicate motivation
+      entry or an ``actor_type`` that exactly matches a motivation
+      value collapses to a single label — matching the docstring's
+      "deduped" contract that the previous shape silently violated.
+
+    The raw CrowdStrike motivation values are kept verbatim — the
+    STIX-mapped motivation values (``personal-gain`` etc.) are still
+    set on the SDO's ``primary_motivation`` /
+    ``secondary_motivations`` fields by the callers, this helper
+    only adds the analyst-friendly raw values as labels.
+    """
+    labels: List[str] = []
+    seen: set[str] = set()
+
+    def _append_unique(value: str) -> None:
+        if value and value not in seen:
+            seen.add(value)
+            labels.append(value)
+
+    actor_motivations = actor.get("motivations")
+    if isinstance(actor_motivations, list):
+        for motivation in actor_motivations:
+            if isinstance(motivation, Mapping):
+                value = str(
+                    motivation.get("value") or motivation.get("slug") or ""
+                ).strip()
+            else:
+                value = str(motivation).strip()
+            _append_unique(value)
+
+    actor_type = actor.get("actor_type")
+    if actor_type:
+        _append_unique(str(actor_type).strip())
+
+    return labels or None
+
+
 def create_intrusion_set(
     name: str,
     created_by: Optional[stix2.Identity] = None,

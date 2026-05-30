@@ -1,0 +1,138 @@
+interactions:
+- request:
+    body: '{"artifact_name": "eicar.com", "artifact_type": "FILE", "community": "default"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '79'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: POST
+    uri: https://api.polyswarm.network/v3/instance
+  response:
+    body:
+      string: '{"result":{"artifact_id":"18283207297428233","assertions":[],"bounty_state":0,"community":"mainnet1","country":"IN","created":"2026-04-02T16:28:26.256380+00:00","detections":null,"expiration_window":null,"expire_at":null,"extended_type":null,"failed":false,"filename":"eicar.com","first_seen":"2026-04-02T16:28:26.256380+00:00","id":"18283207297428233","last_scanned":null,"last_seen":null,"md5":null,"metadata":[],"mimetype":null,"permalink":"https://polyswarm.network/scan/results/file/None/18283207297428233","polyscore":null,"result":null,"sha1":null,"sha256":null,"size":null,"type":"FILE","upload_url":"https://ps-storage-prodv2-artifact-index.s3.us-east-2.amazonaws.com/instances/d6/01/f2/d601f2f2-2298-4a5a-a34e-1229ae8fa7de?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARD7S6WCVBXF6ZSO5%2F20260402%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260402T162826Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=eaa79fdd59232e695dc5acd646a2cc4fbaff2605b850b206a641b16e1b4a7a3d","votes":[],"window_closed":false},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1049'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:28:26 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!python/object/new:_io.BytesIO
+      state: !!python/tuple
+      - !!binary |
+        WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNU
+        LUZJTEUhJEgrSCo=
+      - 0
+      - null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      User-Agent:
+      - python-requests/2.32.3
+    method: PUT
+    uri: https://ps-storage-prodv2-artifact-index.s3.us-east-2.amazonaws.com/instances/d6/01/f2/d601f2f2-2298-4a5a-a34e-1229ae8fa7de?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARD7S6WCVBXF6ZSO5%2F20260402%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260402T162826Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=eaa79fdd59232e695dc5acd646a2cc4fbaff2605b850b206a641b16e1b4a7a3d
+  response:
+    body:
+      string: ''
+    headers:
+      Content-Length:
+      - '0'
+      Date:
+      - Thu, 02 Apr 2026 16:28:27 GMT
+      ETag:
+      - '"44d88612fea8a8f36de82e1278abb02f"'
+      Server:
+      - AmazonS3
+      x-amz-checksum-crc64nvme:
+      - Zoer9MJBF1Q=
+      x-amz-checksum-type:
+      - FULL_OBJECT
+      x-amz-expiration:
+      - expiry-date="Sat, 04 Apr 2026 00:00:00 GMT", rule-id="expiration-artifact-index_0-instances"
+      x-amz-id-2:
+      - +Q23lSYfPKWDp9YnzIFhhC9tritOxjRJDwcnj8khlcgIgdEJL9F2+Gv9dkLZBUOGO4KFmKvwq5w=
+      x-amz-request-id:
+      - Z58GQD32NGY76V2J
+      x-amz-server-side-encryption:
+      - AES256
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"community": "default"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '24'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: PUT
+    uri: https://api.polyswarm.network/v3/instance?id=18283207297428233
+  response:
+    body:
+      string: '{"result":{"artifact_id":"18283207297428233","assertions":[],"bounty_state":0,"community":"mainnet1","country":"IN","created":"2026-04-02T16:28:26.256380+00:00","detections":null,"expiration_window":null,"expire_at":null,"extended_type":null,"failed":false,"filename":"eicar.com","first_seen":"2026-04-02T16:28:26.256380+00:00","id":"18283207297428233","last_scanned":null,"last_seen":null,"md5":null,"metadata":[],"mimetype":null,"permalink":"https://polyswarm.network/scan/results/file/None/18283207297428233","polyscore":null,"result":null,"sha1":null,"sha256":null,"size":null,"type":"FILE","upload_url":"https://ps-storage-prodv2-artifact-index.s3.us-east-2.amazonaws.com/instances/d6/01/f2/d601f2f2-2298-4a5a-a34e-1229ae8fa7de?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARD7S6WCVBXF6ZSO5%2F20260402%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260402T162826Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=eaa79fdd59232e695dc5acd646a2cc4fbaff2605b850b206a641b16e1b4a7a3d","votes":[],"window_closed":false},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1049'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:28:26 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+version: 1

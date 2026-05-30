@@ -4,7 +4,6 @@ import logging
 from typing import Any
 
 from connector.src.custom.client_api.client_api_base import BaseClientAPI
-from connector.src.utils.api_engine.exceptions.api_http_error import ApiHttpError
 
 LOG_PREFIX = "[FetcherShared]"
 
@@ -22,10 +21,10 @@ class ClientAPIShared(BaseClientAPI):
         """Initialize Shared Client API."""
         super().__init__(config, logger, api_client, fetcher_factory)
 
-    async def fetch_subentities_ids(
+    async def fetch_subentities(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
-    ) -> dict[str, list[str]]:
-        """Fetch subentities IDs from the API.
+    ) -> dict[str, list[Any]]:
+        """Fetch related subentities with full payloads from the API.
 
         Args:
             entity_name (str): The name of the entity.
@@ -33,17 +32,18 @@ class ClientAPIShared(BaseClientAPI):
             subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
-            dict[str, list[str]]: The fetched subentities IDs.
+            dict[str, list[Any]]: Related subentities grouped by type.
 
         """
-        subentities_ids = {}
+        subentities: dict[str, list[Any]] = {}
+        total_collection_calls = 0
 
         relationships_fetcher = self.fetcher_factory.create_fetcher_by_name(
             "relationships", base_url=self.config.api_url.unicode_string()
         )
         try:
             for subentity_type in subentity_types:
-                all_ids = []
+                all_entities: list[Any] = []
 
                 params = {
                     entity_name: entity_id,
@@ -55,24 +55,17 @@ class ClientAPIShared(BaseClientAPI):
                     async for page_data in self._paginate_with_cursor(
                         relationships_fetcher, params, f"{subentity_type} relationships"
                     ):
+                        total_collection_calls += 1
                         if isinstance(page_data, list):
-                            all_ids.extend(
-                                [
-                                    item["id"]
-                                    for item in page_data
-                                    if isinstance(item, dict) and item.get("id")
-                                ]
-                            )
+                            all_entities.extend(page_data)
                         elif isinstance(page_data, dict) and "data" in page_data:
                             data = page_data["data"]
                             if isinstance(data, list):
-                                all_ids.extend(
-                                    [
-                                        item["id"]
-                                        for item in data
-                                        if isinstance(item, dict) and item.get("id")
-                                    ]
-                                )
+                                all_entities.extend(data)
+                            elif isinstance(data, dict):
+                                all_entities.append(data)
+                        elif isinstance(page_data, dict):
+                            all_entities.append(page_data)
 
                 except Exception as e:
                     self.logger.debug(
@@ -84,21 +77,24 @@ class ClientAPIShared(BaseClientAPI):
                         },
                     )
 
-                if all_ids:
+                if all_entities:
+                    typed_entities = self._deserialize_subentities(
+                        subentity_type, all_entities
+                    )
                     self.logger.info(
-                        "Retrieved relationship IDs",
+                        "Retrieved related entities",
                         {
                             "prefix": LOG_PREFIX,
-                            "count": len(all_ids),
+                            "count": len(typed_entities),
                             "subentity_type": subentity_type,
                             "entity_name": entity_name,
                             "entity_id": entity_id,
                         },
                     )
-                    subentities_ids[subentity_type] = all_ids
+                    subentities[subentity_type] = typed_entities
                 else:
                     self.logger.debug(
-                        "No relationship IDs found",
+                        "No related entities found",
                         {
                             "prefix": LOG_PREFIX,
                             "subentity_type": subentity_type,
@@ -107,7 +103,6 @@ class ClientAPIShared(BaseClientAPI):
                         },
                     )
 
-            return subentities_ids
         except Exception as e:
             self.logger.error(
                 "Failed to gather relationships",
@@ -119,7 +114,7 @@ class ClientAPIShared(BaseClientAPI):
                 },
             )
             return {entity_type: [] for entity_type in subentity_types}
-        finally:
+        else:
             self.logger.info(
                 "Finished gathering relationships",
                 {
@@ -128,85 +123,43 @@ class ClientAPIShared(BaseClientAPI):
                     "entity_id": entity_id,
                 },
             )
+            return subentities
 
-    async def fetch_subentity_details(
-        self, subentity_ids: dict[str, list[str]]
-    ) -> dict[str, list[Any]]:
-        """Fetch subentity details in parallel for multiple IDs.
-
-        Args:
-            subentity_ids: dictionary mapping entity types to lists of IDs
-
-        Returns:
-            dictionary mapping entity types to lists of fetched entities
-
-        """
-        subentities: dict[str, list[Any]] = {}
-        total_to_fetch = sum(len(ids) for ids in subentity_ids.values())
-
-        if total_to_fetch > 0:
-            self.logger.info(
-                "Fetching details for subentities",
-                {"prefix": LOG_PREFIX, "total_to_fetch": total_to_fetch},
+    def _deserialize_subentities(
+        self, subentity_type: str, entities: list[Any]
+    ) -> list[Any]:
+        """Deserialize related entities to their configured model when available."""
+        try:
+            fetcher = self.fetcher_factory.create_fetcher_by_name(
+                subentity_type, base_url=self.config.api_url.unicode_string()
             )
+            response_model = fetcher.config.response_model
+        except Exception as e:
+            self.logger.debug(
+                "Could not create typed fetcher for related entities",
+                {
+                    "prefix": LOG_PREFIX,
+                    "subentity_type": subentity_type,
+                    "error": str(e),
+                },
+            )
+            response_model = None
 
-        for entity_type, ids in subentity_ids.items():
-            if not ids:
-                subentities[entity_type] = []
-                continue
-
-            try:
-                fetcher = self.fetcher_factory.create_fetcher_by_name(
-                    entity_type, base_url=self.config.api_url.unicode_string()
-                )
-                entities = await fetcher.fetch_multiple(ids)
-                subentities[entity_type] = entities
-                self.logger.debug(
-                    "Fetched entities",
-                    {
-                        "prefix": LOG_PREFIX,
-                        "count": len(entities),
-                        "entity_type": entity_type,
-                    },
-                )
-
-            except ApiHttpError as e:
-                if e.status_code == 404 and entity_type == "files":
-                    self.logger.info(
-                        "404 errors expected for files (files may no longer exist in VirusTotal). Treating as normal behavior.",
-                        {"prefix": LOG_PREFIX},
-                    )
-                    subentities[entity_type] = []
-                else:
-                    self.logger.error(
-                        "HTTP error fetching details",
+        deserialized_entities: list[Any] = []
+        for entity in entities:
+            if response_model and isinstance(entity, dict):
+                try:
+                    deserialized_entities.append(response_model.model_validate(entity))
+                    continue
+                except Exception as e:
+                    self.logger.debug(
+                        "Failed to deserialize related entity, keeping raw payload",
                         {
                             "prefix": LOG_PREFIX,
-                            "status_code": e.status_code,
-                            "entity_type": entity_type,
+                            "subentity_type": subentity_type,
                             "error": str(e),
                         },
                     )
-                    subentities[entity_type] = []
-            except Exception as e:
-                self.logger.error(
-                    "Failed to fetch details",
-                    {
-                        "prefix": LOG_PREFIX,
-                        "entity_type": entity_type,
-                        "error": str(e),
-                    },
-                )
-                subentities[entity_type] = []
+            deserialized_entities.append(entity)
 
-        if total_to_fetch > 0:
-            fetched_summary = ", ".join(
-                [f"{k}: {len(v)}" for k, v in subentities.items() if len(v) > 0]
-            )
-            if fetched_summary:
-                self.logger.info(
-                    "Fetched details",
-                    {"prefix": LOG_PREFIX, "summary": fetched_summary},
-                )
-
-        return subentities
+        return deserialized_entities

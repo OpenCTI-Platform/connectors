@@ -45,9 +45,13 @@ class CapeSandboxConnector:
         self.octi_api_url = get_config_variable(
             "OPENCTI_URL", ["opencti", "url"], config
         )
+        if isinstance(self.octi_api_url, str):
+            self.octi_api_url = self.octi_api_url.rstrip("/")
         self.cape_api_url = get_config_variable(
             "CAPE_SANDBOX_URL", ["cape_sandbox", "url"], config
         )
+        if isinstance(self.cape_api_url, str):
+            self.cape_api_url = self.cape_api_url.rstrip("/")
         self.token = get_config_variable(
             "CAPE_SANDBOX_TOKEN", ["cape_sandbox", "token"], config
         )

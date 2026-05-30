@@ -27,7 +27,7 @@ class HarfanglabClient:
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-        self.api_base_url = self.config.harfanglab_url
+        self.api_base_url = str(self.config.harfanglab_url).rstrip("/")
         self._set_source_lists_ids()
 
     def _set_source_lists_ids(self):

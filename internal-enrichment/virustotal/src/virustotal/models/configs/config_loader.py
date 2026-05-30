@@ -32,7 +32,15 @@ class ConfigLoaderConnector(ConfigLoaderConnectorExtra):
         description="Name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile", "Artifact", "IPv4-Addr", "Domain-Name", "Url", "Hostname"],
+        default=[
+            "StixFile",
+            "Artifact",
+            "IPv4-Addr",
+            "Domain-Name",
+            "Url",
+            "Hostname",
+            "Indicator",
+        ],
         description="The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
     )
 

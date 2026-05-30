@@ -1,5 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
 from doppel.constants import RETRYABLE_REQUEST_ERRORS
@@ -11,9 +11,13 @@ from tenacity import (
     wait_fixed,
 )
 
+if TYPE_CHECKING:
+    from doppel import ConnectorSettings
+    from pycti import OpenCTIConnectorHelper
+
 
 class ConnectorClient:
-    def __init__(self, helper, config):
+    def __init__(self, helper: "OpenCTIConnectorHelper", config: "ConnectorSettings"):
         """
         Initialize the client with necessary configurations
         """

@@ -1,0 +1,22 @@
+version: '3'
+services:
+  connector-intel471-darknet:
+    image: opencti/connector-intel471-darknet:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Intel 471 Darknet
+      - CONNECTOR_SCOPE=intel471-darknet
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_RUN_EVERY=10m # Format <int><d|h|m|s> (e.g. 1d, 12h, 10m, 30s)
+      - CONNECTOR_UPDATE_EXISTING_DATA=false
+      # Intel 471 API connection
+      - INTEL471_API_URL=https://api.intel471.com/v1
+      - INTEL471_API_USERNAME=ChangeMe
+      - INTEL471_API_KEY=ChangeMe
+      # Unix epoch (seconds) of the earliest alert to import on the first run.
+      - INTEL471_DARKNET_INITIAL_HISTORY_ALERTS=0
+      # TLP marking applied to created entities: CLEAR, GREEN, AMBER, AMBER_STRICT, RED
+      - INTEL471_DARKNET_TLP=AMBER
+    restart: always

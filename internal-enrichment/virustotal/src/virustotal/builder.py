@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """VirusTotal builder module."""
 
 import datetime
 import json
-from typing import Optional
 
 import plyara
 import plyara.utils
 import stix2
 from pycti import (
+    STIX_EXT_OCTI,
     STIX_EXT_OCTI_SCO,
     Indicator,
     Location,
@@ -32,8 +31,9 @@ class VirusTotalBuilder:
         stix_entity: dict,
         opencti_entity: dict,
         data: dict,
-        include_attributes_in_note: Optional[bool] = False,
+        include_attributes_in_note: bool = False,
         url_related_object_data: dict = {},
+        is_indicator: bool = False,
     ) -> None:
         """Initialize Virustotal builder."""
         self.helper = helper
@@ -49,10 +49,14 @@ class VirusTotalBuilder:
         )
         self.include_attributes_in_note = include_attributes_in_note
         self.url_related_object_data = url_related_object_data
+        self.is_indicator = is_indicator
 
-        # Update score of observable.
+        # Indicators use STIX_EXT_OCTI (SDO extension); observables use STIX_EXT_OCTI_SCO.
+        self._stix_ext = STIX_EXT_OCTI if is_indicator else STIX_EXT_OCTI_SCO
+
+        # Update score of the entity.
         OpenCTIStix2.put_attribute_in_extension(
-            stix_entity, STIX_EXT_OCTI_SCO, "score", self.score
+            stix_entity, self._stix_ext, "score", self.score
         )
 
         # Add the external reference.
@@ -181,7 +185,7 @@ class VirusTotalBuilder:
         }
         OpenCTIStix2.put_attribute_in_extension(
             self.stix_entity,
-            STIX_EXT_OCTI_SCO,
+            self._stix_ext,
             "external_references",
             external_reference,
             True,
@@ -198,6 +202,8 @@ class VirusTotalBuilder:
 
         Objects created are added in the bundle.
 
+        Skipped when already enriching an Indicator (is_indicator=True).
+
         Parameters
         ----------
         indicator_config : IndicatorConfig
@@ -205,7 +211,13 @@ class VirusTotalBuilder:
         pattern : str
             Stix pattern for the indicator.
         """
-        now_time = datetime.datetime.utcnow()
+        if self.is_indicator:
+            self.helper.log_debug(
+                "[VirusTotal] skipping indicator creation: entity is already an Indicator"
+            )
+            return
+
+        now_time = datetime.datetime.now(datetime.timezone.utc)
 
         # Create an Indicator if positive hits >= ip_indicator_create_positives specified in config
         if (
@@ -344,7 +356,9 @@ class VirusTotalBuilder:
         self.helper.log_debug(f"[VirusTotal] creating note with abstract {abstract}")
         self.bundle.append(
             stix2.Note(
-                id=Note.generate_id(datetime.datetime.now().isoformat(), content),
+                id=Note.generate_id(
+                    datetime.datetime.now(datetime.timezone.utc).isoformat(), content
+                ),
                 abstract=abstract,
                 content=content,
                 created_by_ref=self.author,
@@ -368,58 +382,33 @@ class VirusTotalBuilder:
             content += (
                 "|----------------|-----------|------------|----------|------------|\n"
             )
+            last_analysis_stats = self.attributes.get("last_analysis_stats", [])
+            last_analysis_results = self.attributes["last_analysis_results"]
             content += (
-                "| "
-                + str(len(self.attributes["last_analysis_results"].keys()))
-                + " |"
-                + str(
-                    self.attributes.get("last_analysis_stats", []).get(
-                        "malicious", "N/A"
-                    )
-                )
-                + " | "
-                + str(
-                    self.attributes.get("last_analysis_stats", []).get(
-                        "suspicious", "N/A"
-                    )
-                )
-                + " | "
-                + str(
-                    self.attributes.get("last_analysis_stats", []).get(
-                        "harmless", "N/A"
-                    )
-                )
-                + " | "
-                + str(
-                    self.attributes.get("last_analysis_stats", []).get(
-                        "undetected", "N/A"
-                    )
-                )
-                + " |\n\n"
+                f"| {len(last_analysis_results.keys())} |"
+                f" {last_analysis_stats.get('malicious', 'N/A')} |"
+                f" {last_analysis_stats.get('suspicious', 'N/A')} |"
+                f" {last_analysis_stats.get('harmless', 'N/A')} |"
+                f" {last_analysis_stats.get('undetected', 'N/A')} |\n\n"
             )
             content += "### Last Analysis Results\n\n"
             content += "| Engine name | Method | Category | Result |\n"
             content += "|-------------|---------|---------|--------|\n"
-            for key in self.attributes["last_analysis_results"]:
-                result = self.attributes["last_analysis_results"][key]
+            for key in last_analysis_results:
+                result = last_analysis_results[key]
                 content += (
-                    "| "
-                    + result["engine_name"]
-                    + " | "
-                    + result["method"]
-                    + " | "
-                    + result["category"]
-                    + " | "
-                    + (result["result"] if result["result"] is not None else "N/A")
-                    + " | \n"
+                    f"| {result['engine_name']} | {result['method']} | {result['category']}"
+                    f" | {(result['result'] if result['result'] is not None else 'N/A')} | \n"
                 )
+
             content += (
                 self.create_notes_attributes_content()
                 if self.include_attributes_in_note
                 else ""
             )
             self.create_note(
-                "VirusTotal Results",
+                f"VirusTotal Results ({self.opencti_entity['entity_type']}: "
+                f"{self.opencti_entity['observable_value']})",
                 content,
             )
 
@@ -427,19 +416,19 @@ class VirusTotalBuilder:
             content = "| Vendor | Category |\n"
             content += "|--------|----------|\n"
             for key in self.attributes["categories"]:
-                content += (
-                    "| " + key + " | " + self.attributes["categories"][key] + " | \n"
-                )
+                content += f"| {key} | {self.attributes['categories'][key]} | \n"
             content += (
                 self.create_notes_attributes_content()
                 if self.include_attributes_in_note
                 else ""
             )
-            self.create_note("VirusTotal Categories", content)
+            self.create_note(
+                f"VirusTotal Categories ({self.opencti_entity['entity_type']}: "
+                f"{self.opencti_entity['observable_value']})",
+                content,
+            )
 
-    def create_yara(
-        self, yara: dict, ruleset: dict, valid_from: Optional[float] = None
-    ):
+    def create_yara(self, yara: dict, ruleset: dict, valid_from: float | None = None):
         """
         Create an indicator containing the YARA rule from VirusTotal and link it to the observable.
 
@@ -456,7 +445,7 @@ class VirusTotalBuilder:
         valid_from_date = (
             datetime.datetime.min
             if valid_from is None
-            else datetime.datetime.utcfromtimestamp(valid_from)
+            else datetime.datetime.fromtimestamp(valid_from, datetime.timezone.utc)
         )
         ruleset_id = yara.get("id", "No ruleset id provided")
         self.helper.log_info(f"[VirusTotal] Retrieving ruleset {ruleset_id}")
@@ -518,7 +507,7 @@ class VirusTotalBuilder:
         self.bundle += [indicator, relationship]
 
     @staticmethod
-    def _extract_link(link: str) -> Optional[str]:
+    def _extract_link(link: str) -> str | None:
         """
         Extract the links for the external reference.
 
@@ -578,13 +567,20 @@ class VirusTotalBuilder:
             f"[VirusTotal] updating labels with {self.attributes['tags']}"
         )
         for tag in self.attributes["tags"]:
-            OpenCTIStix2.put_attribute_in_extension(
-                self.stix_entity,
-                STIX_EXT_OCTI_SCO,
-                "labels",
-                tag,
-                True,
-            )
+            if self.is_indicator:
+                # Labels on Indicators are a standard STIX field, not an SCO extension.
+                if "labels" not in self.stix_entity:
+                    self.stix_entity["labels"] = []
+                if tag not in self.stix_entity["labels"]:
+                    self.stix_entity["labels"].append(tag)
+            else:
+                OpenCTIStix2.put_attribute_in_extension(
+                    self.stix_entity,
+                    STIX_EXT_OCTI_SCO,
+                    "labels",
+                    tag,
+                    True,
+                )
 
     def update_names(self, main: bool = False):
         """
@@ -653,11 +649,12 @@ class VirusTotalBuilder:
         attributes_scope = attributes_scope.get(self.opencti_entity.get("entity_type"))
         if self.include_attributes_in_note and attributes_scope:
             for attribute, value in attributes_scope.items():
-                attributes_content += (
-                    "| " + attribute + " | " + str(value or "N/A") + " | \n"
-                )
+                attributes_content += f"| {attribute} | {str(value or 'N/A')} | \n"
             if attributes_content:
-                content = "## Attributes Info\n\n"
+                content = (
+                    f"## Attributes Info ({self.opencti_entity['entity_type']}: "
+                    f"{self.opencti_entity['observable_value']}) \n\n"
+                )
                 content += "Any falsy value will be replaced by ‘N/A’\n"
                 content += "| Attributes |      |\n"
                 content += "|--------|----------|\n"
