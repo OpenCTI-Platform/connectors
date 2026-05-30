@@ -29,7 +29,7 @@ from stix2 import (
     Relationship,
 )
 from stix2 import Report as STIXReport
-from stix2.v21 import _DomainObject, _RelationshipObject
+from stix2.v21 import _DomainObject, _Observable, _RelationshipObject
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,7 @@ class ReportBundleBuilder:
         report_guess_relations: bool = False,
         malwares_from_field: list[dict] | None = None,
         scopes: set[str] | None = None,
+        extracted_observables: list[_Observable] | None = None,
     ) -> None:
         """Initialize report bundle builder."""
         self.report = report
@@ -68,6 +69,7 @@ class ReportBundleBuilder:
         self.malwares_from_field = malwares_from_field or []
         self.related_actor_builder_cls = RelatedActorBundleBuilder
         self.scopes = scopes
+        self.extracted_observables = extracted_observables or []
 
         # Use report dates for start time and stop time.
         start_time = timestamp_to_datetime(self.report["created_date"])
@@ -337,6 +339,9 @@ class ReportBundleBuilder:
         indicators_linked = self.related_indicators or []
         bundle_objects.extend(indicators_linked)
 
+        # Add extracted IOC observables to bundle
+        bundle_objects.extend(self.extracted_observables)
+
         # Create object references for the report.
         # Always include entities in object refs
         object_refs = create_object_refs(
@@ -370,6 +375,9 @@ class ReportBundleBuilder:
 
         # Add related indicator to object refs for report
         object_refs.extend(indicators_linked)
+
+        # Add extracted observables to object refs for report
+        object_refs.extend(self.extracted_observables)
 
         object_refs = self._normalize_report_object_refs(object_refs)
         report = self._create_report(object_refs)

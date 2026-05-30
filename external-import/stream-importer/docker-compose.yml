@@ -17,6 +17,7 @@ services:
       - MINIO_ENDPOINT=minio
       - MINIO_PORT=9000
       - MINIO_SRC_PATH=opencti-export/opencti-stream
+      - MINIO_SRC_RECURSE=false
       - MINIO_DST_PATH=opencti-export-done
       - MINIO_ACCESS_KEY=opencti
       - MINIO_SECRET_KEY=ChangeMe

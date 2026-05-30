@@ -171,7 +171,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
 
     entity = stix_objects[14]
     assert entity.authority_key_identifier == "748580c066c7df37decfbd2937aa031dbeedcd17"
-    assert entity.basic_constraints == '{"is_ca":null,"max_path_len":null}'
+    assert entity.basic_constraints == "{}"
     assert (
         entity.certificate_policies
         == "[CertificatePolicy(cps=['http://cps.digicert.com/example-cps'], id='2.23.140.1.2.2', user_notice=Unset())]"
@@ -189,10 +189,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
         entity.issuer
         == "C=US, O=DigiCert Inc, CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1"
     )
-    assert (
-        entity.key_usage
-        == '{"certificate_sign":null,"content_commitment":null,"crl_sign":null,"data_encipherment":null,"decipher_only":null,"digital_signature":null,"encipher_only":null,"key_agreement":null,"key_encipherment":null,"value":null}'
-    )
+    assert entity.key_usage == "{}"
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
     ]
@@ -224,7 +221,7 @@ def test_converter_ipv4(host_ipv4: Host) -> None:
     assert entity.authors == ["Censys Enrichment Connector"]
     assert entity.content == "HTTP/1.1 301 Moved Permanently"
     assert entity.created_by_ref == "identity--6f9f67f6-7eb2-5397-a02f-d8130aadb954"
-    assert entity.id == "note--ec194bf2-4ee0-5338-857f-4c3f727b8ebf"
+    assert entity.id == "note--57d22a6d-39ea-591e-b86e-a40d31540c14"
     assert entity.object_marking_refs == [
         "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9"
     ]

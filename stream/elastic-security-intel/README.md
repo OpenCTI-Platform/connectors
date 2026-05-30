@@ -68,17 +68,19 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter                | config.yml                      | Docker environment variable              | Default                          | Mandatory | Description                                                |
-|--------------------------|---------------------------------|------------------------------------------|----------------------------------|-----------|-----------------------------------------------------------|
-| Elastic URL              | elastic_security.url            | `ELASTIC_SECURITY_URL`                   |                                  | Yes       | Elasticsearch cluster URL.                                 |
-| Elastic API Key          | elastic_security.api_key        | `ELASTIC_SECURITY_API_KEY`               |                                  | Yes       | API key for Elasticsearch (Base64 encoded id:api_key).     |
-| Kibana URL               | elastic_security.kibana_url     | `ELASTIC_SECURITY_KIBANA_URL`            |                                  | No        | Kibana URL for SIEM rules (auto-detected from ES URL if not set). |
-| OpenCTI External URL     | elastic_security.opencti_external_url | `ELASTIC_SECURITY_OPENCTI_EXTERNAL_URL` |                               | No        | Public URL for OpenCTI reference links in Elastic docs.    |
-| Verify SSL               | elastic_security.verify_ssl     | `ELASTIC_SECURITY_VERIFY_SSL`            | true                             | No        | Verify SSL certificates.                                   |
-| CA Certificate           | elastic_security.ca_cert        | `ELASTIC_SECURITY_CA_CERT`               |                                  | No        | Path to CA certificate file.                               |
-| Index Name               | elastic_security.index_name     | `ELASTIC_SECURITY_INDEX_NAME`            | logs-ti_custom_opencti.indicator | No        | Threat intelligence index name.                            |
-| Indicator Expire Time    | elastic_security.indicator_expire_time | `ELASTIC_SECURITY_INDICATOR_EXPIRE_TIME` | 90                           | No        | Days before indicators expire.                             |
-| Batch Size               | elastic_security.batch_size     | `ELASTIC_SECURITY_BATCH_SIZE`            | 100                              | No        | Batch size for bulk operations.                            |
+| Parameter                  | config.yml                             | Docker environment variable              | Default                          | Mandatory | Description                                                       |
+|----------------------------|----------------------------------------|------------------------------------------|----------------------------------|-----------|-------------------------------------------------------------------|
+| Elastic URL                | elastic_security.url                   | `ELASTIC_SECURITY_URL`                   |                                  | Yes       | Elasticsearch cluster URL.                                        |
+| Elastic API Key            | elastic_security.api_key               | `ELASTIC_SECURITY_API_KEY`               |                                  | Yes       | API key for Elasticsearch (Base64 encoded id:api_key).            |
+| Elastic client certificate | elastic_security.client_cert           | `ELASTIC_SECURITY_CLIENT_CERT`           |                                  | No        | Path to client certificate file (PEM format)                      |
+| Elastic client key         | elastic_security.client_key            | `ELASTIC_SECURITY_CLIENT_KEY`            |                                  | No        | Path to client key file (PEM format)                              |
+| Kibana URL                 | elastic_security.kibana_url            | `ELASTIC_SECURITY_KIBANA_URL`            |                                  | No        | Kibana URL for SIEM rules (auto-detected from ES URL if not set). |
+| OpenCTI External URL       | elastic_security.opencti_external_url  | `ELASTIC_SECURITY_OPENCTI_EXTERNAL_URL`  |                                  | No        | Public URL for OpenCTI reference links in Elastic docs.           |
+| Verify SSL                 | elastic_security.verify_ssl            | `ELASTIC_SECURITY_VERIFY_SSL`            | true                             | No        | Verify SSL certificates.                                          |
+| CA Certificate             | elastic_security.ca_cert               | `ELASTIC_SECURITY_CA_CERT`               |                                  | No        | Path to CA certificate file.                                      |
+| Index Name                 | elastic_security.index_name            | `ELASTIC_SECURITY_INDEX_NAME`            | logs-ti_custom_opencti.indicator | No        | Threat intelligence index name.                                   |
+| Indicator Expire Time      | elastic_security.indicator_expire_time | `ELASTIC_SECURITY_INDICATOR_EXPIRE_TIME` | 90                               | No        | Days before indicators expire.                                    |
+| Batch Size                 | elastic_security.batch_size            | `ELASTIC_SECURITY_BATCH_SIZE`            | 100                              | No        | Batch size for bulk operations.                                   |
 
 ## Deployment
 

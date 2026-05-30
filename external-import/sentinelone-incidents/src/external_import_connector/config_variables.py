@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -22,13 +23,16 @@ class ConfigConnector:
         :return: Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-
-        return config
+        if not os.path.isfile(config_file_path):
+            return {}
+        # ``yaml.load`` returns ``None`` when the YAML document is
+        # empty (e.g. an operator shipped a placeholder ``config.yml``
+        # alongside env-var deployment), which would make ``self.load``
+        # non-dict and break downstream ``get_config_variable`` lookups
+        # that treat the config argument as a mapping. Coerce to ``{}``
+        # to preserve the documented ``-> dict`` contract.
+        with open(config_file_path) as config_file:
+            return yaml.load(config_file, Loader=yaml.FullLoader) or {}
 
     def _initialize_configurations(self) -> None:
         """
@@ -101,9 +105,55 @@ class ConfigConnector:
             )
         self.duration_period = configured_duration_period
 
-        configured_sign = get_config_variable(
-            "SENTINELONE_INCIDENTS_SIGN", ["SentinelOne", "sign"], self.load
+        configured_import_start_date = get_config_variable(
+            "SENTINELONE_INCIDENTS_IMPORT_START_DATE",
+            ["sentinelone_incidents", "import_start_date"],
+            self.load,
         )
-        if not configured_sign:
-            raise ConnectorConfigurationError("SIGN is not configured")
-        self.sign = configured_sign
+        if not configured_import_start_date:
+            raise ConnectorConfigurationError(
+                "SENTINELONE_INCIDENTS_IMPORT_START_DATE is not configured"
+            )
+        # Validate the ISO-8601 shape at startup so a typo (or a
+        # legacy ``YYYY-MM-DD`` value missing the time component) is
+        # reported with a clear, contextual message instead of
+        # surfacing later as a generic ``ValueError`` raised deep in
+        # ``_parse_iso_datetime`` on the first scan cycle. The same
+        # ``Z`` → ``+00:00`` normalisation applied by the runtime
+        # parser is reproduced here so the sample value
+        # ``2026-01-01T00:00:00Z`` is accepted on every supported
+        # Python version (``datetime.fromisoformat`` only learned to
+        # accept the trailing ``Z`` in 3.11).
+        #
+        # Beyond a plain ``datetime.fromisoformat`` check we also
+        # require an explicit ``T`` separator and a non-empty time
+        # component. ``datetime.fromisoformat("2026-01-01")`` is a
+        # valid call (it returns midnight on that date), so without
+        # the extra shape check a legacy ``YYYY-MM-DD`` value would
+        # silently pass startup and then drift into ``midnight UTC``
+        # at runtime — which is rarely what the operator wanted when
+        # they pinned a precise import start point. The connector's
+        # documented contract (``config.yml.sample`` /
+        # ``docker-compose.yml`` / README all advertise
+        # ``YYYY-MM-DDTHH:MM:SSZ``) is for a full datetime, so reject
+        # date-only values up front with the same fail-fast,
+        # contextual error that the parser-failure branch produces.
+        normalised_start_date = configured_import_start_date.strip()
+        if "T" not in normalised_start_date:
+            raise ConnectorConfigurationError(
+                f"SENTINELONE_INCIDENTS_IMPORT_START_DATE must be a full "
+                f"ISO-8601 datetime with a time component (e.g. "
+                f"'2026-01-01T00:00:00Z'), got "
+                f"{configured_import_start_date!r}"
+            )
+        if normalised_start_date.endswith("Z"):
+            normalised_start_date = normalised_start_date[:-1] + "+00:00"
+        try:
+            datetime.fromisoformat(normalised_start_date)
+        except ValueError as exc:
+            raise ConnectorConfigurationError(
+                f"SENTINELONE_INCIDENTS_IMPORT_START_DATE is not a valid "
+                f"ISO-8601 datetime (got {configured_import_start_date!r}): "
+                f"{exc}"
+            ) from exc
+        self.import_start_date = configured_import_start_date

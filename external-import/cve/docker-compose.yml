@@ -16,4 +16,8 @@ services:
       # - CVE_MAINTAIN_DATA=true # Optional, retrieve only updated data
       # - CVE_PULL_HISTORY=false # Optional, if true CVE_HISTORY_START_YEAR is required
       # - CVE_HISTORY_START_YEAR=2019 # Required if pull_history is True, min 2019
+      # - CVE_IMPORT_SOFTWARE=false # if true, resolve CPEs and import as Software objects (generates large volume of data)
+      # - CVE_CPE_HISTORY_INTERVAL=P120D # Optional, interval to look back for CPE modifications (ISO 8601 duration format)
+      # - CVE_CVE_MAX_CONCURRENCY=50 # Maximum number of concurrent CVE processing workers (bounds queued tasks and bundle sends)
+      # - CVE_CPE_MAX_CONCURRENCY=10  # Maximum number of concurrent CPE resolution tasks
     restart: always

@@ -14,4 +14,7 @@ cve:
 #  maintain_data: True # Optional, retrieve only updated data
 #  pull_history: False # Optional, If True, history_start_year is required
 #  history_start_year: 2019 # Required if pull_history is True, min 2019 (see documentation CVE and CVSS base score V3.1)
-
+#  import_software: False # Optional, if True, resolve CPEs and import as Software objects (generates large volume of data)
+#  cpe_history_interval: P120D # The interval specifies how far back in time to search for CPEs that were modified within that period.
+#  cpe_max_concurrency: 10 # max number of concurrent CPE resolution tasks when import_software is True
+#  cve_max_concurrency: 50 # max number of concurrent CVE processing workers

@@ -3,7 +3,6 @@ import json
 import os
 import sys
 import time
-import uuid
 from datetime import datetime, timedelta
 
 import pytz
@@ -11,7 +10,11 @@ import requests
 import stix2
 import yaml
 from dateutil.parser import parse
-from pycti import OpenCTIConnectorHelper, get_config_variable
+from pycti import (
+    CustomObservableMediaContent,
+    OpenCTIConnectorHelper,
+    get_config_variable,
+)
 
 
 class Chapsvision:
@@ -90,6 +93,16 @@ class Chapsvision:
         except Exception as e:
             self.helper.log_error(f"Error while sending bundle: {e}")
 
+    def _generate_id_for_media_content(self, url: str) -> str:
+        """Generate deterministic STIX ID for a Media Content object
+
+        :param url: the URL of the Media Content
+        :type url: str
+        :return: STIX ID for the Media Content
+        :rtype: str
+        """
+        return CustomObservableMediaContent(url=url).id
+
     def generate_micro_blogging(self, doc):
         objects = []
         channel = None
@@ -114,7 +127,7 @@ class Chapsvision:
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
-                "id": "media-content--" + str(uuid.uuid4()),
+                "id": self._generate_id_for_media_content(doc["link"]),
                 "type": "media-content",
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
@@ -158,7 +171,7 @@ class Chapsvision:
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
-                "id": "media-content--" + str(uuid.uuid4()),
+                "id": self._generate_id_for_media_content(doc["link"]),
                 "type": "media-content",
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],
@@ -202,7 +215,7 @@ class Chapsvision:
                 for hashtag in doc["hashtag"]:
                     labels.append(hashtag.replace("#", ""))
             media_content = {
-                "id": "media-content--" + str(uuid.uuid4()),
+                "id": self._generate_id_for_media_content(doc["link"]),
                 "type": "media-content",
                 "media_category": doc["broadcaster_category"],
                 "url": doc["link"],

@@ -1,0 +1,1975 @@
+import base64
+import hashlib
+import json
+import pprint
+import sys
+import time
+import traceback
+from datetime import datetime, timezone
+from typing import Dict, Optional
+from urllib.parse import urlparse
+
+import lib.intel2stix
+import requests
+import stix2
+from bs4 import BeautifulSoup
+from lib.external_import import ExternalImportConnector
+from lib.intel2stix import get_date
+from lib.redaction import redact_url, redact_url_in_text
+from pycti import Channel as PyctiChannel
+from pycti import CustomObjectChannel as Channel
+from pycti import CustomObservableMediaContent as MediaContent
+from pycti import Identity as PyctiIdentity
+from pycti import Incident as PyctiIncident
+from pycti import MarkingDefinition as PyctiMarkingDefinition
+from pycti import Report as PyctiReport
+from pycti import StixCoreRelationship as PyctiSCR
+from pycti import ThreatActorIndividual as PyctiTAI
+from pycti import get_config_variable
+from stix2 import Identity, Incident, Relationship, Report
+
+
+def _make_tlp_marking(definition: str) -> stix2.MarkingDefinition:
+    """Return a ``stix2.MarkingDefinition`` for an OpenCTI-specific TLP value.
+
+    Used for ``TLP:CLEAR`` and ``TLP:AMBER+STRICT`` which the platform
+    represents as custom marking-definition objects (the STIX 2.1
+    library only exposes built-in constants for ``TLP_WHITE`` /
+    ``TLP_GREEN`` / ``TLP_AMBER`` / ``TLP_RED``). Building a real
+    ``stix2.MarkingDefinition`` lets the connector ship the marking
+    object in every bundle so the OpenCTI UI displays the right label
+    (``TLP:CLEAR`` rather than the legacy ``TLP:WHITE``).
+    """
+    return stix2.MarkingDefinition(
+        id=PyctiMarkingDefinition.generate_id("TLP", definition),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
+    )
+
+
+# Default timeout (seconds) applied to every Intel471 HTTP call so that a
+# stuck network does not block the connector loop indefinitely.
+_HTTP_TIMEOUT_SECONDS = 30
+
+
+class Intel471RequestError(Exception):
+    """Raised when a request to the Intel 471 API fails irrecoverably.
+
+    Used by :meth:`Intel471AlertsConnector._intel471_get_json_or_raise`
+    so the alert-collection loop can distinguish "the API returned an
+    empty page" (legitimate end-of-stream) from "the API call failed".
+    Without this distinction a transient outage on the first page made
+    the run cycle silently advance ``last_run`` past data we never
+    actually fetched.
+    """
+
+
+def _b64(payload) -> str:
+    """Return a UTF-8-safe base64 string for ``x_opencti_files`` payloads.
+
+    STIX bundles must serialise to JSON, so the ``data`` of every attached
+    file has to be a *string*, not the raw ``bytes`` returned by
+    :func:`base64.b64encode`.
+    """
+    if isinstance(payload, str):
+        payload = payload.encode("utf-8")
+    return base64.b64encode(payload).decode("ascii")
+
+
+_STIX_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+def _stix_timestamp(seconds_epoch) -> str:
+    """Return a STIX-compatible timestamp string for ``seconds_epoch``.
+
+    The input matches the seconds-since-epoch value historically passed to
+    ``datetime.utcfromtimestamp(...)`` by this connector. Uses a
+    timezone-aware UTC datetime and avoids the private
+    ``stix2.utils._TIMESTAMP_FORMAT_FRAC`` constant referenced by the
+    initial version of this connector.
+    """
+    return datetime.fromtimestamp(seconds_epoch, tz=timezone.utc).strftime(
+        _STIX_TIMESTAMP_FORMAT
+    )
+
+
+class Intel471AlertsConnector(ExternalImportConnector):
+    def __init__(self):
+        """Initialization of the connector
+
+        Note that additional attributes for the connector can be set after the super() call.
+
+        Standarised way to grab attributes from environment variables is as follows:
+
+        >>>         ...
+        >>>         super().__init__()
+        >>>         self.my_attribute = os.environ.get("MY_ATTRIBUTE", "INFO")
+
+        This will make use of the `os.environ.get` method to grab the environment variable and set a default value (in the example "INFO") if it is not set.
+        Additional tunning can be made to the connector by adding additional environment variables.
+
+        Raising ValueErrors or similar might be useful for tracking down issues with the connector initialization.
+        """
+        super().__init__()
+
+        # Connector-specific settings are loaded through
+        # ``get_config_variable`` so they honour both ``src/config.yml``
+        # (nested ``intel471.*`` keys) and the documented environment
+        # variables (``INTEL471_*``). The base class already loaded the
+        # config in ``__init__``; we reuse the same on-disk file rather
+        # than reaching into the helper's internals.
+        config = self._load_config()
+
+        self.intel471_api_url = get_config_variable(
+            "INTEL471_API_URL",
+            ["intel471", "api_url"],
+            config,
+            default="https://api.intel471.com/v1",
+        ).rstrip("/")
+        self.intel471_api_username = get_config_variable(
+            "INTEL471_API_USERNAME",
+            ["intel471", "api_username"],
+            config,
+        )
+        self.intel471_api_key = get_config_variable(
+            "INTEL471_API_KEY",
+            ["intel471", "api_key"],
+            config,
+        )
+        # Connector-specific settings live under the ``intel471_darknet``
+        # yaml key in ``config.yml`` (and under ``INTEL471_DARKNET_*`` env
+        # variables); this matches the README configuration table and the
+        # ``src/config.yml.sample`` layout.
+        self.intel471_initial_history_alerts = str(
+            get_config_variable(
+                "INTEL471_DARKNET_INITIAL_HISTORY_ALERTS",
+                ["intel471_darknet", "initial_history_alerts"],
+                config,
+                default="0",
+            )
+            or "0"
+        )
+        # ``object_marking_refs`` expects a *list* of marking-definition
+        # references, so we store the resolved id as a one-element list.
+        # Every callsite ends up writing ``object_marking_refs=self.intel471_darknet_tlp``
+        # which therefore produces a valid STIX value.
+        #
+        # ``intel471_darknet_marking`` is the full ``stix2.MarkingDefinition``
+        # object; ``_collect_intelligence`` prepends it to every emitted
+        # bundle so OpenCTI-specific markings (``TLP:CLEAR`` /
+        # ``TLP:AMBER+STRICT``) are registered with the platform by
+        # name and the right UI label is preserved.
+        self.intel471_darknet_marking: stix2.MarkingDefinition = self._get_tlp(
+            get_config_variable(
+                "INTEL471_DARKNET_TLP",
+                ["intel471_darknet", "tlp"],
+                config,
+                default="AMBER",
+            )
+            or "AMBER"
+        )
+        self.intel471_darknet_tlp = [self.intel471_darknet_marking.id]
+        self.intel471_watchers = {}
+
+        # collecting watchers
+        self.helper.log_debug("Collecting watcher info")
+        watcher_groups = self._intel471_get_json(
+            f"{self.intel471_api_url}/watcherGroups"
+        )
+        if watcher_groups and "watcherGroups" in watcher_groups:
+            for wg in watcher_groups["watcherGroups"]:
+                watchers = self._intel471_get_json(
+                    f"{self.intel471_api_url}/watcherGroups/{wg['uid']}/watchers"
+                )
+                if not watchers or "watchers" not in watchers:
+                    self.helper.log_debug(f"No watchers in group {wg['uid']}")
+                    continue
+                for w in watchers["watchers"]:
+                    self.intel471_watchers[w["uid"]] = w["description"]
+            # Only log counts here so the watcher metadata (which can carry
+            # sensitive descriptions / queries) does not end up in the
+            # connector logs at INFO level.
+            self.helper.log_debug(
+                f"Watcher collection complete: {len(self.intel471_watchers)} "
+                f"watcher(s) across {len(watcher_groups['watcherGroups'])} "
+                "group(s)"
+            )
+        else:
+            self.helper.log_debug("No watcher groups returned by the API.")
+
+        # get author identity. We always build a STIX ``Identity`` for the
+        # Intel 471 organization and emit it as part of every bundle (see
+        # ``_collect_intelligence``) so the ``created_by_ref`` we set on
+        # every subsequent object resolves in OpenCTI even on the very
+        # first run. If the identity already exists in the platform the
+        # STIX-id stays the same (it is deterministic via
+        # ``PyctiIdentity.generate_id``) and OpenCTI simply reconciles
+        # the two — no duplicate is created.
+        # ``Intel 471`` (with a space) is the brand's canonical spelling.
+        # Using the same string for both the STIX ``Identity`` creation
+        # and the platform-side lookup is what makes the deterministic
+        # ``PyctiIdentity.generate_id`` collapse cleanly onto an
+        # existing identity rather than producing a duplicate
+        # ``Intel471 Inc.`` SDO next to the existing ``Intel 471 Inc.``.
+        intel471_author_name = "Intel 471 Inc."
+        self.intel471_author = stix2.Identity(
+            id=PyctiIdentity.generate_id(intel471_author_name, "organization"),
+            name=intel471_author_name,
+            identity_class="organization",
+            object_marking_refs=self.intel471_darknet_tlp,
+        )
+        self.intel471_id = self.intel471_author["id"]
+        identity_list = self.helper.api.identity.list(
+            filters=self._name_filter(intel471_author_name),
+        )
+        if identity_list:
+            self.helper.log_debug(
+                f"Intel 471 author identity already exists in OpenCTI: "
+                f"{identity_list[0].get('standard_id')}"
+            )
+        else:
+            self.helper.log_debug(
+                f"Intel 471 author identity will be created via the next "
+                f"bundle (x_author_id = {self.intel471_id})"
+            )
+
+    # ``CLEAR`` is **not** an alias of ``stix2.TLP_WHITE``: although
+    # ``pycti.MarkingDefinition.generate_id("TLP", "TLP:CLEAR")`` happens
+    # to derive the same canonical id as ``stix2.TLP_WHITE.id`` (the STIX
+    # 2.1 derivation is deterministic on the marking name), the
+    # **marking-definition object** the connector emits is different —
+    # it carries ``x_opencti_definition='TLP:CLEAR'`` so the OpenCTI UI
+    # shows the modern ``TLP:CLEAR`` label rather than the legacy
+    # ``TLP:WHITE`` label. ``WHITE`` is the legacy alternative and keeps
+    # the built-in ``stix2.TLP_WHITE`` constant.
+    _TLP_MAP: Dict[str, stix2.MarkingDefinition] = {
+        "CLEAR": _make_tlp_marking("TLP:CLEAR"),
+        "WHITE": stix2.TLP_WHITE,
+        "GREEN": stix2.TLP_GREEN,
+        "AMBER": stix2.TLP_AMBER,
+        "AMBER_STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+        "AMBER+STRICT": _make_tlp_marking("TLP:AMBER+STRICT"),
+        "RED": stix2.TLP_RED,
+    }
+
+    @classmethod
+    def _get_tlp(cls, tlp_string: str) -> stix2.MarkingDefinition:
+        """Return the ``stix2.MarkingDefinition`` for ``tlp_string``.
+
+        Normalises case so ``amber``/``Amber``/``AMBER`` all match, and
+        accepts both ``AMBER_STRICT`` and the documented ``AMBER+STRICT``
+        spellings. ``CLEAR`` resolves to a custom OpenCTI marking with
+        ``x_opencti_definition='TLP:CLEAR'``; ``WHITE`` is kept as a
+        legacy alternative pointing at the built-in ``stix2.TLP_WHITE``
+        constant. Unknown values raise a clear ``ValueError`` at
+        startup.
+        """
+        normalised = (tlp_string or "").strip().upper().replace(" ", "_")
+        try:
+            return cls._TLP_MAP[normalised]
+        except KeyError as exc:
+            # Derive the alias list from ``_TLP_MAP`` so the error
+            # message stays in sync with the code if aliases are added
+            # later — the previous hand-rolled list silently dropped
+            # ``WHITE`` and ``AMBER+STRICT`` from the diagnostic.
+            valid = ", ".join(sorted(cls._TLP_MAP))
+            raise ValueError(  # noqa: TRY003 - human-friendly startup error
+                f"Unsupported INTEL471_DARKNET_TLP value '{tlp_string}'. "
+                f"Expected one of {valid}."
+            ) from exc
+
+    # ------------------------------------------------------------------
+    # OpenCTI list-filter helper
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _name_filter(value: str) -> dict:
+        """Build an OpenCTI ``filters`` payload that looks up ``name == value``.
+
+        The modern OpenCTI filter contract expects ``filters`` to be a
+        **list** of filter objects (not a single dict), each with
+        ``key`` / ``values`` (a list) / ``operator``; the inner ``mode``
+        field used by the previous version of this connector is rejected
+        by the API. ``mode`` lives at the top level only (and on
+        ``filterGroups``). This helper centralises the canonical shape
+        so every identity / channel lookup in the connector uses the
+        same payload — see for example ``external-import/cuckoo`` or
+        the ``matrix`` connector for the same pattern.
+        """
+        return {
+            "mode": "and",
+            "filters": [
+                {
+                    "key": "name",
+                    "values": [value],
+                    "operator": "eq",
+                }
+            ],
+            "filterGroups": [],
+        }
+
+    # ------------------------------------------------------------------
+    # HTTP helpers
+    # ------------------------------------------------------------------
+    def _is_intel471_host(self, url: str) -> bool:
+        """Return ``True`` when ``url`` targets the configured Intel 471 host.
+
+        ``imageOriginal`` / attachment URLs carried by an Intel 471 alert
+        payload may point at a third-party CDN or at any other arbitrary
+        host. Sending the Intel 471 Basic Auth credentials there would
+        leak the API username / key, so authentication must only be
+        attached for URLs that match the configured API host (the
+        portal sometimes serves attachments from the same host root as
+        the API, just under a different path).
+        """
+        try:
+            target_host = urlparse(url).hostname or ""
+            allowed_host = urlparse(self.intel471_api_url).hostname or ""
+        except (TypeError, ValueError):
+            return False
+        if not target_host or not allowed_host:
+            return False
+        target_host = target_host.lower()
+        allowed_host = allowed_host.lower()
+        # Same host or a sub-domain of the configured API host.
+        return target_host == allowed_host or target_host.endswith(f".{allowed_host}")
+
+    def _intel471_request(self, url, **kwargs):
+        """Wrap :func:`requests.get` with timeout / authentication / errors.
+
+        Basic Auth credentials are only attached when ``url`` matches the
+        configured Intel 471 host (or a sub-domain of it). For arbitrary
+        external attachment URLs the request is anonymous so the
+        credentials cannot leak in an ``Authorization`` header sent to a
+        third-party CDN.
+
+        Returns the :class:`requests.Response` on success or ``None`` on
+        any failure (timeout, connection error, non-2xx response, …).
+        Callers that need to distinguish failure from "no body" should
+        use :meth:`_intel471_get_json_or_raise` / a successful response
+        whose ``ok`` attribute is :data:`True`.
+        """
+        kwargs.setdefault("timeout", _HTTP_TIMEOUT_SECONDS)
+        if "auth" not in kwargs:
+            if self._is_intel471_host(url):
+                kwargs["auth"] = (
+                    self.intel471_api_username,
+                    self.intel471_api_key,
+                )
+            else:
+                # Explicitly disable authentication for foreign hosts so
+                # credentials never make it into the ``Authorization``
+                # header for a third-party request.
+                kwargs["auth"] = None
+        try:
+            response = requests.get(url, **kwargs)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            # Never log the response body — it may contain credentials or
+            # other sensitive Intel 471 data. Status code is safe.
+            # The URL is also redacted through ``redact_url`` because
+            # attachment downloads target third-party CDNs that can
+            # carry signed query parameters / bearer-style tokens which
+            # we must not leak into the connector logs. ``requests``
+            # itself formats most exceptions as ``"... for url: <full-url>"``
+            # so the original full URL ends up in the exception message
+            # too — ``redact_url_in_text`` sanitises that copy as well.
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            sanitized_exc = redact_url_in_text(str(exc), url)
+            self.helper.log_warning(
+                f"Intel 471 request failed "
+                f"(url={redact_url(url)}, status={status}, "
+                f"exception={type(exc).__name__}): {sanitized_exc}"
+            )
+            return None
+        return response
+
+    def _intel471_get_json(self, url, **kwargs):
+        """GET ``url`` and return the parsed JSON body (or ``None`` on error)."""
+        response = self._intel471_request(url, **kwargs)
+        if response is None or not response.content:
+            return None
+        try:
+            return response.json()
+        except json.JSONDecodeError as exc:
+            self.helper.log_warning(
+                f"Intel 471 returned non-JSON content for {url}: {exc}"
+            )
+            return None
+
+    def _intel471_get_json_or_raise(self, url, **kwargs):
+        """GET ``url`` and return parsed JSON; raise :class:`Intel471RequestError` on failure.
+
+        Used by the alert-collection loop so a transient HTTP / JSON
+        failure on the first page does not silently look like "no more
+        alerts" and let the run cycle advance ``last_run`` past data we
+        never actually fetched.
+        """
+        response = self._intel471_request(url, **kwargs)
+        if response is None:
+            raise Intel471RequestError(
+                f"Intel 471 request failed for {url}; see warnings above."
+            )
+        if not response.content:
+            return {}
+        try:
+            return response.json()
+        except json.JSONDecodeError as exc:
+            raise Intel471RequestError(
+                f"Intel 471 returned non-JSON content for {url}: {exc}"
+            ) from exc
+
+    def _intel471_get_bytes(self, url, **kwargs):
+        """GET ``url`` and return the raw bytes body (or ``None`` on error)."""
+        response = self._intel471_request(url, **kwargs)
+        if response is None:
+            return None
+        return response.content
+
+    def _getPrivateMessageContent(self, privateMessage: dict) -> []:
+        """
+        Transforms a private message dictionnary in STIX content
+        Returns a list of all the created STIX objects. Media content is at the beginning.
+        """
+        objects = []
+        x_message = BeautifulSoup(privateMessage["message"], features="lxml").get_text()
+        # Normalise ``links`` to a local dict so a private-message payload
+        # without a ``links`` object (or with ``links: null``) cannot raise
+        # ``KeyError`` and silently drop the alert while the cycle keeps
+        # advancing ``last_run``. Same defensive pattern as
+        # ``_getActorContent`` / ``_getEntityContent``.
+        links = privateMessage.get("links") or {}
+        forum = links.get("forum") or {}
+        x_forum = forum.get("name", "")
+        thread = links.get("thread") or {}
+        x_thread = thread.get("uid", "")
+        author_actor = links.get("authorActor") or {}
+        x_actor = author_actor.get("handle", "")
+        recipient_actor = links.get("recipientActor") or {}
+        x_recipient = recipient_actor.get("handle", "")
+        if "lastUpdated" in privateMessage:
+            lu = privateMessage["lastUpdated"] / 1000
+            x_lastupdate = get_date(_stix_timestamp(lu))
+        else:
+            x_lastupdate = ""
+        d = privateMessage["date"] / 1000
+        x_date = _stix_timestamp(d)
+
+        # are there some images?
+        octi_filelist = []
+        forum_imagelist = links.get("images") or []
+        if forum_imagelist:
+            # self.helper.log_debug(f"Images? {forum_imagelist}")
+            for f in forum_imagelist:
+                try:
+                    imagename = f["hash"]
+                    image_bytes = self._intel471_get_bytes(f["imageOriginal"])
+                    if image_bytes is None:
+                        continue
+                    octi_filelist.append(
+                        {
+                            "name": imagename,
+                            "data": base64.b64encode(image_bytes).decode("ascii"),
+                            "mime_type": "image/*",
+                        }
+                    )
+                except Exception as e:
+                    self.helper.log_debug(f"Adding of image failed: {e}")
+
+        # add message textfile
+        octi_filelist.append(
+            {
+                "name": privateMessage["uid"] + "-message.txt",
+                "data": _b64(pprint.pformat(x_message)),
+                "mime_type": "txt",
+            }
+        )
+        octi_filelist.append(
+            {
+                "name": privateMessage["uid"] + "-json.txt",
+                "data": _b64(pprint.pformat(privateMessage)),
+                "mime_type": "txt",
+            }
+        )
+
+        # does the sender/receiver already exist in OCTI?
+        # ``x_sender_id`` / ``x_receiver_id`` track *real* identity ids; the
+        # ``x_opencti_created_by_ref`` placed on ``MediaContent`` falls back
+        # to the connector author when no sender identity could be extracted
+        # so it is always a valid STIX reference (OpenCTI carries the
+        # observable author through the ``x_opencti_*`` extension field, not
+        # the STIX-standard ``created_by_ref`` which is an SDO property — see
+        # ``connectors-sdk/connectors_sdk/models/base_observable_entity.py``).
+        x_sender_id = ""
+        x_receiver_id = ""
+        if x_actor:
+            identity_list = self.helper.api.identity.list(
+                filters=self._name_filter(x_actor),
+            )
+            if len(identity_list) == 0:
+                x_sender = Identity(
+                    id=PyctiIdentity.generate_id(
+                        lib.intel2stix.sanitizeName(x_actor), "individual"
+                    ),
+                    name=lib.intel2stix.sanitizeName(x_actor),
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    identity_class="individual",
+                    created_by_ref=self.intel471_id,
+                    description="Private Message Author",
+                )
+                x_sender_id = x_sender["id"]
+                objects.append(x_sender)
+            else:
+                x_sender = identity_list[0]
+                x_sender_id = x_sender["standard_id"]
+        if x_recipient:
+            identity_list = self.helper.api.identity.list(
+                filters=self._name_filter(x_recipient),
+            )
+            if len(identity_list) == 0:
+                x_receiver = Identity(
+                    id=PyctiIdentity.generate_id(
+                        lib.intel2stix.sanitizeName(x_recipient), "individual"
+                    ),
+                    name=lib.intel2stix.sanitizeName(x_recipient),
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    identity_class="individual",
+                    created_by_ref=self.intel471_id,
+                    description="Private Message Author",
+                )
+                x_receiver_id = x_receiver["id"]
+                objects.append(x_receiver)
+            else:
+                x_receiver = identity_list[0]
+                x_receiver_id = x_receiver["standard_id"]
+
+        # channel creation
+        channel_id = ""
+        if x_thread:
+            channel_list = self.helper.api.channel.list(
+                filters=self._name_filter(x_thread),
+            )
+            if len(channel_list) == 0:
+                x_channel = Channel(
+                    id=PyctiChannel.generate_id(x_thread),
+                    name=x_thread,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    created_by_ref=self.intel471_id,
+                    channel_types=[x_forum],
+                    allow_custom=True,
+                )
+                self.helper.log_debug("Channel object created.")
+                objects.append(x_channel)
+                self.helper.log_debug("Channel object added to bundle.")
+                channel_id = x_channel["id"]
+            else:
+                channel_id = channel_list[0]["standard_id"]
+
+        # content creation
+        x_mc_description = (
+            f"### Forum\n\n{x_forum}\n\n"
+            f"### Sender\n\n{x_actor}\n\n"
+            f"### Receiver\n\n{x_recipient}\n\n"
+            f"### Last update\n\n{x_lastupdate}\n\n"
+        )
+        x_media_content = MediaContent(
+            url=hashlib.md5(bytes(pprint.pformat(privateMessage), "utf-8")).hexdigest(),
+            content=x_message,
+            description=x_mc_description,
+            publication_date=x_date,
+            media_category="private forum message",
+            object_marking_refs=self.intel471_darknet_tlp,
+            allow_custom=True,
+            custom_properties={
+                "x_opencti_created_by_ref": x_sender_id or self.intel471_id,
+                "x_opencti_files": octi_filelist,
+            },
+        )
+        objects.insert(0, x_media_content)
+
+        # relationships
+        if channel_id:
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], channel_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=channel_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+        if x_sender_id and x_receiver_id:
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_sender_id, x_receiver_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_sender_id,
+                target_ref=x_receiver_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], x_sender_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=x_sender_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], x_receiver_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=x_receiver_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+
+        return objects
+
+    def _getPostContent(self, post: dict) -> []:
+        """
+        Transforms a post message dictionnary in STIX content
+        Returns a list of all the created STIX objects. Media content is at the beginning.
+        """
+        objects = []
+        x_message = BeautifulSoup(post["message"], "lxml").get_text()
+        # Normalise ``links`` to a local dict so a post payload without a
+        # ``links`` object (or with ``links: null``) cannot raise
+        # ``KeyError`` and silently drop the alert while the cycle keeps
+        # advancing ``last_run``. Same defensive pattern as
+        # ``_getActorContent`` / ``_getEntityContent``.
+        links = post.get("links") or {}
+        author_actor = links.get("authorActor") or {}
+        x_actor = author_actor.get("handle", "")
+        forum = links.get("forum") or {}
+        x_forum = forum.get("name", "")
+        thread = links.get("thread") or {}
+        x_thread = thread.get("topic") or thread.get("uid", "")
+        if "lastUpdated" in post:
+            lu = post["lastUpdated"] / 1000
+            x_lastupdate = get_date(_stix_timestamp(lu))
+        else:
+            x_lastupdate = ""
+        d = post["date"] / 1000
+        x_date = _stix_timestamp(d)
+
+        # are there some images?
+        octi_filelist = []
+        forum_imagelist = links.get("images") or []
+        if forum_imagelist:
+            # self.helper.log_debug(f"Images? {forum_imagelist}")
+            for f in forum_imagelist:
+                try:
+                    imagename = f["hash"]
+                    image_bytes = self._intel471_get_bytes(f["imageOriginal"])
+                    if image_bytes is None:
+                        continue
+                    octi_filelist.append(
+                        {
+                            "name": imagename,
+                            "data": base64.b64encode(image_bytes).decode("ascii"),
+                            "mime_type": "image/*",
+                        }
+                    )
+                except Exception as e:
+                    self.helper.log_debug(f"Adding of image failed: {e}")
+
+        # add message textfile
+        octi_filelist.append(
+            {
+                "name": post["uid"] + "-message.txt",
+                "data": _b64(pprint.pformat(x_message)),
+                "mime_type": "txt",
+            }
+        )
+        octi_filelist.append(
+            {
+                "name": post["uid"] + "-json.txt",
+                "data": _b64(pprint.pformat(post)),
+                "mime_type": "txt",
+            }
+        )
+
+        # does the author already exist in OCTI?
+        x_author_id = ""
+        if x_actor:
+            identity_list = self.helper.api.identity.list(
+                filters=self._name_filter(x_actor),
+            )
+            if len(identity_list) == 0:
+                x_author = Identity(
+                    id=PyctiIdentity.generate_id(
+                        lib.intel2stix.sanitizeName(x_actor), "individual"
+                    ),
+                    name=lib.intel2stix.sanitizeName(x_actor),
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    identity_class="individual",
+                    created_by_ref=self.intel471_id,
+                    description="Forum Author",
+                )
+                x_author_id = x_author["id"]
+                objects.append(x_author)
+            else:
+                x_author = identity_list[0]
+                x_author_id = x_author["standard_id"]
+
+        # channel creation
+        channel_id = ""
+        if x_thread:
+            channel_list = self.helper.api.channel.list(
+                filters=self._name_filter(x_thread),
+            )
+            if len(channel_list) == 0:
+                x_channel = Channel(
+                    id=PyctiChannel.generate_id(x_thread),
+                    name=x_thread,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    created_by_ref=self.intel471_id,
+                    channel_types=[x_forum],
+                    allow_custom=True,
+                )
+                self.helper.log_debug("Channel object created.")
+                objects.append(x_channel)
+                self.helper.log_debug("Channel object added to bundle.")
+                channel_id = x_channel["id"]
+            else:
+                channel_id = channel_list[0]["standard_id"]
+
+        # content creation
+        x_mc_description = (
+            f"### Forum\n\n{x_forum}\n\n"
+            f"### Thread\n\n{x_thread}\n\n"
+            f"### Last update\n\n{x_lastupdate}\n\n"
+        )
+        x_media_content = MediaContent(
+            url=post["uid"],
+            content=x_message,
+            description=x_mc_description,
+            publication_date=x_date,
+            media_category="forum post",
+            object_marking_refs=self.intel471_darknet_tlp,
+            allow_custom=True,
+            custom_properties={
+                "x_opencti_created_by_ref": x_author_id or self.intel471_id,
+                "x_opencti_files": octi_filelist,
+            },
+        )
+        objects.insert(0, x_media_content)
+
+        # relationships
+        if channel_id:
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], channel_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=channel_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+        if x_author_id:
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], x_author_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=x_author_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+
+        return objects
+
+    def _getInstantMessageContent(self, instantMessage: dict) -> []:
+        """
+        Transforms an instant message dictionnary in STIX content.
+        Returns a list of all the created STIX objects. Instant message content is at the beginning.
+        """
+        objects = []
+        x_message = BeautifulSoup(
+            instantMessage["data"]["message"]["text"], features="lxml"
+        ).get_text()
+        x_channel_name = instantMessage["data"]["channel"]["name"]
+        x_channel_url = instantMessage["data"]["channel"]["url"]
+        x_server = instantMessage["data"]["server"]["service_type"]
+        x_actor = instantMessage["data"]["actor"]["handle"]
+        d = (
+            instantMessage["activity"]["first"] / 1000
+            if "first" in instantMessage["activity"]
+            else 0
+        )
+        x_date = _stix_timestamp(d)
+        lu = instantMessage["last_updated"] / 1000
+        x_lastupdate = get_date(_stix_timestamp(lu))
+
+        # add message textfile
+        octi_filelist = [
+            {
+                "name": "message.txt",
+                "data": _b64(pprint.pformat(x_message)),
+                "mime_type": "txt",
+            }
+        ]
+        octi_filelist.append(
+            {
+                "name": "json.txt",
+                "data": _b64(pprint.pformat(instantMessage)),
+                "mime_type": "txt",
+            }
+        )
+
+        # does the author already exist in OCTI?
+        x_author_id = ""
+        if x_actor:
+            identity_list = self.helper.api.identity.list(
+                filters=self._name_filter(x_actor),
+            )
+            if len(identity_list) == 0:
+                x_author = Identity(
+                    id=PyctiIdentity.generate_id(
+                        lib.intel2stix.sanitizeName(x_actor), "individual"
+                    ),
+                    name=lib.intel2stix.sanitizeName(x_actor),
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    identity_class="individual",
+                    created_by_ref=self.intel471_id,
+                    description="Forum Author",
+                )
+                x_author_id = x_author["id"]
+                objects.append(x_author)
+            else:
+                x_author = identity_list[0]
+                x_author_id = x_author["standard_id"]
+
+        # channel creation
+        channel_id = ""
+        if x_channel_name:
+            channel_list = self.helper.api.channel.list(
+                filters=self._name_filter(x_channel_name),
+            )
+            if len(channel_list) == 0:
+                x_channel = Channel(
+                    id=PyctiChannel.generate_id(x_channel_name),
+                    name=x_channel_name,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                    channel_types=[x_server],
+                    created_by_ref=self.intel471_id,
+                    external_references=[
+                        {"source_name": x_server, "url": x_channel_url}
+                    ],
+                    allow_custom=True,
+                )
+                self.helper.log_debug("Channel object created.")
+                objects.append(x_channel)
+                self.helper.log_debug("Channel object added to bundle.")
+                channel_id = x_channel["id"]
+            else:
+                channel_id = channel_list[0]["standard_id"]
+
+        # content creation
+        x_mc_description = (
+            f"### Channel\n\n{x_channel_name}\n\n"
+            f"### Server service type\n\n{x_server}\n\n"
+            f"### Last update\n\n{x_lastupdate}\n\n"
+        )
+        x_media_content = MediaContent(
+            url=hashlib.md5(bytes(pprint.pformat(instantMessage), "utf-8")).hexdigest(),
+            content=x_message,
+            description=x_mc_description,
+            publication_date=x_date,
+            media_category="instant message",
+            object_marking_refs=self.intel471_darknet_tlp,
+            allow_custom=True,
+            custom_properties={
+                "x_opencti_created_by_ref": x_author_id or self.intel471_id,
+                "x_opencti_files": octi_filelist,
+            },
+        )
+        objects.insert(0, x_media_content)
+
+        # relationships
+        if channel_id:
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], channel_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=channel_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+        if x_author_id:
+            x_relationship = Relationship(
+                id=PyctiSCR.generate_id(
+                    "related-to", x_media_content["id"], x_author_id, None, None
+                ),
+                relationship_type="related-to",
+                source_ref=x_media_content["id"],
+                target_ref=x_author_id,
+                created_by_ref=self.intel471_id,
+                object_marking_refs=self.intel471_darknet_tlp,
+            )
+            objects.append(x_relationship)
+
+        return objects
+
+    def _getReportContent(self, report: dict) -> []:
+        """
+        Transforms a report dictionnary in STIX content.
+        Returns a list of all the created STIX objects. Report content is at the beginning.
+        """
+        objects = []
+        x_subject = report["subject"]
+        x_source_charact = (
+            report["sourceCharacterization"]
+            if "sourceCharacterization" in report
+            else ""
+        )
+        x_adm_code = (
+            lib.intel2stix.getAdmiralty(report["admiraltyCode"])
+            if "admiraltyCode" in report
+            else (None, None)
+        )
+        x_motivation = (
+            lib.intel2stix.getMotivation(report["motivation"])
+            if "motivation" in report
+            else ""
+        )
+        x_url = report["portalReportUrl"] if "portalReportUrl" in report else ""
+        x_doc_family = report["documentFamily"] if "documentFamily" in report else ""
+        doi = report["dateOfInformation"] / 1000
+        x_doi = get_date(_stix_timestamp(doi))
+        if "released" in report:
+            dr = report["released"] / 1000
+        elif "created" in report:
+            dr = report["created"] / 1000
+        else:
+            dr = 0
+        x_date = _stix_timestamp(dr)
+        x_rep_description = ""
+        if x_subject:
+            x_rep_description += f"### Subject\n\n{x_subject}\n\n"
+        if x_motivation:
+            x_rep_description += f"### Motivation\n\n{x_motivation}\n\n"
+        if x_source_charact:
+            x_rep_description += (
+                f"### Source characterization\n\n{x_source_charact}\n\n"
+            )
+        if x_doi:
+            x_rep_description += f"### Date of information\n\n{x_doi}\n\n"
+
+        x_obj_refs = []
+        # STIX external-reference URLs must be valid URLs, so we only
+        # emit the Intel 471 portal reference when ``portalReportUrl``
+        # was actually provided. Other report fields (sources, entities,
+        # ...) still attach their own external references below.
+        x_ext_refs = []
+        if x_url:
+            x_ext_refs.append({"source_name": "Intel471 Inc.", "url": x_url})
+        x_actors = []
+        x_labels = []
+
+        # add threat actors
+        if "actorSubjectOfReport" in report:
+            for actor in report["actorSubjectOfReport"]:
+                a = lib.intel2stix.getThreatActorContent(
+                    actor, self.intel471_darknet_tlp, self.intel471_id
+                )
+                objects.append(a)
+                x_obj_refs.append(a["id"])
+                x_actors.append(a["id"])
+
+        # add victims
+        if "victims" in report:
+            for victim in report["victims"]:
+                v = lib.intel2stix.getVictimContent(
+                    victim, self.intel471_darknet_tlp, self.intel471_id
+                )
+                objects.append(v)
+                x_obj_refs.append(v["id"])
+                for a in x_actors:
+                    r = Relationship(
+                        id=PyctiSCR.generate_id("targets", a, v["id"], None, None),
+                        relationship_type="targets",
+                        source_ref=a,
+                        target_ref=v["id"],
+                        created_by_ref=self.intel471_id,
+                        object_marking_refs=self.intel471_darknet_tlp,
+                    )
+                    objects.append(r)
+                    x_obj_refs.append(r)
+
+        # add entities
+        if "entities" in report:
+            for entity in report["entities"]:
+                e = lib.intel2stix.getTypeValueContent(
+                    entity, self.intel471_darknet_tlp, self.intel471_id
+                )
+                if e:
+                    if e[0] == "Object":
+                        objects.extend(e[1])
+                        for o in e[1]:
+                            x_obj_refs.append(o["id"])
+                        for a in x_actors:
+                            r = Relationship(
+                                id=PyctiSCR.generate_id(
+                                    "related-to", e[1][0]["id"], a, None, None
+                                ),
+                                relationship_type="related-to",
+                                source_ref=e[1][0]["id"],
+                                target_ref=a,
+                                created_by_ref=self.intel471_id,
+                                object_marking_refs=self.intel471_darknet_tlp,
+                            )
+                            objects.append(r)
+                            x_obj_refs.append(r)
+                    elif e[0] == "ExtRef":
+                        x_ext_refs.append(e[1])
+                    elif e[0] == "Tag":
+                        x_labels.append(e[1])
+                else:
+                    self.helper.log_debug(f"Entity not supported: {entity}")
+
+        # add locations
+        if "locations" in report:
+            for location in report["locations"]:
+                location_content = lib.intel2stix.getLocationContent(
+                    location, self.intel471_darknet_tlp, self.intel471_id
+                )
+                if location_content is None:
+                    # No region/country information available — skip.
+                    continue
+                rel_type, loc = location_content
+                objects.append(loc)
+                x_obj_refs.append(loc)
+                if rel_type in ["targets", "located-at"]:
+                    for a in x_actors:
+                        r = Relationship(
+                            id=PyctiSCR.generate_id(rel_type, a, loc["id"], None, None),
+                            relationship_type=rel_type,
+                            source_ref=a,
+                            target_ref=loc["id"],
+                            created_by_ref=self.intel471_id,
+                            object_marking_refs=self.intel471_darknet_tlp,
+                        )
+                        objects.append(r)
+                        x_obj_refs.append(r)
+                else:
+                    x_rep_description += (
+                        "### Threat Actor Origin\n\n"
+                        f"{loc.get('region', '')} - {loc.get('country', '')}\n\n"
+                    )
+
+        # add files
+        octi_filelist = []
+        if "rawText" in report:
+            octi_filelist.append(
+                {
+                    "name": "rawText.html",
+                    "data": _b64(report["rawText"]),
+                    "mime_type": "text/html",
+                }
+            )
+        if "rawTextTranslated" in report:
+            octi_filelist.append(
+                {
+                    "name": "rawTextTranslated.html",
+                    "data": _b64(report["rawTextTranslated"]),
+                    "mime_type": "text/html",
+                }
+            )
+        if "researcherComments" in report:
+            octi_filelist.append(
+                {
+                    "name": "researcherComments.html",
+                    "data": _b64(report["researcherComments"]),
+                    "mime_type": "text/html",
+                }
+            )
+        if "executiveSummary" in report:
+            octi_filelist.append(
+                {
+                    "name": "executiveSummary.html",
+                    "data": _b64(report["executiveSummary"]),
+                    "mime_type": "text/html",
+                }
+            )
+
+        # add external references
+        if "sources" in report:
+            for s in report["sources"]:
+                x_ext_refs.append({"source_name": s["title"], "url": s["url"]})
+
+        # add tags
+        if "tags" in report:
+            for t in report["tags"]:
+                x_labels.append(t)
+
+        # report creation
+        x_report = Report(
+            id=PyctiReport.generate_id(x_subject, x_date),
+            type="report",
+            name=x_subject,
+            description=x_rep_description,
+            published=x_date,
+            created_by_ref=self.intel471_id,
+            external_references=x_ext_refs,
+            object_marking_refs=self.intel471_darknet_tlp,
+            confidence=x_adm_code[1],
+            custom_properties={
+                "x_opencti_files": octi_filelist,
+                "report_types": [x_doc_family],
+                "reliability": x_adm_code[0],
+            },
+            object_refs=x_obj_refs,
+            labels=x_labels,
+        )
+        objects.insert(0, x_report)
+
+        return objects
+
+    def _getSpotReportContent(self, spotReport: dict) -> []:
+        """
+        Transforms a spotReport dictionnary in STIX content
+        Returns a list of all the created STIX objects. Spot Report is at the beginning.
+        """
+        objects = []
+        x_title = (
+            spotReport["data"]["spot_report"]["spot_report_data"]["title"]
+            if "title" in spotReport["data"]["spot_report"]["spot_report_data"]
+            else spotReport["data"]["spot_report"]["spot_report_data"]["text"][0:100]
+        )
+        doi = (
+            spotReport["data"]["spot_report"]["spot_report_data"]["date_of_information"]
+            / 1000
+        )
+        x_doi = get_date(_stix_timestamp(doi))
+        r = spotReport["data"]["spot_report"]["spot_report_data"]["released_at"] / 1000
+        x_released = _stix_timestamp(r)
+        lu = spotReport["last_updated"] / 1000
+        x_lastupdate = get_date(_stix_timestamp(lu))
+
+        x_rep_description = (
+            f"### Title\n\n{x_title}\n\n"
+            f"### Date of information\n\n{x_doi}\n\n"
+            f"### Last updated\n\n{x_lastupdate}"
+        )
+
+        x_obj_refs = []
+        x_ext_refs = []
+        x_labels = []
+
+        # add entities
+        if "entities" in spotReport["data"]:
+            for entity in spotReport["data"]["entities"]:
+                e = lib.intel2stix.getTypeValueContent(
+                    entity, self.intel471_darknet_tlp, self.intel471_id
+                )
+                if e:
+                    if e[0] == "Object":
+                        objects.extend(e[1])
+                        for o in e[1]:
+                            x_obj_refs.append(o["id"])
+                    elif e[0] == "ExtRef":
+                        x_ext_refs.append(e[1])
+                    elif e[0] == "Tag":
+                        x_labels.append(e[1])
+                else:
+                    self.helper.log_debug(f"Entity not supported: {entity}")
+
+        # add victims
+        if "victims" in spotReport["data"]["spot_report"]["spot_report_data"]:
+            for victim in spotReport["data"]["spot_report"]["spot_report_data"][
+                "victims"
+            ]:
+                v = lib.intel2stix.getVictimContent(
+                    victim, self.intel471_darknet_tlp, self.intel471_id
+                )
+                objects.append(v)
+                x_obj_refs.append(v["id"])
+
+        # add text
+        octi_filelist = []
+        if "text" in spotReport["data"]["spot_report"]["spot_report_data"]:
+            text = spotReport["data"]["spot_report"]["spot_report_data"]["text"]
+            octi_filelist.append(
+                {
+                    "name": "text.txt",
+                    "data": _b64(text),
+                    "mime_type": "text/txt",
+                }
+            )
+
+        # add external references
+        if "links" in spotReport["data"]["spot_report"]["spot_report_data"]:
+            for link in spotReport["data"]["spot_report"]["spot_report_data"]["links"]:
+                x_ext_refs.append({"source_name": link["title"], "url": link["url"]})
+
+        # report creation
+        x_report = Report(
+            id=PyctiReport.generate_id(x_title, x_released),
+            type="report",
+            name=x_title,
+            description=x_rep_description,
+            published=x_released,
+            created_by_ref=self.intel471_id,
+            external_references=x_ext_refs,
+            object_marking_refs=self.intel471_darknet_tlp,
+            custom_properties={
+                "x_opencti_files": octi_filelist,
+                "report_types": ["spot"],
+            },
+            object_refs=x_obj_refs,
+            labels=x_labels,
+        )
+        objects.insert(0, x_report)
+
+        return objects
+
+    def _getBreachAlertContent(self, breachAlert: dict) -> []:
+        """
+        Transforms a breach alert dictionnary in STIX content
+        Returns a list of all the created STIX objects. Brech alert content is at the beginning.
+        """
+        objects = []
+        x_title = breachAlert["data"]["breach_alert"]["title"]
+        doi = breachAlert["data"]["breach_alert"]["date_of_information"] / 1000
+        x_doi = get_date(_stix_timestamp(doi))
+        r = breachAlert["data"]["breach_alert"]["released_at"] / 1000
+        x_released = _stix_timestamp(r)
+        x_confidence = breachAlert["data"]["breach_alert"]["confidence"]
+        x_confidence_int = lib.intel2stix.getBreachConfidence(x_confidence["level"])
+        self.helper.log_debug(
+            f"Breach Confidence: {x_confidence['level']} aka {x_confidence_int}"
+        )
+        lu = breachAlert["last_updated"] / 1000
+        x_lastupdate = get_date(_stix_timestamp(lu))
+
+        x_rep_description = (
+            f"### Title\n\n{x_title}\n\n"
+            f"### Confidence level\n\n{x_confidence['level']}\n\n"
+            f"### Confidence description\n\n{x_confidence['description']}\n\n"
+            f"### Date of information\n\n{x_doi}\n\n"
+            f"### Last updated\n\n{x_lastupdate}"
+        )
+
+        x_obj_refs = []
+        x_ext_refs = []
+        x_labels = []
+        x_actor = ""
+
+        # add sources
+        if "sources" in breachAlert["data"]["breach_alert"]:
+            for s in breachAlert["data"]["breach_alert"]["sources"]:
+                x_ext_refs.append({"source_name": s["title"], "url": s["url"]})
+
+        # add threat actor
+        if "actor_or_group" in breachAlert["data"]["breach_alert"]:
+            name = breachAlert["data"]["breach_alert"]["actor_or_group"]
+            handles = []
+            splt = name.split(" aka ")
+            handles.append(splt[0])
+            if len(splt) > 1:
+                handles.extend(splt[1].split(", "))
+            a = lib.intel2stix.getThreatActorContent(
+                {"handle": handles[0], "aliases": handles[1:]},
+                self.intel471_darknet_tlp,
+                self.intel471_id,
+            )
+            objects.append(a)
+            x_obj_refs.append(a)
+            x_actor = a["id"]
+
+        # add entities
+        if "entities" in breachAlert["data"]:
+            for entity in breachAlert["data"]["entities"]:
+                e = lib.intel2stix.getTypeValueContent(
+                    entity, self.intel471_darknet_tlp, self.intel471_id
+                )
+                if e:
+                    if e[0] == "Object":
+                        objects.extend(e[1])
+                        for o in e[1]:
+                            x_obj_refs.append(o["id"])
+                        # Skip the actor relationship when no actor was found:
+                        # passing an empty ``source_ref``/``target_ref`` produces
+                        # invalid STIX and breaks the bundle serialisation.
+                        if x_actor:
+                            r = Relationship(
+                                id=PyctiSCR.generate_id(
+                                    "related-to",
+                                    e[1][0]["id"],
+                                    x_actor,
+                                    None,
+                                    None,
+                                ),
+                                relationship_type="related-to",
+                                source_ref=e[1][0]["id"],
+                                target_ref=x_actor,
+                                object_marking_refs=self.intel471_darknet_tlp,
+                            )
+                            objects.append(r)
+                            x_obj_refs.append(r)
+                    elif e[0] == "ExtRef":
+                        x_ext_refs.append(e[1])
+                    elif e[0] == "Tag":
+                        x_labels.append(e[1])
+                else:
+                    self.helper.log_debug(f"Entity not supported: {entity}")
+
+        # add victim, industries and location
+        if "victim" in breachAlert["data"]["breach_alert"]:
+            victim = breachAlert["data"]["breach_alert"]["victim"]
+            v = lib.intel2stix.getVictimContent(
+                victim, self.intel471_darknet_tlp, self.intel471_id
+            )
+            objects.append(v)
+            x_obj_refs.append(v["id"])
+            if x_actor:
+                r = Relationship(
+                    id=PyctiSCR.generate_id("targets", x_actor, v["id"], None, None),
+                    relationship_type="targets",
+                    source_ref=x_actor,
+                    target_ref=v["id"],
+                    created_by_ref=self.intel471_id,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                )
+                objects.append(r)
+                x_obj_refs.append(r)
+            for i in victim.get("industries") or []:
+                s = lib.intel2stix.getIndustriesContent(
+                    i, self.intel471_darknet_tlp, self.intel471_id
+                )
+                objects.append(s[0])
+                x_obj_refs.append(s[0])
+                objects.append(s[1])
+                if x_actor:
+                    r = Relationship(
+                        id=PyctiSCR.generate_id(
+                            "targets", x_actor, s[0]["id"], None, None
+                        ),
+                        relationship_type="targets",
+                        source_ref=x_actor,
+                        target_ref=s[0]["id"],
+                        created_by_ref=self.intel471_id,
+                        object_marking_refs=self.intel471_darknet_tlp,
+                    )
+                    objects.append(r)
+                    x_obj_refs.append(r)
+                r = Relationship(
+                    id=PyctiSCR.generate_id(
+                        "related-to", v["id"], s[0]["id"], None, None
+                    ),
+                    relationship_type="related-to",
+                    source_ref=v["id"],
+                    target_ref=s[0]["id"],
+                    created_by_ref=self.intel471_id,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                )
+                objects.append(r)
+                x_obj_refs.append(r)
+                r = Relationship(
+                    id=PyctiSCR.generate_id(
+                        "part-of", s[0]["id"], s[1]["id"], None, None
+                    ),
+                    relationship_type="part-of",
+                    source_ref=s[0]["id"],
+                    target_ref=s[1]["id"],
+                    created_by_ref=self.intel471_id,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                )
+                objects.append(r)
+            location_content = lib.intel2stix.getLocationContent(
+                victim, self.intel471_darknet_tlp, self.intel471_id
+            )
+            if location_content is not None:
+                _, loc = location_content
+                objects.append(loc)
+                x_obj_refs.append(loc)
+                if x_actor:
+                    r = Relationship(
+                        id=PyctiSCR.generate_id(
+                            "targets", x_actor, loc["id"], None, None
+                        ),
+                        relationship_type="targets",
+                        source_ref=x_actor,
+                        target_ref=loc["id"],
+                        created_by_ref=self.intel471_id,
+                        object_marking_refs=self.intel471_darknet_tlp,
+                    )
+                    objects.append(r)
+                    x_obj_refs.append(r)
+                r = Relationship(
+                    id=PyctiSCR.generate_id(
+                        "located-at", v["id"], loc["id"], None, None
+                    ),
+                    relationship_type="located-at",
+                    source_ref=v["id"],
+                    target_ref=loc["id"],
+                    created_by_ref=self.intel471_id,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                )
+                objects.append(r)
+                x_obj_refs.append(r)
+
+        # add summary. Breach summaries can carry victim details and
+        # other sensitive Intel 471 content, so we log only its length /
+        # presence here and keep the full content inside the STIX
+        # attachment.
+        octi_filelist = []
+        if "summary" in breachAlert["data"]["breach_alert"]:
+            summary = breachAlert["data"]["breach_alert"]["summary"]
+            self.helper.log_debug(
+                f"Breach summary attached ({len(summary)} bytes)"
+                if summary
+                else "Breach summary present but empty"
+            )
+            octi_filelist.append(
+                {
+                    "name": "summary.html",
+                    "data": _b64(summary),
+                    "mime_type": "text/html",
+                }
+            )
+
+        # report creation
+        x_report = Report(
+            id=PyctiReport.generate_id(x_title, x_released),
+            type="report",
+            name=x_title,
+            description=x_rep_description,
+            published=x_released,
+            created_by_ref=self.intel471_id,
+            external_references=x_ext_refs,
+            confidence=lib.intel2stix.getBreachConfidence(x_confidence["level"]),
+            object_marking_refs=self.intel471_darknet_tlp,
+            custom_properties={
+                "x_opencti_files": octi_filelist,
+                "report_types": ["breach_alert"],
+            },
+            object_refs=x_obj_refs,
+            labels=x_labels,
+        )
+        objects.insert(0, x_report)
+
+        return objects
+
+    def _getActorContent(self, actor: dict) -> []:
+        """
+        Transforms an actor dictionnary in STIX content (default is Individial Threat Actor)
+        Returns a list of all the created STIX objects. Actor content is at the beginning.
+        """
+        objects = []
+        handles = actor.get("handles") or []
+        x_name = handles[0] if handles else actor["uid"]
+        # ``handles`` may be missing or an empty list — slice safely so we
+        # never end up with ``None[1:]``.
+        x_aliases = handles[1:]
+        links = actor.get("links") or {}
+        x_forum_TC = links.get("forumTotalCount", 0)
+        x_forum_PMTC = links.get("forumPrivateMessageTotalCount", 0)
+        x_forum_PTC = links.get("forumPostTotalCount", 0)
+        x_report_TC = links.get("reportTotalCount", 0)
+        x_IMS_TC = links.get("instantMessageServerTotalCount", 0)
+        x_IMC_TC = links.get("instantMessageChannelTotalCount", 0)
+        x_IM_TC = links.get("instantMessageTotalCount", 0)
+        x_forums = ""
+        x_ext_refs = []
+        x_source_ids = []
+
+        # add description and contact info. ``links.forums`` is a *list* of
+        # forum entries, each of which may carry its own ``contactInfo``
+        # list — the previous code treated it as a dict and the
+        # contact-info branch was therefore dead.
+        for f in links.get("forums") or []:
+            x_forums += f.get("name", "") + " - "
+            for c in f.get("contactInfo") or []:
+                contact = lib.intel2stix.getTypeValueContent(
+                    c, self.intel471_darknet_tlp, self.intel471_id
+                )
+                if contact and contact[0] == "Object" and contact[1]:
+                    objects.extend(contact[1])
+                    # ``getTypeValueContent`` returns the linkable
+                    # observable / entity as the first element; the
+                    # remaining elements may be ``Indicator`` and
+                    # ``Relationship`` objects which cannot be used as
+                    # the ``source_ref`` of another STIX ``Relationship``
+                    # (the spec only allows SDOs / SCOs there). Only
+                    # link the head so the ``related-to`` relationships
+                    # generated below have valid sources.
+                    x_source_ids.append(contact[1][0]["id"])
+        if x_forums:
+            x_forums = x_forums[0:-2]
+        if "lastUpdated" in actor:
+            lu = actor["lastUpdated"] / 1000
+            x_lastupdate = get_date(_stix_timestamp(lu))
+        else:
+            x_lastupdate = ""
+        if "activeFrom" in actor:
+            af = actor["activeFrom"] / 1000
+            x_active_from = get_date(_stix_timestamp(af))
+        else:
+            x_active_from = ""
+        if "activeUntil" in actor:
+            au = actor["activeUntil"] / 1000
+            x_active_until = get_date(_stix_timestamp(au))
+        else:
+            x_active_until = ""
+        x_actor_description = (
+            f"**Forum total count**: {x_forum_TC}\n\n"
+            f"**Forum private message total count**: {x_forum_PMTC}\n\n"
+            f"**Forum post total count**: {x_forum_PTC}\n\n"
+            f"**Instant message server total count**: {x_IMS_TC}\n\n"
+            f"**Instant message channel total count**: {x_IMC_TC}\n\n"
+            f"**Instant message total count**: {x_IM_TC}\n\n"
+            f"**Report total count**: {x_report_TC}\n\n"
+            f"**Forums**: {x_forums}\n\n"
+            f"**Active from**: {x_active_from}\n\n"
+            f"**Active until**: {x_active_until}\n\n"
+            f"**Last update**: {x_lastupdate}\n\n"
+        )
+
+        # add report references — reuse the ``links`` local that was
+        # normalised at the top of this method (``actor.get("links") or {}``)
+        # so an actor payload with no ``links`` key does not crash here.
+        for r in links.get("reports") or []:
+            x_ext_refs.append(
+                {"source_name": r["subject"], "url": r["portalReportUrl"]}
+            )
+
+        # create threat actor
+        x_actor = stix2.ThreatActor(
+            id=PyctiTAI.generate_id(x_name),
+            name=x_name,
+            description=x_actor_description,
+            aliases=x_aliases,
+            created_by_ref=self.intel471_id,
+            external_references=x_ext_refs,
+            custom_properties={"x_opencti_type": "Threat-Actor-Individual"},
+            object_marking_refs=self.intel471_darknet_tlp,
+        )
+        objects.insert(0, x_actor)
+
+        # add relationships
+        for s in x_source_ids:
+            objects.append(
+                Relationship(
+                    id=PyctiSCR.generate_id("related-to", s, x_actor["id"], None, None),
+                    relationship_type="related-to",
+                    source_ref=s,
+                    target_ref=x_actor["id"],
+                    created_by_ref=self.intel471_id,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                )
+            )
+
+        return objects
+
+    def _getEntityContent(self, entity: dict) -> ():
+        """
+        Transforms an entity dictionnary in STIX content.
+        Returns a tuple:
+        - a list of all the created STIX objects. Entity object comes first, if present.
+        - a list of source ids
+        - a list of external references
+        """
+        objects = []
+        x_source_ids = []
+        x_ext_refs = []
+
+        # Entity payloads that only carry ``type`` / ``value`` (which
+        # ``getTypeValueContent`` is happy to process) have no ``links``
+        # field. Normalising here lets the rest of the method use a
+        # plain ``.get(...)`` chain without raising ``KeyError`` before
+        # we even reach ``getTypeValueContent``.
+        links = entity.get("links") or {}
+
+        # add actors
+        for a in links.get("actors") or []:
+            try:
+                url = f"{self.intel471_api_url}/actors/{a['uid']}"
+                self.helper.log_debug(f"Actor URL: {url} / Entity")
+                actor = self._intel471_get_json(url)
+                if actor:
+                    # The actor payload contains free-form descriptions
+                    # and forum content; log only its presence and the
+                    # actor uid here.
+                    self.helper.log_debug(f"Actor retrieved: uid={actor.get('uid')}")
+                    actor_objects = self._getActorContent(actor)
+                    objects.extend(actor_objects)
+                    x_source_ids.append(actor_objects[0]["id"])
+            except Exception as e:
+                self.helper.log_debug(f"Error retrieving actor data: {e}")
+
+        # TODO: re-enable the activeFrom / activeTill / lastUpdated
+        # description once the Intel 471 payload shape stabilises.
+
+        # add report references
+        for r in links.get("reports") or []:
+            x_ext_refs.append(
+                {"source_name": r["subject"], "url": r["portalReportUrl"]}
+            )
+
+        # get entity
+        x_entity = lib.intel2stix.getTypeValueContent(
+            entity, self.intel471_darknet_tlp, self.intel471_id
+        )
+        # ``getTypeValueContent`` returns an empty tuple for unsupported
+        # entity types — guard against that before indexing.
+        if not x_entity:
+            self.helper.log_debug(
+                f"Entity type not supported by getTypeValueContent: "
+                f"{entity.get('type')}"
+            )
+            return (objects, x_source_ids, x_ext_refs)
+
+        if x_entity[0] == "Object":
+            for s in x_source_ids:
+                objects.append(
+                    Relationship(
+                        id=PyctiSCR.generate_id(
+                            "related-to", s, x_entity[1][0]["id"], None, None
+                        ),
+                        relationship_type="related-to",
+                        source_ref=s,
+                        target_ref=x_entity[1][0]["id"],
+                        created_by_ref=self.intel471_id,
+                        object_marking_refs=self.intel471_darknet_tlp,
+                    )
+                )
+            objects.insert(0, x_entity[1][0])
+            if len(x_entity[1]) > 0:
+                objects.extend(x_entity[1][1:])
+            return (objects, [x_entity[1][0]["id"]], x_ext_refs)
+
+        # if there is no entity object, the related objects will be attached
+        # directly to the incident object
+        return (objects, x_source_ids, x_ext_refs)
+
+    def _get_stix_objects(self, alert) -> []:
+        """
+        Transforms an Intel471 alert into an Incident Stix object, several child objects and relationships
+        """
+        objects = []
+
+        x_alert = None
+        x_name = None
+        x_description = None
+        x_source = ""
+
+        # general alert informations
+
+        x_uid = alert["uid"]
+        x_file = [
+            {
+                "name": x_uid + ".txt",
+                "data": _b64(pprint.pformat(alert)),
+                "mime_type": "txt",
+            }
+        ]
+        x_foundtime = _stix_timestamp(alert["foundTime"] / 1000)
+        x_watcher_description = ""
+        if "watcherUid" in alert:
+            # Watcher collection may have failed at startup, or the API may
+            # return an alert for a watcher we never enumerated. Fall back
+            # to the watcher UID so we do not lose the entire alert.
+            x_watcher_description = self.intel471_watchers.get(
+                alert["watcherUid"], alert["watcherUid"]
+            )
+            x_description = (
+                f"### Watcher\n\n{x_watcher_description}\n\n"
+                f"### Watcher UID\n\n{alert['watcherUid']}"
+            )
+        else:
+            self.helper.log_debug("No watcherUid in alert")
+        target_ids = []
+        x_ext_refs = []
+
+        # specific informations
+
+        if "post" in alert:
+            x_source = "Post"
+            mapping_content = self._getPostContent(alert["post"])
+            target_ids.append(mapping_content[0]["id"])
+            objects.extend(mapping_content)
+
+        if "privateMessage" in alert:
+            if not x_source:
+                x_source = "Private Message"
+            mapping_content = self._getPrivateMessageContent(alert["privateMessage"])
+            target_ids.append(mapping_content[0]["id"])
+            objects.extend(mapping_content)
+
+        if "instantMessage" in alert:
+            if not x_source:
+                x_source = "Instant Message"
+            mapping_content = self._getInstantMessageContent(alert["instantMessage"])
+            target_ids.append(mapping_content[0]["id"])
+            objects.extend(mapping_content)
+
+        if "report" in alert:
+            if not x_source:
+                x_source = "Report"
+            url = f"{self.intel471_api_url}/reports/{alert['report']['uid']}"
+            # Use the raising variant so a transient HTTP / JSON failure
+            # on this per-alert lookup propagates out of the collection
+            # loop. ``ExternalImportConnector._run_cycle`` then catches
+            # the ``Intel471RequestError``, marks the work in-error and
+            # leaves ``last_run`` untouched, so the same window is
+            # retried on the next cycle. Treating ``None`` as "skip"
+            # would have permanently dropped the report alert because
+            # ``_run_cycle`` advances ``last_run`` on a successful
+            # collection — including one where the only report
+            # lookup transparently failed.
+            full_report = self._intel471_get_json_or_raise(url)
+            if full_report:
+                mapping_content = self._getReportContent(full_report)
+                target_ids.append(mapping_content[0]["id"])
+                objects.extend(mapping_content)
+            else:
+                self.helper.log_warning(f"Skipping alert {x_uid}: empty body for {url}")
+
+        if "spotReport" in alert:
+            if not x_source:
+                x_source = "SpotReport"
+            mapping_content = self._getSpotReportContent(alert["spotReport"])
+            target_ids.append(mapping_content[0]["id"])
+            objects.extend(mapping_content)
+
+        if "breachAlert" in alert:
+            if not x_source:
+                x_source = "Breach"
+            mapping_content = self._getBreachAlertContent(alert["breachAlert"])
+            target_ids.append(mapping_content[0]["id"])
+            objects.extend(mapping_content)
+
+        if "entity" in alert:
+            if not x_source:
+                x_source = "Entity"
+            mapping_content = self._getEntityContent(alert["entity"])
+            objects.extend(mapping_content[0])
+            target_ids.extend(mapping_content[1])
+            x_ext_refs.extend(mapping_content[2])
+
+        if "actor" in alert:
+            if not x_source:
+                x_source = "Actor"
+            mapping_content = self._getActorContent(alert["actor"])
+            target_ids.append(mapping_content[0]["id"])
+            objects.extend(mapping_content)
+
+        # incident creation
+        x_name = f"[{x_source}] [{x_watcher_description}] [{x_uid}]"
+        x_alert = Incident(
+            id=PyctiIncident.generate_id(x_name, x_foundtime),
+            name=x_name,
+            description=x_description,
+            type="incident",
+            object_marking_refs=self.intel471_darknet_tlp,
+            created_by_ref=self.intel471_id,
+            external_references=x_ext_refs,
+            custom_properties={
+                "incident_type": "alert",
+                "source": x_source,
+                "first_seen": x_foundtime,
+                "x_opencti_files": x_file,
+            },
+        )
+        objects.append(x_alert)
+
+        # relationships
+        if target_ids:
+            for t in target_ids:
+                x_relationship = Relationship(
+                    id=PyctiSCR.generate_id("related-to", x_alert["id"], t, None, None),
+                    relationship_type="related-to",
+                    source_ref=x_alert["id"],
+                    target_ref=t,
+                    created_by_ref=self.intel471_id,
+                    object_marking_refs=self.intel471_darknet_tlp,
+                )
+                objects.append(x_relationship)
+
+        return objects
+
+    def _collect_alerts(self, start_time) -> []:
+        """Collect alerts from Intel 471 and return a list of STIX objects.
+
+        Uses :meth:`_intel471_get_json_or_raise` so HTTP / JSON failures
+        on the first (or any) page propagate as
+        :class:`Intel471RequestError`. The caller catches that in
+        :class:`lib.external_import.ExternalImportConnector._run_cycle`,
+        which then marks the work in-error and leaves ``last_run``
+        untouched so the next run retries from the same window — a
+        transient outage no longer silently advances the cursor past
+        data we never fetched.
+        """
+        self.helper.log_debug(f"Collection started from date: {start_time}")
+
+        # collecting alerts
+        self.helper.log_debug("Second step: collecting alerts")
+        bundle = []
+
+        fromParam = start_time * 1000
+        count = 0
+
+        while True:
+            offset = None
+            nb = 0
+
+            while True:
+                if offset:
+                    url = f"{self.intel471_api_url}/alerts?count=100&sort=earliest&from={fromParam}&offset={offset}"
+                else:
+                    url = f"{self.intel471_api_url}/alerts?count=100&sort=earliest&from={fromParam}"
+                self.helper.log_debug("URL: " + url)
+
+                alerts = self._intel471_get_json_or_raise(url)
+                if not alerts or "alerts" not in alerts:
+                    # Empty but successful response: the API has no more
+                    # alerts for this window.
+                    break
+                alert_list = alerts["alerts"]
+                if not alert_list:
+                    break
+
+                self.helper.log_debug("Nombre alertes: " + str(len(alert_list)))
+                for a in alert_list:
+                    count += 1
+                    objs = None
+                    try:
+                        objs = self._get_stix_objects(a)
+                    except Intel471RequestError:
+                        # The per-alert ``/reports/{uid}`` lookup inside
+                        # ``_get_stix_objects`` also goes through
+                        # ``_intel471_get_json_or_raise``. Letting the
+                        # broad ``except Exception`` below swallow that
+                        # would log the failure, return successfully
+                        # from ``_collect_alerts``, and ``_run_cycle``
+                        # would then advance ``last_run`` — permanently
+                        # dropping the report alert. Re-raising here
+                        # propagates the failure up to ``_run_cycle``,
+                        # which marks the work in-error and leaves the
+                        # cursor untouched so the same window is
+                        # retried on the next cycle.
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        # Per-alert *transformation* failures (KeyError,
+                        # ValueError, ...) should not abort the whole
+                        # run: log and skip the offending alert but
+                        # keep advancing through the rest of the
+                        # window.
+                        self.helper.log_error(f"Error retrieving alert: {e}")
+                        self.helper.log_error(traceback.format_exc())
+                    if objs:
+                        bundle.extend(objs)
+
+                offset = alert_list[-1]["uid"]
+                nb += len(alert_list)
+                if nb >= 1100:
+                    fromParam = int(alert_list[-1]["foundTime"]) + 1
+                    break
+            if nb < 1100:
+                break
+
+        return bundle
+
+    def _collect_intelligence(self, since: Optional[datetime] = None) -> list:
+        """Collect Intel 471 alerts and return them as STIX 2 objects.
+
+        ``since`` is the timezone-aware UTC :class:`datetime.datetime`
+        returned by the base ``ExternalImportConnector`` scheduler (or
+        ``None`` on the very first run). It is converted into the
+        epoch-seconds value expected by ``_collect_alerts``; when no
+        previous ``last_run`` is recorded we fall back to the
+        ``INTEL471_DARKNET_INITIAL_HISTORY_ALERTS`` configuration value.
+        """
+        self.helper.log_debug(
+            f"{self.helper.connect_name} connector is starting the collection of objects..."
+        )
+        stix_objects = []
+
+        if since is None:
+            start_time = int(self.intel471_initial_history_alerts)
+        else:
+            start_time = int(since.timestamp())
+
+        self.helper.log_debug(
+            f"Start = {start_time} (since={since!r}) / "
+            f"intel471_initial_history_alerts = {self.intel471_initial_history_alerts}"
+        )
+
+        stix_objects.extend(self._collect_alerts(start_time))
+
+        # Always emit the Intel 471 author identity alongside the rest of
+        # the bundle so the ``created_by_ref`` on every produced object
+        # resolves in OpenCTI even when this is the very first run and
+        # the identity has never been ingested before. The id is
+        # deterministic, so subsequent runs just reconcile against the
+        # existing identity without creating a duplicate. The configured
+        # TLP marking-definition object is also prepended so
+        # OpenCTI-specific markings (``TLP:CLEAR`` / ``TLP:AMBER+STRICT``)
+        # are registered with the platform by name — built-in stix2
+        # markings (``WHITE`` / ``GREEN`` / ``AMBER`` / ``RED``) are
+        # already known to the platform but emitting them explicitly is
+        # harmless and keeps the contract uniform across every alias.
+        if stix_objects:
+            stix_objects.insert(0, self.intel471_author)
+            stix_objects.insert(0, self.intel471_darknet_marking)
+
+        self.helper.log_info(
+            f"{len(stix_objects)} STIX2 objects have been compiled by "
+            f"{self.helper.connect_name} connector. "
+        )
+
+        return stix_objects
+
+
+if __name__ == "__main__":
+    try:
+        connector = Intel471AlertsConnector()
+        connector.run()
+    except KeyboardInterrupt:
+        # ``Ctrl+C`` / ``SIGINT``: graceful operator-initiated shutdown.
+        # Always exit ``0`` so container supervisors do not interpret
+        # the deliberate signal as a crash that should trigger a
+        # restart backoff.
+        sys.exit(0)
+    except SystemExit:
+        # Let the original ``SystemExit`` propagate so its ``code``
+        # attribute is preserved. Catching it here and unconditionally
+        # exiting ``0`` would mask any non-zero status raised below
+        # this point (helper initialisation, future fatal preconditions
+        # / health checks, …) and make real failures look like clean
+        # exits to the orchestrator.
+        raise
+    except Exception as e:
+        # Startup / fatal-loop failures: print the traceback and exit
+        # non-zero so container supervisors / CI / restart policies
+        # report the run as failed instead of mistaking a crash for a
+        # clean exit. The short ``time.sleep(10)`` is kept on purpose
+        # to spread restart attempts when several connectors crash
+        # together (e.g. during a temporary OpenCTI outage).
+        print(e)
+        print(traceback.format_exc())
+        time.sleep(10)
+        sys.exit(1)

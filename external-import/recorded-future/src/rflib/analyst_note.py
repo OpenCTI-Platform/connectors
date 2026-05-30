@@ -17,7 +17,7 @@ class AnalystNote(threading.Thread):
         rf_topics,
         tlp,
         rf_person_to_TA,
-        rf_TA_to_intrusion_set,
+        ta_to_intrusion_set,
         risk_as_score,
         risk_threshold,
         analyst_notes_guess_relationships,
@@ -32,7 +32,7 @@ class AnalystNote(threading.Thread):
         self.rf_topics = rf_topics
         self.tlp = tlp
         self.rf_person_to_TA = rf_person_to_TA
-        self.rf_TA_to_intrusion_set = rf_TA_to_intrusion_set
+        self.ta_to_intrusion_set = ta_to_intrusion_set
         self.risk_as_score = risk_as_score
         self.risk_threshold = risk_threshold
         self.analyst_notes_guess_relationships = analyst_notes_guess_relationships
@@ -135,7 +135,7 @@ class AnalystNote(threading.Thread):
                     tas,
                     self.rfapi,
                     self.rf_person_to_TA,
-                    self.rf_TA_to_intrusion_set,
+                    self.ta_to_intrusion_set,
                     self.risk_as_score,
                     self.risk_threshold,
                     self.analyst_notes_guess_relationships,

@@ -105,30 +105,20 @@ class ScoutSearchConnectorClient:
         days = self.config.search_interval
         return self._request_data(endpoint, params={"query": query, "days": days})
 
-    def get_entity(self, observable_type: str, observable_value: str) -> dict:
+    def get_entity(self, pattern: str) -> dict:
         """
-        Fetch the STIX bundle for the given observable.
-        Supports: Text
+        Fetch the STIX bundle for the given pattern.
         """
         try:
             self.helper.connector_logger.info(
-                "[ScoutSearchConnector] Processing observable",
-                {"type": observable_type, "value": observable_value},
+                "[ScoutSearchConnector] Processing pattern",
+                {"pattern": pattern},
             )
-
-            if observable_type == "Text":
-                return self.search_query(observable_value)
-
-            # No else needed here
-            self.helper.connector_logger.warning(
-                "[ScoutSearchConnector] Unsupported observable type",
-                {"observable_type": observable_type, "value": observable_value},
-            )
-            return {}
+            return self.search_query(pattern)
 
         except Exception as e:
             self.helper.connector_logger.error(
                 "[ScoutSearchConnector] Error processing entity",
-                {"type": observable_type, "value": observable_value, "error": str(e)},
+                {"pattern": pattern, "error": str(e)},
             )
             return {}

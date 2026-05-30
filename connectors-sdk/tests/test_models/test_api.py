@@ -102,6 +102,7 @@ def test_public_models_are_present():
         "Software",
         "Text",
         "ThreatActorGroup",
+        "Tool",
         "TLPMarking",
         "URL",
         "UserAccount",

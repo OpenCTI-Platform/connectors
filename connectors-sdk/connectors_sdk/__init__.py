@@ -2,6 +2,14 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.connectors.external_import._work_manager import WorkManager
+from connectors_sdk.connectors.external_import.base_data_processor import (
+    BaseDataProcessor,
+)
+from connectors_sdk.connectors.external_import.external_import_connector import (
+    ExternalImportConnector,
+)
+from connectors_sdk.connectors.external_import.logger import ConnectorLogger
 from connectors_sdk.settings.annotated_types import (
     DatetimeFromIsoString,
     ListFromString,
@@ -23,6 +31,7 @@ from connectors_sdk.settings.exceptions import (
     ConfigError,
     ConfigValidationError,
 )
+from connectors_sdk.states.states import ExternalImportConnectorState
 
 __all__ = [
     # Base Settings
@@ -43,4 +52,11 @@ __all__ = [
     # Deprecations
     "Deprecate",
     "DeprecatedField",
+    # Connector States
+    "ExternalImportConnectorState",
+    # Connector base classes
+    "ExternalImportConnector",
+    "ConnectorLogger",
+    "BaseDataProcessor",
+    "WorkManager",
 ]

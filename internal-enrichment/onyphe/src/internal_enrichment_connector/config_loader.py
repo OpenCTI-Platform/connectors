@@ -115,3 +115,54 @@ class ConfigConnector:
             default=10,
             isNumber=True,
         )
+
+        self.category = get_config_variable(
+            "ONYPHE_CATEGORY",
+            ["onyphe", "category"],
+            self.load,
+            default="ctiscan",
+        )
+
+        self.indicator_max_results = get_config_variable(
+            "ONYPHE_INDICATOR_MAX_RESULTS",
+            ["onyphe", "indicator_max_results"],
+            self.load,
+            default=1000,
+            isNumber=True,
+        )
+
+        # CSV list of analytical pivot labels controlling which ONYPHE fingerprint
+        # fields are turned into Text observables during enrichment.
+        # An empty value means "use the default set" (sha256-preferred per family
+        # — see DEFAULT_PIVOT_LABELS in onyphe_references.py).
+        # Valid labels are the short names in ANALYTICAL_PIVOTS, e.g.:
+        #   hhhash-sha256, favicon-sha256, ssh-fingerprint-sha256, app-data-sha256 …
+        text_fingerprints_raw = get_config_variable(
+            "ONYPHE_TEXT_FINGERPRINTS",
+            ["onyphe", "text_fingerprints"],
+            self.load,
+            default="",
+        )
+        if text_fingerprints_raw:
+            self.text_fingerprints = [
+                t.strip() for t in text_fingerprints_raw.split(",") if t.strip()
+            ]
+        else:
+            self.text_fingerprints = []
+
+        # CSV list of OpenCTI observable types (and "Vulnerability") to create
+        # during enrichment.  An empty value means "all types" (default behaviour).
+        # Valid values: Domain-Name, Hostname, IPv4-Address, IPv6-Address,
+        #               Autonomous-System, X509-Certificate, Text, Vulnerability
+        enrichment_types_raw = get_config_variable(
+            "ONYPHE_ENRICHMENT_TYPES",
+            ["onyphe", "enrichment_types"],
+            self.load,
+            default="",
+        )
+        if enrichment_types_raw:
+            self.enrichment_types = [
+                t.strip() for t in enrichment_types_raw.split(",") if t.strip()
+            ]
+        else:
+            self.enrichment_types = []

@@ -1,0 +1,4 @@
+# Main dependencies needed to import the connector under test.
+-r ../src/requirements.txt
+pytest==9.0.3
+pytest-mock
