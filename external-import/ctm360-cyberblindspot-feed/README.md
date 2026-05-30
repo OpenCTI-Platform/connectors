@@ -10,7 +10,7 @@ findings on a configurable schedule and creates the corresponding STIX objects,
 relationships, and indicators in your OpenCTI knowledge graph.
 
 **Connector type**: EXTERNAL_IMPORT
-**OpenCTI compatibility**: >= 7.x (tested on 7.260401.0)
+**OpenCTI compatibility**: >= 7.x (tested on 7.260529.0)
 
 ---
 
@@ -83,9 +83,9 @@ unauthorized domain registrations targeting your brand.
 
 | Dependency       | Version                        |
 |------------------|--------------------------------|
-| OpenCTI Platform | >= 7.x (tested on 7.260401.0)  |
-| pycti            | == 7.260401.0                  |
-| connectors-sdk   | 7.260401.0 (from OpenCTI repo) |
+| OpenCTI Platform | >= 7.x (tested on 7.260529.0)  |
+| pycti            | == 7.260529.0                  |
+| connectors-sdk   | master (from OpenCTI repo)     |
 | stix2            | == 3.0.1                       |
 | requests         | == 2.32.3                      |
 | Python           | 3.12 (Alpine Docker image)     |
