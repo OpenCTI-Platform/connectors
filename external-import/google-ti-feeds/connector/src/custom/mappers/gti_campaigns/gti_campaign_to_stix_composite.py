@@ -17,7 +17,7 @@ from connector.src.custom.mappers.gti_campaigns.gti_campaign_to_stix_location im
 from connector.src.custom.models.gti.gti_campaign_model import GTICampaignData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )

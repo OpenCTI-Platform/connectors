@@ -1,0 +1,42 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      User-Agent:
+      - polyswarm_api/3.16.0 (x86_64-Linux-CPython-3.13.5)
+    method: GET
+    uri: https://api.polyswarm.network/v3/ioc/sha256/275a021bbfb6489e54d471899f7db9d1663fc695ec2fe2a2c4538aabf651fd0f?hide_known_good=True&community=default
+  response:
+    body:
+      string: '{"result":{"imphash":"","ips":["74.178.76.44","23.38.111.119","151.101.162.172","52.140.118.28","72.147.149.16","146.75.106.172"],"ttps":["T1071","T1003"],"urls":[]},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '181'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Mar 2026 20:09:23 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '174062536429'
+    status:
+      code: 200
+      message: OK
+version: 1

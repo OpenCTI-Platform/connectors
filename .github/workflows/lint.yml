@@ -2,6 +2,13 @@ name: Lint & Format
 
 on:
   push:
+    branches-ignore:
+      - master
+      - 'release/*'
+      - 'lts/*'
+    tags-ignore:
+      - '**'
+  workflow_call:
 
 env:
   UV_SYSTEM_PYTHON: 1

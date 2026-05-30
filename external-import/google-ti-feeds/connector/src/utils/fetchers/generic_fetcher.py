@@ -364,11 +364,52 @@ class GenericFetcher:
                 "Fetching entities", {"prefix": LOG_PREFIX, "entity_type": entity_type}
             )
 
+    async def fetch_bytes(
+        self,
+        additional_headers: dict[str, str] | None = None,
+        **endpoint_params: Any,
+    ) -> tuple[int, bytes]:
+        """Fetch raw binary content from the configured endpoint.
+
+        This method is intended for endpoints that return binary data (e.g. tar.bz2
+        archives) rather than JSON.
+
+        Args:
+            additional_headers: Extra headers to merge on top of the fetcher's base
+                headers for this specific request.
+            **endpoint_params: Parameters substituted into the endpoint URL template
+                and/or forwarded as query parameters.
+
+        Returns:
+            A ``(status_code, content)`` tuple where *content* is the raw response
+            body as bytes. 4xx/5xx responses are returned as-is so the caller can
+            decide how to handle them.
+
+        Raises:
+            Configured exception class: On infrastructure failures (network, timeout).
+
+        """
+        result = await self._make_api_call(
+            endpoint_params,
+            as_bytes=True,
+            additional_headers=additional_headers,
+        )
+        if not result:
+            self.logger.warning(
+                "Failed to fetch bytes content",
+                {"prefix": LOG_PREFIX, "entity_type": self.config.entity_type},
+            )
+            return (0, b"")  # Return a default value on failure
+        # _make_api_call returns (0, b"") on error when as_bytes=True
+        return result
+
     async def _make_api_call(
         self,
         endpoint_params: dict[str, Any],
         entity_id: str | None = None,
         use_raw_response: bool = False,
+        as_bytes: bool = False,
+        additional_headers: dict[str, str] | None = None,
     ) -> Any | None:
         """Make the actual API call with error handling.
 
@@ -376,9 +417,13 @@ class GenericFetcher:
             endpoint_params: Parameters for endpoint formatting and query parameters
             entity_id: Optional entity ID for context in errors
             use_raw_response: If True, return the raw response without model processing
+            as_bytes: If True, return ``(status_code, bytes)`` via
+                ``call_api(as_bytes=True)`` instead of parsing JSON.
+            additional_headers: Extra headers to merge on top of the fetcher's base
+                headers for this specific request.
 
         Returns:
-            Processed API response (via response_key) or raw response if use_raw_response=True
+            Processed API response, raw response, or ``(status, bytes)`` tuple.
 
         Raises:
             Configured exception class: If there's an error making the API call
@@ -404,9 +449,13 @@ class GenericFetcher:
             self.logger.warning(error_msg, {"prefix": LOG_PREFIX})
             raise self.config.create_exception(error_msg) from e
 
+        merged_headers = dict(self.headers)
+        if additional_headers:
+            merged_headers.update(additional_headers)
+
         try:
             self.logger.debug(
-                "Fetching entity from endpoint",
+                f"Fetching {'binary content' if as_bytes else 'entity'} from endpoint",
                 {
                     "prefix": LOG_PREFIX,
                     "entity_type": self.config.entity_type,
@@ -426,24 +475,27 @@ class GenericFetcher:
             response = await self.api_client.call_api(
                 url=endpoint,
                 method=self.config.method,
-                headers=self.headers,
+                headers=merged_headers,
                 params=query_params if query_params else None,
                 model=self.config.response_model if not use_raw_response else None,
-                response_key=self.config.response_key if not use_raw_response else None,
+                response_key=(
+                    self.config.response_key if not use_raw_response else None
+                ),
                 timeout=self.config.timeout,
+                as_bytes=as_bytes,
             )
 
-            if self.config.save_to_file:
+            if not as_bytes and self.config.save_to_file:
                 await self._save_response_to_file(response, endpoint, query_params)
 
             return response
 
         except ApiNetworkError as net_err:
             self._handle_api_error(net_err, endpoint, entity_id)
-            return None
+            return (0, b"") if as_bytes else None
         except Exception as e:
             self._handle_general_error(e, endpoint, entity_id)
-            return None
+            return (0, b"") if as_bytes else None
 
     async def _save_response_to_file(
         self,

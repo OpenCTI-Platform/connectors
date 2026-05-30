@@ -1,0 +1,42 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      User-Agent:
+      - polyswarm_api/3.16.0 (x86_64-Linux-CPython-3.13.5)
+    method: GET
+    uri: https://api.polyswarm.network/v3/ioc/sha256/83a37ac38e86dfcccbf405650ef0ef655e2a4671bf5d8b3c405af18fb37bcb89?hide_known_good=True&community=default
+  response:
+    body:
+      string: '{"result":{"imphash":"46d622f7b3a9583c2976072cd46d3373","ips":["74.178.76.44","211.43.203.28","23.62.100.184","175.126.111.143","23.38.111.119","20.72.205.209","74.178.76.128","85.234.74.60","72.145.35.144"],"ttps":["T1057","T1012","T1059","T1070","T1497","T1112","T1071","T1564","T1003","T1547.001","T1547","T1082","T1564.003","T1202"],"urls":["http://www.hellobetta.com/mall/flash/POPUP/1.php","http://www.aega.co.kr/mall/manual/parser/parser.php"]},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '467'
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Mar 2026 20:25:36 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '493472182752'
+    status:
+      code: 200
+      message: OK
+version: 1

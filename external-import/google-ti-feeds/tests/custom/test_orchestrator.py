@@ -80,6 +80,7 @@ class DummyConfig:
         self.import_malware_families = True
         self.import_vulnerabilities = True
         self.import_campaigns = True
+        self.import_indicators = False
         self.report_types = report_types
         self.report_origins = report_origins
         self.threat_actor_origins = "All"
@@ -109,7 +110,7 @@ def patch_perform_single_attempt(monkeypatch: Any) -> Any:
 
     response_data = _load_debug_responses(debug_folder)
 
-    async def _fake_perform_single_attempt(self) -> Any:  # type: ignore
+    async def _fake_perform_single_attempt(self, as_bytes: bool = False) -> Any:  # type: ignore
         """Perform a single attempt using the stubbed responses."""
         model_mapping = {
             "GTIMalwareFamilyData": "malware_families",

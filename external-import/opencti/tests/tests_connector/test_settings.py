@@ -166,14 +166,40 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_field)
 @pytest.mark.parametrize(
     "raw_value,expected",
     [
-        # Real YAML boolean (from ``config.yml``) is preserved.
-        pytest.param(False, False, id="real_bool_false"),
+        # Real YAML boolean (from ``config.yml``) is normalised to the
+        # empty-string sentinel that disables the dataset downstream.
+        pytest.param(False, "", id="real_bool_false"),
         # Env-var / Docker-compose string "false" (case-insensitive +
-        # surrounding whitespace) is coerced to ``False`` so the
-        # README's "set to ``false`` to disable" UX works end-to-end.
-        pytest.param("false", False, id="literal_string_false"),
-        pytest.param("FALSE", False, id="uppercase_string_false"),
-        pytest.param("  false  ", False, id="whitespace_string_false"),
+        # surrounding whitespace) is coerced to ``""`` so the README's
+        # "set to ``false`` to disable" UX works end-to-end no matter
+        # how the value arrives.
+        pytest.param("false", "", id="literal_string_false"),
+        pytest.param("FALSE", "", id="uppercase_string_false"),
+        pytest.param("  false  ", "", id="whitespace_string_false"),
+        # Explicit YAML null value: key present with no value
+        # (``sectors_file_url:`` or ``sectors_file_url: null``) - both
+        # surface as Python ``None`` after the YAML loader runs and
+        # route into the validator. Without normalisation Pydantic
+        # would reject ``None`` against the ``str`` field at
+        # validation time, which would block the connector from
+        # starting instead of honouring the README's "leave empty to
+        # disable" contract. (Omitting the key entirely is a separate
+        # path: Pydantic substitutes the field's default URL, which
+        # also goes through this validator because ``BaseConfigModel``
+        # sets ``validate_default=True`` - but the default is a real
+        # URL string, not a disable sentinel, so it just passes
+        # through unchanged and the dataset stays enabled.)
+        pytest.param(None, "", id="real_none"),
+        # The empty / whitespace-only strings are the operator-friendly
+        # disable sentinels (UI input, env-var trimmed to nothing). All
+        # of them collapse to ``""`` so the connector filters them out
+        # the same way as the explicit ``false`` form. Without this a
+        # value like ``"   "`` would survive validation, pass the
+        # truthy filter, and crash the connector with
+        # ``urllib.request.urlopen("   ")`` on the first scheduled run.
+        pytest.param("", "", id="empty_string"),
+        pytest.param("   ", "", id="whitespace_only_string"),
+        pytest.param("\t\n  ", "", id="tab_newline_whitespace_string"),
         # Any other string is preserved as-is (still a real URL).
         pytest.param(
             "https://example.invalid/x.json",
@@ -182,14 +208,27 @@ def test_settings_should_raise_when_invalid_input(settings_dict, expected_field)
         ),
     ],
 )
-def test_falsable_url_coercion(raw_value, expected):
-    """``"false"`` (any casing / surrounding whitespace) coerces to ``False``.
+def test_dataset_url_disable_sentinels_are_normalised(raw_value, expected):
+    """Disable sentinels normalise to ``""`` (the connector then filters truthy).
 
-    Pins the disable-via-config-false contract so a future refactor of the
-    ``BeforeValidator`` cannot silently re-introduce the bug where the typed
-    ``str`` field stored the literal string ``"false"`` and the downstream
-    ``url is not False`` filter never matched (leading the connector to
-    issue an HTTP GET for the URL ``"false"`` and log an error).
+    Pins the full disable-via-config contract so a future refactor of
+    the ``BeforeValidator`` cannot silently re-introduce one of the
+    historical bugs:
+
+    - typed ``str`` field stored the literal string ``"false"`` and the
+      downstream URL filter never matched, so the connector issued an
+      HTTP GET for the URL ``"false"`` and logged an error;
+    - an explicit YAML null value (key present with no value -
+      ``sectors_file_url:`` or ``sectors_file_url: null``) raised a
+      ``ConfigValidationError`` instead of honouring the README's
+      "leave empty to disable" UX;
+    - a whitespace-only string survived validation and crashed
+      ``urllib.request.urlopen`` on the first scheduled run.
+
+    Also pins that we expose a plain ``str`` field to the JSON schema
+    generator - the previous ``str | Literal[False]`` union produced an
+    ``anyOf`` schema that the OpenCTI Manager / XTM Composer UI tags as
+    "Unsupported" and refuses to render.
     """
 
     class FakeConnectorSettings(ConnectorSettings):
@@ -211,37 +250,26 @@ def test_falsable_url_coercion(raw_value, expected):
     "raw_value",
     [
         # Real YAML boolean ``True`` is meaningless for a URL field
-        # ("enable the URL" is not a thing — either set a URL or
-        # leave the default) and would otherwise survive a plain
-        # ``str | bool`` typing all the way to
-        # ``urllib.request.urlopen(True)`` which raises ``TypeError``
-        # at runtime. The ``str | Literal[False]`` typing on
-        # ``FalsableUrl`` rejects it at validation time so the
-        # operator sees a clear ``ConfigValidationError`` at startup
-        # instead of a runtime crash on the first scheduled run.
+        # ("enable the URL" is not a thing - either set a URL or leave
+        # the default) and would otherwise survive any laxer typing all
+        # the way to ``urllib.request.urlopen(True)`` which raises
+        # ``TypeError`` at runtime. With the plain ``str`` typing on
+        # ``DatasetUrl`` Pydantic rejects ``True`` at validation time
+        # (``True`` is not a string, and the ``BeforeValidator`` only
+        # normalises ``False``), so the operator sees a clear
+        # ``ConfigValidationError`` at startup instead of a runtime
+        # crash on the first scheduled run.
         pytest.param(True, id="real_bool_true"),
-        # The string ``"true"`` does NOT pass through the
-        # ``_coerce_false`` coercion (it only knows ``"false"``), so
-        # it lands in the union as a plain string. Pydantic will
-        # accept it as a ``str`` candidate of the union — but the
-        # next pass through the URL field at runtime would fail to
-        # open it. Documenting the current behaviour here makes the
-        # contract explicit: ``"true"`` is treated as a (broken) URL
-        # string, not as the boolean ``True``. If the disable-only
-        # contract is ever extended to enable / disable both ways,
-        # this case has to flip to ``pytest.raises``.
-        pytest.param("true", id="literal_string_true_treated_as_url_string"),
     ],
 )
-def test_falsable_url_rejects_true(raw_value):
+def test_dataset_url_rejects_true(raw_value):
     """Real ``True`` is rejected at validation time.
 
-    Pins the ``str | Literal[False]`` typing on ``FalsableUrl`` so a
-    future refactor that relaxes the union back to ``str | bool``
-    cannot silently let ``True`` flow into the URL list and crash
-    the connector on the first run with a confusing
-    ``TypeError: cannot read object of type bool`` from inside
-    ``urllib.request.urlopen``.
+    Pins the ``DatasetUrl`` contract so a future refactor that swaps
+    the field back to a permissive ``str | bool`` (or drops the
+    ``BeforeValidator``) cannot silently let ``True`` flow into the
+    URL list and crash the connector on the first run with a confusing
+    ``TypeError`` from inside ``urllib.request.urlopen``.
     """
     from connectors_sdk import ConfigValidationError as _CVE
 
@@ -256,12 +284,58 @@ def test_falsable_url_rejects_true(raw_value):
                 }
             )
 
-    if raw_value is True:
-        with pytest.raises(_CVE, match="Error validating configuration"):
-            FakeConnectorSettings()
-    else:
-        # ``"true"`` lands as a plain string (no coercion path). The
-        # field accepts any string in the union, so validation passes
-        # and the value round-trips verbatim.
-        settings = FakeConnectorSettings()
-        assert settings.config.sectors_file_url == "true"
+    with pytest.raises(_CVE, match="Error validating configuration"):
+        FakeConnectorSettings()
+
+
+def test_dataset_url_literal_string_true_is_kept_as_url_string():
+    """``"true"`` (string) lands verbatim - the disable contract is one-way.
+
+    The ``BeforeValidator`` only normalises ``False`` / ``"false"`` so
+    the operator-friendly disable sentinel is unambiguous. ``"true"``
+    is not a disable sentinel and there is no ``"enable"`` semantics
+    on a URL field - it is treated as a (broken) URL string and round
+    trips verbatim. Documenting it here makes the contract explicit;
+    if the disable-only contract is ever extended both ways, flip this
+    case to ``pytest.raises``.
+    """
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+                    "connector": {"id": "connector-id"},
+                    "config": {"sectors_file_url": "true"},
+                }
+            )
+
+    settings = FakeConnectorSettings()
+    assert settings.config.sectors_file_url == "true"
+
+
+def test_dataset_url_schema_is_plain_string():
+    """The dataset URL fields MUST expose ``{"type": "string"}`` in the JSON schema.
+
+    Pins the fix for the OpenCTI Manager / XTM Composer
+    "CONFIG_*_FILE_URL - Unsupported" regression: the previous
+    ``str | Literal[False]`` typing emitted an
+    ``anyOf: [{"type": "string"}, {"const": false, "type": "boolean"}]``
+    that those UIs reject. The contract we ship to the Manager
+    therefore MUST be a plain string type - the disable sentinel is
+    enforced at the Pydantic validator level, not the JSON Schema
+    level.
+    """
+    from connector.settings import OpenctiConfig
+
+    schema = OpenctiConfig.model_json_schema()
+    for field in ("sectors_file_url", "geography_file_url", "companies_file_url"):
+        field_schema = schema["properties"][field]
+        assert (
+            field_schema.get("type") == "string"
+        ), f"{field} must be a plain string in JSON Schema, got {field_schema!r}"
+        assert "anyOf" not in field_schema, (
+            f"{field} must NOT expose an anyOf schema (UI renders it as "
+            f"Unsupported), got {field_schema!r}"
+        )
