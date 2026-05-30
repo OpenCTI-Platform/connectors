@@ -135,7 +135,6 @@ class ConverterToStix:
             domain = log.get("domain", "")
             ip_val = log.get("ip", "")
             email = log.get("email", "")
-            normalize_timestamp(log.get("date"))
 
             ext_ref = self._ext_ref("CTM360-CyberBlindSpot", log_id)
 

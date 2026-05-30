@@ -252,8 +252,10 @@ time window.
 
 ### Rate limiting
 
-The API client respects `X-RateLimit-Remaining` and `Retry-After` response
-headers. On HTTP 429, the client backs off exponentially before retrying.
+On HTTP 429 (Too Many Requests), the client honours the `Retry-After` response
+header when present, and otherwise falls back to a linear backoff
+(`retry_delay × attempt`). Transient server errors (HTTP 500, 502, 503) are
+retried with the same linear backoff, up to 3 attempts before failing.
 
 ---
 
