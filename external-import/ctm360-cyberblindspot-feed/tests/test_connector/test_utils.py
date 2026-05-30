@@ -1,0 +1,96 @@
+"""Tests for the connector utility helpers."""
+
+import re
+import uuid
+from datetime import datetime, timezone
+
+from connector.utils import generate_deterministic_id, normalize_timestamp
+
+ISO_Z_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+
+
+class TestNormalizeTimestamp:
+    """normalize_timestamp must always return a STIX-compatible Z-suffixed string."""
+
+    def test_empty_value_returns_now(self):
+        result = normalize_timestamp(None)
+        assert ISO_Z_PATTERN.match(result)
+
+    def test_empty_string_returns_now(self):
+        result = normalize_timestamp("")
+        assert ISO_Z_PATTERN.match(result)
+
+    def test_epoch_seconds_int(self):
+        # 2021-01-01T00:00:00Z
+        assert normalize_timestamp(1609459200) == "2021-01-01T00:00:00Z"
+
+    def test_epoch_milliseconds_int(self):
+        # 1609459200000 ms -> same instant as 1609459200 s
+        assert normalize_timestamp(1609459200000) == "2021-01-01T00:00:00Z"
+
+    def test_epoch_float(self):
+        assert normalize_timestamp(1609459200.0) == "2021-01-01T00:00:00Z"
+
+    def test_non_string_non_number_returns_now(self):
+        result = normalize_timestamp(["not", "a", "timestamp"])
+        assert ISO_Z_PATTERN.match(result)
+
+    def test_numeric_string_epoch_seconds(self):
+        assert normalize_timestamp("1609459200") == "2021-01-01T00:00:00Z"
+
+    def test_numeric_string_epoch_milliseconds(self):
+        assert normalize_timestamp("1609459200000") == "2021-01-01T00:00:00Z"
+
+    def test_ddmmyyyy_12h_am_pm(self):
+        assert normalize_timestamp("04-03-2026 08:52:59 AM") == "2026-03-04T08:52:59Z"
+
+    def test_ddmmyyyy_24h(self):
+        assert normalize_timestamp("04-03-2026 18:29:05") == "2026-03-04T18:29:05Z"
+
+    def test_iso8601_with_z(self):
+        assert normalize_timestamp("2026-03-04T18:00:00Z") == "2026-03-04T18:00:00Z"
+
+    def test_iso8601_without_timezone(self):
+        assert normalize_timestamp("2026-03-04T18:00:00") == "2026-03-04T18:00:00Z"
+
+    def test_iso8601_with_offset(self):
+        # +02:00 offset normalised back to UTC representation of the same wall clock
+        result = normalize_timestamp("2026-03-04T18:00:00+02:00")
+        assert ISO_Z_PATTERN.match(result)
+
+    def test_invalid_string_returns_now(self):
+        result = normalize_timestamp("definitely not a date")
+        assert ISO_Z_PATTERN.match(result)
+
+    def test_now_fallback_is_utc(self):
+        before = datetime.now(timezone.utc).replace(microsecond=0)
+        result = normalize_timestamp(None)
+        parsed = datetime.strptime(result, "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc
+        )
+        assert abs((parsed - before).total_seconds()) < 5
+
+
+class TestGenerateDeterministicId:
+    """generate_deterministic_id must be stable and namespaced by STIX type."""
+
+    def test_format_and_prefix(self):
+        result = generate_deterministic_id("relationship", "a", "b")
+        assert result.startswith("relationship--")
+        uuid.UUID(result.split("--", 1)[1])  # must be a valid UUID
+
+    def test_is_deterministic(self):
+        first = generate_deterministic_id("relationship", "src", "dst")
+        second = generate_deterministic_id("relationship", "src", "dst")
+        assert first == second
+
+    def test_different_inputs_differ(self):
+        assert generate_deterministic_id(
+            "relationship", "a", "b"
+        ) != generate_deterministic_id("relationship", "a", "c")
+
+    def test_matches_uuid5_seed(self):
+        expected = uuid.uuid5(uuid.NAMESPACE_URL, "x-y")
+        assert (
+            generate_deterministic_id("indicator", "x", "y") == f"indicator--{expected}"
+        )
