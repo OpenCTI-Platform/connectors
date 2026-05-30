@@ -64,8 +64,8 @@ All objects are marked `TLP:WHITE` and attributed to the CTM360 CYNA identity.
 | Dependency          | Version                        |
 |---------------------|--------------------------------|
 | OpenCTI Platform    | >= 7.x                         |
-| pycti               | 7.260401.0                     |
-| connectors-sdk      | 7.260401.0 (from OpenCTI repo) |
+| pycti               | 7.260529.0                     |
+| connectors-sdk      | master (from OpenCTI repo)     |
 | stix2               | == 3.0.1                       |
 | requests            | == 2.32.3                      |
 | Python              | 3.12 (Alpine Docker image)     |
