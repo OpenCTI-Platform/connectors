@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime, timezone
 
 
@@ -49,6 +48,10 @@ def normalize_timestamp(ts) -> str:
         dt = datetime.fromisoformat(ts)
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            # Convert aware timestamps with a non-UTC offset to UTC before
+            # formatting, so e.g. "20:00+03:00" becomes "17:00Z" not "20:00Z".
+            dt = dt.astimezone(timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     except (ValueError, AttributeError):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

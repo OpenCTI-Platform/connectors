@@ -58,7 +58,7 @@ class CTM360HackerviewFeedConfig(BaseConfigModel):
     )
     status_poll_interval: timedelta = Field(
         default=timedelta(hours=1),
-        description="Interval in seconds between status polling cycles (default: 1h).",
+        description="ISO-8601 duration between status polling cycles (default: PT1H).",
     )
     enable_status_tracking: bool = Field(
         default=True,

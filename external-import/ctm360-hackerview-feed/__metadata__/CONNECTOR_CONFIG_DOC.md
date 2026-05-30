@@ -20,5 +20,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS | `boolean` |  | boolean | `true` | Enable importing domain assets. |
 | CTM360_HACKERVIEW_FEED_IMPORT_HOST_ASSETS | `boolean` |  | boolean | `true` | Enable importing hostname assets. |
 | CTM360_HACKERVIEW_FEED_IMPORT_IP_ASSETS | `boolean` |  | boolean | `true` | Enable importing IP address assets. |
-| CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | Interval in seconds between status polling cycles (default: 1h). |
+| CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"PT1H"` | ISO-8601 duration between status polling cycles (default: PT1H). |
 | CTM360_HACKERVIEW_FEED_ENABLE_STATUS_TRACKING | `boolean` |  | boolean | `true` | Enable background polling for issue status changes. |

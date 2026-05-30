@@ -1,6 +1,6 @@
 services:
   connector-ctm360-hackerview-feed:
-    image: opencti/connector-ctm360-hackerview-feed:latest
+    image: opencti/connector-ctm360-hackerview:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
@@ -11,7 +11,6 @@ services:
       - CONNECTOR_DURATION_PERIOD=PT24H
       - CTM360_HACKERVIEW_FEED_API_BASE_URL=https://hackerview.ctm360.com
       - CTM360_HACKERVIEW_FEED_API_KEY=${CTM360_HACKERVIEW_FEED_API_KEY}
-      - CTM360_HACKERVIEW_FEED_IMPORT_INTERVAL=86400
       - CTM360_HACKERVIEW_FEED_IMPORT_ISSUES=true
       - CTM360_HACKERVIEW_FEED_IMPORT_RESOLVED_ISSUES=true
       - CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS=true

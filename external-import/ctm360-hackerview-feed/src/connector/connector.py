@@ -1,6 +1,4 @@
-import sys
 import threading
-import time
 from datetime import datetime, timezone
 
 from connector.case_status_tracker import CaseStatusTracker
@@ -36,40 +34,12 @@ class CTM360HackerViewConnector:
         self._lock = threading.Lock()
         self._enable_tracking = config.ctm360_hackerview_feed.enable_status_tracking
         self._tracker = None
-        self._author_opencti_id = None
-
-    def _resolve_author_id(self) -> str:
-        """Create or retrieve the HackerView Identity in OpenCTI and return its internal ID."""
-        try:
-            result = self.helper.api.identity.create(
-                type="Organization",
-                name="HackerView",
-                description="CTM360 External Attack Surface Management platform",
-            )
-            return result.get("id", "") if result else ""
-        except Exception as e:
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] Failed to resolve author identity", {"error": str(e)}
-            )
-            return ""
+        # The HackerView author identity is created (with a deterministic id) by
+        # the converter and shipped in every bundle, so reuse that id rather than
+        # issuing an extra API call to create a second identity.
+        self._author_opencti_id = self.converter.author.id
 
     def run(self):
-        try:
-            self.client.ping()
-            self.helper.connector_logger.info("[CONNECTOR] API connection verified")
-        except Exception as exc:
-            self.helper.connector_logger.error(
-                "[CONNECTOR] API ping failed — stopping", {"error": str(exc)}
-            )
-            sys.exit(1)
-
-        self._author_opencti_id = self._resolve_author_id()
-        if self._author_opencti_id:
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Author identity resolved",
-                {"id": self._author_opencti_id},
-            )
-
         if self._enable_tracking:
             self._tracker = CaseStatusTracker(
                 helper=self.helper,
@@ -82,36 +52,47 @@ class CTM360HackerViewConnector:
             self._tracker.start()
 
         self.helper.connector_logger.info(
-            "[CONNECTOR] Starting import loop",
+            "[CONNECTOR] Starting connector schedule",
             {"interval_seconds": self._interval},
         )
 
-        self.helper.schedule_process(
-            message_callback=self._callback,
-            duration_period=self._interval,
-        )
+        try:
+            self.helper.schedule_process(
+                message_callback=self._callback,
+                duration_period=self._interval,
+            )
+        finally:
+            if self._tracker:
+                self._tracker.stop()
 
     def _callback(self):
+        # Ping inside the scheduled callback so connectivity is re-checked every
+        # run and a transient API outage does not kill the connector process.
+        try:
+            self.client.ping()
+            self.helper.connector_logger.info("[CONNECTOR] API connection verified")
+        except Exception as exc:
+            self.helper.connector_logger.error(
+                "[CONNECTOR] API ping failed — skipping this run",
+                {"error": str(exc)},
+            )
+            return
+
         try:
             self._import_data()
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Stopping")
+            raise
         except Exception as e:
             self.helper.connector_logger.error(
                 "[CONNECTOR] Import cycle failed", {"error": str(e)}
             )
 
     def _import_data(self):
-        state = self.helper.get_state() or {}
+        with self._lock:
+            state = self.helper.get_state() or {}
         last_run = state.get("last_run", None)
         now = datetime.now(timezone.utc)
-
-        friendly_name = (
-            f"CTM360-HackerView import @ {now.strftime('%Y-%m-%dT%H:%M:%SZ')}"
-        )
-        work_id = self.helper.api.work.initiate_work(
-            self.config.connector.id, friendly_name
-        )
 
         all_objects = []
         errors = []
@@ -202,17 +183,22 @@ class CTM360HackerViewConnector:
                     )
 
             if len(errors) == categories_attempted and categories_attempted > 0:
-                error_msg = (
+                raise ValueError(
                     f"All {categories_attempted} categories failed: {'; '.join(errors)}"
                 )
-                self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
-                raise ValueError(error_msg)
 
+            # Only create a Work when there is actually a bundle to ingest.
+            work_id = None
             if all_objects:
+                friendly_name = (
+                    f"CTM360-HackerView import @ {now.strftime('%Y-%m-%dT%H:%M:%SZ')}"
+                )
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
                 bundle = self.helper.stix2_create_bundle(all_objects)
                 self.helper.send_stix2_bundle(
                     bundle,
-                    update=True,
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
@@ -229,15 +215,20 @@ class CTM360HackerViewConnector:
                 msg += f" (partial: {len(errors)} categories failed)"
 
             self.helper.connector_logger.info("[CONNECTOR] Import done", {"msg": msg})
-            self.helper.api.work.to_processed(work_id, msg)
-            self.helper.set_state({"last_run": now.strftime("%Y-%m-%dT%H:%M:%SZ")})
+            if work_id:
+                self.helper.api.work.to_processed(work_id, msg)
+
+            # Merge into existing state under the shared lock so the status
+            # tracker's tracked_cases are not wiped and writes do not race.
+            with self._lock:
+                new_state = self.helper.get_state() or {}
+                new_state["last_run"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.helper.set_state(new_state)
 
         except Exception as e:
-            if "All" not in str(e):
-                self.helper.connector_logger.error(
-                    "[CONNECTOR] Import failed", {"error": str(e)}
-                )
-                self.helper.api.work.to_processed(work_id, str(e), in_error=True)
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Import failed", {"error": str(e)}
+            )
             raise
 
     def _create_case_incidents(self, case_metadata: list) -> int:

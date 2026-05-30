@@ -93,7 +93,7 @@
     },
     "CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL": {
       "default": "PT1H",
-      "description": "Interval in seconds between status polling cycles (default: 1h).",
+      "description": "ISO-8601 duration between status polling cycles (default: PT1H).",
       "format": "duration",
       "type": "string"
     },

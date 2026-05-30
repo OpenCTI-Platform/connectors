@@ -160,7 +160,6 @@ class ConverterToStix:
             environments = issue.get("environments", [])
             hackerview_link = issue.get("hackerview_link", "")
             first_seen = normalize_timestamp(issue.get("first_seen"))
-            normalize_timestamp(issue.get("last_seen"))
             last_updated = normalize_timestamp(issue.get("last_updated"))
 
             if not issue_id:
@@ -322,7 +321,9 @@ class ConverterToStix:
                     if not cwe_id_val:
                         continue
 
-                    attack_id = pycti.AttackPattern.generate_id(name=cwe_id_val)
+                    attack_id = pycti.AttackPattern.generate_id(
+                        name=cwe_id_val, x_mitre_id=cwe_id_val
+                    )
                     attack_pattern = stix2.AttackPattern(
                         id=attack_id,
                         name=cwe_id_val,
@@ -360,6 +361,8 @@ class ConverterToStix:
                     if not tech:
                         continue
                     tech_name = str(tech).strip()
+                    # stix2 derives a deterministic SCO id from `name`, so the
+                    # same technology reuses the same Software id across runs.
                     software = stix2.Software(name=tech_name)
                     objects.append(software)
 
@@ -372,6 +375,7 @@ class ConverterToStix:
                                     source_ref=system_id,
                                     target_ref=software.id,
                                 ),
+                                relationship_type="related-to",
                                 source_ref=system_id,
                                 target_ref=software.id,
                                 created_by_ref=self.author.id,

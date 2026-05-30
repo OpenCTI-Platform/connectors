@@ -76,7 +76,8 @@ class TestCTM360HvConfigDefaults:
 class TestCTM360HvConfigOverrides:
     """Test that default values can be overridden via env vars."""
 
-    def test_override_import_interval(self, monkeypatch):
+    def test_override_duration_period(self, monkeypatch):
+        """Scheduling is controlled by CONNECTOR_DURATION_PERIOD (no import_interval)."""
         monkeypatch.setenv("CONNECTOR_DURATION_PERIOD", "PT1H")
         settings = ConnectorSettings()
         assert settings.connector.duration_period == timedelta(hours=1)

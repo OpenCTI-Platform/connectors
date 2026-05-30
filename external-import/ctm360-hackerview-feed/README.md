@@ -32,11 +32,14 @@ Each category can be enabled or disabled independently via environment variables
 
 | STIX Type | Source | Notes |
 |---|---|---|
+| `identity` (organization) | All | The `HackerView` author identity attached to every object |
+| `identity` (system) | Issues, Domain / Host / IP Assets | One System per affected asset (host, domain, IP) — assets are modelled as System identities, not observables |
 | `vulnerability` | Issues / Resolved Issues | Created when a CVE identifier is present; score derived from severity |
 | `note` | Issues / Resolved Issues | Full issue detail (category, severity, impact, technologies, status) |
-| `domain-name` | Domain Assets, Host Assets, Issues | Observable for each unique domain or hostname |
-| `ipv4-address` / `ipv6-address` | IP Assets, Issues | Observable for each validated IP address |
-| `relationship` | Issues | `related-to` (vulnerability → observable), `resolves-to` (domain → IP) |
+| `attack-pattern` | Issues | One per CWE identifier on the issue |
+| `software` | Issues | One per detected technology |
+| `case-incident` | Issues | Created via the OpenCTI API for each issue, linked to the issue's vulnerability/system |
+| `relationship` | Issues | `has` (system → vulnerability), `related-to` (vulnerability → attack-pattern, system → software) |
 
 All objects are attributed to the `CTM360 HackerView` Identity and carry an
 `x_opencti_score` mapped from HackerView severity:
@@ -55,9 +58,9 @@ Resolved issues have their score reduced by 20 points.
 
 | Dependency       | Version                        |
 |------------------|--------------------------------|
-| OpenCTI Platform | >= 7.x (tested on 7.260401.0)  |
-| pycti            | == 7.260401.0                  |
-| connectors-sdk   | 7.260401.0 (from OpenCTI repo) |
+| OpenCTI Platform | >= 7.x (tested on 7.260529.0)  |
+| pycti            | == 7.260529.0                  |
+| connectors-sdk   | master (from OpenCTI repo)     |
 | stix2            | == 3.0.1                       |
 | requests         | == 2.32.3                      |
 | Python           | 3.12 (Alpine Docker image)     |
@@ -82,7 +85,7 @@ into the `docker-compose.yml` environment section. At minimum you must supply:
 - `OPENCTI_URL`
 - `OPENCTI_TOKEN`
 - `CONNECTOR_ID` (a unique UUID for this connector instance)
-- `CTM360_HV_API_KEY`
+- `CTM360_HACKERVIEW_FEED_API_KEY`
 
 ### 3. Add to your OpenCTI Docker Compose stack
 
@@ -91,37 +94,33 @@ standalone while pointing `OPENCTI_URL` at your running platform:
 
 ```yaml
 services:
-  connector-ctm360-hackerview:
-    build:
-      context: ./ctm360-hackerview-feed
-      dockerfile: Dockerfile
+  connector-ctm360-hackerview-feed:
+    image: opencti/connector-ctm360-hackerview:latest
     environment:
       - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_CTM360_HV_ID}
+      - CONNECTOR_ID=${CONNECTOR_CTM360_HACKERVIEW_FEED_ID}
       - CONNECTOR_NAME=CTM360-HackerView
       - CONNECTOR_SCOPE=CTM360-HackerView
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT24H
-      - CTM360_HV_API_BASE_URL=https://hackerview.ctm360.com
-      - CTM360_HV_API_KEY=${CTM360_HV_API_KEY}
-      - CTM360_HV_IMPORT_INTERVAL=86400
-      - CTM360_HV_IMPORT_ISSUES=true
-      - CTM360_HV_IMPORT_RESOLVED_ISSUES=true
-      - CTM360_HV_IMPORT_DOMAIN_ASSETS=true
-      - CTM360_HV_IMPORT_HOST_ASSETS=true
-      - CTM360_HV_IMPORT_IP_ASSETS=true
+      - CTM360_HACKERVIEW_FEED_API_BASE_URL=https://hackerview.ctm360.com
+      - CTM360_HACKERVIEW_FEED_API_KEY=${CTM360_HACKERVIEW_FEED_API_KEY}
+      - CTM360_HACKERVIEW_FEED_IMPORT_ISSUES=true
+      - CTM360_HACKERVIEW_FEED_IMPORT_RESOLVED_ISSUES=true
+      - CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS=true
+      - CTM360_HACKERVIEW_FEED_IMPORT_HOST_ASSETS=true
+      - CTM360_HACKERVIEW_FEED_IMPORT_IP_ASSETS=true
+      - CTM360_HACKERVIEW_FEED_ENABLE_STATUS_TRACKING=true
+      - CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL=PT1H
     restart: always
-    depends_on:
-      opencti:
-        condition: service_healthy
 ```
 
 ### 4. Start the connector
 
 ```bash
-docker compose up -d connector-ctm360-hackerview
+docker compose up -d connector-ctm360-hackerview-feed
 ```
 
 ## Environment Variables
@@ -148,37 +147,47 @@ docker compose up -d connector-ctm360-hackerview
 
 | Variable | Description | Default | Required |
 |---|---|---|---|
-| `CTM360_HV_API_BASE_URL` | HackerView API base URL | `https://hackerview.ctm360.com` | No |
-| `CTM360_HV_API_KEY` | API key for HackerView authentication | — | Yes |
-| `CTM360_HV_IMPORT_INTERVAL` | Interval in seconds between import cycles | `86400` (24 h) | No |
+| `CTM360_HACKERVIEW_FEED_API_BASE_URL` | HackerView API base URL | `https://hackerview.ctm360.com` | No |
+| `CTM360_HACKERVIEW_FEED_API_KEY` | API key for HackerView authentication | — | Yes |
+
+> The import cadence is controlled by the standard `CONNECTOR_DURATION_PERIOD` (there is no separate import-interval variable).
 
 ### Data Category Toggles
 
 | Variable | Description | Default | Required |
 |---|---|---|---|
-| `CTM360_HV_IMPORT_ISSUES` | Import active security issues | `true` | No |
-| `CTM360_HV_IMPORT_RESOLVED_ISSUES` | Import resolved (remediated) issues | `true` | No |
-| `CTM360_HV_IMPORT_DOMAIN_ASSETS` | Import genuine domain assets | `true` | No |
-| `CTM360_HV_IMPORT_HOST_ASSETS` | Import hostname assets | `true` | No |
-| `CTM360_HV_IMPORT_IP_ASSETS` | Import IP address assets | `true` | No |
+| `CTM360_HACKERVIEW_FEED_IMPORT_ISSUES` | Import active security issues | `true` | No |
+| `CTM360_HACKERVIEW_FEED_IMPORT_RESOLVED_ISSUES` | Import resolved (remediated) issues | `true` | No |
+| `CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS` | Import genuine domain assets | `true` | No |
+| `CTM360_HACKERVIEW_FEED_IMPORT_HOST_ASSETS` | Import hostname assets | `true` | No |
+| `CTM360_HACKERVIEW_FEED_IMPORT_IP_ASSETS` | Import IP address assets | `true` | No |
+
+### Status Tracking
+
+| Variable | Description | Default | Required |
+|---|---|---|---|
+| `CTM360_HACKERVIEW_FEED_ENABLE_STATUS_TRACKING` | Enable background polling of issue status changes | `true` | No |
+| `CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL` | ISO-8601 duration between status polling cycles | `PT1H` | No |
 
 ## Usage
 
 Once started, the connector will:
 
-1. Perform a startup connectivity check against the HackerView API (`/api/v2/issues`
-   with a far-future date filter). If this fails the connector exits immediately with
-   code 1.
-2. Run an initial full import of all enabled categories.
-3. Store the timestamp of each successful run in the OpenCTI connector state.
-4. On subsequent runs, pass the stored timestamp as a `first_seen` filter when
+1. Schedule itself via the platform-level `CONNECTOR_DURATION_PERIOD` (pycti's
+   `schedule_process`).
+2. At the start of each run, perform a connectivity check against the HackerView API
+   (`/api/v2/issues`). If the ping fails, the run is skipped and retried on the next
+   scheduled cycle (the connector process is not killed).
+3. Import all enabled categories and send a single STIX bundle.
+4. Store the timestamp of each successful run in the OpenCTI connector state.
+5. On subsequent runs, pass the stored timestamp as a `first_seen` filter when
    fetching issues so that only new findings are retrieved. Asset endpoints are
    fetched in full each cycle.
-5. Sleep for `CTM360_HV_IMPORT_INTERVAL` seconds before repeating.
 
 If some but not all categories fail during a cycle, the connector still sends the
 partial bundle and records which categories failed in the work message. If every
-enabled category fails, the work is marked as errored and an exception is raised.
+enabled category fails, an exception is raised and the cycle is retried on the next
+schedule.
 
 ### Monitoring
 
@@ -225,23 +234,24 @@ of STIX objects ingested and any partial failures.
 
 ## Troubleshooting
 
-### Connector exits immediately at startup
+### Connector logs "API ping failed — skipping this run"
 
-The startup API ping failed. Check:
-- `CTM360_HV_API_KEY` is set and valid.
-- `CTM360_HV_API_BASE_URL` is reachable from the connector container.
+The per-run API ping failed, so the cycle was skipped (it will retry on the next
+schedule). Check:
+- `CTM360_HACKERVIEW_FEED_API_KEY` is set and valid.
+- `CTM360_HACKERVIEW_FEED_API_BASE_URL` is reachable from the connector container.
 - No firewall or proxy is blocking outbound HTTPS to `hackerview.ctm360.com`.
 
 View logs with:
 ```bash
-docker compose logs connector-ctm360-hackerview
+docker compose logs connector-ctm360-hackerview-feed
 ```
 
 ### No objects appear in OpenCTI after a successful run
 
 - Verify that at least one category toggle is set to `true`.
 - Check that the HackerView account has data in the selected categories.
-- If `CTM360_HV_IMPORT_INTERVAL` is very large and this is not the first run, the
+- If `CONNECTOR_DURATION_PERIOD` is very large and this is not the first run, the
   incremental `first_seen` filter may return no new issues. Set the connector state
   to `null` in OpenCTI to force a full re-import.
 
@@ -261,4 +271,4 @@ Resolve the underlying API error and the next scheduled run will retry all categ
 
 The client respects the `Retry-After` response header and will automatically pause
 before retrying. If rate limiting is persistent, consider increasing
-`CTM360_HV_IMPORT_INTERVAL` to reduce API call frequency.
+`CONNECTOR_DURATION_PERIOD` to reduce API call frequency.
