@@ -22,7 +22,7 @@ class CTM360CynaConnector:
         self.client = CTM360CynaClient(
             helper=self.helper,
             base_url=str(config.ctm360_cyna.api_base_url),
-            api_key=config.ctm360_cyna.api_key,
+            api_key=config.ctm360_cyna.api_key.get_secret_value(),
         )
         self.converter = ConverterToStix(self.helper)
         self._interval = config.ctm360_cyna.import_interval

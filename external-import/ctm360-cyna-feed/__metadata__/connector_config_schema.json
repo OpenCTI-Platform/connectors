@@ -57,7 +57,9 @@
     },
     "CTM360_CYNA_API_KEY": {
       "description": "API key for CYNA authentication.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "CTM360_CYNA_IMPORT_INTERVAL": {
       "default": 86400,

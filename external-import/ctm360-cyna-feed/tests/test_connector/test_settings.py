@@ -2,7 +2,7 @@
 
 import pytest
 from connector.settings import ConnectorSettings
-from connectors_sdk.exceptions import ConfigValidationError
+from connectors_sdk import ConfigValidationError
 
 
 class TestConnectorSettingsInstantiation:
@@ -13,7 +13,7 @@ class TestConnectorSettingsInstantiation:
         settings = ConnectorSettings()
         assert settings.opencti.url is not None
         assert settings.connector.name == "CTM360-CYNA"
-        assert settings.ctm360_cyna.api_key == "test-api-key"
+        assert settings.ctm360_cyna.api_key.get_secret_value() == "test-api-key"
 
     def test_opencti_url(self):
         """OpenCTI URL should match the environment variable."""

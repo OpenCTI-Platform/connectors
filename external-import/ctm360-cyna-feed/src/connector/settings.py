@@ -3,7 +3,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -15,7 +15,7 @@ class CTM360CynaConfig(BaseConfigModel):
         default="https://cyna.ctm360.com",
         description="CYNA API base URL.",
     )
-    api_key: str = Field(description="API key for CYNA authentication.")
+    api_key: SecretStr = Field(description="API key for CYNA authentication.")
     import_interval: int = Field(
         default=86400,
         description="Interval in seconds between imports (default: 24h).",

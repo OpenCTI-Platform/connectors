@@ -1,13 +1,12 @@
 import uuid
 
 import stix2
-from connector.utils import (
-    extract_cves,
-    generate_deterministic_id,
-    normalize_timestamp,
-)
+from connector.utils import extract_cves, normalize_timestamp
 from pycti import (
+    Identity,
     OpenCTIConnectorHelper,
+    Report,
+    StixCoreRelationship,
     Vulnerability,
 )
 
@@ -18,7 +17,7 @@ class ConverterToStix:
     def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.author = stix2.Identity(
-            id="identity--a3e8e8c0-5b6a-4e2d-9c3f-1a2b3c4d5e6f",
+            id=Identity.generate_id(name="CTM360 CYNA", identity_class="organization"),
             name="CTM360 CYNA",
             identity_class="organization",
             description="CTM360 Cyber News & Alerts platform",
@@ -69,6 +68,12 @@ class ConverterToStix:
                 skipped_count += 1
                 continue
 
+        # Include the referenced TLP marking definition so the bundle is
+        # self-contained (every Report/Relationship references TLP_WHITE and
+        # cleanup_inconsistent_bundle would otherwise flag those references).
+        if len(objects) > 1:
+            objects.append(stix2.TLP_WHITE)
+
         self.helper.connector_logger.info(
             "[CONVERTER] Conversion complete",
             {
@@ -116,9 +121,9 @@ class ConverterToStix:
         # Build labels from content analysis
         labels = self._extract_labels(title, description)
 
-        # Create the Report
-        report_seed = f"cyna-report-{item_id}"
-        report_id = f"report--{uuid.uuid5(uuid.NAMESPACE_URL, report_seed)}"
+        # Create the Report (deterministic id via the pycti generator)
+        report_name = f"[CYNA] {title}"
+        report_id = Report.generate_id(name=report_name, published=published_ts)
 
         # Collect object_refs — will add vulnerability refs below
         object_refs = [self.author.id]
@@ -155,7 +160,7 @@ class ConverterToStix:
 
             # Create relationship: Report --related-to--> Vulnerability
             rel = stix2.Relationship(
-                id=generate_deterministic_id("relationship", report_id, vuln.id),
+                id=StixCoreRelationship.generate_id("related-to", report_id, vuln.id),
                 relationship_type="related-to",
                 source_ref=report_id,
                 target_ref=vuln.id,
@@ -166,7 +171,7 @@ class ConverterToStix:
 
         report = stix2.Report(
             id=report_id,
-            name=f"[CYNA] {title}",
+            name=report_name,
             description=description or f"CTM360 CYNA news: {title}",
             published=published_ts,
             created=published_ts,

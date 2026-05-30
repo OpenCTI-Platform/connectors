@@ -27,6 +27,3 @@ services:
       - /tmp
     mem_limit: 512m
     pids_limit: 100
-    depends_on:
-      opencti:
-        condition: service_healthy
