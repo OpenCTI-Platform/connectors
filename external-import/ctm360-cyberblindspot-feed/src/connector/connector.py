@@ -219,7 +219,12 @@ class CTM360CyberBlindSpotConnector:
 
             self.helper.connector_logger.info("[CONNECTOR] Import done", {"msg": msg})
             self.helper.api.work.to_processed(work_id, msg)
-            self.helper.set_state({"last_run": now.strftime("%Y-%m-%dT%H:%M:%SZ")})
+            # Preserve other state keys (e.g. tracked_cases written by the status
+            # tracker) and update under the shared lock to avoid races.
+            with self._lock:
+                state = self.helper.get_state() or {}
+                state["last_run"] = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+                self.helper.set_state(state)
 
         except Exception as e:
             if "All" not in str(e):

@@ -23,6 +23,4 @@ RUN chmod +x /entrypoint.sh
 
 USER connector
 
-HEALTHCHECK --interval=60s --timeout=10s --retries=3 CMD python -c "import os; os._exit(0)" || exit 1
-
 ENTRYPOINT ["/entrypoint.sh"]

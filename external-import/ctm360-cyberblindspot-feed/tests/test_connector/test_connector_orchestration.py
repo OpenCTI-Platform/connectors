@@ -115,6 +115,18 @@ class TestImportData:
         # Work was marked errored, state was NOT advanced.
         helper.set_state.assert_not_called()
 
+    def test_state_keys_are_preserved(self, helper):
+        connector = build_connector(helper)
+        self._wire_converter(connector, returns_objects=True)
+        helper.get_state.return_value = {
+            "last_run": "old",
+            "tracked_cases": {"T1": {"case_incident_id": "c1"}},
+        }
+        connector._import_data()
+        saved = helper.set_state.call_args[0][0]
+        assert saved["tracked_cases"] == {"T1": {"case_incident_id": "c1"}}
+        assert saved["last_run"] != "old"
+
     def test_disabled_categories_are_skipped(self, helper):
         connector = build_connector(
             helper,

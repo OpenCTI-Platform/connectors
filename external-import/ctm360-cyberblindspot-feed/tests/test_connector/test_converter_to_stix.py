@@ -48,6 +48,38 @@ class TestConverterHelpers:
         ref = converter._ext_ref("CTM360", "abc", url="https://example.com")
         assert ref.url == "https://example.com"
 
+    def test_escape_stix_value(self, converter):
+        assert converter._escape_stix_value("o'brien") == "o\\'brien"
+        assert converter._escape_stix_value("a\\b") == "a\\\\b"
+
+
+class TestStixPatternEscaping:
+    """Values embedded in STIX patterns must be escaped so stix2 accepts them."""
+
+    def test_breached_username_with_quote(self, converter):
+        objects = converter.breached_credentials_to_stix(
+            [{"id": "C9", "username": "o'brien"}]
+        )
+        indicators = [o for o in objects if o.type == "indicator"]
+        assert indicators  # stix2 would raise on an invalid pattern
+        assert "o\\'brien" in indicators[0].pattern
+
+    def test_breached_email_with_quote(self, converter):
+        objects = converter.breached_credentials_to_stix(
+            [{"id": "C10", "email": "o'brien@example.com"}]
+        )
+        indicators = [o for o in objects if o.type == "indicator"]
+        assert indicators
+        assert "o\\'brien@example.com" in indicators[0].pattern
+
+    def test_domain_with_quote(self, converter):
+        objects = converter.domain_protection_to_stix(
+            [{"id": "D9", "domain": "ev'il.example"}]
+        )
+        indicators = [o for o in objects if o.type == "indicator"]
+        assert indicators
+        assert "ev\\'il.example" in indicators[0].pattern
+
 
 class TestIncidentsToStix:
     def test_basic_incident_metadata(self, converter):

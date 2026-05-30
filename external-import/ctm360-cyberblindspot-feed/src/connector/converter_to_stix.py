@@ -4,14 +4,16 @@ import uuid
 
 import stix2
 from connector.utils import generate_deterministic_id, normalize_timestamp
-from pycti import OpenCTIConnectorHelper
+from pycti import Identity, OpenCTIConnectorHelper
 
 
 class ConverterToStix:
     def __init__(self, helper: OpenCTIConnectorHelper):
         self.helper = helper
         self.author = stix2.Identity(
-            id="identity--d7db1b72-e3a0-4af8-b80b-0f5cf79e3217",
+            id=Identity.generate_id(
+                name="CyberBlindSpot", identity_class="organization"
+            ),
             name="CyberBlindSpot",
             identity_class="organization",
             description="CTM360 Digital Risk Protection platform",
@@ -52,6 +54,11 @@ class ConverterToStix:
     def _slugify_label(self, text: str) -> str:
         """Convert a label to lowercase kebab-case."""
         return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+    @staticmethod
+    def _escape_stix_value(value: str) -> str:
+        """Escape backslashes and single quotes for safe STIX string literals."""
+        return str(value).replace("\\", "\\\\").replace("'", "\\'")
 
     def incidents_to_stix(self, incidents: list) -> list:
         self.incident_case_metadata = []
@@ -237,10 +244,13 @@ class ConverterToStix:
                     f"indicator--{uuid.uuid5(uuid.NAMESPACE_URL, indicator_seed)}"
                 )
                 if email and "@" in email:
-                    pattern = f"[email-addr:value = '{email}']"
+                    pattern = f"[email-addr:value = '{self._escape_stix_value(email)}']"
                     indicator_name = f"Breached credential: {email}"
                 else:
-                    pattern = f"[user-account:account_login = '{username}']"
+                    pattern = (
+                        "[user-account:account_login = "
+                        f"'{self._escape_stix_value(username)}']"
+                    )
                     indicator_name = f"Breached credential: {username}"
 
                 indicator = stix2.Indicator(
@@ -365,7 +375,7 @@ class ConverterToStix:
                         f"Domain protection finding: {finding_type}. "
                         f"Risk score: {risk_score}. Status: {status}."
                     ),
-                    pattern=f"[domain-name:value = '{domain}']",
+                    pattern=f"[domain-name:value = '{self._escape_stix_value(domain)}']",
                     pattern_type="stix",
                     valid_from=created,
                     created_by_ref=self.author.id,
