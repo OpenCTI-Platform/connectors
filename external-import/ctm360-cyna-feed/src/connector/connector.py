@@ -37,13 +37,13 @@ class CTM360CynaConnector:
             self.helper.connector_logger.info("[CONNECTOR] API connection verified")
         except Exception as exc:
             self.helper.connector_logger.error(
-                "[CONNECTOR] API ping failed — stopping", {"error": str(exc)}
+                "[CONNECTOR] API ping failed — stopping", meta={"error": str(exc)}
             )
             sys.exit(1)
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting import loop",
-            {
+            meta={
                 "interval_seconds": self._interval,
                 "page_size": self._page_size,
                 "max_pages": self._max_pages,
@@ -57,7 +57,7 @@ class CTM360CynaConnector:
                 break
             except Exception as e:
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Import cycle failed", {"error": str(e)}
+                    "[CONNECTOR] Import cycle failed", meta={"error": str(e)}
                 )
             time.sleep(self._interval)
 
@@ -76,11 +76,15 @@ class CTM360CynaConnector:
             self.helper.connect_id, friendly_name
         )
 
+        # Tracks whether the total-conversion-failure path already marked the work
+        # item as errored, so the except block does not report it a second time.
+        work_marked_in_error = False
+
         try:
             # Fetch all news items using cursor-based pagination
             self.helper.connector_logger.info(
                 "[CONNECTOR] Fetching news items",
-                {"last_run": last_run, "page_size": self._page_size},
+                meta={"last_run": last_run, "page_size": self._page_size},
             )
             all_items = self.client.get_all_news(
                 page_size=self._page_size,
@@ -89,7 +93,7 @@ class CTM360CynaConnector:
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Fetched items from API",
-                {"total_items": len(all_items)},
+                meta={"total_items": len(all_items)},
             )
 
             # Client-side time filtering — skip items older than last_run
@@ -102,7 +106,7 @@ class CTM360CynaConnector:
                         filtered_items.append(item)
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Filtered by last_run",
-                    {
+                    meta={
                         "before_filter": len(all_items),
                         "after_filter": len(filtered_items),
                         "last_run": last_run,
@@ -116,6 +120,7 @@ class CTM360CynaConnector:
             # Total failure guard — at least Identity + 1 real object expected
             if len(stix_objects) <= 1 and len(all_items) > 0:
                 error_msg = f"All {len(all_items)} news items failed STIX conversion"
+                work_marked_in_error = True
                 self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
                 raise ValueError(error_msg)
 
@@ -131,14 +136,16 @@ class CTM360CynaConnector:
             else:
                 msg = "No new data to import"
 
-            self.helper.connector_logger.info("[CONNECTOR] Import done", {"msg": msg})
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Import done", meta={"msg": msg}
+            )
             self.helper.api.work.to_processed(work_id, msg)
             self.helper.set_state({"last_run": now.strftime("%Y-%m-%dT%H:%M:%SZ")})
 
         except Exception as e:
-            if "All" not in str(e):
+            if not work_marked_in_error:
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Import failed", {"error": str(e)}
+                    "[CONNECTOR] Import failed", meta={"error": str(e)}
                 )
                 self.helper.api.work.to_processed(work_id, str(e), in_error=True)
             raise

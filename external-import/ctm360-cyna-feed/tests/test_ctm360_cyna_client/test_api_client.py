@@ -76,6 +76,14 @@ class TestRequest:
         )
         assert client._request("GET", "/x") == {"ok": 1}
 
+    def test_504_is_retried(self, client):
+        # 504 (and any 5xx) must be treated as a transient, retryable failure.
+        client.session.request = MagicMock(
+            side_effect=[FakeResponse(504), FakeResponse(200, {"ok": 1})]
+        )
+        assert client._request("GET", "/x") == {"ok": 1}
+        assert client.session.request.call_count == 2
+
     def test_non_retryable_http_error(self, client):
         client.session.request = MagicMock(return_value=FakeResponse(404))
         with pytest.raises(CTM360CynaAPIError) as exc:

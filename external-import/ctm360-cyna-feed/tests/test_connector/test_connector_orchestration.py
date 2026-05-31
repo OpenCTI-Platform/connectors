@@ -88,6 +88,20 @@ class TestImportData:
         assert helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
         helper.set_state.assert_not_called()
 
+    def test_unexpected_error_message_containing_all_still_marks_errored(self, helper):
+        # Error reporting must not depend on the exception message text: an
+        # unrelated error whose message contains "All" must still mark the work
+        # item errored (regression guard for the previous str(e) check).
+        connector = build_connector(helper)
+        helper.get_state.return_value = {}
+        connector.client.get_all_news.side_effect = RuntimeError(
+            "All connection attempts failed"
+        )
+        with pytest.raises(RuntimeError, match="All connection attempts failed"):
+            connector._import_data()
+        assert helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
+        helper.set_state.assert_not_called()
+
     def test_last_run_filtering(self, helper):
         connector = build_connector(helper)
         helper.get_state.return_value = {"last_run": "2026-01-15T00:00:00Z"}

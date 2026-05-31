@@ -83,6 +83,16 @@ class TestNewsToStix:
         assert "vulnerability" in types
         assert "relationship" in types
 
+    def test_vulnerability_is_tlp_marked(self, converter):
+        import stix2
+
+        objects = converter.news_to_stix(
+            [_news_item(title="Fix CVE-2024-12345", description="patch now")]
+        )
+        vuln = next(o for o in objects if o.type == "vulnerability")
+        # CVE entities must carry the same TLP marking as the referencing report.
+        assert vuln.object_marking_refs == [stix2.TLP_WHITE.id]
+
     def test_external_source_ref_added_for_http_link(self, converter):
         objects = converter.news_to_stix(
             [_news_item(link="https://news.example/article")]

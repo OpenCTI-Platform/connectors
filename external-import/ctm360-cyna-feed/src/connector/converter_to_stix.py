@@ -63,7 +63,7 @@ class ConverterToStix:
                 item_id = self._get_item_id(item)
                 self.helper.connector_logger.warning(
                     "[CONVERTER] Skipping malformed news item",
-                    {"item_id": item_id, "error": str(e)},
+                    meta={"item_id": item_id, "error": str(e)},
                 )
                 skipped_count += 1
                 continue
@@ -76,7 +76,7 @@ class ConverterToStix:
 
         self.helper.connector_logger.info(
             "[CONVERTER] Conversion complete",
-            {
+            meta={
                 "converted": converted_count,
                 "skipped": skipped_count,
                 "total_stix_objects": len(objects),
@@ -149,6 +149,7 @@ class ConverterToStix:
                             url=f"https://nvd.nist.gov/vuln/detail/{cve_id}",
                         )
                     ],
+                    object_marking_refs=[stix2.TLP_WHITE.id],
                     custom_properties={
                         "x_opencti_score": 50,
                     },

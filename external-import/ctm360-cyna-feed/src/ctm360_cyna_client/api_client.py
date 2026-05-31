@@ -15,7 +15,7 @@ class CTM360CynaAPIError(Exception):
 class CTM360CynaClient:
     """HTTP client for the CTM360 CYNA (Cyber News & Alerts) API.
 
-    Handles authentication, retry with exponential backoff, rate limiting,
+    Handles authentication, retry with linear backoff, rate limiting,
     and cursor-based pagination.
     """
 
@@ -58,7 +58,7 @@ class CTM360CynaClient:
             try:
                 self.helper.connector_logger.debug(
                     "[API] Request",
-                    {
+                    meta={
                         "method": method,
                         "url": url,
                         "params": params,
@@ -76,7 +76,7 @@ class CTM360CynaClient:
                     )
                     self.helper.connector_logger.warning(
                         "[API] Rate limited, waiting",
-                        {"retry_after": retry_after},
+                        meta={"retry_after": retry_after},
                     )
                     time.sleep(retry_after)
                     continue
@@ -86,11 +86,13 @@ class CTM360CynaClient:
 
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code if e.response is not None else 0
-                if status in (500, 502, 503) and attempt < self._max_retries - 1:
+                # Retry the whole 5xx range (e.g. 500/502/503/504) — these are
+                # transient server-side failures.
+                if status >= 500 and attempt < self._max_retries - 1:
                     wait_time = self._retry_delay * (attempt + 1)
                     self.helper.connector_logger.warning(
                         "[API] Server error, retrying",
-                        {"status": status, "wait": wait_time},
+                        meta={"status": status, "wait": wait_time},
                     )
                     time.sleep(wait_time)
                     continue
@@ -103,7 +105,7 @@ class CTM360CynaClient:
                     wait_time = self._retry_delay * (attempt + 1)
                     self.helper.connector_logger.warning(
                         "[API] Connection error, retrying",
-                        {"error": str(e), "wait": wait_time},
+                        meta={"error": str(e), "wait": wait_time},
                     )
                     time.sleep(wait_time)
                     continue
@@ -114,7 +116,7 @@ class CTM360CynaClient:
                     wait_time = self._retry_delay * (attempt + 1)
                     self.helper.connector_logger.warning(
                         "[API] Timeout, retrying",
-                        {"error": str(e), "wait": wait_time},
+                        meta={"error": str(e), "wait": wait_time},
                     )
                     time.sleep(wait_time)
                     continue
@@ -136,7 +138,7 @@ class CTM360CynaClient:
             )
         self.helper.connector_logger.debug(
             "[API] Ping successful",
-            {"total": response.get("total", {}).get("value", 0)},
+            meta={"total": response.get("total", {}).get("value", 0)},
         )
 
     def get_news_page(
@@ -191,7 +193,7 @@ class CTM360CynaClient:
             page_count += 1
             self.helper.connector_logger.info(
                 "[API] Fetching page",
-                {"page": page_count, "cursor": cursor is not None},
+                meta={"page": page_count, "cursor": cursor is not None},
             )
 
             response = self.get_news_page(size=page_size, search_after=cursor)
@@ -202,7 +204,7 @@ class CTM360CynaClient:
 
             self.helper.connector_logger.debug(
                 "[API] Page fetched",
-                {
+                meta={
                     "page": page_count,
                     "items_on_page": len(data),
                     "total_collected": len(all_items),
@@ -221,7 +223,7 @@ class CTM360CynaClient:
 
         self.helper.connector_logger.info(
             "[API] Pagination complete",
-            {"total_pages": page_count, "total_items": len(all_items)},
+            meta={"total_pages": page_count, "total_items": len(all_items)},
         )
 
         return all_items

@@ -38,9 +38,10 @@ category, and pushes STIX bundles into OpenCTI.
   subsequent import cycles only process news items published after the previous run.
 - **Startup connectivity check** — the connector pings the CYNA API at launch and
   exits with code 1 immediately if authentication fails or the API is unreachable.
-- **Retry with exponential backoff** — HTTP 429 (rate limit), 5xx server errors,
-  connection errors, and timeouts are all retried up to three times with escalating
-  delays.
+- **Retry with linear backoff** — HTTP 429 (rate limit), 5xx server errors,
+  connection errors, and timeouts are all retried up to three times with linearly
+  increasing delays (5s, 10s, 15s). HTTP 429 honours the `Retry-After` header when
+  present.
 - **Total failure guard** — raises an error and marks the work item as failed if all
   news items in a cycle fail STIX conversion rather than silently importing nothing.
 
