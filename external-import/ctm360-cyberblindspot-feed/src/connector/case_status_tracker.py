@@ -38,7 +38,7 @@ class CaseStatusTracker:
         self._thread.start()
         self.helper.connector_logger.info(
             "[STATUS-TRACKER] Background polling started",
-            {"poll_interval": self.poll_interval},
+            meta={"poll_interval": self.poll_interval},
         )
 
     def stop(self):
@@ -72,7 +72,7 @@ class CaseStatusTracker:
                 self._check_all_cases()
             except Exception as e:
                 self.helper.connector_logger.error(
-                    "[STATUS-TRACKER] Poll cycle error", {"error": str(e)}
+                    "[STATUS-TRACKER] Poll cycle error", meta={"error": str(e)}
                 )
             self._stop_event.wait(self.poll_interval)
 
@@ -86,7 +86,7 @@ class CaseStatusTracker:
 
         self.helper.connector_logger.info(
             "[STATUS-TRACKER] Checking tracked cases",
-            {"count": len(tracked)},
+            meta={"count": len(tracked)},
         )
 
         for ticket_id, info in tracked.items():
@@ -95,7 +95,7 @@ class CaseStatusTracker:
             except Exception as e:
                 self.helper.connector_logger.error(
                     "[STATUS-TRACKER] Failed to check case",
-                    {"ticket_id": ticket_id, "error": str(e)},
+                    meta={"ticket_id": ticket_id, "error": str(e)},
                 )
 
     def _check_single_case(self, ticket_id: str, info: dict):
@@ -111,7 +111,7 @@ class CaseStatusTracker:
 
         self.helper.connector_logger.info(
             "[STATUS-TRACKER] Status change detected",
-            {
+            meta={
                 "ticket_id": ticket_id,
                 "old_status": last_status,
                 "new_status": current_status,
@@ -154,10 +154,10 @@ class CaseStatusTracker:
             )
             self.helper.connector_logger.info(
                 "[STATUS-TRACKER] Updated case label",
-                {"case_id": case_incident_id, "label": new_label},
+                meta={"case_id": case_incident_id, "label": new_label},
             )
         except Exception as e:
             self.helper.connector_logger.error(
                 "[STATUS-TRACKER] Failed to update case label",
-                {"case_id": case_incident_id, "error": str(e)},
+                meta={"case_id": case_incident_id, "error": str(e)},
             )

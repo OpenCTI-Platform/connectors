@@ -43,7 +43,7 @@ class CTM360CyberBlindSpotConnector:
             return result.get("id", "") if result else ""
         except Exception as e:
             self.helper.connector_logger.warning(
-                "[CONNECTOR] Failed to resolve author identity", {"error": str(e)}
+                "[CONNECTOR] Failed to resolve author identity", meta={"error": str(e)}
             )
             return ""
 
@@ -53,7 +53,7 @@ class CTM360CyberBlindSpotConnector:
             self.helper.connector_logger.info("[CONNECTOR] API connection verified")
         except Exception as exc:
             self.helper.connector_logger.error(
-                "[CONNECTOR] API ping failed — stopping", {"error": str(exc)}
+                "[CONNECTOR] API ping failed — stopping", meta={"error": str(exc)}
             )
             sys.exit(1)
 
@@ -61,7 +61,7 @@ class CTM360CyberBlindSpotConnector:
         if self._author_opencti_id:
             self.helper.connector_logger.info(
                 "[CONNECTOR] Author identity resolved",
-                {"id": self._author_opencti_id},
+                meta={"id": self._author_opencti_id},
             )
 
         if self._enable_tracking:
@@ -75,7 +75,7 @@ class CTM360CyberBlindSpotConnector:
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting import loop",
-            {"interval_seconds": self._interval},
+            meta={"interval_seconds": self._interval},
         )
         while True:
             try:
@@ -85,7 +85,7 @@ class CTM360CyberBlindSpotConnector:
                 break
             except Exception as e:
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Import cycle failed", {"error": str(e)}
+                    "[CONNECTOR] Import cycle failed", meta={"error": str(e)}
                 )
             time.sleep(self._interval)
 
@@ -114,12 +114,12 @@ class CTM360CyberBlindSpotConnector:
                     all_objects.extend(objects)
                     self.helper.connector_logger.info(
                         "[CONNECTOR] Incidents processed",
-                        {"count": len(data), "stix_objects": len(objects)},
+                        meta={"count": len(data), "stix_objects": len(objects)},
                     )
                 except Exception as e:
                     errors.append(f"incidents: {e}")
                     self.helper.connector_logger.error(
-                        "[CONNECTOR] Incidents fetch failed", {"error": str(e)}
+                        "[CONNECTOR] Incidents fetch failed", meta={"error": str(e)}
                     )
 
             if self._import_malware_logs:
@@ -130,12 +130,12 @@ class CTM360CyberBlindSpotConnector:
                     all_objects.extend(objects)
                     self.helper.connector_logger.info(
                         "[CONNECTOR] Malware logs processed",
-                        {"count": len(data), "stix_objects": len(objects)},
+                        meta={"count": len(data), "stix_objects": len(objects)},
                     )
                 except Exception as e:
                     errors.append(f"malware_logs: {e}")
                     self.helper.connector_logger.error(
-                        "[CONNECTOR] Malware logs fetch failed", {"error": str(e)}
+                        "[CONNECTOR] Malware logs fetch failed", meta={"error": str(e)}
                     )
 
             if self._import_breached_creds:
@@ -146,13 +146,13 @@ class CTM360CyberBlindSpotConnector:
                     all_objects.extend(objects)
                     self.helper.connector_logger.info(
                         "[CONNECTOR] Breached credentials processed",
-                        {"count": len(data), "stix_objects": len(objects)},
+                        meta={"count": len(data), "stix_objects": len(objects)},
                     )
                 except Exception as e:
                     errors.append(f"breached_credentials: {e}")
                     self.helper.connector_logger.error(
                         "[CONNECTOR] Breached credentials fetch failed",
-                        {"error": str(e)},
+                        meta={"error": str(e)},
                     )
 
             if self._import_card_leaks:
@@ -163,12 +163,12 @@ class CTM360CyberBlindSpotConnector:
                     all_objects.extend(objects)
                     self.helper.connector_logger.info(
                         "[CONNECTOR] Card leaks processed",
-                        {"count": len(data), "stix_objects": len(objects)},
+                        meta={"count": len(data), "stix_objects": len(objects)},
                     )
                 except Exception as e:
                     errors.append(f"card_leaks: {e}")
                     self.helper.connector_logger.error(
-                        "[CONNECTOR] Card leaks fetch failed", {"error": str(e)}
+                        "[CONNECTOR] Card leaks fetch failed", meta={"error": str(e)}
                     )
 
             if self._import_domain_protection:
@@ -179,13 +179,13 @@ class CTM360CyberBlindSpotConnector:
                     all_objects.extend(objects)
                     self.helper.connector_logger.info(
                         "[CONNECTOR] Domain protection processed",
-                        {"count": len(data), "stix_objects": len(objects)},
+                        meta={"count": len(data), "stix_objects": len(objects)},
                     )
                 except Exception as e:
                     errors.append(f"domain_protection: {e}")
                     self.helper.connector_logger.error(
                         "[CONNECTOR] Domain protection fetch failed",
-                        {"error": str(e)},
+                        meta={"error": str(e)},
                     )
 
             if len(errors) == categories_attempted and categories_attempted > 0:
@@ -217,7 +217,9 @@ class CTM360CyberBlindSpotConnector:
             if errors:
                 msg += f" (partial: {len(errors)} categories failed)"
 
-            self.helper.connector_logger.info("[CONNECTOR] Import done", {"msg": msg})
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Import done", meta={"msg": msg}
+            )
             self.helper.api.work.to_processed(work_id, msg)
             # Preserve other state keys (e.g. tracked_cases written by the status
             # tracker) and update under the shared lock to avoid races.
@@ -229,7 +231,7 @@ class CTM360CyberBlindSpotConnector:
         except Exception as e:
             if "All" not in str(e):
                 self.helper.connector_logger.error(
-                    "[CONNECTOR] Import failed", {"error": str(e)}
+                    "[CONNECTOR] Import failed", meta={"error": str(e)}
                 )
                 self.helper.api.work.to_processed(work_id, str(e), in_error=True)
             raise
@@ -246,11 +248,11 @@ class CTM360CyberBlindSpotConnector:
             except Exception as e:
                 self.helper.connector_logger.error(
                     "[CONNECTOR] Failed to create CaseIncident",
-                    {"ticket_id": meta.get("ticket_id"), "error": str(e)},
+                    meta={"ticket_id": meta.get("ticket_id"), "error": str(e)},
                 )
         self.helper.connector_logger.info(
             "[CONNECTOR] CaseIncidents created",
-            {"created": created, "total": len(case_metadata)},
+            meta={"created": created, "total": len(case_metadata)},
         )
         return created
 
@@ -283,7 +285,7 @@ class CTM360CyberBlindSpotConnector:
         if case_id:
             self.helper.connector_logger.info(
                 "[CONNECTOR] CaseIncident created",
-                {"case_id": case_id, "ticket_id": ticket_id, "name": meta["name"]},
+                meta={"case_id": case_id, "ticket_id": ticket_id, "name": meta["name"]},
             )
             # Add labels individually
             for label in meta.get("labels", []):
@@ -294,15 +296,16 @@ class CTM360CyberBlindSpotConnector:
                 except Exception as e:
                     self.helper.connector_logger.warning(
                         "[CONNECTOR] Failed to add label",
-                        {"case_id": case_id, "label": label, "error": str(e)},
+                        meta={"case_id": case_id, "label": label, "error": str(e)},
                     )
-            # Register with status tracker
+            # Register with status tracker, seeding the last-known status from
+            # the incident metadata (matching the `status:<value>` label already
+            # applied) so the first poll cycle does not re-add an existing label.
             if self._tracker:
-                initial_status = "unknown"
                 self._tracker.register_case(
                     ticket_id=ticket_id,
                     case_incident_id=case_id,
-                    initial_status=initial_status,
+                    initial_status=meta.get("status", "unknown"),
                 )
             # Set response types
             resp_types = meta.get("response_types", [])
@@ -315,5 +318,5 @@ class CTM360CyberBlindSpotConnector:
                 except Exception as e:
                     self.helper.connector_logger.warning(
                         "[CONNECTOR] Failed to set response_types",
-                        {"case_id": case_id, "error": str(e)},
+                        meta={"case_id": case_id, "error": str(e)},
                     )

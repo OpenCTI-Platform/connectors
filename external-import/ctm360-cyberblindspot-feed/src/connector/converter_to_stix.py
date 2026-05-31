@@ -78,7 +78,7 @@ class ConverterToStix:
             if not inc_id:
                 self.helper.connector_logger.warning(
                     "[CONVERTER] Skipping incident with no id",
-                    {"subject": subject},
+                    meta={"subject": subject},
                 )
                 continue
 
@@ -129,6 +129,9 @@ class ConverterToStix:
                     "response_types": [inc_type] if inc_type else [],
                     "labels": case_labels,
                     "created": created,
+                    # Normalised current status, used to seed the status tracker
+                    # so the first poll cycle does not treat it as a change.
+                    "status": str(status).lower(),
                 }
             )
 

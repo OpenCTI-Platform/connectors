@@ -54,9 +54,21 @@ class TestNormalizeTimestamp:
         assert normalize_timestamp("2026-03-04T18:00:00") == "2026-03-04T18:00:00Z"
 
     def test_iso8601_with_offset(self):
-        # +02:00 offset normalised back to UTC representation of the same wall clock
-        result = normalize_timestamp("2026-03-04T18:00:00+02:00")
-        assert ISO_Z_PATTERN.match(result)
+        # +02:00 offset must be converted to UTC, not just stamped with "Z":
+        # 18:00+02:00 is 16:00Z.
+        assert (
+            normalize_timestamp("2026-03-04T18:00:00+02:00") == "2026-03-04T16:00:00Z"
+        )
+
+    def test_iso8601_with_negative_offset(self):
+        # -05:00 offset -> UTC is five hours ahead of the local wall clock.
+        assert (
+            normalize_timestamp("2026-03-04T18:00:00-05:00") == "2026-03-04T23:00:00Z"
+        )
+
+    def test_epoch_zero_is_unix_epoch(self):
+        # 0 is a valid epoch (1970-01-01T00:00:00Z), not a missing value.
+        assert normalize_timestamp(0) == "1970-01-01T00:00:00Z"
 
     def test_invalid_string_returns_now(self):
         result = normalize_timestamp("definitely not a date")

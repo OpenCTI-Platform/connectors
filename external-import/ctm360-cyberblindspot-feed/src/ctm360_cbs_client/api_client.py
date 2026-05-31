@@ -28,7 +28,7 @@ class CTM360CbsClient:
             try:
                 self.helper.connector_logger.debug(
                     "[API] Request",
-                    {"method": method, "url": url, "params": params},
+                    meta={"method": method, "url": url, "params": params},
                 )
                 response = self.session.request(method, url, params=params, timeout=60)
                 if response.status_code == 204:
@@ -41,7 +41,7 @@ class CTM360CbsClient:
                     )
                     self.helper.connector_logger.warning(
                         "[API] Rate limited, waiting",
-                        {"retry_after": retry_after},
+                        meta={"retry_after": retry_after},
                     )
                     time.sleep(retry_after)
                     continue
@@ -100,7 +100,7 @@ class CTM360CbsClient:
             total = data.get("count", 0)
             self.helper.connector_logger.debug(
                 "[API] Page fetched",
-                {"path": path, "page": page, "items": len(items), "total": total},
+                meta={"path": path, "page": page, "items": len(items), "total": total},
             )
 
             if len(items) < page_size or len(all_items) >= total:

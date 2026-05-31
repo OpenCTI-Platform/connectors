@@ -12,7 +12,9 @@ def normalize_timestamp(ts) -> str:
     - Epoch milliseconds (1772614383785)
     - Epoch seconds (1772614383)
     """
-    if not ts:
+    # Use an explicit None/empty-string check so a numeric 0 (a valid epoch,
+    # 1970-01-01T00:00:00Z) is handled by the epoch branch below.
+    if ts is None or ts == "":
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Handle epoch timestamps (int or float)
@@ -55,8 +57,13 @@ def normalize_timestamp(ts) -> str:
     try:
         ts = ts.replace("Z", "+00:00")
         dt = datetime.fromisoformat(ts)
+        # Treat naive timestamps as UTC, and convert offset-aware timestamps
+        # to UTC before formatting so the trailing "Z" is always accurate
+        # (e.g. 18:00+02:00 -> 16:00Z, not 18:00Z).
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     except (ValueError, AttributeError):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
