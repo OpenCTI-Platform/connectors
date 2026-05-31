@@ -21,6 +21,21 @@ class CTM360CbsClient:
         self._max_retries = 3
         self._retry_delay = 5
 
+    def _parse_retry_after(self, value, default: int) -> int:
+        """Parse a ``Retry-After`` header into a delay in seconds.
+
+        Per RFC 9110 the value may be a non-negative integer (seconds) or an
+        HTTP-date. A float-like string is also tolerated. Anything we cannot
+        interpret as a number of seconds falls back to the configured backoff
+        instead of raising and aborting the request loop.
+        """
+        if value is None:
+            return default
+        try:
+            return max(0, int(float(value)))
+        except (TypeError, ValueError):
+            return default
+
     def _request(self, method: str, path: str, params: dict = None) -> dict:
         """Make a single API request and return the raw JSON response dict."""
         url = f"{self.base_url}{path}"
@@ -34,10 +49,9 @@ class CTM360CbsClient:
                 if response.status_code == 204:
                     return {"incident_list": [], "count": 0}
                 if response.status_code == 429:
-                    retry_after = int(
-                        response.headers.get(
-                            "Retry-After", self._retry_delay * (attempt + 1)
-                        )
+                    retry_after = self._parse_retry_after(
+                        response.headers.get("Retry-After"),
+                        self._retry_delay * (attempt + 1),
                     )
                     self.helper.connector_logger.warning(
                         "[API] Rate limited, waiting",

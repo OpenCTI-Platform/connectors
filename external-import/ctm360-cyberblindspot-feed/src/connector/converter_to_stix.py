@@ -165,7 +165,10 @@ class ConverterToStix:
                     ipaddress.ip_address(ip_val)
                     ip_obs = stix2.IPv4Address(
                         value=ip_val,
-                        custom_properties={"x_opencti_score": 70},
+                        custom_properties={
+                            "x_opencti_score": 70,
+                            "x_opencti_created_by_ref": self.author.id,
+                        },
                     )
                     objects.append(ip_obs)
                     if malware_family and malware_family != "Unknown":
@@ -186,14 +189,20 @@ class ConverterToStix:
             if domain:
                 domain_obs = stix2.DomainName(
                     value=domain,
-                    custom_properties={"x_opencti_score": 60},
+                    custom_properties={
+                        "x_opencti_score": 60,
+                        "x_opencti_created_by_ref": self.author.id,
+                    },
                 )
                 objects.append(domain_obs)
 
             if email and "@" in email:
                 email_obs = stix2.EmailAddress(
                     value=email,
-                    custom_properties={"x_opencti_score": 60},
+                    custom_properties={
+                        "x_opencti_score": 60,
+                        "x_opencti_created_by_ref": self.author.id,
+                    },
                 )
                 objects.append(email_obs)
 
@@ -216,7 +225,10 @@ class ConverterToStix:
             if email and "@" in email:
                 email_obs = stix2.EmailAddress(
                     value=email,
-                    custom_properties={"x_opencti_score": 75},
+                    custom_properties={
+                        "x_opencti_score": 75,
+                        "x_opencti_created_by_ref": self.author.id,
+                    },
                 )
                 objects.append(email_obs)
                 object_refs.append(email_obs.id)
@@ -224,7 +236,10 @@ class ConverterToStix:
             if domain:
                 domain_obs = stix2.DomainName(
                     value=domain,
-                    custom_properties={"x_opencti_score": 50},
+                    custom_properties={
+                        "x_opencti_score": 50,
+                        "x_opencti_created_by_ref": self.author.id,
+                    },
                 )
                 objects.append(domain_obs)
                 object_refs.append(domain_obs.id)
@@ -234,7 +249,10 @@ class ConverterToStix:
                 user_id=user_display,
                 account_login=username or email,
                 display_name=user_display,
-                custom_properties={"x_opencti_score": 75},
+                custom_properties={
+                    "x_opencti_score": 75,
+                    "x_opencti_created_by_ref": self.author.id,
+                },
             )
             objects.append(user_account)
             object_refs.append(user_account.id)
@@ -367,7 +385,10 @@ class ConverterToStix:
             if domain:
                 domain_obs = stix2.DomainName(
                     value=domain,
-                    custom_properties={"x_opencti_score": score},
+                    custom_properties={
+                        "x_opencti_score": score,
+                        "x_opencti_created_by_ref": self.author.id,
+                    },
                 )
                 objects.append(domain_obs)
 
@@ -404,7 +425,10 @@ class ConverterToStix:
                     ipaddress.ip_address(ip_address)
                     ip_obs = stix2.IPv4Address(
                         value=ip_address,
-                        custom_properties={"x_opencti_score": score},
+                        custom_properties={
+                            "x_opencti_score": score,
+                            "x_opencti_created_by_ref": self.author.id,
+                        },
                     )
                     objects.append(ip_obs)
                     if domain:

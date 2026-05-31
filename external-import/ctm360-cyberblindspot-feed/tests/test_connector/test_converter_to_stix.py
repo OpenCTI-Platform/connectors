@@ -81,6 +81,60 @@ class TestStixPatternEscaping:
         assert "ev\\'il.example" in indicators[0].pattern
 
 
+class TestObservableAuthorAttribution:
+    """SCOs must carry x_opencti_created_by_ref so OpenCTI attributes them."""
+
+    def _observables(self, objects):
+        sco_types = {"ipv4-addr", "domain-name", "email-addr", "user-account"}
+        return [o for o in objects if o.type in sco_types]
+
+    def test_malware_log_observables_attributed(self, converter):
+        objects = converter.malware_logs_to_stix(
+            [
+                {
+                    "id": "M1",
+                    "malware_family": "RedLine",
+                    "ip": "1.2.3.4",
+                    "domain": "evil.example",
+                    "email": "victim@example.com",
+                }
+            ]
+        )
+        observables = self._observables(objects)
+        assert observables
+        for obs in observables:
+            assert obs.x_opencti_created_by_ref == converter.author.id
+
+    def test_breached_credential_observables_attributed(self, converter):
+        objects = converter.breached_credentials_to_stix(
+            [
+                {
+                    "id": "C1",
+                    "email": "jdoe@example.com",
+                    "username": "jdoe",
+                    "domain": "example.com",
+                }
+            ]
+        )
+        observables = self._observables(objects)
+        assert {o.type for o in observables} >= {
+            "email-addr",
+            "domain-name",
+            "user-account",
+        }
+        for obs in observables:
+            assert obs.x_opencti_created_by_ref == converter.author.id
+
+    def test_domain_protection_observables_attributed(self, converter):
+        objects = converter.domain_protection_to_stix(
+            [{"id": "D1", "domain": "bad.example", "ip_address": "8.8.8.8"}]
+        )
+        observables = self._observables(objects)
+        assert {o.type for o in observables} == {"domain-name", "ipv4-addr"}
+        for obs in observables:
+            assert obs.x_opencti_created_by_ref == converter.author.id
+
+
 class TestIncidentsToStix:
     def test_basic_incident_metadata(self, converter):
         incidents = [

@@ -253,7 +253,8 @@ time window.
 ### Rate limiting
 
 On HTTP 429 (Too Many Requests), the client honours the `Retry-After` response
-header when present, and otherwise falls back to a linear backoff
+header when it is present and expressed as a number of seconds; if the header is
+missing or non-numeric (e.g. an HTTP-date), it falls back to a linear backoff
 (`retry_delay × attempt`). Transient server errors (HTTP 500, 502, 503) are
 retried with the same linear backoff, up to 3 attempts before failing.
 

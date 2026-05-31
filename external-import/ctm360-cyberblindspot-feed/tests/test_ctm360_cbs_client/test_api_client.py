@@ -73,6 +73,19 @@ class TestRequest:
         )
         assert client._request("GET", "/x") == {"ok": True}
 
+    def test_429_http_date_retry_after_does_not_crash(self, client):
+        # An HTTP-date Retry-After is valid per RFC 9110 but not an int; the
+        # client must fall back to the computed backoff instead of raising.
+        client.session.request = MagicMock(
+            side_effect=[
+                FakeResponse(
+                    429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}
+                ),
+                FakeResponse(200, {"ok": True}),
+            ]
+        )
+        assert client._request("GET", "/x") == {"ok": True}
+
     def test_429_exhausts_retries(self, client):
         client.session.request = MagicMock(return_value=FakeResponse(429))
         with pytest.raises(CTM360CbsAPIError, match="Max retries exceeded"):
@@ -103,6 +116,25 @@ class TestRequest:
         )
         with pytest.raises(CTM360CbsAPIError, match="Request timeout"):
             client._request("GET", "/x")
+
+
+class TestParseRetryAfter:
+    def test_integer_seconds(self, client):
+        assert client._parse_retry_after("5", default=99) == 5
+
+    def test_float_seconds_truncated(self, client):
+        assert client._parse_retry_after("2.9", default=99) == 2
+
+    def test_missing_value_uses_default(self, client):
+        assert client._parse_retry_after(None, default=42) == 42
+
+    def test_http_date_uses_default(self, client):
+        assert (
+            client._parse_retry_after("Wed, 21 Oct 2026 07:28:00 GMT", default=7) == 7
+        )
+
+    def test_negative_clamped_to_zero(self, client):
+        assert client._parse_retry_after("-10", default=99) == 0
 
 
 class TestExtractItems:
