@@ -1,6 +1,7 @@
 {
   "title": "Splunk",
   "slug": "splunk",
+  "logo": "logo.png",
   "description": "The OpenCTI Splunk connector imports Splunk saved searches as SPL indicators, Splunk Enterprise Security assets and identities as identities and infrastructure, and Enterprise Security findings as incidents and sightings.",
   "short_description": "Import Splunk and Splunk Enterprise Security knowledge into OpenCTI.",
   "use_cases": [
