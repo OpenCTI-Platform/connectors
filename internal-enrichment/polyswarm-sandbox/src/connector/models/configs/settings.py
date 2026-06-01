@@ -107,8 +107,8 @@ class PolySwarmConfig(BaseConfigModel):
         description="Request and attach PDF report from PolySwarm.",
     )
     llm_report_enabled: bool = Field(
-        default=True,
-        description="Request AI-generated analysis summary.",
+        default=False,
+        description="Request AI-generated analysis summary (opt-in).",
     )
     llm_report_timeout: int = Field(
         default=120,
