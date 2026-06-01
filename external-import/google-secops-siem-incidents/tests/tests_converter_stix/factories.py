@@ -17,6 +17,7 @@ from google_secops_siem_incidents.models.rule_alert_response import (
     StringSeq,
     TimeWindow,
 )
+from polyfactory.factories.pydantic_factory import ModelFactory
 
 
 # ---------------------------------------------------------------------------

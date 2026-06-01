@@ -7,8 +7,8 @@ credentials and that the GoogleAuthHook refreshes / reuses them correctly.
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from google_secops_siem_incidents.client_api import GoogleSecOpsApiClient
+
 from tests.tests_chronicle_client.factories import make_config
 
 

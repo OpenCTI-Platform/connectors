@@ -6,16 +6,16 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 """
 
 from connectors_sdk.models import UserAccount
+
+# --- import under test (will cause ImportError → RED) ---
+from google_secops_siem_incidents.mappers.user_account_mapper import (  # noqa: E402
+    map_user_accounts,
+)
 from tests_converter_stix.factories import (
     make_author,
     make_multi_user_outcomes,
     make_tlp_marking,
     make_user_outcomes,
-)
-
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.user_account_mapper import (  # noqa: E402
-    map_user_accounts,
 )
 
 

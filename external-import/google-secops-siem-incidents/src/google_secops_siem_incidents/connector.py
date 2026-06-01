@@ -13,6 +13,7 @@ from google_secops_siem_incidents.converter_to_stix import ConverterToStix
 from google_secops_siem_incidents.settings import ConnectorSettings
 from google_secops_siem_incidents.state_manager import GoogleSecOpsSIEMState
 from google_secops_siem_incidents.utils.timestamps import parse_ts as _parse_ts
+from pycti import OpenCTIConnectorHelper
 
 _LOG_PREFIX = "[CONNECTOR]"
 

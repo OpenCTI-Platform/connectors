@@ -3,6 +3,7 @@
 import traceback
 
 from google_secops_siem_incidents import ConnectorSettings, GoogleSecOpsConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:

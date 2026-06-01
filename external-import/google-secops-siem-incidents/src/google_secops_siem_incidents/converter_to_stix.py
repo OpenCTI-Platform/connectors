@@ -2,8 +2,6 @@
 
 from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from connectors_sdk.models.enums import TLPLevel
-from pycti import OpenCTIConnectorHelper
-
 from google_secops_siem_incidents.mappers.attack_pattern_mapper import (
     map_attack_patterns,
 )
@@ -16,6 +14,7 @@ from google_secops_siem_incidents.mappers.relationship_mapper import map_relatio
 from google_secops_siem_incidents.mappers.url_mapper import map_urls
 from google_secops_siem_incidents.mappers.user_account_mapper import map_user_accounts
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
+from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:

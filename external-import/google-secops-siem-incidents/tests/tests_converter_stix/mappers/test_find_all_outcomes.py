@@ -5,9 +5,8 @@ Validates the multi-outcome lookup function that underlies all mapper changes.
 BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 """
 
-from tests_converter_stix.factories import OutcomeFactory
-
 from google_secops_siem_incidents.mappers._utils import find_all_outcomes
+from tests_converter_stix.factories import OutcomeFactory
 
 
 # ---------------------------------------------------------------------------
