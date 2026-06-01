@@ -70,6 +70,14 @@ class TestNormalizeTimestamp:
         # 0 is a valid epoch (1970-01-01T00:00:00Z), not a missing value.
         assert normalize_timestamp(0) == "1970-01-01T00:00:00Z"
 
+    def test_huge_epoch_int_falls_back_to_now(self):
+        # An out-of-range epoch must not raise OverflowError/OSError; it falls
+        # back to a valid "now" timestamp like the other branches.
+        assert ISO_Z_PATTERN.match(normalize_timestamp(10**20))
+
+    def test_huge_epoch_string_falls_back_to_now(self):
+        assert ISO_Z_PATTERN.match(normalize_timestamp(str(10**20)))
+
     def test_invalid_string_returns_now(self):
         result = normalize_timestamp("definitely not a date")
         assert ISO_Z_PATTERN.match(result)

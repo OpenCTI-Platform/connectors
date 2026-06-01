@@ -3,7 +3,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -15,9 +15,10 @@ class CTM360CbsConfig(BaseConfigModel):
         default="https://cbs.ctm360.com",
         description="CyberBlindSpot API base URL.",
     )
-    api_key: str = Field(description="API key for CyberBlindSpot authentication.")
+    api_key: SecretStr = Field(description="API key for CyberBlindSpot authentication.")
     import_interval: int = Field(
         default=86400,
+        gt=0,
         description="Interval in seconds between imports (default: 24h).",
     )
     import_incidents: bool = Field(
@@ -42,6 +43,7 @@ class CTM360CbsConfig(BaseConfigModel):
     )
     status_poll_interval: int = Field(
         default=3600,
+        gt=0,
         description="Interval in seconds between status polling cycles (default: 1h).",
     )
     enable_status_tracking: bool = Field(

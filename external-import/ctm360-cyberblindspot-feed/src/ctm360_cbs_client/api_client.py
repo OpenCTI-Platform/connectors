@@ -64,7 +64,9 @@ class CTM360CbsClient:
                 return data if isinstance(data, dict) else {"data": data}
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code if e.response is not None else 0
-                if status in (500, 502, 503) and attempt < self._max_retries - 1:
+                # Retry the whole 5xx range (e.g. 500/502/503/504) — these are
+                # transient server-side failures, matching the documented behaviour.
+                if status >= 500 and attempt < self._max_retries - 1:
                     time.sleep(self._retry_delay * (attempt + 1))
                     continue
                 raise CTM360CbsAPIError(
@@ -90,7 +92,7 @@ class CTM360CbsClient:
         - /leaks/* -> "data"
         - /domain_protection -> "data"
         """
-        if "incident_list" in data:
+        if "incident_list" in data and isinstance(data["incident_list"], list):
             return data["incident_list"]
         if "data" in data and isinstance(data["data"], list):
             return data["data"]
@@ -111,13 +113,19 @@ class CTM360CbsClient:
             items = self._extract_items(data)
             all_items.extend(items)
 
-            total = data.get("count", 0)
+            total = data.get("count")
             self.helper.connector_logger.debug(
                 "[API] Page fetched",
                 meta={"path": path, "page": page, "items": len(items), "total": total},
             )
 
-            if len(items) < page_size or len(all_items) >= total:
+            # Stop on a short page; only use the `count`/`total` stop condition
+            # when the API actually reports it (>0). Otherwise a missing/zero
+            # `count` (e.g. a bare-list response wrapped as {"data": [...]})
+            # would falsely stop pagination after the first full page.
+            if len(items) < page_size:
+                break
+            if total and len(all_items) >= total:
                 break
             page += 1
 

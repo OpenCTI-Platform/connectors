@@ -13,7 +13,7 @@ class TestConnectorSettingsInstantiation:
         settings = ConnectorSettings()
         assert settings.opencti.url is not None
         assert settings.connector.name == "CTM360-CyberBlindSpot"
-        assert settings.ctm360_cbs.api_key == "test-api-key"
+        assert settings.ctm360_cbs.api_key.get_secret_value() == "test-api-key"
 
     def test_opencti_url(self):
         """OpenCTI URL should match the environment variable."""
@@ -93,6 +93,31 @@ class TestCTM360CbsConfigOverrides:
             str(settings.ctm360_cbs.api_base_url).rstrip("/")
             == "https://custom.example.com"
         )
+
+
+class TestPositiveIntegerValidation:
+    """Non-positive interval values must be rejected at config load time."""
+
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_import_interval_must_be_positive(self, monkeypatch, value):
+        monkeypatch.setenv("CTM360_CBS_IMPORT_INTERVAL", value)
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+    @pytest.mark.parametrize("value", ["0", "-3600"])
+    def test_status_poll_interval_must_be_positive(self, monkeypatch, value):
+        monkeypatch.setenv("CTM360_CBS_STATUS_POLL_INTERVAL", value)
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+
+class TestSecretApiKey:
+    """The API key must be modelled as a secret (not exposed in repr/str)."""
+
+    def test_api_key_is_secret(self):
+        settings = ConnectorSettings()
+        assert "test-api-key" not in repr(settings.ctm360_cbs.api_key)
+        assert settings.ctm360_cbs.api_key.get_secret_value() == "test-api-key"
 
 
 class TestRequiredFieldValidation:

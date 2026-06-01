@@ -18,7 +18,7 @@ class CTM360CyberBlindSpotConnector:
         self.client = CTM360CbsClient(
             helper=self.helper,
             base_url=str(config.ctm360_cbs.api_base_url),
-            api_key=config.ctm360_cbs.api_key,
+            api_key=config.ctm360_cbs.api_key.get_secret_value(),
         )
         self.converter = ConverterToStix(self.helper)
         self._lock = threading.Lock()
@@ -104,6 +104,10 @@ class CTM360CyberBlindSpotConnector:
         all_objects = []
         errors = []
         categories_attempted = 0
+        # Tracks whether the total-failure path already marked the work item as
+        # errored, so the except block doesn't report it a second time (and so
+        # the decision no longer depends on the wording of the exception).
+        work_marked_in_error = False
 
         try:
             if self._import_incidents:
@@ -192,6 +196,7 @@ class CTM360CyberBlindSpotConnector:
                 error_msg = (
                     f"All {categories_attempted} categories failed: {'; '.join(errors)}"
                 )
+                work_marked_in_error = True
                 self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
                 raise ValueError(error_msg)
 
@@ -229,7 +234,7 @@ class CTM360CyberBlindSpotConnector:
                 self.helper.set_state(state)
 
         except Exception as e:
-            if "All" not in str(e):
+            if not work_marked_in_error:
                 self.helper.connector_logger.error(
                     "[CONNECTOR] Import failed", meta={"error": str(e)}
                 )

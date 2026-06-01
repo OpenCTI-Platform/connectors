@@ -288,8 +288,9 @@ retried with the same linear backoff, up to 3 attempts before failing.
 
 - Check the logs for HTTP errors against specific endpoints.
 - Verify your API key has access to all five data categories in CyberBlindSpot.
-- Partial imports are logged at `WARNING` level; full failures are logged at
-  `ERROR` level.
+- Per-category fetch failures (partial imports) are logged at `ERROR` level,
+  and the import-cycle summary notes how many categories failed; a full-cycle
+  failure (every category failed) is also logged at `ERROR` level.
 
 ### High memory usage
 

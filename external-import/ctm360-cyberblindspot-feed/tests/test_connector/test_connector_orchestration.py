@@ -5,12 +5,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.connector import CTM360CyberBlindSpotConnector
+from pydantic import SecretStr
 
 
 def make_config(**overrides):
     cbs = SimpleNamespace(
         api_base_url="https://cbs.example.com",
-        api_key="secret",
+        api_key=SecretStr("secret"),
         enable_status_tracking=False,
         import_interval=1,
         import_incidents=True,

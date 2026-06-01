@@ -97,6 +97,14 @@ class TestRequest:
         )
         assert client._request("GET", "/x") == {"ok": True}
 
+    def test_504_is_retried(self, client):
+        # 504 (and any 5xx) must be treated as a transient, retryable failure.
+        client.session.request = MagicMock(
+            side_effect=[FakeResponse(504), FakeResponse(200, {"ok": True})]
+        )
+        assert client._request("GET", "/x") == {"ok": True}
+        assert client.session.request.call_count == 2
+
     def test_non_retryable_http_error(self, client):
         client.session.request = MagicMock(return_value=FakeResponse(404))
         with pytest.raises(CTM360CbsAPIError) as exc:
@@ -147,6 +155,11 @@ class TestExtractItems:
     def test_data_not_a_list(self, client):
         assert client._extract_items({"data": "nope"}) == []
 
+    def test_incident_list_not_a_list(self, client):
+        # A non-list incident_list must not be returned (would break extend()).
+        assert client._extract_items({"incident_list": None}) == []
+        assert client._extract_items({"incident_list": {"x": 1}}) == []
+
     def test_empty(self, client):
         assert client._extract_items({}) == []
 
@@ -166,6 +179,17 @@ class TestPaginatedRequest:
         client._request = MagicMock(side_effect=[page1, page2])
         result = client._paginated_request("GET", "/api/v2/leaks/x", page_size=200)
         assert len(result) == 250
+        assert client._request.call_count == 2
+
+    def test_paginates_when_count_absent(self, client):
+        # Without a `count` field, pagination must continue on a full page and
+        # only stop on a short page (previously total defaulted to 0 and
+        # pagination wrongly stopped after the first page).
+        page1 = {"data": list(range(200))}
+        page2 = {"data": list(range(10))}
+        client._request = MagicMock(side_effect=[page1, page2])
+        result = client._paginated_request("GET", "/api/v2/leaks/x", page_size=200)
+        assert len(result) == 210
         assert client._request.call_count == 2
 
 
