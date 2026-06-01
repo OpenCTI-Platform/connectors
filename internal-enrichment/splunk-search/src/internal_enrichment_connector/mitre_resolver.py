@@ -135,7 +135,9 @@ class MITREResolver:
             resolved.add("workstation")
         if any(k in combined for k in ("ics", "scada", "control system")):
             resolved.add("control-system")
-        if any(k in combined for k in ("command and control", "command-and-control", "c2")):
+        if any(
+            k in combined for k in ("command and control", "command-and-control", "c2")
+        ):
             resolved.add("command-and-control")
         if "phishing" in combined:
             resolved.add("phishing")
@@ -147,7 +149,9 @@ class MITREResolver:
             resolved.add("botnet")
         if any(k in combined for k in ("anonym", "vpn", "tor", "proxy")):
             resolved.add("anonymization")
-        if any(k in combined for k in ("hosting malware", "malware hosting", "malware")):
+        if any(
+            k in combined for k in ("hosting malware", "malware hosting", "malware")
+        ):
             resolved.add("hosting-malware")
         if "target list" in combined:
             resolved.add("hosting-target-lists")

@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from .infrastructure import INFRASTRUCTURE_TYPE_NORMALIZATION
 from .mitre_resolver import INFRASTRUCTURE_TYPE_OV
+
+if TYPE_CHECKING:
+    from .cim_mitre_mapper import CIMToMITREMapper
+    from .mitre_resolver import MITREResolver
 
 VALID_ENTITY_TYPES = {"SecurityPlatform", "Infrastructure", "Software"}
 
@@ -105,11 +109,11 @@ class YAMLValidator:
                     )
                     continue
                 if raw not in INFRASTRUCTURE_TYPE_OV:
-                    errors.append(
-                        f"{sourcetype}: invalid infrastructure_type '{raw}'"
-                    )
+                    errors.append(f"{sourcetype}: invalid infrastructure_type '{raw}'")
 
-        return ValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings)
+        return ValidationResult(
+            valid=len(errors) == 0, errors=errors, warnings=warnings
+        )
 
     def _resolve_mitre_sources(self, entry: dict) -> list[str]:
         explicit = entry.get("mitre_data_sources") or []

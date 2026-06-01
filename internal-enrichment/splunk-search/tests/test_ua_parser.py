@@ -33,10 +33,7 @@ def test_parse_python_requests():
 
 def test_parse_bot():
     parser = UserAgentParser()
-    ua = (
-        "Mozilla/5.0 (compatible; Googlebot/2.1; "
-        "+http://www.google.com/bot.html)"
-    )
+    ua = "Mozilla/5.0 (compatible; Googlebot/2.1; " "+http://www.google.com/bot.html)"
 
     parsed = parser.parse(ua)
     assert parsed is not None

@@ -1,4 +1,4 @@
-from internal_enrichment_connector.cim_parser import CIMParser, CIM_TO_STIX_MAP
+from internal_enrichment_connector.cim_parser import CIM_TO_STIX_MAP, CIMParser
 
 
 def test_parse_ip_fields():
@@ -41,14 +41,12 @@ def test_dedup_across_rows():
 
 def test_all_cim_fields_mapped():
     parser = CIMParser()
-    row = {
-        key: "value"
-        for key in CIM_TO_STIX_MAP
-        if CIM_TO_STIX_MAP[key] is not None
-    }
+    row = {key: "value" for key in CIM_TO_STIX_MAP if CIM_TO_STIX_MAP[key] is not None}
 
     observables = parser.parse_row(row)
-    assert len(observables) == len([k for k, v in CIM_TO_STIX_MAP.items() if v is not None])
+    assert len(observables) == len(
+        [k for k, v in CIM_TO_STIX_MAP.items() if v is not None]
+    )
 
 
 def test_unknown_fields_ignored():

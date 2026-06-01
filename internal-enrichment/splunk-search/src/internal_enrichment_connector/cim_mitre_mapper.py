@@ -22,7 +22,9 @@ class CIMToMITREMapper:
             mapping_path: Optional path to cim_to_mitre.yaml.
                 Defaults to data/cim_to_mitre.yaml relative to this module.
         """
-        self._mapping_path = mapping_path or (Path(__file__).parent / "data" / "cim_to_mitre.yaml")
+        self._mapping_path = mapping_path or (
+            Path(__file__).parent / "data" / "cim_to_mitre.yaml"
+        )
         self._mapping: dict[str, list[str]] = {}
         self._unmapped_models: set[str] = set()
         self._available = False

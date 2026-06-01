@@ -6,7 +6,6 @@ from internal_enrichment_connector.connector import (
     SPLUNK_TEMPLATE_LABEL,
     SplunkSearchConnector,
 )
-from internal_enrichment_connector.splunk_result_parser import create_sighting
 
 
 def _helper(existing_indicators=None):
@@ -277,9 +276,7 @@ def test_enrich_stix_indicator_sightings_have_splunk_system_created_by_ref():
     connector = _connector(helper)
     # No sourcetype in result → vendor identity override not triggered → splunk system
     # identity flows through as created_by_ref (the original fallback behavior).
-    connector.splunk_client.run_search.return_value = [
-        {"src": "5.6.7.8"}
-    ]
+    connector.splunk_client.run_search.return_value = [{"src": "5.6.7.8"}]
     template = {
         "id": "indicator--00000000-0000-4000-8000-000000000011",
         "x_opencti_id": "template-opencti-id",
@@ -326,8 +323,6 @@ def test_merge_sightings_preserves_platform_where_sighted_refs():
 
     helper = _helper()
     connector = _connector(helper)
-
-    author = connector.author
     platform_id = Identity.generate_id("OISF Suricata", "securityplatform")
     splunk_system_id = Identity.generate_id("Splunk", "system")
 

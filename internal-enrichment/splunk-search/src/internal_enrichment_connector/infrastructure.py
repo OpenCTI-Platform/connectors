@@ -1,10 +1,14 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from pycti import Infrastructure as PyctiInfrastructure
 
 from .mitre_resolver import INFRASTRUCTURE_TYPE_OV
+
+if TYPE_CHECKING:
+    from .cim_mitre_mapper import CIMToMITREMapper
+    from .mitre_resolver import MITREResolver
 
 INFRASTRUCTURE_TYPE_NORMALIZATION = {
     "cloud-service": "unknown",
@@ -128,7 +132,9 @@ class InfrastructureBuilder:
                 asset = self._mitre_resolver.resolve_asset(str(asset_name))
                 if not asset:
                     continue
-                for infrastructure_type in self._mitre_resolver.get_infrastructure_types(asset):
+                for (
+                    infrastructure_type
+                ) in self._mitre_resolver.get_infrastructure_types(asset):
                     if (
                         infrastructure_type in INFRASTRUCTURE_TYPE_OV
                         and infrastructure_type not in resolved

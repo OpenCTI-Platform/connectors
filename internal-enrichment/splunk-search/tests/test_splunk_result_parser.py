@@ -8,7 +8,7 @@ from internal_enrichment_connector.splunk_result_parser import (
     parse_observables_and_incident,
 )
 from internal_enrichment_connector.utils.utils import detect_observable_type
-from pycti import CustomObservableHostname, CustomObservableUserAgent, Identity
+from pycti import CustomObservableUserAgent, Identity
 
 
 @pytest.fixture
@@ -323,8 +323,7 @@ def test_parse_dns_traffic(helper, author):
     assert len(observables) >= 3
     # Sightings are created for sightable observables only (Identity objects excluded)
     sightable = [
-        o for o in observables
-        if isinstance(o, (stix2.IPv4Address, stix2.DomainName))
+        o for o in observables if isinstance(o, (stix2.IPv4Address, stix2.DomainName))
     ]
     assert len(sightings) == len(sightable)
 
@@ -385,6 +384,7 @@ def test_sighting_attribution(helper, author):
     # where_sighted_refs uses the vendor identity (as splunk_identity_id fallback).
     # created_by_ref is overridden to the vendor Identity ID.
     from pycti import Identity as _Identity
+
     result = {"sourcetype": "test", "src": "192.168.1.1"}
     _, source_identity, sightings = parse_observables_and_incident(
         helper, result=result, author=author
@@ -416,6 +416,7 @@ def test_sighting_structure(helper, author):
         if sighting.get("x_opencti_sighting_of_ref") == ip_observable.id
     )
     from pycti import Identity as _Identity
+
     assert (
         ip_sighting.sighting_of_ref == "indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e"
     )
@@ -431,7 +432,9 @@ def test_sighting_structure(helper, author):
     unknown_vendor_id = _Identity.generate_id("Unknown", "organization")
     assert ip_sighting.where_sighted_refs == [unknown_vendor_id]
     # Vendor Identity ("Unknown" org) overrides created_by_ref when sourcetype is present
-    assert ip_sighting.created_by_ref == _Identity.generate_id("Unknown", "organization")
+    assert ip_sighting.created_by_ref == _Identity.generate_id(
+        "Unknown", "organization"
+    )
     assert "first_seen" in ip_sighting
     assert "last_seen" in ip_sighting
 

@@ -224,7 +224,9 @@ def test_already_valid_stix_type():
 
 
 def test_mapper_resolve_used_when_no_explicit_sources():
-    builder = InfrastructureBuilder(mitre_resolver=_FakeResolver(), cim_mapper=_FakeMapper())
+    builder = InfrastructureBuilder(
+        mitre_resolver=_FakeResolver(), cim_mapper=_FakeMapper()
+    )
     entry = {
         "vendor": "Cisco",
         "product": "ASA",

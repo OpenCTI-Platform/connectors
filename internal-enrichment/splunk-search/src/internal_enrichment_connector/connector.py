@@ -78,7 +78,9 @@ class SplunkSearchConnector:
     def _validate_sourcetype_map_startup(self) -> None:
         """Validate sourcetype_map.yaml at startup and report findings."""
         validator = YAMLValidator(self.mitre_resolver, cim_mapper=self.cim_mapper)
-        result = validator.validate({"sourcetype_map": self.sourcetype_resolver.get_mapping()})
+        result = validator.validate(
+            {"sourcetype_map": self.sourcetype_resolver.get_mapping()}
+        )
         for error in result.errors:
             self.helper.connector_logger.error(f"YAML validation: {error}")
         for warning in result.warnings:
@@ -101,8 +103,18 @@ class SplunkSearchConnector:
         for entry in mapping.values():
             if not isinstance(entry, dict) or entry.get("skip") is True:
                 continue
-            sources = self.cim_mapper.resolve(entry) if self.cim_mapper.is_available else (
-                sorted({str(name) for name in (entry.get("mitre_data_sources") or []) if str(name).strip()})
+            sources = (
+                self.cim_mapper.resolve(entry)
+                if self.cim_mapper.is_available
+                else (
+                    sorted(
+                        {
+                            str(name)
+                            for name in (entry.get("mitre_data_sources") or [])
+                            if str(name).strip()
+                        }
+                    )
+                )
             )
             if sources:
                 covered += 1

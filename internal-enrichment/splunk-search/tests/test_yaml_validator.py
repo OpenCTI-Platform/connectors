@@ -223,7 +223,10 @@ def test_normalizable_type_warns_not_errors():
 
     result = validator.validate(data)
     assert not any("endpoint-security" in e for e in result.errors)
-    assert any("normalizable infrastructure_type 'endpoint-security'" in w for w in result.warnings)
+    assert any(
+        "normalizable infrastructure_type 'endpoint-security'" in w
+        for w in result.warnings
+    )
 
 
 def test_unknown_type_errors():

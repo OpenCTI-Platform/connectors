@@ -2,8 +2,6 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
-
 from internal_enrichment_connector.mitre_resolver import MITREResolver
 
 

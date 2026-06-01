@@ -6,9 +6,8 @@ observables, handling various types of data including URLs, User-Agents, DNS que
 IP addresses, hostnames, user accounts, and files.
 """
 
-import json
 from datetime import datetime
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import pytz
 import stix2
@@ -104,14 +103,16 @@ def create_sighting(
     #   2. splunk_identity_id — Splunk System identity (identity_class="system")
     #   3. author.id       — last-resort fallback
     where_sighted_id = (
-        source_identity.id
-        if source_identity
-        else (splunk_identity_id or author.id)
+        source_identity.id if source_identity else (splunk_identity_id or author.id)
     )
     sighting_props = {
         "id": StixSightingRelationship.generate_id(
             observable_id,
-            source_identity.id if source_identity else (splunk_identity_id or author.id),
+            (
+                source_identity.id
+                if source_identity
+                else (splunk_identity_id or author.id)
+            ),
             first_seen_time,
             last_seen_time,
         ),
@@ -390,7 +391,9 @@ def parse_observables_and_incident(
     observable_type_override: Optional[str] = None,
     template_name: Optional[str] = None,
     splunk_identity_id: Optional[str] = None,
-) -> Tuple[List[stix2.base._Observable], Optional[stix2.Identity], List[stix2.Sighting]]:
+) -> Tuple[
+    List[stix2.base._Observable], Optional[stix2.Identity], List[stix2.Sighting]
+]:
     """
     Parse Splunk search results into STIX observables and incidents.
 
@@ -494,7 +497,6 @@ def parse_observables_and_incident(
 
     # Handle Sourcetype — resolve via mapping, create vendor + platform identities
     sourcetype_val = result.get("sourcetype")
-    vendor_product = result.get("vendor_product")
     mapping: Optional[dict] = None
     _effective_creator_id: Optional[str] = splunk_identity_id
     _is_unmapped: bool = False
@@ -523,15 +525,11 @@ def parse_observables_and_incident(
                 allow_custom=True,
                 created_by_ref=author.id,
                 x_opencti_created_by_ref=author.id,
-                **({
-                    "object_marking_refs": marking_refs
-                } if marking_refs else {}),
+                **({"object_marking_refs": marking_refs} if marking_refs else {}),
             )
             observables.append(vendor_identity)
             _effective_creator_id = vendor_identity.id
-            helper.connector_logger.debug(
-                f"[PARSER] Created vendor Identity: {vendor}"
-            )
+            helper.connector_logger.debug(f"[PARSER] Created vendor Identity: {vendor}")
         except Exception as e:
             helper.connector_logger.error(
                 f"[PARSER] Failed to create vendor Identity for '{vendor}': {e}"
@@ -547,7 +545,11 @@ def parse_observables_and_incident(
                         allow_custom=True,
                         created_by_ref=vendor_identity.id,
                         x_opencti_created_by_ref=vendor_identity.id,
-                        **({"object_marking_refs": marking_refs} if marking_refs else {}),
+                        **(
+                            {"object_marking_refs": marking_refs}
+                            if marking_refs
+                            else {}
+                        ),
                     )
                     observables.append(infrastructure_obj)
                     helper.connector_logger.debug(
@@ -584,9 +586,7 @@ def parse_observables_and_incident(
                     },
                     created_by_ref=vendor_identity.id,
                     x_opencti_created_by_ref=vendor_identity.id,
-                    **({
-                        "object_marking_refs": marking_refs
-                    } if marking_refs else {}),
+                    **({"object_marking_refs": marking_refs} if marking_refs else {}),
                 )
                 observables.append(platform_identity)
                 source_identity = platform_identity
@@ -868,8 +868,7 @@ def parse_observables_and_incident(
         description = (
             f"[UNMAPPED SOURCETYPE: {sourcetype_val}] "
             f"No platform mapping found for sourcetype '{sourcetype_val}'. "
-            f"Defaulting to Splunk as the observing platform.\n\n"
-            + description
+            f"Defaulting to Splunk as the observing platform.\n\n" + description
         )
 
     # Prefer standardized names if present; fall back to e_time/l_time; finally _time

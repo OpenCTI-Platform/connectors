@@ -28,8 +28,6 @@ class OpenCTIIndicatorFetcher:
         """
         Internal method to query OpenCTI API.
         """
-        splunk_label = self.opencti_client
-
         query_filters = {
             "mode": "and",
             "filters": [
@@ -65,7 +63,7 @@ class OpenCTIIndicatorFetcher:
         try:
             result = self.opencti_client.indicator.read(filters=query_filters)
             return result or []
-        except Exception as e:
+        except Exception:
             # Log error if needed
             return []
 

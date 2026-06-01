@@ -6,7 +6,7 @@ provides case-sensitive lookups for Splunk sourcetype → vendor/platform metada
 import logging
 from copy import deepcopy
 from importlib import resources
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import yaml
 
@@ -36,11 +36,11 @@ class SourcetypeResolver:
         try:
             ref = resources.files(_YAML_PACKAGE).joinpath(_YAML_RESOURCE)
             raw = yaml.safe_load(ref.read_text(encoding="utf-8"))
-            sourcetype_map = raw.get("sourcetype_map", {}) if isinstance(raw, dict) else {}
+            sourcetype_map = (
+                raw.get("sourcetype_map", {}) if isinstance(raw, dict) else {}
+            )
             self._map = {
-                k: v
-                for k, v in sourcetype_map.items()
-                if not str(k).startswith("_")
+                k: v for k, v in sourcetype_map.items() if not str(k).startswith("_")
             }
             logger.debug(
                 "[RESOLVER] Loaded %d sourcetype mappings from %s",

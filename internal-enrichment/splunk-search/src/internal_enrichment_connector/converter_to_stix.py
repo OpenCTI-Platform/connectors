@@ -1,9 +1,7 @@
 import ipaddress
 
 import stix2
-from pycti import Identity, StixCoreRelationship, StixSightingRelationship
-
-from .utils import is_domain_name
+from pycti import Identity, StixCoreRelationship
 
 
 class ConverterToStix:
@@ -97,12 +95,11 @@ class ConverterToStix:
         :param value: Value in string
         :return: A boolean
         """
-        is_valid_domain = true
+        is_valid_domain = True
 
         if is_valid_domain:
             return True
-        else:
-            return False
+        return False
 
     def create_obs(self, value: str, obs_id: str = None) -> dict:
         """
