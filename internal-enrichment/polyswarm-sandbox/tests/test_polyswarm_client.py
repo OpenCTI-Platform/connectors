@@ -345,14 +345,14 @@ class TestLLMReport:
         assert "sandbox_task_id" not in params
 
     def test_collect_llm_report_success(self, client):
-        task = MagicMock(state="SUCCEEDED", url="https://example.com/llm.txt")
+        # The report comes back inline on the task; no S3/HTTP download.
+        report = {"bottom_line": "Malicious."}
+        task = MagicMock(state="SUCCEEDED", report=report)
         client.api.llm_report_get = MagicMock(return_value=task)
-        client._session.get.return_value = MagicMock(
-            status_code=200, text="LLM analysis..."
-        )
 
         result = client.collect_llm_report("llm-task-1", timeout=5, poll_interval=0.01)
-        assert result == "LLM analysis..."
+        assert result == report
+        client._session.get.assert_not_called()
 
     def test_collect_llm_report_empty_id_returns_none(self, client):
         assert client.collect_llm_report("") is None

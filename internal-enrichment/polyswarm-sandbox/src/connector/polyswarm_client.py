@@ -627,8 +627,8 @@ class PolySwarmClient:
 
     def collect_llm_report(
         self, llm_task_id: str, timeout: int = 120, poll_interval: int = 5
-    ) -> str | None:
-        """Poll an existing LLM report task until complete, then download the result.
+    ) -> dict | str | None:
+        """Poll an existing LLM report task until complete, then return the result.
 
         Separated from ``create_llm_report`` so callers can fire creation early
         (as soon as scan/sandbox succeeds) and defer polling until other work finishes.
@@ -664,18 +664,16 @@ class PolySwarmClient:
                 )
                 return None
 
-            if report_task.state == "SUCCEEDED" and report_task.url:
-                # Download via the retry session rather than the SDK —
-                # the URL is a pre-signed S3 link, not an API endpoint.
-                response = self._session.get(report_task.url, timeout=60)
-                if response.status_code == 200:
-                    report_text = response.text
+            if report_task.state == "SUCCEEDED":
+                # polyswarm-api (>= 3.21) returns the report inline on the task.
+                report = getattr(report_task, "report", None)
+                if report:
                     self.helper.log_info(
-                        f"[POLYSWARM] LLM report {llm_task_id} downloaded ({len(report_text)} chars)"
+                        f"[POLYSWARM] LLM report {llm_task_id} retrieved"
                     )
-                    return report_text
+                    return report
                 self.helper.log_warning(
-                    f"[POLYSWARM] LLM report download failed: HTTP {response.status_code}"
+                    f"[POLYSWARM] LLM report {llm_task_id} succeeded but no report content"
                 )
                 return None
 
