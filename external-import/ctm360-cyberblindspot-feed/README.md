@@ -113,10 +113,10 @@ Create a `.env` file in the connector directory with the required secrets:
 ```env
 # OpenCTI connection
 OPENCTI_URL=http://opencti:8080
-OPENCTI_ADMIN_TOKEN=your-opencti-admin-token
+OPENCTI_TOKEN=your-opencti-admin-token
 
 # Connector identity (generate a random UUID)
-CONNECTOR_CTM360_CBS_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+CONNECTOR_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
 # CTM360 CyberBlindSpot credentials
 CTM360_CBS_API_KEY=your-cyberblindspot-api-key
@@ -128,9 +128,10 @@ Copy the service definition from `docker-compose.yml` into your existing
 OpenCTI `docker-compose.yml`, or run the connector standalone alongside
 a running OpenCTI instance.
 
-The connector depends on the `opencti` service being healthy. Ensure that
-service is defined and health-checked in your compose file before adding
-this connector.
+The sample service does not declare a `depends_on` condition so it stays
+portable when OpenCTI runs elsewhere (a separate stack or an external host).
+If you add it to the same Compose file as OpenCTI, start the connector after
+the platform is up and reachable.
 
 ### 4. Start the connector
 
@@ -172,6 +173,8 @@ docker compose up -d connector-ctm360-cyberblindspot
 | `CTM360_CBS_IMPORT_BREACHED_CREDENTIALS` | Enable importing breached credentials | `true` | No |
 | `CTM360_CBS_IMPORT_CARD_LEAKS` | Enable importing card leaks | `true` | No |
 | `CTM360_CBS_IMPORT_DOMAIN_PROTECTION` | Enable importing domain protection findings | `true` | No |
+| `CTM360_CBS_ENABLE_STATUS_TRACKING` | Enable background polling for incident status changes | `true` | No |
+| `CTM360_CBS_STATUS_POLL_INTERVAL` | Interval in seconds between status polling cycles | `3600` (1h) | No |
 
 ---
 
@@ -255,8 +258,9 @@ time window.
 On HTTP 429 (Too Many Requests), the client honours the `Retry-After` response
 header when it is present and expressed as a number of seconds; if the header is
 missing or non-numeric (e.g. an HTTP-date), it falls back to a linear backoff
-(`retry_delay × attempt`). Transient server errors (HTTP 500, 502, 503) are
-retried with the same linear backoff, up to 3 attempts before failing.
+(`retry_delay × attempt`). Transient server errors (any HTTP 5xx, e.g. 500,
+502, 503, 504) are retried with the same linear backoff, up to 3 attempts
+before failing.
 
 ---
 

@@ -19,3 +19,5 @@ ctm360_cbs:
   import_breached_credentials: true
   import_card_leaks: true
   import_domain_protection: true
+  enable_status_tracking: true
+  status_poll_interval: 3600

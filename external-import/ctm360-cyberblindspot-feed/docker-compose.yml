@@ -5,8 +5,8 @@ services:
       dockerfile: Dockerfile
     environment:
       - OPENCTI_URL=http://opencti:8080
-      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_CTM360_CBS_ID}
+      - OPENCTI_TOKEN=${OPENCTI_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_NAME=CTM360-CyberBlindSpot
       - CONNECTOR_SCOPE=CTM360-CyberBlindSpot
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
@@ -32,6 +32,3 @@ services:
       - /tmp
     mem_limit: 512m
     pids_limit: 100
-    depends_on:
-      opencti:
-        condition: service_healthy

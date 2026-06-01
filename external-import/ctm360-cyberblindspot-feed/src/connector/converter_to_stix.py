@@ -60,6 +60,18 @@ class ConverterToStix:
         """Escape backslashes and single quotes for safe STIX string literals."""
         return str(value).replace("\\", "\\\\").replace("'", "\\'")
 
+    @staticmethod
+    def _stable_fallback_id(prefix: str, *fields) -> str:
+        """Build a deterministic identifier from stable content fields.
+
+        Used when a CBS record has no ``id`` so repeated imports of the same
+        record reuse the same external reference / STIX seed instead of minting
+        a fresh ``uuid4`` (and therefore duplicate Notes/Indicators) on every
+        run. Falls back to the prefix alone when no content field is present.
+        """
+        seed = "|".join(str(f) for f in fields if f)
+        return f"cbs-{prefix}-{uuid.uuid5(uuid.NAMESPACE_URL, seed or prefix)}"
+
     def incidents_to_stix(self, incidents: list) -> list:
         self.incident_case_metadata = []
         objects = [self.author]
@@ -140,11 +152,15 @@ class ConverterToStix:
     def malware_logs_to_stix(self, logs: list) -> list:
         objects = [self.author]
         for log in logs:
-            log_id = log.get("id", str(uuid.uuid4()))
             malware_family = log.get("malware_family", "Unknown")
             domain = log.get("domain", "")
             ip_val = log.get("ip", "")
             email = log.get("email", "")
+            # Derive a deterministic id from stable content when the API omits
+            # one, so re-imports don't churn the external reference each run.
+            log_id = log.get("id") or self._stable_fallback_id(
+                "malware", malware_family, domain, ip_val, email
+            )
 
             ext_ref = self._ext_ref("CTM360-CyberBlindSpot", log_id)
 
@@ -211,12 +227,16 @@ class ConverterToStix:
     def breached_credentials_to_stix(self, creds: list) -> list:
         objects = [self.author]
         for cred in creds:
-            cred_id = cred.get("id", str(uuid.uuid4()))
             email = cred.get("email", "")
             username = cred.get("username", "")
             domain = cred.get("domain", "")
             breach_source = cred.get("breach_source", "Unknown")
             created = normalize_timestamp(cred.get("date"))
+            # A missing id must not become a random uuid4: it seeds the Note and
+            # Indicator ids, so a fresh value each run would duplicate them.
+            cred_id = cred.get("id") or self._stable_fallback_id(
+                "breach", email, username, domain, breach_source
+            )
 
             ext_ref = self._ext_ref("CTM360-CyberBlindSpot", cred_id)
 
@@ -342,9 +362,12 @@ class ConverterToStix:
     def card_leaks_to_stix(self, cards: list) -> list:
         objects = [self.author]
         for card in cards:
-            card_id = card.get("id", str(uuid.uuid4()))
             bank = card.get("bank_name", "Unknown")
             created = normalize_timestamp(card.get("date"))
+            # Deterministic fallback so the Note id stays stable across runs.
+            card_id = card.get("id") or self._stable_fallback_id(
+                "cardleak", bank, card.get("date")
+            )
 
             ext_ref = self._ext_ref("CTM360-CyberBlindSpot", card_id)
 
@@ -371,13 +394,17 @@ class ConverterToStix:
     def domain_protection_to_stix(self, findings: list) -> list:
         objects = [self.author]
         for finding in findings:
-            finding_id = finding.get("id", str(uuid.uuid4()))
             domain = finding.get("domain", "")
             finding_type = finding.get("type", "Unknown")
             risk_score = finding.get("risk_score", 50)
             status = finding.get("finding_status", "unknown")
             ip_address = finding.get("ip_address", "")
             created = normalize_timestamp(finding.get("created_date"))
+            # Deterministic fallback so the Indicator id stays stable across
+            # runs when the API omits an explicit id.
+            finding_id = finding.get("id") or self._stable_fallback_id(
+                "domainprot", domain, finding_type
+            )
 
             ext_ref = self._ext_ref("CTM360-CyberBlindSpot", finding_id)
             score = min(int(risk_score), 100) if risk_score else 50

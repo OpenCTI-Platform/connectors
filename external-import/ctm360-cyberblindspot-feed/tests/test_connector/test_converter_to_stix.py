@@ -52,6 +52,68 @@ class TestConverterHelpers:
         assert converter._escape_stix_value("o'brien") == "o\\'brien"
         assert converter._escape_stix_value("a\\b") == "a\\\\b"
 
+    def test_stable_fallback_id_is_deterministic(self, converter):
+        first = converter._stable_fallback_id("malware", "RedLine", "1.2.3.4")
+        second = converter._stable_fallback_id("malware", "RedLine", "1.2.3.4")
+        assert first == second
+        assert first.startswith("cbs-malware-")
+
+    def test_stable_fallback_id_varies_with_content(self, converter):
+        a = converter._stable_fallback_id("breach", "a@example.com")
+        b = converter._stable_fallback_id("breach", "b@example.com")
+        assert a != b
+
+    def test_stable_fallback_id_ignores_empty_fields(self, converter):
+        # Empty/falsy fields are skipped, so no content collapses to the prefix.
+        assert converter._stable_fallback_id(
+            "cardleak", "", None
+        ) == converter._stable_fallback_id("cardleak")
+
+
+class TestDeterministicFallbackIds:
+    """Records without an API id must yield stable STIX ids across runs."""
+
+    def _malware_ext_id(self, objects):
+        malware = [o for o in objects if o.type == "malware"]
+        return malware[0].external_references[0].external_id
+
+    def test_malware_log_without_id_is_stable(self, converter):
+        log = {"malware_family": "RedLine", "ip": "1.2.3.4"}
+        first = self._malware_ext_id(converter.malware_logs_to_stix([dict(log)]))
+        second = self._malware_ext_id(converter.malware_logs_to_stix([dict(log)]))
+        assert first == second
+        assert first.startswith("cbs-malware-")
+
+    def test_breached_credential_without_id_is_stable(self, converter):
+        cred = {"email": "jdoe@example.com", "username": "jdoe"}
+
+        def ids(objects):
+            return {o.id for o in objects if o.type in ("note", "indicator")}
+
+        first = ids(converter.breached_credentials_to_stix([dict(cred)]))
+        second = ids(converter.breached_credentials_to_stix([dict(cred)]))
+        assert first == second
+
+    def test_card_leak_without_id_is_stable(self, converter):
+        card = {"bank_name": "ACME Bank", "date": "2026-03-04T18:00:00Z"}
+
+        def note_id(objects):
+            return next(o.id for o in objects if o.type == "note")
+
+        assert note_id(converter.card_leaks_to_stix([dict(card)])) == note_id(
+            converter.card_leaks_to_stix([dict(card)])
+        )
+
+    def test_domain_protection_without_id_is_stable(self, converter):
+        finding = {"domain": "bad.example", "type": "typosquatting"}
+
+        def indicator_id(objects):
+            return next(o.id for o in objects if o.type == "indicator")
+
+        assert indicator_id(
+            converter.domain_protection_to_stix([dict(finding)])
+        ) == indicator_id(converter.domain_protection_to_stix([dict(finding)]))
+
 
 class TestStixPatternEscaping:
     """Values embedded in STIX patterns must be escaped so stix2 accepts them."""
