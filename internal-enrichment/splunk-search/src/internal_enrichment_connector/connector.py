@@ -366,11 +366,11 @@ class SplunkSearchConnector:
         pattern_type = entity.get("pattern_type", "")
         obs_type = entity.get("x_opencti_main_observable_type", "")
 
-        if entity_type == "Indicator":
-            return self._enrich_indicator(entity)
         if pattern_type == "stix":
             return self._enrich_stix_indicator(entity, stix_objects, obs_type)
         if pattern_type == "spl":
+            if entity_type == "Indicator":
+                return self._enrich_indicator(entity)
             return self._enrich_spl_indicator(entity, stix_objects, obs_type)
 
         msg = f"Unsupported pattern_type '{pattern_type}', skipping"
