@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, field
 
+from internal_enrichment_connector.utils.note_params import load_note_params
 from pycti import OpenCTIConnectorHelper
 
 
@@ -60,12 +60,13 @@ class SplunkIndicator:
         return None
 
     def load_params_from_notes(self, helper: OpenCTIConnectorHelper) -> None:
-        """Fetch attached Notes and merge any JSON content as params.
+        """Fetch attached Notes and merge any YAML content as params.
 
-        Expected Note.content can be raw JSON or JSON inside a fenced code block:
-        ```json
-        { "earliest": "-7d@d", "latest": "now", "index_scope": "index=security" }
-        ```
+        Expected Note.content should be a YAML mapping, for example::
+
+            earliest: -7d@d
+            latest: now
+            index_scope: index=security
         """
         helper.connector_logger.debug(
             "[PARAMS] Indicator OpenCTI ID resolved",
@@ -104,35 +105,15 @@ class SplunkIndicator:
             )
             notes = []
 
-        merged: dict[str, str] = {}
+        merged: dict = {}
         for n in notes:
             content = (n or {}).get("content", "") or ""
-            if not content.strip():
-                continue
-
-            # Try raw JSON first
-            parsed = None
-            try:
-                parsed = json.loads(content)
-            except Exception:
-                # Try to extract fenced ```json ... ``` (or ``` ... ```) blocks
-                fenced = re.findall(
-                    r"```(?:json)?\s*([\s\S]*?)```", content, flags=re.I
-                )
-                for block in fenced:
-                    try:
-                        parsed = json.loads(block)
-                        break
-                    except Exception:
-                        continue
-
-            if isinstance(parsed, dict):
-                for k, v in parsed.items():
-                    if isinstance(v, (str, int, float)):
-                        merged[k] = str(v)
-            else:
+            note_params = load_note_params(content)
+            if note_params:
+                merged.update(note_params)
+            elif content.strip():
                 helper.connector_logger.debug(
-                    "[PARAMS] Skipped non-JSON Note content",
+                    "[PARAMS] Skipped non-YAML or empty Note content",
                     {"note_id": (n or {}).get("id")},
                 )
 

@@ -266,7 +266,7 @@ spl_indicators = [
         "confidence": 100,
         "created": "2025-08-04T19:18:09.000Z",
         "modified": "2025-08-04T19:22:02.021Z",
-        "content": '{\n  "earliest_time": "-30d@d",\n  "latest_time": "now",\n  "timeout": 60,\n  "wait_seconds": 2\n}',
+        "content": "# Last 30 days\nearliest_time: -30d@d\nlatest_time: now\ntimeout: 60\nwait_seconds: 2\n",
         "note_types": ["Search Parameters"],
         "likelihood": 50,
         "external_references": [
@@ -297,7 +297,7 @@ spl_indicators = [
         "confidence": 100,
         "created": "2025-08-04T19:18:09.000Z",
         "modified": "2025-08-04T19:22:02.021Z",
-        "content": '{\n  "earliest_time": "-90d@d",\n  "latest_time": "now",\n  "timeout": 60,\n  "wait_seconds": 2\n}',
+        "content": "# Last 90 days\nearliest_time: -90d@d\nlatest_time: now\ntimeout: 60\nwait_seconds: 2\n",
         "note_types": ["Search Parameters"],
         "likelihood": 50,
         "external_references": [
@@ -326,7 +326,7 @@ spl_indicators = [
         "confidence": 100,
         "created": "2025-09-03T15:23:46.000Z",
         "modified": "2025-09-03T15:24:23.030Z",
-        "content": '{ "earliest_time": "0", "latest_time": "now", "timeout": 60, "wait_seconds": 2 }',
+        "content": '# All time\nearliest_time: "0"\nlatest_time: now\ntimeout: 60\nwait_seconds: 2\n',
         "note_types": ["Search Parameters"],
         "likelihood": 50,
         "external_references": [
@@ -352,7 +352,7 @@ spl_indicators = [
         "confidence": 100,
         "created": "2025-09-03T15:21:14.000Z",
         "modified": "2025-09-03T15:23:11.648Z",
-        "content": '{ "earliest_time": "-7d@d", "latest_time": "now", "timeout": 60, "wait_seconds": 2 }',
+        "content": "# Last 7 days\nearliest_time: -7d@d\nlatest_time: now\ntimeout: 60\nwait_seconds: 2\n",
         "note_types": ["Search Parameters"],
         "likelihood": 50,
         "external_references": [
@@ -378,7 +378,7 @@ spl_indicators = [
         "confidence": 100,
         "created": "2025-09-03T15:17:41.000Z",
         "modified": "2025-09-03T15:20:52.027Z",
-        "content": '{ "earliest_time": "-24h@h", "latest_time": "now", "timeout": 60, "wait_seconds": 2 }',
+        "content": "# Last 24 hours\nearliest_time: -24h@h\nlatest_time: now\ntimeout: 60\nwait_seconds: 2\n",
         "note_types": ["Search Parameters"],
         "likelihood": 50,
         "external_references": [
