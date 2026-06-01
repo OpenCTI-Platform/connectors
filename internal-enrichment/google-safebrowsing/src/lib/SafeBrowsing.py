@@ -30,10 +30,8 @@ class SafeBrowsingConnector:
             self.update_existing_data = "false"
 
     def google_safe_browsing(self, observable):
-
+        """Checks an observable against the configured Safe Browsing API (Google or Yandex)."""
         self.helper.log_info(f"Checking {observable['value']} against Safe Browsing")
-
-        """Checks a domain against the configured Safe Browsing API (Google or Yandex)."""
 
         API_KEY = os.environ.get("SAFE_BROWSING_API_KEY") or os.environ.get(
             "GOOGLE_SAFE_BROWSING_API_KEY", ""
@@ -151,14 +149,10 @@ class SafeBrowsingConnector:
         self.entity_id = data["entity_id"]
         observable = self.helper.api.stix_cyber_observable.read(id=self.entity_id)
 
-        if observable["entity_type"] == "Domain-Name":
-            self.helper.log_info(
-                f"Checking domain {observable['value']} against Safe Browsing"
-            )
-            return self.google_safe_browsing(observable)
-        elif observable["entity_type"] == "Url":
-            return self.google_safe_browsing(observable)
-        elif observable["entity_type"] == "Hostname":
+        # google_safe_browsing() already logs a single "Checking ... against Safe
+        # Browsing" line for every supported type, so don't log again here (it
+        # previously produced duplicate entries for Domain-Name only).
+        if observable["entity_type"] in ("Domain-Name", "Url", "Hostname"):
             return self.google_safe_browsing(observable)
 
     # Start the main loop
