@@ -149,6 +149,19 @@ class TestIssuesToStix:
         case2 = next(o for o in second if o.type == "case-incident")
         assert case1.id == case2.id
 
+    def test_note_id_stable_across_description_change(self, converter):
+        # The Note id is seeded from the ticket id, not the mutable
+        # description, so a status/progress change on re-import updates the
+        # same Note instead of creating a duplicate.
+        first = converter.issues_to_stix([_full_issue(status="open")])
+        second = converter.issues_to_stix(
+            [_full_issue(status="closed", progress_status="done")]
+        )
+        note1 = next(o for o in first if o.type == "note")
+        note2 = next(o for o in second if o.type == "note")
+        assert note1.id == note2.id
+        assert note1.content != note2.content  # body still reflects latest state
+
 
 class TestResolvedIssuesToStix:
     def test_resolved_issue(self, converter):
@@ -162,6 +175,41 @@ class TestResolvedIssuesToStix:
     def test_resolved_without_ticket_id_skipped(self, converter):
         objects = converter.resolved_issues_to_stix([{"issue_name": "x"}])
         assert _types(objects) == ["identity"]
+
+    def test_resolved_ip_only_system_named_by_ip(self, converter):
+        # An IP-only resolved issue (no host/domain) must name the System by
+        # the IP, not produce an empty-named System whose id collapses with
+        # every other IP-only issue.
+        objects = converter.resolved_issues_to_stix(
+            [{"ticket_id": "HV-9", "issue_name": "x", "resolved_ip": "9.9.9.9"}]
+        )
+        systems = [
+            o for o in objects if o.type == "identity" and o.identity_class == "system"
+        ]
+        assert len(systems) == 1
+        assert systems[0].name == "9.9.9.9"
+
+    def test_resolved_ip_only_systems_are_distinct(self, converter):
+        a = converter.resolved_issues_to_stix(
+            [{"ticket_id": "A", "issue_name": "x", "resolved_ip": "1.1.1.1"}]
+        )
+        b = converter.resolved_issues_to_stix(
+            [{"ticket_id": "B", "issue_name": "y", "resolved_ip": "2.2.2.2"}]
+        )
+        sys_a = next(
+            o.id for o in a if o.type == "identity" and o.identity_class == "system"
+        )
+        sys_b = next(
+            o.id for o in b if o.type == "identity" and o.identity_class == "system"
+        )
+        assert sys_a != sys_b
+
+    def test_resolved_note_id_stable_across_content_change(self, converter):
+        a = converter.resolved_issues_to_stix([_full_issue(severity="high")])
+        b = converter.resolved_issues_to_stix([_full_issue(severity="low")])
+        note_a = next(o for o in a if o.type == "note")
+        note_b = next(o for o in b if o.type == "note")
+        assert note_a.id == note_b.id
 
 
 class TestAssetsToStix:

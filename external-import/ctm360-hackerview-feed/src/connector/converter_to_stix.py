@@ -299,7 +299,12 @@ class ConverterToStix:
             if system_id:
                 note_refs.append(system_id)
 
-            note_id = pycti.Note.generate_id(created=first_seen, content=description)
+            # Seed the Note id from the stable ticket id (not the mutable
+            # description, which changes with status/progress) so re-imports
+            # update the same Note instead of creating duplicates.
+            note_id = pycti.Note.generate_id(
+                created=None, content=f"ctm360-hackerview-issue-note-{issue_id}"
+            )
             note = stix2.Note(
                 id=note_id,
                 content=description,
@@ -525,17 +530,20 @@ class ConverterToStix:
                 objects.append(vuln_obj)
 
             # --- System identity for affected asset ---
-            system_name = host or domain or ""
-            if system_name or resolved_ip:
+            # Include resolved_ip in the name fallback so an IP-only resolved
+            # issue keeps a unique identity; generating the id from an empty
+            # name would collapse all such assets into one System.
+            system_name = host or domain or resolved_ip
+            if system_name:
                 system_id = pycti.Identity.generate_id(
                     name=system_name, identity_class="system"
                 )
-                system_desc = f"HackerView asset: {system_name or resolved_ip}"
-                if resolved_ip and system_name:
+                system_desc = f"HackerView asset: {system_name}"
+                if resolved_ip and resolved_ip != system_name:
                     system_desc += f" ({resolved_ip})"
                 system = stix2.Identity(
                     id=system_id,
-                    name=system_name or resolved_ip,
+                    name=system_name,
                     identity_class="system",
                     description=system_desc,
                     created_by_ref=self.author.id,
@@ -561,7 +569,11 @@ class ConverterToStix:
                 f"Resolved HackerView issue: {issue_name}. "
                 f"Severity: {severity}. CVE: {cve_id or 'N/A'}."
             )
-            note_id = pycti.Note.generate_id(created=first_seen, content=note_content)
+            # Stable Note id keyed on the ticket id (not the mutable content)
+            # so re-imports don't create duplicate resolved-issue notes.
+            note_id = pycti.Note.generate_id(
+                created=None, content=f"ctm360-hackerview-resolved-note-{issue_id}"
+            )
             note = stix2.Note(
                 id=note_id,
                 content=note_content,
