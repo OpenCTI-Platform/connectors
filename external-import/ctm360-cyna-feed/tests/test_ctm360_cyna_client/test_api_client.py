@@ -224,6 +224,15 @@ class TestParseRetryAfter:
     def test_past_http_date_clamped_to_zero(self, client):
         assert client._parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT", 7) == 0
 
+    def test_unparseable_date_returning_none_uses_fallback(self, client, monkeypatch):
+        # Some Python versions return None (instead of raising) for an
+        # unparseable HTTP-date; that path must also fall back to the backoff.
+        monkeypatch.setattr(
+            "ctm360_cyna_client.api_client.parsedate_to_datetime",
+            lambda _value: None,
+        )
+        assert client._parse_retry_after("whenever", 7) == 7
+
 
 class TestApiError:
     def test_attributes(self):
