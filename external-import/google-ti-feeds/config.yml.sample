@@ -8,3 +8,6 @@ connector:
 
 gti:
   api_key: 'ChangeMe'
+  # import_indicators: false
+  # indicator_types: file,ip,url,domain
+  # indicator_import_start_date: PT1H

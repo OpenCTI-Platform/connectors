@@ -1,0 +1,21 @@
+{
+  "title": "Export File ODS",
+  "slug": "export-file-ods",
+  "description": "OpenCTI Export File ODS connector renders OpenCTI search results to an OpenDocument Spreadsheet (.ods) using a headless LibreOffice instance.",
+  "short_description": "OpenCTI Export File ODS connector renders OpenCTI search results to an OpenDocument Spreadsheet (.ods) using a headless LibreOffice instance.",
+  "logo": null,
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.4.3",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-export-file/export-file-ods",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-export-file-ods",
+  "container_type": "INTERNAL_EXPORT_FILE"
+}

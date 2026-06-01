@@ -18,7 +18,7 @@ from connector.src.custom.mappers.gti_reports.gti_report_to_stix_sector import (
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.note_model import OctiNoteModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )

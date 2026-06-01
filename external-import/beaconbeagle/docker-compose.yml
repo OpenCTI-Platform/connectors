@@ -1,0 +1,25 @@
+version: '3'
+services:
+  connector-beaconbeagle:
+    image: opencti/connector-beaconbeagle:rolling
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=CHANGEME
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=BEACONBEAGLE
+      - CONNECTOR_SCOPE=beaconbeagle
+      - CONNECTOR_LOG_LEVEL=error
+      - BEACONBEAGLE_URL=https://beaconbeagle.com/api/v1/c2?q=&protocol=&port=&min_endpoints=0&first_after=&first_before=&last_after=&last_before=&sort=firsttime&order=desc
+      - BEACONBEAGLE_ADD_URLS=true
+      - BEACONBEAGLE_ADD_USERAGENT=true
+      - BEACONBEAGLE_LINK_TOOL=CobaltStrike
+      - BEACONBEAGLE_LINK_AP=T1071 Standard Application Layer Protocol
+      - BEACONBEAGLE_LINK_COUNTRY=true
+      - BEACONBEAGLE_LINK_BGPAS=true
+      - BEACONBEAGLE_SEARCH_BGPAS=false # whois -h bgp.tools fallback; generates outbound traffic to bgp.tools
+      - BEACONBEAGLE_LINK_WATERMARK_TXT= # suffix for the CobaltStrike licence-watermark Text observable; empty disables it
+      - BEACONBEAGLE_LINKS_DURATION=24
+      - BEACONBEAGLE_INTERVAL=2 # In hours
+      - BEACONBEAGLE_MARKING=TLP:GREEN
+    restart: always

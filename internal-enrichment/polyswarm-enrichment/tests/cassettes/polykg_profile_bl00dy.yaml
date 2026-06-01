@@ -1,0 +1,110 @@
+interactions:
+- request:
+    body: '{"family_name": "Bl00dy"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '25'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:4141/v3/kg/profile
+  response:
+    body:
+      string: '{"family":"Bl00dy","description":"Bl00dy is a ransomware family that
+        emerged in May 2022, utilizing leaked LockBit ransomware builder source code.
+        The malware encrypts victim files and appends the ''.bl00dy'' extension, then
+        demands ransom payment through Telegram-based communications. Bl00dy primarily
+        targets educational institutions by exploiting the PaperCut CVE-2023-27350
+        vulnerability for initial access, though it has also impacted healthcare,
+        consumer goods, professional services, and IT sectors. The ransomware operators
+        use legitimate remote management tools, Cobalt Strike beacons, DiceLoader,
+        and TrueBot for command and control and post-exploitation activities.","malware_type":["Ransomware"],"actors":["Bl00dy
+        Ransomware Gang"],"origin_locations":[],"programming_languages":[],"systems_targeted":["Windows"],"target_locations":["United
+        States","United Kingdom"],"verticals_targeted":["Education","Healthcare","Consumer
+        Goods","Professional Services","IT & ITES"],"related_malware":["LockBit"],"target_cves":["CVE-2023-27350"],"campaigns":[],"ttps":[{"technique_id":"T1190","name":"Exploit
+        Public-Facing Application","tactic":"initial-access"},{"technique_id":"T1059","name":"Command
+        and Scripting Interpreter","tactic":"execution"},{"technique_id":"T1486","name":"Data
+        Encrypted for Impact","tactic":"impact"},{"technique_id":"T1083","name":"File
+        and Directory Discovery","tactic":"discovery"},{"technique_id":"T1082","name":"System
+        Information Discovery","tactic":"discovery"},{"technique_id":"T1057","name":"Process
+        Discovery","tactic":"discovery"},{"technique_id":"T1518","name":"Software
+        Discovery","tactic":"discovery"},{"technique_id":"T1569.002","name":"Service
+        Execution","tactic":"execution"},{"technique_id":"T1071.001","name":"Web Protocols","tactic":"command-and-control"},{"technique_id":"T1573.002","name":"Asymmetric
+        Cryptography","tactic":"command-and-control"}],"updated":"2026-03-09T10:37:26.449202+00:00","citations":"https://cyble.com/blog/bl00dy-new-ransomware-strain-active-in-the-wild/,https://www.bleepingcomputer.com/news/security/fbi-bl00dy-ransomware-targets-education-orgs-in-papercut-attacks/,https://www.techtarget.com/searchsecurity/news/366537554/Bl00dy-ransomware-gang-targets-schools-via-PaperCut-flaw,https://phishingtackle.com/blog/bl00dy-ransomware-threat-fbi-and-cisa-warn-of-papercut-risk-to-education"}'
+    headers:
+      content-length:
+      - '2357'
+      content-type:
+      - application/json
+      date:
+      - Tue, 10 Mar 2026 09:44:30 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"family_name": "Bl00dy"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '25'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:4141/v3/kg/profile
+  response:
+    body:
+      string: '{"family":"Bl00dy","description":"Bl00dy is a ransomware family that
+        emerged in May 2022, utilizing leaked LockBit ransomware builder source code.
+        The malware encrypts victim files and appends the ''.bl00dy'' extension, then
+        demands ransom payment through Telegram-based communications. Bl00dy primarily
+        targets educational institutions by exploiting the PaperCut CVE-2023-27350
+        vulnerability for initial access, though it has also impacted healthcare,
+        consumer goods, professional services, and IT sectors. The ransomware operators
+        use legitimate remote management tools, Cobalt Strike beacons, DiceLoader,
+        and TrueBot for command and control and post-exploitation activities.","malware_type":["Ransomware"],"actors":["Bl00dy
+        Ransomware Gang"],"origin_locations":[],"programming_languages":[],"systems_targeted":["Windows"],"target_locations":["United
+        States","United Kingdom"],"verticals_targeted":["Education","Healthcare","Consumer
+        Goods","Professional Services","IT & ITES"],"related_malware":["LockBit"],"target_cves":["CVE-2023-27350"],"campaigns":[],"ttps":[{"technique_id":"T1190","name":"Exploit
+        Public-Facing Application","tactic":"initial-access"},{"technique_id":"T1059","name":"Command
+        and Scripting Interpreter","tactic":"execution"},{"technique_id":"T1486","name":"Data
+        Encrypted for Impact","tactic":"impact"},{"technique_id":"T1083","name":"File
+        and Directory Discovery","tactic":"discovery"},{"technique_id":"T1082","name":"System
+        Information Discovery","tactic":"discovery"},{"technique_id":"T1057","name":"Process
+        Discovery","tactic":"discovery"},{"technique_id":"T1518","name":"Software
+        Discovery","tactic":"discovery"},{"technique_id":"T1569.002","name":"Service
+        Execution","tactic":"execution"},{"technique_id":"T1071.001","name":"Web Protocols","tactic":"command-and-control"},{"technique_id":"T1573.002","name":"Asymmetric
+        Cryptography","tactic":"command-and-control"}],"updated":"2026-03-09T10:37:26.449202+00:00","citations":"https://cyble.com/blog/bl00dy-new-ransomware-strain-active-in-the-wild/,https://www.bleepingcomputer.com/news/security/fbi-bl00dy-ransomware-targets-education-orgs-in-papercut-attacks/,https://www.techtarget.com/searchsecurity/news/366537554/Bl00dy-ransomware-gang-targets-schools-via-PaperCut-flaw,https://phishingtackle.com/blog/bl00dy-ransomware-threat-fbi-and-cisa-warn-of-papercut-risk-to-education"}'
+    headers:
+      content-length:
+      - '2357'
+      content-type:
+      - application/json
+      date:
+      - Tue, 10 Mar 2026 11:16:47 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+version: 1

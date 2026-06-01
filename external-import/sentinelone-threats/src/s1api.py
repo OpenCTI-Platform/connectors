@@ -15,7 +15,7 @@ class SentinelOneApi:
         api_url: str representing the endpoint to call the SentinelOne API, e.g. https://xxxxxxx.sentinelone.net
         api_token: str representing the API token
         """
-        self._api_url = api_url
+        self._api_url = api_url.rstrip("/") if isinstance(api_url, str) else api_url
         # TODO the api token automatically re-generates after 6 months
         self._headers = {"Authorization": f"ApiToken {api_token}"}
 

@@ -1,0 +1,37 @@
+# Sublime Security OpenCTI Connector Configuration
+# This config replicates docker-compose.yml options for non-Docker installs
+# Copy this file to config.yml and customize for your environment
+
+# OpenCTI Configuration
+opencti:
+  url: 'http://localhost'
+  token: "ChangeMe"
+
+# Connector Configuration
+connector:
+  # id: "d5003f91-27b0-4b4e-995d-a4b9a8a970a4"
+  # name: "Sublime Security Incidents"
+  # scope: "sublime"
+  # log_level: "error"
+  # duration_period: "PT3M"  # ISO 8601 duration (PT10M = 10 minutes)
+
+# Sublime Security Configuration
+sublime:
+  token: "ChangeMe"               # Required
+  # url: "https://platform.sublime.security"
+
+  # verdicts: "malicious"         # Comma-separated: malicious,suspicious
+  # incident_type: "phishing"     # STIX incident type
+
+  # incident_prefix: "Sublime Incident - "
+  # case_prefix: "Case - "
+
+  # auto_create_cases: false      # Automatically create cases for incidents
+
+  # set_priority: true            # Enable priority mapping from attack score verdict
+  # set_severity: true           # Enable severity mapping from attack score verdict
+
+  # first_run_duration: "PT8H"    # Duration for initial data fetch in ISO 8601 format
+  # force_historical: false       # Force historical fetch by overriding existing state
+  # batch_size: 100               # Number of message groups to process per batch (default: 100)
+  # tlp_level: "amber"

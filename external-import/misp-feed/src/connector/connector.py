@@ -96,8 +96,15 @@ class MispFeed:
         str
             A string with the content or None in case of failure.
         """
+        headers = {}
+        if self.config.misp_feed.http_authorization_header:
+            headers["Authorization"] = self.config.misp_feed.http_authorization_header
         try:
-            response = requests.get(url, verify=self.config.misp_feed.ssl_verify)
+            response = requests.get(
+                url,
+                verify=self.config.misp_feed.ssl_verify,
+                headers=headers or None,
+            )
             response.raise_for_status()
             return response.text
         except (
