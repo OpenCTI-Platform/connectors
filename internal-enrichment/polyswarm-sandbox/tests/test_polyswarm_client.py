@@ -292,6 +292,58 @@ class TestLLMReport:
         result = client.create_llm_report()
         assert result is None
 
+    def test_create_llm_report_maps_sandbox_task_id_to_cape(self, client):
+        # The SDK accepts cape_/triage_sandbox_task_id, NOT a generic
+        # sandbox_task_id. fake_sdk carries the real signature, so forwarding
+        # the wrong kwarg would TypeError (swallowed -> None) and fail this.
+        captured = {}
+
+        def fake_sdk(
+            instance_id=None, cape_sandbox_task_id=None, triage_sandbox_task_id=None
+        ):
+            captured["cape"] = cape_sandbox_task_id
+            captured["triage"] = triage_sandbox_task_id
+            return MagicMock(id="llm-cape", state="PENDING")
+
+        client.api.llm_report_create = fake_sdk
+        result = client.create_llm_report(sandbox_task_id="sb-9", provider="cape")
+        assert result == "llm-cape"
+        assert captured == {"cape": "sb-9", "triage": None}
+
+    def test_create_llm_report_maps_sandbox_task_id_to_triage(self, client):
+        captured = {}
+
+        def fake_sdk(
+            instance_id=None, cape_sandbox_task_id=None, triage_sandbox_task_id=None
+        ):
+            captured["cape"] = cape_sandbox_task_id
+            captured["triage"] = triage_sandbox_task_id
+            return MagicMock(id="llm-triage", state="PENDING")
+
+        client.api.llm_report_create = fake_sdk
+        result = client.create_llm_report(sandbox_task_id="sb-7", provider="triage")
+        assert result == "llm-triage"
+        assert captured == {"cape": None, "triage": "sb-7"}
+
+    def test_sdk_llm_report_create_signature_contract(self):
+        """Guard the real SDK signature create_llm_report depends on.
+
+        The mapping tests above use a fake with the expected signature; a
+        MagicMock would accept any kwarg and hide a drift. This introspects
+        the installed SDK to confirm it really exposes the provider-specific
+        kwargs and has no generic ``sandbox_task_id``. If the SDK ever renames
+        or drops these, fix the mapping in ``create_llm_report``.
+        """
+        import inspect
+
+        from connector.polyswarm import PolyswarmAPI
+
+        params = inspect.signature(PolyswarmAPI.llm_report_create).parameters
+        assert "instance_id" in params
+        assert "cape_sandbox_task_id" in params
+        assert "triage_sandbox_task_id" in params
+        assert "sandbox_task_id" not in params
+
     def test_collect_llm_report_success(self, client):
         task = MagicMock(state="SUCCEEDED", url="https://example.com/llm.txt")
         client.api.llm_report_get = MagicMock(return_value=task)

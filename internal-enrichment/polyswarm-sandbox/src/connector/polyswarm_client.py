@@ -561,11 +561,18 @@ class PolySwarmClient:
         return None
 
     def create_llm_report(
-        self, instance_id: str | None = None, sandbox_task_id: str | None = None
+        self,
+        instance_id: str | None = None,
+        sandbox_task_id: str | None = None,
+        provider: str | None = None,
     ) -> str | None:
         """
         Create an LLM report task (non-blocking). Returns the report task ID immediately.
         Call collect_llm_report() later to poll and download the result.
+
+        The SDK's ``llm_report_create`` takes a provider-specific sandbox task
+        kwarg (``triage_sandbox_task_id`` or ``cape_sandbox_task_id``), not a
+        generic ``sandbox_task_id``. Map it from ``provider`` here.
         """
         if not instance_id and not sandbox_task_id:
             self.helper.log_warning(
@@ -583,11 +590,19 @@ class PolySwarmClient:
                 f"[POLYSWARM] Creating LLM report ({', '.join(source_desc)})"
             )
 
+            kwargs: dict[str, Any] = {
+                "instance_id": instance_id,
+                "operation": "LLM report create",
+            }
+            if sandbox_task_id:
+                if provider == "triage":
+                    kwargs["triage_sandbox_task_id"] = sandbox_task_id
+                else:
+                    kwargs["cape_sandbox_task_id"] = sandbox_task_id
+
             report_task = self._retry_sdk_call(
                 self.api.llm_report_create,
-                instance_id=instance_id,
-                sandbox_task_id=sandbox_task_id,
-                operation="LLM report create",
+                **kwargs,
             )
 
             if not report_task or not report_task.id:

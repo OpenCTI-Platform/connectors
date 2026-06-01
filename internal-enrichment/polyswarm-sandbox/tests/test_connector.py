@@ -169,15 +169,52 @@ class TestPydanticConfig:
 
 
 class TestEntityScope:
-    """Verify entity type filtering — only Artifact/StixFile should pass."""
+    """Verify entity type filtering by ``enrichment_entity.entity_type``.
+
+    Regression: the type must come from ``enrichment_entity.entity_type``, not
+    the STIX ID prefix. A StixFile observable has id ``file--<uuid>`` but type
+    ``StixFile``; parsing the prefix yields ``file`` which never matches a
+    ``StixFile`` scope entry.
+    """
 
     def test_artifact_in_scope(self):
-        c = make_connector()
-        assert c._entity_in_scope({"entity_id": "artifact--1234-5678"}) is True
+        c = make_connector()  # connect_scope = "Artifact"
+        assert (
+            c._entity_in_scope(
+                {
+                    "entity_id": "artifact--1234-5678",
+                    "enrichment_entity": {"entity_type": "Artifact"},
+                }
+            )
+            is True
+        )
 
     def test_indicator_not_in_scope(self):
         c = make_connector()
-        assert c._entity_in_scope({"entity_id": "indicator--1234"}) is False
+        assert (
+            c._entity_in_scope(
+                {
+                    "entity_id": "indicator--1234",
+                    "enrichment_entity": {"entity_type": "Indicator"},
+                }
+            )
+            is False
+        )
+
+    def test_stixfile_matched_by_entity_type_not_id_prefix(self):
+        # The id prefix is 'file' but the entity_type is 'StixFile'. The scope
+        # check must use the type, so this is in scope when StixFile is listed.
+        c = make_connector()
+        c.helper.connect_scope = "StixFile,Artifact"
+        assert (
+            c._entity_in_scope(
+                {
+                    "entity_id": "file--1234-5678",
+                    "enrichment_entity": {"entity_type": "StixFile"},
+                }
+            )
+            is True
+        )
 
     def test_skips_non_artifact(self):
         c = make_connector()
