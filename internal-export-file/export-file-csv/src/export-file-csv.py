@@ -131,9 +131,9 @@ class ExportFileCsv:
         entity_type = data["entity_type"]
         list_params = data.get("list_params", {})
         visible_columns = list_params.get("visible_columns", [])
-        self.helper.connector_logger.info(
-            "Columns",
-            visible_columns
+        self.helper.connector_logger.debug(
+            "Exporting with visible columns",
+            {"visible_columns": visible_columns},
         )
         csv_data = self.export_dict_list_to_csv(entities_list, visible_columns)
         self.helper.log_info(
