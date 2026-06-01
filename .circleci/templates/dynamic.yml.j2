@@ -54,7 +54,7 @@ jobs:
             find . -name pyproject.toml -exec sed "s|connectors-sdk.*$|connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@$RELEASE_REF#subdirectory=connectors-sdk\",|" -i {} \;
                 {% endif %}
             {% endif -%}
-            docker buildx build . \
+            docker buildx build --pull . \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}} \
              --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}} \
@@ -63,7 +63,7 @@ jobs:
              --push
 
             {% if param['images'][image_key] is defined and param['images'][image_key]['fips'] == true -%}
-            docker buildx build -f Dockerfile_fips . \
+            docker buildx build --pull -f Dockerfile_fips . \
              {% for tag in tags -%}
              --tag {{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
              --tag ghcr.io/opencti-platform/{{repo}}/connector-{{sub_dir}}:{{tag}}-fips \
