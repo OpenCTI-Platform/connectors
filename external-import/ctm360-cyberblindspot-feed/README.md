@@ -156,10 +156,10 @@ docker compose up -d connector-ctm360-cyberblindspot
 |----------|-------------|---------|----------|
 | `CONNECTOR_ID` | Unique UUID for this connector instance | — | Yes |
 | `CONNECTOR_NAME` | Display name shown in the OpenCTI UI | `CTM360-CyberBlindSpot` | No |
-| `CONNECTOR_SCOPE` | Connector scope identifier | `CTM360-CyberBlindSpot` | No |
+| `CONNECTOR_SCOPE` | Connector scope identifier (the provided `docker-compose.yml` sets it to `CTM360-CyberBlindSpot`) | — | Yes |
 | `CONNECTOR_TYPE` | Connector type (must be `EXTERNAL_IMPORT`) | `EXTERNAL_IMPORT` | No |
-| `CONNECTOR_LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error` | `info` | No |
-| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration between import runs | `PT24H` | No |
+| `CONNECTOR_LOG_LEVEL` | Log verbosity: `debug`, `info`, `warn`, `error` | `error` | No |
+| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration required by the SDK base config (the provided `docker-compose.yml` sets it to `PT24H`; runtime scheduling actually uses `CTM360_CBS_IMPORT_INTERVAL`) | — | Yes |
 
 ### CTM360 CyberBlindSpot Variables
 
