@@ -41,6 +41,9 @@ filterwarnings = [
     "ignore::UserWarning",
     "ignore::RuntimeWarning",
 ]
+addopts = [
+    "--cov=google_secops_siem_incidents"
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -76,3 +79,16 @@ src_paths = ["."]
 ignore = ["W", "E"]
 max-line-length = 88
 per-file-ignores = ["tests/*:S101", "tests/**/*:S101"]
+
+[tool.uv.workspace]
+members = [
+    ".",
+]
+
+[tool.uv.sources]
+google-secops-siem-incidents-connector = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "google-secops-siem-incidents-connector[test]",
+]
