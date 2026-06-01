@@ -1,0 +1,126 @@
+interactions:
+- request:
+    body: '{"family_name": "Rhadamanthys"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '31'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:4141/v3/kg/profile
+  response:
+    body:
+      string: '{"family":"Rhadamanthys","description":"Rhadamanthys is an advanced
+        C++ information-stealing malware first observed in late 2022. It operates
+        as a Malware-as-a-Service (MaaS) platform with extensive data theft capabilities
+        including cryptocurrency wallet credentials, browser data, email collections,
+        and seed phrase recognition from images. The malware uses sophisticated obfuscation
+        techniques including virtual machine obfuscation based on Quake III engine,
+        custom embedded file systems, and multi-stage execution with custom XS module
+        formats. It features a modular architecture with configurable C2 communications
+        and supports multiple delivery methods including MSI installations.","malware_type":["Stealer","Infostealer","Trojan"],"actors":["TA547","Silent
+        Ransom Group"],"origin_locations":[],"programming_languages":["C++"],"systems_targeted":["Windows"],"target_locations":["Germany","United
+        States"],"verticals_targeted":["Oil and Gas","Legal Services","Financial Services","Cryptocurrency"],"related_malware":["SmokeLoader"],"target_cves":[],"campaigns":["Operation
+        Endgame"],"ttps":[{"technique_id":"T1598.002","name":"Spearphishing Attachment","tactic":"reconnaissance"},{"technique_id":"T1204","name":"User
+        Execution","tactic":"execution"},{"technique_id":"T1059","name":"Command and
+        Scripting Interpreter","tactic":"execution"},{"technique_id":"T1055","name":"Process
+        Injection","tactic":"defense-evasion"},{"technique_id":"T1218.011","name":"Rundll32","tactic":"defense-evasion"},{"technique_id":"T1027","name":"Obfuscated
+        Files or Information","tactic":"defense-evasion"},{"technique_id":"T1497","name":"Virtualization/Sandbox
+        Evasion","tactic":"defense-evasion"},{"technique_id":"T1003","name":"OS Credential
+        Dumping","tactic":"credential-access"},{"technique_id":"T1056","name":"Input
+        Capture","tactic":"collection"},{"technique_id":"T1552.002","name":"Credentials
+        in Registry","tactic":"credential-access"},{"technique_id":"T1082","name":"System
+        Information Discovery","tactic":"discovery"},{"technique_id":"T1518","name":"Software
+        Discovery","tactic":"discovery"},{"technique_id":"T1083","name":"File and
+        Directory Discovery","tactic":"discovery"},{"technique_id":"T1087","name":"Account
+        Discovery","tactic":"discovery"},{"technique_id":"T1005","name":"Data from
+        Local System","tactic":"collection"},{"technique_id":"T1114","name":"Email
+        Collection","tactic":"collection"},{"technique_id":"T1071","name":"Application
+        Layer Protocol","tactic":"command-and-control"},{"technique_id":"T1095","name":"Non-Application
+        Layer Protocol","tactic":"command-and-control"},{"technique_id":"T1105","name":"Ingress
+        Tool Transfer","tactic":"command-and-control"}],"updated":"2026-03-09T10:36:24.099600+00:00","citations":"https://www.hivepro.com/wp-content/uploads/2023/01/Rhadamanthys-A-New-Evasive-Information-Stealer.pdf,https://medium.com/@anyrun/rhadamanthys-malware-overview-ebc12c1a874e,https://cyble.com/blog/rhadamanthys-new-stealer-spreading-through-google-ads/,https://www.huntress.com/threat-library/malware/rhadamanthys,https://thehackernews.com/2024/04/ta547-phishing-attack-hits-german-firms.html,https://research.checkpoint.com/2025/rhadamanthys-0-9-x-walk-through-the-updates/,https://assets.recordedfuture.com/insikt-report-pdfs/2024/mtp-2024-0926.pdf,https://www.zscaler.com/blogs/security-research/technical-analysis-rhadamanthys-obfuscation-techniques"}'
+    headers:
+      content-length:
+      - '3381'
+      content-type:
+      - application/json
+      date:
+      - Tue, 10 Mar 2026 09:44:30 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"family_name": "Rhadamanthys"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '31'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:4141/v3/kg/profile
+  response:
+    body:
+      string: '{"family":"Rhadamanthys","description":"Rhadamanthys is an advanced
+        C++ information-stealing malware first observed in late 2022. It operates
+        as a Malware-as-a-Service (MaaS) platform with extensive data theft capabilities
+        including cryptocurrency wallet credentials, browser data, email collections,
+        and seed phrase recognition from images. The malware uses sophisticated obfuscation
+        techniques including virtual machine obfuscation based on Quake III engine,
+        custom embedded file systems, and multi-stage execution with custom XS module
+        formats. It features a modular architecture with configurable C2 communications
+        and supports multiple delivery methods including MSI installations.","malware_type":["Stealer","Infostealer","Trojan"],"actors":["TA547","Silent
+        Ransom Group"],"origin_locations":[],"programming_languages":["C++"],"systems_targeted":["Windows"],"target_locations":["Germany","United
+        States"],"verticals_targeted":["Oil and Gas","Legal Services","Financial Services","Cryptocurrency"],"related_malware":["SmokeLoader"],"target_cves":[],"campaigns":["Operation
+        Endgame"],"ttps":[{"technique_id":"T1598.002","name":"Spearphishing Attachment","tactic":"reconnaissance"},{"technique_id":"T1204","name":"User
+        Execution","tactic":"execution"},{"technique_id":"T1059","name":"Command and
+        Scripting Interpreter","tactic":"execution"},{"technique_id":"T1055","name":"Process
+        Injection","tactic":"defense-evasion"},{"technique_id":"T1218.011","name":"Rundll32","tactic":"defense-evasion"},{"technique_id":"T1027","name":"Obfuscated
+        Files or Information","tactic":"defense-evasion"},{"technique_id":"T1497","name":"Virtualization/Sandbox
+        Evasion","tactic":"defense-evasion"},{"technique_id":"T1003","name":"OS Credential
+        Dumping","tactic":"credential-access"},{"technique_id":"T1056","name":"Input
+        Capture","tactic":"collection"},{"technique_id":"T1552.002","name":"Credentials
+        in Registry","tactic":"credential-access"},{"technique_id":"T1082","name":"System
+        Information Discovery","tactic":"discovery"},{"technique_id":"T1518","name":"Software
+        Discovery","tactic":"discovery"},{"technique_id":"T1083","name":"File and
+        Directory Discovery","tactic":"discovery"},{"technique_id":"T1087","name":"Account
+        Discovery","tactic":"discovery"},{"technique_id":"T1005","name":"Data from
+        Local System","tactic":"collection"},{"technique_id":"T1114","name":"Email
+        Collection","tactic":"collection"},{"technique_id":"T1071","name":"Application
+        Layer Protocol","tactic":"command-and-control"},{"technique_id":"T1095","name":"Non-Application
+        Layer Protocol","tactic":"command-and-control"},{"technique_id":"T1105","name":"Ingress
+        Tool Transfer","tactic":"command-and-control"}],"updated":"2026-03-09T10:36:24.099600+00:00","citations":"https://www.hivepro.com/wp-content/uploads/2023/01/Rhadamanthys-A-New-Evasive-Information-Stealer.pdf,https://medium.com/@anyrun/rhadamanthys-malware-overview-ebc12c1a874e,https://cyble.com/blog/rhadamanthys-new-stealer-spreading-through-google-ads/,https://www.huntress.com/threat-library/malware/rhadamanthys,https://thehackernews.com/2024/04/ta547-phishing-attack-hits-german-firms.html,https://research.checkpoint.com/2025/rhadamanthys-0-9-x-walk-through-the-updates/,https://assets.recordedfuture.com/insikt-report-pdfs/2024/mtp-2024-0926.pdf,https://www.zscaler.com/blogs/security-research/technical-analysis-rhadamanthys-obfuscation-techniques"}'
+    headers:
+      content-length:
+      - '3381'
+      content-type:
+      - application/json
+      date:
+      - Tue, 10 Mar 2026 11:16:47 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -88,6 +88,12 @@ class VirustotalLivehuntNotifications:
             self.config.virustotal_livehunt_notifications.livehunt_label_prefix,
             self.config.virustotal_livehunt_notifications.livehunt_tag_prefix,
             self.config.virustotal_livehunt_notifications.enable_label_enrichment,
+            get_malware_config=self.config.virustotal_livehunt_notifications.get_malware_config,
+            create_file_indicators=self.config.virustotal_livehunt_notifications.create_file_indicators,
+            create_domain_name_indicators=self.config.virustotal_livehunt_notifications.create_domain_name_indicators,
+            create_ip_indicators=self.config.virustotal_livehunt_notifications.create_ip_indicators,
+            create_url_indicators=self.config.virustotal_livehunt_notifications.create_url_indicators,
+            limit=self.config.virustotal_livehunt_notifications.limit,
         )
 
     @staticmethod

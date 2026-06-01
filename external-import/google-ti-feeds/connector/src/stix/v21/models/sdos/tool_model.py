@@ -23,8 +23,8 @@ class ToolModel(BaseSDOModel):
         default=None,
         description="Details about the Tool's purpose, use, and characteristics.",
     )
-    tool_types: list[ToolTypeOV] = Field(
-        ...,
+    tool_types: list[ToolTypeOV] | None = Field(
+        default=None,
         description="Open vocabulary of tool types. SHOULD come from tool-type-ov.",
     )
     aliases: list[str] | None = Field(

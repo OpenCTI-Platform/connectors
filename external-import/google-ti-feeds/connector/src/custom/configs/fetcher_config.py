@@ -10,6 +10,9 @@ from connector.src.custom.configs.campaign.fetcher_config_campaign import (
 from connector.src.custom.configs.fetcher_config_common import (
     COMMON_FETCHER_CONFIGS,
 )
+from connector.src.custom.configs.indicator.fetcher_config_indicator import (
+    INDICATOR_FETCHER_CONFIGS,
+)
 from connector.src.custom.configs.malware.fetcher_config_malware import (
     MALWARE_FETCHER_CONFIGS,
 )
@@ -30,4 +33,5 @@ FETCHER_CONFIGS = {
     **VULNERABILITY_FETCHER_CONFIGS,
     **CAMPAIGN_FETCHER_CONFIGS,
     **COMMON_FETCHER_CONFIGS,
+    **INDICATOR_FETCHER_CONFIGS,
 }

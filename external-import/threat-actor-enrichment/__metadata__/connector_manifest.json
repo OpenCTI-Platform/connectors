@@ -1,0 +1,22 @@
+{
+  "title": "Threat Actor Enrichment",
+  "slug": "threat-actor-enrichment",
+  "description": "Periodically enriches threat actor group entities by computing their real last_seen date from related indicators and reports. Fixes stale last_seen values that occur because OpenCTI does not automatically propagate activity dates from linked IOCs back to threat actor entities.",
+  "short_description": "Enriches threat actor groups with computed last_seen dates from related indicators and reports.",
+  "logo": null,
+  "use_cases": [
+    "Enrichment & Analysis",
+    "Threat Intelligence Management"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 75,
+  "support_version": ">=6.8.0",
+  "subscription_link": "",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/threat-actor-enrichment",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-threat-actor-enrichment",
+  "container_type": "EXTERNAL_IMPORT"
+}

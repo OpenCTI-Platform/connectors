@@ -23,7 +23,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | RECORDED_FUTURE_INSIKT_ONLY | `boolean` |  | boolean | `true` | Whether to import only Insikt notes (Recorded Future's analyst reports). |
 | RECORDED_FUTURE_PULL_SIGNATURES | `boolean` |  | boolean | `false` | Whether to import detection signatures (Yara/Snort/Sigma rules) from analyst notes. |
 | RECORDED_FUTURE_PERSON_TO_TA | `boolean` |  | boolean | `false` | Whether to convert Person entities to Threat Actor entities. |
-| RECORDED_FUTURE_TA_TO_INTRUSION_SET | `array` |  | string | `[]` | Comma-separated list of submodules where Threat Actor entities are mapped to Intrusion Set instead of Threat Actor. Available values: risk_list, analyst_notesExample: 'risk_list,analyst_notes'. |
+| RECORDED_FUTURE_TA_TO_INTRUSION_SET | `boolean` |  | boolean | `false` | Whether to map Threat Actor entities to Intrusion Set instead of Threat Actor. |
 | RECORDED_FUTURE_RISK_AS_SCORE | `boolean` |  | boolean | `true` | Whether to import risk scores as confidence scores in OpenCTI. |
 | RECORDED_FUTURE_RISK_THRESHOLD | `integer` |  | `0 < x ` | `60` | Minimum risk score threshold (0-100) for importing entities. |
 | RECORDED_FUTURE_ANALYST_NOTES_GUESS_RELATIONSHIPS | `boolean` |  | boolean | `false` | Enable or disable the automatic guessing of relationships between entities when processing analyst notes. |

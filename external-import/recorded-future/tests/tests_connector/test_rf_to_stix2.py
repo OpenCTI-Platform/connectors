@@ -82,13 +82,13 @@ def test_vulnerability_map_data_produces_intrusion_set_for_threat_actor():
     # And the row's Links contain a related entity of type "Threat Actor" named "APT28"
     rf_row = _given_vuln_risk_row(risk=75, threat_actor_name="APT28")
 
-    # When the vulnerability processes the risk row with risk_list enabled in ta_to_intrusion_set
+    # When the vulnerability processes the risk row with ta_to_intrusion_set enabled
     _when_vuln_map_data_with_ta_scope(
         vuln,
         rf_row,
         tlp,
         related_entity_types=["Threat Actor"],
-        ta_to_intrusion_set=["risk_list"],
+        ta_to_intrusion_set=True,
     )
 
     # Then exactly one IntrusionSet is present in the resolved related entities
@@ -108,13 +108,13 @@ def test_indicator_map_data_produces_intrusion_set_for_threat_actor():
     # And the row's Links hits contain a related entity of type "Threat Actor" named "APT28"
     rf_row = _given_indicator_risk_row(risk=75, threat_actor_name="APT28")
 
-    # When the indicator processes the risk row with risk_list enabled in ta_to_intrusion_set
+    # When the indicator processes the risk row with ta_to_intrusion_set enabled
     _when_indicator_map_data_with_ta_scope(
         indicator,
         rf_row,
         tlp,
         related_entity_types=["Threat Actor"],
-        ta_to_intrusion_set=["risk_list"],
+        ta_to_intrusion_set=True,
     )
 
     # Then exactly one IntrusionSet is present in the resolved related entities
@@ -123,7 +123,7 @@ def test_indicator_map_data_produces_intrusion_set_for_threat_actor():
     _then_contains_no_threat_actor(indicator.related_entities)
 
 
-# Scenario: Vulnerability Threat Actor → IntrusionSet when risk_list is in ta_to_intrusion_set
+# Scenario: Vulnerability Threat Actor → IntrusionSet when ta_to_intrusion_set is True
 def test_vulnerability_map_data_respects_risk_list_enabled():
     # Given a valid author identity and TLP marking
     author = _given_author()
@@ -133,13 +133,13 @@ def test_vulnerability_map_data_respects_risk_list_enabled():
     # And a risk list CSV row with risk score 80 whose Links contain "APT29"
     rf_row = _given_vuln_risk_row(risk=80, threat_actor_name="APT29")
 
-    # When map_data is called with ta_to_intrusion_set=["risk_list"]
+    # When map_data is called with ta_to_intrusion_set=True
     _when_vuln_map_data_with_ta_scope(
         vuln,
         rf_row,
         tlp,
         related_entity_types=["Threat Actor"],
-        ta_to_intrusion_set=["risk_list"],
+        ta_to_intrusion_set=True,
     )
 
     # Then exactly one IntrusionSet is present in the resolved related entities
@@ -148,7 +148,7 @@ def test_vulnerability_map_data_respects_risk_list_enabled():
     _then_contains_no_threat_actor(vuln.related_entities)
 
 
-# Scenario: Vulnerability Threat Actor → ThreatActor when risk_list NOT in ta_to_intrusion_set
+# Scenario: Vulnerability Threat Actor → ThreatActor when ta_to_intrusion_set is False
 def test_vulnerability_map_data_respects_risk_list_disabled():
     # Given a valid author identity and TLP marking
     author = _given_author()
@@ -158,13 +158,13 @@ def test_vulnerability_map_data_respects_risk_list_disabled():
     # And a risk list CSV row with risk score 80 whose Links contain "APT29"
     rf_row = _given_vuln_risk_row(risk=80, threat_actor_name="APT29")
 
-    # When map_data is called with ta_to_intrusion_set=[] (risk_list disabled)
+    # When map_data is called with ta_to_intrusion_set=False
     _when_vuln_map_data_with_ta_scope(
         vuln,
         rf_row,
         tlp,
         related_entity_types=["Threat Actor"],
-        ta_to_intrusion_set=[],
+        ta_to_intrusion_set=False,
     )
 
     # Then exactly one ThreatActor is present in the resolved related entities
@@ -173,7 +173,7 @@ def test_vulnerability_map_data_respects_risk_list_disabled():
     _then_contains_no_intrusion_set(vuln.related_entities)
 
 
-# Scenario: Indicator Threat Actor → IntrusionSet when risk_list is in ta_to_intrusion_set
+# Scenario: Indicator Threat Actor → IntrusionSet when ta_to_intrusion_set is True
 def test_indicator_map_data_respects_risk_list_enabled():
     # Given a valid author identity and TLP marking
     author = _given_author()
@@ -183,13 +183,13 @@ def test_indicator_map_data_respects_risk_list_enabled():
     # And a risk list CSV row with risk score 80 whose Links contain "APT29"
     rf_row = _given_indicator_risk_row(risk=80, threat_actor_name="APT29")
 
-    # When map_data is called with ta_to_intrusion_set=["risk_list"]
+    # When map_data is called with ta_to_intrusion_set=True
     _when_indicator_map_data_with_ta_scope(
         indicator,
         rf_row,
         tlp,
         related_entity_types=["Threat Actor"],
-        ta_to_intrusion_set=["risk_list"],
+        ta_to_intrusion_set=True,
     )
 
     # Then exactly one IntrusionSet is present in the resolved related entities
@@ -198,7 +198,7 @@ def test_indicator_map_data_respects_risk_list_enabled():
     _then_contains_no_threat_actor(indicator.related_entities)
 
 
-# Scenario: Indicator Threat Actor → ThreatActor when risk_list NOT in ta_to_intrusion_set
+# Scenario: Indicator Threat Actor → ThreatActor when ta_to_intrusion_set is False
 def test_indicator_map_data_respects_risk_list_disabled():
     # Given a valid author identity and TLP marking
     author = _given_author()
@@ -208,13 +208,13 @@ def test_indicator_map_data_respects_risk_list_disabled():
     # And a risk list CSV row with risk score 80 whose Links contain "APT29"
     rf_row = _given_indicator_risk_row(risk=80, threat_actor_name="APT29")
 
-    # When map_data is called with ta_to_intrusion_set=[] (risk_list disabled)
+    # When map_data is called with ta_to_intrusion_set=False
     _when_indicator_map_data_with_ta_scope(
         indicator,
         rf_row,
         tlp,
         related_entity_types=["Threat Actor"],
-        ta_to_intrusion_set=[],
+        ta_to_intrusion_set=False,
     )
 
     # Then exactly one ThreatActor is present in the resolved related entities

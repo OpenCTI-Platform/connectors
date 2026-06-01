@@ -17,7 +17,7 @@ from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_loc
 from connector.src.custom.models.gti.gti_threat_actor_model import GTIThreatActorData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )

@@ -50,22 +50,20 @@ def collect_vckev(
         return
 
     logger.info("[VULNCHECK KEV] Starting collection")
-    entities = client.get_vckev()
-
-    # Initiate new work
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
-    stix_objects = _extract_stix_from_vckev(
-        converter_to_stix=converter_to_stix,
-        entities=entities,
-        logger=logger,
-    )
+    for page in client.iter_vckev():
+        stix_objects = _extract_stix_from_vckev(
+            converter_to_stix=converter_to_stix,
+            entities=page,
+            logger=logger,
+        )
+        if stix_objects:
+            works.send_bundle(
+                helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
+            )
 
     works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
     logger.info("[VULNCHECK KEV] Data Source Completed!")

@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'CVEProject cvelistV5'
+  scope: 'identity,vulnerability,software'
+  log_level: 'info'
+  duration_period: 'PT1H' # ISO 8601 duration period
+
+cvelistv5:
+  # Upstream git repository. Override only if you mirror cvelistV5 internally.
+  repo_url: 'https://github.com/CVEProject/cvelistV5.git'
+  repo_branch: 'main'
+  # Local path where the clone is kept. Must be writable by the connector.
+  local_path: '/opt/cvelistV5'
+  # Oldest year of CVE records to import (initial run only). Most CVSS v3.1
+  # metrics were back-filled from 2019 onwards.
+  history_start_year: 2019

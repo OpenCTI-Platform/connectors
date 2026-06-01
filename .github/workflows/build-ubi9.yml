@@ -1,0 +1,145 @@
+name: Build UBI9 Images
+
+on:
+  workflow_call:
+    inputs:
+      platforms:
+        description: "Target platforms for docker buildx"
+        required: false
+        type: string
+        default: "linux/amd64,linux/arm64"
+      push:
+        description: "Whether to push images to registries"
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: true
+      DOCKERHUB_PASSWORD:
+        required: true
+      GHCR_USERNAME:
+        required: true
+      GHCR_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-matrix:
+    name: Generate build matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      image-tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          sparse-checkout: .github/ubi9-connectors.json
+
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          python3 -c "
+          import json, os
+          with open('.github/ubi9-connectors.json') as f:
+              connectors = json.load(f)
+          matrix = {'include': [{'path': c, 'name': os.path.basename(c)} for c in connectors]}
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('matrix=' + json.dumps(matrix) + '\n')
+          "
+
+      - name: Compute image tag
+        id: meta
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            IMAGE_TAG="${{ github.ref_name }}"
+          elif [[ "${{ github.ref_name }}" == "master" ]]; then
+            IMAGE_TAG="latest"
+          else
+            # Sanitize branch name for Docker tag (e.g. release/6.9.x -> release-6.9.x)
+            IMAGE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-')
+          fi
+          echo "tag=${IMAGE_TAG}-ubi9" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.name }}-ubi9
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Login to DockerHub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Parse build configuration
+        id: config
+        shell: bash
+        run: |
+          CONNECTOR_PATH="${{ matrix.path }}"
+
+          # Derive CONNECTOR_TYPE from the top-level directory
+          # e.g. external-import -> EXTERNAL_IMPORT
+          TOP_DIR=$(echo "$CONNECTOR_PATH" | cut -d/ -f1)
+          CONNECTOR_TYPE=$(echo "$TOP_DIR" | tr '[:lower:]-' '[:upper:]_')
+
+          # Start build args with CONNECTOR_TYPE
+          BUILD_ARGS="CONNECTOR_TYPE=${CONNECTOR_TYPE}"
+
+          # Append overrides from .build.env if it exists
+          ENV_FILE="${CONNECTOR_PATH}/.build.env"
+          if [ -f "$ENV_FILE" ]; then
+            while IFS='=' read -r key val || [ -n "$key" ]; do
+              # Skip empty lines and comments
+              [[ -z "$key" || "$key" == \#* ]] && continue
+              # Strip surrounding double quotes from values
+              val="${val#\"}"
+              val="${val%\"}"
+              BUILD_ARGS="$(printf '%s\n%s=%s' "$BUILD_ARGS" "$key" "$val")"
+            done < "$ENV_FILE"
+          fi
+
+          # Output multiline build args
+          {
+            echo "build_args<<EOF"
+            echo "$BUILD_ARGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: ${{ matrix.path }}
+          file: ./Dockerfile_ubi9
+          pull: true
+          push: ${{ inputs.push }}
+          platforms: ${{ inputs.platforms }}
+          build-args: ${{ steps.config.outputs.build_args }}
+          tags: |
+            opencti/connector-${{ matrix.name }}:${{ needs.build-matrix.outputs.image-tag }}
+            ghcr.io/opencti-platform/opencti/connector-${{ matrix.name }}:${{ needs.build-matrix.outputs.image-tag }}

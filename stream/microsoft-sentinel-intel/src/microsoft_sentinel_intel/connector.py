@@ -10,7 +10,7 @@ from microsoft_sentinel_intel.errors import (
     ConnectorWarning,
 )
 from microsoft_sentinel_intel.settings import ConnectorSettings
-from microsoft_sentinel_intel.utils import extract_pattern_type, is_stix_indicator
+from microsoft_sentinel_intel.utils import is_stix_indicator
 from pycti import OpenCTIConnectorHelper
 
 
@@ -65,7 +65,6 @@ class Connector:
                 self.client.delete_indicator_by_id(
                     stix_object["id"],
                     source_system=self.config.microsoft_sentinel_intel.source_system,
-                    pattern_type=extract_pattern_type(stix_object.get("pattern", "")),
                 )
             case _:
                 raise ConnectorWarning(
@@ -191,7 +190,6 @@ class Connector:
                     self.client.delete_indicator_by_id(
                         data["id"],
                         source_system=self.config.microsoft_sentinel_intel.source_system,
-                        pattern_type=extract_pattern_type(data.get("pattern", "")),
                     )
                 except ConnectorClientError as err:
                     self.helper.connector_logger.error(

@@ -45,8 +45,9 @@ def get_client(
 ) -> ClientWrapper:
     config_kwargs = {"username": api_username, "password": api_key}
     if proxy_url:
-        config_kwargs["proxy"] = proxy_url
-        if proxy_auth := parse_url(proxy_url).auth:
+        proxy_url_str = str(proxy_url)
+        config_kwargs["proxy"] = proxy_url_str
+        if proxy_auth := parse_url(proxy_url_str).auth:
             config_kwargs["proxy_headers"] = make_headers(proxy_basic_auth=proxy_auth)
 
     if backend_name == BackendName.TITAN:

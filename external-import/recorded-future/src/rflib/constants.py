@@ -36,6 +36,7 @@ RISK_RULES_MAPPER = [
     {"rule_score": 2, "severity": "Suspicious", "risk_score": "25-64"},
     {"rule_score": 3, "severity": "Malicious", "risk_score": "65-89"},
     {"rule_score": 4, "severity": "Very Malicious", "risk_score": "90-99"},
+    {"rule_score": 5, "severity": "Very Critical", "risk_score": "100"},
 ]
 
 TLP_MAP = {

@@ -41,6 +41,7 @@ class ApiClient:
         response_key: str | None = None,
         model: type[BaseModel] | None = None,
         timeout: float | None = None,
+        as_bytes: bool = False,
     ) -> Any:
         """Call the API using the provided strategy.
 
@@ -51,25 +52,30 @@ class ApiClient:
             params (dict[str, Any] | None): The query parameters to include in the request.
             data (dict[str, Any] | None): The data to include in the request.
             json_payload (dict[str, Any] | None): The JSON data to include in the request.
-            response_key (str | None): The key to extract from the response.
-            model (type[BaseModel] | None): The model to deserialize the response into.
+            response_key (str | None): The key to extract from the response (JSON mode only).
+            model (type[BaseModel] | None): The model to deserialize the response into (JSON mode only).
             timeout (float | None): The timeout for the request.
+            as_bytes: When True, return ``(status_code, bytes)`` without JSON
+                parsing or model deserialization. ``response_key`` and ``model``
+                are ignored in this mode.
 
         Returns:
-            Any: The response from the API.
+            Parsed JSON / model instance (``as_bytes=False``) or
+            ``(status_code, bytes)`` tuple (``as_bytes=True``).
 
         Raises:
             ApiError: If the API call fails.
 
         """
         self._logger.debug(
-            f"{LOG_PREFIX} Preparing to call API",
+            f"{LOG_PREFIX} Preparing to call API{' (bytes)' if as_bytes else ''}",
             {
                 "method": method,
                 "url": url,
                 "model": model.__name__ if model else None,
                 "response_key": response_key,
                 "timeout": timeout,
+                "as_bytes": as_bytes,
             },
         )
         try:
@@ -80,16 +86,28 @@ class ApiClient:
                 params=params,
                 data=data,
                 json_payload=json_payload,
-                response_key=response_key,
-                model=model,
+                response_key=response_key if not as_bytes else None,
+                model=model if not as_bytes else None,
                 timeout=timeout,
             )
+
+            if as_bytes:
+                status, content = await self.strategy.execute(
+                    api_request, as_bytes=True
+                )
+                self._logger.debug(
+                    f"{LOG_PREFIX} API bytes call successful",
+                    {"method": method, "url": url, "status": status},
+                )
+                return status, content
+
             response = await self.strategy.execute(api_request)
             self._logger.debug(
                 f"{LOG_PREFIX} API call successful",
                 {"method": method, "url": url},
             )
             return response
+
         except (
             ApiTimeoutError,
             ApiRateLimitError,
@@ -103,7 +121,6 @@ class ApiClient:
                 if isinstance(known_api_err, ApiNetworkError)
                 else "Known API error"
             )
-
             self._logger.warning(
                 f"{LOG_PREFIX} {error_prefix} during call_api",
                 {

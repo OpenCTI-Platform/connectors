@@ -30,8 +30,9 @@ ENUMS = OCTI_ENUMS | {
     "ChannelType",
     "IncidentSeverity",
     "IncidentType",
-    "RelationshipType",
     "InfrastructureType",
+    "RelationshipType",
+    "ToolType",
 }
 
 

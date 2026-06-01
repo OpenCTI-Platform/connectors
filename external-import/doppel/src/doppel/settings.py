@@ -1,10 +1,11 @@
 from datetime import timedelta
-from typing import Literal, Optional
+from typing import Literal
 
 from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, HttpUrl
 
@@ -19,6 +20,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="Doppel Threat Intelligence",
     )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["doppel"],
+    )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
         default=timedelta(hours=1),
@@ -31,15 +36,18 @@ class DoppelConfig(BaseConfigModel):
     """
 
     api_base_url: HttpUrl = Field(
-        description="API base URL.", default="https://api.doppel.com/v1"
+        description="API base URL.", default=HttpUrl("https://api.doppel.com/v1")
     )
 
     api_key: str = Field(description="API key for authentication.")
 
-    user_api_key: Optional[str] = Field(description="Used for user-specific identity")
+    user_api_key: str | None = Field(
+        description="Used for user-specific identity", default=None
+    )
 
-    organization_code: Optional[str] = Field(
-        description="Identifies the specific organizational workspace for multi-tenant keys"
+    organization_code: str | None = Field(
+        description="Identifies the specific organizational workspace for multi-tenant keys",
+        default=None,
     )
 
     tlp_level: Literal[

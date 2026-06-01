@@ -6,7 +6,7 @@ connector:
   id: ChangeMe
   type: EXTERNAL_IMPORT
   name: DEP Connector
-  scope: incident,identity,indicator
+  scope: report,incident,identity,indicator
   log_level: info
   interval: 3600 # In seconds
 
@@ -32,3 +32,4 @@ dep:
   create_sector_identities: true
   create_intrusion_sets: true
   create_country_locations: true
+  primary_object: report  # "report" (default) or "incident"

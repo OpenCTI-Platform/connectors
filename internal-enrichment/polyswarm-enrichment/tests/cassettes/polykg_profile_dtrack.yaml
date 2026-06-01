@@ -1,0 +1,114 @@
+interactions:
+- request:
+    body: '{"family_name": "DTrack"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '25'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:4141/v3/kg/profile
+  response:
+    body:
+      string: '{"family":"DTrack","description":"DTrack is a modular Remote Access
+        Trojan (RAT) and backdoor developed by the Lazarus Group for stealthy intelligence
+        gathering and espionage. It features comprehensive data collection capabilities
+        including keylogging, screenshot capture, browser history retrieval, running
+        process monitoring, IP configuration discovery, and network connection enumeration.
+        A specialized variant called ATMDTrack was developed specifically to target
+        ATM systems and steal payment card data. The malware uses encrypted payloads,
+        decryption routines, and obfuscation techniques to evade detection while establishing
+        persistence and exfiltrating collected data.","malware_type":["Backdoor","RAT","Stealer","Spyware"],"actors":["Lazarus
+        Group","APT38"],"origin_locations":["North Korea"],"programming_languages":[],"systems_targeted":["Windows","ATM
+        Systems"],"target_locations":["India","South Korea","Europe"],"verticals_targeted":["Financial
+        Services","Banking","ATM Networks"],"related_malware":["ATMDTrack"],"target_cves":[],"campaigns":["Operation
+        DarkSeoul","Operation Dream Job"],"ttps":[{"technique_id":"T1005","name":"Data
+        from Local System","tactic":""},{"technique_id":"T1074.001","name":"Data Staged:
+        Local Data Staging","tactic":""},{"technique_id":"T1140","name":"Deobfuscate/Decode
+        Files or Information","tactic":""},{"technique_id":"T1027.009","name":"Obfuscated
+        Files or Information: Embedded Payloads","tactic":""},{"technique_id":"T1082","name":"System
+        Information Discovery","tactic":""},{"technique_id":"T1016","name":"System
+        Network Configuration Discovery","tactic":""},{"technique_id":"T1049","name":"System
+        Network Connections Discovery","tactic":""}],"updated":"2026-03-09T09:29:06.773236+00:00","citations":"https://attack.mitre.org/software/S0567/,
+        https://socprime.com/news/dtrack-rat-on-the-service-of-lazarus-group/, https://www.zdnet.com/article/new-north-korean-malware-targeting-atms-spotted-in-india/,
+        https://www.bankinfosecurity.com/kaspersky-dual-use-dtrack-malware-linked-to-atm-thefts-a-13144,
+        https://malpedia.caad.fkie.fraunhofer.de/details/win.dtrack"}'
+    headers:
+      content-length:
+      - '2110'
+      content-type:
+      - application/json
+      date:
+      - Tue, 10 Mar 2026 10:59:00 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"family_name": "DTrack"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '25'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.32.5
+    method: POST
+    uri: http://localhost:4141/v3/kg/profile
+  response:
+    body:
+      string: '{"family":"DTrack","description":"DTrack is a modular Remote Access
+        Trojan (RAT) and backdoor developed by the Lazarus Group for stealthy intelligence
+        gathering and espionage. It features comprehensive data collection capabilities
+        including keylogging, screenshot capture, browser history retrieval, running
+        process monitoring, IP configuration discovery, and network connection enumeration.
+        A specialized variant called ATMDTrack was developed specifically to target
+        ATM systems and steal payment card data. The malware uses encrypted payloads,
+        decryption routines, and obfuscation techniques to evade detection while establishing
+        persistence and exfiltrating collected data.","malware_type":["Backdoor","RAT","Stealer","Spyware"],"actors":["Lazarus
+        Group","APT38"],"origin_locations":["North Korea"],"programming_languages":[],"systems_targeted":["Windows","ATM
+        Systems"],"target_locations":["India","South Korea","Europe"],"verticals_targeted":["Financial
+        Services","Banking","ATM Networks"],"related_malware":["ATMDTrack"],"target_cves":[],"campaigns":["Operation
+        DarkSeoul","Operation Dream Job"],"ttps":[{"technique_id":"T1005","name":"Data
+        from Local System","tactic":""},{"technique_id":"T1074.001","name":"Data Staged:
+        Local Data Staging","tactic":""},{"technique_id":"T1140","name":"Deobfuscate/Decode
+        Files or Information","tactic":""},{"technique_id":"T1027.009","name":"Obfuscated
+        Files or Information: Embedded Payloads","tactic":""},{"technique_id":"T1082","name":"System
+        Information Discovery","tactic":""},{"technique_id":"T1016","name":"System
+        Network Configuration Discovery","tactic":""},{"technique_id":"T1049","name":"System
+        Network Connections Discovery","tactic":""}],"updated":"2026-03-09T09:29:06.773236+00:00","citations":"https://attack.mitre.org/software/S0567/,
+        https://socprime.com/news/dtrack-rat-on-the-service-of-lazarus-group/, https://www.zdnet.com/article/new-north-korean-malware-targeting-atms-spotted-in-india/,
+        https://www.bankinfosecurity.com/kaspersky-dual-use-dtrack-malware-linked-to-atm-thefts-a-13144,
+        https://malpedia.caad.fkie.fraunhofer.de/details/win.dtrack"}'
+    headers:
+      content-length:
+      - '2110'
+      content-type:
+      - application/json
+      date:
+      - Tue, 10 Mar 2026 11:16:47 GMT
+      server:
+      - uvicorn
+    status:
+      code: 200
+      message: OK
+version: 1
