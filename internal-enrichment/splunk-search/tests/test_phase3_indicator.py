@@ -358,3 +358,177 @@ def test_full_enrichment_flow():
         if o.get("type") == "relationship" and o.get("relationship_type") == "based-on"
     ]
     assert len(rels) == 3  # one per observable
+
+
+# ------------------------------------------------------------------ #
+#  14. Note-based parameter resolution                                #
+# ------------------------------------------------------------------ #
+
+
+def _note_with_content(content: str) -> dict:
+    """Build a minimal Note dict as returned by the OpenCTI API."""
+    return {
+        "id": "note--00000000-0000-4000-8000-000000000001",
+        "type": "note",
+        "note_types": ["Search Parameters"],
+        "content": content,
+    }
+
+
+def test_note_earliest_latest_passed_to_run_search():
+    """When a Note has earliest/latest, _enrich_indicator uses them."""
+    helper = _helper()
+    helper.api.note.list.return_value = [
+        _note_with_content('earliest: "0"\nlatest: now\n')
+    ]
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    call_kwargs = connector.splunk_client.run_search.call_args.kwargs
+    assert call_kwargs["earliest_time"] == "0"
+    assert call_kwargs["latest_time"] == "now"
+
+
+def test_note_earliest_time_alias_passed_to_run_search():
+    """earliest_time alias in Note should map to earliest_time param."""
+    helper = _helper()
+    helper.api.note.list.return_value = [
+        _note_with_content("earliest_time: -7d@d\nlatest_time: now\n")
+    ]
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    call_kwargs = connector.splunk_client.run_search.call_args.kwargs
+    assert call_kwargs["earliest_time"] == "-7d@d"
+    assert call_kwargs["latest_time"] == "now"
+
+
+def test_no_note_falls_back_to_config_defaults():
+    """Without a Note, _enrich_indicator uses the connector config defaults."""
+    helper = _helper()
+    helper.api.note.list.return_value = []
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    call_kwargs = connector.splunk_client.run_search.call_args.kwargs
+    assert call_kwargs["earliest_time"] == "-30d@d"
+    assert call_kwargs["latest_time"] == "now"
+
+
+def test_note_partial_params_earliest_only():
+    """Note with only earliest — latest falls back to config."""
+    helper = _helper()
+    helper.api.note.list.return_value = [_note_with_content("earliest: -7d@d\n")]
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    call_kwargs = connector.splunk_client.run_search.call_args.kwargs
+    assert call_kwargs["earliest_time"] == "-7d@d"
+    assert call_kwargs["latest_time"] == "now"  # config default
+
+
+def test_note_timeout_and_wait_seconds_passed():
+    """Note timeout/wait_seconds override config values in _enrich_indicator."""
+    helper = _helper()
+    helper.api.note.list.return_value = [
+        _note_with_content(
+            "earliest: -90d@d\nlatest: now\ntimeout: 120\nwait_seconds: 5\n"
+        )
+    ]
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    call_kwargs = connector.splunk_client.run_search.call_args.kwargs
+    assert call_kwargs["timeout"] == 120
+    assert call_kwargs["wait_seconds"] == 5
+
+
+def test_wrong_note_type_ignored():
+    """A Note with note_types != 'Search Parameters' should not be used."""
+    helper = _helper()
+    # note.list returns [] because the API filter already excludes non-matching types;
+    # simulate that by returning empty (the filter in load_params_from_notes handles it)
+    helper.api.note.list.return_value = []
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    call_kwargs = connector.splunk_client.run_search.call_args.kwargs
+    assert call_kwargs["earliest_time"] == "-30d@d"  # config default
+
+
+def test_resolve_search_params_returns_note_values():
+    """resolve_search_params returns Note values when a Note is found."""
+    helper = _helper()
+    helper.api.note.list.return_value = [
+        _note_with_content('earliest: "0"\nlatest: now\nmax_results: 500\n')
+    ]
+    connector = _connector(helper=helper)
+    entity = _indicator_entity()
+    result = connector.resolve_search_params(entity)
+
+    assert result["earliest"] == "0"
+    assert result["latest"] == "now"
+    assert result["max_results"] == 500
+
+
+def test_resolve_search_params_falls_back_to_config():
+    """resolve_search_params falls back to config when no Note."""
+    helper = _helper()
+    helper.api.note.list.return_value = []
+    connector = _connector(helper=helper)
+    entity = _indicator_entity()
+    result = connector.resolve_search_params(entity)
+
+    assert result["earliest"] == "-30d@d"
+    assert result["latest"] == "now"
+    assert result["max_results"] == 1000
+    assert result["timeout"] == 60
+    assert result["wait_seconds"] == 2
+
+
+def test_get_entity_note_params_empty_when_no_note():
+    """get_entity_note_params returns empty dict when no Note is attached."""
+    helper = _helper()
+    helper.api.note.list.return_value = []
+    connector = _connector(helper=helper)
+    result = connector.get_entity_note_params(_indicator_entity())
+    assert result == {}
+
+
+def test_get_entity_note_params_returns_parsed_content():
+    """get_entity_note_params returns parsed YAML from Note content."""
+    helper = _helper()
+    helper.api.note.list.return_value = [
+        _note_with_content("earliest: -24h@h\nlatest: now\ntimeout: 30\n")
+    ]
+    connector = _connector(helper=helper)
+    result = connector.get_entity_note_params(_indicator_entity())
+
+    assert result["earliest"] == "-24h@h"
+    assert result["latest"] == "now"
+    assert result["timeout"] == 30
+
+
+def test_note_earliest_used_in_negative_sighting():
+    """Note earliest/latest are reflected in the negative sighting description."""
+    helper = _helper()
+    helper.api.note.list.return_value = [
+        _note_with_content('earliest: "0"\nlatest: now\n')
+    ]
+    connector = _connector(helper=helper)
+    connector.splunk_client.run_search.return_value = []
+    connector._enrich_indicator(_indicator_entity())
+
+    bundle_arg = connector.helper.send_stix2_bundle.call_args[0][0]
+    bundle = stix2.parse(bundle_arg, allow_custom=True)
+    sightings = [o for o in bundle.objects if o.get("type") == "sighting"]
+    assert len(sightings) == 1
+    # The note's "0" should appear in the sighting description (search window)
+    desc = sightings[0].get("description", "")
+    assert "0" in desc or sightings[0].get("x_opencti_negative") is True

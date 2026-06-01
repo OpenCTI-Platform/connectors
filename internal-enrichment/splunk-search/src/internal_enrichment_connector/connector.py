@@ -428,12 +428,23 @@ class SplunkSearchConnector:
         splunk_indicator = SplunkIndicator(indicator, obs_type)
         splunk_indicator.load_params_from_notes(self.helper)
         # Normalise alternate param names used by the previous connector version
-        if "earliest_time" in splunk_indicator.params:
+        if (
+            "earliest_time" in splunk_indicator.params
+            and "earliest" not in splunk_indicator.params
+        ):
             splunk_indicator.params["earliest"] = splunk_indicator.params[
                 "earliest_time"
             ]
-        if "latest_time" in splunk_indicator.params:
+        if (
+            "latest_time" in splunk_indicator.params
+            and "latest" not in splunk_indicator.params
+        ):
             splunk_indicator.params["latest"] = splunk_indicator.params["latest_time"]
+        # Inject connector config as fallback so render() never falls back to hard-coded defaults
+        splunk_indicator.params.setdefault(
+            "earliest", self.config.splunk_search_earliest
+        )
+        splunk_indicator.params.setdefault("latest", self.config.splunk_search_latest)
         plan = splunk_indicator.render(values, helper=self.helper)
         return plan, splunk_indicator
 
@@ -516,6 +527,85 @@ class SplunkSearchConnector:
         """Legacy shim kept for any external callers. Use _build_search_plan + _execute_plan instead."""
         plan, splunk_indicator = self._build_search_plan(indicator, obs_type, values)
         return self._execute_plan(plan, splunk_indicator.params)
+
+    # ------------------------------------------------------------------ #
+    #  Note-based parameter resolution                                    #
+    # ------------------------------------------------------------------ #
+
+    def get_entity_note_params(self, entity: dict) -> dict:
+        """Look up attached Search Parameters Notes for an entity and return parsed params.
+
+        Delegates to SplunkIndicator.load_params_from_notes() which queries
+        the OpenCTI API for Notes with note_types containing 'Search Parameters'
+        that are attached to the entity's OpenCTI ID.  Alias normalisation
+        (earliest_time → earliest, latest_time → latest) is applied before
+        returning so callers can rely on canonical key names.
+
+        Returns:
+            dict of validated params from the Note, or empty dict if none found.
+        """
+        si = SplunkIndicator(entity, "")
+        si.load_params_from_notes(self.helper)
+        params = si.params
+        # Normalise aliases so callers use canonical names
+        if "earliest_time" in params and "earliest" not in params:
+            params["earliest"] = params["earliest_time"]
+        if "latest_time" in params and "latest" not in params:
+            params["latest"] = params["latest_time"]
+        if params:
+            self.helper.connector_logger.info(
+                "[NOTE] Using params from attached Note",
+                {"entity_id": entity.get("id"), "params": params},
+            )
+        else:
+            self.helper.connector_logger.info(
+                "[NOTE] No Search Parameters Note found, using connector defaults",
+                {"entity_id": entity.get("id")},
+            )
+        return params
+
+    def resolve_search_params(self, entity: dict) -> dict:
+        """Resolve search parameters: Note override > connector config fallback.
+
+        Priority order:
+          1. Note object params (if a Search Parameters Note is attached to the entity)
+          2. Connector config defaults (SPLUNK_SEARCH_EARLIEST, etc.)
+
+        Returns a dict with keys: earliest, latest, max_results, timeout,
+        wait_seconds, index, sourcetype, fields.
+        """
+        entity_id = entity.get("id", "")
+        note_params = self.get_entity_note_params(entity)
+
+        def _src(key: str) -> str:
+            return "Note" if key in note_params else "config"
+
+        resolved = {
+            "earliest": note_params.get("earliest", self.config.splunk_search_earliest),
+            "latest": note_params.get("latest", self.config.splunk_search_latest),
+            "max_results": note_params.get(
+                "max_results", self.config.splunk_max_results
+            ),
+            "timeout": note_params.get("timeout", self.config.splunk_timeout),
+            "wait_seconds": note_params.get(
+                "wait_seconds", self.config.splunk_wait_seconds
+            ),
+            "index": note_params.get("index"),
+            "sourcetype": note_params.get("sourcetype"),
+            "fields": note_params.get("fields"),
+        }
+        self.helper.connector_logger.info(
+            "[PARAMS] Resolved search params",
+            {
+                "entity_id": entity_id,
+                "earliest": f"{resolved['earliest']} (from {_src('earliest')})",
+                "latest": f"{resolved['latest']} (from {_src('latest')})",
+                "max_results": f"{resolved['max_results']} (from {_src('max_results')})",
+                "timeout": f"{resolved['timeout']} (from {_src('timeout')})",
+                "wait_seconds": f"{resolved['wait_seconds']} (from {_src('wait_seconds')})",
+            },
+        )
+        return resolved
 
     def _enrich_stix_indicator(self, entity, stix_objects, obs_type) -> str:
         values = self._extract_observable_values(entity, stix_objects, obs_type)
@@ -862,13 +952,15 @@ class SplunkSearchConnector:
             {"indicator_id": indicator_id, "query_preview": spl_query[:200]},
         )
 
+        params = self.resolve_search_params(entity)
+
         rows = self.splunk_client.run_search(
             query=spl_query,
-            earliest_time=self.config.splunk_search_earliest,
-            latest_time=self.config.splunk_search_latest,
-            timeout=self.config.splunk_timeout,
-            wait_seconds=self.config.splunk_wait_seconds,
-            max_results=self.config.splunk_max_results,
+            earliest_time=params["earliest"],
+            latest_time=params["latest"],
+            timeout=params["timeout"],
+            wait_seconds=params["wait_seconds"],
+            max_results=params["max_results"],
         )
 
         splunk_identity = self._splunk_system_identity()
@@ -879,8 +971,8 @@ class SplunkSearchConnector:
                 indicator_stix_id=indicator_id,
                 indicator_name=indicator_name,
                 search_type="indicator-spl",
-                earliest=self.config.splunk_search_earliest,
-                latest=self.config.splunk_search_latest,
+                earliest=params["earliest"],
+                latest=params["latest"],
                 splunk_host=self.config.splunk_host,
                 query=spl_query,
                 author=self.author,
