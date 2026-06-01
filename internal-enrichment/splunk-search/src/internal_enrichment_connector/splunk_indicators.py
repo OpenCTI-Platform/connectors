@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 from pycti import OpenCTIConnectorHelper
 
@@ -14,12 +15,12 @@ class SplunkSearchPlan:
     query: str
     earliest: str
     latest: str
-    index_scope: Optional[str] = None
-    tokens_used: Dict[str, str] = field(default_factory=dict)
+    index_scope: str | None = None
+    tokens_used: dict[str, str] = field(default_factory=dict)
     # Custom search fields (set when Note contains a "search" param)
     custom: bool = False
     observable_field: str = "observable_value"
-    observable_type_override: Optional[str] = None
+    observable_type_override: str | None = None
     indicator_value: str = ""
 
 
@@ -40,7 +41,7 @@ class SplunkIndicator:
         self.pattern = indicator.get("pattern", "")
         self.pattern_type = indicator.get("pattern_type", "")
         self.obs_type = obs_type or indicator.get("x_opencti_main_observable_type", "")
-        self.params: Dict[str, str] = {}
+        self.params: dict[str, str] = {}
 
     # ---------------------------- OpenCTI params ---------------------------- #
 
@@ -89,7 +90,7 @@ class SplunkIndicator:
             )
             notes = []
 
-        merged: Dict[str, str] = {}
+        merged: dict[str, str] = {}
         for n in notes:
             content = (n or {}).get("content", "") or ""
             if not content.strip():
@@ -126,7 +127,7 @@ class SplunkIndicator:
 
     # ---------------------------- Rendering ---------------------------- #
     def render(
-        self, values: List[str], helper: Optional[OpenCTIConnectorHelper] = None
+        self, values: list[str], helper: OpenCTIConnectorHelper | None = None
     ) -> SplunkSearchPlan:
         safe_vals = [self._escape(str(v)) for v in values if v is not None]
         value_str = safe_vals[0] if safe_vals else ""

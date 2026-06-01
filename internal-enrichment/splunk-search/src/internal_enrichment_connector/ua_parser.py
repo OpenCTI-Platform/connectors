@@ -123,14 +123,6 @@ class UserAgentParser:
                 continue
             version = match.group(2)
             canonical_name = software
-            if canonical_name.lower() == "teamviewer":
-                canonical_name = "TeamViewer"
-            elif canonical_name.lower() == "wget":
-                canonical_name = "Wget"
-            elif canonical_name.lower() == "curl":
-                canonical_name = "curl"
-            elif canonical_name.lower() == "python-requests":
-                canonical_name = "python-requests"
 
             return ParsedUserAgent(
                 software_name=canonical_name,
