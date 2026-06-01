@@ -47,7 +47,9 @@ def test_s01_fresh_state_fields_default_to_none() -> None:
 
 def _given_fresh_state(helper: MagicMock) -> GoogleSecOpsSIEMState:
     """Instantiate state with no prior OpenCTI data."""
-    return GoogleSecOpsSIEMState(helper=helper)
+    state = GoogleSecOpsSIEMState()
+    state.inject_dependencies(helper)
+    return state
 
 
 def _then_field_is_none(state: GoogleSecOpsSIEMState, field: str) -> None:
@@ -125,7 +127,8 @@ def _given_state_with_alert_timestamp(
     helper: MagicMock, timestamp: str
 ) -> GoogleSecOpsSIEMState:
     """Instantiate state, load, then set last_alert_timestamp."""
-    state = GoogleSecOpsSIEMState(helper=helper)
+    state = GoogleSecOpsSIEMState()
+    state.inject_dependencies(helper)
     state.load()
     state.last_alert_timestamp = timestamp
     return state

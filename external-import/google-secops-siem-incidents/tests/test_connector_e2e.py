@@ -148,7 +148,7 @@ def test_state_persisted_with_correct_timestamp(
         f" got: {final_state['last_alert_timestamp']}"
     )
     assert (
-        "pagination_checkpoint" not in final_state
+        final_state.get("pagination_checkpoint") is None
     ), "pagination_checkpoint must be cleared after a clean run"
 
 
@@ -332,7 +332,7 @@ def test_pagination_checkpoint_written_and_cleared(
     # final state: checkpoint cleared, last_alert_timestamp set to batch 1 max (10:00 > 09:00)
     final_state = all_state_calls[-1]
     assert (
-        "pagination_checkpoint" not in final_state
+        final_state.get("pagination_checkpoint") is None
     ), "pagination_checkpoint must be cleared after a clean run"
     assert "2024-03-01T10:00:01" in final_state["last_alert_timestamp"]
 
@@ -384,7 +384,7 @@ def test_resumes_from_pagination_checkpoint(
     # final state: checkpoint cleared, last_alert_timestamp = max(11:00, 10:00, 11:00) + 1s
     all_state_calls = [c[0][0] for c in helper.set_state.call_args_list]
     final_state = all_state_calls[-1]
-    assert "pagination_checkpoint" not in final_state
+    assert final_state.get("pagination_checkpoint") is None
     assert "2024-03-01T11:00:01" in final_state["last_alert_timestamp"]
 
 

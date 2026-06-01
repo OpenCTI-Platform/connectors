@@ -112,7 +112,8 @@ class GoogleSecOpsConnector:
             state: Pre-loaded state; loads a fresh one when None.
         """
         if state is None:
-            state = GoogleSecOpsSIEMState(helper=self.helper)
+            state = GoogleSecOpsSIEMState()
+            state.inject_dependencies(self.helper)
             state.load()
         asyncio.run(self._async_process_message(state))
 
@@ -393,7 +394,8 @@ class GoogleSecOpsConnector:
     def process_message(self) -> None:
         """Execute one connector run: log state, drive the async pipeline, and persist last_run."""
         try:
-            state = GoogleSecOpsSIEMState(helper=self.helper)
+            state = GoogleSecOpsSIEMState()
+            state.inject_dependencies(self.helper)
             state.load()
 
             if state.last_run is not None:
