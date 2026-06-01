@@ -295,10 +295,13 @@ class CVEProcessor:
         adp_containers: list[dict[str, Any]],
     ) -> dict[str, Any]:
         all_metrics = cna.get("metrics") or []
-        for adp in adp_containers:
-            all_metrics = all_metrics or adp.get("metrics") or []
-            if all_metrics:
-                break
+        if not cls._has_supported_cvss_metric(all_metrics):
+            all_metrics = []
+            for adp in adp_containers:
+                candidate_metrics = adp.get("metrics") or []
+                if cls._has_supported_cvss_metric(candidate_metrics):
+                    all_metrics = candidate_metrics
+                    break
 
         if not all_metrics:
             return {}
@@ -383,6 +386,13 @@ class CVEProcessor:
             )
 
         return props
+
+    @classmethod
+    def _has_supported_cvss_metric(cls, metrics: list[dict[str, Any]]) -> bool:
+        return bool(
+            cls._find_cvss_metric(metrics, CVSS_V3_VERSIONS)
+            or cls._find_cvss_metric(metrics, CVSS_V4_VERSIONS)
+        )
 
     @staticmethod
     def _find_cvss_metric(

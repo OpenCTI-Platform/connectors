@@ -167,8 +167,16 @@ class TestExtractCvssProperties:
 
         # v3 from CNA
         assert props["x_opencti_cvss_base_score"] == 8.2
-        # v4 should NOT come from ADP since CNA metrics were found
+        # v4 should NOT come from ADP since CNA has supported metrics
         assert "x_opencti_cvss_v4_base_score" not in props
+
+    def test_unsupported_cna_metrics_falls_back_to_adp(self):
+        """If CNA metrics has no supported version, ADP is used."""
+        cna = {"metrics": [{"cvssV2_0": {"baseScore": 5.0}}]}
+        adp = [{"metrics": [CVSS_V31_METRIC]}]
+        props = CVEProcessor._extract_cvss_properties(cna, adp)
+
+        assert props["x_opencti_cvss_base_score"] == 8.2
 
 
 # ---------------------------------------------------------------------------
