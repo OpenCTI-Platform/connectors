@@ -30,12 +30,13 @@ class ExportFileCsv:
             []
         )  # error holder to be reset before each new process
 
-    def export_dict_list_to_csv(self, data, columns=[]):
+    def export_dict_list_to_csv(self, data, columns=None):
+        included_columns = columns or []
         output = io.StringIO()
         data_headers = sorted(set().union(*(d.keys() for d in data)))
         headers = (
-            [header for header in columns if header in data_headers]
-            if len(columns) != 0
+            [header for header in included_columns if header in data_headers]
+            if len(included_columns) != 0
             else data_headers
         )
         if "hashes" in headers:
@@ -128,8 +129,12 @@ class ExportFileCsv:
         file_markings = data["file_markings"]
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
-        list_params = data.get("list_params")
+        list_params = data.get("list_params", {})
         visible_columns = list_params.get("visible_columns", [])
+        self.helper.connector_logger.info(
+            "Columns",
+            visible_columns
+        )
         csv_data = self.export_dict_list_to_csv(entities_list, visible_columns)
         self.helper.log_info(
             "Uploading: " + entity_type + "/" + export_type + " to " + file_name
