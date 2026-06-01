@@ -124,7 +124,7 @@ All variables are required unless a default is listed.
 |-----------------------------|----------------------------------------------------------|-------------------|
 | `CONNECTOR_ID`              | Unique UUIDv4 for this connector instance.               | —                 |
 | `CONNECTOR_NAME`            | Display name in OpenCTI.                                 | `CTM360-CYNA`     |
-| `CONNECTOR_SCOPE`           | Connector scope label.                                   | `CTM360-CYNA`     |
+| `CONNECTOR_SCOPE`           | Connector scope label (required; the provided samples use `ctm360-cyna`). | —    |
 | `CONNECTOR_TYPE`            | Must be `EXTERNAL_IMPORT`.                               | `EXTERNAL_IMPORT` |
 | `CONNECTOR_LOG_LEVEL`       | Logging verbosity: `debug`, `info`, `warning`, `error`. | `info`            |
 | `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration for the OpenCTI scheduler (e.g. `PT24H`). | `PT24H`       |

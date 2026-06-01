@@ -57,8 +57,12 @@ class ConverterToStix:
         for item in news_items:
             try:
                 item_objects = self._convert_single_news_item(item, global_cve_objects)
-                objects.extend(item_objects)
-                converted_count += 1
+                if item_objects:
+                    objects.extend(item_objects)
+                    converted_count += 1
+                else:
+                    # Item was intentionally skipped (e.g. no published_date).
+                    skipped_count += 1
             except Exception as e:
                 item_id = self._get_item_id(item)
                 self.helper.connector_logger.warning(
@@ -108,10 +112,30 @@ class ConverterToStix:
         # _id is at the top level of the item, NOT inside metadata
         item_id = item.get("_id", "")
 
-        if not item_id:
-            item_id = str(uuid.uuid4())
+        # A news item without a usable published date can't get a deterministic
+        # Report id (Report.generate_id is keyed on name+published); importing it
+        # would mint — and then re-update — a fresh Report on every run. A
+        # numeric 0 is a valid epoch, so only None / blank strings are "missing".
+        if isinstance(published_date, str):
+            has_published = bool(published_date.strip())
+        else:
+            has_published = published_date is not None
+        if not has_published:
+            self.helper.connector_logger.warning(
+                "[CONVERTER] Skipping news item with no published_date",
+                meta={"item_id": item_id or "unknown", "title": title},
+            )
+            return []
 
         published_ts = normalize_timestamp(published_date)
+
+        # Derive a deterministic fallback id from stable content when the API
+        # omits `_id`, so the external reference stays stable across re-imports
+        # instead of churning a fresh uuid4 on every run.
+        if not item_id:
+            item_id = (
+                f"cyna-{uuid.uuid5(uuid.NAMESPACE_URL, f'{title}|{published_ts}')}"
+            )
 
         # Build external references
         ext_refs = [self._ext_ref("CTM360-CYNA", item_id)]

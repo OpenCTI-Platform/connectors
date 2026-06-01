@@ -15,7 +15,13 @@ def _types(objects):
     return [obj.type for obj in objects]
 
 
-def _news_item(item_id="N1", title="Title", description="", link="", published=""):
+def _news_item(
+    item_id="N1",
+    title="Title",
+    description="",
+    link="",
+    published="2026-01-01T00:00:00Z",
+):
     return {
         "_id": item_id,
         "metadata": {
@@ -126,9 +132,30 @@ class TestNewsToStix:
         rid2 = next(o.id for o in second if o.type == "report")
         assert rid1 == rid2
 
-    def test_missing_id_is_tolerated(self, converter):
-        objects = converter.news_to_stix([{"metadata": {"title": "no id"}}])
-        assert any(o.type == "report" for o in objects)
+    def test_missing_id_uses_deterministic_fallback(self, converter):
+        # A missing `_id` must not fall back to uuid4(): the CTM360-CYNA
+        # external reference has to stay stable across re-imports.
+        item = _news_item(item_id="", title="No id news")
+        first = converter.news_to_stix([item])
+        second = converter.news_to_stix([item])
+
+        def _cyna_ext_id(objects):
+            report = next(o for o in objects if o.type == "report")
+            ref = next(
+                r for r in report.external_references if r.source_name == "CTM360-CYNA"
+            )
+            return ref.external_id
+
+        assert _cyna_ext_id(first) == _cyna_ext_id(second)
+        assert _cyna_ext_id(first).startswith("cyna-")
+
+    def test_missing_published_date_is_skipped(self, converter):
+        # No published_date -> Report.generate_id would be non-deterministic
+        # (keyed on name+published), so the item is skipped, not imported.
+        objects = converter.news_to_stix([{"_id": "N1", "metadata": {"title": "x"}}])
+        assert _types(objects) == ["identity"]
+        assert not any(o.type == "report" for o in objects)
+        converter.helper.connector_logger.warning.assert_called()
 
     def test_all_items_failed_returns_author_only_without_tlp(self, converter):
         # metadata=None triggers an AttributeError inside conversion -> skipped.

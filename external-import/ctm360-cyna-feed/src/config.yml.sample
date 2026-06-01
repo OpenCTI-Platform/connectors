@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'  # UUIDv4
   name: 'CTM360-CYNA'
-  scope: 'CTM360-CYNA'
+  scope: 'ctm360-cyna'
   log_level: 'info'
   duration_period: 'PT24H'
 
