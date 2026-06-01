@@ -8,6 +8,8 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 
 from unittest.mock import MagicMock
 
+# --- import under test (will cause ImportError → RED) ---
+from google_secops_siem_incidents.converter_to_stix import ConverterToStix  # noqa: E402
 from tests_converter_stix.factories import (
     AlertFactory,
     AlertFieldFactory,

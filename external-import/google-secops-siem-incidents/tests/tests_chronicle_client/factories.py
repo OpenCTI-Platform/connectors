@@ -15,6 +15,7 @@ from google_secops_siem_incidents.models.rule_alert_response import (
     TimeWindow,
 )
 from google_secops_siem_incidents.settings import GoogleSecOpsConfig
+from polyfactory.factories.pydantic_factory import ModelFactory
 
 
 # ---------------------------------------------------------------------------

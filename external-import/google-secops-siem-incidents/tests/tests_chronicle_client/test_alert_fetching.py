@@ -7,7 +7,6 @@ multi-batch pagination, safety guards, empty responses, and error propagation.
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
 from google_secops_siem_incidents.utils.api_engine.exceptions import (
     ApiCircuitOpenError,
@@ -16,6 +15,7 @@ from google_secops_siem_incidents.utils.api_engine.exceptions import (
     ApiRateLimitError,
     ApiTimeoutError,
 )
+
 from tests.tests_chronicle_client.factories import (
     AlertFactory,
     RuleAlertFactory,

@@ -3,7 +3,6 @@
 from typing import Any
 
 from connectors_sdk.models import Hostname
-
 from google_secops_siem_incidents.mappers._utils import find_all_outcomes
 from google_secops_siem_incidents.models.rule_alert_response import Outcome
 

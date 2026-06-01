@@ -16,6 +16,7 @@ from connectors_sdk.models.reference import Reference
 from google_secops_siem_incidents.mappers.relationship_mapper import (  # noqa: E402
     map_relationships,
 )
+from tests_converter_stix.factories import make_author, make_tlp_marking
 
 
 # ---------------------------------------------------------------------------

@@ -5,17 +5,16 @@ Tests extraction of Hostname observables from Chronicle alert outcomes.
 BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 """
 
+# --- import under test (will cause ImportError → RED) ---
+from google_secops_siem_incidents.mappers.hostname_mapper import (  # noqa: E402
+    map_hostname,
+)
 from tests_converter_stix.factories import (
     OutcomeFactory,
     make_author,
     make_hostname_outcomes,
     make_multi_hostname_outcomes,
     make_tlp_marking,
-)
-
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.hostname_mapper import (  # noqa: E402
-    map_hostname,
 )
 
 
