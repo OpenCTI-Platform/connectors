@@ -9,6 +9,8 @@ import pytz
 import stix2
 from pycti import Identity, OpenCTIConnectorHelper
 
+from .cim_mitre_mapper import CIMToMITREMapper
+from .infrastructure import InfrastructureBuilder
 from .mitre_resolver import MITREResolver
 from .services import SourcetypeResolver, SplunkClient
 from .splunk_bundle import spl_indicators
@@ -18,6 +20,7 @@ from .splunk_result_parser import (
     create_sighting,
     is_no_results_row,
     parse_observables_and_incident,
+    set_infrastructure_builder,
 )
 from .yaml_validator import YAMLValidator
 
@@ -54,11 +57,27 @@ class SplunkSearchConnector:
             self.helper.connector_logger.info(
                 "MITRE resolver unavailable, MITRE enrichments will be skipped"
             )
+        self.cim_mapper = CIMToMITREMapper()
+        if self.cim_mapper.is_available:
+            self.helper.connector_logger.info(
+                "CIM-to-MITRE mapping loaded",
+                {"mapped_models": self.cim_mapper.mapped_models_count},
+            )
+        else:
+            self.helper.connector_logger.warning(
+                "CIM-to-MITRE mapping file unavailable, datamodel-based MITRE resolution disabled"
+            )
+        self.infrastructure_builder = InfrastructureBuilder(
+            mitre_resolver=self.mitre_resolver,
+            cim_mapper=self.cim_mapper,
+        )
+        set_infrastructure_builder(self.infrastructure_builder)
         self._validate_sourcetype_map_startup()
+        self._log_cim_mitre_coverage_summary()
 
     def _validate_sourcetype_map_startup(self) -> None:
         """Validate sourcetype_map.yaml at startup and report findings."""
-        validator = YAMLValidator(self.mitre_resolver)
+        validator = YAMLValidator(self.mitre_resolver, cim_mapper=self.cim_mapper)
         result = validator.validate({"sourcetype_map": self.sourcetype_resolver.get_mapping()})
         for error in result.errors:
             self.helper.connector_logger.error(f"YAML validation: {error}")
@@ -70,6 +89,31 @@ class SplunkSearchConnector:
                 "valid": result.valid,
                 "errors": len(result.errors),
                 "warnings": len(result.warnings),
+            },
+        )
+
+    def _log_cim_mitre_coverage_summary(self) -> None:
+        """Log sourcetype-level MITRE coverage based on explicit and CIM-derived sources."""
+        mapping = self.sourcetype_resolver.get_mapping()
+        total_entries = len(mapping)
+        covered = 0
+
+        for entry in mapping.values():
+            if not isinstance(entry, dict) or entry.get("skip") is True:
+                continue
+            sources = self.cim_mapper.resolve(entry) if self.cim_mapper.is_available else (
+                sorted({str(name) for name in (entry.get("mitre_data_sources") or []) if str(name).strip()})
+            )
+            if sources:
+                covered += 1
+
+        uncovered = max(total_entries - covered, 0)
+        self.helper.connector_logger.info(
+            "Sourcetype MITRE coverage",
+            {
+                "covered": covered,
+                "total": total_entries,
+                "uncovered": uncovered,
             },
         )
 

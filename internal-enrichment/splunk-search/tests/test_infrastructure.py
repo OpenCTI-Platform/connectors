@@ -7,7 +7,11 @@ class _FakeResolver:
 
     def resolve_data_source(self, name: str):
         if name == "Network Traffic":
-            return {"x_mitre_platforms": ["Network Device"]}
+            return {
+                "id": "x-mitre-data-source--abc",
+                "name": "Network Traffic",
+                "x_mitre_platforms": ["Network Device"],
+            }
         return None
 
     def resolve_asset(self, name: str):
@@ -19,6 +23,15 @@ class _FakeResolver:
         if asset.get("name") == "Network Device":
             return ["routers-switches"]
         return ["unknown"]
+
+
+class _FakeMapper:
+    is_available = True
+
+    def resolve(self, entry: dict) -> list[str]:
+        if entry.get("datamodels") == ["Network_Traffic"]:
+            return ["Network Traffic"]
+        return []
 
 
 def test_build_firewall():
@@ -65,7 +78,7 @@ def test_description_included():
 
     obj = builder.build(entry)
     assert obj is not None
-    assert obj["description"] == "Cisco ASA firewall platform"
+    assert "Cisco ASA firewall platform" in obj["description"]
 
 
 def test_infrastructure_types_from_yaml():
@@ -109,3 +122,118 @@ def test_without_resolver():
     obj = builder.build(entry)
     assert obj is not None
     assert obj["infrastructure_types"] == ["firewall"]
+
+
+def test_normalize_endpoint_security():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "infrastructure_types": ["endpoint-security"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert obj["infrastructure_types"] == ["workstation"]
+
+
+def test_normalize_network_device():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "infrastructure_types": ["network-device"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert obj["infrastructure_types"] == ["routers-switches"]
+
+
+def test_normalize_ids():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "infrastructure_types": ["ids"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert obj["infrastructure_types"] == ["unknown"]
+
+
+def test_normalize_waf():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "infrastructure_types": ["waf"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert obj["infrastructure_types"] == ["firewall"]
+
+
+def test_unknown_type_not_in_map():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "infrastructure_types": ["completely-unknown"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert obj["infrastructure_types"] == ["unknown"]
+
+
+def test_original_type_in_description():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "description": "Infra description",
+        "infrastructure_types": ["network-device"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert "platform_type: network-device" in obj["description"]
+
+
+def test_already_valid_stix_type():
+    builder = InfrastructureBuilder()
+    entry = {
+        "vendor": "Vendor",
+        "product": "Product",
+        "entity_type": "Infrastructure",
+        "infrastructure_types": ["firewall"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert obj["infrastructure_types"] == ["firewall"]
+
+
+def test_mapper_resolve_used_when_no_explicit_sources():
+    builder = InfrastructureBuilder(mitre_resolver=_FakeResolver(), cim_mapper=_FakeMapper())
+    entry = {
+        "vendor": "Cisco",
+        "product": "ASA",
+        "entity_type": "Infrastructure",
+        "datamodels": ["Network_Traffic"],
+        "infrastructure_types": ["firewall"],
+    }
+
+    obj = builder.build(entry)
+    assert obj is not None
+    assert "MITRE Data Sources: Network Traffic" in obj["description"]
+    assert obj.get("external_references")

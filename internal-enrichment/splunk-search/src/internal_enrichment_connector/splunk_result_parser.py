@@ -35,6 +35,12 @@ _resolver = _SourcetypeResolver()
 _infra_builder = InfrastructureBuilder()
 
 
+def set_infrastructure_builder(builder: InfrastructureBuilder) -> None:
+    """Set the module-level infrastructure builder used during parsing."""
+    global _infra_builder
+    _infra_builder = builder
+
+
 def _parse_ts(val) -> Optional[datetime]:
     if val is None:
         return None

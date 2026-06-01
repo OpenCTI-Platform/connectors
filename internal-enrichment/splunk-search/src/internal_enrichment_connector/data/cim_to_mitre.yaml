@@ -1,0 +1,35 @@
+# CIM Data Model -> MITRE ATT&CK Data Source mapping
+# CIM models: https://docs.splunk.com/Documentation/CIM/latest/User/Overview
+# MITRE Data Sources: https://attack.mitre.org/datasources/
+
+mapping:
+  # Authentication & Identity
+  Authentication: ["Logon Session"]
+  Change: ["Active Directory", "User Account"]
+
+  # Network
+  Network_Traffic: ["Network Traffic"]
+  Network_Resolution: ["Network Traffic"]
+  Network_Sessions: ["Network Traffic"]
+  Web: ["Network Traffic"]
+
+  # Endpoint
+  Endpoint.Processes: ["Process"]
+  Endpoint.Filesystem: ["File"]
+  Endpoint.Registry: ["Windows Registry"]
+  Endpoint.Services: ["Service"]
+
+  # Security
+  Intrusion_Detection: ["Network Traffic"]
+  Malware: ["File"]
+  Vulnerabilities: ["Application Log"]
+
+  # Infrastructure
+  Certificates: ["Certificate"]
+  Email: ["Application Log"]
+  DLP: ["File"]
+
+  # Operational - no direct MITRE equivalent
+  Performance: []
+  Splunk_Audit: []
+  Application_State: ["Application Log"]
