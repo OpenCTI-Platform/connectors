@@ -115,6 +115,21 @@ class TestImportData:
         assert len(passed_items) == 1
         assert passed_items[0]["metadata"]["published_date"] == "2026-02-01T00:00:00Z"
 
+    def test_last_run_filter_tolerates_non_dict_items(self, helper):
+        # A non-dict page entry must not raise AttributeError out of the
+        # last_run filter and abort the whole cycle; it flows to the converter
+        # (which skips it per-item).
+        connector = build_connector(helper)
+        helper.get_state.return_value = {"last_run": "2026-01-15T00:00:00Z"}
+        connector.client.get_all_news.return_value = [
+            "not-a-dict",
+            _item("2026-02-01T00:00:00Z"),
+        ]
+        connector.converter.news_to_stix.return_value = [object(), object()]
+        connector._import_data()
+        passed_items = connector.converter.news_to_stix.call_args[0][0]
+        assert "not-a-dict" in passed_items
+
 
 class TestRun:
     def test_ping_failure_exits(self, helper):

@@ -21,10 +21,13 @@ def normalize_timestamp(ts) -> str:
 
     # Handle epoch timestamps (int or float)
     if isinstance(ts, (int, float)):
-        if ts > 1e12:
-            ts = ts / 1000
-        dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        try:
+            epoch = ts / 1000 if ts > 1e12 else ts
+            dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        except (OverflowError, OSError, ValueError):
+            # Out-of-range epoch — fall back to now, like the other branches.
+            return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if not isinstance(ts, str):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -32,12 +35,17 @@ def normalize_timestamp(ts) -> str:
     # Handle numeric strings (epoch)
     try:
         epoch = float(ts.strip())
-        if epoch > 1e12:
-            epoch = epoch / 1000
-        dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
-        return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     except ValueError:
-        pass
+        epoch = None
+    if epoch is not None:
+        try:
+            if epoch > 1e12:
+                epoch = epoch / 1000
+            dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
+            return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+        except (OverflowError, OSError, ValueError):
+            # Out-of-range epoch string — fall back to now.
+            return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Handle ISO 8601 and YYYY-MM-DD HH:MM:SS (fromisoformat handles both)
     try:

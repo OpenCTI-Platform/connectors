@@ -12,8 +12,9 @@ class CTM360CynaConnector:
     """OpenCTI EXTERNAL_IMPORT connector for CTM360 CYNA (Cyber News & Alerts).
 
     Fetches cyber news items from the CYNA API using cursor-based pagination,
-    converts them to STIX objects (Reports, Vulnerabilities, Notes), and
-    imports them into OpenCTI.
+    converts them to STIX objects (an Identity author, Reports, CVE
+    Vulnerabilities, and the relationships between them), and imports them into
+    OpenCTI.
     """
 
     def __init__(self, config, helper: OpenCTIConnectorHelper):
@@ -100,7 +101,12 @@ class CTM360CynaConnector:
             if last_run:
                 filtered_items = []
                 for item in all_items:
-                    metadata = item.get("metadata", {})
+                    # Tolerate non-dict entries (the converter already skips
+                    # them per-item); keep them so the converter can log/skip
+                    # rather than raising AttributeError and aborting the cycle.
+                    metadata = (
+                        item.get("metadata", {}) if isinstance(item, dict) else {}
+                    )
                     pub_date = metadata.get("published_date")
                     if is_newer_than(pub_date, last_run):
                         filtered_items.append(item)

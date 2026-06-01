@@ -55,6 +55,14 @@ class TestNormalizeTimestamp:
     def test_invalid_returns_now(self):
         assert ISO_Z_PATTERN.match(normalize_timestamp("not a date at all"))
 
+    def test_out_of_range_epoch_int_falls_back_to_now(self):
+        # A wildly out-of-range epoch raises OverflowError/OSError in
+        # datetime.fromtimestamp(); it must fall back to now, not crash.
+        assert ISO_Z_PATTERN.match(normalize_timestamp(10**20))
+
+    def test_out_of_range_epoch_string_falls_back_to_now(self):
+        assert ISO_Z_PATTERN.match(normalize_timestamp(str(10**20)))
+
 
 class TestExtractCves:
     def test_empty(self):
