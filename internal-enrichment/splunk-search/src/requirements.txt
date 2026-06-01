@@ -5,3 +5,4 @@ validators==0.35.0
 splunk-sdk>=2.0.0
 stix2>=3.0.0
 pytz>=2024.1
+user-agents>=2.2.0

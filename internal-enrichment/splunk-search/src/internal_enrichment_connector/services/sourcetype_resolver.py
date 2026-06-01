@@ -4,6 +4,7 @@ provides case-sensitive lookups for Splunk sourcetype → vendor/platform metada
 """
 
 import logging
+from copy import deepcopy
 from importlib import resources
 from typing import Dict, List, Optional
 
@@ -107,3 +108,7 @@ class SourcetypeResolver:
     def count(self) -> int:
         """Return the number of loaded sourcetype mappings."""
         return len(self._map)
+
+    def get_mapping(self) -> Dict[str, dict]:
+        """Return a defensive copy of the full sourcetype mapping."""
+        return deepcopy(self._map)

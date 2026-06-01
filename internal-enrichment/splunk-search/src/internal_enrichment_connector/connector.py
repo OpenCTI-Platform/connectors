@@ -9,6 +9,7 @@ import pytz
 import stix2
 from pycti import Identity, OpenCTIConnectorHelper
 
+from .mitre_resolver import MITREResolver
 from .services import SourcetypeResolver, SplunkClient
 from .splunk_bundle import spl_indicators
 from .splunk_indicators import SplunkIndicator, SplunkSearchPlan
@@ -18,6 +19,7 @@ from .splunk_result_parser import (
     is_no_results_row,
     parse_observables_and_incident,
 )
+from .yaml_validator import YAMLValidator
 
 SPLUNK_TEMPLATE_LABEL = "threat-hunting-splunk"
 SPLUNK_PATTERN_TYPE = "spl"
@@ -36,9 +38,39 @@ class SplunkSearchConnector:
             verify=config.splunk_verify_ssl,
         )
         self.author = self._load_author_identity()
-        _startup_resolver = SourcetypeResolver()
+        self.sourcetype_resolver = SourcetypeResolver()
         self.helper.connector_logger.info(
-            f"Loaded {_startup_resolver.count()} sourcetype mappings"
+            f"Loaded {self.sourcetype_resolver.count()} sourcetype mappings"
+        )
+        self.mitre_resolver = MITREResolver(cache_dir=".cache", cache_ttl_days=7)
+        if self.mitre_resolver.initialize():
+            self.helper.connector_logger.info(
+                "MITRE resolver initialized",
+                {
+                    "data_source_count": len(self.mitre_resolver.data_source_names),
+                },
+            )
+        else:
+            self.helper.connector_logger.info(
+                "MITRE resolver unavailable, MITRE enrichments will be skipped"
+            )
+        self._validate_sourcetype_map_startup()
+
+    def _validate_sourcetype_map_startup(self) -> None:
+        """Validate sourcetype_map.yaml at startup and report findings."""
+        validator = YAMLValidator(self.mitre_resolver)
+        result = validator.validate({"sourcetype_map": self.sourcetype_resolver.get_mapping()})
+        for error in result.errors:
+            self.helper.connector_logger.error(f"YAML validation: {error}")
+        for warning in result.warnings:
+            self.helper.connector_logger.info(f"YAML validation: {warning}")
+        self.helper.connector_logger.info(
+            "YAML validation summary",
+            {
+                "valid": result.valid,
+                "errors": len(result.errors),
+                "warnings": len(result.warnings),
+            },
         )
 
     def _load_author_identity(self) -> stix2.Identity:

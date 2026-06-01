@@ -1,0 +1,87 @@
+{
+  "type": "bundle",
+  "id": "bundle--11111111-1111-4111-8111-111111111111",
+  "objects": [
+    {
+      "type": "x-mitre-data-source",
+      "id": "x-mitre-data-source--3e23e4b8-1111-4111-8111-111111111111",
+      "name": "Network Traffic",
+      "x_mitre_platforms": ["Network Device"]
+    },
+    {
+      "type": "x-mitre-data-source",
+      "id": "x-mitre-data-source--3e23e4b8-2222-4222-8222-222222222222",
+      "name": "Firewall",
+      "x_mitre_platforms": ["Network Device"]
+    },
+    {
+      "type": "x-mitre-data-source",
+      "id": "x-mitre-data-source--3e23e4b8-3333-4333-8333-333333333333",
+      "name": "Application Log",
+      "x_mitre_platforms": ["Server"]
+    },
+    {
+      "type": "x-mitre-data-source",
+      "id": "x-mitre-data-source--3e23e4b8-4444-4444-8444-444444444444",
+      "name": "Process",
+      "x_mitre_platforms": ["Workstation"]
+    },
+    {
+      "type": "x-mitre-data-source",
+      "id": "x-mitre-data-source--3e23e4b8-5555-4555-8555-555555555555",
+      "name": "File",
+      "x_mitre_platforms": ["Workstation"]
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--aaaa1111-1111-4111-8111-111111111111",
+      "name": "Network Connection Creation",
+      "x_mitre_data_source_ref": "x-mitre-data-source--3e23e4b8-1111-4111-8111-111111111111"
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--aaaa2222-2222-4222-8222-222222222222",
+      "name": "Network Traffic Content",
+      "x_mitre_data_source_ref": "x-mitre-data-source--3e23e4b8-1111-4111-8111-111111111111"
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--aaaa3333-3333-4333-8333-333333333333",
+      "name": "Firewall Rule Modification",
+      "x_mitre_data_source_ref": "x-mitre-data-source--3e23e4b8-2222-4222-8222-222222222222"
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--aaaa4444-4444-4444-8444-444444444444",
+      "name": "Process Creation",
+      "x_mitre_data_source_ref": "x-mitre-data-source--3e23e4b8-4444-4444-8444-444444444444"
+    },
+    {
+      "type": "x-mitre-data-component",
+      "id": "x-mitre-data-component--aaaa5555-5555-4555-8555-555555555555",
+      "name": "File Creation",
+      "x_mitre_data_source_ref": "x-mitre-data-source--3e23e4b8-5555-4555-8555-555555555555"
+    },
+    {
+      "type": "x-mitre-asset",
+      "id": "x-mitre-asset--bbbb1111-1111-4111-8111-111111111111",
+      "name": "Network Device",
+      "x_mitre_platforms": ["Router", "Switch"],
+      "sectors": ["firewall"]
+    },
+    {
+      "type": "x-mitre-asset",
+      "id": "x-mitre-asset--bbbb2222-2222-4222-8222-222222222222",
+      "name": "Server",
+      "x_mitre_platforms": ["Windows Server"],
+      "sectors": ["control system"]
+    },
+    {
+      "type": "x-mitre-asset",
+      "id": "x-mitre-asset--bbbb3333-3333-4333-8333-333333333333",
+      "name": "Workstation",
+      "x_mitre_platforms": ["Desktop"],
+      "sectors": []
+    }
+  ]
+}

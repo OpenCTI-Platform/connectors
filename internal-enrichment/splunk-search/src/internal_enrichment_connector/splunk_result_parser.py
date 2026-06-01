@@ -19,6 +19,7 @@ from pycti import (
     StixSightingRelationship,
 )
 
+from .infrastructure import InfrastructureBuilder
 from .services.sourcetype_resolver import SourcetypeResolver as _SourcetypeResolver
 from .utils import (
     detect_observable_type,
@@ -31,6 +32,7 @@ from .utils import (
 
 # Module-level resolver — loaded once at import time, shared across all calls.
 _resolver = _SourcetypeResolver()
+_infra_builder = InfrastructureBuilder()
 
 
 def _parse_ts(val) -> Optional[datetime]:
@@ -531,6 +533,25 @@ def parse_observables_and_incident(
             vendor_identity = None
 
         if entity_type == "Infrastructure" and vendor_identity is not None:
+            infrastructure_data = _infra_builder.build(mapping)
+            if infrastructure_data:
+                try:
+                    infrastructure_obj = stix2.Infrastructure(
+                        **infrastructure_data,
+                        allow_custom=True,
+                        created_by_ref=vendor_identity.id,
+                        x_opencti_created_by_ref=vendor_identity.id,
+                        **({"object_marking_refs": marking_refs} if marking_refs else {}),
+                    )
+                    observables.append(infrastructure_obj)
+                    helper.connector_logger.debug(
+                        f"[PARSER] Created Infrastructure object: {infrastructure_data.get('name')}"
+                    )
+                except Exception as e:
+                    helper.connector_logger.error(
+                        f"[PARSER] Failed to create Infrastructure for '{mapping.get('product', sourcetype_val)}': {e}"
+                    )
+
             # SecurityPlatform Identity goes into where_sighted_refs (Identity SDO required).
             # identity_class MUST be "securityplatform" (all-lowercase) — this is what
             # triggers OpenCTI's securityPlatformAdd mutation instead of the generic
