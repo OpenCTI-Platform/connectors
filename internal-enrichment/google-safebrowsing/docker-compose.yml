@@ -15,8 +15,8 @@ services:
       - CONNECTOR_UPDATE_EXISTING_DATA=true
       # Connector's custom execution parameters:
       - SAFE_BROWSING_API_KEY= # Your Google/Yandex Safe Browsing API key
-      - SAFE_BROWSING_API_URL= # Your Google/Yandex Safe Browsing API URL (optional, default: https://safebrowsing.googleapis.com)
-      # GOOGLE_SAFE_BROWSING_API_KEY= # Your Google Safe Browsing API key for backward compatibility (optional, if SAFE_BROWSING_API_KEY is not set)
+      # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Optional (default). Use https://sba.yandex.net for Yandex
+      # - GOOGLE_SAFE_BROWSING_API_KEY= # Legacy Google key, used only if SAFE_BROWSING_API_KEY is unset (backward compatibility)
     restart: always
 
 

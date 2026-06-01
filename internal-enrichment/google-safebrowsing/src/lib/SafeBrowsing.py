@@ -31,17 +31,18 @@ class SafeBrowsingConnector:
 
     def google_safe_browsing(self, observable):
 
-        self.helper.log_info(
-            f"Checking domain {observable['value']} against Google Safe Browsing"
-        )
+        self.helper.log_info(f"Checking {observable['value']} against Safe Browsing")
 
-        """Checks a domain against the Google Safe Browsing API."""
+        """Checks a domain against the configured Safe Browsing API (Google or Yandex)."""
 
         API_KEY = os.environ.get("SAFE_BROWSING_API_KEY") or os.environ.get(
             "GOOGLE_SAFE_BROWSING_API_KEY", ""
         )
-        API_URL = os.environ.get(
-            "SAFE_BROWSING_API_URL", "https://safebrowsing.googleapis.com"
+        # Treat an empty value (e.g. `SAFE_BROWSING_API_URL=` in docker-compose) as
+        # unset so the default Google endpoint is always used.
+        API_URL = (
+            os.environ.get("SAFE_BROWSING_API_URL")
+            or "https://safebrowsing.googleapis.com"
         )
         domain = observable["value"]
         stix_objects = []
@@ -71,6 +72,7 @@ class SafeBrowsingConnector:
         response = requests.post(
             url,
             json=payload,
+            timeout=30,
         )
         if response.status_code == 200:
             if response.json():
@@ -151,7 +153,7 @@ class SafeBrowsingConnector:
 
         if observable["entity_type"] == "Domain-Name":
             self.helper.log_info(
-                f"Checking domain {observable} against Google Safe Browsing"
+                f"Checking domain {observable['value']} against Safe Browsing"
             )
             return self.google_safe_browsing(observable)
         elif observable["entity_type"] == "Url":

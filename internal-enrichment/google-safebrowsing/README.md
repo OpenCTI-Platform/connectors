@@ -6,7 +6,7 @@
 
 The Google Safe Browsing connector enriches Domain-Name, URL, and Hostname observables by checking them against Google's Safe Browsing threat lists, identifying malware, phishing, and unwanted software threats.
 
-Connector can be usable with Yandex Safe Browsing as an alternative.
+This connector can also be used with Yandex Safe Browsing as an alternative provider.
 
 ## Table of Contents
 
@@ -70,11 +70,11 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter        | config.yml | Docker environment variable      | Mandatory | Description                                     |
-|------------------|------------|----------------------------------|-----------|-------------------------------------------------|
-| API Key          |            | `SAFE_BROWSING_API_KEY`          | Yes       | Safe Browsing API key (Google/Yandex) .         |
-| API Url          |            | `SAFE_BROWSING_API_URL`          | No.       | Safe Browsing API url (Google/Yandex). Default: https://safebrowsing.googleapis.com |
-| API Key          |            | `GOOGLE_SAFE_BROWSING_API_KEY`   | No        | Google Safe Browsing API key from Cloud Console (for backward compatibility). |
+| Parameter | config.yml | Docker environment variable    | Mandatory | Description                                                                                                  |
+|-----------|------------|--------------------------------|-----------|--------------------------------------------------------------------------------------------------------------|
+| API Key   |            | `SAFE_BROWSING_API_KEY`        | Yes*      | Safe Browsing API key (Google or Yandex). *Required unless the legacy `GOOGLE_SAFE_BROWSING_API_KEY` is set. |
+| API URL   |            | `SAFE_BROWSING_API_URL`        | No        | Safe Browsing API base URL (Google or Yandex). Default: `https://safebrowsing.googleapis.com`.               |
+| API Key   |            | `GOOGLE_SAFE_BROWSING_API_KEY` | No        | Legacy Google Safe Browsing API key, used only if `SAFE_BROWSING_API_KEY` is unset (backward compatibility). |
 
 
 ## Deployment
@@ -101,9 +101,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=true
       - CONNECTOR_UPDATE_EXISTING_DATA=true
-      # - GOOGLE_SAFE_BROWSING_API_KEY=ChangeMe
       - SAFE_BROWSING_API_KEY=ChangeMe
-      - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # OR https://sba.yandex.net
+      # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Optional (default). Use https://sba.yandex.net for Yandex
+      # - GOOGLE_SAFE_BROWSING_API_KEY=ChangeMe # Legacy, used only if SAFE_BROWSING_API_KEY is unset
     restart: always
 ```
 
