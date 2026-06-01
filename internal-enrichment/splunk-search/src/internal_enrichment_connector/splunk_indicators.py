@@ -45,6 +45,20 @@ class SplunkIndicator:
 
     # ---------------------------- OpenCTI params ---------------------------- #
 
+    @staticmethod
+    def extract_spl(indicator: dict) -> str | None:
+        """Extract the raw SPL query from an indicator dict.
+
+        For indicators with pattern_type='spl', the pattern field IS the SPL query.
+        Returns the query string, or None when the indicator is not an SPL type
+        or the pattern is empty.
+        """
+        pattern_type = (indicator.get("pattern_type") or "").lower().strip()
+        if pattern_type == "spl":
+            query = (indicator.get("pattern") or "").strip()
+            return query if query else None
+        return None
+
     def load_params_from_notes(self, helper: OpenCTIConnectorHelper) -> None:
         """Fetch attached Notes and merge any JSON content as params.
 
