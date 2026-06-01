@@ -228,6 +228,13 @@ class ConverterToStix:
 
         return labels
 
-    def _get_item_id(self, item: dict) -> str:
-        """Safely extract an item ID for logging."""
-        return item.get("_id", "unknown")
+    def _get_item_id(self, item) -> str:
+        """Safely extract an item ID for logging.
+
+        Tolerates non-dict items (e.g. a malformed API page containing a bare
+        string) so the per-item skip path in ``news_to_stix`` cannot itself
+        raise and abort the whole conversion.
+        """
+        if isinstance(item, dict):
+            return item.get("_id", "unknown")
+        return "unknown"

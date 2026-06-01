@@ -88,6 +88,28 @@ class TestCTM360CynaConfigOverrides:
         )
 
 
+class TestPositiveIntegerValidation:
+    """Non-positive scheduling/pagination values must be rejected at load time."""
+
+    @pytest.mark.parametrize("value", ["0", "-1"])
+    def test_import_interval_must_be_positive(self, monkeypatch, value):
+        monkeypatch.setenv("CTM360_CYNA_IMPORT_INTERVAL", value)
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+    @pytest.mark.parametrize("value", ["0", "-10"])
+    def test_page_size_must_be_positive(self, monkeypatch, value):
+        monkeypatch.setenv("CTM360_CYNA_PAGE_SIZE", value)
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+    @pytest.mark.parametrize("value", ["0", "-3"])
+    def test_max_pages_must_be_positive(self, monkeypatch, value):
+        monkeypatch.setenv("CTM360_CYNA_MAX_PAGES", value)
+        with pytest.raises(ConfigValidationError):
+            ConnectorSettings()
+
+
 class TestRequiredFieldValidation:
     """Test that missing required fields raise validation errors."""
 

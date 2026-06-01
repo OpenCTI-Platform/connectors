@@ -65,6 +65,29 @@ class TestRequest:
         )
         assert client._request("GET", "/x") == {"ok": 1}
 
+    def test_429_with_invalid_retry_after_header(self, client):
+        # A malformed Retry-After value must not raise; it falls back to the
+        # configured backoff and the request still completes.
+        client.session.request = MagicMock(
+            side_effect=[
+                FakeResponse(429, headers={"Retry-After": "not-a-number"}),
+                FakeResponse(200, {"ok": 1}),
+            ]
+        )
+        assert client._request("GET", "/x") == {"ok": 1}
+
+    def test_429_with_http_date_retry_after_header(self, client):
+        # An HTTP-date Retry-After value (RFC 7231) must be parsed, not crash.
+        client.session.request = MagicMock(
+            side_effect=[
+                FakeResponse(
+                    429, headers={"Retry-After": "Wed, 21 Oct 2099 07:28:00 GMT"}
+                ),
+                FakeResponse(200, {"ok": 1}),
+            ]
+        )
+        assert client._request("GET", "/x") == {"ok": 1}
+
     def test_429_exhausted(self, client):
         client.session.request = MagicMock(return_value=FakeResponse(429))
         with pytest.raises(CTM360CynaAPIError, match="Max retries exceeded"):
@@ -180,6 +203,26 @@ class TestGetAllNews:
         result = client.get_all_news(page_size=1, max_pages=3)
         assert client.get_news_page.call_count == 3
         assert len(result) == 3
+
+
+class TestParseRetryAfter:
+    def test_none_returns_fallback(self, client):
+        assert client._parse_retry_after(None, 7) == 7
+
+    def test_integer_seconds(self, client):
+        assert client._parse_retry_after("10", 7) == 10
+
+    def test_negative_seconds_clamped_to_zero(self, client):
+        assert client._parse_retry_after("-5", 7) == 0
+
+    def test_malformed_value_returns_fallback(self, client):
+        assert client._parse_retry_after("soon", 7) == 7
+
+    def test_future_http_date_returns_positive_delay(self, client):
+        assert client._parse_retry_after("Wed, 21 Oct 2099 07:28:00 GMT", 7) > 0
+
+    def test_past_http_date_clamped_to_zero(self, client):
+        assert client._parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT", 7) == 0
 
 
 class TestApiError:

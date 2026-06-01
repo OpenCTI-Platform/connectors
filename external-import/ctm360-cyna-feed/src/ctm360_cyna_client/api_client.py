@@ -1,4 +1,6 @@
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 
 import requests
 from pycti import OpenCTIConnectorHelper
@@ -32,6 +34,35 @@ class CTM360CynaClient:
         self.session.verify = True
         self._max_retries = 3
         self._retry_delay = 5
+
+    def _parse_retry_after(self, header_value, fallback: int) -> int:
+        """Parse a ``Retry-After`` header into a non-negative delay in seconds.
+
+        ``Retry-After`` may be either an integer number of seconds or an
+        HTTP-date (RFC 7231). Any missing or malformed value falls back to the
+        configured linear backoff so a non-integer header can never bypass the
+        retry handling with an unexpected ``ValueError``.
+        """
+        if header_value is None:
+            return fallback
+
+        # Integer "delay-seconds" form.
+        try:
+            return max(int(header_value), 0)
+        except (TypeError, ValueError):
+            pass
+
+        # HTTP-date form.
+        try:
+            retry_dt = parsedate_to_datetime(header_value)
+        except (TypeError, ValueError):
+            return fallback
+        if retry_dt is None:
+            return fallback
+        if retry_dt.tzinfo is None:
+            retry_dt = retry_dt.replace(tzinfo=timezone.utc)
+        delta = (retry_dt - datetime.now(timezone.utc)).total_seconds()
+        return max(int(delta), 0)
 
     def _request(
         self,
@@ -69,10 +100,9 @@ class CTM360CynaClient:
 
                 # Handle rate limiting
                 if response.status_code == 429:
-                    retry_after = int(
-                        response.headers.get(
-                            "Retry-After", self._retry_delay * (attempt + 1)
-                        )
+                    retry_after = self._parse_retry_after(
+                        response.headers.get("Retry-After"),
+                        self._retry_delay * (attempt + 1),
                     )
                     self.helper.connector_logger.warning(
                         "[API] Rate limited, waiting",

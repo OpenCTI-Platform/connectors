@@ -64,16 +64,19 @@
     "CTM360_CYNA_IMPORT_INTERVAL": {
       "default": 86400,
       "description": "Interval in seconds between imports (default: 24h).",
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "CTM360_CYNA_PAGE_SIZE": {
       "default": 25,
       "description": "Number of news items per API page (default: 25).",
+      "exclusiveMinimum": 0,
       "type": "integer"
     },
     "CTM360_CYNA_MAX_PAGES": {
       "default": 100,
       "description": "Maximum pages to fetch per import cycle (safety limit).",
+      "exclusiveMinimum": 0,
       "type": "integer"
     }
   },

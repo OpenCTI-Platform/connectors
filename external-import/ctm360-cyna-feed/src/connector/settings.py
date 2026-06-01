@@ -18,14 +18,17 @@ class CTM360CynaConfig(BaseConfigModel):
     api_key: SecretStr = Field(description="API key for CYNA authentication.")
     import_interval: int = Field(
         default=86400,
+        gt=0,
         description="Interval in seconds between imports (default: 24h).",
     )
     page_size: int = Field(
         default=25,
+        gt=0,
         description="Number of news items per API page (default: 25).",
     )
     max_pages: int = Field(
         default=100,
+        gt=0,
         description="Maximum pages to fetch per import cycle (safety limit).",
     )
 

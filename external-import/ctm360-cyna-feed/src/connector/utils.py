@@ -13,7 +13,10 @@ def normalize_timestamp(ts) -> str:
     - Epoch seconds (1772657449)
     - Common date-only formats
     """
-    if not ts:
+    # Note: only None (and empty/blank strings further down) are treated as
+    # "missing". A numeric 0 is a valid Unix epoch and must normalise to
+    # "1970-01-01T00:00:00Z", not the current time.
+    if ts is None:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Handle epoch timestamps (int or float)

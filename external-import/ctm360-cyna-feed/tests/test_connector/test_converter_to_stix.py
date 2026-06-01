@@ -41,6 +41,12 @@ class TestHelpers:
         assert converter._get_item_id({"_id": "abc"}) == "abc"
         assert converter._get_item_id({}) == "unknown"
 
+    def test_get_item_id_non_dict_returns_unknown(self, converter):
+        # A non-dict item must not raise (it would otherwise escape the
+        # per-item skip path and abort the whole conversion).
+        assert converter._get_item_id("not-a-dict") == "unknown"
+        assert converter._get_item_id(None) == "unknown"
+
     def test_author_uses_deterministic_id(self, converter):
         # pycti Identity.generate_id yields a deterministic identity-- id.
         assert converter.author.id.startswith("identity--")
@@ -130,4 +136,12 @@ class TestNewsToStix:
         types = _types(objects)
         assert types == ["identity"]
         assert "marking-definition" not in types
+        converter.helper.connector_logger.warning.assert_called()
+
+    def test_non_dict_item_is_skipped_not_fatal(self, converter):
+        # A bare non-dict item in the page must be skipped (logged) rather than
+        # raising out of news_to_stix and failing the whole batch.
+        objects = converter.news_to_stix(["not-a-dict", _news_item(title="Valid news")])
+        types = _types(objects)
+        assert "report" in types  # the valid item still converts
         converter.helper.connector_logger.warning.assert_called()

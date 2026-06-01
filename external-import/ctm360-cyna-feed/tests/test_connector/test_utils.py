@@ -15,6 +15,12 @@ class TestNormalizeTimestamp:
     def test_epoch_seconds(self):
         assert normalize_timestamp(1609459200) == "2021-01-01T00:00:00Z"
 
+    def test_epoch_zero_is_unix_epoch_not_now(self):
+        # 0 is a valid Unix epoch and must not be treated as "missing".
+        assert normalize_timestamp(0) == "1970-01-01T00:00:00Z"
+        assert normalize_timestamp(0.0) == "1970-01-01T00:00:00Z"
+        assert normalize_timestamp("0") == "1970-01-01T00:00:00Z"
+
     def test_epoch_milliseconds(self):
         assert normalize_timestamp(1609459200000) == "2021-01-01T00:00:00Z"
 
