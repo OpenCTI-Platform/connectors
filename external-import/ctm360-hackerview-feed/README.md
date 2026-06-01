@@ -38,7 +38,7 @@ Each category can be enabled or disabled independently via environment variables
 | `note` | Issues / Resolved Issues | Full issue detail (category, severity, impact, technologies, status) |
 | `attack-pattern` | Issues | One per CWE identifier on the issue |
 | `software` | Issues | One per detected technology |
-| `case-incident` | Issues | Created via the OpenCTI API for each issue, linked to the issue's vulnerability/system |
+| `case-incident` | Issues | One `CustomObjectCaseIncident` per issue, shipped in the bundle with a deterministic id (`CaseIncident.generate_id`) and referencing the issue's vulnerability/system/note/attack-pattern/software |
 | `relationship` | Issues | `has` (system → vulnerability), `related-to` (vulnerability → attack-pattern, system → software) |
 
 All objects are attributed to the `CTM360 HackerView` Identity and carry an
@@ -227,10 +227,17 @@ of STIX objects ingested and any partial failures.
   retry (up to 3 attempts) on 5xx errors and connection failures, and rate-limit
   handling via `Retry-After`.
 - `connector/connector.py` — Orchestration loop; fetches data per category, collects
-  STIX objects, sends the bundle, updates connector state, and handles partial failures
-  without masking partial successes.
+  STIX objects (including the case incidents), sends a single bundle, updates connector
+  state, and handles partial failures without masking partial successes.
 - `connector/converter_to_stix.py` — Converts raw HackerView JSON records into STIX
-  2.1 objects; generates deterministic IDs for relationships and deduplication.
+  2.1 objects; generates deterministic IDs for every object (including
+  `CustomObjectCaseIncident` via `CaseIncident.generate_id`) so re-imports upsert
+  instead of duplicating. Nothing is created through the OpenCTI API.
+- `connector/case_status_tracker.py` — Optional background daemon
+  (`CTM360_HACKERVIEW_FEED_ENABLE_STATUS_TRACKING`) that polls HackerView for status
+  changes on the case incidents shipped in the bundle and, when a status changes,
+  updates the case's `status:` label (a label update on an existing object, keyed by
+  the deterministic case id — never a creation).
 
 ## Troubleshooting
 

@@ -7,8 +7,6 @@ from connector.settings import ConnectorSettings
 from ctm360_hv_client.api_client import CTM360HvClient
 from pycti import OpenCTIConnectorHelper
 
-HV_SOURCE_NAME = "CTM360-HackerView"
-
 
 class CTM360HackerViewConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -34,10 +32,6 @@ class CTM360HackerViewConnector:
         self._lock = threading.Lock()
         self._enable_tracking = config.ctm360_hackerview_feed.enable_status_tracking
         self._tracker = None
-        # The HackerView author identity is created (with a deterministic id) by
-        # the converter and shipped in every bundle, so reuse that id rather than
-        # issuing an extra API call to create a second identity.
-        self._author_opencti_id = self.converter.author.id
 
     def run(self):
         if self._enable_tracking:
@@ -93,6 +87,10 @@ class CTM360HackerViewConnector:
             state = self.helper.get_state() or {}
         last_run = state.get("last_run", None)
         now = datetime.now(timezone.utc)
+
+        # Reset so a category that is disabled or fails this cycle cannot leak
+        # CaseIncidents collected on a previous run into the tracker.
+        self.converter.issue_case_metadata = []
 
         all_objects = []
         errors = []
@@ -206,10 +204,16 @@ class CTM360HackerViewConnector:
             else:
                 msg = "No new data to import"
 
-            # Create CaseIncidents for HackerView issues
-            case_count = self._create_case_incidents(self.converter.issue_case_metadata)
-            if case_count > 0:
-                msg += f", {case_count} case(s) created"
+            # CaseIncidents are produced by the converter and shipped in the
+            # bundle above (CustomObjectCaseIncident with deterministic ids), so
+            # they are deduplicated by the OpenCTI worker. Register them with the
+            # status tracker — keyed by the deterministic case id — so later
+            # HackerView status changes can be reflected without any API create.
+            case_metadata = self.converter.issue_case_metadata
+            if case_metadata:
+                msg += f", {len(case_metadata)} case(s) in bundle"
+                if self._tracker:
+                    self._tracker.register_cases(case_metadata)
 
             if errors:
                 msg += f" (partial: {len(errors)} categories failed)"
@@ -230,91 +234,3 @@ class CTM360HackerViewConnector:
                 "[CONNECTOR] Import failed", {"error": str(e)}
             )
             raise
-
-    def _create_case_incidents(self, case_metadata: list) -> int:
-        """Create CaseIncident objects in OpenCTI for each HackerView issue."""
-        if not case_metadata:
-            return 0
-        created = 0
-        for meta in case_metadata:
-            try:
-                self._create_case_incident(meta)
-                created += 1
-            except Exception as e:
-                self.helper.connector_logger.error(
-                    "[CONNECTOR] Failed to create CaseIncident",
-                    {"ticket_id": meta.get("ticket_id"), "error": str(e)},
-                )
-        self.helper.connector_logger.info(
-            "[CONNECTOR] CaseIncidents created",
-            {"created": created, "total": len(case_metadata)},
-        )
-        return created
-
-    def _create_case_incident(self, meta: dict):
-        """Create a single CaseIncident in OpenCTI via pycti API."""
-        ticket_id = meta["ticket_id"]
-
-        # Create ExternalReference first, then pass its ID
-        ext_ref_kwargs = {
-            "source_name": HV_SOURCE_NAME,
-            "external_id": ticket_id,
-        }
-        if meta.get("hackerview_link"):
-            ext_ref_kwargs["url"] = meta["hackerview_link"]
-
-        ext_ref_result = self.helper.api.external_reference.create(**ext_ref_kwargs)
-        ext_ref_id = ext_ref_result.get("id") if ext_ref_result else None
-        ext_refs = [ext_ref_id] if ext_ref_id else []
-
-        create_kwargs = {
-            "name": meta["name"],
-            "description": meta["description"],
-            "severity": meta["severity"],
-            "priority": meta["priority"],
-            "created": meta["created"],
-            "externalReferences": ext_refs,
-            "objects": meta.get("linked_stix_ids", []),
-        }
-        if self._author_opencti_id:
-            create_kwargs["createdBy"] = self._author_opencti_id
-
-        result = self.helper.api.case_incident.create(**create_kwargs)
-
-        case_id = result.get("id", "") if result else ""
-        if case_id:
-            self.helper.connector_logger.info(
-                "[CONNECTOR] CaseIncident created",
-                {"case_id": case_id, "ticket_id": ticket_id, "name": meta["name"]},
-            )
-            # Add labels individually
-            for label in meta.get("labels", []):
-                try:
-                    self.helper.api.stix_domain_object.add_label(
-                        id=case_id, label_name=label
-                    )
-                except Exception as e:
-                    self.helper.connector_logger.warning(
-                        "[CONNECTOR] Failed to add label",
-                        {"case_id": case_id, "label": label, "error": str(e)},
-                    )
-            # Register with status tracker
-            if self._tracker:
-                self._tracker.register_case(
-                    ticket_id=ticket_id,
-                    case_incident_id=case_id,
-                    initial_status="unknown",
-                )
-            # Set response types
-            resp_types = meta.get("response_types", [])
-            if resp_types:
-                try:
-                    self.helper.api.stix_domain_object.update_field(
-                        id=case_id,
-                        input={"key": "response_types", "value": resp_types},
-                    )
-                except Exception as e:
-                    self.helper.connector_logger.warning(
-                        "[CONNECTOR] Failed to set response_types",
-                        {"case_id": case_id, "error": str(e)},
-                    )

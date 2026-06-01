@@ -46,11 +46,11 @@ def build_connector(helper, **hv_overrides):
 
 
 class TestInit:
-    def test_author_id_comes_from_converter(self, helper):
+    def test_author_identity_ships_in_bundle_not_via_api(self, helper):
         connector = CTM360HackerViewConnector(config=make_config(), helper=helper)
-        assert connector._author_opencti_id == connector.converter.author.id
-        assert connector._author_opencti_id.startswith("identity--")
-        # No extra API call to create an author identity.
+        # The author identity is created by the converter (deterministic id) and
+        # shipped in the bundle — never created via an OpenCTI API call.
+        assert connector.converter.author.id.startswith("identity--")
         helper.api.identity.create.assert_not_called()
 
 
@@ -163,43 +163,93 @@ class TestImportData:
         assert saved["last_run"] != "old"
 
 
-class TestCreateCaseIncident:
-    def _meta(self):
-        return {
-            "ticket_id": "HV-1",
-            "name": "Issue [HV-1]",
-            "description": "desc",
-            "severity": "high",
-            "priority": "P2",
-            "created": "2026-03-04T18:00:00Z",
-            "labels": ["ctm360-hackerview", "status:open"],
-            "linked_stix_ids": ["vulnerability--x"],
-            "response_types": ["exposure"],
-            "hackerview_link": "https://hackerview.ctm360.com/issue/HV-1",
-        }
+class TestCaseRegistration:
+    """Cases ship in the bundle; the connector only registers them (no API create)."""
 
-    def test_empty_metadata_returns_zero(self, helper):
-        connector = build_connector(helper)
-        assert connector._create_case_incidents([]) == 0
+    def _wire_issue_cases(self, connector, meta):
+        for getter in (
+            "get_issues",
+            "get_resolved_issues",
+            "get_domain_assets",
+            "get_host_assets",
+            "get_ip_assets",
+        ):
+            getattr(connector.client, getter).return_value = []
+        for conv in (
+            "resolved_issues_to_stix",
+            "domain_assets_to_stix",
+            "host_assets_to_stix",
+            "ip_assets_to_stix",
+        ):
+            getattr(connector.converter, conv).return_value = []
 
-    def test_create_case_incident_full(self, helper):
-        helper.api.external_reference.create.return_value = {"id": "ext-1"}
-        helper.api.case_incident.create.return_value = {"id": "case-1"}
-        connector = build_connector(helper)
-        connector._create_case_incident(self._meta())
-        kwargs = helper.api.case_incident.create.call_args.kwargs
-        assert kwargs["name"] == "Issue [HV-1]"
-        assert kwargs["createdBy"] == connector._author_opencti_id
-        assert kwargs["objects"] == ["vulnerability--x"]
-        assert helper.api.stix_domain_object.add_label.call_count == 2
-        helper.api.stix_domain_object.update_field.assert_called_once()
+        def fake_issues_to_stix(_data):
+            connector.converter.issue_case_metadata = meta
+            return [object()]  # one case-incident object in the bundle
 
-    def test_create_case_incidents_counts_errors(self, helper):
-        helper.api.external_reference.create.return_value = {"id": "ext-1"}
-        helper.api.case_incident.create.side_effect = [
-            {"id": "case-1"},
-            RuntimeError("boom"),
+        connector.converter.issues_to_stix.side_effect = fake_issues_to_stix
+
+    def test_cases_registered_from_metadata_without_api_create(self, helper):
+        connector = build_connector(helper, enable_status_tracking=True)
+        connector._tracker = MagicMock()
+        helper.get_state.return_value = {}
+        meta = [
+            {
+                "ticket_id": "HV-1",
+                "case_incident_id": "case-incident--abc",
+                "initial_status": "open",
+            }
         ]
-        connector = build_connector(helper)
-        created = connector._create_case_incidents([self._meta(), self._meta()])
-        assert created == 1
+        self._wire_issue_cases(connector, meta)
+
+        connector._import_data()
+
+        # The case incident shipped in the bundle, not via the API.
+        helper.api.case_incident.create.assert_not_called()
+        helper.api.external_reference.create.assert_not_called()
+        helper.send_stix2_bundle.assert_called_once()
+        connector._tracker.register_cases.assert_called_once_with(meta)
+
+    def test_no_tracker_still_no_api_create(self, helper):
+        connector = build_connector(helper)  # tracking disabled, _tracker is None
+        helper.get_state.return_value = {}
+        meta = [
+            {
+                "ticket_id": "HV-1",
+                "case_incident_id": "case-incident--abc",
+                "initial_status": "open",
+            }
+        ]
+        self._wire_issue_cases(connector, meta)
+
+        connector._import_data()
+
+        helper.api.case_incident.create.assert_not_called()
+        helper.send_stix2_bundle.assert_called_once()
+
+    def test_metadata_reset_prevents_stale_registration(self, helper):
+        # A previous run left metadata on the converter; if issues are not
+        # imported this cycle it must not be re-registered.
+        connector = build_connector(helper, enable_status_tracking=True)
+        connector._tracker = MagicMock()
+        connector._import_issues = False
+        connector.converter.issue_case_metadata = [{"ticket_id": "STALE"}]
+        helper.get_state.return_value = {}
+        for getter in (
+            "get_resolved_issues",
+            "get_domain_assets",
+            "get_host_assets",
+            "get_ip_assets",
+        ):
+            getattr(connector.client, getter).return_value = []
+        for conv in (
+            "resolved_issues_to_stix",
+            "domain_assets_to_stix",
+            "host_assets_to_stix",
+            "ip_assets_to_stix",
+        ):
+            getattr(connector.converter, conv).return_value = []
+
+        connector._import_data()
+
+        connector._tracker.register_cases.assert_not_called()

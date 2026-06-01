@@ -3,7 +3,7 @@ import re
 import pycti
 import stix2
 from connector.utils import normalize_timestamp
-from pycti import OpenCTIConnectorHelper
+from pycti import CustomObjectCaseIncident, OpenCTIConnectorHelper
 
 
 class ConverterToStix:
@@ -127,10 +127,14 @@ class ConverterToStix:
         return str(value) if value else ""
 
     def issues_to_stix(self, issues: list) -> list:
-        """Convert HackerView security issues to STIX objects and case metadata.
+        """Convert HackerView security issues to STIX objects.
 
-        Creates Vulnerability (when cve_id present) and Note (issue details).
-        Collects case metadata for CaseIncident creation by the connector.
+        Builds, per issue, a Vulnerability (when cve_id is present), a System
+        identity for the affected asset, a Note with the full details, any
+        AttackPattern (CWE) / Software (technology) objects, and a
+        ``CustomObjectCaseIncident`` (deterministic id) referencing them — all
+        shipped in the bundle. Records the deterministic case id and current
+        status in ``issue_case_metadata`` so the status tracker can follow up.
         """
         self.issue_case_metadata = []
         objects = [self.author]
@@ -168,6 +172,10 @@ class ConverterToStix:
                     {"issue_name": issue_name},
                 )
                 continue
+
+            # STIX ids of every entity built for this issue; used as the
+            # CaseIncident object_refs so the case is a complete container.
+            issue_object_ids = []
 
             score = self._severity_to_score(severity)
             ext_ref = self._ext_ref(
@@ -247,6 +255,7 @@ class ConverterToStix:
                     },
                 )
                 objects.append(vuln_obj)
+                issue_object_ids.append(vuln_obj.id)
 
             # --- System identity for affected asset ---
             system_name = host or domain or asset or resolved_ip
@@ -265,6 +274,7 @@ class ConverterToStix:
                     created_by_ref=self.author.id,
                 )
                 objects.append(system)
+                issue_object_ids.append(system_id)
 
                 # System --has--> Vulnerability
                 if vuln_obj:
@@ -303,6 +313,7 @@ class ConverterToStix:
                 },
             )
             objects.append(note)
+            issue_object_ids.append(note.id)
 
             # --- AttackPattern from CWE IDs ---
             cwe_raw_list = issue.get("cwe", [])
@@ -338,6 +349,7 @@ class ConverterToStix:
                         ],
                     )
                     objects.append(attack_pattern)
+                    issue_object_ids.append(attack_id)
 
                     # Vulnerability --related-to--> AttackPattern
                     if vuln_obj:
@@ -365,6 +377,7 @@ class ConverterToStix:
                     # same technology reuses the same Software id across runs.
                     software = stix2.Software(name=tech_name)
                     objects.append(software)
+                    issue_object_ids.append(software.id)
 
                     # System --related-to--> Software
                     if system_name and system_id:
@@ -420,26 +433,38 @@ class ConverterToStix:
             self._add_list_labels(case_labels, issue.get("potential_attack_type", []))
             self._add_list_labels(case_labels, issue.get("potential_impact", []))
 
-            linked_ids = []
-            if vuln_obj:
-                linked_ids.append(vuln_obj.id)
-            if system_id:
-                linked_ids.append(system_id)
+            # --- CaseIncident (shipped in the bundle, never via the API) ---
+            case_id = pycti.CaseIncident.generate_id(name=case_name, created=first_seen)
+            case_kwargs = {
+                "id": case_id,
+                "name": case_name,
+                "description": description,
+                "severity": self._normalize_severity(severity),
+                "priority": self._severity_to_priority(severity),
+                "created": first_seen,
+                "created_by_ref": self.author.id,
+                "labels": case_labels,
+                "external_references": [ext_ref],
+                "object_refs": issue_object_ids,
+            }
+            response_types = [self._format_list_field(issue_type)] if issue_type else []
+            if response_types:
+                case_kwargs["response_types"] = response_types
+            objects.append(CustomObjectCaseIncident(**case_kwargs))
 
+            # The deterministic case id and the issue's current status are kept
+            # so the background status tracker can reflect later status changes
+            # onto the case shipped in the bundle (no API creation needed).
+            initial_status = (
+                f"{str(status).lower()}:{str(progress_status).lower()}"
+                if progress_status
+                else str(status).lower()
+            )
             self.issue_case_metadata.append(
                 {
                     "ticket_id": str(issue_id),
-                    "name": case_name,
-                    "description": description,
-                    "severity": self._normalize_severity(severity),
-                    "priority": self._severity_to_priority(severity),
-                    "response_types": (
-                        [self._format_list_field(issue_type)] if issue_type else []
-                    ),
-                    "labels": case_labels,
-                    "linked_stix_ids": linked_ids,
-                    "created": first_seen,
-                    "hackerview_link": hackerview_link,
+                    "case_incident_id": case_id,
+                    "initial_status": initial_status,
                 }
             )
 

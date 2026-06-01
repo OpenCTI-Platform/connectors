@@ -89,6 +89,7 @@ class TestIssuesToStix:
         assert "attack-pattern" in types
         assert "software" in types
         assert "relationship" in types
+        assert "case-incident" in types  # shipped in the bundle, not via API
         assert len(converter.issue_case_metadata) == 1
 
     def test_technologies_relationship_has_relationship_type(self, converter):
@@ -117,16 +118,36 @@ class TestIssuesToStix:
         objects = converter.issues_to_stix([_full_issue(cve_id="", cwe=[])])
         assert "vulnerability" not in _types(objects)
 
-    def test_case_metadata_fields(self, converter):
-        converter.issues_to_stix([_full_issue()])
+    def test_case_incident_object_built_in_bundle(self, converter):
+        objects = converter.issues_to_stix([_full_issue()])
+        cases = [o for o in objects if o.type == "case-incident"]
+        assert len(cases) == 1
+        case = cases[0]
+        assert case.id.startswith("case-incident--")
+        assert case.severity == "high"
+        assert case.priority == "P2"
+        assert case.response_types == ["exposure"]
+        assert "ctm360-hackerview" in case.labels
+        assert "status:open" in case.labels
+        assert case.created_by_ref == converter.author.id
+        assert any(ref.external_id == "HV-1" for ref in case.external_references)
+        # The case references the objects built for the issue (note is always one).
+        assert case.object_refs
+
+    def test_case_metadata_tracks_deterministic_id(self, converter):
+        objects = converter.issues_to_stix([_full_issue()])
+        case = next(o for o in objects if o.type == "case-incident")
         meta = converter.issue_case_metadata[0]
         assert meta["ticket_id"] == "HV-1"
-        assert meta["severity"] == "high"
-        assert meta["priority"] == "P2"
-        assert "ctm360-hackerview" in meta["labels"]
-        assert "status:open" in meta["labels"]
-        assert meta["hackerview_link"].endswith("HV-1")
-        assert meta["linked_stix_ids"]
+        assert meta["case_incident_id"] == case.id
+        assert meta["initial_status"] == "open:in_progress"
+
+    def test_case_incident_id_is_deterministic(self, converter):
+        first = converter.issues_to_stix([_full_issue()])
+        second = converter.issues_to_stix([_full_issue()])
+        case1 = next(o for o in first if o.type == "case-incident")
+        case2 = next(o for o in second if o.type == "case-incident")
+        assert case1.id == case2.id
 
 
 class TestResolvedIssuesToStix:

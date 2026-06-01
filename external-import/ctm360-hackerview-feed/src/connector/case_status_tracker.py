@@ -1,8 +1,11 @@
 """Background daemon thread that polls HackerView API for issue status changes.
 
-When a CaseIncident is created from a HackerView issue, the tracker registers
-it for polling. On each cycle, it checks the current status from the HackerView
-API and updates the CaseIncident label in OpenCTI if the status changed.
+CaseIncidents themselves are created through the STIX bundle (see
+``ConverterToStix``) with deterministic ids; this tracker only reflects *later*
+status changes onto an already-ingested case. The connector registers each case
+by its deterministic id, and on every cycle the tracker checks the current
+status from the HackerView API and updates the case label in OpenCTI when it
+changes (a label mutation on an existing object, never a creation).
 """
 
 import threading
@@ -52,17 +55,41 @@ class CaseStatusTracker:
         case_incident_id: str,
         initial_status: str = "unknown",
     ):
-        """Register a CaseIncident for status tracking."""
+        """Register a single bundle-created CaseIncident for status tracking."""
+        self.register_cases(
+            [
+                {
+                    "ticket_id": ticket_id,
+                    "case_incident_id": case_incident_id,
+                    "initial_status": initial_status,
+                }
+            ]
+        )
+
+    def register_cases(self, cases: list):
+        """Register CaseIncidents (created in the bundle) for status tracking.
+
+        Each entry must carry the ticket_id and the deterministic
+        ``case_incident_id`` shipped in the bundle. Existing tracked entries are
+        preserved so the tracker does not lose the last known status. Done in a
+        single state read-modify-write under the shared lock.
+        """
+        if not cases:
+            return
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         with self.lock:
             state = self.helper.get_state() or {}
             tracked = state.get("tracked_cases", {})
-            tracked[ticket_id] = {
-                "case_incident_id": case_incident_id,
-                "last_known_status": initial_status,
-                "registered_at": datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                ),
-            }
+            for case in cases:
+                ticket_id = case["ticket_id"]
+                existing = tracked.get(ticket_id, {})
+                tracked[ticket_id] = {
+                    "case_incident_id": case["case_incident_id"],
+                    "last_known_status": existing.get(
+                        "last_known_status", case.get("initial_status", "unknown")
+                    ),
+                    "registered_at": existing.get("registered_at", now),
+                }
             state["tracked_cases"] = tracked
             self.helper.set_state(state)
 

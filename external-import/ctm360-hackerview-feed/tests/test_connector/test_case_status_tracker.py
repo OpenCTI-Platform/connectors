@@ -32,6 +32,43 @@ class TestRegisterCase:
         assert saved["tracked_cases"]["HV-1"]["case_incident_id"] == "case-incident--1"
         assert saved["tracked_cases"]["HV-1"]["last_known_status"] == "open"
 
+    def test_register_cases_batch_preserves_existing_status(self, tracker, helper):
+        helper.get_state.return_value = {
+            "tracked_cases": {
+                "HV-1": {
+                    "case_incident_id": "case-incident--1",
+                    "last_known_status": "open:triage",
+                    "registered_at": "t0",
+                }
+            }
+        }
+        tracker.register_cases(
+            [
+                {
+                    "ticket_id": "HV-1",
+                    "case_incident_id": "case-incident--1",
+                    "initial_status": "open",
+                },
+                {
+                    "ticket_id": "HV-2",
+                    "case_incident_id": "case-incident--2",
+                    "initial_status": "new",
+                },
+            ]
+        )
+        saved = helper.set_state.call_args[0][0]["tracked_cases"]
+        # An already-tracked case keeps its last known status (not reset).
+        assert saved["HV-1"]["last_known_status"] == "open:triage"
+        assert saved["HV-1"]["registered_at"] == "t0"
+        # A new case is seeded with its initial status.
+        assert saved["HV-2"]["last_known_status"] == "new"
+        # The whole batch is a single state write.
+        assert helper.set_state.call_count == 1
+
+    def test_register_cases_empty_is_noop(self, tracker, helper):
+        tracker.register_cases([])
+        helper.set_state.assert_not_called()
+
 
 class TestCheckAllCases:
     def test_empty_does_nothing(self, tracker, helper):
