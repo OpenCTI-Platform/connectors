@@ -73,3 +73,45 @@ class TestCIMToMITREMapper:
         mapper = CIMToMITREMapper(mapping_path=_mapping_path())
         mapper.resolve({"datamodels": ["UnknownA", "UnknownB", "Network_Traffic"]})
         assert mapper.unmapped_models == ["UnknownA", "UnknownB"]
+
+    def test_resolve_dns_model(self):
+        """DNS CIM model resolves to Network Traffic."""
+        mapper = CIMToMITREMapper(mapping_path=_mapping_path())
+        entry = {"datamodels": ["DNS"]}
+        result = mapper.resolve(entry)
+        assert result == ["Network Traffic"]
+
+    def test_resolve_alerts_model(self):
+        """Alerts CIM model resolves to Sensor Health."""
+        mapper = CIMToMITREMapper(mapping_path=_mapping_path())
+        entry = {"datamodels": ["Alerts"]}
+        result = mapper.resolve(entry)
+        assert result == ["Sensor Health"]
+
+    def test_resolve_endpoint_ports(self):
+        """Endpoint.Ports CIM model resolves to Network Traffic."""
+        mapper = CIMToMITREMapper(mapping_path=_mapping_path())
+        entry = {"datamodels": ["Endpoint.Ports"]}
+        result = mapper.resolve(entry)
+        assert result == ["Network Traffic"]
+
+    def test_resolve_databases_model(self):
+        """Databases CIM model resolves to Application Log."""
+        mapper = CIMToMITREMapper(mapping_path=_mapping_path())
+        entry = {"datamodels": ["Databases"]}
+        result = mapper.resolve(entry)
+        assert result == ["Application Log"]
+
+    def test_resolve_data_access_model(self):
+        """Data_Access CIM model resolves to Cloud Storage."""
+        mapper = CIMToMITREMapper(mapping_path=_mapping_path())
+        entry = {"datamodels": ["Data_Access"]}
+        result = mapper.resolve(entry)
+        assert result == ["Cloud Storage"]
+
+    def test_dns_deduplicates_with_network_traffic(self):
+        """DNS and Network_Traffic both map to Network Traffic and deduplicate."""
+        mapper = CIMToMITREMapper(mapping_path=_mapping_path())
+        entry = {"datamodels": ["DNS", "Network_Traffic"]}
+        result = mapper.resolve(entry)
+        assert result == ["Network Traffic"]

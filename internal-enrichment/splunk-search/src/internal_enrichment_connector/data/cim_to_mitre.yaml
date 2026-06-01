@@ -12,6 +12,9 @@ mapping:
   Network_Resolution: ["Network Traffic"]
   Network_Sessions: ["Network Traffic"]
   Web: ["Network Traffic"]
+  DNS: ["Network Traffic"]
+  Endpoint.Ports: ["Network Traffic"]
+  Endpoint.Listening_Ports: ["Network Traffic"]
 
   # Endpoint
   Endpoint.Processes: ["Process"]
@@ -23,11 +26,16 @@ mapping:
   Intrusion_Detection: ["Network Traffic"]
   Malware: ["File"]
   Vulnerabilities: ["Application Log"]
+  Alerts: ["Sensor Health"]
 
   # Infrastructure
   Certificates: ["Certificate"]
   Email: ["Application Log"]
   DLP: ["File"]
+
+  # Data
+  Databases: ["Application Log"]
+  Data_Access: ["Cloud Storage"]
 
   # Operational - no direct MITRE equivalent
   Performance: []
