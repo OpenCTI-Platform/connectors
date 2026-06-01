@@ -8,12 +8,12 @@ version = "0.1.0"
 description = "Google SecOps external-import connector for OpenCTI."
 requires-python = ">=3.11, <3.13"
 dependencies = [
-    "pycti==7.260428.0",
+    "pycti==7.260604.0",
     "pydantic~=2.11.3",
     "requests~=2.32.3",
     "aiohttp~=3.11.0",
     "google-auth~=2.0",
-    "connectors-sdk",
+    "connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk"
 ]
 
 [project.optional-dependencies]
