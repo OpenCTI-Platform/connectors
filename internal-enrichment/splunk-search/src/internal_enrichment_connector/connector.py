@@ -848,7 +848,7 @@ class SplunkSearchConnector:
 
         Gracefully degrades when CIM / UA / Infrastructure produce nothing.
         """
-        indicator_id = entity.get("id") or entity.get("standard_id", "")
+        indicator_id = entity.get("standard_id") or entity.get("id", "")
         indicator_name = entity.get("name", "(unnamed indicator)")
 
         spl_query = SplunkIndicator.extract_spl(entity)
