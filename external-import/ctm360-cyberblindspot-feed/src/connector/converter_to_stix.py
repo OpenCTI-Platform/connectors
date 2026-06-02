@@ -151,30 +151,39 @@ class ConverterToStix:
 
     def malware_logs_to_stix(self, logs: list) -> list:
         objects = [self.author]
+        # De-duplicate Malware SDOs per family within a single conversion run.
+        # The Malware id is derived from the family, so emitting one object per
+        # log would put several "malware" objects sharing the same id (but with
+        # differing external_references / auto-generated timestamps) in the same
+        # bundle, causing conflicting updates on ingestion.
+        malware_by_family = {}
         for log in logs:
             malware_family = log.get("malware_family", "Unknown")
             domain = log.get("domain", "")
             ip_val = log.get("ip", "")
             email = log.get("email", "")
-            # Derive a deterministic id from stable content when the API omits
-            # one, so re-imports don't churn the external reference each run.
-            log_id = log.get("id") or self._stable_fallback_id(
-                "malware", malware_family, domain, ip_val, email
-            )
 
-            ext_ref = self._ext_ref("CTM360-CyberBlindSpot", log_id)
-
+            malware_obj = None
             if malware_family and malware_family != "Unknown":
-                malware_obj = stix2.Malware(
-                    id=f"malware--{uuid.uuid5(uuid.NAMESPACE_URL, f'cbs-malware-{malware_family}')}",
-                    name=malware_family,
-                    is_family=True,
-                    description="Malware family detected by CTM360 CyberBlindSpot",
-                    created_by_ref=self.author.id,
-                    external_references=[ext_ref],
-                    custom_properties={"x_opencti_score": 80},
-                )
-                objects.append(malware_obj)
+                malware_obj = malware_by_family.get(malware_family)
+                if malware_obj is None:
+                    # Family-stable external reference so the shared Malware
+                    # object stays byte-identical across every log of the same
+                    # family and across runs (no per-record id on a family SDO).
+                    ext_ref = self._ext_ref(
+                        "CTM360-CyberBlindSpot", f"malware:{malware_family}"
+                    )
+                    malware_obj = stix2.Malware(
+                        id=f"malware--{uuid.uuid5(uuid.NAMESPACE_URL, f'cbs-malware-{malware_family}')}",
+                        name=malware_family,
+                        is_family=True,
+                        description="Malware family detected by CTM360 CyberBlindSpot",
+                        created_by_ref=self.author.id,
+                        external_references=[ext_ref],
+                        custom_properties={"x_opencti_score": 80},
+                    )
+                    malware_by_family[malware_family] = malware_obj
+                    objects.append(malware_obj)
 
             if ip_val:
                 try:
@@ -187,7 +196,7 @@ class ConverterToStix:
                         },
                     )
                     objects.append(ip_obs)
-                    if malware_family and malware_family != "Unknown":
+                    if malware_obj is not None:
                         objects.append(
                             stix2.Relationship(
                                 id=generate_deterministic_id(

@@ -110,7 +110,15 @@ class TestGenerateDeterministicId:
         ) != generate_deterministic_id("relationship", "a", "c")
 
     def test_matches_uuid5_seed(self):
-        expected = uuid.uuid5(uuid.NAMESPACE_URL, "x-y")
+        # Args are joined with "|" (not "-") to avoid seed collisions when the
+        # args themselves contain "-" (as STIX IDs do).
+        expected = uuid.uuid5(uuid.NAMESPACE_URL, "x|y")
         assert (
             generate_deterministic_id("indicator", "x", "y") == f"indicator--{expected}"
         )
+
+    def test_separator_avoids_collision(self):
+        # ("a-b", "c") and ("a", "b-c") must not collapse to the same seed.
+        assert generate_deterministic_id(
+            "relationship", "a-b", "c"
+        ) != generate_deterministic_id("relationship", "a", "b-c")

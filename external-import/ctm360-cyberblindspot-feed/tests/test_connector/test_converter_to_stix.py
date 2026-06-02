@@ -77,12 +77,15 @@ class TestDeterministicFallbackIds:
         malware = [o for o in objects if o.type == "malware"]
         return malware[0].external_references[0].external_id
 
-    def test_malware_log_without_id_is_stable(self, converter):
+    def test_malware_external_id_is_family_stable(self, converter):
+        # The Malware SDO is de-duplicated per family, so its external
+        # reference is family-stable (malware:<family>) rather than a
+        # per-record id — identical across logs and across runs.
         log = {"malware_family": "RedLine", "ip": "1.2.3.4"}
         first = self._malware_ext_id(converter.malware_logs_to_stix([dict(log)]))
         second = self._malware_ext_id(converter.malware_logs_to_stix([dict(log)]))
         assert first == second
-        assert first.startswith("cbs-malware-")
+        assert first == "malware:RedLine"
 
     def test_breached_credential_without_id_is_stable(self, converter):
         cred = {"email": "jdoe@example.com", "username": "jdoe"}
@@ -291,6 +294,23 @@ class TestMalwareLogsToStix:
     def test_empty_log_only_author(self, converter):
         types = _types(converter.malware_logs_to_stix([{}]))
         assert types == ["identity"]
+
+    def test_same_family_deduplicated(self, converter):
+        # Multiple logs sharing a family must yield exactly one Malware SDO
+        # (its id is family-derived), but every observable and relationship
+        # must still be emitted and point at that single Malware.
+        logs = [
+            {"id": "M1", "malware_family": "RedLine", "ip": "1.2.3.4"},
+            {"id": "M2", "malware_family": "RedLine", "ip": "5.6.7.8"},
+        ]
+        objects = converter.malware_logs_to_stix(logs)
+        malware = [o for o in objects if o.type == "malware"]
+        assert len(malware) == 1
+        ips = [o for o in objects if o.type == "ipv4-addr"]
+        assert {i.value for i in ips} == {"1.2.3.4", "5.6.7.8"}
+        rels = [o for o in objects if o.type == "relationship"]
+        assert len(rels) == 2
+        assert all(r.source_ref == malware[0].id for r in rels)
 
 
 class TestBreachedCredentialsToStix:
