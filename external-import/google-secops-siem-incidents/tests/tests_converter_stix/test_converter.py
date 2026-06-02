@@ -82,7 +82,7 @@ def _build_empty_alert():
 # ---------------------------------------------------------------------------
 class TestConverterToStix:
     def test_then_full_alert_produces_incident_and_observables(self):
-        """convert_rule_alert with full alert → incident + hostname + 2 IPs + 1 user + 4 relationships."""
+        """convert_rule_alert with full alert → incident + observables from outcomes AND fields + relationships."""
         # _given_
         converter = _make_converter()
         alert, rule_metadata = _build_full_alert()
@@ -91,6 +91,8 @@ class TestConverterToStix:
         result = converter.convert_rule_alert(alert, rule_metadata)
 
         # _then_ — count by STIX2 type string
+        # Outcomes produce: 1 hostname, 2 IPs, 1 user
+        # Alert fields produce: 1 hostname (webserver.corp.local), 1 IP (10.0.0.1)
         incidents = [o for o in result if getattr(o, "type", None) == "incident"]
         hostnames = [o for o in result if getattr(o, "type", None) == "hostname"]
         ips = [o for o in result if getattr(o, "type", None) == "ipv4-addr"]
@@ -98,10 +100,10 @@ class TestConverterToStix:
         rels = [o for o in result if getattr(o, "type", None) == "relationship"]
 
         assert len(incidents) == 1
-        assert len(hostnames) == 1
-        assert len(ips) == 2
+        assert len(hostnames) == 2  # 1 outcome + 1 field
+        assert len(ips) == 3  # 2 outcomes + 1 field
         assert len(users) == 1
-        assert len(rels) == 4  # 1 hostname + 2 IPs + 1 user
+        assert len(rels) == 6  # 2 hostnames + 3 IPs + 1 user
 
     def test_then_empty_alert_produces_incident_only(self):
         """convert_rule_alert with empty event samples → incident only (no observables, no relationships)."""
