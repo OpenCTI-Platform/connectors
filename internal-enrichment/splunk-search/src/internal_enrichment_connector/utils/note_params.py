@@ -15,6 +15,7 @@ Usage::
 from __future__ import annotations
 
 import logging
+import re
 
 import yaml
 
@@ -102,7 +103,13 @@ def parse_note_params(content: str) -> dict:
     if not content or not content.strip():
         return {}
     try:
-        parsed = yaml.safe_load(content.strip())
+        # Strip HTML tags (e.g. content wrapped by the OpenCTI rich-text editor)
+        cleaned = re.sub(r"<[^>]+>", "\n", content)
+        # Strip Markdown code fences (```yaml, ```json, ``` …)
+        cleaned = re.sub(r"^```[\w]*\s*", "", cleaned.strip(), flags=re.MULTILINE)
+        cleaned = re.sub(r"^```\s*$", "", cleaned, flags=re.MULTILINE)
+        cleaned = cleaned.strip()
+        parsed = yaml.safe_load(cleaned)
         if not isinstance(parsed, dict):
             logger.warning(
                 "[NOTE] Note content is not a YAML mapping, ignoring: %s",
@@ -111,7 +118,11 @@ def parse_note_params(content: str) -> dict:
             return {}
         return parsed
     except yaml.YAMLError as exc:
-        logger.warning("[NOTE] Failed to parse Note content as YAML: %s", exc)
+        logger.warning(
+            "[NOTE] Failed to parse Note content as YAML: %s — raw content preview: %r",
+            exc,
+            content[:200],
+        )
         return {}
 
 

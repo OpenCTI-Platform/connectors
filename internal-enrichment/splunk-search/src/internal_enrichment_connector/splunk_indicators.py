@@ -35,7 +35,7 @@ class SplunkIndicator:
 
     def __init__(self, indicator: dict, obs_type: str) -> None:
         self.indicator = indicator
-        self.id = indicator.get("id", "")
+        self.id = indicator.get("standard_id") or indicator.get("id", "")
         self.opencti_id = indicator.get("x_opencti_id") or indicator.get("id", "")
         self.name = indicator.get("name", "(unnamed indicator)")
         self.pattern = indicator.get("pattern", "")
