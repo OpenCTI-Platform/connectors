@@ -9,7 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -41,6 +41,7 @@ class GoogleSecOpsConfig(BaseConfigModel):
     project_instance: str = Field(description="Instance UUID.")
     private_key: str = Field(description="Service account private key (PEM).")
     private_key_id: str = Field(description="Service account private key ID.")
+
     client_email: str = Field(description="Service account client email.")
     client_id: str = Field(description="Service account client ID.")
     auth_uri: str = Field(
@@ -74,6 +75,14 @@ class GoogleSecOpsConfig(BaseConfigModel):
             "(ISO-8601 duration, e.g. P1D). Used only when no prior state exists."
         ),
     )
+
+    @field_validator("private_key", mode="before")
+    @classmethod
+    def _normalize_pem_newlines(cls, v: str) -> str:
+        """Replace literal '\\n' with real newlines so PEM parsing succeeds."""
+        if isinstance(v, str) and "\\n" in v:
+            return v.replace("\\n", "\n")
+        return v
 
 
 class ConnectorSettings(BaseConnectorSettings):
