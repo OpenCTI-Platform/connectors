@@ -54,6 +54,7 @@ class DatadogIntelClient:
 
         self.batch: dict[str, dict] = {}
         self.batch_lock = threading.Lock()
+        self.flush_lock = threading.Lock()
         self._flush_timer: threading.Timer | None = None
 
     ###########################################################
@@ -118,6 +119,10 @@ class DatadogIntelClient:
                 self.batch[indicator_id]["x_opencti_event_type"] = "delete"
 
     def _flush_batch(self) -> None:
+        with self.flush_lock:
+            self._flush_batch_locked()
+
+    def _flush_batch_locked(self) -> None:
         if self._flush_timer is not None:
             self._flush_timer.cancel()
             self._flush_timer = None
@@ -213,7 +218,7 @@ class DatadogIntelClient:
     # Process indicator method
     ###########################################################
     def process_indicator(self, data: dict) -> None:
-        self.helper.connector_logger.debug("Processing batch event", {"raw": data})
+        self.helper.connector_logger.debug("Processing batch event", meta={"raw": data})
 
         self._append_to_batch(data)
 

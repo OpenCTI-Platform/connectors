@@ -53,6 +53,21 @@ def client(config, helper):
     return DatadogIntelClient(helper, config, "ip_address")
 
 
+def _batch_event(
+    indicator_id: str,
+    modified: str = "2024-01-01T00:00:00Z",
+    event_type: str = "create",
+) -> dict[str, Any]:
+    return {
+        "id": indicator_id,
+        "modified": modified,
+        "x_opencti_event_type": event_type,
+        "extensions": {
+            "ext-1": {"id": indicator_id, "main_observable_type": "IPv4-Addr"}
+        },
+    }
+
+
 def test_post_indicators_sends_gzipped_payload(client):
     payload = {"indicators": [{"type": "ip", "value": "1.2.3.4"}]}
 
@@ -304,3 +319,72 @@ def test_flush_preserves_concurrent_replacement(client):
     # The update that arrived during the POST is retained.
     assert "id-1" in client.batch
     assert client.batch["id-1"]["x_opencti_event_type"] == "update"
+
+
+def test_concurrent_flushes_are_serialized(client):
+    """Only one flush may perform POST/session I/O at a time."""
+    import threading
+
+    client.batch = {"id-1": _batch_event("id-1")}
+
+    first_post_entered = threading.Event()
+    release_first_post = threading.Event()
+    second_post_entered = threading.Event()
+    counter_lock = threading.Lock()
+    active_posts = 0
+    max_active_posts = 0
+    post_call_count = 0
+
+    def slow_post(_payload):
+        nonlocal active_posts, max_active_posts, post_call_count
+        with counter_lock:
+            post_call_count += 1
+            call_number = post_call_count
+            active_posts += 1
+            max_active_posts = max(max_active_posts, active_posts)
+            if call_number == 1:
+                first_post_entered.set()
+            else:
+                second_post_entered.set()
+
+        try:
+            if call_number == 1:
+                assert release_first_post.wait(timeout=5), "test deadlock"
+        finally:
+            with counter_lock:
+                active_posts -= 1
+
+    client._post_indicators = slow_post
+
+    first_flush = threading.Thread(target=client._flush_batch)
+    first_flush.start()
+    assert first_post_entered.wait(timeout=5), "first flush never entered POST"
+
+    client._append_to_batch(_batch_event("id-2", modified="2024-01-01T00:00:01Z"))
+    second_flush = threading.Thread(target=client._flush_batch)
+    second_flush.start()
+
+    assert not second_post_entered.wait(
+        timeout=0.5
+    ), "second flush entered POST while the first flush was still in flight"
+
+    release_first_post.set()
+    first_flush.join(timeout=5)
+    second_flush.join(timeout=5)
+
+    assert not first_flush.is_alive()
+    assert not second_flush.is_alive()
+    assert max_active_posts == 1
+    assert post_call_count == 2
+    assert client.batch == {}
+
+
+def test_process_indicator_logs_structured_meta(client):
+    data = _batch_event("id-1")
+
+    with patch.object(client, "_reset_flush_timer"):
+        client.process_indicator(data)
+
+    client.helper.connector_logger.debug.assert_any_call(
+        "Processing batch event", meta={"raw": data}
+    )
