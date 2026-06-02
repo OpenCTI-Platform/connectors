@@ -68,7 +68,7 @@ class DatadogIntelConnector:
         The data passed in the data parameter is a dictionary with the following structure as shown in
         https://docs.opencti.io/latest/development/connectors/#additional-implementations
         :param msg: Message event from stream
-        :return: string
+        :return: None
         """
         self.helper.connector_logger.debug(
             "Message received",
@@ -79,6 +79,7 @@ class DatadogIntelConnector:
             self.check_stream_id()
 
             data = json.loads(msg.data)["data"]
+            data["event_type"] = msg.event
             data["x_opencti_event_type"] = msg.event
         except Exception as e:
             self.helper.connector_logger.error(
