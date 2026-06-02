@@ -57,7 +57,7 @@ def map_incident(
         rows.append(f"| Risk | {risk_outcome.int64_val} |")
 
     description = (
-        "| Panel | Status |\n| --- | --- |\n" + "\n".join(rows) if rows else None
+        "| Attribute | Value |\n| --- | --- |\n" + "\n".join(rows) if rows else None
     )
 
     raw_tags = rule_metadata.properties.metadata.get("tags", "")
