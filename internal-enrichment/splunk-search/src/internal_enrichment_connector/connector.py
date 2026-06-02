@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ipaddress
+import json
 import re
 from copy import deepcopy
 from datetime import datetime
@@ -11,6 +13,7 @@ from pycti import Identity, OpenCTIConnectorHelper, StixCoreRelationship
 
 from .cim_mitre_mapper import CIMToMITREMapper
 from .cim_parser import CIMParser
+from .data_model_detector import detect_data_model
 from .infrastructure import InfrastructureBuilder
 from .mitre_resolver import MITREResolver
 from .services import SourcetypeResolver, SplunkClient
@@ -47,7 +50,22 @@ class SplunkSearchConnector:
         self.helper.connector_logger.info(
             f"Loaded {self.sourcetype_resolver.count()} sourcetype mappings"
         )
-        self.mitre_resolver = MITREResolver(cache_dir=".cache", cache_ttl_days=7)
+        self.cim_mapper = CIMToMITREMapper()
+        if self.cim_mapper.is_available:
+            self.helper.connector_logger.info(
+                "CIM-to-MITRE mapping loaded",
+                {"mapped_models": self.cim_mapper.mapped_models_count},
+            )
+        else:
+            self.helper.connector_logger.warning(
+                "CIM-to-MITRE mapping file unavailable, datamodel-based MITRE resolution disabled"
+            )
+        self.mitre_resolver = MITREResolver(
+            cache_dir=".cache",
+            cache_ttl_days=7,
+            bundle_url=config.mitre_attack_bundle_url,
+            cim_mapper=self.cim_mapper,
+        )
         if self.mitre_resolver.initialize():
             self.helper.connector_logger.info(
                 "MITRE resolver initialized",
@@ -58,16 +76,6 @@ class SplunkSearchConnector:
         else:
             self.helper.connector_logger.info(
                 "MITRE resolver unavailable, MITRE enrichments will be skipped"
-            )
-        self.cim_mapper = CIMToMITREMapper()
-        if self.cim_mapper.is_available:
-            self.helper.connector_logger.info(
-                "CIM-to-MITRE mapping loaded",
-                {"mapped_models": self.cim_mapper.mapped_models_count},
-            )
-        else:
-            self.helper.connector_logger.warning(
-                "CIM-to-MITRE mapping file unavailable, datamodel-based MITRE resolution disabled"
             )
         self.infrastructure_builder = InfrastructureBuilder(
             mitre_resolver=self.mitre_resolver,
@@ -761,15 +769,57 @@ class SplunkSearchConnector:
         )
 
     @staticmethod
-    def _is_valid_single_ipv4(value: str) -> bool:
-        """Return True only for single valid IPv4 addresses (no CIDR, no hostnames)."""
-        import ipaddress
+    def _is_valid_ip(value: str) -> bool:
+        """Return True only for single valid IP addresses (no CIDR, no hostnames)."""
 
         try:
-            ipaddress.IPv4Address(value)
+            ipaddress.ip_address(value)
             return True
         except ValueError:
             return False
+
+    @staticmethod
+    def _normalize_observable_value(raw_value: Any) -> Optional[str]:
+        if raw_value is None:
+            return None
+        value = str(raw_value).strip()
+        if not value:
+            return None
+        if value.lower() in {"unknown", "n/a", "-"}:
+            return None
+        return value
+
+    @staticmethod
+    def _resolve_polymorphic_ip_or_domain(value: str) -> tuple[str, str]:
+        try:
+            parsed_ip = ipaddress.ip_address(value)
+            if isinstance(parsed_ip, ipaddress.IPv4Address):
+                return ("IPv4-Addr", value)
+            return ("IPv6-Addr", value)
+        except ValueError:
+            return ("Domain-Name", value)
+
+    @staticmethod
+    def _file_hash_algorithm_for_field(field_name: str, value: str) -> str:
+        fixed_mapping = {
+            "md5": "MD5",
+            "sha1": "SHA-1",
+            "sha256": "SHA-256",
+            "sha512": "SHA-512",
+        }
+        if field_name in fixed_mapping:
+            return fixed_mapping[field_name]
+
+        hash_length = len(value)
+        if hash_length == 32:
+            return "MD5"
+        if hash_length == 40:
+            return "SHA-1"
+        if hash_length == 64:
+            return "SHA-256"
+        if hash_length == 128:
+            return "SHA-512"
+        return "SHA-256"
 
     def _parse_ts_from_rows(self, rows: list[dict]) -> tuple[datetime, datetime]:
         """Extract first_seen/last_seen from _time fields across all rows."""
@@ -792,40 +842,260 @@ class SplunkSearchConnector:
     def _build_observables_from_cim(
         self, cim_observables: list, author_id: str, marking_id: Optional[str]
     ) -> list:
-        """Build STIX observable objects from CIM parsed results.
-
-        Only src_ip, dest_ip → IPv4-Addr; domain → Domain-Name; url → Url.
-        Deduplicates by STIX ID.
-        """
+        """Build STIX observable objects from CIM parsed results."""
         seen: dict[str, stix2.base._STIXBase] = {}
+        seen_value_keys: set[tuple[str, str]] = set()
         custom_props: dict = {"created_by_ref": author_id}
         if marking_id:
             custom_props["object_marking_refs"] = [marking_id]
 
         for obs in cim_observables:
-            value = obs.value
-            if not value or (isinstance(value, str) and not value.strip()):
+            raw_value = getattr(obs, "value", None)
+            source_field = str(getattr(obs, "source_field", "") or "").strip()
+            obs_type = str(
+                getattr(obs, "obs_type", None) or getattr(obs, "stix_type", "") or ""
+            ).strip()
+
+            if isinstance(raw_value, dict):
+                value = json.dumps(raw_value, sort_keys=True)
+            else:
+                value = self._normalize_observable_value(raw_value)
+
+            if value is None:
                 continue
-            value = str(value).strip()
 
             stix_obj: Optional[stix2.base._STIXBase] = None
-            if obs.source_field in ("src_ip", "dest_ip"):
-                if not self._is_valid_single_ipv4(value):
-                    continue
-                stix_obj = stix2.IPv4Address(
-                    value=value, allow_custom=True, **custom_props
+            value_key: Optional[tuple[str, str]] = None
+
+            if source_field in {"src", "dest", "host"}:
+                resolved_type, resolved_value = self._resolve_polymorphic_ip_or_domain(
+                    value
                 )
-            elif obs.source_field in (
+                normalized_value = (
+                    resolved_value.lower()
+                    if resolved_type == "Domain-Name"
+                    else resolved_value
+                )
+                value_key = (resolved_type, normalized_value)
+                if value_key in seen_value_keys:
+                    continue
+                if resolved_type == "IPv4-Addr":
+                    stix_obj = stix2.IPv4Address(
+                        value=resolved_value,
+                        allow_custom=True,
+                        **custom_props,
+                    )
+                elif resolved_type == "IPv6-Addr":
+                    stix_obj = stix2.IPv6Address(
+                        value=resolved_value,
+                        allow_custom=True,
+                        **custom_props,
+                    )
+                else:
+                    stix_obj = stix2.DomainName(
+                        value=resolved_value,
+                        allow_custom=True,
+                        **custom_props,
+                    )
+            elif source_field in {"src_ip", "dest_ip"} or obs_type in {
+                "IPv4-Addr",
+                "IPv6-Addr",
+            }:
+                if not self._is_valid_ip(value):
+                    self.helper.connector_logger.debug(
+                        "[INDICATOR] Skipping non-IP value for IP observable",
+                        {
+                            "source_field": source_field,
+                            "stix_type": obs_type,
+                            "value": value,
+                        },
+                    )
+                    continue
+                parsed_ip = ipaddress.ip_address(value)
+                if isinstance(parsed_ip, ipaddress.IPv4Address):
+                    value_key = ("IPv4-Addr", value)
+                    if value_key in seen_value_keys:
+                        continue
+                    stix_obj = stix2.IPv4Address(
+                        value=value,
+                        allow_custom=True,
+                        **custom_props,
+                    )
+                else:
+                    value_key = ("IPv6-Addr", value)
+                    if value_key in seen_value_keys:
+                        continue
+                    stix_obj = stix2.IPv6Address(
+                        value=value,
+                        allow_custom=True,
+                        **custom_props,
+                    )
+            elif source_field in (
                 "src_dns",
                 "dest_dns",
                 "src_host",
                 "dest_host",
-            ):
+            ) or obs_type in {"Domain-Name", "Hostname"}:
+                value_key = ("Domain-Name", value.lower())
+                if value_key in seen_value_keys:
+                    continue
                 stix_obj = stix2.DomainName(
                     value=value, allow_custom=True, **custom_props
                 )
-            elif obs.source_field == "url":
+            elif source_field in {"url", "uri_path", "uri_query"} or obs_type == "Url":
+                value_key = ("Url", value)
+                if value_key in seen_value_keys:
+                    continue
                 stix_obj = stix2.URL(value=value, allow_custom=True, **custom_props)
+            elif (
+                source_field in {"user", "src_user", "dest_user"}
+                or obs_type == "User-Account"
+            ):
+                value_key = ("User-Account", value)
+                if value_key in seen_value_keys:
+                    continue
+                stix_obj = stix2.UserAccount(
+                    account_login=value,
+                    allow_custom=True,
+                    **custom_props,
+                )
+            elif (
+                source_field
+                in {
+                    "email",
+                    "email_src",
+                    "email_dst",
+                    "src_email",
+                    "dest_email",
+                }
+                or obs_type == "Email-Addr"
+            ):
+                value_key = ("Email-Addr", value.lower())
+                if value_key in seen_value_keys:
+                    continue
+                stix_obj = stix2.EmailAddress(
+                    value=value,
+                    allow_custom=True,
+                    **custom_props,
+                )
+            elif source_field == "app" or obs_type == "Software":
+                value_key = ("Software", value)
+                if value_key in seen_value_keys:
+                    continue
+                stix_obj = stix2.Software(name=value, allow_custom=True, **custom_props)
+            elif (
+                source_field in {"process_name", "process", "process_path"}
+                or obs_type == "Process"
+            ):
+                if source_field == "process_name":
+                    value_key = ("Process:name", value)
+                    process_kwargs = {"name": value}
+                else:
+                    value_key = ("Process:command_line", value)
+                    process_kwargs = {"command_line": value}
+                if value_key in seen_value_keys:
+                    continue
+                try:
+                    stix_obj = stix2.Process(
+                        allow_custom=True,
+                        **custom_props,
+                        **process_kwargs,
+                    )
+                except Exception as exc:
+                    self.helper.connector_logger.debug(
+                        "[INDICATOR] Skipping Process observable creation",
+                        {
+                            "source_field": source_field,
+                            "stix_type": obs_type,
+                            "value": value,
+                            "error": str(exc),
+                        },
+                    )
+                    continue
+            elif source_field in {"src_mac", "dest_mac"} or obs_type == "Mac-Addr":
+                value_key = ("Mac-Addr", value.lower())
+                if value_key in seen_value_keys:
+                    continue
+                stix_obj = stix2.MACAddress(
+                    value=value,
+                    allow_custom=True,
+                    **custom_props,
+                )
+            elif (
+                source_field
+                in {
+                    "file",
+                    "file_name",
+                    "file_path",
+                    "file_hash",
+                    "md5",
+                    "sha1",
+                    "sha256",
+                    "sha512",
+                }
+                or obs_type == "StixFile"
+            ):
+                file_payload: dict[str, Any]
+                if isinstance(raw_value, dict):
+                    file_payload = {}
+                    file_name = self._normalize_observable_value(raw_value.get("name"))
+                    file_path = self._normalize_observable_value(raw_value.get("path"))
+                    file_hashes = raw_value.get("hashes")
+                    if file_name:
+                        file_payload["name"] = file_name
+                    if file_path:
+                        file_payload["path"] = file_path
+                    if isinstance(file_hashes, dict) and file_hashes:
+                        file_payload["hashes"] = file_hashes
+                else:
+                    file_payload = {}
+                    if source_field == "file_name":
+                        file_payload["name"] = value
+                    elif source_field == "file_path":
+                        file_payload["path"] = value
+                    elif source_field in {
+                        "file_hash",
+                        "md5",
+                        "sha1",
+                        "sha256",
+                        "sha512",
+                    }:
+                        hash_algo = self._file_hash_algorithm_for_field(
+                            source_field, value
+                        )
+                        file_payload["hashes"] = {hash_algo: value}
+
+                if not file_payload:
+                    self.helper.connector_logger.debug(
+                        "[INDICATOR] Skipping empty File observable payload",
+                        {
+                            "source_field": source_field,
+                            "stix_type": obs_type,
+                        },
+                    )
+                    continue
+
+                value_key = ("StixFile", json.dumps(file_payload, sort_keys=True))
+                if value_key in seen_value_keys:
+                    continue
+                stix_obj = stix2.File(
+                    allow_custom=True,
+                    **custom_props,
+                    **file_payload,
+                )
+            else:
+                self.helper.connector_logger.debug(
+                    "[INDICATOR] Unhandled CIM observable",
+                    {
+                        "source_field": source_field,
+                        "stix_type": obs_type,
+                        "value": value[:200],
+                    },
+                )
+                continue
+
+            if value_key is not None:
+                seen_value_keys.add(value_key)
 
             if stix_obj is not None and stix_obj.id not in seen:
                 seen[stix_obj.id] = stix_obj
@@ -923,6 +1193,115 @@ class SplunkSearchConnector:
             )
         return rels
 
+    def _build_mitre_infra_relationships(
+        self,
+        infra_objects: list,
+        rows: list[dict],
+        spl_query: Optional[str] = None,
+    ) -> list:
+        """Build MITRE ATT&CK Data Source objects and Infrastructure→produces relationships.
+
+        Detection order:
+        1. The SPL query string (datamodel= reference).
+        2. The sourcetype field of the first matching row.
+        3. Field-name heuristics across all rows.
+
+        Returns a flat list of parsed STIX objects (x-mitre-data-source,
+        x-mitre-data-component) followed by stix2.Relationship objects.
+        Returns an empty list when no Infrastructure objects exist, when the
+        data model cannot be detected, or when the MITRE resolver has no
+        mapping for the detected model.
+        """
+        if not infra_objects:
+            return []
+
+        # Detect CIM data model — try each row until one succeeds
+        detected_model: Optional[str] = None
+        for row in rows:
+            detected_model = detect_data_model(row, spl_query=spl_query)
+            if detected_model:
+                break
+
+        if not detected_model:
+            self.helper.connector_logger.debug(
+                "[MITRE] Could not detect CIM data model from rows — "
+                "skipping MITRE Data Source relationships"
+            )
+            return []
+
+        ds_dicts = self.mitre_resolver.resolve_data_sources_for_model(detected_model)
+        if not ds_dicts:
+            self.helper.connector_logger.debug(
+                "[MITRE] No MITRE data sources mapped for data model",
+                {"data_model": detected_model},
+            )
+            return []
+
+        # Parse raw ATT&CK bundle dicts into stix2 objects
+        parsed_ds_objects: list = []
+        for ds_dict in ds_dicts:
+            try:
+                parsed_ds_objects.append(stix2.parse(ds_dict, allow_custom=True))
+            except Exception as exc:
+                self.helper.connector_logger.debug(
+                    "[MITRE] Could not parse ATT&CK bundle object",
+                    {"id": ds_dict.get("id"), "error": str(exc)},
+                )
+
+        # Only data-source objects are relationship targets
+        data_source_stix_objects = [
+            obj
+            for obj in parsed_ds_objects
+            if getattr(obj, "type", None) == "x-mitre-data-source"
+        ]
+
+        result_objects: list = list(parsed_ds_objects)
+        seen_rel_ids: set[str] = set()
+
+        for infra in infra_objects:
+            infra_id = getattr(infra, "id", None)
+            infra_name = getattr(infra, "name", "(unknown)")
+            if not infra_id:
+                continue
+
+            for ds_obj in data_source_stix_objects:
+                ds_id = getattr(ds_obj, "id", None)
+                ds_name = getattr(ds_obj, "name", "")
+                if not ds_id:
+                    continue
+
+                rel_id = StixCoreRelationship.generate_id("produces", infra_id, ds_id)
+                if rel_id in seen_rel_ids:
+                    continue
+                seen_rel_ids.add(rel_id)
+
+                rel = stix2.Relationship(
+                    id=rel_id,
+                    relationship_type="produces",
+                    source_ref=infra_id,
+                    target_ref=ds_id,
+                    description=(
+                        f"Infrastructure '{infra_name}' produces MITRE ATT&CK "
+                        f"Data Source: {ds_name} (detected via Splunk "
+                        f"{detected_model} Data Model)"
+                    ),
+                    created_by_ref=self.author.id,
+                    object_marking_refs=[self.config.observable_tlp],
+                    confidence=100,
+                    allow_custom=True,
+                )
+                result_objects.append(rel)
+
+        self.helper.connector_logger.info(
+            "[MITRE] Built MITRE ATT&CK Data Source relationships",
+            {
+                "data_model": detected_model,
+                "data_sources": len(data_source_stix_objects),
+                "relationships": len(seen_rel_ids),
+            },
+        )
+        return result_objects
+
     def _enrich_indicator(self, entity: dict) -> str:
         """Enrich a STIX Indicator whose pattern contains a raw SPL query.
 
@@ -934,9 +1313,10 @@ class SplunkSearchConnector:
           5. Build Infrastructure from sourcetypes (via InfrastructureBuilder).
           6. Create positive Sighting linking Indicator to Splunk.
           7. Create based-on relationships Indicator → each observable.
-          8. Bundle and send.
+          8. Build MITRE ATT&CK Data Source relationships (if enabled).
+          9. Bundle and send.
 
-        Gracefully degrades when CIM / UA / Infrastructure produce nothing.
+        Gracefully degrades when CIM / UA / Infrastructure / MITRE produce nothing.
         """
         indicator_id = entity.get("standard_id") or entity.get("id", "")
         indicator_name = entity.get("name", "(unnamed indicator)")
@@ -1019,6 +1399,15 @@ class SplunkSearchConnector:
         # Relationships: Indicator based-on each observable
         relationships = self._build_based_on_relationships(indicator_id, observables)
 
+        # MITRE ATT&CK Data Source relationships
+        mitre_objects: list = []
+        if self.config.mitre_data_sources_enabled and self.mitre_resolver.is_available:
+            mitre_objects = self._build_mitre_infra_relationships(
+                infra_objects=infra_objects,
+                rows=rows,
+                spl_query=spl_query,
+            )
+
         all_objects = (
             [self.author, splunk_identity]
             + observables
@@ -1026,12 +1415,13 @@ class SplunkSearchConnector:
             + [sighting]
             + relationships
             + ua_objects
+            + mitre_objects
         )
         self._send_results(all_objects)
         return (
             f"[INDICATOR] '{indicator_name}': {len(rows)} rows, "
             f"{len(observables)} observables, {len(infra_objects)} infra, "
-            f"{len(ua_objects)} ua-objects"
+            f"{len(ua_objects)} ua-objects, {len(mitre_objects)} mitre-objects"
         )
 
     # ------------------------------------------------------------------ #

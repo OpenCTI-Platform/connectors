@@ -157,6 +157,105 @@ def test_observable_creation_from_cim_fields():
     assert "url" in obj_types
 
 
+def test_authentication_row_creates_ip_user_software_and_skips_unknown_dest():
+    connector = _connector()
+    rows = [
+        {
+            "src": "104.207.83.63",
+            "dest": "unknown",
+            "user": "bgist@roth.ly",
+            "app": "microsoft:office:365:portal",
+            "sourcetype": "ms:aad:signin",
+        }
+    ]
+    connector.splunk_client.run_search.return_value = rows
+    connector._enrich_indicator(_indicator_entity())
+
+    bundle_arg = connector.helper.send_stix2_bundle.call_args[0][0]
+    bundle = stix2.parse(bundle_arg, allow_custom=True)
+
+    ipv4_objs = [o for o in bundle.objects if o.get("type") == "ipv4-addr"]
+    user_objs = [o for o in bundle.objects if o.get("type") == "user-account"]
+    software_objs = [o for o in bundle.objects if o.get("type") == "software"]
+
+    assert len(ipv4_objs) == 1
+    assert len(user_objs) == 1
+    assert len(software_objs) == 1
+
+
+def test_ipv6_support_for_src_ip_and_polymorphic_src():
+    connector = _connector()
+    rows = [
+        {
+            "sourcetype": "syslog",
+            "src_ip": "2001:db8::1",
+            "src": "2001:db8::2",
+        }
+    ]
+    connector.splunk_client.run_search.return_value = rows
+    connector._enrich_indicator(_indicator_entity())
+
+    bundle_arg = connector.helper.send_stix2_bundle.call_args[0][0]
+    bundle = stix2.parse(bundle_arg, allow_custom=True)
+    ipv6_objs = [o for o in bundle.objects if o.get("type") == "ipv6-addr"]
+
+    assert len(ipv6_objs) == 2
+
+
+def test_extended_cim_type_mappings_create_expected_objects():
+    connector = _connector()
+    rows = [
+        {
+            "sourcetype": "syslog",
+            "src_mac": "00:11:22:33:44:55",
+            "email": "analyst@example.com",
+            "process_name": "cmd.exe",
+            "file_name": "payload.bin",
+            "sha256": "a" * 64,
+            "src": "portal.example.org",
+        }
+    ]
+    connector.splunk_client.run_search.return_value = rows
+    connector._enrich_indicator(_indicator_entity())
+
+    bundle_arg = connector.helper.send_stix2_bundle.call_args[0][0]
+    bundle = stix2.parse(bundle_arg, allow_custom=True)
+    obj_types = [o.get("type") for o in bundle.objects]
+
+    assert "mac-addr" in obj_types
+    assert "email-addr" in obj_types
+    assert "process" in obj_types
+    assert "file" in obj_types
+    assert "domain-name" in obj_types
+
+
+def test_unhandled_observable_logs_debug_message():
+    connector = _connector()
+    raw = [
+        SimpleNamespace(
+            stix_type="Custom-Thing",
+            source_field="custom_field",
+            value="custom-value",
+        )
+    ]
+
+    observables = connector._build_observables_from_cim(
+        raw,
+        author_id=connector.author.id,
+        marking_id=connector.config.observable_tlp,
+    )
+
+    assert observables == []
+    connector.helper.connector_logger.debug.assert_any_call(
+        "[INDICATOR] Unhandled CIM observable",
+        {
+            "source_field": "custom_field",
+            "stix_type": "Custom-Thing",
+            "value": "custom-value",
+        },
+    )
+
+
 # ------------------------------------------------------------------ #
 #  5. Observable deduplication                                        #
 # ------------------------------------------------------------------ #

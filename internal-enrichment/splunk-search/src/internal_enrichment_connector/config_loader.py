@@ -4,6 +4,8 @@ from pathlib import Path
 import yaml
 from pycti import get_config_variable
 
+from .mitre_resolver import ENTERPRISE_ATTACK_URL
+
 TLP_MARKING_IDS = {
     "TLP:CLEAR": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
     "TLP:WHITE": "marking-definition--613f2e26-407d-48c7-9eca-b8e91df99dc9",
@@ -117,6 +119,20 @@ class ConfigConnector:
         )
         self.sighting_tlp = self._resolve_tlp(self.sighting_tlp_label)
         self.observable_tlp = self._resolve_tlp(self.observable_tlp_label)
+        self.mitre_data_sources_enabled = self._as_bool(
+            get_config_variable(
+                "MITRE_DATA_SOURCES_ENABLED",
+                ["splunk-search", "mitre_data_sources_enabled"],
+                self.load,
+                default="true",
+            )
+        )
+        self.mitre_attack_bundle_url = get_config_variable(
+            "MITRE_ATTACK_BUNDLE_URL",
+            ["splunk-search", "mitre_attack_bundle_url"],
+            self.load,
+            default=ENTERPRISE_ATTACK_URL,
+        )
 
     def _validate_required(self) -> None:
         missing = []

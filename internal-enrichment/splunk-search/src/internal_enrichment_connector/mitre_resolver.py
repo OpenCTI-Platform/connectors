@@ -38,9 +38,17 @@ INFRASTRUCTURE_TYPE_OV = {
 class MITREResolver:
     """Fetches and caches MITRE ATT&CK enterprise bundle and provides lookups."""
 
-    def __init__(self, cache_dir: str = ".cache", cache_ttl_days: int = 7):
+    def __init__(
+        self,
+        cache_dir: str = ".cache",
+        cache_ttl_days: int = 7,
+        bundle_url: Optional[str] = None,
+        cim_mapper=None,
+    ):
         self._cache_dir = Path(cache_dir)
         self._cache_ttl_days = cache_ttl_days
+        self._bundle_url = bundle_url or ENTERPRISE_ATTACK_URL
+        self._cim_mapper = cim_mapper
         self._cache_path = self._cache_dir / "enterprise-attack.json"
         self._meta_path = self._cache_dir / "enterprise-attack.meta.json"
 
@@ -73,7 +81,7 @@ class MITREResolver:
                             "fetched_at": datetime.now(timezone.utc)
                             .replace(microsecond=0)
                             .isoformat(),
-                            "source_url": ENTERPRISE_ATTACK_URL,
+                            "source_url": self._bundle_url,
                         },
                         ensure_ascii=True,
                     ),
@@ -97,6 +105,43 @@ class MITREResolver:
             self._components_by_source_id = {}
             logger.warning("MITRE resolver unavailable: no network and no cache")
             return False
+
+    def resolve_data_sources_for_model(self, data_model: str) -> list[dict[str, Any]]:
+        """Return all MITRE ATT&CK Data Source (and Data Component) objects
+        mapped to the given Splunk CIM Data Model name.
+
+        Uses the injected *cim_mapper* (``CIMToMITREMapper``) to resolve
+        Data Source names for the model, then looks each name up in the
+        indexed bundle objects.
+
+        Returns an empty list when the resolver is unavailable, no CIM mapper
+        is configured, or the model has no MITRE mapping.
+        """
+        if not self._available or self._cim_mapper is None:
+            return []
+
+        names = self._cim_mapper.resolve({"datamodels": [data_model]})
+        if not names:
+            return []
+
+        objects: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
+
+        for name in names:
+            ds = self._data_source_by_name.get(name.casefold())
+            if ds is None:
+                continue
+            ds_id = ds.get("id", "")
+            if ds_id and ds_id not in seen_ids:
+                seen_ids.add(ds_id)
+                objects.append(ds)
+                for comp in self._components_by_source_id.get(ds_id, []):
+                    comp_id = comp.get("id", "")
+                    if comp_id and comp_id not in seen_ids:
+                        seen_ids.add(comp_id)
+                        objects.append(comp)
+
+        return objects
 
     def resolve_data_source(self, name: str) -> Optional[dict]:
         """Return data source object by exact name (case-insensitive)."""
@@ -209,11 +254,15 @@ class MITREResolver:
 
     def _fetch_bundle(self) -> Optional[dict[str, Any]]:
         try:
-            response = requests.get(ENTERPRISE_ATTACK_URL, timeout=30)
+            response = requests.get(self._bundle_url, timeout=30)
             response.raise_for_status()
             return response.json()
         except Exception as exc:
-            logger.warning("Failed fetching MITRE bundle: %s", exc)
+            logger.warning(
+                "Failed to fetch MITRE ATT&CK bundle — MITRE Data Source "
+                "relationships will be skipped: %s",
+                exc,
+            )
             return None
 
     def _set_bundle(self, bundle: dict[str, Any]) -> None:
