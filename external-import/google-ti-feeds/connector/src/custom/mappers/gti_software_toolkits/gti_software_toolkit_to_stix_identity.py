@@ -13,7 +13,7 @@ from connectors_sdk.models import (
     TLPMarking,
 )
 from pydantic import BaseModel
-from stix2.v21 import Identity 
+from stix2.v21 import Identity
 
 
 class IdentityWithTiming(BaseModel):

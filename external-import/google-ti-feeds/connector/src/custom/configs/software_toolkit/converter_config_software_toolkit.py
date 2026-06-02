@@ -27,9 +27,6 @@ from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_malwar
 from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_composite import (
     GTISoftwareToolkitToSTIXComposite,
 )
-from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_tool import (
-    GTISoftwareToolkitToSTIXTool,
-)
 from connector.src.custom.mappers.gti_threat_actors.gti_threat_actor_to_stix_composite import (
     GTIThreatActorToSTIXComposite,
 )

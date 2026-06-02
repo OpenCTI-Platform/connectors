@@ -1,9 +1,5 @@
 """Converts a GTI software toolkit to a STIX Tool object."""
 
-from connectors_sdk.models.enums import ToolType
-
-from connector.src.stix.v21.models.ovs.malware_type_ov_enums import MalwareTypeOV
-
 from datetime import datetime, timezone
 from typing import Any
 
@@ -14,6 +10,7 @@ from connector.src.custom.models.gti.gti_software_toolkit_model import (
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
 from connectors_sdk.models import ExternalReference, Tool
+from connectors_sdk.models.enums import ToolType
 from connectors_sdk.models.octi import (
     OrganizationAuthor,
     TLPMarking,
