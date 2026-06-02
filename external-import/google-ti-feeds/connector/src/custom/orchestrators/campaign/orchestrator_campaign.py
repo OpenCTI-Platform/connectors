@@ -78,17 +78,6 @@ class OrchestratorCampaign(BaseOrchestrator):
             initial_state: Initial state for the orchestrator
 
         """
-        subentity_types = [
-            "malware_families",
-            "attack_techniques",
-            "vulnerabilities",
-            "threat_actors",
-            # "reports",
-            # "domains",
-            # "files",
-            # "urls",
-            # "ip_addresses",
-        ]
         try:
             async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):
                 total_campaigns = len(gti_campaigns)
@@ -97,6 +86,23 @@ class OrchestratorCampaign(BaseOrchestrator):
                     campaign_entities = self.converter.convert_campaign_to_stix(
                         campaign
                     )
+                    subentity_types = [
+                        "malware_families",
+                        "attack_techniques",
+                        "vulnerabilities",
+                        "threat_actors",
+                    ]
+
+                    # prevents to search for IOCs (quota limitation) if the campaign is not associated to urls, domains, ip addresses, files (counters)
+                    if campaign.attributes.counters.urls > 0:
+                        subentity_types.append("urls")
+                    if campaign.attributes.counters.domains > 0:
+                        subentity_types.append("domains")
+                    if campaign.attributes.counters.ip_addresses > 0:
+                        subentity_types.append("ip_addresses")
+                    if campaign.attributes.counters.files > 0:
+                        subentity_types.append("files")
+
                     subentities = await self.client_api.fetch_subentities(
                         entity_name="entity_id",
                         entity_id=campaign.id,
