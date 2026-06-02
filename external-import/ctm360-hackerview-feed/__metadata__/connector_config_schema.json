@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/ctm360-hackerview-feed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "CTM360-HackerView",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "CTM360-HackerView"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CTM360_HACKERVIEW_FEED_API_BASE_URL": {
+      "default": "https://hackerview.ctm360.com/",
+      "description": "HackerView API base URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "CTM360_HACKERVIEW_FEED_API_KEY": {
+      "description": "API key for HackerView authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CTM360_HACKERVIEW_FEED_IMPORT_ISSUES": {
+      "default": true,
+      "description": "Enable importing security issues.",
+      "type": "boolean"
+    },
+    "CTM360_HACKERVIEW_FEED_IMPORT_RESOLVED_ISSUES": {
+      "default": true,
+      "description": "Enable importing resolved issues.",
+      "type": "boolean"
+    },
+    "CTM360_HACKERVIEW_FEED_IMPORT_DOMAIN_ASSETS": {
+      "default": true,
+      "description": "Enable importing domain assets.",
+      "type": "boolean"
+    },
+    "CTM360_HACKERVIEW_FEED_IMPORT_HOST_ASSETS": {
+      "default": true,
+      "description": "Enable importing hostname assets.",
+      "type": "boolean"
+    },
+    "CTM360_HACKERVIEW_FEED_IMPORT_IP_ASSETS": {
+      "default": true,
+      "description": "Enable importing IP address assets.",
+      "type": "boolean"
+    },
+    "CTM360_HACKERVIEW_FEED_STATUS_POLL_INTERVAL": {
+      "default": "PT1H",
+      "description": "ISO-8601 duration between status polling cycles (default: PT1H).",
+      "format": "duration",
+      "type": "string"
+    },
+    "CTM360_HACKERVIEW_FEED_ENABLE_STATUS_TRACKING": {
+      "default": true,
+      "description": "Enable background polling for issue status changes.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CTM360_HACKERVIEW_FEED_API_KEY"
+  ],
+  "additionalProperties": true
+}
