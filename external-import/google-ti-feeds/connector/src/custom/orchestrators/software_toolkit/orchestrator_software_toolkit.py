@@ -81,7 +81,6 @@ class OrchestratorSoftwareToolkit(BaseOrchestrator):
         subentity_types = [
             "malware_families",
             "attack_techniques",
-            "threat_actors",
         ]
         try:
             async for gti_software_toolkits in self.client_api.fetch_software_toolkits(
