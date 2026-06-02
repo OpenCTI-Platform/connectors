@@ -24,6 +24,9 @@ from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_compos
 from connector.src.custom.mappers.gti_malwares.gti_malware_family_to_stix_malware import (
     GTIMalwareFamilyToSTIXMalware,
 )
+from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_composite import (
+    GTISoftwareToolkitToSTIXComposite,
+)
 from connector.src.custom.mappers.gti_software_toolkits.gti_software_toolkit_to_stix_tool import (
     GTISoftwareToolkitToSTIXTool,
 )
@@ -51,7 +54,7 @@ from connector.src.utils.converters.generic_converter_config import (
 
 GTI_SOFTWARE_TOOLKIT_CONVERTER_CONFIG = GenericConverterConfig(
     entity_type="software_toolkits",
-    mapper_class=GTISoftwareToolkitToSTIXTool,
+    mapper_class=GTISoftwareToolkitToSTIXComposite,
     output_stix_type="tool",
     exception_class=GTISoftwareToolkitConversionError,
     display_name="software toolkits",
