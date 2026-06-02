@@ -24,16 +24,19 @@ class ConverterToStix:
         self,
         helper: OpenCTIConnectorHelper,
         tlp_level: str,
+        secops_base_url: str | None = None,
     ) -> None:
         """Initialise the converter with the OpenCTI helper and TLP level.
 
         Args:
             helper: OpenCTI helper instance.
             tlp_level: TLP level string (e.g. 'amber').
+            secops_base_url: Optional base URL for Google SecOps UI external references.
         """
         self.helper = helper
         self.author = OrganizationAuthor(name="Google SecOps").to_stix2_object()
         self.tlp_marking = TLPMarking(level=TLPLevel(tlp_level)).to_stix2_object()
+        self.secops_base_url = secops_base_url
 
     def convert_rule_alert(self, alert: Alert, rule_metadata: RuleMetadata) -> list:
         """Convert a single alert into a flat list of STIX objects.
@@ -46,7 +49,11 @@ class ConverterToStix:
             Flat list of STIX 2.1 objects (incident, observables, relationships).
         """
         incident = map_incident(
-            alert, rule_metadata, author=self.author, tlp_marking=self.tlp_marking
+            alert,
+            rule_metadata,
+            author=self.author,
+            tlp_marking=self.tlp_marking,
+            secops_base_url=self.secops_base_url,
         )
 
         hostnames = map_hostname(

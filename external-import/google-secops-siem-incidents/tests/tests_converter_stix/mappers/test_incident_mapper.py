@@ -270,3 +270,84 @@ class TestIncidentLastSeen:
         assert incident.first_seen is not None
         assert incident.last_seen is not None
         assert incident.last_seen >= incident.first_seen
+
+
+# ---------------------------------------------------------------------------
+# Tests — external reference from SecOps URL
+# ---------------------------------------------------------------------------
+class TestIncidentExternalReference:
+    def test_then_external_reference_created_when_secops_url_provided(self):
+        """Given a secops_base_url → incident has an external reference with correct URL."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([])
+        secops_url = "https://acme.backstory.chronicle.security"
+
+        # _when_
+        incident = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            secops_base_url=secops_url,
+        )
+
+        # _then_
+        assert incident.external_references is not None
+        assert len(incident.external_references) == 1
+        ext_ref = incident.external_references[0]
+        assert ext_ref.source_name == "Google SecOps SIEM"
+        assert ext_ref.url == f"{secops_url}/alerts/{alert.id}"
+        assert ext_ref.external_id == alert.id
+
+    def test_then_external_reference_strips_trailing_slash(self):
+        """Given a secops_base_url with trailing slash → URL has no double slash."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([])
+        secops_url = "https://acme.backstory.chronicle.security/"
+
+        # _when_
+        incident = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            secops_base_url=secops_url,
+        )
+
+        # _then_
+        ext_ref = incident.external_references[0]
+        assert "//" not in ext_ref.url.replace("https://", "")
+
+    def test_then_no_external_reference_when_secops_url_is_none(self):
+        """Given no secops_base_url → incident has no external references."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([])
+
+        # _when_
+        incident = _when_map_incident(alert, meta)
+
+        # _then_
+        assert incident.external_references is None
+
+    def test_then_external_reference_converts_to_stix2(self):
+        """Given a secops_base_url → the incident's STIX2 object includes the external reference."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([])
+        secops_url = "https://acme.backstory.chronicle.security"
+
+        # _when_
+        incident = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            secops_base_url=secops_url,
+        )
+        stix_obj = incident.to_stix2_object()
+
+        # _then_
+        assert hasattr(stix_obj, "external_references")
+        assert len(stix_obj.external_references) == 1
+        assert (
+            stix_obj.external_references[0]["url"] == f"{secops_url}/alerts/{alert.id}"
+        )
