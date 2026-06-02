@@ -1,5 +1,6 @@
 """Map alert outcomes to File observables."""
 
+from itertools import zip_longest
 from typing import Any
 
 from connectors_sdk.models import File
@@ -49,16 +50,15 @@ def map_files(
         path_outcomes = find_all_outcomes(outcomes, path_name)
         sha256_outcomes = find_all_outcomes(outcomes, sha256_name)
 
-        for i, path_outcome in enumerate(path_outcomes):
-            if not path_outcome.string_val:
+        for path_outcome, sha256_outcome in zip_longest(path_outcomes, sha256_outcomes):
+            path = path_outcome.string_val if path_outcome is not None else None
+            name = _basename(path) if path else None
+
+            sha256 = sha256_outcome.string_val if sha256_outcome is not None else None
+            hashes = {HashAlgorithm.SHA256: sha256} if sha256 else None
+
+            if name is None and hashes is None:
                 continue
-
-            path = path_outcome.string_val
-            name = _basename(path)
-
-            hashes = None
-            if i < len(sha256_outcomes) and sha256_outcomes[i].string_val:
-                hashes = {HashAlgorithm.SHA256: sha256_outcomes[i].string_val}
 
             result.append(
                 File(

@@ -104,6 +104,36 @@ class TestFileMapper:
         assert result[0].name == "curl"
         assert result[0].hashes is None
 
+    def test_then_hash_only_creates_file_without_name(self):
+        """Given principal sha256 but no path → File(name=None, hashes={SHA256: ...})."""
+        # _given_
+        outcomes = make_file_outcomes(
+            principal_sha256=_SHA256_A,
+        )
+
+        # _when_
+        result = _when_map_files(outcomes)
+
+        # _then_
+        assert len(result) == 1
+        assert result[0].name is None
+        assert result[0].hashes == {HashAlgorithm.SHA256: _SHA256_A}
+
+    def test_then_target_hash_only_creates_file_without_name(self):
+        """Given target sha256 but no path → File(name=None, hashes={SHA256: ...})."""
+        # _given_
+        outcomes = make_file_outcomes(
+            target_sha256=_SHA256_B,
+        )
+
+        # _when_
+        result = _when_map_files(outcomes)
+
+        # _then_
+        assert len(result) == 1
+        assert result[0].name is None
+        assert result[0].hashes == {HashAlgorithm.SHA256: _SHA256_B}
+
     def test_then_all_file_outcomes_empty_returns_empty(self):
         """Given all file outcomes empty → returns []."""
         # _given_
@@ -114,6 +144,22 @@ class TestFileMapper:
 
         # _then_
         assert result == []
+
+    def test_then_empty_sha256_treated_as_absent(self):
+        """Given path present but sha256 is empty string → File(name=..., hashes=None)."""
+        # _given_
+        outcomes = make_file_outcomes(
+            principal_path="/usr/bin/curl",
+            principal_sha256="",
+        )
+
+        # _when_
+        result = _when_map_files(outcomes)
+
+        # _then_
+        assert len(result) == 1
+        assert result[0].name == "curl"
+        assert result[0].hashes is None
 
     def test_then_empty_outcomes_list_returns_empty(self):
         """Trap guard: Given all file outcomes empty → returns []."""
