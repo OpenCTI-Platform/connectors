@@ -1,5 +1,9 @@
 """Converts a GTI software toolkit to a STIX Tool object."""
 
+from connectors_sdk.models.enums import ToolType
+
+from connector.src.stix.v21.models.ovs.malware_type_ov_enums import MalwareTypeOV
+
 from datetime import datetime, timezone
 from typing import Any
 
@@ -84,6 +88,9 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
         created = datetime.fromtimestamp(attributes.creation_date, tz=timezone.utc)
 
         aliases = self._extract_aliases(attributes)
+
+        tool_types = self._extract_malware_types_as_tool_types(attributes)
+
         external_references = self._create_external_references()
 
         tool_model = Tool(
@@ -91,6 +98,7 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
             author=self.organization,
             markings=[self.tlp_marking],
             description=attributes.description,
+            tool_types=tool_types if tool_types else None,
             aliases=aliases,
             created=created,
             external_references=external_references,
@@ -112,6 +120,26 @@ class GTISoftwareToolkitToSTIXTool(BaseMapper):
         if not attributes.alt_names_details:
             return None
         return [detail.value for detail in attributes.alt_names_details if detail.value]
+
+    def _extract_malware_types_as_tool_types(
+        self, attributes: SoftwareToolkitModel
+    ) -> list[ToolType]:
+        """Extract malware types from software toolkit attributes.
+
+        Args:
+            attributes: The software toolkit attributes
+
+        Returns:
+            list[MalwareTypeOV]: Extracted malware types
+
+        """
+        malware_types = []
+        if hasattr(attributes, "malware_roles") and attributes.malware_roles:
+            for role in attributes.malware_roles:
+                if hasattr(role, "value") and role.value:
+                    malware_types.append(ToolType(role.value))
+
+        return malware_types
 
     def _create_external_references(self) -> list[ExternalReference] | None:
         """Create external references pointing to the GTI software toolkit page.
