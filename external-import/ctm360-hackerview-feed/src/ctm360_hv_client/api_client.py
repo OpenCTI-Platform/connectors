@@ -21,6 +21,21 @@ class CTM360HvClient:
         self._max_retries = 3
         self._retry_delay = 5
 
+    def _parse_retry_after(self, value, default: int) -> int:
+        """Parse a ``Retry-After`` header into a delay in seconds.
+
+        Per RFC 9110 the value may be a non-negative integer (seconds) or an
+        HTTP-date. A float-like string is also tolerated. Anything we cannot
+        interpret as a number of seconds falls back to the configured backoff
+        instead of raising ``ValueError`` and aborting the request loop.
+        """
+        if value is None:
+            return default
+        try:
+            return max(0, int(float(value)))
+        except (TypeError, ValueError):
+            return default
+
     def _request(self, method: str, path: str, params: dict = None) -> dict:
         """Make a single API request and return the raw JSON response dict/list."""
         url = f"{self.base_url}{path}"
@@ -34,10 +49,9 @@ class CTM360HvClient:
                 if response.status_code == 204:
                     return {"issues": [], "count": 0}
                 if response.status_code == 429:
-                    retry_after = int(
-                        response.headers.get(
-                            "Retry-After", self._retry_delay * (attempt + 1)
-                        )
+                    retry_after = self._parse_retry_after(
+                        response.headers.get("Retry-After"),
+                        self._retry_delay * (attempt + 1),
                     )
                     self.helper.connector_logger.warning(
                         "[API] Rate limited, waiting",
@@ -50,7 +64,9 @@ class CTM360HvClient:
                 return data if isinstance(data, dict) else {"data": data}
             except requests.exceptions.HTTPError as e:
                 status = e.response.status_code if e.response is not None else 0
-                if status in (500, 502, 503) and attempt < self._max_retries - 1:
+                # Retry the whole 5xx range (e.g. 500/502/503/504) — these are
+                # transient server-side failures.
+                if status >= 500 and attempt < self._max_retries - 1:
                     time.sleep(self._retry_delay * (attempt + 1))
                     continue
                 raise CTM360HvAPIError(
@@ -70,7 +86,7 @@ class CTM360HvClient:
 
     def _extract_items(self, data: dict) -> list:
         """Extract the list of items from an API response dict."""
-        if "issues" in data:
+        if "issues" in data and isinstance(data["issues"], list):
             return data["issues"]
         if "data" in data and isinstance(data["data"], list):
             return data["data"]
@@ -95,13 +111,20 @@ class CTM360HvClient:
             items = self._extract_items(data)
             all_items.extend(items)
 
-            total = data.get("count", 0)
+            total = data.get("count")
             self.helper.connector_logger.debug(
                 "[API] Page fetched",
                 {"path": path, "page": page, "items": len(items), "total": total},
             )
 
-            if len(items) < page_size or len(all_items) >= total:
+            # Stop on a short page; only use the `count`/`total` stop condition
+            # when the API actually reports a positive count. Otherwise a
+            # missing/zero `count` (e.g. a bare-list response wrapped as
+            # {"data": [...]}) would falsely stop pagination after the first
+            # full page and silently truncate the import.
+            if len(items) < page_size:
+                break
+            if total and len(all_items) >= total:
                 break
             page += 1
 

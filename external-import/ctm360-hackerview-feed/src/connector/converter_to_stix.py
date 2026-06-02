@@ -409,11 +409,20 @@ class ConverterToStix:
 
             # Build labels (no severity)
             discovery_source = issue.get("discovery_source", "")
+            # Combine status + progress_status into a single value used both for
+            # the case's `status:` label and for the status tracker's seed, so the
+            # bundle label and the tracker stay in sync. If they diverged, the
+            # tracker would try to remove a `status:` label that never existed on
+            # the case (the tracker maintains the combined form) and leak the
+            # original `status:` label on the first detected change.
+            effective_status = (
+                f"{str(status).lower()}:{str(progress_status).lower()}"
+                if progress_status
+                else str(status).lower()
+            )
             case_labels = ["ctm360-hackerview"]
-            if status and status.lower() != "unknown":
-                case_labels.append(f"status:{status.lower()}")
-            if progress_status:
-                case_labels.append(f"progress:{progress_status.lower()}")
+            if status and str(status).lower() != "unknown":
+                case_labels.append(f"status:{effective_status}")
             self._add_list_labels(case_labels, issue_type)
             self._add_list_labels(case_labels, issue.get("issue_category", []))
             self._add_list_labels(case_labels, technologies)
@@ -459,17 +468,15 @@ class ConverterToStix:
 
             # The deterministic case id and the issue's current status are kept
             # so the background status tracker can reflect later status changes
-            # onto the case shipped in the bundle (no API creation needed).
-            initial_status = (
-                f"{str(status).lower()}:{str(progress_status).lower()}"
-                if progress_status
-                else str(status).lower()
-            )
+            # onto the case shipped in the bundle (no API creation needed). The
+            # tracker is seeded with the exact same `effective_status` value that
+            # backs the `status:` label above, so the first poll cycle treats an
+            # unchanged status as a no-op and a change targets the real label.
             self.issue_case_metadata.append(
                 {
                     "ticket_id": str(issue_id),
                     "case_incident_id": case_id,
-                    "initial_status": initial_status,
+                    "initial_status": effective_status,
                 }
             )
 

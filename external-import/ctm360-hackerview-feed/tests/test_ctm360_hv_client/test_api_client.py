@@ -78,6 +78,25 @@ class TestRequest:
         )
         assert client._request("GET", "/x") == {"ok": True}
 
+    def test_504_then_success(self, client):
+        # 504 is part of the 5xx range and must be retried (status >= 500).
+        client.session.request = MagicMock(
+            side_effect=[FakeResponse(504), FakeResponse(200, {"ok": True})]
+        )
+        assert client._request("GET", "/x") == {"ok": True}
+
+    def test_429_http_date_retry_after_does_not_crash(self, client):
+        # An HTTP-date Retry-After must not raise ValueError and abort the loop.
+        client.session.request = MagicMock(
+            side_effect=[
+                FakeResponse(
+                    429, headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}
+                ),
+                FakeResponse(200, {"ok": True}),
+            ]
+        )
+        assert client._request("GET", "/x") == {"ok": True}
+
     def test_non_retryable_http_error(self, client):
         client.session.request = MagicMock(return_value=FakeResponse(404))
         with pytest.raises(CTM360HvAPIError) as exc:
@@ -99,9 +118,31 @@ class TestRequest:
             client._request("GET", "/x")
 
 
+class TestParseRetryAfter:
+    def test_integer_seconds(self, client):
+        assert client._parse_retry_after("3", 9) == 3
+
+    def test_float_seconds(self, client):
+        assert client._parse_retry_after("2.5", 9) == 2
+
+    def test_http_date_falls_back(self, client):
+        assert client._parse_retry_after("Wed, 21 Oct 2026 07:28:00 GMT", 9) == 9
+
+    def test_missing_falls_back(self, client):
+        assert client._parse_retry_after(None, 9) == 9
+
+    def test_negative_is_clamped(self, client):
+        assert client._parse_retry_after("-5", 9) == 0
+
+
 class TestExtractItems:
     def test_issues(self, client):
         assert client._extract_items({"issues": [1, 2]}) == [1, 2]
+
+    def test_issues_non_list_ignored(self, client):
+        # A non-list `issues` payload must not be returned (it would break
+        # list.extend downstream).
+        assert client._extract_items({"issues": {"not": "a list"}}) == []
 
     def test_data_list(self, client):
         assert client._extract_items({"data": [3]}) == [3]
@@ -127,6 +168,19 @@ class TestPaginatedRequest:
             "GET", "/api/v2/assets/domain", page_size=100
         )
         assert len(result) == 150
+        assert client._request.call_count == 2
+
+    def test_count_absent_does_not_truncate(self, client):
+        # A full first page with no `count` must not stop pagination after the
+        # first page (regression: total defaulted to 0 -> always stopped).
+        client._request = MagicMock(
+            side_effect=[
+                {"issues": list(range(100))},  # full page, no count
+                {"issues": list(range(10))},  # short page -> stop
+            ]
+        )
+        result = client._paginated_request("GET", "/api/v2/issues", page_size=100)
+        assert len(result) == 110
         assert client._request.call_count == 2
 
 

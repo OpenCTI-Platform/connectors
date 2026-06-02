@@ -128,11 +128,31 @@ class TestIssuesToStix:
         assert case.priority == "P2"
         assert case.response_types == ["exposure"]
         assert "ctm360-hackerview" in case.labels
-        assert "status:open" in case.labels
+        # The status label uses the combined status+progress form so it matches
+        # the value the tracker maintains (see test below).
+        assert "status:open:in_progress" in case.labels
         assert case.created_by_ref == converter.author.id
         assert any(ref.external_id == "HV-1" for ref in case.external_references)
         # The case references the objects built for the issue (note is always one).
         assert case.object_refs
+
+    def test_case_label_matches_tracker_seed(self, converter):
+        # The `status:` label shipped on the case must equal `status:` + the
+        # initial_status seeded into the tracker, otherwise the tracker would
+        # remove a non-existent label and leak the original on the first change.
+        objects = converter.issues_to_stix([_full_issue()])
+        case = next(o for o in objects if o.type == "case-incident")
+        meta = converter.issue_case_metadata[0]
+        status_labels = [label for label in case.labels if label.startswith("status:")]
+        assert status_labels == [f"status:{meta['initial_status']}"]
+        # The old split form (a separate `progress:` label) must not be emitted.
+        assert not any(label.startswith("progress:") for label in case.labels)
+
+    def test_case_label_bare_status_when_no_progress(self, converter):
+        objects = converter.issues_to_stix([_full_issue(progress_status="")])
+        case = next(o for o in objects if o.type == "case-incident")
+        assert "status:open" in case.labels
+        assert converter.issue_case_metadata[0]["initial_status"] == "open"
 
     def test_case_metadata_tracks_deterministic_id(self, converter):
         objects = converter.issues_to_stix([_full_issue()])

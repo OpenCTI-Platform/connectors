@@ -43,3 +43,11 @@ class TestNormalizeTimestamp:
 
     def test_invalid_returns_now(self):
         assert ISO_Z_PATTERN.match(normalize_timestamp("definitely not a date"))
+
+    def test_huge_epoch_int_falls_back_to_now(self):
+        # An out-of-range epoch must not raise OverflowError/OSError; it falls
+        # back to a valid "now" timestamp like the other branches.
+        assert ISO_Z_PATTERN.match(normalize_timestamp(10**20))
+
+    def test_huge_epoch_string_falls_back_to_now(self):
+        assert ISO_Z_PATTERN.match(normalize_timestamp(str(10**20)))
