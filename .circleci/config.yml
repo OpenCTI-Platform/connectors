@@ -202,7 +202,6 @@ jobs:
           sudo apt install -y \
             curl \
             gettext-base \
-            libmagic1 \
             libcairo2-dev libpango1.0-dev  # for internal-export-file/export-report-pdf tests (weasyprint)
       - run:
           name: install dependencies
