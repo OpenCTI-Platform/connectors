@@ -221,6 +221,18 @@ class TestParseRetryAfter:
     def test_future_http_date_returns_positive_delay(self, client):
         assert client._parse_retry_after("Wed, 21 Oct 2099 07:28:00 GMT", 7) > 0
 
+    def test_far_future_http_date_capped_at_max(self, client):
+        # A far-future HTTP-date must not pin the connector sleeping for years;
+        # the computed delay is capped at the configured maximum.
+        assert (
+            client._parse_retry_after("Wed, 21 Oct 2099 07:28:00 GMT", 7)
+            == client._max_retry_after
+        )
+
+    def test_huge_integer_seconds_capped_at_max(self, client):
+        # An absurdly large delay-seconds value is also capped.
+        assert client._parse_retry_after("999999999", 7) == client._max_retry_after
+
     def test_past_http_date_clamped_to_zero(self, client):
         assert client._parse_retry_after("Wed, 21 Oct 2015 07:28:00 GMT", 7) == 0
 

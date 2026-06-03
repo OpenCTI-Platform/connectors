@@ -34,21 +34,30 @@ class CTM360CynaClient:
         self.session.verify = True
         self._max_retries = 3
         self._retry_delay = 5
+        # Upper bound (seconds) for any server-provided Retry-After, so a
+        # misbehaving server (e.g. a far-future HTTP-date or an absurdly large
+        # delay-seconds value) cannot pin the connector sleeping for an
+        # unbounded amount of time.
+        self._max_retry_after = 300
 
     def _parse_retry_after(self, header_value, fallback: int) -> int:
         """Parse a ``Retry-After`` header into a non-negative delay in seconds.
 
         ``Retry-After`` may be either an integer number of seconds or an
-        HTTP-date (RFC 7231). Any missing or malformed value falls back to the
-        configured linear backoff so a non-integer header can never bypass the
-        retry handling with an unexpected ``ValueError``.
+        HTTP-date (RFC 7231). The resulting delay is clamped to
+        ``[0, self._max_retry_after]`` so a misbehaving server cannot pin the
+        connector sleeping for an unbounded amount of time, while smaller
+        server-provided delays are still honoured. Any missing or malformed
+        value falls back to the configured linear backoff so a non-integer
+        header can never bypass the retry handling with an unexpected
+        ``ValueError``.
         """
         if header_value is None:
             return fallback
 
         # Integer "delay-seconds" form.
         try:
-            return max(int(header_value), 0)
+            return self._clamp_retry_after(int(header_value))
         except (TypeError, ValueError):
             pass
 
@@ -62,7 +71,11 @@ class CTM360CynaClient:
         if retry_dt.tzinfo is None:
             retry_dt = retry_dt.replace(tzinfo=timezone.utc)
         delta = (retry_dt - datetime.now(timezone.utc)).total_seconds()
-        return max(int(delta), 0)
+        return self._clamp_retry_after(int(delta))
+
+    def _clamp_retry_after(self, seconds: int) -> int:
+        """Clamp a Retry-After delay to ``[0, self._max_retry_after]``."""
+        return max(0, min(seconds, self._max_retry_after))
 
     def _request(
         self,
