@@ -362,172 +362,6 @@ class BaseHttpClient(ABC):
         response = self._raw_request(method, endpoint, **kwargs)
         return self._parse_response_body(response)
 
-    # # ------------------------------------------------------------------
-    # # Pagination helpers
-    # # ------------------------------------------------------------------
-
-    # def _paginate_offset(
-    #     self,
-    #     path: str,
-    #     *,
-    #     params: dict[str, Any] | None = None,
-    #     page_param: str = "page",
-    #     page_size_param: str = "per_page",
-    #     page_size: int = 100,
-    #     start_page: int = 1,
-    #     results_key: str | None = None,
-    # ) -> Generator[list[Any], None, None]:
-    #     """Iterate through offset/page-based pagination.
-
-    #     Yields pages of results until an empty page or a page smaller than
-    #     ``page_size`` is received.
-
-    #     Args:
-    #         path: API endpoint path.
-    #         params: Additional query parameters.
-    #         page_param: Name of the page number parameter.
-    #         page_size_param: Name of the page size parameter.
-    #         page_size: Number of results per page.
-    #         start_page: First page number (usually 0 or 1).
-    #         results_key: If the response is a dict, extract results from this key.
-    #                      If None, the response itself is treated as the results list.
-
-    #     Yields:
-    #         Lists of result items, one per page.
-    #     """
-    #     current_page = start_page
-    #     base_params = dict(params) if params else {}
-
-    #     while True:
-    #         page_params = {
-    #             **base_params,
-    #             page_param: current_page,
-    #             page_size_param: page_size,
-    #         }
-    #         response = self._get(path, params=page_params)
-
-    #         results = response[results_key] if results_key else response
-    #         if not results:
-    #             break
-
-    #         yield results
-
-    #         if len(results) < page_size:
-    #             break
-    #         current_page += 1
-
-    # def _paginate_cursor(
-    #     self,
-    #     path: str,
-    #     *,
-    #     params: dict[str, Any] | None = None,
-    #     cursor_param: str = "cursor",
-    #     cursor_extractor: Callable[[Any], str | None] | None = None,
-    #     results_key: str | None = None,
-    # ) -> Generator[list[Any], None, None]:
-    #     """Iterate through cursor-based pagination.
-
-    #     Yields pages of results until no next cursor is returned.
-
-    #     Args:
-    #         path: API endpoint path.
-    #         params: Additional query parameters.
-    #         cursor_param: Name of the cursor parameter to send.
-    #         cursor_extractor: Function to extract the next cursor from the response.
-    #                           If None, looks for ``response["next"]`` or
-    #                           ``response["meta"]["next_cursor"]``.
-    #         results_key: If the response is a dict, extract results from this key.
-    #                      If None and response is a dict with a ``results_key``,
-    #                      falls back to ``"data"`` or ``"results"``.
-
-    #     Yields:
-    #         Lists of result items, one per page.
-    #     """
-    #     base_params = dict(params) if params else {}
-    #     cursor: str | None = None
-
-    #     while True:
-    #         page_params = {**base_params}
-    #         if cursor:
-    #             page_params[cursor_param] = cursor
-
-    #         response = self._get(path, params=page_params)
-
-    #         results = self._extract_results(response, results_key)
-    #         if not results:
-    #             break
-
-    #         yield results
-
-    #         # Extract next cursor
-    #         if cursor_extractor:
-    #             cursor = cursor_extractor(response)
-    #         elif isinstance(response, dict):
-    #             cursor = response.get("next") or (
-    #                 response.get("meta", {}).get("next_cursor")
-    #             )
-    #         else:
-    #             cursor = None
-
-    #         if not cursor:
-    #             break
-
-    # def _paginate_links(
-    #     self,
-    #     path: str,
-    #     *,
-    #     params: dict[str, Any] | None = None,
-    #     next_url_extractor: Callable[[Any], str | None] | None = None,
-    #     results_key: str | None = None,
-    # ) -> Generator[list[Any], None, None]:
-    #     """Iterate through link-based (HATEOAS) pagination.
-
-    #     Follows a "next" URL returned in the response body until no more
-    #     pages are available.
-
-    #     Args:
-    #         path: Initial API endpoint path.
-    #         params: Query parameters for the first request only.
-    #         next_url_extractor: Function to extract the next URL from the response.
-    #                             If None, looks for ``response["_links"]["next"]["href"]``
-    #                             or ``response["next_url"]``.
-    #         results_key: If the response is a dict, extract results from this key.
-    #                      If None, tries ``"items"`` or ``"data"``.
-
-    #     Yields:
-    #         Lists of result items, one per page.
-    #     """
-    #     url: str | None = None
-
-    #     while True:
-    #         if url is None:
-    #             response = self._get(path, params=params)
-    #         else:
-    #             # Resolve relative URLs against the base URL
-    #             resolved_url = urljoin(self._base_url + "/", url)
-    #             response = self._request("GET", resolved_url, _absolute_url=True)
-
-    #         results = self._extract_results(response, results_key)
-    #         if not results:
-    #             break
-
-    #         yield results
-
-    #         # Extract next URL
-    #         if next_url_extractor:
-    #             url = next_url_extractor(response)
-    #         elif isinstance(response, dict):
-    #             links = response.get("_links", {})
-    #             next_link = links.get("next", {})
-    #             url = next_link.get("href") if next_link else None
-    #             if not url:
-    #                 url = response.get("next_url")
-    #         else:
-    #             url = None
-
-    #         if not url:
-    #             break
-
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
@@ -545,3 +379,44 @@ class BaseHttpClient(ABC):
         """
         path = "/".join(arg.strip("/") for arg in args)
         return urljoin(url + "/", path)
+
+
+# Decorators
+
+
+def paginate_offset(
+    page_param: str = "page",
+    start_page: int = 1,
+    page_size_param: str = "page_size",
+    page_size: int = 100,
+    result_extractor: Callable[[Any], Any] | None = None,
+) -> Callable[..., Generator[Any, None, None]]:
+
+    def paginate(
+        request_fn: Callable[..., Any], *args: Any, **kwargs: Any
+    ) -> Generator[list[Any], None, None]:
+        base_params = kwargs.get("params", {})
+
+        current_page = start_page
+        while True:
+            page_params = {
+                **base_params,
+                page_param: current_page,
+                page_size_param: page_size,
+            }
+            kwargs["params"] = page_params
+
+            data = request_fn(*args, **kwargs)
+            if not data:
+                break
+
+            results = result_extractor(data) if result_extractor else data
+
+            yield results
+
+            if len(results) < page_size:
+                break
+
+            current_page += 1
+
+    return paginate
