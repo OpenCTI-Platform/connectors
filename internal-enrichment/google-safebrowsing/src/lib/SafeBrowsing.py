@@ -25,7 +25,7 @@ class SafeBrowsingConnector:
         if update_existing_data.lower() in ["true", "false"]:
             self.update_existing_data = update_existing_data.lower()
         else:
-            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{self.interval}'. It SHOULD be either `true` or `false`. `false` is assumed. "
+            msg = f"Error when grabbing CONNECTOR_UPDATE_EXISTING_DATA environment variable: '{update_existing_data}'. It SHOULD be either `true` or `false`. `false` is assumed. "
             self.helper.log_warning(msg)
             self.update_existing_data = "false"
 

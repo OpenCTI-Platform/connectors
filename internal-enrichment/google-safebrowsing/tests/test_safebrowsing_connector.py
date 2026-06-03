@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
+from lib import SafeBrowsing as safebrowsing_module
 
 
 def _domain_observable(**overrides):
@@ -170,6 +171,27 @@ class TestEnrichmentResults:
         assert connector.google_safe_browsing(_domain_observable()) is None
         connector.helper.log_error.assert_called_once()
         connector.helper.send_stix2_bundle.assert_not_called()
+
+
+class TestUpdateExistingDataConfig:
+    def _build(self, mocker):
+        mocker.patch.object(
+            safebrowsing_module, "OpenCTIConnectorHelper", return_value=MagicMock()
+        )
+        return safebrowsing_module.SafeBrowsingConnector()
+
+    def test_invalid_value_falls_back_to_false(self, mocker, monkeypatch):
+        # An invalid CONNECTOR_UPDATE_EXISTING_DATA must warn and default to
+        # "false" rather than crashing __init__ with an AttributeError.
+        monkeypatch.setenv("CONNECTOR_UPDATE_EXISTING_DATA", "yes")
+        connector = self._build(mocker)
+        assert connector.update_existing_data == "false"
+        connector.helper.log_warning.assert_called_once()
+
+    def test_valid_true_value_is_kept(self, mocker, monkeypatch):
+        monkeypatch.setenv("CONNECTOR_UPDATE_EXISTING_DATA", "TRUE")
+        connector = self._build(mocker)
+        assert connector.update_existing_data == "true"
 
 
 class TestProcessMessage:
