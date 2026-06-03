@@ -8,12 +8,15 @@ from connectors_sdk import (
 )
 from pydantic import Field, SecretStr, field_validator
 
-# Entity types this connector can actually enrich. Kept in sync with
-# the keys of ``censys_enrichment.converters._CONVERTER_MAP`` — these
-# are the OpenCTI ``entity_type`` values
-# (``_is_entity_in_scope`` in ``connector.py`` matches against this
-# capitalised form, not the STIX-lowercase form). The list is
-# defined here as a module-level constant rather than imported from
+# Entity types this connector can actually enrich. These are the
+# capitalised OpenCTI ``entity_type`` values, i.e. the capitalised
+# subset of the keys of ``censys_enrichment.converters._CONVERTER_MAP``
+# (that map also holds the STIX-lowercase aliases — e.g. ``ipv4-addr`` —
+# used for converter dispatch by ``stix_entity["type"]``; this constant
+# tracks only the capitalised forms on purpose, because
+# ``_is_entity_in_scope`` in ``connector.py`` matches
+# ``observable["entity_type"]`` against the capitalised form). Defined
+# here as a module-level constant rather than imported from
 # ``converters/`` to avoid an import cycle when the SDK loads the
 # settings before the connector module is wired up.
 SUPPORTED_SCOPE_ENTITY_TYPES: frozenset[str] = frozenset(
