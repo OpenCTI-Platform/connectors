@@ -50,8 +50,8 @@ import re
 import sys
 
 scope = pathlib.Path(sys.argv[1])
-local_sdk = sys.argv[2]
-replacement = f"connectors-sdk @ file://{local_sdk}"
+local_sdk = pathlib.Path(sys.argv[2]).resolve().as_uri()
+replacement = f"connectors-sdk @ {local_sdk}"
 pattern = re.compile(
     r"connectors-sdk\s*@\s*git\+https://github\.com/OpenCTI-Platform/connectors\.git@[^#\s\"']+#subdirectory=connectors-sdk"
 )
