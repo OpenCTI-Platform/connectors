@@ -216,6 +216,21 @@ class TestEntityScope:
             is True
         )
 
+    def test_stixfile_out_of_scope_under_default_artifact_only(self):
+        # Default scope is Artifact only: the sandbox detonates an uploaded
+        # file, so a StixFile carrying just a hash has nothing to detonate and
+        # is correctly skipped rather than raising a confusing artifact error.
+        c = make_connector()  # connect_scope = "Artifact"
+        assert (
+            c._entity_in_scope(
+                {
+                    "entity_id": "file--1234-5678",
+                    "enrichment_entity": {"entity_type": "StixFile"},
+                }
+            )
+            is False
+        )
+
     def test_skips_non_artifact(self):
         c = make_connector()
         result = c._process_message(

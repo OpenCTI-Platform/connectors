@@ -152,6 +152,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     Inherits ``type = INTERNAL_ENRICHMENT`` from the SDK base class.
     Only ``name`` and ``scope`` are overridden here; everything else
     (ID, confidence, log level) comes from env vars or SDK defaults.
+
+    Scope is ``Artifact`` only: the sandbox detonates an uploaded file,
+    so it needs the file attached to an Artifact. A StixFile observable
+    carrying just a hash has nothing to detonate.
     """
 
     name: str = Field(
@@ -159,7 +163,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
         description="The name of the connector.",
     )
     scope: ListFromString = Field(
-        default=["StixFile", "Artifact"],
+        default=["Artifact"],
         description="The scope of the connector.",
     )
 
