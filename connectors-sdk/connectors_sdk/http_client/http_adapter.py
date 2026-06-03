@@ -1,38 +1,55 @@
-from datetime import timedelta
-from typing import Any
+from typing import Any, Literal
 
 import requests
 from requests.adapters import HTTPAdapter, Retry
-from limits import RateLimitItemPerSecond, storage, strategies
+from limits import storage, strategies, parse
 
 from connectors_sdk.http_client.exceptions import HttpClientRateLimitError
+from pydantic import HttpUrl
 
 
 class RateLimit:
     def __init__(
         self,
-        url: str,
-        rate_limit: int = 0,
-        rate_interval: timedelta = timedelta(seconds=0),
+        url: HttpUrl | str,
+        rate_limit: int | None = None,
+        rate_expiry: (
+            tuple[
+                int,
+                Literal[
+                    "day",
+                    "month",
+                    "year",
+                    "hour",
+                    "minute",
+                    "second",
+                ],
+            ]
+            | None
+        ) = None,
     ) -> None:
-        if rate_limit <= 0 or rate_interval.total_seconds() <= 0:
-            return
+        if rate_limit and rate_expiry:
+            # The `limits` library provides a `parse` method that expects a specific format
+            # See https://limits.readthedocs.io/en/latest/quickstart.html#rate-limit-string-notation
+            self._rate_limit = parse(
+                f"{rate_limit} per {rate_expiry[0]} {rate_expiry[1]}"
+            )
+            self._rate_limiter = strategies.FixedWindowRateLimiter(
+                storage.MemoryStorage()
+            )
+        else:
+            self._rate_limit = None
+            self._rate_limiter = None
 
-        limits_storage = storage.MemoryStorage()
-
-        self._rate_limiter = strategies.FixedWindowRateLimiter(limits_storage)
-        self._rate_limit = RateLimitItemPerSecond(
-            rate_limit, int(rate_interval.total_seconds())
-        )
-        self._url = url
+        self._url = str(url)
 
     def check(self) -> None:
-        if not hasattr(self, "_rate_limiter") or not hasattr(self, "_rate_limit"):
+        if self._rate_limiter is None or self._rate_limit is None:
             return
 
-        if not self._rate_limiter.hit(self._rate_limit):
+        if not self._rate_limiter.hit(self._rate_limit, self._url):
             raise HttpClientRateLimitError(
-                f"Rate limit of {self._rate_limit.amount} exceeded for {self._url}"
+                f"Requests on {self._url} exceeded rate limit of {self._rate_limit}(s)"
             )
 
 

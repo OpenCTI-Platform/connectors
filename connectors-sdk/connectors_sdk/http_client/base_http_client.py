@@ -13,9 +13,8 @@ from __future__ import annotations
 
 from abc import ABC
 import logging
-from datetime import timedelta
 from collections.abc import Generator
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Literal
 from urllib.parse import urljoin
 
 from pydantic import HttpUrl
@@ -49,14 +48,8 @@ class BaseHttpClient(ABC):
             def get_indicators(self, page: int = 1) -> dict:
                 return self._get("/api/indicators", params={"page": page})
 
-    Args:
-        base_url: Base URL of the API (trailing slash is stripped).
-        ssl_verify: Whether to verify SSL certificates.
-        timeout: Default request timeout in seconds.
-        rate_limit: Maximum number of requests per interval (0 to disable).
-        rate_interval: Minimum amount of time between consecutive requests (0 to disable).
-        max_retries: Maximum number of retries for transient errors.
-        backoff_factor: Multiplier for exponential backoff between retries.
+    Attributes:
+        logger: Logger instance for the class.
     """
 
     logger: ClassVar[logging.Logger] = logging.getLogger("BaseHttpClient")
@@ -74,22 +67,43 @@ class BaseHttpClient(ABC):
         base_url: HttpUrl | str,
         ssl_verify: bool = True,
         timeout: int = 60,
-        rate_limit: int = 0,
-        rate_interval: timedelta = timedelta(seconds=0),
         max_retries: int = 3,
         backoff_factor: float = 1.0,
+        rate_limit: int | None = None,
+        rate_expiry: (
+            tuple[
+                int,
+                Literal[
+                    "day",
+                    "month",
+                    "year",
+                    "hour",
+                    "minute",
+                    "second",
+                ],
+            ]
+            | None
+        ) = None,
     ) -> None:
         """Initialize the HTTP client.
 
-        See class docstring for parameter descriptions.
+        Args:
+            base_url: Base URL of the API.
+            ssl_verify: Whether to verify SSL certificates.
+            timeout: Default request timeout in seconds.
+            max_retries: Maximum number of retries for transient errors.
+            backoff_factor: Multiplier for exponential backoff between retries.
+            rate_limit: Maximum number of requests per interval (`None` to disable).
+            rate_expiry: Time window for the rate limit, expressed in multiple of time units
+            e.g., `(2, "hour")` for a rate limit that expires every 2 hours (`None` to disable).
         """
         self._base_url = str(base_url)
         self._ssl_verify = ssl_verify
         self._timeout = timeout
-        self._rate_limit = rate_limit
-        self._rate_interval = rate_interval
         self._max_retries = max_retries
         self._backoff_factor = backoff_factor
+        self._rate_limit = rate_limit
+        self._rate_expiry = rate_expiry
 
     @property
     def _session(self) -> requests.Session:
@@ -112,7 +126,7 @@ class BaseHttpClient(ABC):
             rate_limit = RateLimit(
                 url=self._base_url,
                 rate_limit=self._rate_limit,
-                rate_interval=self._rate_interval,
+                rate_expiry=self._rate_expiry,
             )
 
             # Retry only idempotent requests that may succeed as-is on next try
