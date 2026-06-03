@@ -141,7 +141,7 @@ class SentinelOneClient:
         request_attempts = 3
         backoff_factor = 5
 
-        url = f"{self.config.api_url}{IOC_ENDPOINT_URL}"
+        url = f"{str(self.config.api_url).rstrip('/')}{IOC_ENDPOINT_URL}"
 
         for attempt in range(request_attempts):
             try:
