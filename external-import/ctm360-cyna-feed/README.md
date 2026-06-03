@@ -126,8 +126,8 @@ All variables are required unless a default is listed.
 | `CONNECTOR_NAME`            | Display name in OpenCTI.                                 | `CTM360-CYNA`     |
 | `CONNECTOR_SCOPE`           | Connector scope label (required; the provided samples use `ctm360-cyna`). | —    |
 | `CONNECTOR_TYPE`            | Must be `EXTERNAL_IMPORT`.                               | `EXTERNAL_IMPORT` |
-| `CONNECTOR_LOG_LEVEL`       | Logging verbosity: `debug`, `info`, `warning`, `error`. | `info`            |
-| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration for the OpenCTI scheduler (e.g. `PT24H`). | `PT24H`       |
+| `CONNECTOR_LOG_LEVEL`       | Logging verbosity: `debug`, `info`, `warning`, `error` (the provided samples set `info`). | `error`           |
+| `CONNECTOR_DURATION_PERIOD` | ISO 8601 duration required by the SDK base config (the provided samples set `PT24H`); runtime scheduling actually uses `CTM360_CYNA_IMPORT_INTERVAL`. | —             |
 
 ### CTM360 CYNA settings
 

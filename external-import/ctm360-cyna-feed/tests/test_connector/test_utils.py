@@ -98,7 +98,8 @@ class TestIsNewerThan:
         ts = "2026-01-01T00:00:00Z"
         assert is_newer_than(ts, ts) is False
 
-    def test_unparseable_defaults_true(self):
-        # datetime.now() fallback still produces a valid comparison, so feed a
-        # value that normalises to "now" against a clearly future-ish cutoff.
-        assert is_newer_than("garbage", "garbage") in (True, False)
+    def test_unparseable_returns_bool_without_raising(self):
+        # Unparseable inputs must not raise: both normalise to "now" via the
+        # datetime.now() fallback, so the helper still returns a real bool.
+        result = is_newer_than("garbage", "garbage")
+        assert isinstance(result, bool)
