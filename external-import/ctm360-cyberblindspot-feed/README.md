@@ -45,7 +45,7 @@ by infostealer families.
 | `IPv4-Addr` | IP address of the compromised host |
 | `Domain-Name` | Domain exfiltrated from the infected host |
 | `Email-Addr` | Email address found in the malware log |
-| `Relationship` | Links between the malware and observed infrastructure |
+| `Relationship` | `uses` relationships linking the malware family to each observed IP, domain, and email |
 
 ### Breached Credentials
 

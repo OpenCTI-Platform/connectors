@@ -248,6 +248,12 @@ class TestEndpoints:
         client._request = MagicMock(return_value={"incident_list": []})
         assert client.get_incident("1") == {}
 
+    def test_get_incident_list_non_dict_element(self, client):
+        # A non-dict element must not be returned: downstream callers call
+        # .get(...) on the result and would crash on a string/list/None.
+        client._request = MagicMock(return_value={"incident_list": ["oops"]})
+        assert client.get_incident("1") == {}
+
     def test_get_incident_flat(self, client):
         client._request = MagicMock(return_value={"id": "1", "status": "open"})
         assert client.get_incident("1") == {"id": "1", "status": "open"}

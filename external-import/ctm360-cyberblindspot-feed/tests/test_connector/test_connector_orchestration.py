@@ -128,6 +128,32 @@ class TestImportData:
         assert saved["tracked_cases"] == {"T1": {"case_incident_id": "c1"}}
         assert saved["last_run"] != "old"
 
+    def test_duplicate_objects_are_deduplicated_before_bundling(self, helper):
+        # Every category converter prepends the shared author Identity, so the
+        # concatenated output repeats it; the bundle must carry it only once.
+        connector = build_connector(helper)
+        author = SimpleNamespace(id="identity--author")
+        connector.client.get_incidents.return_value = []
+        connector.client.get_malware_logs.return_value = []
+        connector.client.get_breached_credentials.return_value = []
+        connector.client.get_card_leaks.return_value = []
+        connector.client.get_domain_protection.return_value = []
+        connector.converter.incidents_to_stix.return_value = [author]
+        connector.converter.malware_logs_to_stix.return_value = [
+            author,
+            SimpleNamespace(id="malware--1"),
+        ]
+        connector.converter.breached_credentials_to_stix.return_value = [author]
+        connector.converter.card_leaks_to_stix.return_value = [author]
+        connector.converter.domain_protection_to_stix.return_value = [author]
+
+        connector._import_data()
+
+        bundled = helper.stix2_create_bundle.call_args[0][0]
+        ids = [obj.id for obj in bundled]
+        assert ids.count("identity--author") == 1
+        assert "malware--1" in ids
+
     def test_disabled_categories_are_skipped(self, helper):
         connector = build_connector(
             helper,

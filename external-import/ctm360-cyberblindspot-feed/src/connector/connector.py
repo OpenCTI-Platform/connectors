@@ -201,6 +201,21 @@ class CTM360CyberBlindSpotConnector:
                 raise ValueError(error_msg)
 
             if all_objects:
+                # Every category converter prepends the shared author Identity
+                # (and the same observable can surface in more than one
+                # category), so concatenating the per-category outputs repeats
+                # objects that share a STIX id. De-duplicate by id before
+                # bundling to avoid shipping the same object multiple times.
+                seen_ids = set()
+                deduped_objects = []
+                for obj in all_objects:
+                    obj_id = getattr(obj, "id", None)
+                    if obj_id is not None and obj_id in seen_ids:
+                        continue
+                    if obj_id is not None:
+                        seen_ids.add(obj_id)
+                    deduped_objects.append(obj)
+                all_objects = deduped_objects
                 bundle = self.helper.stix2_create_bundle(all_objects)
                 self.helper.send_stix2_bundle(
                     bundle,

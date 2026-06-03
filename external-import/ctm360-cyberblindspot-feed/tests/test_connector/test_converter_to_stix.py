@@ -295,6 +295,48 @@ class TestMalwareLogsToStix:
         types = _types(converter.malware_logs_to_stix([{}]))
         assert types == ["identity"]
 
+    def test_malware_links_all_observed_infrastructure(self, converter):
+        # The malware family must be linked (uses) to every observed
+        # observable — IP, domain and email — not just the IP.
+        logs = [
+            {
+                "id": "M1",
+                "malware_family": "RedLine",
+                "ip": "1.2.3.4",
+                "domain": "evil.example",
+                "email": "victim@example.com",
+            }
+        ]
+        objects = converter.malware_logs_to_stix(logs)
+        malware = next(o for o in objects if o.type == "malware")
+        rels = [o for o in objects if o.type == "relationship"]
+        assert len(rels) == 3
+        assert all(r.relationship_type == "uses" for r in rels)
+        assert all(r.source_ref == malware.id for r in rels)
+        assert {r.target_ref.split("--")[0] for r in rels} == {
+            "ipv4-addr",
+            "domain-name",
+            "email-addr",
+        }
+
+    def test_unknown_family_emits_observables_without_relationships(self, converter):
+        # Without a known family there is no Malware SDO to anchor the
+        # relationships, but the observables are still emitted.
+        logs = [
+            {
+                "id": "M9",
+                "malware_family": "Unknown",
+                "domain": "x.example",
+                "email": "a@b.example",
+            }
+        ]
+        objects = converter.malware_logs_to_stix(logs)
+        assert not [o for o in objects if o.type == "relationship"]
+        assert {o.type for o in objects if o.type in ("domain-name", "email-addr")} == {
+            "domain-name",
+            "email-addr",
+        }
+
     def test_same_family_deduplicated(self, converter):
         # Multiple logs sharing a family must yield exactly one Malware SDO
         # (its id is family-derived), but every observable and relationship

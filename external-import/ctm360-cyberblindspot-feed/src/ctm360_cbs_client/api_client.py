@@ -200,7 +200,11 @@ class CTM360CbsClient:
             return result["incident"]
         if "incident_list" in result and isinstance(result["incident_list"], list):
             items = result["incident_list"]
-            return items[0] if items else {}
+            # Guard against a non-dict element: downstream callers
+            # (CaseStatusTracker, converter) call .get(...) on the result.
+            if items and isinstance(items[0], dict):
+                return items[0]
+            return {}
         if "id" in result and "status" in result:
             return result
         return result

@@ -220,6 +220,18 @@ class ConverterToStix:
                     },
                 )
                 objects.append(domain_obs)
+                if malware_obj is not None:
+                    objects.append(
+                        stix2.Relationship(
+                            id=generate_deterministic_id(
+                                "relationship", malware_obj.id, domain_obs.id
+                            ),
+                            relationship_type="uses",
+                            source_ref=malware_obj.id,
+                            target_ref=domain_obs.id,
+                            created_by_ref=self.author.id,
+                        )
+                    )
 
             if email and "@" in email:
                 email_obs = stix2.EmailAddress(
@@ -230,6 +242,18 @@ class ConverterToStix:
                     },
                 )
                 objects.append(email_obs)
+                if malware_obj is not None:
+                    objects.append(
+                        stix2.Relationship(
+                            id=generate_deterministic_id(
+                                "relationship", malware_obj.id, email_obs.id
+                            ),
+                            relationship_type="uses",
+                            source_ref=malware_obj.id,
+                            target_ref=email_obs.id,
+                            created_by_ref=self.author.id,
+                        )
+                    )
 
         return objects
 
