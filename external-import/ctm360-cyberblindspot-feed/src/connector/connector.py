@@ -200,21 +200,31 @@ class CTM360CyberBlindSpotConnector:
                 self.helper.api.work.to_processed(work_id, error_msg, in_error=True)
                 raise ValueError(error_msg)
 
-            if all_objects:
-                # Every category converter prepends the shared author Identity
-                # (and the same observable can surface in more than one
-                # category), so concatenating the per-category outputs repeats
-                # objects that share a STIX id. De-duplicate by id before
-                # bundling to avoid shipping the same object multiple times.
-                seen_ids = set()
-                deduped_objects = []
-                for obj in all_objects:
-                    obj_id = getattr(obj, "id", None)
-                    if obj_id is not None and obj_id in seen_ids:
-                        continue
-                    if obj_id is not None:
-                        seen_ids.add(obj_id)
-                    deduped_objects.append(obj)
+            # Every category converter prepends the shared author Identity
+            # (and the same observable can surface in more than one category),
+            # so concatenating the per-category outputs repeats objects that
+            # share a STIX id. De-duplicate by id before bundling to avoid
+            # shipping the same object multiple times.
+            seen_ids = set()
+            deduped_objects = []
+            for obj in all_objects:
+                obj_id = getattr(obj, "id", None)
+                if obj_id is not None and obj_id in seen_ids:
+                    continue
+                if obj_id is not None:
+                    seen_ids.add(obj_id)
+                deduped_objects.append(obj)
+
+            # Because every converter prepends the author Identity, a cycle
+            # where all endpoints returned no data still yields an author-only
+            # list. Treat a bundle that carries nothing but the author as "no
+            # data" and skip sending it, so the connector does not create a
+            # noisy author-only work item every cycle.
+            author_id = getattr(self.converter.author, "id", None)
+            content_objects = [
+                obj for obj in deduped_objects if getattr(obj, "id", None) != author_id
+            ]
+            if content_objects:
                 all_objects = deduped_objects
                 bundle = self.helper.stix2_create_bundle(all_objects)
                 self.helper.send_stix2_bundle(

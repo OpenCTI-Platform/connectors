@@ -79,7 +79,10 @@ class ConverterToStix:
             inc_id = inc.get("id", "")
             subject = inc.get("subject", "Unknown incident")
             severity = inc.get("severity", "medium")
-            inc_type = inc.get("type", "Unknown")
+            # Treat a missing/blank/whitespace-only type as "Unknown" so the
+            # slugified label is never empty — an empty label would later trigger
+            # an add_label(label_name="") call during CaseIncident creation.
+            inc_type = str(inc.get("type") or "").strip() or "Unknown"
             status = inc.get("status", "unknown")
             coa = inc.get("coa", "")
             source = inc.get("source", "")
@@ -120,8 +123,12 @@ class ConverterToStix:
                 else f"{subject} [{inc_id}]"
             )
 
-            # Collect labels (no severity)
-            case_labels = [type_label, "ctm360-cbs"]
+            # Collect labels (no severity). Only include the type label when
+            # slugification yields a non-empty value (a type made up solely of
+            # punctuation slugifies to "") so no empty label is ever emitted.
+            case_labels = ["ctm360-cbs"]
+            if type_label:
+                case_labels.insert(0, type_label)
             if status and status.lower() != "unknown":
                 case_labels.append(f"status:{status.lower()}")
             if coa and coa.lower() not in ("none", ""):

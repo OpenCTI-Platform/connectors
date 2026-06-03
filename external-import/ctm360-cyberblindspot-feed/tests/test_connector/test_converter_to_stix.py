@@ -248,6 +248,22 @@ class TestIncidentsToStix:
         assert not any(label.startswith("status:") for label in labels)
         assert not any(label.startswith("coa:") for label in labels)
 
+    def test_incident_blank_type_yields_no_empty_label(self, converter):
+        # A blank/whitespace type must be normalised to "unknown" rather than
+        # leaving an empty label that would trigger add_label(label_name="").
+        converter.incidents_to_stix([{"id": "INC-E", "subject": "X", "type": "   "}])
+        labels = converter.incident_case_metadata[0]["labels"]
+        assert "" not in labels
+        assert "unknown" in labels
+
+    def test_incident_punctuation_type_drops_empty_label(self, converter):
+        # A type made up solely of punctuation slugifies to "" and must be
+        # dropped from the labels rather than emitted as an empty label.
+        converter.incidents_to_stix([{"id": "INC-P", "subject": "X", "type": "***"}])
+        labels = converter.incident_case_metadata[0]["labels"]
+        assert "" not in labels
+        assert "ctm360-cbs" in labels
+
     def test_incident_without_id_is_skipped(self, converter):
         objects = converter.incidents_to_stix([{"subject": "no id here"}])
         assert _types(objects) == ["identity"]

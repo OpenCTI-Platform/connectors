@@ -154,6 +154,32 @@ class TestImportData:
         assert ids.count("identity--author") == 1
         assert "malware--1" in ids
 
+    def test_author_only_bundle_is_not_sent(self, helper):
+        # Every converter prepends the shared author Identity, so a cycle where
+        # all endpoints returned no data still yields an author-only list. That
+        # must be treated as "no data" and skip the bundle rather than shipping
+        # an author-only work item every cycle.
+        connector = build_connector(helper)
+        author = SimpleNamespace(id="identity--author")
+        connector.converter.author = author
+        connector.client.get_incidents.return_value = []
+        connector.client.get_malware_logs.return_value = []
+        connector.client.get_breached_credentials.return_value = []
+        connector.client.get_card_leaks.return_value = []
+        connector.client.get_domain_protection.return_value = []
+        connector.converter.incidents_to_stix.return_value = [author]
+        connector.converter.malware_logs_to_stix.return_value = [author]
+        connector.converter.breached_credentials_to_stix.return_value = [author]
+        connector.converter.card_leaks_to_stix.return_value = [author]
+        connector.converter.domain_protection_to_stix.return_value = [author]
+
+        connector._import_data()
+
+        helper.send_stix2_bundle.assert_not_called()
+        # State still advances even when there is no data to import.
+        helper.set_state.assert_called_once()
+        assert helper.api.work.to_processed.call_args.args[1] == "No new data to import"
+
     def test_disabled_categories_are_skipped(self, helper):
         connector = build_connector(
             helper,
