@@ -1,0 +1,17 @@
+{
+  "title": "Dark Web Informer",
+  "description": "Dark Web Informer is a threat intelligence service that monitors dark web forums, ransomware leak sites, and cybercrime channels, publishing alerts on data leaks, breaches, and threat-actor activity. This connector ingests Dark Web Informer threat-feed alerts, indicators of compromise, and ransomware victim intelligence into OpenCTI through the Dark Web Informer API, with scheduled incremental imports.",
+  "short_description": "Ingests Dark Web Informer threat-feed alerts, IOCs, and ransomware victim intelligence into OpenCTI.",
+  "logo": "external-import/dark-web-informer/__metadata__/logo.png",
+  "use_cases": ["Dark Web Monitoring", "Ransomware Intelligence"],
+  "verified": false,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://darkwebinformer.com/api-details/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/dark-web-informer",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-dark-web-informer",
+  "container_type": "EXTERNAL_IMPORT"
+}
