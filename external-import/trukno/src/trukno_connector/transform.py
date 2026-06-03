@@ -26,7 +26,6 @@ def transform_breach_to_bundle(payload: dict) -> dict:
         "description": payload.get("summary", ""),
         "report_types": ["threat-report"],
         "object_refs": object_refs,
-        "x_opencti_source": "trukno",
     }
     objects.append(report)
 
