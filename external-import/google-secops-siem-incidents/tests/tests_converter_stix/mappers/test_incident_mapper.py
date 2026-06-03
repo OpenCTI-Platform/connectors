@@ -176,7 +176,7 @@ class TestIncidentDescription:
 
         # _then_
         desc = incident.description or ""
-        assert "| Panel | Status |" in desc
+        assert "| Attribute | Value |" in desc
         assert "| --- | --- |" in desc
         assert "| Risk | 75 |" in desc
 
