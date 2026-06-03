@@ -5,8 +5,28 @@ from typing import Any
 
 from connectors_sdk.models import Incident
 from connectors_sdk.models.enums import IncidentType
+from connectors_sdk.models.external_reference import ExternalReference
 from google_secops_siem_incidents.mappers._utils import find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
+
+
+def _build_external_reference(secops_base_url: str, alert_id: str) -> ExternalReference:
+    """Build an ExternalReference pointing to the alert in Google SecOps.
+
+    Args:
+        secops_base_url: Base SecOps UI URL (e.g. 'https://xxx.backstory.chronicle.security').
+        alert_id: Alert identifier from the detection.
+
+    Returns:
+        ExternalReference with the constructed URL.
+    """
+    url = f"{secops_base_url.rstrip('/')}/alerts/{alert_id}"
+    return ExternalReference(
+        source_name="Google SecOps SIEM",
+        description="Link to the original alert in Google SecOps SIEM.",
+        url=url,
+        external_id=alert_id,
+    )
 
 
 def map_incident(
@@ -15,6 +35,7 @@ def map_incident(
     *,
     author: Any,
     tlp_marking: Any,
+    secops_base_url: str | None = None,
 ) -> Incident:
     """Map a alert and rule metadata to a connectors_sdk Incident.
 
@@ -23,6 +44,7 @@ def map_incident(
         rule_metadata: Rule metadata associated with the alert.
         author: STIX author identity object.
         tlp_marking: TLP marking definition object.
+        secops_base_url: Optional base URL for Google SecOps UI to build an external reference.
 
     Returns:
         Populated Incident model instance.
@@ -67,6 +89,10 @@ def map_incident(
         alert.time_window.end_time.replace("Z", "+00:00")
     )
 
+    external_references = None
+    if secops_base_url:
+        external_references = [_build_external_reference(secops_base_url, alert.id)]
+
     return Incident(
         name=name,
         severity=severity,
@@ -78,4 +104,5 @@ def map_incident(
         labels=labels,
         author=author,
         markings=[tlp_marking],
+        external_references=external_references,
     )

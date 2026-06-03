@@ -5,6 +5,9 @@ from typing import Any
 
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
+from google_secops_siem_incidents.models.instance_info_response import (
+    InstanceInfoResponse,
+)
 from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
 from google_secops_siem_incidents.settings import GoogleSecOpsConfig
 from google_secops_siem_incidents.utils.api_engine import ApiClient
@@ -140,6 +143,17 @@ class GoogleSecOpsApiClient:
             f"/{self._ALERTS_ENDPOINT}"
         )
 
+    def _instance_url(self) -> str:
+        """Build the full Instance Info endpoint URL.
+
+        Returns:
+            Fully qualified URL for GET /v1alpha/{instance_path}.
+        """
+        return (
+            f"{self._regionalized_url()}"
+            f"/{self._API_VERSION}/{self._instance_path()}"
+        )
+
     @staticmethod
     def compute_pagination_pivot(response: RuleAlertResponse) -> str | None:
         """Return the minimum detection_timestamp across all alerts, used as the next exclusive endTime.
@@ -160,6 +174,18 @@ class GoogleSecOpsApiClient:
     async def close(self) -> None:
         """Close the underlying HTTP session."""
         await self._api_client.close()
+
+    async def fetch_instance_info(self) -> InstanceInfoResponse:
+        """Fetch instance information including SecOps UI URLs.
+
+        Returns:
+            InstanceInfoResponse with secops_urls and other instance metadata.
+        """
+        return await self._api_client.call_api(
+            url=self._instance_url(),
+            method="GET",
+            response_model=InstanceInfoResponse,
+        )
 
     async def fetch_rule_alerts(
         self,

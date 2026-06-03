@@ -78,6 +78,7 @@ class GoogleSecOpsConnector:
         self.config = config
         self.helper = helper
         self._client: GoogleSecOpsApiClient | None = None
+        self._secops_base_url: str | None = None
         self.converter_to_stix = ConverterToStix(
             helper=self.helper,
             tlp_level=self.config.google_secops_siem_incidents.tlp_level,
@@ -105,6 +106,33 @@ class GoogleSecOpsConnector:
         """
         self._client = value
 
+    async def _resolve_secops_base_url(self) -> str | None:
+        """Fetch instance info and extract the first SecOps URL.
+
+        Returns:
+            Base SecOps URL string, or None if unavailable.
+        """
+        try:
+            instance_info = await self.client.fetch_instance_info()
+            if instance_info.secops_urls:
+                url = instance_info.secops_urls[0].rstrip("/")
+                self.helper.connector_logger.info(
+                    f"{_LOG_PREFIX} SecOps base URL resolved",
+                    {"secops_base_url": url},
+                )
+                return url
+            self.helper.connector_logger.warning(
+                f"{_LOG_PREFIX} Instance info returned no secopsUrls — "
+                "external references will not be attached to incidents."
+            )
+        except Exception as err:
+            self.helper.connector_logger.warning(
+                f"{_LOG_PREFIX} Failed to fetch instance info — "
+                "external references will not be attached to incidents.",
+                {"reason": str(err)},
+            )
+        return None
+
     def _collect_intelligence(self, state: GoogleSecOpsSIEMState | None = None) -> None:
         """Run the async fetch-and-send pipeline synchronously via asyncio.run.
 
@@ -124,6 +152,11 @@ class GoogleSecOpsConnector:
             state: Current connector state with timestamp and pagination fields.
         """
         try:
+            secops_base_url = await self._resolve_secops_base_url()
+            if secops_base_url != self._secops_base_url:
+                self._secops_base_url = secops_base_url
+                self.converter_to_stix.secops_base_url = secops_base_url
+
             start_time, end_time, global_max_ts, first_run, resumed = (
                 self._resolve_time_window(state)
             )
@@ -376,7 +409,11 @@ class GoogleSecOpsConnector:
                     f"{_LOG_PREFIX} State updated",
                     {
                         "total_batches": batch_num,
-                        "last_alert_timestamp": state.last_alert_timestamp.isoformat(),
+                        "last_alert_timestamp": (
+                            state.last_alert_timestamp.isoformat()
+                            if state.last_alert_timestamp
+                            else None
+                        ),
                     },
                 )
 
