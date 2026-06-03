@@ -105,12 +105,11 @@
       "default": [
         "google threat intelligence"
       ],
-      "description": "Comma-separated list of software toolkit origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
+      "description": "Comma-separated list of software toolkit origins to import, or 'All' for all origins. Allowed values: All, partner, google threat intelligence",
       "examples": [
         "All",
         "partner",
-        "google threat intelligence",
-        "crowdsourced"
+        "google threat intelligence"
       ],
       "items": {
         "type": "string"
