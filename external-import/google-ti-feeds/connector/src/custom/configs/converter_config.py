@@ -13,6 +13,9 @@ from connector.src.custom.configs.malware.converter_config_malware import (
 from connector.src.custom.configs.report.converter_config_report import (
     REPORT_CONVERTER_CONFIGS,
 )
+from connector.src.custom.configs.software_toolkit.converter_config_software_toolkit import (
+    SOFTWARE_TOOLKIT_CONVERTER_CONFIGS,
+)
 from connector.src.custom.configs.threat_actor.converter_config_threat_actor import (
     THREAT_ACTOR_CONVERTER_CONFIGS,
 )
@@ -26,4 +29,5 @@ CONVERTER_CONFIGS = {
     **MALWARE_CONVERTER_CONFIGS,
     **VULNERABILITY_CONVERTER_CONFIGS,
     **CAMPAIGN_CONVERTER_CONFIGS,
+    **SOFTWARE_TOOLKIT_CONVERTER_CONFIGS,
 }
