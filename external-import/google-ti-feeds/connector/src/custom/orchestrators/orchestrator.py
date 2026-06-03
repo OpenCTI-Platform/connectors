@@ -20,6 +20,9 @@ from connector.src.custom.orchestrators.malware.orchestrator_malware import (
 from connector.src.custom.orchestrators.report.orchestrator_report import (
     OrchestratorReport,
 )
+from connector.src.custom.orchestrators.software_toolkit.orchestrator_software_toolkit import (
+    OrchestratorSoftwareToolkit,
+)
 from connector.src.custom.orchestrators.threat_actor.orchestrator_threat_actor import (
     OrchestratorThreatActor,
 )
@@ -127,6 +130,17 @@ class Orchestrator:
             self.indicator_orchestrator = OrchestratorIndicator(
                 work_manager, logger, config, tlp_level
             )
+        if self.config.import_software_toolkits:
+            self.logger.info(
+                "Software toolkit import start date",
+                {
+                    "prefix": LOG_PREFIX,
+                    "start_date": self.config.software_toolkit_import_start_date,
+                },
+            )
+            self.software_toolkit_orchestrator = OrchestratorSoftwareToolkit(
+                work_manager, logger, config, tlp_level
+            )
 
     async def run_report(self, initial_state: dict[str, Any] | None) -> None:
         """Run the report orchestrator.
@@ -189,3 +203,15 @@ class Orchestrator:
         """
         self.logger.info("Starting indicator orchestration", {"prefix": LOG_PREFIX})
         await self.indicator_orchestrator.run(initial_state)
+
+    async def run_software_toolkit(self, initial_state: dict[str, Any] | None) -> None:
+        """Run the software toolkit orchestrator.
+
+        Args:
+            initial_state: Initial state for the orchestrator
+
+        """
+        self.logger.info(
+            "Starting software toolkit orchestration", {"prefix": LOG_PREFIX}
+        )
+        await self.software_toolkit_orchestrator.run(initial_state)
