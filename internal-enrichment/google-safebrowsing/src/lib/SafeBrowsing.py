@@ -67,11 +67,17 @@ class SafeBrowsingConnector:
                 "threatEntries": [{"url": domain}],
             },
         }
-        response = requests.post(
-            url,
-            json=payload,
-            timeout=30,
-        )
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                timeout=30,
+            )
+        except requests.exceptions.RequestException as e:
+            # A timeout / connection error / etc. must not crash the enrichment
+            # worker; log it and treat it as an error (no-match) path.
+            self.helper.log_error(f"Safe Browsing request failed: {e}")
+            return None
         if response.status_code == 200:
             if response.json():
 

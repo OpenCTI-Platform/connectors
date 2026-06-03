@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+import requests
 
 
 def _domain_observable(**overrides):
@@ -157,6 +158,18 @@ class TestEnrichmentResults:
         )
         assert connector.google_safe_browsing(_domain_observable()) is None
         connector.helper.log_error.assert_called_once()
+
+    def test_request_exception_is_handled(self, connector, mocker, monkeypatch):
+        # A timeout / connection error must be caught and treated as an error
+        # path (log + return None), not propagated out and crash the worker.
+        monkeypatch.setenv("SAFE_BROWSING_API_KEY", "k")
+        mocker.patch(
+            "lib.SafeBrowsing.requests.post",
+            side_effect=requests.exceptions.Timeout("timed out"),
+        )
+        assert connector.google_safe_browsing(_domain_observable()) is None
+        connector.helper.log_error.assert_called_once()
+        connector.helper.send_stix2_bundle.assert_not_called()
 
 
 class TestProcessMessage:
