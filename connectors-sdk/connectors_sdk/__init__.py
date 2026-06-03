@@ -10,7 +10,15 @@ from connectors_sdk.client import (
     ApiUnauthorizedError,
     BaseClientApi,
 )
-from connectors_sdk.connectors.external_import._work_manager import WorkManager
+from connectors_sdk.http_client.base_http_client import BaseHttpClient
+from connectors_sdk.http_client.http_adapter import RateLimit, RateLimitHTTPAdapter
+from connectors_sdk.http_client.exceptions import (
+    HttpClientRateLimitError,
+    HttpClientException,
+    HttpRequestError,
+    HttpRequestClientError,
+    HttpRequestServerError,
+)
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
@@ -49,29 +57,33 @@ __all__ = [
     "ApiRateLimitError",
     "ApiServerError",
     "ApiUnauthorizedError",
-    # Base Settings
-    "BaseConnectorSettings",
-    # Base Configs
+    # http_client
+    "BaseHttpClient",
+    "HttpClientException",
+    "HttpClientRateLimitError",
+    "HttpRequestError",
+    "HttpRequestClientError",
+    "HttpRequestServerError",
+    "RateLimit",
+    "RateLimitHTTPAdapter",
+    # connectors
+    "ExternalImportConnector",
+    "ConnectorLogger",
+    "BaseDataProcessor",
+    # settings
     "BaseConfigModel",
+    "BaseConnectorSettings",
     "BaseExternalImportConnectorConfig",
     "BaseInternalEnrichmentConnectorConfig",
     "BaseInternalExportFileConnectorConfig",
     "BaseInternalImportFileConnectorConfig",
     "BaseStreamConnectorConfig",
-    # Exceptions
     "ConfigError",
     "ConfigValidationError",
-    # Annotated types
     "DatetimeFromIsoString",
-    "ListFromString",
-    # Deprecations
     "Deprecate",
     "DeprecatedField",
-    # Connector States
+    "ListFromString",
+    # states
     "ExternalImportConnectorState",
-    # Connector base classes
-    "ExternalImportConnector",
-    "ConnectorLogger",
-    "BaseDataProcessor",
-    "WorkManager",
 ]
