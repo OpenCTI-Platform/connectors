@@ -442,3 +442,175 @@ def test_no_unprotected_helper_opencti_url(helper_url_violations):
         f"Fix: Add .rstrip('/') inline, e.g.:\n"
         f"  f\"{{self.helper.opencti_url.rstrip('/')}}/storage/get/{{file_id}}\""
     )
+
+
+def _resolve_constant_value(source: str, const_name: str) -> str | None:
+    """Resolve a module-level constant's string value from source code."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    for node in ast.iter_child_nodes(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == const_name:
+                    if isinstance(node.value, ast.Constant) and isinstance(
+                        node.value.value, str
+                    ):
+                        return node.value.value
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == const_name:
+                if isinstance(node.value, ast.Constant) and isinstance(
+                    node.value.value, str
+                ):
+                    return node.value.value
+    return None
+
+
+def _is_config_attr_protected_in_connector(
+    connector_files: list[Path], attr_name: str
+) -> bool:
+    """
+    Check if a config URL attribute was already rstrip'd at assignment time
+    somewhere in the connector source files.
+
+    attr_name is the last part of the dotted access, e.g. "api_base_url"
+    from "self.config.api_base_url".
+    """
+    for f in connector_files:
+        try:
+            content = f.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        lines = content.splitlines()
+        for idx, line in enumerate(lines):
+            if attr_name not in line:
+                continue
+            # Check this line and the next few lines for rstrip (multiline assignments)
+            window = "\n".join(lines[idx : idx + 6])
+            if attr_name in window and "rstrip" in window:
+                return True
+    return False
+
+
+def collect_unprotected_config_url_concatenations():
+    """
+    Find f-string or concatenation patterns where a config URL attribute
+    (self.config.xxx_url or self.xxx.xxx_url) is joined with a constant or
+    literal that starts with '/', without .rstrip("/") protection.
+
+    This catches cases like:
+        url = f"{self.config.api_url}{ENDPOINT}"  # ENDPOINT = "/api/v1/..."
+        url = f"{self.config.api_url}/endpoint"
+    """
+    violations = []
+    connector_groups = find_connector_file_groups()
+
+    # Pattern: {self.config.xxx_url} or {self.xxx.xxx_url} in f-string,
+    # followed by a variable (constant) in another f-string placeholder: {url}{CONST}
+    config_url_in_fstring = re.compile(
+        r"""\{(self\.(\w+)\.(\w*url))\}\{(\w+)\}""", re.IGNORECASE
+    )
+    # Pattern: {self.config.xxx_url}/ directly
+    config_url_slash_fstring = re.compile(
+        r"""\{(self\.(\w+)\.(\w*url))\}/""", re.IGNORECASE
+    )
+    # Concatenation: self.config.xxx_url + CONSTANT or + "/..."
+    config_url_concat = re.compile(
+        r"""(self\.(\w+)\.(\w*url))\s*\+\s*(\w+|['"]/)""", re.IGNORECASE
+    )
+
+    for src_dir, py_files in connector_groups.items():
+        for py_file in py_files:
+            try:
+                content = py_file.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+
+            code_lines = _get_non_docstring_lines(content)
+            lines = content.splitlines()
+
+            for i, line in enumerate(lines, start=1):
+                if i not in code_lines:
+                    continue
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+
+                # Skip if line already has rstrip protection
+                if "rstrip" in line:
+                    continue
+
+                matched_url_attr = None
+                attr_name = None
+
+                # Case 1: f-string with config URL followed by constant name
+                m = config_url_in_fstring.search(line)
+                if m:
+                    url_attr = m.group(1)
+                    attr_name = m.group(3)
+                    const_name = m.group(4)
+                    const_val = _resolve_constant_value(content, const_name)
+                    if const_val and const_val.startswith("/"):
+                        matched_url_attr = url_attr
+
+                # Case 2: f-string with config URL followed directly by /
+                if not matched_url_attr:
+                    m = config_url_slash_fstring.search(line)
+                    if m:
+                        matched_url_attr = m.group(1)
+                        attr_name = m.group(3)
+
+                # Case 3: concatenation with config URL + constant or + "/..."
+                if not matched_url_attr:
+                    m = config_url_concat.search(line)
+                    if m:
+                        url_attr = m.group(1)
+                        attr_name = m.group(3)
+                        rhs = m.group(4)
+                        if rhs.startswith(("'", '"')):
+                            # Direct string literal starting with /
+                            matched_url_attr = url_attr
+                        else:
+                            # It's a variable name - resolve it
+                            const_val = _resolve_constant_value(content, rhs)
+                            if const_val and const_val.startswith("/"):
+                                matched_url_attr = url_attr
+
+                if matched_url_attr and attr_name:
+                    # Check if this attribute was already rstrip'd at assignment
+                    if _is_config_attr_protected_in_connector(py_files, attr_name):
+                        continue
+                    rel_path = py_file.relative_to(REPO_ROOT)
+                    violations.append((str(rel_path), i, stripped))
+
+    return violations
+
+
+@pytest.fixture(scope="session")
+def config_url_concat_violations():
+    """Collect unprotected config URL concatenations with leading-slash constants."""
+    return collect_unprotected_config_url_concatenations()
+
+
+def test_no_unprotected_config_url_concatenations(config_url_concat_violations):
+    """
+    Verify that config URL attributes (HttpUrl fields) used in f-strings
+    or concatenations with leading-slash paths include .rstrip("/") protection.
+
+    Pydantic HttpUrl adds a trailing slash on str() conversion, so
+    f"{self.config.api_url}/endpoint" produces a double slash.
+    """
+    if not config_url_concat_violations:
+        return
+
+    messages = []
+    for file_path, line_num, code in config_url_concat_violations:
+        messages.append(f"  {file_path}:{line_num} - {code}")
+    violation_report = "\n".join(messages)
+    pytest.fail(
+        f"Found {len(config_url_concat_violations)} config URL concatenation(s) without .rstrip('/') protection:\n"
+        f"{violation_report}\n\n"
+        f"Fix: Add .rstrip('/') inline, e.g.:\n"
+        f"  url = f\"{{str(self.config.api_url).rstrip('/')}}/endpoint\""
+    )
