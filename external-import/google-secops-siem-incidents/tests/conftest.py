@@ -43,25 +43,6 @@ def stub_settings():
 
 
 @pytest.fixture(autouse=True)
-def patch_logger_for_tests(monkeypatch):
-    """Patch logging.Logger to merge pycti's dict-style extra args into the message string for caplog compatibility."""
-    import logging
-
-    def _wrap(original):
-        def _enhanced(self, msg, *args, **kwargs):
-            if args and len(args) == 1 and isinstance(args[0], dict):
-                return original(self, f"{msg} - {args[0]}")
-            return original(self, msg, *args, **kwargs)
-
-        return _enhanced
-
-    monkeypatch.setattr(logging.Logger, "info", _wrap(logging.Logger.info))
-    monkeypatch.setattr(logging.Logger, "debug", _wrap(logging.Logger.debug))
-    monkeypatch.setattr(logging.Logger, "warning", _wrap(logging.Logger.warning))
-    monkeypatch.setattr(logging.Logger, "error", _wrap(logging.Logger.error))
-
-
-@pytest.fixture(autouse=True)
 def clear_rate_limiter_registry():
     """Clear the RateLimiterRegistry after each test to prevent inter-test leakage."""
     from google_secops_siem_incidents.utils.api_engine.rate_limiter import (

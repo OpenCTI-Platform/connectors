@@ -39,7 +39,7 @@ async def test_successful_get_request_returns_parsed_json_body():
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
-        mock_session.request = AsyncMock(return_value=mock_response)
+        mock_session.request = MagicMock(return_value=mock_response)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
             return await client.request("GET", "https://example.com/api")
@@ -73,7 +73,7 @@ async def test_http_error_status_codes_are_classified(status_code):
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
-        mock_session.request = AsyncMock(return_value=mock_response)
+        mock_session.request = MagicMock(return_value=mock_response)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
             return await client.request("GET", "https://example.com/api")
@@ -107,7 +107,7 @@ async def test_rate_limit_status_429_raises_rate_limit_error():
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
-        mock_session.request = AsyncMock(return_value=mock_response)
+        mock_session.request = MagicMock(return_value=mock_response)
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
             return await client.request("GET", "https://example.com/api")
@@ -128,7 +128,7 @@ async def test_request_timeout_raises_timeout_error():
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
-        mock_session.request = AsyncMock(side_effect=asyncio.TimeoutError())
+        mock_session.request = MagicMock(side_effect=asyncio.TimeoutError())
 
         with patch("aiohttp.ClientSession", return_value=mock_session):
             return await client.request("GET", "https://example.com/api")
@@ -158,7 +158,7 @@ async def test_network_failure_raises_network_error():
         mock_session = AsyncMock()
         mock_session.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session.__aexit__ = AsyncMock(return_value=None)
-        mock_session.request = AsyncMock(
+        mock_session.request = MagicMock(
             side_effect=aiohttp.ClientConnectorError(
                 connection_key=MagicMock(), os_error=OSError("Network unreachable")
             )

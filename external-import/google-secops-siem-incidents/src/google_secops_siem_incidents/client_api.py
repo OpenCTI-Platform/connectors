@@ -1,5 +1,6 @@
 """Google SecOps API client with Google OAuth2 service-account auth."""
 
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -43,7 +44,10 @@ class GoogleAuthHook(BaseRequestHook):
             request: The outgoing request model to mutate.
         """
         if not self._credentials.valid:
-            self._credentials.refresh(Request())
+            # ``Credentials.refresh`` is a blocking (requests-based) network
+            # call; run it in a worker thread so it does not block the event
+            # loop (and stall other async work) during a token refresh.
+            await asyncio.to_thread(self._credentials.refresh, Request())
         if request.headers is None:
             request.headers = {}
         request.headers["Authorization"] = f"Bearer {self._credentials.token}"

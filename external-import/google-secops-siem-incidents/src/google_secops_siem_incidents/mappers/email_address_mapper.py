@@ -7,7 +7,7 @@ from google_secops_siem_incidents.mappers._utils import find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Outcome
 
 
-def map_email_adresses(
+def map_email_addresses(
     outcomes: list[Outcome],
     *,
     author: Any,

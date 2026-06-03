@@ -53,7 +53,7 @@ interfaces/                         ← 6 ABCs for custom implementations
 
 ```python
 import asyncio
-from google_secops.utils.api_engine import (
+from google_secops_siem_incidents.utils.api_engine import (
     AioHttpClient,
     ApiClient,
     CircuitBreaker,
@@ -127,7 +127,7 @@ strategy = RetryRequestStrategy(
 To share an explicit limiter instance directly, pass a `TokenBucketRateLimiter` object instead of a dict:
 
 ```python
-from google_secops.utils.api_engine import TokenBucketRateLimiter
+from google_secops_siem_incidents.utils.api_engine import TokenBucketRateLimiter
 
 limiter = TokenBucketRateLimiter(max_requests=10, period=1.0)
 strategy = RetryRequestStrategy(
@@ -145,7 +145,7 @@ Implement `BaseRequestHook` to inject headers, log requests, or inspect response
 
 ```python
 from typing import Any
-from google_secops.utils.api_engine import BaseRequestHook, BaseRequestModel
+from google_secops_siem_incidents.utils.api_engine import BaseRequestHook, BaseRequestModel
 
 
 class BearerAuthHook(BaseRequestHook):
@@ -191,7 +191,7 @@ All exceptions inherit from `ApiError`. Callers handle the `ApiError` family onl
 Catching pattern:
 
 ```python
-from google_secops.utils.api_engine import (
+from google_secops_siem_incidents.utils.api_engine import (
     ApiCircuitOpenError,
     ApiError,
     ApiHttpError,

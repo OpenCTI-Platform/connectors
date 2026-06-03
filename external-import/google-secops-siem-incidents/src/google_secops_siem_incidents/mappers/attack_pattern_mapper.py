@@ -45,7 +45,7 @@ def map_attack_patterns(
         )
 
     if attack_pattern_outcome.string_seq:
-        for attack_pattern in attack_pattern_outcome.string_seq:
+        for attack_pattern in attack_pattern_outcome.string_seq.string_vals:
             result.append(
                 AttackPattern(
                     name=attack_pattern,

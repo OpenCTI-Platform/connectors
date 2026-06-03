@@ -59,7 +59,6 @@ def map_incident(
     severity = raw_severity.lower() or None
 
     incident_type = IncidentType(alert.rule_type.lower().replace("_", "-"))
-    incident_type._name_ = alert.rule_type.upper().replace("_", "-")
 
     ts = alert.detection_timestamp.replace("Z", "+00:00")
     first_seen = datetime.fromisoformat(ts)

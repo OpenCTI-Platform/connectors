@@ -6,6 +6,7 @@ as requests age out.
 All tests MUST fail with ImportError until the implementation exists.
 """
 
+import asyncio
 import time
 
 import pytest
@@ -65,7 +66,7 @@ async def test_expired_requests_free_capacity_immediately():
         await limiter.acquire()
         await limiter.acquire()
         await limiter.acquire()
-        time.sleep(0.6)  # wait for all to expire
+        await asyncio.sleep(0.6)  # wait for all to expire
         return limiter
 
     async def _when_new_slot_acquired(limiter):

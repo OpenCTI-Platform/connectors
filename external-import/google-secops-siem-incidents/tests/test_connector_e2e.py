@@ -202,6 +202,36 @@ def _then_run_completed_successfully(
     )
 
 
+class _MetaLogger:
+    """pycti-AppLogger-like logger for tests.
+
+    Mirrors ``OpenCTIConnectorHelper.connector_logger``: every method takes
+    ``(message, meta=None)`` and, when meta is provided, merges it into the
+    emitted record so ``caplog`` assertions can match on the structured fields.
+    """
+
+    def __init__(self, name: str) -> None:
+        self._logger = logging.getLogger(name)
+
+    def _emit(self, level: int, message: str, meta: dict | None) -> None:
+        if meta:
+            self._logger.log(level, "%s - %s", message, meta)
+        else:
+            self._logger.log(level, message)
+
+    def debug(self, message: str, meta: dict | None = None) -> None:
+        self._emit(logging.DEBUG, message, meta)
+
+    def info(self, message: str, meta: dict | None = None) -> None:
+        self._emit(logging.INFO, message, meta)
+
+    def warning(self, message: str, meta: dict | None = None) -> None:
+        self._emit(logging.WARNING, message, meta)
+
+    def error(self, message: str, meta: dict | None = None) -> None:
+        self._emit(logging.ERROR, message, meta)
+
+
 def _make_mock_helper(initial_state: dict | None = None) -> MagicMock:
     """Build a fully mocked OpenCTIConnectorHelper with stateful get/set_state using full-replacement semantics."""
     helper = MagicMock(spec=OpenCTIConnectorHelper)
@@ -222,7 +252,7 @@ def _make_mock_helper(initial_state: dict | None = None) -> MagicMock:
     helper.api.work.initiate_work.return_value = "work-id-123"
     helper.stix2_create_bundle.side_effect = lambda objs: {"objects": objs}
     helper.send_stix2_bundle.return_value = None
-    helper.connector_logger = logging.getLogger("test_connector_e2e")
+    helper.connector_logger = _MetaLogger("test_connector_e2e")
     return helper
 
 

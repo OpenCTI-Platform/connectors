@@ -6,6 +6,7 @@ from typing import Any
 import aiohttp
 
 from .exceptions import (
+    ApiError,
     ApiHttpError,
     ApiNetworkError,
     ApiRateLimitError,
@@ -100,7 +101,7 @@ class AioHttpClient(BaseHttpClient):
         )
         session = self._get_session()
         try:
-            response = await session.request(
+            async with session.request(
                 method=method,
                 url=url,
                 headers=headers,
@@ -108,14 +109,14 @@ class AioHttpClient(BaseHttpClient):
                 data=data,
                 json=json_payload,
                 timeout=effective_timeout,
-            )
-            if response.status == 429:
-                text = await response.text()
-                raise ApiRateLimitError(f"Rate limit exceeded: HTTP 429 — {text}")
-            if response.status >= 400:
-                text = await response.text()
-                raise ApiHttpError(text, status_code=response.status)
-            return await response.json()
+            ) as response:
+                if response.status == 429:
+                    text = await response.text()
+                    raise ApiRateLimitError(f"Rate limit exceeded: HTTP 429 — {text}")
+                if response.status >= 400:
+                    text = await response.text()
+                    raise ApiHttpError(text, status_code=response.status)
+                return await response.json()
         except (ApiHttpError, ApiRateLimitError):
             raise
         except (asyncio.TimeoutError, aiohttp.ServerTimeoutError) as exc:
@@ -123,4 +124,7 @@ class AioHttpClient(BaseHttpClient):
         except Exception as exc:
             if _is_network_error(exc):
                 raise ApiNetworkError(str(exc)) from exc
-            raise
+            # Preserve the typed-error boundary: wrap anything unexpected
+            # (e.g. JSON-decode / content-type errors) in ApiError so callers
+            # never see raw aiohttp/stdlib exceptions leak out.
+            raise ApiError(str(exc)) from exc

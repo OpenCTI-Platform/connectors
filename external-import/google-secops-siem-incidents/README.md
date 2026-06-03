@@ -26,7 +26,7 @@
 
 This connector fetches SIEM rule alerts from the Google SecOps API and imports them into OpenCTI as STIX 2.1 objects. Each rule alert is mapped to an OpenCTI Incident, enriched with related observables (IP addresses, hostnames, user accounts, files) and linked via STIX relationships.
 
-The connector uses forward-sliding pagination: on first run it fetches alerts back to a configurable lookback window; on subsequent runs it resumes from the last processed alert timestamp.
+The connector uses backward-sliding pagination: within a run, when a window returns too many alerts it slides the window end backward to the earliest alert seen and re-queries; on first run it fetches alerts back to a configurable lookback window; on subsequent runs it resumes from the last processed alert timestamp.
 
 ## Installation
 

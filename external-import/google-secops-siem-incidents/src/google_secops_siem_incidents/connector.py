@@ -118,7 +118,7 @@ class GoogleSecOpsConnector:
                 url = instance_info.secops_urls[0].rstrip("/")
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} SecOps base URL resolved",
-                    {"secops_base_url": url},
+                    meta={"secops_base_url": url},
                 )
                 return url
             self.helper.connector_logger.warning(
@@ -129,7 +129,7 @@ class GoogleSecOpsConnector:
             self.helper.connector_logger.warning(
                 f"{_LOG_PREFIX} Failed to fetch instance info — "
                 "external references will not be attached to incidents.",
-                {"reason": str(err)},
+                meta={"reason": str(err)},
             )
         return None
 
@@ -179,7 +179,7 @@ class GoogleSecOpsConnector:
 
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} Batch fetched",
-                    {
+                    meta={
                         "batch_num": batch_num,
                         "rule_alerts": len(response.rule_alerts),
                         "alerts": alert_count,
@@ -191,7 +191,7 @@ class GoogleSecOpsConnector:
 
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} Batch converted to STIX",
-                    {
+                    meta={
                         "batch_num": batch_num,
                         "stix_count": f"{len(stix_objects)} (~{_unique_count(stix_objects)} unique)",
                         "type_summary": _type_summary(stix_objects),
@@ -228,12 +228,12 @@ class GoogleSecOpsConnector:
                 f"{_LOG_PREFIX} Google authentication failed — "
                 "verify GOOGLE_SECOPS_SIEM_INCIDENTS_CREDENTIALS_JSON "
                 "contains a valid service account key with the correct scopes.",
-                {"reason": str(err), "traceback": traceback.format_exc()},
+                meta={"reason": str(err), "traceback": traceback.format_exc()},
             )
         except Exception as err:
             self.helper.connector_logger.error(
                 f"{_LOG_PREFIX} Unexpected error during async run",
-                {"reason": str(err), "traceback": traceback.format_exc()},
+                meta={"reason": str(err), "traceback": traceback.format_exc()},
             )
         finally:
             await self.client.close()
@@ -276,7 +276,7 @@ class GoogleSecOpsConnector:
         }
         if resumed:
             _log_extra["resumed"] = True
-        self.helper.connector_logger.info(f"{_LOG_PREFIX} Run started", _log_extra)
+        self.helper.connector_logger.info(f"{_LOG_PREFIX} Run started", meta=_log_extra)
 
     def _convert_batch(self, response: Any) -> tuple[list[Any], str | None]:
         """Convert all alerts in a response batch to STIX objects.
@@ -342,7 +342,7 @@ class GoogleSecOpsConnector:
         )
         self.helper.connector_logger.info(
             f"{_LOG_PREFIX} Bundle sent",
-            {
+            meta={
                 "batch_num": batch_num,
                 "work_id": work_id,
                 "stix_count": f"{len(ordered)} (~{_unique_count(ordered)} unique)",
@@ -373,7 +373,7 @@ class GoogleSecOpsConnector:
         state.save()
         self.helper.connector_logger.info(
             f"{_LOG_PREFIX} State checkpoint",
-            {
+            meta={
                 "batch_num": batch_num,
                 "window_end": pivot_dt.isoformat(),
                 "run_max_ts": max_dt.isoformat(),
@@ -407,7 +407,7 @@ class GoogleSecOpsConnector:
             if global_max_ts is not None:
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} State updated",
-                    {
+                    meta={
                         "total_batches": batch_num,
                         "last_alert_timestamp": (
                             state.last_alert_timestamp.isoformat()
@@ -419,7 +419,7 @@ class GoogleSecOpsConnector:
 
         self.helper.connector_logger.info(
             f"{_LOG_PREFIX} Run completed",
-            {
+            meta={
                 "total_batches": batch_num,
                 "total_alerts": total_alerts,
                 "total_stix_objects": f"{total_stix_objects} (~{len(total_unique_ids)} unique)",
@@ -438,7 +438,7 @@ class GoogleSecOpsConnector:
             if state.last_run is not None:
                 self.helper.connector_logger.info(
                     f"{_LOG_PREFIX} Connector last run",
-                    {"last_run_datetime": str(state.last_run)},
+                    meta={"last_run_datetime": str(state.last_run)},
                 )
             else:
                 self.helper.connector_logger.info(
@@ -453,7 +453,7 @@ class GoogleSecOpsConnector:
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info(
                 f"{_LOG_PREFIX} Connector stopped.",
-                {"connector_name": self.helper.connect_name},
+                meta={"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
 

@@ -6,7 +6,9 @@ from google_secops_siem_incidents.mappers.alert_mapper import map_alert_fields
 from google_secops_siem_incidents.mappers.attack_pattern_mapper import (
     map_attack_patterns,
 )
-from google_secops_siem_incidents.mappers.email_address_mapper import map_email_adresses
+from google_secops_siem_incidents.mappers.email_address_mapper import (
+    map_email_addresses,
+)
 from google_secops_siem_incidents.mappers.file_mapper import map_files
 from google_secops_siem_incidents.mappers.hostname_mapper import map_hostname
 from google_secops_siem_incidents.mappers.incident_mapper import map_incident
@@ -69,7 +71,7 @@ class ConverterToStix:
         files = map_files(
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
-        email_adresses = map_email_adresses(
+        email_addresses = map_email_addresses(
             alert.outcomes, author=self.author, tlp_marking=self.tlp_marking
         )
         urls = map_urls(
@@ -87,7 +89,7 @@ class ConverterToStix:
         observables.extend(ips)
         observables.extend(users)
         observables.extend(files)
-        observables.extend(email_adresses)
+        observables.extend(email_addresses)
         observables.extend(urls)
         observables.extend(attack_patterns)
         observables.extend(field_observables)

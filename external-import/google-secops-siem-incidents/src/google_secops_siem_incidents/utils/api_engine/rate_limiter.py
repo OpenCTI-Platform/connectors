@@ -27,13 +27,22 @@ class TokenBucketRateLimiter(BaseRateLimiter):
         self._lock = asyncio.Lock()
 
     async def acquire(self) -> None:
-        """Block until a request slot is available, then claim it."""
-        async with self._lock:
-            now = time.monotonic()
-            while self._timestamps and self._timestamps[0] + self.period <= now:
-                self._timestamps.popleft()
+        """Block until a request slot is available, then claim it.
 
-            if len(self._timestamps) >= self.max_requests:
+        The wait time is computed while holding the lock, but the lock is
+        released *before* sleeping so other callers are not serialised behind
+        the sleeper (avoids head-of-line blocking under concurrency).
+        """
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                while self._timestamps and self._timestamps[0] + self.period <= now:
+                    self._timestamps.popleft()
+
+                if len(self._timestamps) < self.max_requests:
+                    self._timestamps.append(time.monotonic())
+                    return
+
                 wait_time = self._timestamps[0] + self.period - now
                 _logger.debug(
                     "Rate limit reached (%d/%d), waiting %.3fs",
@@ -41,12 +50,7 @@ class TokenBucketRateLimiter(BaseRateLimiter):
                     self.max_requests,
                     wait_time,
                 )
-                await asyncio.sleep(wait_time)
-                now = time.monotonic()
-                while self._timestamps and self._timestamps[0] + self.period <= now:
-                    self._timestamps.popleft()
-
-            self._timestamps.append(time.monotonic())
+            await asyncio.sleep(wait_time)
 
 
 class RateLimiterRegistry:

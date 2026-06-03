@@ -21,7 +21,7 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Google SecOps SIEM Incidents"
+        "google-secops-siem-incidents"
       ],
       "description": "The scope of the connector, e.g. 'flashpoint'.",
       "items": {
