@@ -38,7 +38,9 @@ do
   if [ "$project" = "tests" ]; then
     dependency_scope="$project"
   fi
-  project_has_sdk_dependency=$(grep -rl "connectors-sdk" "$dependency_scope" || true)
+  project_has_sdk_dependency=$(find "$dependency_scope" \
+    \( -name "requirements.txt" -o -name "pyproject.toml" \) \
+    -type f -exec grep -Il "connectors-sdk" {} + 2>/dev/null || true)
 
   if [ -n "$project_has_sdk_dependency" ] ; then
     echo 'Rewriting connectors-sdk dependencies to the local checkout for this test run'
@@ -64,7 +66,9 @@ for path in scope.rglob("*"):
 PY
   fi
 
-  project_pins_pycti=$(grep -RIlE 'pycti(==| @ )' "$dependency_scope" 2>/dev/null || true)
+  project_pins_pycti=$(find "$dependency_scope" \
+    \( -name "requirements.txt" -o -name "pyproject.toml" \) \
+    -type f -exec grep -IlE 'pycti(==| @ )' {} + 2>/dev/null || true)
 
   if [ "$CIRCLE_BRANCH" = "${RELEASE_REF:-"master"}" ]; then
     echo "🔄 On ${RELEASE_REF:-"master"} branch, running all tests for: " "$project"
