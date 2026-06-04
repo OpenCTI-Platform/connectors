@@ -10,6 +10,8 @@ Covers:
 import os
 import sys
 
+import pytest
+
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
 from reportimporter.configparser import ConfigParser
@@ -118,3 +120,75 @@ def test_from_opencti_gpu_autodetects_when_unset(monkeypatch):
 
     assert isinstance(ocr.gpu, bool)
     assert ocr.serialize_gpu == ocr.gpu
+
+
+def test_provider_properties_openai(monkeypatch):
+    _clear_key_env(monkeypatch)
+    monkeypatch.setenv("IMPORT_DOCUMENT_AI_PROVIDER", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "k")
+    cfg = ConfigParser({})
+    assert cfg.is_openai
+    assert not cfg.is_azure_openai
+    assert not cfg.is_ollama
+
+
+def test_provider_properties_azure(monkeypatch):
+    _clear_key_env(monkeypatch)
+    monkeypatch.setenv("IMPORT_DOCUMENT_AI_PROVIDER", "azureopenai")
+    monkeypatch.setenv("AZURE_OPENAI_KEY", "k")
+    monkeypatch.setenv("AZURE_OPENAI_ENDPOINT", "https://fake.azure.local")
+    monkeypatch.setenv("AZURE_OPENAI_DEPLOYMENT", "dep")
+    cfg = ConfigParser({})
+    assert cfg.is_azure_openai
+    assert not cfg.is_openai
+
+
+def test_provider_properties_ollama(monkeypatch):
+    _clear_key_env(monkeypatch)
+    cfg = ConfigParser(
+        {"import_document": {"ai_provider": "ollama", "ai_model": "gemma4"}}
+    )
+    assert cfg.is_ollama
+
+
+def test_unsupported_provider_raises(monkeypatch):
+    _clear_key_env(monkeypatch)
+    with pytest.raises(ValueError):
+        ConfigParser({"import_document": {"ai_provider": "bogus"}})
+
+
+def test_invalid_model_input_ratio_raises(monkeypatch):
+    _clear_key_env(monkeypatch)
+    with pytest.raises(ValueError):
+        ConfigParser(
+            {"import_document": {"ai_provider": "ollama", "model_input_ratio": 5}}
+        )
+
+
+def test_create_indicator_connector_fallback(monkeypatch):
+    _clear_key_env(monkeypatch)
+    cfg = ConfigParser(
+        {
+            "import_document": {"ai_provider": "ollama"},
+            "connector": {"create_indicator": True},
+        }
+    )
+    assert cfg.create_indicator is True
+
+
+def test_trace_enabled_from_string(monkeypatch):
+    _clear_key_env(monkeypatch)
+    cfg = ConfigParser(
+        {"import_document": {"ai_provider": "ollama", "trace_payloads": "yes"}}
+    )
+    assert cfg.trace_enabled is True
+
+
+def test_configparser_none_config_uses_defaults(monkeypatch):
+    # config=None exercises the YAML auto-load path; src/config.yml is absent in
+    # the repo, so it falls back to an empty mapping and env/defaults apply.
+    _clear_key_env(monkeypatch)
+    monkeypatch.setenv("IMPORT_DOCUMENT_AI_PROVIDER", "ollama")
+    cfg = ConfigParser()
+    assert cfg.ai_provider == "ollama"
+    assert cfg.max_model_tokens == 4096

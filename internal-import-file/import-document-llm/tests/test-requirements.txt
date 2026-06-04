@@ -1,6 +1,5 @@
 pytest==8.4.2
 pytest-asyncio==1.2.0
-pytest-cov==7.0.0
 requests-mock==1.12.1
 stix2==3.0.1
 PyMuPDF==1.26.4
