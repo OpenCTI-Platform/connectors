@@ -21,6 +21,7 @@ from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
     CustomObjectTask,
+    Identity,
     Incident,
     Note,
     OpenCTIConnectorHelper,
@@ -68,9 +69,12 @@ class TheHive:
         for mapping in self.thehive_severity_mapping:
             self.severity_mapping[int(mapping.split(":")[0])] = mapping.split(":")[1]
 
-        self.identity = self.helper.api.identity.create(
-            type="Organization",
+        self.identity = stix2.Identity(
+            id=Identity.generate_id(
+                name=self.thehive_organization_name, identity_class="organization"
+            ),
             name=self.thehive_organization_name,
+            identity_class="organization",
             description=self.thehive_organization_name,
         )
 
@@ -146,7 +150,7 @@ class TheHive:
         self.helper.connector_logger.info(
             f"Starting import for alert '{alert.get('title')}'"
         )
-        bundle_objects = []
+        bundle_objects = [self.identity]
         try:
             markings = self.process_markings(alert)
             bundle_objects.extend(markings)
@@ -186,7 +190,7 @@ class TheHive:
         self.helper.connector_logger.info(
             f"Starting generation of STIX bundle for case: {case.get('title')}"
         )
-        bundle_objects = []
+        bundle_objects = [self.identity]
 
         try:
             markings = self.process_markings(case)
@@ -374,7 +378,7 @@ class TheHive:
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
-            if not isinstance(items, list):
+            if not items:
                 self.not_found_items(items, type)
         elif type == "alert":
             items: list["OutputAlert"] = self.thehive_api.alert.find(
@@ -382,7 +386,7 @@ class TheHive:
                 sortby=Asc("_updatedAt"),
                 paginate=Paginate(start=0, end=100),
             )
-            if not isinstance(items, list):
+            if not items:
                 self.not_found_items(items, type)
         else:
             raise ValueError(f"Unsupported type in process_logic: {type}")
