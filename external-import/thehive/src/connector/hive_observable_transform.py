@@ -106,7 +106,7 @@ class HiveObservableTransform:
 
         # Return the results from the function in the MAP, if it's not in the MAP return the default_observable
         handler = data_type_to_observable_map.get(
-            self.data_type, self.default_observable()
+            self.data_type, self.default_observable
         )
         return handler()
 
