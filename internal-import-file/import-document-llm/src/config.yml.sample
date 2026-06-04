@@ -12,6 +12,7 @@ connector:
   auto: false
   log_level: 'info'
 
+import_document:
   # LLM backend selection: openai | azureopenai | ollama
   ai_provider: ollama
   ai_model: gemma4
@@ -20,7 +21,6 @@ connector:
   # 0 or unset disables it.
   llm_rpm: 0
 
-import_document:
   create_indicator: false
   # Optional override used when provider cannot report context window.
   manual_context_window: 0

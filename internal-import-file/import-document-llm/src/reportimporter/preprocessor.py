@@ -39,6 +39,19 @@ def set_helper(helper) -> None:
 # ---------------------------------------------------------------------------
 # PDF OCR configuration
 # ---------------------------------------------------------------------------
+def _coerce_bool(value, default: bool) -> bool:
+    """Coerce a config value to bool, treating None as "use the default".
+
+    Env-var values arrive as strings (e.g. "false"), so a plain ``bool(value)``
+    would wrongly read "false" as True.
+    """
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class PdfOcrConfig:
     languages: tuple[str, ...] = ("en",)
@@ -54,10 +67,20 @@ class PdfOcrConfig:
             langs = tuple(
                 str(x).strip().lower() for x in requested if str(x).strip()
             ) or ("en",)
+            # gpu/serialize_gpu may be None ("auto") or a string from env vars;
+            # auto-detect CUDA when unset so we never force GPU on a CPU-only host.
+            gpu = _coerce_bool(
+                getattr(parser, "pdf_ocr_gpu", None),
+                default=torch.cuda.is_available(),
+            )
+            serialize_gpu = _coerce_bool(
+                getattr(parser, "pdf_ocr_serialize_gpu", None),
+                default=gpu,
+            )
             return cls(
                 languages=langs,
-                gpu=bool(getattr(parser, "pdf_ocr_gpu", True)),
-                serialize_gpu=bool(getattr(parser, "pdf_ocr_serialize_gpu", True)),
+                gpu=gpu,
+                serialize_gpu=serialize_gpu,
                 min_img_area=int(getattr(parser, "pdf_ocr_min_img_area", 40_000)),
                 page_raster_dpi=int(getattr(parser, "pdf_ocr_page_dpi", 300)),
             )

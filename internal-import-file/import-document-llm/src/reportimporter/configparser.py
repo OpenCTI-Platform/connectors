@@ -69,13 +69,20 @@ class ConfigParser:
         self.openai_endpoint: str | None = get_config_variable(
             "AZURE_OPENAI_ENDPOINT", ["azure_openai", "endpoint"], config
         )
-        self.openai_key: str | None = get_config_variable(
+        openai_api_key = get_config_variable(
             "OPENAI_API_KEY", ["openai", "key"], config
         )
-        if not self.openai_key:
-            self.openai_key = get_config_variable(
-                "AZURE_OPENAI_KEY", ["azure_openai", "key"], config
-            )
+        azure_api_key = get_config_variable(
+            "AZURE_OPENAI_KEY", ["azure_openai", "key"], config
+        )
+        # Pick the key matching the selected provider first. Preferring
+        # OPENAI_API_KEY unconditionally would make an Azure deployment use the
+        # plain OpenAI key (and fail auth) whenever both env vars are set, as is
+        # common in shared environments.
+        if self.ai_provider == "azureopenai":
+            self.openai_key: str | None = azure_api_key or openai_api_key
+        else:
+            self.openai_key = openai_api_key or azure_api_key
         self.openai_deployment: str | None = get_config_variable(
             "AZURE_OPENAI_DEPLOYMENT", ["azure_openai", "deployment"], config
         )
@@ -185,6 +192,30 @@ class ConfigParser:
             config,
             isNumber=True,
             default=300,
+        )
+
+        # Remaining OCR knobs consumed by PdfOcrConfig.from_opencti(). Without
+        # these the values from config/env were silently ignored. gpu and
+        # serialize_gpu default to None ("auto") so from_opencti() can fall back
+        # to torch.cuda.is_available() and only enable GPU when CUDA is present.
+        self.pdf_ocr_min_img_area: int = get_config_variable(
+            "IMPORT_DOCUMENT_PDF_OCR_MIN_IMG_AREA",
+            ["import_document", "pdf_ocr_min_img_area"],
+            config,
+            isNumber=True,
+            default=40000,
+        )
+        self.pdf_ocr_gpu = get_config_variable(
+            "IMPORT_DOCUMENT_PDF_OCR_GPU",
+            ["import_document", "pdf_ocr_gpu"],
+            config,
+            default=None,
+        )
+        self.pdf_ocr_serialize_gpu = get_config_variable(
+            "IMPORT_DOCUMENT_PDF_OCR_SERIALIZE_GPU",
+            ["import_document", "pdf_ocr_serialize_gpu"],
+            config,
+            default=None,
         )
 
         self.prompt_path: str | None = get_config_variable(

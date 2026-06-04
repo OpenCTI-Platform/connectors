@@ -44,7 +44,7 @@ import stix2
 from pycti import OpenCTIConnectorHelper, Report, StixCoreRelationship
 from reportimporter.configparser import ConfigParser
 from reportimporter.llmhelper import LLMHelper
-from reportimporter.preprocessor import FilePreprocessor
+from reportimporter.preprocessor import FilePreprocessor, PdfOcrConfig
 from reportimporter.preprocessor import set_helper as set_preproc_helper
 from reportimporter.relations_allowed import (
     is_relation_allowed,
@@ -646,7 +646,10 @@ class ReportImporter:
                 file_mime,
                 file_name_in_data,
                 pdf_ocr_enabled=effective_pdf_ocr,
-                pdf_ocr_config=self.config,
+                # Build the typed OCR config from the parser so the langs/dpi/
+                # gpu/min_img_area settings are actually honoured. Passing the
+                # raw ConfigParser made _process_pdf() silently use defaults.
+                pdf_ocr_config=PdfOcrConfig.from_opencti(self.config),
             )
             or ""
         )

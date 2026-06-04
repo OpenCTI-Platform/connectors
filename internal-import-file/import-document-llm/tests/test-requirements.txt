@@ -12,15 +12,13 @@ pycountry==24.6.1
 phonenumbers==9.0.15
 openai==2.2.0
 ollama==0.6.0
-pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@master#subdirectory=client-python
+pycti==7.260604.0
 python-docx==1.2.0
 markdownify==1.2.0
 antlr4-python3-runtime==4.9.3
 requests==2.32.5
 PyYAML==6.0.2
-ijson==3.4.0
 pdf2image==1.17.0
-pycountry==24.6.1
 torch==2.10.0
 torchvision==0.25.0
 pillow==11.3.0
