@@ -33,9 +33,18 @@ def test_transform_includes_linked_attack_patterns_and_malware():
 
     assert {obj["type"] for obj in linked_objects} == {"attack-pattern", "malware"}
     assert set(report["object_refs"]) == {obj["id"] for obj in linked_objects}
+    attack_pattern = next(
+        obj for obj in linked_objects if obj["type"] == "attack-pattern"
+    )
+    malware = next(obj for obj in linked_objects if obj["type"] == "malware")
+    assert attack_pattern["created"] == payload["publishedAt"]
+    assert attack_pattern["modified"] == payload["publishedAt"]
+    assert malware["created"] == payload["publishedAt"]
+    assert malware["modified"] == payload["publishedAt"]
+    assert malware["malware_types"] == ["unknown"]
 
 
-def test_cleanup_removes_unsupported_relationships_and_x_properties():
+def test_cleanup_removes_unsupported_relationships_and_preserves_opencti_properties():
     bundle = {
         "type": "bundle",
         "id": "bundle--1",
@@ -45,6 +54,7 @@ def test_cleanup_removes_unsupported_relationships_and_x_properties():
                 "id": "report--1",
                 "object_refs": ["malware--1"],
                 "x_opencti_source": "trukno",
+                "x_trukno_internal": "remove-me",
             },
             {"type": "malware", "id": "malware--1", "name": "Example"},
             {
@@ -59,7 +69,8 @@ def test_cleanup_removes_unsupported_relationships_and_x_properties():
 
     cleaned = cleanup_bundle_for_opencti(bundle)
 
-    assert "x_opencti_source" not in cleaned["objects"][0]
+    assert cleaned["objects"][0]["x_opencti_source"] == "trukno"
+    assert "x_trukno_internal" not in cleaned["objects"][0]
     assert all(
         obj.get("relationship_type") != "contains"
         for obj in cleaned["objects"]

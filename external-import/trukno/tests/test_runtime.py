@@ -1,6 +1,7 @@
 import builtins
 import json
 from io import StringIO
+from unittest.mock import MagicMock
 
 import pytest
 from trukno_connector import runtime
@@ -34,6 +35,16 @@ class DummyClient:
             "publishedAt": "2026-04-20T12:00:00Z",
             "summary": "Summary",
         }
+
+
+def test_log_passes_context_as_logger_meta():
+    helper = type("Helper", (), {"connector_logger": MagicMock()})()
+
+    runtime._log(helper, "info", "Message", {"key": "value"})
+
+    helper.connector_logger.info.assert_called_once_with(
+        "Message", meta={"key": "value"}
+    )
 
 
 def test_run_once_fetches_transforms_and_sends_bundle():

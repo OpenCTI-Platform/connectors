@@ -11,7 +11,7 @@ def cleanup_bundle_for_opencti(bundle: dict) -> dict:
             if obj.get("relationship_type") not in ALLOWED_RELATIONSHIP_TYPES:
                 continue
         for key in list(obj.keys()):
-            if key.startswith("x_"):
+            if key.startswith("x_") and not key.startswith("x_opencti_"):
                 obj.pop(key)
         cleaned_objects.append(obj)
     cleaned_bundle["objects"] = cleaned_objects

@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 cd /opt/opencti-connector-trukno
-python3 main.py
+exec python3 main.py
 

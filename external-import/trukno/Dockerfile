@@ -6,9 +6,9 @@ WORKDIR /opt/opencti-connector-trukno
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git libmagic1 \
+    && pip install --no-cache-dir -r requirements.txt \
+    && apt-get purge -y --auto-remove git \
     && rm -rf /var/lib/apt/lists/*
-
-RUN pip install --no-cache-dir -r requirements.txt
 
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

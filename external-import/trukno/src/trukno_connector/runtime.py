@@ -65,7 +65,7 @@ def _persist_checkpoint(helper, state, updated_at: str) -> ConnectorState:
 def _log(helper, level: str, message: str, context: dict | None = None) -> None:
     logger = getattr(helper, "connector_logger", None)
     if logger is not None and hasattr(logger, level):
-        getattr(logger, level)(message, context or {})
+        getattr(logger, level)(message, meta=context or {})
         return
     print(message, flush=True)
 
