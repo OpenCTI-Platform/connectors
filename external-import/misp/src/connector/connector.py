@@ -446,8 +446,12 @@ class Misp:
                     },
                 )
             else:
-                last_event_date = self.config.misp.import_from_date or now
-                self.logger.info("Connector has never run")
+                last_event_date = self.config.misp.import_from_date or now - timedelta(
+                    days=10
+                )
+                self.logger.info(
+                    "Connector has never run", {"last_event_date": last_event_date}
+                )
 
             filter_params = {
                 "date_field_filter": self.config.misp.date_filter_field,

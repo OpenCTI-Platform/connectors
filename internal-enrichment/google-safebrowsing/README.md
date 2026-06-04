@@ -6,6 +6,8 @@
 
 The Google Safe Browsing connector enriches Domain-Name, URL, and Hostname observables by checking them against Google's Safe Browsing threat lists, identifying malware, phishing, and unwanted software threats.
 
+This connector can also be used with Yandex Safe Browsing as an alternative provider.
+
 ## Table of Contents
 
 - [OpenCTI Google Safe Browsing Connector](#opencti-google-safe-browsing-connector)
@@ -40,7 +42,7 @@ This connector integrates Google Safe Browsing with OpenCTI to:
 ### Requirements
 
 - OpenCTI Platform >= 6.0.6
-- Google Safe Browsing API key (from Google Cloud Console)
+- Google Safe Browsing API key (from Google Cloud Console) or Yandex Safe Browsing API key (from Yandex Dev Portal)
 
 ## Configuration variables
 
@@ -68,9 +70,12 @@ There are a number of configuration options, which are set either in `docker-com
 
 ### Connector extra parameters environment variables
 
-| Parameter        | config.yml | Docker environment variable      | Mandatory | Description                                    |
-|------------------|------------|----------------------------------|-----------|------------------------------------------------|
-| API Key          |            | `GOOGLE_SAFE_BROWSING_API_KEY`   | Yes       | Google Safe Browsing API key from Cloud Console.|
+| Parameter | config.yml | Docker environment variable    | Mandatory | Description                                                                                                  |
+|-----------|------------|--------------------------------|-----------|--------------------------------------------------------------------------------------------------------------|
+| API Key   |            | `SAFE_BROWSING_API_KEY`        | Yes*      | Safe Browsing API key (Google or Yandex). *Required unless the legacy `GOOGLE_SAFE_BROWSING_API_KEY` is set. |
+| API URL   |            | `SAFE_BROWSING_API_URL`        | No        | Safe Browsing API base URL (Google or Yandex). Default: `https://safebrowsing.googleapis.com`.               |
+| API Key   |            | `GOOGLE_SAFE_BROWSING_API_KEY` | No        | Legacy Google Safe Browsing API key, used only if `SAFE_BROWSING_API_KEY` is unset (backward compatibility). |
+
 
 ## Deployment
 
@@ -96,7 +101,9 @@ Configure the connector in `docker-compose.yml`:
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_AUTO=true
       - CONNECTOR_UPDATE_EXISTING_DATA=true
-      - GOOGLE_SAFE_BROWSING_API_KEY=ChangeMe
+      - SAFE_BROWSING_API_KEY=ChangeMe
+      # - SAFE_BROWSING_API_URL=https://safebrowsing.googleapis.com # Optional (default). Use https://sba.yandex.net for Yandex
+      # - GOOGLE_SAFE_BROWSING_API_KEY=ChangeMe # Legacy, used only if SAFE_BROWSING_API_KEY is unset
     restart: always
 ```
 
@@ -124,7 +131,7 @@ python3 main.py
 
 ## Usage
 
-The connector checks observables against Google Safe Browsing threat lists.
+The connector checks observables against Google/Yandex Safe Browsing threat lists.
 
 **Observations → Observables**
 
@@ -132,7 +139,7 @@ Select a Domain-Name, URL, or Hostname observable, then click the enrichment but
 
 ## Behavior
 
-The connector queries the Google Safe Browsing API to check if URLs/domains are flagged as threats.
+The connector queries the Google/Yandex Safe Browsing API to check if URLs/domains are flagged as threats.
 
 ### Data Flow
 
@@ -144,7 +151,7 @@ graph LR
         Hostname[Hostname]
     end
 
-    subgraph Google Safe Browsing API
+    subgraph Google/Yandex Safe Browsing API
         API[Threat Match API v4]
     end
 
@@ -228,8 +235,8 @@ Log output includes:
 
 ## Additional information
 
-- **API Key Required**: Obtain from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+- **API Key Required**: Obtain from [Google Cloud Console](https://console.cloud.google.com/apis/credentials) or [Yandex Dev Portal](https://developer.tech.yandex.ru/keys/)
 - **Free Tier Available**: Safe Browsing API has a free usage tier
-- **Rate Limits**: Subject to Google API rate limits
+- **Rate Limits**: Subject to Google/Yandex API rate limits
 - **Score Assignment**: Flagged observables receive score of 100
 - **Label Application**: Threat type is applied as a label for easy filtering

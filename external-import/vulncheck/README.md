@@ -89,7 +89,7 @@ Below are the parameters you'll need to set for running the connector:
 | Connector ID              | `id`              | `CONNECTOR_ID`                       | /                                                                                                                           | Yes         | A unique `UUIDv4` identifier for this connector.                              |
 | Connector Type            | `type`            | `CONNECTOR_TYPE`                     | EXTERNAL_IMPORT                                                                                                             | No          | Specifies the type of connector. Should always be set to `EXTERNAL_IMPORT`.   |
 | Connector Name            | `name`            | `CONNECTOR_NAME`                     | VulnCheck Connector                                                                                                         | No          | The name of the connector as it will appear in OpenCTI.                       |
-| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`                    | vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source     | No          | The scope of data to import, a list of Stix Objects.                          |
+| Connector Scope           | `scope`           | `CONNECTOR_SCOPE`                    | vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source,report     | No          | The scope of data to import, a list of Stix Objects.                          |
 | Connector Duration period | `duration_period` | `CONNECTOR_DURATION_PERIOD`          | PT1H                                                                                                                        | No          | The time period for which to fetch data. Default is 24 hours.                 |
 | Log Level                 | `log_level`       | `CONNECTOR_LOG_LEVEL`                | info                                                                                                                        | No          | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.        |
 | API Base URL              | `api_base_url`    | `CONNECTOR_VULNCHECK_API_BASE_URL`   | <https://api.vulncheck.com/v3>                                                                                                | No          | The base URL for the VulnCheck API (e.g., `https://api.vulncheck.com/v3`).    |
@@ -184,11 +184,14 @@ Malware objects in OpenCTI.
 percentiles, helping prioritize remediation efforts based on exploit
 probability.
 - **Ransomware**: Creates Malware objects for ransomware families, linking them
-to associated vulnerabilities.
+to associated vulnerabilities. When `report` is in scope, each ransomware family
+is wrapped in a STIX Report for browsability in OpenCTI's Reports view.
 - **Threat Actors**: Adds Threat Actor objects with external references,
-relationships to targeted vulnerabilities, and descriptive metadata.
+relationships to targeted vulnerabilities, and descriptive metadata. When `report`
+is in scope, each threat actor entry is wrapped in a STIX Report.
 - **Botnets**: Ingests infrastructure data associated with botnet activities
-and links them to targeted vulnerabilities.
+and links them to targeted vulnerabilities. When `report` is in scope, each
+botnet entry is wrapped in a STIX Report.
 - **Initial Access Indicators**: Maps CPEs and vulnerabilities leveraged for
 initial access tactics.
 - **IP Intelligence**: Adds infrastructure and IP-related intelligence,
@@ -217,7 +220,7 @@ One way to separate these large data sources when `software` is in scope, is to 
 
 - Primary Connector:
   - Sources: `botnets,epss,exploits,ipintel,ransomware,snort,suricata,threat-actors,vulncheck-kev`
-  - Scope: `vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference`
+  - Scope: `vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,report`
   - This connector will handle the main threat intelligence data without
   `software`, ensuring timely ingestion.
 - Secondary Connector:

@@ -46,21 +46,20 @@ def collect_epss(
         return
 
     logger.info("[EPSS] Starting collection")
-    entities = client.get_epss()
-
-    # Initiate new work
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
-    stix_objects = _extract_stix_from_epss(
-        converter_to_stix=converter_to_stix,
-        entities=entities,
-        logger=logger,
-    )
+
+    for page in client.iter_epss():
+        stix_objects = _extract_stix_from_epss(
+            converter_to_stix=converter_to_stix,
+            entities=page,
+            logger=logger,
+        )
+        if stix_objects:
+            works.send_bundle(
+                helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
+            )
 
     works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
     logger.info("[EPSS] Data Source Completed!")

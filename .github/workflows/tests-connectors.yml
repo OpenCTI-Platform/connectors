@@ -2,10 +2,10 @@ name: Tests Connectors
 
 on:
   push:
-    branches:
+    branches-ignore:
       - master
-      - 'release/6.9.x'
-      - 'lts/*'  # Match any branch starting with 'lts/'
+      - 'release/*'
+      - 'lts/*'
     paths:
       - 'connectors-sdk/**'
       - 'external-import/**'
@@ -31,6 +31,7 @@ on:
       - 'run_test.sh'
       - '.github/workflows/tests-connectors.yml'
       - '.github/scripts/**'
+  workflow_call:
 
 concurrency:
   group: tests-${{ github.workflow }}-${{ github.ref }}
