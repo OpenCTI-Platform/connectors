@@ -9,8 +9,14 @@ from connector.src.custom.client_api.campaign.client_api_campaign import (
     ClientAPICampaign,
 )
 from connector.src.custom.client_api.client_api_shared import ClientAPIShared
+from connector.src.custom.client_api.indicator.client_api_indicator import (
+    ClientAPIIndicator,
+)
 from connector.src.custom.client_api.malware.client_api_malware import ClientAPIMalware
 from connector.src.custom.client_api.report.client_api_report import ClientAPIReport
+from connector.src.custom.client_api.software_toolkit.client_api_software_toolkit import (
+    ClientAPISoftwareToolkit,
+)
 from connector.src.custom.client_api.threat_actor.client_api_threat_actor import (
     ClientAPIThreatActor,
 )
@@ -60,6 +66,14 @@ class ClientAPI:
             self.campaign_client = ClientAPICampaign(
                 config, logger, self._shared_api_client, self._shared_fetcher_factory
             )
+        if self.config.import_indicators:
+            self.indicator_client = ClientAPIIndicator(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
+        if self.config.import_software_toolkits:
+            self.software_toolkit_client = ClientAPISoftwareToolkit(
+                config, logger, self._shared_api_client, self._shared_fetcher_factory
+            )
         self.shared_client = ClientAPIShared(
             config, logger, self._shared_api_client, self._shared_fetcher_factory
         )
@@ -89,6 +103,11 @@ class ClientAPI:
         """Get the real total number of campaigns from the campaign client."""
         return self.campaign_client.real_total_campaigns
 
+    @property
+    def real_total_software_toolkits(self) -> int:
+        """Get the real total number of software toolkits from the software toolkit client."""
+        return self.software_toolkit_client.real_total_software_toolkits
+
     async def fetch_reports(
         self, initial_state: dict[str, Any] | None
     ) -> AsyncGenerator[dict[Any, Any], None]:
@@ -104,6 +123,18 @@ class ClientAPI:
         self.logger.info("Starting report fetching", {"prefix": LOG_PREFIX})
         async for report_data in self.report_client.fetch_reports(initial_state):
             yield report_data
+
+    async def download_report_pdf(self, report_id: str) -> bytes | None:
+        """Download a report PDF from the GTI API.
+
+        Args:
+            report_id: The ID of the report to download the PDF for.
+
+        Returns:
+            The PDF content as bytes, or None if the download failed.
+
+        """
+        return await self.report_client.download_report_pdf(report_id)
 
     async def fetch_threat_actors(
         self, initial_state: dict[str, Any] | None
@@ -175,10 +206,10 @@ class ClientAPI:
         async for campaign_data in self.campaign_client.fetch_campaigns(initial_state):
             yield campaign_data
 
-    async def fetch_subentities_ids(
+    async def fetch_subentities(
         self, entity_name: str, entity_id: str, subentity_types: list[str]
-    ) -> dict[str, list[str]]:
-        """Fetch subentities IDs from the API.
+    ) -> dict[str, list[Any]]:
+        """Fetch related subentities with full payloads from the API.
 
         Args:
             entity_name (str): The name of the entity.
@@ -186,26 +217,45 @@ class ClientAPI:
             subentity_types (list[str]): The type of subentities to fetch.
 
         Returns:
-            dict[str, list[str]]: The fetched subentities IDs.
+            dict[str, list[Any]]: The fetched related subentities.
 
         """
-        return await self.shared_client.fetch_subentities_ids(
+        return await self.shared_client.fetch_subentities(
             entity_name, entity_id, subentity_types
         )
 
-    async def fetch_subentity_details(
-        self, subentity_ids: dict[str, list[str]]
-    ) -> dict[str, list[Any]]:
-        """Fetch subentity details in parallel for multiple IDs.
+    async def fetch_ioc_delta_package(
+        self, package_id: str, ioc_type: str
+    ) -> list[dict[str, Any]] | None:
+        """Fetch an IOC delta package for a given package_id and ioc_type.
 
         Args:
-            subentity_ids: dictionary mapping entity types to lists of IDs
+            package_id: The package ID (hourly timestamp format YYYYMMDDHH).
+            ioc_type: The IOC type (file, ip, url, domain).
 
         Returns:
-            dictionary mapping entity types to lists of fetched entities
+            List of parsed IOC entries, or None if not available.
 
         """
-        return await self.shared_client.fetch_subentity_details(subentity_ids)
+        return await self.indicator_client.fetch_ioc_delta_package(package_id, ioc_type)
+
+    async def fetch_software_toolkits(
+        self, initial_state: dict[str, Any] | None = None
+    ) -> AsyncGenerator[dict[Any, Any], None]:
+        """Fetch software toolkits from the API.
+
+        Args:
+            initial_state (dict[str, Any] | None): The initial state of the fetcher.
+
+        Yields:
+            dict[str, Any]: The fetched software toolkits.
+
+        """
+        self.logger.info("Starting software toolkit fetching", {"prefix": LOG_PREFIX})
+        async for (
+            software_toolkit_data
+        ) in self.software_toolkit_client.fetch_software_toolkits(initial_state):
+            yield software_toolkit_data
 
     def _create_fetcher_factory(self) -> GenericFetcherFactory:
         """Create and configure the fetcher factory with all configurations."""

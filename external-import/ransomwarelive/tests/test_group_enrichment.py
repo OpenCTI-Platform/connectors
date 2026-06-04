@@ -72,7 +72,7 @@ GROUP_DATA = [
 
 @pytest.fixture()
 def converter():
-    return ConverterToStix()
+    return ConverterToStix("TLP:CLEAR")
 
 
 @pytest.fixture()
@@ -177,7 +177,7 @@ class TestExtractGroupAliasesAndRefs:
         assert urls.count("http://dupsite.onion") == 1
 
     def test_slug_urls_omitted_when_create_leak_site_domains_false(self):
-        c = ConverterToStix(create_leak_site_domains=False)
+        c = ConverterToStix("TLP:CLEAR", create_leak_site_domains=False)
         entry = get_group_entry("acme-ransomware", GROUP_DATA)
         _, ext_refs = c._extract_group_aliases_and_refs(entry)
         urls = [r.get("url") for r in ext_refs]
@@ -354,7 +354,7 @@ class TestAttackPatternFetcher:
             connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
             connector.helper = mock_helper
             connector.config = mock_config
-            connector.converter_to_stix = ConverterToStix()
+            connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
             connector.author = connector.converter_to_stix.author
             connector.processed_groups = set()
         return connector
@@ -403,7 +403,7 @@ class TestProcessGroupTtps:
         connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
         connector.helper = mock_helper
         connector.config = mock_config
-        connector.converter_to_stix = ConverterToStix()
+        connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
         connector.author = connector.converter_to_stix.author
         connector.processed_groups = set()
         return connector
@@ -479,7 +479,7 @@ class TestCollectGroupEnrichmentObjects:
         connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
         connector.helper = MagicMock()
         connector.config = MagicMock()
-        connector.converter_to_stix = ConverterToStix()
+        connector.converter_to_stix = ConverterToStix("TLP:CLEAR")
         connector.author = connector.converter_to_stix.author
         connector.processed_groups = set()
         connector.process_group_ttps = MagicMock(return_value=[])
@@ -586,23 +586,23 @@ class TestCollectGroupEnrichmentObjects:
 
 
 class TestProcessExternalReferencesToggle:
-    def test_claim_url_included_when_enabled(self):
-        converter = ConverterToStix()
+    def test_post_url_included_when_enabled(self):
+        converter = ConverterToStix("TLP:CLEAR")
         item = {
-            "url": "https://www.ransomware.live/id/abc",
+            "website": "https://www.ransomware.live/id/abc",
             "screenshot": "https://images.ransomware.live/victims/abc.png",
-            "claim_url": "http://darkweb.onion/victim/abc",
+            "post_url": "http://darkweb.onion/victim/abc",
         }
         refs = converter.process_external_references(item, create_leak_post_refs=True)
         urls = [r.get("url") for r in refs]
         assert "http://darkweb.onion/victim/abc" in urls
 
-    def test_claim_url_excluded_when_disabled(self):
-        converter = ConverterToStix()
+    def test_post_url_excluded_when_disabled(self):
+        converter = ConverterToStix("TLP:CLEAR")
         item = {
-            "url": "https://www.ransomware.live/id/abc",
+            "website": "https://www.ransomware.live/id/abc",
             "screenshot": "https://images.ransomware.live/victims/abc.png",
-            "claim_url": "http://darkweb.onion/victim/abc",
+            "post_url": "http://darkweb.onion/victim/abc",
         }
         refs = converter.process_external_references(item, create_leak_post_refs=False)
         urls = [r.get("url") for r in refs]

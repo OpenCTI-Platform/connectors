@@ -1,0 +1,48 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: GET
+    uri: https://api.polyswarm.network/v3/sandbox/provider/list
+  response:
+    body:
+      string: '{"result":{"cape":{"id":"1","name":"cape","slug":"cape","tool":"cape_sandbox_v2","vms":{"win-10-build-19041":{"architecture":"x64","id":"100","language":"English
+        (United States)","name":"Microsoft Windows 10 Pro Build 19041","os_name":"Microsoft
+        Windows 10 Pro","os_version":"10.0.19041 Build 19041","slug":"win-10-build-19041","supported_artifact_types":["FILE","URL"],"supported_browsers":["firefox"]}}},"triage":{"id":"2","name":"triage","slug":"triage","tool":"triage_sandbox_v0","vms":{"android-11-x64":{"api_level":30,"architecture":"x64","id":"201","language":"English
+        (United States)","name":"android-11-x64","os_name":"Android 11 x64","profile":"droid","slug":"android-11-x64","supported_artifact_types":["FILE"],"supported_browsers":[]},"ubuntu-22.04-amd64":{"Architecture":"x64","id":"202","language":"English
+        (United States)","name":"ubuntu-22.04-amd64","os_name":"Ubuntu 22.04 amd64","os_version":"22.04","profile":"ubuntu2204","slug":"ubuntu-22.04-amd64","supported_artifact_types":["FILE","URL"],"supported_browsers":["firefox"]},"windows11-21h2-x64":{"Architecture":"x64","id":"200","language":"English
+        (United States)","name":"windows11-21h2-x64","os_name":"Windows 11 21h2 x64","os_version":"21H2
+        Build 22000.493","profile":"poly","slug":"windows11-21h2-x64","supported_artifact_types":["FILE","URL"],"supported_browsers":["edge"]}}}},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1368'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:28:22 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+version: 1

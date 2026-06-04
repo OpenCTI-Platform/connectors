@@ -1,9 +1,5 @@
 # OpenCTI Google SecOps SIEM Connector
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Filigran Verified | -    | -       |
-
 The Google SecOps SIEM connector streams OpenCTI STIX indicators to Google SecOps SIEM as UDM entities for threat detection and correlation.
 
 ## Table of Contents
@@ -83,6 +79,18 @@ There are a number of configuration options, which are set either in `docker-com
 | Google Token URI           | secops_siem.token_uri   | `SECOPS_SIEM_TOKEN_URI`          |         | Yes       | Service account `token_uri` value.                         |
 | Google Auth Provider Cert  | secops_siem.auth_provider_cert | `SECOPS_SIEM_AUTH_PROVIDER_CERT` |     | Yes       | Service account `auth_provider_x509_cert_url` value.       |
 | Google Client Cert URL     | secops_siem.client_cert_url | `SECOPS_SIEM_CLIENT_CERT_URL` |         | Yes       | Service account `client_x509_cert_url` value.              |
+
+For `secops_siem.private_key` in `config.yml`, prefer YAML multiline format to preserve PEM newlines:
+
+```yaml
+secops_siem:
+  private_key: |-
+    -----BEGIN PRIVATE KEY-----
+    ...
+    -----END PRIVATE KEY-----
+```
+
+The connector also normalizes escaped newlines (`\\n`) if the key is provided through environment variables or single-line values.
 
 ## Deployment
 

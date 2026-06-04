@@ -281,8 +281,8 @@ class Asset(FrozenBaseModelWithWarnedExtra):
     netbios_name: Optional[str] = Field(
         None, description="The NetBIOS name of the asset."
     )
-    operating_system: list[str] = Field(
-        ..., description="List of operating systems running on the asset."
+    operating_system: Optional[list[str]] = Field(
+        None, description="List of operating systems running on the asset."
     )
     network_id: str = Field(
         ..., description="The ID of the network the asset belongs to."

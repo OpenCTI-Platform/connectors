@@ -1,4 +1,4 @@
 # Main connector dependencies
--r ../requirements.txt
+-r ../src/requirements.txt
 pytest>=9.0.3
 pytest-mock>=3.10.0

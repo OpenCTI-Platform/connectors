@@ -1,0 +1,26 @@
+{
+  "stix_objects": [
+    {
+      "type": "url",
+      "id": "url--33333333-3333-4333-8333-333333333333",
+      "value": "https://malicious.example"
+    }
+  ],
+  "stix_entity": {
+    "type": "url",
+    "id": "url--33333333-3333-4333-8333-333333333333",
+    "value": "https://malicious.example"
+  },
+  "enrichment_entity": {
+    "entity_type": "Url",
+    "observable_value": "https://malicious.example",
+    "hashes": [],
+    "importFiles": [],
+    "objectMarking": [
+      {
+        "definition_type": "TLP",
+        "definition": "TLP:CLEAR"
+      }
+    ]
+  }
+}

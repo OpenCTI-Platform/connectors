@@ -1,7 +1,4 @@
-"""
-See https://github.com/OpenCTI-Platform/connectors/blob/42e0ad002318224e88cac2b4796c0bc136a4aa75/templates/external-import/src/external_import_connector/client_api.py
-"""
-
+import json
 from io import BytesIO
 
 import requests
@@ -28,13 +25,17 @@ class ImportDocumentAIClient:
                     }
             """).get("data", {}).get("settings", {}).get("id", "")
 
-        # Define headers in session and update when needed
-        headers = {
-            "X-OpenCTI-Certificate": self.config.licence_key_base64,
-            "X-OpenCTI-instance-id": self._opencti_instance_id,
-        }
+        # Define headers in session for legacy direct mode
+        headers = {}
+        if self.config.licence_key_base64:
+            headers["X-OpenCTI-Certificate"] = self.config.licence_key_base64
+        headers["X-OpenCTI-instance-id"] = self._opencti_instance_id
         self.session = requests.Session()
         self.session.headers.update(headers)
+
+        # OpenCTI platform URL and token for API-based calls
+        self._opencti_url = self.helper.opencti_url.rstrip("/")
+        self._opencti_token = self.helper.api.api_token
 
     def _request_data(
         self, endpoint: str, file_name: str, file_mime: str, file_data: BytesIO
@@ -95,5 +96,81 @@ class ImportDocumentAIClient:
         except stix2.exceptions.STIXError as e:
             self.helper.connector_logger.error(
                 "[API] Error while parsing STIX2 bundle", {"error": str(e)}
+            )
+            raise e
+
+    def get_bundle_via_xtm_one(
+        self,
+        file_name: str,
+        file_mime: str,
+        file_data: BytesIO,
+        agent_slug: str,
+        allowed_relationship_triplets: set[tuple[str, str, str]],
+    ) -> stix2.Bundle:
+        """
+        Fetch the bundle via the OpenCTI chatbot proxy API (XTM One mode).
+        Posts the file as multipart to POST /chatbot/agent with the agent_slug.
+        """
+        url = f"{self._opencti_url}/chatbot/agent"
+        try:
+            response = requests.post(
+                url=url,
+                files={"file": (file_name, file_data, file_mime)},
+                data={
+                    "agent_slug": agent_slug,
+                    "content": "Extract STIX from the attached files",
+                },
+                headers={"Authorization": f"Bearer {self._opencti_token}"},
+                timeout=630,  # 10 min + 30s buffer (must exceed platform's MULTIPART_XTM_TIMEOUT)
+            )
+            self.helper.connector_logger.info(
+                "[API] HTTP Post Request to OpenCTI chatbot agent",
+                {"url_path": url, "agent_slug": agent_slug},
+            )
+            response.raise_for_status()
+        except requests.ConnectionError:
+            raise requests.ConnectionError(
+                "OpenCTI chatbot agent API seems to be unreachable"
+            )
+        except requests.RequestException as err:
+            self.helper.connector_logger.error(
+                "[API] Error while calling chatbot agent",
+                {"url_path": url, "error": str(err)},
+            )
+            raise err
+
+        try:
+            result = response.json()
+            self.helper.connector_logger.info(
+                "[API] Chatbot agent response received",
+                {"keys": list(result.keys())},
+            )
+            # The OpenCTI proxy relays the XTM One SendMessageResponse:
+            # { "user_message": {...}, "assistant_message": { "content": "..." }, "conversation_id": "..." }
+            # The assistant_message.content contains the STIX bundle as JSON text
+            assistant_content = None
+            if "assistant_message" in result:
+                assistant_content = result["assistant_message"].get("content", "")
+            elif "content" in result:
+                # Fallback: direct content field
+                assistant_content = result["content"]
+
+            if assistant_content and isinstance(assistant_content, str):
+                bundle_data = json.loads(assistant_content)
+            elif isinstance(assistant_content, dict):
+                bundle_data = assistant_content
+            else:
+                raise ValueError(
+                    f"Unexpected response format from XTM One agent: {list(result.keys())}"
+                )
+
+            bundle = stix2.Bundle(**bundle_data, allow_custom=True)
+            bundle = deduplicate_bundle_objects(bundle)
+            bundle = filter_relationship_triplets(bundle, allowed_relationship_triplets)
+            return bundle
+        except stix2.exceptions.STIXError as e:
+            self.helper.connector_logger.error(
+                "[API] Error while parsing STIX2 bundle from chatbot agent",
+                {"error": str(e)},
             )
             raise e

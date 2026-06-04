@@ -21,6 +21,7 @@ class UrlscanConnector:
             self.helper,
             api_key=self.config.urlscan_enrichment.api_key.get_secret_value(),
             default_scan_visibility=self.config.urlscan_enrichment.visibility,
+            import_screenshot=self.config.urlscan_enrichment.import_screenshot,
         )
         self.converter = UrlscanConverter(
             self.helper,

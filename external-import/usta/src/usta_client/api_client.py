@@ -76,7 +76,7 @@ class UstaClient:
         page_size: int = 100,
     ) -> None:
         self.helper = helper
-        self.base_url = str(base_url).rstrip("/")
+        self.base_url = base_url.rstrip("/") if isinstance(base_url, str) else base_url
         self.api_key = api_key
         self.page_size = page_size
 
