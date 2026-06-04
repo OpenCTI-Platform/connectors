@@ -1,2 +1,2 @@
-pycti==7.260423.0
-requests
+pycti==7.260604.0
+requests<=2.33.0

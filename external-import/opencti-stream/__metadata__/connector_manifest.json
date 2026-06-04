@@ -1,0 +1,19 @@
+{
+  "title": "OpenCTI Stream",
+  "slug": "opencti-stream",
+  "description": "Subscribe to an OpenCTI live stream and forward each create/update event as a single STIX 2.1 bundle. Supports three output modes via the standard connector helper settings: RabbitMQ queue (default, for in-platform fan-out and applicant impersonation), local directory and S3 bucket. Directory and S3 modes pair naturally with the `diode-import` connector to replicate data between OpenCTI instances or air-gapped environments. The originating user (`origin.user_id` of each stream event) is propagated as the bundle `applicant_id`, so it can be remapped on the target instance via `DIODE_IMPORT_APPLICANT_MAPPINGS`.",
+  "short_description": "Forward events from an OpenCTI live stream to a queue, directory or S3 bucket as STIX 2.1 bundles.",
+  "logo": null,
+  "use_cases": [],
+  "verified": true,
+  "last_verified_date": "2026-05-07",
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/opencti-stream",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-opencti-stream",
+  "container_type": "EXTERNAL_IMPORT"
+}

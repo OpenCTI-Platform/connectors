@@ -168,6 +168,8 @@ class Connector:
         campaigns_enabled = gti_config.import_campaigns
         malware_families_enabled = gti_config.import_malware_families
         vulnerabilities_enabled = gti_config.import_vulnerabilities
+        indicators_enabled = gti_config.import_indicators
+        software_toolkits_enabled = gti_config.import_software_toolkits
 
         if (
             not reports_enabled
@@ -175,6 +177,8 @@ class Connector:
             and not campaigns_enabled
             and not malware_families_enabled
             and not vulnerabilities_enabled
+            and not indicators_enabled
+            and not software_toolkits_enabled
         ):
             self._logger.info(
                 "No GTI imports are enabled in configuration", {"prefix": LOG_PREFIX}
@@ -188,6 +192,8 @@ class Connector:
                 or campaigns_enabled
                 or malware_families_enabled
                 or vulnerabilities_enabled
+                or indicators_enabled
+                or software_toolkits_enabled
             ):
                 return await self._process_gti_parallel(gti_config)
             else:
@@ -198,6 +204,8 @@ class Connector:
                     campaigns_enabled,
                     malware_families_enabled,
                     vulnerabilities_enabled,
+                    indicators_enabled,
+                    software_toolkits_enabled,
                 )
         except (KeyboardInterrupt, asyncio.CancelledError):
             self._logger.info(
@@ -225,6 +233,10 @@ class Connector:
             enabled_imports.append("malware_families")
         if gti_config.import_vulnerabilities:
             enabled_imports.append("vulnerabilities")
+        if gti_config.import_indicators:
+            enabled_imports.append("indicators")
+        if gti_config.import_software_toolkits:
+            enabled_imports.append("software_toolkits")
         return enabled_imports
 
     def _create_processing_tasks(self, gti_config: GTIConfig) -> list[Any]:
@@ -260,6 +272,19 @@ class Connector:
                 self._process_gti_vulnerabilities(gti_config), name="vulnerabilities"
             )
             tasks.append(vulnerabilities_task)
+
+        if gti_config.import_indicators:
+            indicators_task = asyncio.create_task(
+                self._process_gti_indicators(gti_config), name="indicators"
+            )
+            tasks.append(indicators_task)
+
+        if gti_config.import_software_toolkits:
+            software_toolkits_task = asyncio.create_task(
+                self._process_gti_software_toolkits(gti_config),
+                name="software_toolkits",
+            )
+            tasks.append(software_toolkits_task)
 
         return tasks
 
@@ -353,6 +378,8 @@ class Connector:
         campaigns_enabled: bool,
         malware_families_enabled: bool,
         vulnerabilities_enabled: bool,
+        indicators_enabled: bool,
+        software_toolkits_enabled: bool,
     ) -> Any | None:
         """Process GTI imports sequentially."""
         self._logger.info("Starting sequential processing...", {"prefix": LOG_PREFIX})
@@ -396,6 +423,24 @@ class Connector:
                 vulnerabilities_enabled,
                 gti_config,
                 self._process_gti_vulnerabilities,
+            )
+            if error_result:
+                return error_result
+
+            error_result = await self._process_import_type(
+                "indicators",
+                indicators_enabled,
+                gti_config,
+                self._process_gti_indicators,
+            )
+            if error_result:
+                return error_result
+
+            error_result = await self._process_import_type(
+                "software toolkits",
+                software_toolkits_enabled,
+                gti_config,
+                self._process_gti_software_toolkits,
             )
             if error_result:
                 return error_result
@@ -558,6 +603,66 @@ class Connector:
             error_msg = f"GTI vulnerabilities processing failed: {str(e)}"
             self._logger.error(
                 "GTI vulnerabilities processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
+            return error_msg
+
+    async def _process_gti_indicators(self, gti_config: GTIConfig) -> str | None:
+        """Process GTI IOC indicators using the orchestrator."""
+        try:
+            orchestrator = Orchestrator(
+                work_manager=self.work_manager,
+                logger=self._logger,
+                config=gti_config,
+                tlp_level=self._config.connector_config.tlp_level,
+            )
+
+            initial_state = self._helper.get_state()
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
+
+            self._logger.info(
+                "Starting GTI indicators ingestion", {"prefix": LOG_PREFIX}
+            )
+            await orchestrator.run_indicators(initial_state)
+            return None
+
+        except Exception as e:
+            error_msg = f"GTI indicators processing failed: {str(e)}"
+            self._logger.error(
+                "GTI indicators processing failed",
+                {"prefix": LOG_PREFIX, "error": str(e)},
+            )
+            return error_msg
+
+    async def _process_gti_software_toolkits(self, gti_config: GTIConfig) -> str | None:
+        """Process GTI software toolkits using the orchestrator."""
+        try:
+            orchestrator = Orchestrator(
+                work_manager=self.work_manager,
+                logger=self._logger,
+                config=gti_config,
+                tlp_level=self._config.connector_config.tlp_level,
+            )
+
+            initial_state = self._helper.get_state()
+            self._logger.info(
+                "Retrieved state",
+                {"prefix": LOG_PREFIX, "initial_state": initial_state},
+            )
+
+            self._logger.info(
+                "Starting GTI software toolkits ingestion", {"prefix": LOG_PREFIX}
+            )
+            await orchestrator.run_software_toolkit(initial_state)
+            return None
+
+        except Exception as e:
+            error_msg = f"GTI software toolkits processing failed: {str(e)}"
+            self._logger.error(
+                "GTI software toolkits processing failed",
                 {"prefix": LOG_PREFIX, "error": str(e)},
             )
             return error_msg

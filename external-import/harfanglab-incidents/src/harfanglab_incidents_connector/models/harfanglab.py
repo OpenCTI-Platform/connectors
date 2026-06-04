@@ -74,11 +74,15 @@ class Process:
         self.name = data.get("process_name") or None
         hashes_data = data.get("hashes") or {}
         self.hashes = {
-            # "SHA-512": hashes_data.get("sha512"),
-            "SHA-256": hashes_data.get("sha256"),
-            "SHA-1": hashes_data.get("sha1"),
-            "MD5": hashes_data.get("md5"),
-        }
+            k: v
+            for k, v in {
+                # "SHA-512": hashes_data.get("sha512"),
+                "SHA-256": hashes_data.get("sha256"),
+                "SHA-1": hashes_data.get("sha1"),
+                "MD5": hashes_data.get("md5"),
+            }.items()
+            if v
+        } or None
 
 
 class SigmaRule:

@@ -14,9 +14,6 @@ class Incident(BaseIdentifiedEntity):
         description="A name used to identify this Incident.",
         min_length=1,
     )
-    created: AwareDatetime = Field(
-        description="The date and time at which the Incident was created, used for deterministic ID generation.",
-    )
     description: str | None = Field(
         default=None,
         description="A description that provides more details and context about the Incident.",
@@ -59,7 +56,6 @@ class Incident(BaseIdentifiedEntity):
             ),
             name=self.name,
             description=self.description,
-            created=self.created,
             labels=self.labels,
             allow_custom=True,
             source=self.source,

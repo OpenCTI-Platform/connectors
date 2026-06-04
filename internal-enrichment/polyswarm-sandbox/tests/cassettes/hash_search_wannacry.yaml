@@ -1,0 +1,136 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: GET
+    uri: https://api.polyswarm.network/v3/search/hash/sha256?hash=ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa&community=default
+  response:
+    body:
+      string: '{"has_more":false,"limit":50,"result":[{"artifact_id":"50629618874722532","assertions":[{"author":"45003009427661603","author_name":"Qihoo
+        360","bid":"2500000000000000","engine":{"description":"Qihoo 360 is the largest
+        provider of antivirus, Internet and mobile security products in China. QVM
+        (Qihoo Support Vector Machine) is used as a basis for a detection algorithm
+        which is automatically enhanced and updated with new malware samples submitted
+        by users to servers. Program files that do not appear on our blacklist and
+        whitelist are scanned using QVM, and any \u201chits\u201d presumed to be malicious
+        would be removed or quarantined.","name":"Qihoo 360"},"mask":true,"metadata":{"malware_family":"Win32/Ransom.WannaCry.HykCEpsA","product":"Qihoo","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"signatures_version":"2022-10-09
+        10:05"}},"verdict":true},{"author":"21584326519540048","author_name":"XVirus","bid":"1500000000000000","engine":{"description":"Xvirus
+        is a project that started in 2010. Our objective is to provide to consumers
+        with simple but powerful products to keep their computers protected, clean
+        and at top performance.","name":"XVirus"},"mask":true,"metadata":{"product":"xvirus","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"vendor_version":"3.0.2.0"}},"verdict":true},{"author":"82454256513644328","author_name":"SecureAge","bid":"2500000000000000","engine":{"description":"The
+        SecureAge APEX Engine harnesses the power of artificial intelligence (AI)
+        to take on the threats of today and tomorrow. Leveraging on the power of big
+        data, the APEX engine goes beyond traditional scanners by effectively and
+        reliably spotting malicious patterns to allow for quick decisions based on
+        prior experience. It can adaptively update its knowledge against newer and
+        unseen malware variants that may attempt to infect endpoints during an outbreak.
+        This approach makes it incredibly faster at detecting zero-day threats while
+        having minimal footprint regarding performance and disk space when compared
+        to traditional anti-malware engines.","name":"SecureAge"},"mask":true,"metadata":{"malware_family":"Malicious","product":"secureage","scanner":{"definition_version":"6.223","engine_version":"5.5.1","environment":{"architecture":"x86_64","operating_system":"Linux"}}},"verdict":true},{"author":"18903854210768464","author_name":"SecondWrite","bid":"2500000000000000","engine":{"description":"SecondWrite\u2019s
+        engine provides in-depth malware analysis; for both files and websites. It
+        leverages its patented advanced program analysis and machine learning feature
+        sets to .identify evasive and zero-day malware before other tools in the industry.","name":"SecondWrite"},"mask":true,"metadata":{"malware_family":"","product":"secondwrite","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"version":"0.0.1"}},"verdict":true},{"author":"48487887999524630","author_name":"Lionic","bid":"2500000000000000","engine":{"description":"AegisLab\u2019s
+        intelligent virus DNA algorithm extracts the special one-to-many mapping virus
+        signatures. It achieved the much higher detection rate for latest Windows
+        PE and Android APK variant virus while maintained the minimum memory footprint.
+        Their scan engine also uses the DNA fast match algorithm and is very suitable
+        for limited resources environment. In native streaming mode, the engine is
+        able to catch the most viruses very efficiently from network packets.","name":"Lionic"},"mask":true,"metadata":{"malware_family":"Trojan.Win32.Wanna.toNn","product":"Lionic","scanner":{"engine_version":"8.26","environment":{"architecture":"x86_64","operating_system":"Linux"}}},"verdict":true},{"author":"32946093848101608","author_name":"Filseclab","bid":"2500000000000000","engine":{"description":"","name":"Filseclab"},"mask":true,"metadata":{"malware_family":"Win.WanaDecryptor.vrsr","product":"filseclab","scanner":{"engine_version":"1.0.2.2132","environment":{"architecture":"x86_64","operating_system":"Linux"},"signatures_timestamp":"Thursday,
+        September 11, 2025 10:47:33 PM","signatures_version":"40.131.4421"}},"verdict":true},{"author":"33148585565356292","author_name":"Jiangmin","bid":"2500000000000000","engine":{"description":"Specializes
+        in malicious files and business documents scanning","name":"Jiangmin"},"mask":true,"metadata":{"malware_family":"Trojan.Wanna.eo","product":"jiangmin","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"signatures_version":"16.0.100","vendor_vendor":"1.0.0.0","version":"0.0.1"}},"verdict":true},{"author":"52651304516102272","author_name":"Cyberstanc_scrutiny","bid":"0","engine":{"description":"Cyberstanc
+        is a technology-driven company. We offer a product suite specialized engine
+        in multi-stage ransomware detection utilizing self-learning-based heuristic
+        analysis.","name":"Cyberstanc_scrutiny"},"mask":true,"metadata":{"product":"Cyberstanc_scrutiny","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"}}},"verdict":null},{"author":"84695705209944120","author_name":"Crowdstrike
+        Falcon ML","bid":"2500000000000000","engine":{"description":"CrowdStrike Falcon
+        ML protects customers against all cyber attacks, using sophisticated signatureless
+        artificial intelligence/machine learning and Indicator of Attack (IOA) based
+        threat prevention to stop known and unknown threats in real-time.","name":"Crowdstrike
+        Falcon ML"},"mask":true,"metadata":{"malware_family":"win/malicious","product":"crowdstrike-falcon","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"vendor_version":"2","version":"0.0.1"},"vendor_api_version":"2","vendor_endpoint":"https://hybrid-analysis.com/api/v2/quick-scan"},"verdict":true},{"author":"44916051751992551","author_name":"NanoAV","bid":"2500000000000000","engine":{"description":"Russian
+        advanced cyber security threat protection with high speed comprehensive threat
+        scanning that provides protection from all types of malware and includes real-time
+        file and network protection and remediation.","name":"NanoAV"},"mask":true,"metadata":{"malware_family":"Trojan.Win32.Ransom.eoptnj","product":"NANO
+        Antivirus","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"signatures_version":"0.14.67.53048","vendor_version":"1.0.170.92431"}},"verdict":true},{"author":"71222207979378669","author_name":"ClamAV","bid":"2500000000000000","engine":{"description":"ClamAV
+        is an open source, signature-based, anti-virus engine capable of scanning
+        a wide variety of common file types.","name":"ClamAV"},"mask":true,"metadata":{"malware_family":"Win.Ransomware.Wannacryptor-9940180-0","product":"clamav","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"vendor_version":"ClamAV
+        1.5.1/27884/Sun Jan 18 07:24:07 2026","version":"0.0.2"}},"verdict":true},{"author":"14106784725859115","author_name":"DrWeb","bid":"2500000000000000","engine":{"description":"A
+        anti-virus offering preventive protection against the latest active threats,
+        targeted attacks, and infiltration attempts that take advantage of vulnerabilities","name":"DrWeb"},"mask":true,"metadata":{"malware_family":"Trojan.Encoder.11432","product":"drweb","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"signatures_version":"07B1BA4F8188D468B902E30742BE0072,
+        2026-Jan-26 14:42:48","vendor_version":"7.00.72.09030","version":"0.0.1"}},"verdict":true},{"author":"72563027764114662","author_name":"SentinelOne
+        Static ML","bid":"2500000000000000","engine":{"description":"SentinelOne (Static
+        ML) is a machine learning engine designed to identify unknown malware. It
+        is part of a unique offering of a multi-layer detection and prevention agent
+        that is capable of keeping organizations ahead of any advanced threat in real-time.","name":"SentinelOne
+        Static ML"},"mask":true,"metadata":{"indicators":["creates_service","fake_microsoft","high_entropy","section_entropy_high"],"malware_family":"","product":"sentinelone","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"version":"0.0.1"}},"verdict":true},{"author":"55328652711226799","author_name":"Alibaba","bid":"500000000000000","engine":{"description":"Engine
+        based on cloud computing, big data technologies and a database with massive
+        collection of confirmed malware and safe files. Multiple subsystems included,
+        such as preprocessing, static analysis, dynamic analysis, and counterfeit
+        software detection.","name":"Alibaba"},"mask":true,"metadata":{"comments":["REPORT_TYPE=pe"],"malware_family":"Gene.Win.Harmlet.22566-0","product":"Alibaba","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"signatures_version":"20180921112649","vendor_version":"0.2.0.3"}},"verdict":true},{"author":"71533258252366147","author_name":"Ikarus","bid":"2500000000000000","engine":{"description":"Protects
+        effectively against viruses, trojans, spyware, spam, and malware that threaten
+        the security of your devices and data.","name":"Ikarus"},"mask":true,"metadata":{"malware_family":"Trojan-Ransom.WannaCry","product":"ikarus","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"version":"0.0.1"},"signatures_version":"build
+        108929, 2026-01-26 13:08:16","vendor_version":"6.4.12"},"verdict":true},{"author":"61602204071113521","author_name":"RedDrip
+        APT Scanner - RAS","bid":"500000000000000","engine":{"description":"RAS can
+        scan files then determine APT group who is using the files for attacking purpose.To
+        achieve that goal, RAS engine uses custom pattern file which contains malware
+        pattern and its corresponding APT Group. The knowledge behind pattern file
+        is from daily APT tracking conducted by RedDrip Team researchers and analysis
+        system.","name":"RedDrip APT Scanner - RAS"},"mask":true,"metadata":{"product":"reddrip","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"}}},"verdict":false}],"bounty_state":4,"community":"mainnet1","country":"US","created":"2026-01-26T16:18:05.098799+00:00","detections":{"benign":1,"malicious":9,"total":10},"expiration_window":null,"expire_at":null,"extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows, 4 sections","failed":false,"filename":"diskpart.exe","first_seen":"2019-04-24T00:26:18.868545+00:00","id":"50629618874722532","last_scanned":"2026-01-26T16:18:05.098799+00:00","last_seen":"2026-01-26T16:18:05.098799+00:00","md5":"84c82835a5d21bbcf75a61706d8ab549","metadata":[{"created":"2026-01-26T16:18:43.785706+00:00","tool":"pefile","tool_metadata":{"app_container":false,"compile_date":"2010-11-20
+        09:05:05","exports":[],"force_integrity":false,"force_no_isolation":false,"has_debug_info":false,"has_export_table":false,"has_import_table":true,"high_entropy_aslr":false,"imphash":"68f013d7437aa653a8a98a05807afeb1","imported_functions":["GetFileAttributesW","GetFileSizeEx","CreateFileA","InitializeCriticalSection","DeleteCriticalSection","ReadFile","GetFileSize","WriteFile","LeaveCriticalSection","EnterCriticalSection","SetFileAttributesW","SetCurrentDirectoryW","CreateDirectoryW","GetTempPathW","GetWindowsDirectoryW","GetFileAttributesA","SizeofResource","LockResource","LoadResource","MultiByteToWideChar","Sleep","OpenMutexA","GetFullPathNameA","CopyFileA","GetModuleFileNameA","VirtualAlloc","VirtualFree","FreeLibrary","HeapAlloc","GetProcessHeap","GetModuleHandleA","SetLastError","VirtualProtect","IsBadReadPtr","HeapFree","SystemTimeToFileTime","LocalFileTimeToFileTime","CreateDirectoryA","GetStartupInfoA","SetFilePointer","SetFileTime","GetComputerNameW","GetCurrentDirectoryA","SetCurrentDirectoryA","GlobalAlloc","LoadLibraryA","GetProcAddress","GlobalFree","CreateProcessA","CloseHandle","WaitForSingleObject","TerminateProcess","GetExitCodeProcess","FindResourceA","wsprintfA","CreateServiceA","OpenServiceA","StartServiceA","CloseServiceHandle","CryptReleaseContext","RegCreateKeyW","RegSetValueExA","RegQueryValueExA","RegCloseKey","OpenSCManagerA","realloc","fclose","fwrite","fread","fopen","sprintf","rand","srand","strcpy","memset","strlen","wcscat","wcslen","__CxxFrameHandler","??3@YAXPAX@Z","memcmp","_except_handler3","_local_unwind2","wcsrchr","swprintf","??2@YAPAXI@Z","memcpy","strcmp","strrchr","__p___argv","__p___argc","_stricmp","free","malloc","??0exception@@QAE@ABV0@@Z","??1exception@@UAE@XZ","??0exception@@QAE@ABQBD@Z","_CxxThrowException","calloc","strcat","_mbsstr","??1type_info@@UAE@XZ","_exit","_XcptFilter","exit","_acmdln","__getmainargs","_initterm","__setusermatherr","_adjust_fdiv","__p__commode","__p__fmode","__set_app_type","_controlfp"],"is_dll":false,"is_driver":false,"is_exe":true,"is_probably_packed":true,"libraries":["KERNEL32.dll","USER32.dll","ADVAPI32.dll","MSVCRT.dll"],"no_bind":false,"pdb":[],"pdb_guids":[],"peid":"Microsoft
+        Visual C++ v6.0","resources":[{"entropy":7.999906909031022,"extended_mimetype":"Zip
+        archive data, at least v2.0 to extract, compression method=deflate","language":"LANG_ENGLISH","md5":"b576ada3366908875e5ce4cb3da6153a","mimetype":"application/zip","offset":"65776","sha1":"30f8820cf93a627c66195f0d77d6a409024c6e52","sha256":"5873c1b5b246c80ab88172d3294140a83d711cd64520a0c7dd7837f028146b80","size":"3446325","sublanguage":"SUBLANG_ENGLISH_US","type":"XIA"},{"entropy":3.529736693207566,"extended_mimetype":"data","language":"LANG_ENGLISH","md5":"0e14014289c29078069237196bd3ea72","mimetype":"application/octet-stream","offset":"3512104","sha1":"466a736f7f6987b34cd7a130e26a8af13d3cf76c","sha256":"f8cbc0ddb17a85f2ba099416961efef915f8eba926681df7cd2c1fa69f3c2b6a","size":"904","sublanguage":"SUBLANG_ENGLISH_US","type":"RT_VERSION"},{"entropy":5.039190221146114,"extended_mimetype":"exported
+        SGML document, ASCII text, with CRLF line terminators","language":"LANG_ENGLISH","md5":"a31cf56465371581763e9f0a86d41987","mimetype":"text/plain","offset":"3513008","sha1":"4a6cdd3cb3dab86effefdf7e4b29538c45f77440","sha256":"590b5bae6a9c329da6d5b836e3ec9baeb9607b8ea88e7015a01e021fc416707f","size":"1263","sublanguage":"SUBLANG_ENGLISH_US","type":"RT_MANIFEST"}],"resources_by_language":{"LANG_ENGLISH":3},"resources_by_type":{"RT_MANIFEST":1,"RT_VERSION":1,"XIA":1},"rich_header_hash_sha256":"6caeca67b7c6a82989f4e7cefb5312a13e59151ae84f3ba6964c70e799729bac","sections":[{"entropy":6.404235106100747,"md5":"920e964050a1a5dd60dd00083fd541a2","name":".text","raw_size":"28672","sha1":"2eb82dfb19006b8970dcc5d72b2cf3fa1479538b","sha256":"55cda830ff2543783350fb781ed2bf77e72aa123134d2513acfb944487773054","virtual_address":"4096","virtual_size":"27056"},{"entropy":6.66357096840794,"md5":"2c42611802d585e6eed68595876d1a15","name":".rdata","raw_size":"24576","sha1":"18a834d08f616a6175c6e2281597d760c77c3d81","sha256":"a2acc94d242d28b6dd0a0859ec59ecc7f6b98d4ea09346b819d486b8827d2d79","virtual_address":"32768","virtual_size":"24432"},{"entropy":4.4557495078691405,"md5":"83506e37bd8b50cacabd480f8eb3849b","name":".data","raw_size":"8192","sha1":"7bd2238995e2286a24e92667f161a3c14506d4e1","sha256":"110357de37bd422f6c68b66035e4652b99767819353f4c398953249a930fa823","virtual_address":"57344","virtual_size":"6488"},{"entropy":7.999867975099678,"md5":"f99ce7dc94308f0a149a19e022e4c316","name":".rsrc","raw_size":"3448832","sha1":"9782e77f3f117b9c50867e778a9e940cbc6cf080","sha256":"418c45aa8ad5b74ea7a820a4cf19b2fbc688502752d600a7800d3cbe1d058e44","virtual_address":"65536","virtual_size":"3448736"}],"terminal_server_aware":false,"uses_aslr":false,"uses_cfg":false,"uses_dep":false,"uses_seh":true,"verify_checksum":false,"warnings":[],"wdm_driver":false},"updated":"2026-01-26T16:18:43.785706+00:00"},{"created":"2026-01-26T16:18:37.276514+00:00","tool":"polyunite","tool_metadata":{"labels":["ransomware","trojan"],"malware_family":"Wannacryptor","operating_system":["Windows"]},"updated":"2026-01-26T16:18:37.276514+00:00"},{"created":"2026-01-26T16:18:21.878340+00:00","tool":"hash","tool_metadata":{"authentihash":"4b2c4c7f06f5ffaeea6efc537f0aa66b0a30c7ccd7979c86c7f4f996002b99fd","md5":"84c82835a5d21bbcf75a61706d8ab549","sha1":"5ff465afaabcbf0150d1a3ab2c2e74f3a4426467","sha256":"ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa","sha3_256":"b0e240ef9f18786c588c4cffa777e35b1741189d543cf2220f25291bab2d2214","sha3_512":"8a3d757bbfe30415c187834c25bdf33946ca4c5a937758776d7a9f0730b3285095c6b32ed7e35403b926bcbf92682194243092ab731aaa64fc80e31f408fd8b9","sha512":"90723a50c20ba3643d625595fd6be8dcf88d70ff7f4b4719a88f055d5b3149a4231018ea30d375171507a147e59f73478c0c27948590794554d031e7d54b7244","ssdeep":"98304:QqPoBhz1aRxcSUDk36SAEdhvxWa9P593R8yAVp2g3x:QqPe1Cxcxk3ZAEUadzR8yc4gB","tlsh":"73f533f4e221b7acf2550ef64855c59b6a9724b2ebef1e26da8001a70d44f7f8fc0491"},"updated":"2026-01-26T16:18:21.878340+00:00"},{"created":"2026-01-26T16:18:21.109331+00:00","tool":"exiftool","tool_metadata":{"characterset":"Unicode","codesize":28672,"companyname":"Microsoft
+        Corporation","directory":"/tmp","entrypoint":"0x77ba","exiftoolversion":12.76,"fileaccessdate":"2026:01:26
+        16:18:07+00:00","filedescription":"DiskPart","fileflags":"(none)","fileflagsmask":"0x003f","fileinodechangedate":"2026:01:26
+        16:18:07+00:00","filemodifydate":"2026:01:26 16:18:07+00:00","filename":"tmpwvgu_9q7","fileos":"Windows
+        NT 32-bit","filepermissions":"-rw-r--r--","filesize":"3.5 MB","filesubtype":0,"filetype":"Win32
+        EXE","filetypeextension":"exe","fileversion":"6.1.7601.17514 (win7sp1_rtm.101119-1850)","fileversionnumber":"6.1.7601.17514","imagefilecharacteristics":"No
+        relocs, Executable, No line numbers, No symbols, 32-bit","imageversion":0.0,"initializeddatasize":3481600,"internalname":"diskpart.exe","languagecode":"English
+        (U.S.)","legalcopyright":"\u00a9 Microsoft Corporation. All rights reserved.","linkerversion":6.0,"machinetype":"Intel
+        386 or later, and compatibles","mimetype":"application/octet-stream","objectfiletype":"Dynamic
+        link library","originalfilename":"diskpart.exe","osversion":4.0,"petype":"PE32","productname":"Microsoft\u00ae
+        Windows\u00ae Operating System","productversion":"6.1.7601.17514","productversionnumber":"6.1.7601.17514","sourcefile":"/tmp/tmpwvgu_9q7","subsystem":"Windows
+        GUI","subsystemversion":4.0,"timestamp":"2010:11:20 09:05:05+00:00","uninitializeddatasize":0},"updated":"2026-01-26T16:18:21.109331+00:00"},{"created":"2026-01-26T16:18:20.621156+00:00","tool":"lief","tool_metadata":{"entrypoint":4224954,"exported_functions":[],"has_nx":false,"imported_functions":["GetFileAttributesW","GetFileSizeEx","CreateFileA","InitializeCriticalSection","DeleteCriticalSection","ReadFile","GetFileSize","WriteFile","LeaveCriticalSection","EnterCriticalSection","SetFileAttributesW","SetCurrentDirectoryW","CreateDirectoryW","GetTempPathW","GetWindowsDirectoryW","GetFileAttributesA","SizeofResource","LockResource","LoadResource","MultiByteToWideChar","Sleep","OpenMutexA","GetFullPathNameA","CopyFileA","GetModuleFileNameA","VirtualAlloc","VirtualFree","FreeLibrary","HeapAlloc","GetProcessHeap","GetModuleHandleA","SetLastError","VirtualProtect","IsBadReadPtr","HeapFree","SystemTimeToFileTime","LocalFileTimeToFileTime","CreateDirectoryA","GetStartupInfoA","SetFilePointer","SetFileTime","GetComputerNameW","GetCurrentDirectoryA","SetCurrentDirectoryA","GlobalAlloc","LoadLibraryA","GetProcAddress","GlobalFree","CreateProcessA","CloseHandle","WaitForSingleObject","TerminateProcess","GetExitCodeProcess","FindResourceA","wsprintfA","CreateServiceA","OpenServiceA","StartServiceA","CloseServiceHandle","CryptReleaseContext","RegCreateKeyW","RegSetValueExA","RegQueryValueExA","RegCloseKey","OpenSCManagerA","realloc","fclose","fwrite","fread","fopen","sprintf","rand","srand","strcpy","memset","strlen","wcscat","wcslen","__CxxFrameHandler","??3@YAXPAX@Z","memcmp","_except_handler3","_local_unwind2","wcsrchr","swprintf","??2@YAPAXI@Z","memcpy","strcmp","strrchr","__p___argv","__p___argc","_stricmp","free","malloc","??0exception@@QAE@ABV0@@Z","??1exception@@UAE@XZ","??0exception@@QAE@ABQBD@Z","_CxxThrowException","calloc","strcat","_mbsstr","??1type_info@@UAE@XZ","_exit","_XcptFilter","exit","_acmdln","__getmainargs","_initterm","__setusermatherr","_adjust_fdiv","__p__commode","__p__fmode","__set_app_type","_controlfp"],"is_pie":false,"libraries":["KERNEL32.dll","USER32.dll","ADVAPI32.dll","MSVCRT.dll"],"virtual_size":3514368},"updated":"2026-01-26T16:18:20.621156+00:00"}],"mimetype":"application/vnd.microsoft.portable-executable","permalink":"https://polyswarm.network/scan/results/file/ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa/50629618874722532","polyscore":0.999999375589526,"result":true,"sha1":"5ff465afaabcbf0150d1a3ab2c2e74f3a4426467","sha256":"ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa","size":3514368,"type":"FILE","upload_url":"https://s3.us-east-2.amazonaws.com/ps-storage-prodv2-artifact-index/instances/0d/89/19/0d8919a8-2506-48f9-b519-ad0fcfbc1ee1?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARD7S6WCVBXF6ZSO5%2F20260126%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260126T161805Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=f1276d44c623895f9043a9f00ef959003cecbb176408d6773b0f025c906a096f","votes":[{"arbiter":"72439373973467971","arbiter_name":"ClamAV-Arbiter","engine":{"description":"ClamAV
+        is an open source, signature-based, anti-virus engine capable of scanning
+        a wide variety of common file types.","name":"ClamAV-Arbiter"},"metadata":{"malware_family":"Win.Ransomware.Wannacryptor-9940180-0","product":"clamav","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"vendor_version":"ClamAV
+        1.5.1/27899/Sun Feb  1 07:24:13 2026","version":"0.0.2"}},"vote":true},{"arbiter":"57614234896550","arbiter_name":"Cyberstanc
+        Arbiter","engine":{"description":"Cyberstanc is a technology-driven company.
+        We offer a product suite specialized engine in multi-stage ransomware detection
+        utilizing self-learning-based heuristic analysis.","name":"Cyberstanc Arbiter"},"metadata":{"product":"Cyberstanc_scrutiny","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"}}},"vote":null},{"arbiter":"15969739892675589","arbiter_name":"SentinelOne
+        Static ML Arbiter","engine":{"description":"SentinelOne (Static ML) is a machine
+        learning engine designed to identify unknown malware. It is part of a unique
+        offering of a multi-layer detection and prevention agent that is capable of
+        keeping organizations ahead of any advanced threat in real-time.","name":"SentinelOne
+        Static ML Arbiter"},"metadata":{"comments":["SKIPPED:DECOMPRESSION-UNSAFE"],"product":"sentinelone","scanner":{"environment":{"architecture":"x86_64","operating_system":"Linux"},"version":"0.0.1"}},"vote":null}],"window_closed":true}],"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '22705'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:28:23 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+version: 1

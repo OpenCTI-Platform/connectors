@@ -1,0 +1,1 @@
+"""Software toolkit configuration module."""

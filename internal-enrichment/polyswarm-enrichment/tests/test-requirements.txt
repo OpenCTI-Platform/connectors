@@ -1,0 +1,4 @@
+-r ../src/requirements.txt
+pytest>=8.0
+pytest-mock>=3.14
+vcrpy>=6.0.0

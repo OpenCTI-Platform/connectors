@@ -110,8 +110,18 @@ class RetryRequestStrategy(BaseRequestStrategy):
 
         self._initialized = True
 
-    async def _perform_single_attempt(self) -> Any:
-        """Perform a single request attempt and process response."""
+    async def _perform_single_attempt(
+        self, as_bytes: bool = False
+    ) -> dict[str, Any] | tuple[int, bytes]:
+        """Perform a single request attempt and process the response.
+
+        Args:
+            as_bytes: When True the response is returned as a raw ``(status, bytes)``
+                tuple (no model parsing, no response_key extraction). When False the
+                response is parsed as JSON and optionally deserialised into a Pydantic
+                model.
+
+        """
         try:
             await self._initialize()
 
@@ -126,7 +136,7 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 await hook.before(self.api_req)
 
             self._logger.debug(
-                f"{LOG_PREFIX} Attempting API request",
+                f"{LOG_PREFIX} Attempting {'bytes ' if as_bytes else ''}API request",
                 {
                     "method": self.api_req.method,
                     "url": self.api_req.url,
@@ -135,6 +145,28 @@ class RetryRequestStrategy(BaseRequestStrategy):
                     "has_json": self.api_req.json_payload is not None,
                 },
             )
+
+            if as_bytes:
+                status, content = await self.http.request(
+                    self.api_req.method,
+                    self.api_req.url,
+                    headers=self.api_req.headers,
+                    params=self.api_req.params,
+                    json_payload=self.api_req.json_payload,
+                    timeout=self.api_req.timeout,
+                    as_bytes=True,
+                )
+                self._logger.debug(
+                    f"{LOG_PREFIX} Raw bytes response received",
+                    {
+                        "url": self.api_req.url,
+                        "status": status,
+                        "content_size": len(content),
+                    },
+                )
+                for hook in self.hooks:
+                    await hook.after(self.api_req, {"status": status})
+                return status, content
 
             raw = await self.http.request(
                 self.api_req.method,
@@ -148,14 +180,12 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 f"{LOG_PREFIX} Raw response received",
                 {"url": self.api_req.url},
             )
-
             for hook in self.hooks:
                 await hook.after(self.api_req, raw)
 
             data = (
                 raw.get(self.api_req.response_key) if self.api_req.response_key else raw
             )
-
             if self.api_req.model:
                 try:
                     return self.api_req.model.model_validate(data)
@@ -209,24 +239,18 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 f"{LOG_PREFIX} Unexpected error occurred during request processing: {str(generic_err)}"
             ) from generic_err
 
-    async def execute(self, request: BaseRequestModel) -> Any:
-        """Execute the request with retry and rate limiting.
+    async def _execute_with_retry(
+        self, as_bytes: bool = False
+    ) -> dict[str, Any] | tuple[int, bytes]:
+        """Shared retry loop for both JSON and bytes requests.
 
         Args:
-            request: The request to execute.
-
-        Returns:
-            The response from the request.
-
-        Raises:
-            ApiCircuitOpenError: If the circuit breaker is open.
-            ApiRateLimitExceededError: If the rate limit is exceeded.
-            ApiNetworkError: If there's a persistent network connectivity issue.
-            ApiError: If the request fails.
+            as_bytes: Forwarded to ``_perform_single_attempt``. Also narrows the set
+                of retryable exceptions: bytes requests cannot raise ``ApiHttpError``
+                or ``ApiRateLimitError`` (4xx/5xx come back as status codes), so only
+                ``ApiTimeoutError`` triggers a retry in that path.
 
         """
-        await self._validate_request(request)
-
         current_backoff_delay = self.backoff
         last_exception: Exception | None = None
         network_error_count = 0
@@ -235,14 +259,14 @@ class RetryRequestStrategy(BaseRequestStrategy):
         for attempt in range(self.max_retries + 1):
             try:
                 self._logger.debug(
-                    f"{LOG_PREFIX} Executing request attempt",
+                    f"{LOG_PREFIX} Executing {'bytes ' if as_bytes else ''}request attempt",
                     {
                         "attempt": attempt + 1,
                         "max_attempts": self.max_retries + 1,
                         "url": self.api_req.url,
                     },
                 )
-                return await self._perform_single_attempt()
+                return await self._perform_single_attempt(as_bytes=as_bytes)
             except ApiNetworkError as e:
                 last_exception = e
                 network_error_count += 1
@@ -269,6 +293,25 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 raise e
 
         return await self._handle_max_retries_exceeded(last_exception)
+
+    async def execute(self, request: BaseRequestModel, as_bytes: bool = False) -> Any:
+        """Execute the request with retry and rate limiting.
+
+        Args:
+            request: The request to execute.
+
+        Returns:
+            The response from the request.
+
+        Raises:
+            ApiCircuitOpenError: If the circuit breaker is open.
+            ApiRateLimitExceededError: If the rate limit is exceeded.
+            ApiNetworkError: If there's a persistent network connectivity issue.
+            ApiError: If the request fails.
+
+        """
+        await self._validate_request(request)
+        return await self._execute_with_retry(as_bytes=as_bytes)
 
     async def _validate_request(self, request: BaseRequestModel) -> None:
         """Validate the request and check circuit breaker status.

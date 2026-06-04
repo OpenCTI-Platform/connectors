@@ -13,7 +13,7 @@ from connector.src.stix.v21.models.cdts.kill_chain_phase_model import (
     KillChainPhaseModel,
 )
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )

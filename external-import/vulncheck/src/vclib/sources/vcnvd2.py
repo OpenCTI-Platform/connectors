@@ -17,7 +17,7 @@ from vclib.util.config import (
 )
 from vclib.util.cpe import parse_cpe_uri
 from vclib.util.memory_usage import log_memory_usage
-from vclib.util.nvd import check_size_of_stix_objects, check_vuln_description
+from vclib.util.nvd import check_vuln_description
 from vulncheck_sdk.models.advisory_cvssv40 import AdvisoryCVSSV40
 from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
 from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
@@ -572,16 +572,7 @@ def _collect_vc_nvd2_from_backup(
     source_name: str,
     cleanup=True,
 ) -> None:
-    work_num = 1
-
-    # Initiate new work
-    work_id = works.start_work(
-        helper=helper,
-        logger=logger,
-        work_name=source_name,
-        work_num=work_num,
-    )
-    stix_objects = []
+    work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     logger.info("[VULNCHECK NVD-2] Parsing data into STIX objects")
 
@@ -589,36 +580,24 @@ def _collect_vc_nvd2_from_backup(
         for file_name in zip_ref.namelist():
             if file_name.endswith(".json"):
                 with zip_ref.open(file_name) as json_file:
-                    stix_objects.extend(
-                        _process_vc_nvd2_json(
-                            converter_to_stix=converter_to_stix,
-                            logger=logger,
-                            target_scope=target_scope,
-                            data=json.load(json_file),
-                        )
-                    )
-
-                    stix_objects, work_id, work_num = check_size_of_stix_objects(
-                        helper=helper,
+                    stix_objects = _process_vc_nvd2_json(
+                        converter_to_stix=converter_to_stix,
                         logger=logger,
-                        source_name=source_name,
-                        stix_objects=stix_objects,
-                        work_id=work_id,
-                        work_num=work_num,
+                        target_scope=target_scope,
+                        data=json.load(json_file),
                     )
+                    if stix_objects:
+                        works.send_bundle(
+                            helper=helper,
+                            logger=logger,
+                            stix_objects=stix_objects,
+                            work_id=work_id,
+                        )
 
-    if len(stix_objects) > 0:
-        works.finish_work(
-            helper=helper,
-            logger=logger,
-            stix_objects=stix_objects,
-            work_id=work_id,
-            work_name=source_name,
-            work_num=work_num,
-        )
-    logger.info(
-        "Finished parsing STIX from VulnCheck-NVD2 backup!",
+    works.finish_work(
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
+    logger.info("Finished parsing STIX from VulnCheck-NVD2 backup!")
     if cleanup:
         os.remove(filepath)
 

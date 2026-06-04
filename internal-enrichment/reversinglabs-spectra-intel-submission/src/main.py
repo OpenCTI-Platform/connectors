@@ -542,7 +542,7 @@ class ReversingLabsSpectraIntelConnector(InternalEnrichmentConnector):
             sample_name = self.opencti_entity["importFiles"][0]["name"]
             file_id = self.opencti_entity["importFiles"][0]["id"]
             file_mime_type = self.opencti_entity["mime_type"]
-            file_uri = f"{self.helper.opencti_url}/storage/get/{file_id}"
+            file_uri = f"{self.helper.opencti_url.rstrip('/')}/storage/get/{file_id}"
 
             if file_mime_type in ZIP_MIME_TYPES:
                 is_archive = True

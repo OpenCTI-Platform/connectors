@@ -234,14 +234,16 @@ class File(BaseModel):
         self.__post_init__()
 
     def to_stix2_object(self) -> stix2.File:
-        return stix2.File(
-            name=self.name,
-            hashes=self.hashes,
-            object_marking_refs=self.object_marking_refs,
-            custom_properties={
+        kwargs = {
+            "name": self.name,
+            "object_marking_refs": self.object_marking_refs,
+            "custom_properties": {
                 "created_by_ref": self.author.id,
             },
-        )
+        }
+        if self.hashes:
+            kwargs["hashes"] = self.hashes
+        return stix2.File(**kwargs)
 
 
 class Hostname(BaseModel):
