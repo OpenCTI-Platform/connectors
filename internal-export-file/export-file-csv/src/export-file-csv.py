@@ -30,15 +30,46 @@ class ExportFileCsv:
             []
         )  # error holder to be reset before each new process
 
+    # The frontend (opencti #15593) sends the visible DataTable column ids as
+    # the ``visible_columns`` list. A few presentation column ids differ from
+    # the field keys present in the exported entity dicts, so they are mapped to
+    # the matching export key before filtering. Any id not listed here is
+    # matched against the export keys as-is (most ids already match, e.g.
+    # ``relationship_type``, ``entity_type``, ``created_at``, ``objectMarking``).
+    VISIBLE_COLUMN_ALIASES = {
+        "fromName": "from",
+        "fromType": "from",
+        "toName": "to",
+        "toType": "to",
+        "creator": "creators",
+    }
+
+    @classmethod
+    def _select_export_headers(cls, data_headers, columns):
+        """Resolve which export columns to keep, preserving the requested order.
+
+        ``columns`` is the optional list of visible DataTable column ids sent by
+        the frontend. ``None`` or an empty list means "no filter" — export every
+        column. Known presentation ids are translated to their export field key
+        via ``VISIBLE_COLUMN_ALIASES``; ids without a matching export key are
+        dropped. If the requested columns resolve to nothing (e.g. none overlap
+        the data), fall back to all columns so the export is never empty.
+        """
+        if not columns:
+            return data_headers
+        selected = []
+        seen = set()
+        for column in columns:
+            key = cls.VISIBLE_COLUMN_ALIASES.get(column, column)
+            if key in data_headers and key not in seen:
+                seen.add(key)
+                selected.append(key)
+        return selected or data_headers
+
     def export_dict_list_to_csv(self, data, columns=None):
-        included_columns = columns or []
         output = io.StringIO()
         data_headers = sorted(set().union(*(d.keys() for d in data)))
-        headers = (
-            [header for header in included_columns if header in data_headers]
-            if len(included_columns) != 0
-            else data_headers
-        )
+        headers = self._select_export_headers(data_headers, columns)
         if "hashes" in headers:
             headers = headers + [
                 "hashes.MD5",
@@ -130,7 +161,9 @@ class ExportFileCsv:
         entity_id = data.get("entity_id")
         entity_type = data["entity_type"]
         list_params = data.get("list_params", {})
-        visible_columns = list_params.get("visible_columns", [])
+        # Use None (not []) as the "no filter" sentinel so an absent
+        # visible_columns exports all columns, while a provided list filters.
+        visible_columns = list_params.get("visible_columns")
         self.helper.connector_logger.debug(
             "Exporting with visible columns",
             {"visible_columns": visible_columns},
