@@ -6,6 +6,7 @@ from typing import IO, Dict, Iterable, List, Pattern, Tuple
 import chardet
 import ioc_finder
 from bs4 import BeautifulSoup
+from docx import Document
 from pdfminer.high_level import extract_pages
 from pdfminer.layout import LAParams, LTTextContainer
 from pycti import OpenCTIConnectorHelper
@@ -138,8 +139,6 @@ class ReportParser(object):
     def _parse_docx(self, file_data: IO) -> Dict[str, Dict]:
         parse_info = {}
         try:
-            from docx import Document
-
             doc = Document(file_data)
             for paragraph in doc.paragraphs:
                 text = paragraph.text.strip()
