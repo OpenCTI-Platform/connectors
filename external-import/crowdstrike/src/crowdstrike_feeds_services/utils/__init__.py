@@ -185,22 +185,23 @@ def paginate(func):
             errors = response["errors"]
             if errors:
                 logger.error("Query completed with errors")
-                for error in errors:
-                    # FalconPy returns each error as a dict
-                    # (e.g. ``{"code": 400, "message": "..."}``), not an
-                    # object with ``.message`` / ``.code`` attributes. Read
-                    # the fields defensively so a malformed (non-dict) entry
-                    # cannot mask the underlying API error with an
-                    # ``AttributeError``.
+                # ``errors`` may be a single dict, a list of dicts, or another
+                # shape, so normalize to a list before iterating (iterating a
+                # bare dict would yield its keys and mask the real error).
+                # FalconPy returns each error as a dict (e.g.
+                # ``{"code": 400, "message": "..."}``), not an object with
+                # ``.message`` / ``.code`` attributes; read the fields
+                # defensively and fall back to the raw error when no message is
+                # present so the underlying API error is never lost.
+                error_list = errors if isinstance(errors, (list, tuple)) else [errors]
+                for error in error_list:
                     if isinstance(error, dict):
-                        error_message = error.get("message")
+                        error_message = error.get("message") or error
                         error_code = error.get("code")
                     else:
                         error_message = error
                         error_code = None
-                    logger.error(
-                        "Error: %s (code: %s)", error_message, error_code
-                    )
+                    logger.error("Error: %s (code: %s)", error_message, error_code)
 
             meta = response["meta"]
             if meta["pagination"] is not None:
