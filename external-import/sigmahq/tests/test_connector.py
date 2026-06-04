@@ -196,9 +196,7 @@ class TestProcessMessageExceptionHandling:
         """Best-effort close: if to_processed itself raises, we just log."""
         connector = _make_connector()
         connector.helper.get_state.return_value = None
-        connector.client.get_latest_published_version.side_effect = RuntimeError(
-            "boom"
-        )
+        connector.client.get_latest_published_version.side_effect = RuntimeError("boom")
         connector.helper.api.work.to_processed.side_effect = RuntimeError(
             "platform down"
         )
@@ -259,4 +257,3 @@ class TestRun:
         call_kwargs = connector.helper.schedule_process.call_args[1]
         assert call_kwargs["message_callback"] == connector.process_message
         assert call_kwargs["duration_period"] == 86400
-
