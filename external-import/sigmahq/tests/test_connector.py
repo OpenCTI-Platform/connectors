@@ -10,6 +10,7 @@ Covers the orchestration logic in ``connector.py``:
 """
 
 from unittest.mock import MagicMock
+
 from connector.connector import SigmaHQConnector
 
 
