@@ -293,19 +293,30 @@ class CensysStixBuilder:
         )
 
     def add_certificate(self, cert: Certificate | None) -> X509Certificate | None:
+        # An X509Certificate observable is identified by its fingerprints. The
+        # SDK model rejects empty ``hashes`` at serialization (stix2 raises
+        # "hashes must not be empty"), so a certificate with no fingerprint at
+        # all cannot be represented — skip it rather than emit an unserializable
+        # object, even if ``parsed`` metadata is present.
         if not cert or not (
-            cert.fingerprint_sha256
-            or cert.fingerprint_sha1
-            or cert.fingerprint_md5
-            or cert.parsed
+            cert.fingerprint_sha256 or cert.fingerprint_sha1 or cert.fingerprint_md5
         ):
             return None
+        # Only keep fingerprints that are actually present. The SDK model types
+        # ``hashes`` as ``dict[HashAlgorithm, str] | None`` (with min_length=1),
+        # so ``None`` values would fail validation and an empty dict is invalid
+        # too — pass ``None`` when the certificate carries no fingerprint.
+        hashes = {
+            algorithm: fingerprint
+            for algorithm, fingerprint in (
+                (HashAlgorithm.SHA1, cert.fingerprint_sha1),
+                (HashAlgorithm.SHA256, cert.fingerprint_sha256),
+                (HashAlgorithm.MD5, cert.fingerprint_md5),
+            )
+            if fingerprint
+        }
         certificate = X509Certificate(
-            hashes={
-                HashAlgorithm.SHA1: cert.fingerprint_sha1,
-                HashAlgorithm.SHA256: cert.fingerprint_sha256,
-                HashAlgorithm.MD5: cert.fingerprint_md5,
-            },
+            hashes=hashes or None,
             **self.common_props,
         )
         if cert.parsed:
