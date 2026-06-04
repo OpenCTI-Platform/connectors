@@ -41,7 +41,7 @@ class TemplateConnector:
         - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to OpenCTI
         - `self.helper.set_state()` is used to store persistent data in connector's state
         - `self.helper.api.work.to_processed(...)` MUST be called to notify the platform when all bundles were sent
-        or when an error occured. Consider calling it in a `finally` block to make sure it gets called.
+        or when an error occurred. Consider calling it in a `finally` block to make sure it gets called.
 
     """
 

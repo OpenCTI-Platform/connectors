@@ -350,6 +350,10 @@ class RestoreFilesConnector:
                         self.helper.api.stix2.import_bundle_from_json(
                             json.dumps(bundle), True
                         )
+                    message = (
+                        "Restore dir run (direct creation), "
+                        "storing last_run as {0}".format(entry.name)
+                    )
                 else:
                     self.helper.log_info("restore dir (worker bundles):" + entry.name)
                     self.helper.send_stix2_bundle(

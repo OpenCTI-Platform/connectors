@@ -588,7 +588,8 @@ class MWDB:
 
     def start_up(self):
         while True:
-            in_error = None
+            self.workid = None
+            in_error = False
             message = ""
             try:
                 timestamp = int(time.time())
@@ -650,12 +651,16 @@ class MWDB:
                 in_error = True
                 self.helper.log_error(message)
             finally:
-                self.helper.api.work.to_processed(self.workid, message, in_error=in_error)
+                if self.workid is not None:
+                    self.helper.api.work.to_processed(
+                        self.workid, message, in_error=in_error
+                    )
+                    self.workid = None
 
             if self.helper.connect_run_and_terminate:
-                message = "Connector stop"
-                self.helper.api.work.to_processed(self.workid, message, in_error=True)
-                self.helper.log_info(message)
+                # The work was already closed in the finally block above; just
+                # log, flush the ping and terminate.
+                self.helper.log_info("Connector stop")
                 self.helper.force_ping()
                 sys.exit(0)
             time.sleep(60)

@@ -52,6 +52,9 @@ class AbuseSSLConnector:
     def run(self):
         """Running component of class"""
         while True:
+            work_id = None
+            in_error = False
+            message = ""
             try:
                 current_state = self.helper.get_state()
                 now = datetime.now(tz=timezone.utc)
@@ -82,22 +85,29 @@ class AbuseSSLConnector:
                     + " events have been processed), storing last_run as "
                     + str(now)
                 )
-                self.helper.api.work.to_processed(work_id, message)
                 self.helper.log_info(message)
                 self.helper.set_state(
                     {
                         "last_run": now.timestamp(),
                     }
                 )
-                time.sleep(self.interval)
 
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                message = "Connector stop"
+                in_error = True
+                self.helper.log_info(message)
                 exit(0)
 
             except Exception as exception:
-                self.helper.log_error(str(exception))
-                time.sleep(self.interval)
+                message = "Failed: {0}".format(str(exception))
+                in_error = True
+                self.helper.log_error(message)
+            finally:
+                if work_id is not None:
+                    self.helper.api.work.to_processed(
+                        work_id, message, in_error=in_error
+                    )
+            time.sleep(self.interval)
 
     def get_ips(self, url):
         """

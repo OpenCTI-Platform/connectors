@@ -138,6 +138,7 @@ class LastInfoSec:
         req = requests.get(url, proxies=proxy_dic)
         if req.status_code == 200:
             lastinfosec_data = req.json()
+            work_id = None
             if isinstance(lastinfosec_data, list) and len(lastinfosec_data) > 0:
                 friendly_name = "LastInfoSec CTI run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
@@ -148,8 +149,9 @@ class LastInfoSec:
                 self.push_data(lastinfosec_data, timestamp, work_id)
             stop = time.perf_counter()
             process_time_seconds = stop - start
-            message = "Done in {0} seconds".format(process_time_seconds)
-            self.helper.api.work.to_processed(work_id, message)
+            if work_id is not None:
+                message = "Done in {0} seconds".format(process_time_seconds)
+                self.helper.api.work.to_processed(work_id, message)
             time_to_sleep = run_interval - process_time_seconds
         else:
             message = "Connector error run, storing last_run as {0}".format(timestamp)

@@ -83,7 +83,6 @@ class SekoiaConnector(object):
             cursor = self._run(cursor, work_id)
             message = f"Connector successfully run, cursor updated to {cursor}"
             self.helper.connector_logger.info(message)
-            self.helper.api.work.to_processed(work_id, message)
         except (KeyboardInterrupt, SystemExit):
             message = "Connector stop"
             self.helper.connector_logger.info(message)

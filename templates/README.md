@@ -405,7 +405,7 @@ Forgetting to call `to_processed` will prevent the Work from transitioning to th
 ```python
 work_id = None
 message = "Done"
-is_error = False
+in_error = False
 try:
   work_id = self.helper.api.work.initiate_work(
       self.helper.connect_id, friendly_name
@@ -415,12 +415,12 @@ try:
 except Exception as ex:
   # You might want to treat several error cases differently, this is a basic handling
   message = "Failed: {}".format(str(ex))
-  is_error = True
+  in_error = True
 finally:
   # It's important to notify the backend that the connector finished pushing all bundles on the queue.
   # The Work will be able to transition to `complete` when all bundles get treated by the workers.
   if work_id is not None:
-    self.helper.api.work.to_processed(work_id, message, is_error=is_error)
+    self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 ```
 
 Get current state
