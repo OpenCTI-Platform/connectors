@@ -1,0 +1,23 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'  # UUIDv4
+  name: 'CTM360-CyberBlindSpot'
+  scope: 'CTM360-CyberBlindSpot'
+  log_level: 'info'
+  duration_period: 'PT24H'
+
+ctm360_cbs:
+  api_base_url: 'https://cbs.ctm360.com'
+  api_key: 'ChangeMe'
+  import_interval: 86400
+  import_incidents: true
+  import_malware_logs: true
+  import_breached_credentials: true
+  import_card_leaks: true
+  import_domain_protection: true
+  enable_status_tracking: true
+  status_poll_interval: 3600

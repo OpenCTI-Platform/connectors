@@ -22,12 +22,16 @@ def test_incident_class_should_not_accept_invalid_input():
         Incident.model_validate(input_data)
 
 
-def test_incident_class_should_require_name_and_created():
-    """Test that Incident class requires name and created fields."""
-    with pytest.raises(ValidationError):
-        Incident.model_validate({"name": "Test incident"})
+def test_incident_class_should_require_name():
+    """Test that Incident class requires name field."""
     with pytest.raises(ValidationError):
         Incident.model_validate({"created": "2024-01-01T00:00:00Z"})
+
+
+def test_incident_class_should_accept_without_created():
+    """Test that Incident class accepts missing created field."""
+    incident = Incident.model_validate({"name": "Test incident"})
+    assert incident.created is None
 
 
 def test_incident_to_stix2_object_returns_valid_stix_object(
@@ -76,7 +80,6 @@ def test_incident_to_stix2_object_with_minimal_fields():
     """Test that Incident to_stix2_object works with only required fields."""
     incident = Incident(
         name="Minimal incident",
-        created="2024-06-15T10:00:00Z",
     )
     stix2_obj = incident.to_stix2_object()
 

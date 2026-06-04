@@ -85,10 +85,15 @@ class ConverterConfig:
         original_tags_to_keep_as_labels: list[str] = [],
         default_attribute_score: int | None = None,
         guess_threats_from_tags: bool = False,
+        threat_level_score_mapping: dict[str, int] | None = None,
     ):
         self.report_type = report_type
         self.report_description_attribute_filters = report_description_attribute_filters
-        self.external_reference_base_url = external_reference_base_url
+        self.external_reference_base_url = (
+            external_reference_base_url.rstrip("/")
+            if isinstance(external_reference_base_url, str)
+            else external_reference_base_url
+        )
         self.convert_event_to_report = convert_event_to_report
         self.convert_attribute_to_associated_file = convert_attribute_to_associated_file
         self.convert_attribute_to_indicator = convert_attribute_to_indicator
@@ -107,3 +112,4 @@ class ConverterConfig:
         self.original_tags_to_keep_as_labels = original_tags_to_keep_as_labels
         self.default_attribute_score = default_attribute_score
         self.guess_threats_from_tags = guess_threats_from_tags
+        self.threat_level_score_mapping = threat_level_score_mapping

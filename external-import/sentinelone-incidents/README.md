@@ -1,9 +1,5 @@
 # OpenCTI SentinelOne Incidents
 
-| Status | Date | Comment |
-|--------|------|---------|
-| Community | -    | -       |
-
 This connector allows Incidents from a SentinelOne account to be created within an OpenCTI Instance
 
 <br>
@@ -23,17 +19,9 @@ This software is provided as a community-driven project and is not officially su
 <br>
 
 ## How It Works
-The connector will create a corresponding OpenCTI Incident for `flagged` SentinelOne threats only.
+The connector will create a corresponding OpenCTI Incident for SentinelOne threats only.
 
-<br>
-
-- To `flag` a threat in SentinelOne, simply create a new note on the threat's page whose text is the value of `SIGN`. You will define this as an environment variable in the setup (`[OpenCTI_add]` by default).
-
-![Flagging Note In S1](doc/tag_note.png)
-
-<br>
-
-- Each fetch interval, the connector will scan the threats on your SentinelOne account, triggering the creation process on those that are flagged. The interval between scans is determined by the enviroment variable `CONNECTOR_DURATION_PERIOD` that you will define in seconds.
+- Each fetch interval, the connector queries SentinelOne for all incidents created strictly after the cursor (`last_run`, falling back to `SENTINELONE_INCIDENTS_IMPORT_START_DATE` on the first run) and triggers the creation process on each one. The interval between scans is determined by the environment variable `CONNECTOR_DURATION_PERIOD`, configured as an ISO-8601 duration (e.g. `PT5M` for every 5 minutes).
 
 <br>
 
@@ -130,7 +118,7 @@ It is best practice to create a new user under the `Connectors` group and to use
 - Config.yml: `log_level`
 
 ##### Connector Duration Period
-- The intervals at which the Connector will scan for (and subsequently process) newly flagged Incidents in ISO8601 format. A value of `PT5M`, to scan every 5 minutes, is recommended. 
+- The interval at which the Connector will query SentinelOne for new Incidents (and subsequently process them), expressed as an ISO-8601 duration. A value of `PT5M`, to scan every 5 minutes, is recommended.
 - Example: `PT5M`
 - Environment Variable: `CONNECTOR_DURATION_PERIOD`
 - Config.yml: `duration_period`
@@ -142,31 +130,31 @@ It is best practice to create a new user under the `Connectors` group and to use
 ##### SentinelOne URL
 - The SentinelOne URL used to access the console. **NOTE:** The URL should not end with a `/`.
 - Example: `https://usea1-purple.sentinelone.net`
-- Environment Variable: `S1_URL`
+- Environment Variable: `SENTINELONE_INCIDENTS_URL`
 - Config.yml: `url`
 
 ##### SentinelOne API Key
 - The API key for your SentinelOne account (JWT). **NOTE:** Should not include `APIToken`.
 - Example: `eyJraWQiO...`
-- Environment Variable: `S1_API_KEY`
+- Environment Variable: `SENTINELONE_INCIDENTS_API_KEY`
 - Config.yml: `api_key`
 
 ##### SentinelOne Account ID
 - The ID of your SentinelOne Account.
 - Example: `1234567890123456789`
-- Environment Variable: `S1_ACCOUNT_ID`
+- Environment Variable: `SENTINELONE_INCIDENTS_ACCOUNT_ID`
 - Config.yml: `account_id`
 
 ##### Maximum API Attempts
 - The maximum number of times the connector will retry push attempts when they fail. `5` is recommended as failures almost only ever occur due to the API rate limits Exponential backoffs are implemented alongside this to handle the rate limits.
 - Example: `5`
-- Environment Variable: `MAX_API_ATTEMPTS`
+- Environment Variable: `SENTINELONE_INCIDENTS_MAX_API_ATTEMPTS`
 - Config.yml: `max_api_attempts`
 
-##### Incident Flag String
-- The string that will be inputted into a note for an Incident in SentinelOne to flag it for importing. 
-- Example: `[OpenCTI_add]`
-- Environment Variable: `SIGN`
-- Config.yml: `sign`
+##### Import Start Date
+- The start date for fetching incidents from SentinelOne in ISO8601 format.
+- Example: `2026-03-01T00:00:00Z`
+- Environment Variable: `SENTINELONE_INCIDENTS_IMPORT_START_DATE`
+- Config.yml: `import_start_date`
 
 <br>
