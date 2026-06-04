@@ -20,10 +20,11 @@ class ConnectorClient:
 
     def set_oauth_token(self):
         try:
-            url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
+            config = self.config.microsoft_defender_incidents
+            url = f"https://login.microsoftonline.com/{config.tenant_id}/oauth2/v2.0/token"
             oauth_data = {
-                "client_id": self.config.client_id,
-                "client_secret": self.config.client_secret,
+                "client_id": config.client_id,
+                "client_secret": config.client_secret.get_secret_value(),
                 "grant_type": "client_credentials",
                 "scope": "https://graph.microsoft.com/.default",
             }
@@ -63,8 +64,9 @@ class ConnectorClient:
         :param date_str: date in iso 8601 format as a character string.
         :return: A fully constructed URL string for querying incidents.
         """
-        base_url = self.config.api_base_url
-        incident_path = self.config.incident_path
+        config = self.config.microsoft_defender_incidents
+        base_url = str(config.api_base_url).rstrip("/")
+        incident_path = config.incident_path
         params = {"$expand": "alerts", "$filter": f"lastUpdateDateTime gt {date_str}"}
         return requests.Request(
             "GET", f"{base_url}{incident_path}", params=params

@@ -1,12 +1,11 @@
 import sys
-from datetime import datetime
 
 import stix2
 from pycti import OpenCTIConnectorHelper
 
 from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
 from .converter_to_stix import ConverterToStix
+from .settings import ConnectorSettings
 from .utils import detect_ip_version, find_matching_file_ids, format_date
 
 
@@ -23,9 +22,9 @@ class MicrosoftDefenderIncidentsConnector:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
-            Initialize the connector with necessary configuration environment variables
-        - `helper (OpenCTIConnectorHelper(config))`:
+        - `config (ConnectorSettings)`:
+            Store the connector's configuration. It defines how the connector will behave.
+        - `helper (OpenCTIConnectorHelper)`:
             This is the helper to use.
             ALL connectors have to instantiate the connector helper with configurations.
             Doing this will do a lot of operations behind the scene.
@@ -36,7 +35,7 @@ class MicrosoftDefenderIncidentsConnector:
 
     Best practices
         - `self.helper.api.work.initiate_work(...)` is used to initiate a new work
-        - `self.helper.schedule_iso()` is used to encapsulate the main process in a scheduler
+        - `self.helper.schedule_process()` is used to encapsulate the main process in a scheduler
         - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
         - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
         - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to RabbitMQ
@@ -44,14 +43,16 @@ class MicrosoftDefenderIncidentsConnector:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
-        """
 
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
+        Args:
+            config (ConnectorSettings): Configuration of the connector
+            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+        """
+        self.config = config
+        self.helper = helper
         self.client = ConnectorClient(self.helper, self.config)
         self.tlp_marking = stix2.TLP_RED
         self.converter_to_stix = ConverterToStix(
@@ -68,10 +69,9 @@ class MicrosoftDefenderIncidentsConnector:
             last_timestamp = state["last_incident_timestamp"]
             return last_timestamp
 
-        if self.config.import_start_date:
-            datetime_obj = datetime.fromisoformat(self.config.import_start_date)
-            last_timestamp = int(round(datetime_obj.timestamp()))
-            return last_timestamp
+        import_start_date = self.config.microsoft_defender_incidents.import_start_date
+        last_timestamp = int(round(import_start_date.timestamp()))
+        return last_timestamp
 
     def _set_last_incident_date(self, incident_timestamp: int):
         """
@@ -418,7 +418,7 @@ class MicrosoftDefenderIncidentsConnector:
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         :return: None
         """
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )
