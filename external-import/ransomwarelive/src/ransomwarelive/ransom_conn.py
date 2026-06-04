@@ -188,7 +188,8 @@ class RansomwareAPIConnector:
             group_entry (dict): single group entry from /v2/groups API
             intrusion_set (stix2.IntrusionSet): the group's IntrusionSet object
         Returns:
-            list of stix2 objects (attack_pattern + relationship pairs)
+            list of 'uses' Relationship objects (the referenced AttackPatterns
+            are resolved from OpenCTI by id and are not added to the bundle)
         """
         objects = []
         for tactic in group_entry.get("ttps") or []:
@@ -225,10 +226,12 @@ class RansomwareAPIConnector:
         """
         if group_name in self.processed_groups:
             return []
-        self.processed_groups.add(group_name)
         group_entry = get_group_entry(group_name, group_data)
         if not group_entry:
+            # Don't mark the group processed until a matching entry is found, so
+            # a partial/inconsistent API response doesn't permanently skip it.
             return []
+        self.processed_groups.add(group_name)
         objects = []
         if self.config.connector.create_leak_site_domains:
             objects.extend(
