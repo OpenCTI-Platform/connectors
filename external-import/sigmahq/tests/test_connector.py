@@ -9,9 +9,7 @@ Covers the orchestration logic in ``connector.py``:
 - Failure to mark work as in_error (best-effort close)
 """
 
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 from connector.connector import SigmaHQConnector
 
 
