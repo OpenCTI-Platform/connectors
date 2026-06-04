@@ -108,7 +108,7 @@ class TheHive:
         """Converts the Hive Observable to a STIX observable."""
         stix_observable = None
         try:
-            create_by_ref = self.identity.get("standard_id")
+            create_by_ref = self.identity.id
             u_observable = HiveObservableTransform(
                 observable=observable,
                 markings=markings,
@@ -136,7 +136,7 @@ class TheHive:
             last_seen=modified,
             object_marking_refs=markings,
             labels=alert.get("tags", []),
-            created_by_ref=self.identity.get("standard_id", ""),
+            created_by_ref=self.identity.id,
             allow_custom=True,
             custom_properties={
                 "source": alert.get("source", ""),
@@ -277,13 +277,13 @@ class TheHive:
             stix_sighting = stix2.Sighting(
                 id=StixSightingRelationship.generate_id(
                     stix_observable.id,
-                    self.identity.get("standard_id"),
+                    self.identity.id,
                     format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                     format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
                 ),
                 first_seen=format_datetime(int_start_date, DEFAULT_UTC_DATETIME),
                 last_seen=format_datetime(int_start_date + 3600, DEFAULT_UTC_DATETIME),
-                where_sighted_refs=[self.identity.get("standard_id")],
+                where_sighted_refs=[self.identity.id],
                 # As SDO are not supported in official STIX, we use a fake ID in ref
                 # Worker will use custom_properties instead
                 sighting_of_ref="indicator--c1034564-a9fb-429b-a1c1-c80116cc8e1e",
@@ -429,7 +429,7 @@ class TheHive:
             created=created,
             object_marking_refs=markings,
             labels=case.get("tags") if case.get("tags") else None,
-            created_by_ref=self.identity.get("standard_id"),
+            created_by_ref=self.identity.id,
             severity=(
                 self.severity_mapping[case.get("severity")]
                 if case.get("severity") in self.severity_mapping
@@ -504,7 +504,7 @@ class TheHive:
                         "related-to", stix_observable.id, stix_incident.id
                     ),
                     relationship_type="related-to",
-                    created_by_ref=self.identity.get("standard_id", ""),
+                    created_by_ref=self.identity.id,
                     source_ref=stix_observable.id,
                     target_ref=stix_incident.id,
                     object_marking_refs=markings,
@@ -647,7 +647,7 @@ class TheHive:
                                 "related-to", file_artifact.id, stix_case.id
                             ),
                             relationship_type="related-to",
-                            created_by_ref=self.identity.get("standard_id", ""),
+                            created_by_ref=self.identity.id,
                             source_ref=file_artifact.id,
                             target_ref=stix_case.id,
                             allow_custom=True,
