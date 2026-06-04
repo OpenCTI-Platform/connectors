@@ -330,11 +330,18 @@ class ConverterToStix:
                     pattern = f"[email-addr:value = '{self._escape_stix_value(email)}']"
                     indicator_name = f"Breached credential: {email}"
                 else:
+                    # Fall back to the email when there is no username (the email
+                    # may be present but lack an "@"). indicator_value is truthy
+                    # here, so username-or-email is guaranteed non-empty and the
+                    # pattern is never an empty/constant string — an empty pattern
+                    # would collapse unrelated records onto one Indicator id. This
+                    # mirrors the UserAccount account_login below.
+                    account_login = username or email
                     pattern = (
                         "[user-account:account_login = "
-                        f"'{self._escape_stix_value(username)}']"
+                        f"'{self._escape_stix_value(account_login)}']"
                     )
-                    indicator_name = f"Breached credential: {username}"
+                    indicator_name = f"Breached credential: {account_login}"
 
                 # Derive the Indicator id from its STIX pattern via the pycti
                 # generator so the same credential pattern de-duplicates across

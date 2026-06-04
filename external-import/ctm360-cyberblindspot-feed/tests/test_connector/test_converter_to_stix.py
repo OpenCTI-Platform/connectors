@@ -443,6 +443,32 @@ class TestBreachedCredentialsToStix:
         assert "user-account" in types
         assert "note" in types
 
+    def test_invalid_email_without_username_uses_nonempty_pattern(self, converter):
+        # An email present but invalid (no "@") with no username must not yield
+        # an empty user-account pattern (which would collapse unrelated records
+        # onto a single constant Indicator id). It falls back to the email value
+        # and stays consistent with the UserAccount account_login.
+        objects = converter.breached_credentials_to_stix(
+            [{"id": "C4", "email": "not-an-email"}]
+        )
+        indicators = [o for o in objects if o.type == "indicator"]
+        assert indicators
+        assert indicators[0].pattern == "[user-account:account_login = 'not-an-email']"
+        user_accounts = [o for o in objects if o.type == "user-account"]
+        assert user_accounts[0].account_login == "not-an-email"
+
+    def test_invalid_email_indicator_ids_are_distinct(self, converter):
+        # Two records with different invalid emails (and no username) must map to
+        # distinct Indicators rather than collapsing onto one empty-pattern id.
+        objects = converter.breached_credentials_to_stix(
+            [
+                {"id": "C5", "email": "bad-one"},
+                {"id": "C6", "email": "bad-two"},
+            ]
+        )
+        indicator_ids = {o.id for o in objects if o.type == "indicator"}
+        assert len(indicator_ids) == 2
+
 
 class TestCardLeaksToStix:
     def test_card_leak_note(self, converter):
