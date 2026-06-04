@@ -1,3 +1,2 @@
 -r ../src/requirements.txt
 pytest==9.0.3
-pytest-cov>=4.1.0,<6.0.0
