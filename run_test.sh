@@ -80,14 +80,10 @@ do
       uv pip install -q ./connectors-sdk
   fi
 
-  if [ -n "$project_has_sdk_dependency" ] ; then
-    echo 'Keeping pycti version required by connectors-sdk'
-  else
-    echo 'Installing latest version of pycti'
-    uv pip uninstall pycti
-    REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
-    uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
-  fi
+  echo 'Installing latest version of pycti'
+  uv pip uninstall pycti
+  REF="${CIRCLE_TAG:-${RELEASE_REF:-"master"}}"
+  uv pip install -q git+https://github.com/OpenCTI-Platform/opencti.git@"$REF"#subdirectory=client-python
   uv pip freeze | grep "connectors-sdk\|pycti" || true
 
   uv pip check || exit 1  # exit if dependencies are broken
