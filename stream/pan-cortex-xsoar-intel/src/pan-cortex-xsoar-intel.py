@@ -89,7 +89,9 @@ class XSoarAPI:
         xsoar_key: str,
         xsoar_ssl_verify: bool,
     ) -> None:
-        self.xsoar_url = xsoar_url
+        self.xsoar_url = (
+            xsoar_url.rstrip("/") if isinstance(xsoar_url, str) else xsoar_url
+        )
         self.xsoar_key_id = xsoar_key_id
         self.xsoar_key = xsoar_key
         self.xsoar_ssl_verify = xsoar_ssl_verify

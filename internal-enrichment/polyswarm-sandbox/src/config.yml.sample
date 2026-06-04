@@ -1,0 +1,49 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  type: 'INTERNAL_ENRICHMENT'
+  id: 'ChangeMe'
+  name: 'PolySwarm Sandbox'
+  scope: 'StixFile,Artifact'
+  auto: false
+  log_level: 'error'
+
+polyswarm:
+  api_key: 'ChangeMe'
+  api_url: 'https://api.polyswarm.network'
+  community: 'default'
+  max_tlp: 'TLP:AMBER'
+  replace_with_lower_score: true
+  timeout: 300
+
+  # Sandbox settings
+  sandbox_enabled: true
+  sandbox_provider: 'cape'              # cape, triage, or both
+  sandbox_vm_cape: 'win-10-build-19041'
+  sandbox_vm_triage: 'windows11-21h2-x64'
+  sandbox_network_enabled: true
+  sandbox_timeout: 600
+
+  # Polling
+  poll_interval: 30
+  poll_timeout: 900
+
+  # Reports
+  json_report_enabled: true
+  pdf_report_enabled: true
+  llm_report_enabled: true
+  llm_report_timeout: 120
+
+  # STIX creation
+  min_polyscore: 50
+  create_indicators: true
+  create_observables: true
+
+  # File handling
+  max_file_size: 33554432               # 32MB
+  download_artifacts: true
+
+  # polykg (optional — malware profile enrichment, empty = disabled)
+  # polykg_api_url: ''

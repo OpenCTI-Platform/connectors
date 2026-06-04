@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from urllib.parse import parse_qs, urlparse
 
 from .base_api import BaseCrowdstrikeClient
 
@@ -14,46 +13,39 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         super().__init__(config, helper)
 
     def get_combined_indicator_entities(
-        self, limit: int, sort: str, fql_filter: str, deep_pagination: bool
+        self,
+        limit: int,
+        sort: str,
+        fql_filter: str,
     ) -> dict:
-        """
-        Get info about indicators that match provided FQL filters.
-        :param limit: Maximum number of records to return (Max: 5000) in integer
-        :param sort: The property to sort by. (Ex: created_date|desc) in str
-        :param fql_filter: FQL query expression that should be used to limit the results in str
-        :param deep_pagination: Boolean
-        :return: Dict object containing API response
+        """Get info about indicators that match provided FQL filters.
+
+        Thin wrapper around the FalconPy ``QueryIntelIndicatorEntities``
+        operation (``GET /intel/combined/indicators/v1``). The only
+        keyword arguments accepted by that operation are ``fields``,
+        ``filter``, ``include_deleted``, ``include_relations``, ``limit``,
+        ``offset``, ``parameters``, ``q`` and ``sort`` — there is no
+        ``deep_pagination`` flag and no continuation-token parameter, and
+        the response carries no ``Next-Page`` HTTP header. Deep pagination
+        is handled by the caller via the ``_marker`` FQL field (see the
+        importer for the loop). Keeping this method *single-page* avoids
+        re-introducing the silently-ignored ``deep_pagination`` / ``next_page``
+        keywords that previously caused the connector to only ever fetch
+        the first page.
+
+        :param limit: Maximum number of records to return (max: 5000).
+        :param sort: The property to sort by (e.g. ``_marker.asc``).
+        :param fql_filter: FQL query expression used to filter the results.
+        :return: Parsed response body (``response["body"]``).
         """
         response = self.cs_intel.query_indicator_entities(
-            limit=limit, sort=sort, filter=fql_filter, deep_pagination=deep_pagination
+            limit=limit, sort=sort, filter=fql_filter
         )
-
-        response_body = response["body"]
-        response_body["next_page_details"] = None
-
-        next_page_details = self.get_next_page(response)
-
-        if next_page_details is not None:
-            response_body["next_page_details"] = next_page_details
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting combined indicator entities...")
 
-        return response_body
-
-    @staticmethod
-    def get_next_page(response: dict) -> dict | None:
-        """
-        Get the next page of indicators if the total number is higher than the limit chosen
-        :param response: dict of the response
-        :return: A dictionary if there is more indicators than limit set or None
-        """
-        next_page = response.get("headers").get("Next-Page")
-
-        if next_page is not None:
-            enc_payload = urlparse(next_page).query
-            next_page_parsed = parse_qs(enc_payload)
-
-            return next_page_parsed
-        else:
-            return None
+        # ``handle_api_error`` normalises ``response["body"]`` to ``{}``
+        # when the upstream omits it, but we still guard here so the
+        # contract is explicit at the call site.
+        return response.get("body") or {}

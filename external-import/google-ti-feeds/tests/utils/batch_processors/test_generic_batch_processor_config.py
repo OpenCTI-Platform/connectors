@@ -106,7 +106,6 @@ def full_config() -> GenericBatchProcessorConfig:
         preprocessing_function=sample_preprocessor,
         postprocessing_function=sample_postprocessor,
         validation_function=sample_validator,
-        empty_batch_behavior="skip",
         max_retries=3,
         retry_delay=2.0,
         work_timeout=120.0,
@@ -183,24 +182,6 @@ def test_basic_config_validation_on_creation() -> None:
             display_name="test",
         )
     assert "batch_size must be greater than 0" in str(excinfo.value)  # noqa: S101
-
-
-def test_basic_config_validation_empty_batch_behavior() -> None:
-    """Test validation of empty_batch_behavior parameter."""
-    # Given: Invalid empty_batch_behavior value
-
-    # When: Configuration is created with invalid empty_batch_behavior
-    # Then: ValueError should be raised
-    with pytest.raises(ValueError) as excinfo:
-        GenericBatchProcessorConfig(
-            batch_size=10,
-            work_name_template="Test",
-            state_key="test",
-            entity_type="test",
-            display_name="test",
-            empty_batch_behavior="invalid_value",
-        )
-    assert "empty_batch_behavior must be" in str(excinfo.value)  # noqa: S101
 
 
 # Scenario: Creating full configuration with all parameters
@@ -773,7 +754,6 @@ def _then_config_has_default_values(config: GenericBatchProcessorConfig) -> None
     assert config.preprocessing_function is None  # noqa: S101
     assert config.postprocessing_function is None  # noqa: S101
     assert config.validation_function is None  # noqa: S101
-    assert config.empty_batch_behavior == "update_state"  # noqa: S101
     assert config.max_retries == 0  # noqa: S101
     assert config.retry_delay == 1.0  # noqa: S101
     assert config.work_timeout is None  # noqa: S101
@@ -795,7 +775,6 @@ def _then_config_has_full_properties(config: GenericBatchProcessorConfig) -> Non
     assert config.preprocessing_function == sample_preprocessor  # noqa: S101
     assert config.postprocessing_function == sample_postprocessor  # noqa: S101
     assert config.validation_function == sample_validator  # noqa: S101
-    assert config.empty_batch_behavior == "skip"  # noqa: S101
     assert config.max_retries == 3  # noqa: S101
     assert config.retry_delay == 2.0  # noqa: S101
     assert config.work_timeout == 120.0  # noqa: S101

@@ -529,40 +529,6 @@ def filter_relationship_triplets(
     )
 
 
-def update_author(
-    author_id: str, stix_object: stix2.v21._STIXBase21
-) -> stix2.v21._STIXBase21:
-    """Attach an author (identity) to a STIX object.
-
-    Args:
-        author_id (str): The ID of the author identity to attach.
-        stix_object (stix2.v21._STIXBase21): The STIX object to process.
-
-    Returns:
-        (stix2.v21._STIXBase21): The processed STIX object with the author attached.
-
-    Examples:
-        >>> import stix2
-        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
-        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
-        >>> malware_with_author = attach_author(identity["id"], malware)
-        >>> # observable case
-        >>> ip = stix2.IPv4Address(value="127.0.0.1")
-        >>> ip_with_author = attach_author(identity["id"], ip)
-    """
-    object_dict = json.loads(stix_object.serialize())
-
-    try:
-        object_dict["created_by_ref"] = author_id
-        return stix2.parse(object_dict)
-    except stix2.exceptions.ExtraPropertiesError:
-        # for some stix object created by ref is not supported (ex: observable)
-        # we use x_opencti_created_by_ref instead
-        object_dict.pop("created_by_ref", None)
-        object_dict["x_opencti_created_by_ref"] = author_id
-        return stix2.parse(object_dict, allow_custom=True)
-
-
 def update_object_marking_refs(
     marking_ids: list[str], stix_object: stix2.v21._STIXBase21, extend: bool = True
 ) -> stix2.v21._STIXBase21:
@@ -643,42 +609,6 @@ def update_object_refs(
         object_dict["object_refs"] = object_refs
 
     return stix2.parse(object_dict, allow_custom=True)
-
-
-def bulk_update_authors(author_id: str, bundle: stix2.Bundle) -> stix2.Bundle:
-    """Attach an author (identity) to all STIX objects in a bundle.
-
-    Args:
-        author_id (str): The ID of the author identity to attach.
-        bundle (stix2.Bundle): The STIX bundle to process.
-
-    Returns:
-        (stix2.Bundle): The processed STIX bundle with authors attached to each object.
-
-    Examples:
-        >>> import stix2
-        >>> identity = stix2.Identity(name="Example Org", identity_class="organization")
-        >>> malware = stix2.Malware(name="Example Malware", is_family=False)
-        >>> report = stix2.Report(
-        ...     name="Example Report",
-        ...     description="An example report.",
-        ...     object_refs=[malware["id"]],
-        ...     published="2024-10-01T12:00:00Z",
-        ... )
-        >>> bundle = stix2.Bundle(
-        ...     objects=[
-        ...         identity,
-        ...         malware,
-        ...         report,
-        ...     ],
-        ...     allow_custom=True,
-        ... )
-        >>> bundle_with_authors = bulk_attach_author(identity["id"], bundle)
-    """
-    updated_objects = [
-        update_author(author_id, obj) for obj in bundle.get("objects", [])
-    ]
-    return stix2.Bundle(type=bundle["type"], objects=updated_objects, allow_custom=True)
 
 
 def bulk_update_object_markings(

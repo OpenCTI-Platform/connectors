@@ -1,0 +1,13 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Threat Actor Enrichment'
+  scope: 'threat-actor-group'
+  log_level: 'info'
+
+threat_actor_enrichment:
+  interval: 24 # hours

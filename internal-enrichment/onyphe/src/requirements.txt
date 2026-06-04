@@ -1,3 +1,3 @@
-requests
-pycti==7.260507.0
+requests<=2.33.0
+pycti==7.260604.0
 stix2

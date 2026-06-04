@@ -1,5 +1,6 @@
 """Module to test the OpenCTI connector configuration loading and instantiation."""
 
+import time
 from os import environ as os_environ
 from typing import Any
 from unittest.mock import patch
@@ -300,6 +301,8 @@ def _then_connector_created_successfully(capfd, mock_env, connector, data) -> No
                     else:
                         assert str(attr) == value  # noqa: S101
 
+        # Allow threaded log output to flush before capturing
+        time.sleep(0.1)
         log_records = capfd.readouterr()
         if connector._config.connector_config.log_level in ["info", "debug"]:
             assert "Connector registered with ID" in log_records.err  # noqa: S101
