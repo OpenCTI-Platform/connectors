@@ -5,13 +5,18 @@ from datetime import datetime
 
 import requests
 import stix2
-from connector.settings import ConnectorSettings
-from constants import DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
-from dateutil.parser import parse
-from hive_observable_transform import (
+from connector.constants import (
+    DEFAULT_UTC_DATETIME,
+    PAP_MAPPINGS,
+    TLP_MAPPINGS,
+)
+from connector.hive_observable_transform import (
     HiveObservableTransform,
     UnsupportedIndicatorTypeError,
 )
+from connector.settings import ConnectorSettings
+from connector.utils import format_datetime
+from dateutil.parser import parse
 from pycti import (
     CaseIncident,
     CustomObjectCaseIncident,
@@ -29,8 +34,6 @@ from thehive4py.query.page import Paginate
 from thehive4py.query.sort import Asc
 from thehive4py.types.alert import OutputAlert
 from thehive4py.types.case import OutputCase
-
-from utils import format_datetime  # isort: skip
 
 
 class TheHive:
@@ -50,18 +53,16 @@ class TheHive:
         else:
             self.thehive_import_from_date = time.time()
 
-        self.thehive_import_only_tlp = config.thehive.import_only_tlp.split(",")
+        self.thehive_import_only_tlp = config.thehive.import_only_tlp
         self.thehive_import_alerts = config.thehive.import_alerts
         self.thehive_import_attachments = config.thehive.import_attachments
 
-        self.thehive_severity_mapping = config.thehive.severity_mapping.split(",")
-        self.thehive_case_status_mapping = config.thehive.case_status_mapping.split(",")
-        self.thehive_case_tag_whitelist = config.thehive.case_tag_whitelist.split(",")
-        self.thehive_task_status_mapping = config.thehive.task_status_mapping.split(",")
-        self.thehive_alert_status_mapping = config.thehive.alert_status_mapping.split(
-            ","
-        )
-        self.thehive_user_mapping = config.thehive.user_mapping.split(",")
+        self.thehive_severity_mapping = config.thehive.severity_mapping
+        self.thehive_case_status_mapping = config.thehive.case_status_mapping
+        self.thehive_case_tag_whitelist = config.thehive.case_tag_whitelist
+        self.thehive_task_status_mapping = config.thehive.task_status_mapping
+        self.thehive_alert_status_mapping = config.thehive.alert_status_mapping
+        self.thehive_user_mapping = config.thehive.user_mapping
 
         self.severity_mapping = {}
         for mapping in self.thehive_severity_mapping:
@@ -234,7 +235,7 @@ class TheHive:
             self.helper.log_info(
                 f"Completed generation of STIX bundle for case: {case.get('title')}"
             )
-            self.helper.send_stix2_bundle(bundle)
+            self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
 
         except Exception as e:
             self.helper.log_error(f"Error serializing STIX bundle for 'case': {str(e)}")
@@ -244,7 +245,8 @@ class TheHive:
             try:
                 self.helper.log_info("Sending STIX artifacts bundle (attachments)...")
                 self.helper.send_stix2_bundle(
-                    self.helper.stix2_create_bundle(attachments)
+                    self.helper.stix2_create_bundle(attachments),
+                    cleanup_inconsistent_bundle=True,
                 )
 
             except Exception as e:
@@ -308,13 +310,9 @@ class TheHive:
 
     def not_found_items(self, items, type):
         api_error_msg = (
-            "There is an error with your The Hive URL: "
-            + self.thehive_url
-            + items["message"]
-            + " as the type <"
-            + type
-            + "> is not found and the API message error is: "
-            + items["type"]
+            f"There is an error with your The Hive URL: {self.thehive_url}"
+            f"{items['message']} as the type <{type}> is not found"
+            f" and the API message error is: {items['type']}"
         )
         raise Exception({"message": api_error_msg})
 
@@ -334,6 +332,7 @@ class TheHive:
                 self.helper.send_stix2_bundle(
                     stix_bundle,
                     work_id=work_id,
+                    cleanup_inconsistent_bundle=True,
                 )
 
                 updated_last_date = self.get_updated_date(item, updated_last_date)
@@ -596,7 +595,7 @@ class TheHive:
                     try:
                         url = f"{self.thehive_url}/api/v1/attachment/{file_id}/download"
                         self.helper.log_info(
-                            f"Download attachment {file_name} depuis {url}"
+                            f"Download attachment {file_name} from {url}"
                         )
 
                         response = requests.get(
