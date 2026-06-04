@@ -2,7 +2,7 @@
   "id": "_indicator_test_12345",
   "indicator": "example.malicious-domain.com",
   "type": "domain",
-  "last_update": 1640995200,
+  "last_updated": 1640995200,
   "published_date": 1640908800,
   "malicious_confidence": "high",
   "reports": ["CSIR-20001", "CSIT-54321"],

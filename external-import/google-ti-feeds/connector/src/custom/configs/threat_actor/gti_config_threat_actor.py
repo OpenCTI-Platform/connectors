@@ -31,12 +31,18 @@ class GTIThreatActorConfig(GTIBaseConfig):
         default=["google threat intelligence"],
         description="Comma-separated list of threat actor origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
-        examples=["All", "partner,google threat intelligence", "crowdsourced"],
+        examples=["All", "partner", "google threat intelligence", "crowdsourced"],
     )
 
     enable_threat_actor_aliases: bool = Field(
         default=False,
         description="Whether to enable importing threat actor aliases from GTI",
+    )
+
+    threat_actor_extra_filters: ListFromString = Field(
+        default=[],
+        description="Optional List of additional filters to add to query when fetching threat actors.",
+        examples=["name:APT28"],
     )
 
     @field_validator("threat_actor_origins", mode="after")

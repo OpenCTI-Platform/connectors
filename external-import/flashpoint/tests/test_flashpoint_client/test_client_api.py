@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -49,6 +50,93 @@ def test_flashpoint_client_session(mock_flashpoint_client):
         mock_flashpoint_client.session.headers["Authorization"]
         == f"Bearer {TEST_API_KEY}"
     )
+    assert (
+        mock_flashpoint_client.session.headers["x-fp-integrationplatform"] == "OpenCTI"
+    )
+    assert "x-fp-integrationplatformversion" in mock_flashpoint_client.session.headers
+    assert "x-fp-integrationversion" in mock_flashpoint_client.session.headers
+
+
+def test_iter_indicators_pages_should_return_items_from_single_page_response(
+    mock_flashpoint_client,
+):
+    responses = [
+        mock_response(
+            status_code=200,
+            body={
+                "items": [
+                    {
+                        "id": "i-1",
+                        "type": "domain",
+                        "value": "example.org",
+                        "modified_at": "2026-03-01T00:00:00Z",
+                    }
+                ]
+            },
+        ),
+        mock_response(status_code=200, body={"items": []}),
+    ]
+
+    with patch("requests.Session.request", side_effect=responses):
+        indicators = [
+            item
+            for page in mock_flashpoint_client.iter_indicators_pages(
+                start_date=datetime.fromisoformat("2026-03-01T00:00:00+00:00"),
+                size=1,
+            )
+            for item in page
+        ]
+
+    assert len(indicators) == 1
+    assert indicators[0]["id"] == "i-1"
+
+
+def test_iter_indicators_pages_should_fallback_to_offset_without_pagination_next(
+    mock_flashpoint_client,
+):
+    responses = [
+        mock_response(
+            status_code=200,
+            body={
+                "items": [
+                    {
+                        "id": "i-10",
+                        "type": "domain",
+                        "value": "one.example.org",
+                        "modified_at": "2026-03-01T00:00:00Z",
+                    }
+                ]
+            },
+        ),
+        mock_response(
+            status_code=200,
+            body={
+                "items": [
+                    {
+                        "id": "i-11",
+                        "type": "domain",
+                        "value": "two.example.org",
+                        "modified_at": "2026-03-01T00:00:01Z",
+                    }
+                ]
+            },
+        ),
+        mock_response(status_code=200, body={"items": []}),
+    ]
+
+    with patch("requests.Session.request", side_effect=responses):
+        indicators = [
+            item
+            for page in mock_flashpoint_client.iter_indicators_pages(
+                start_date=datetime.fromisoformat("2026-03-01T00:00:00+00:00"),
+                size=1,
+            )
+            for item in page
+        ]
+
+    assert len(indicators) == 2
+    assert indicators[0]["id"] == "i-10"
+    assert indicators[1]["id"] == "i-11"
 
 
 def test_get_compromised_credential_sightings_should_return_compromised_credential_sightings(

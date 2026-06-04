@@ -51,6 +51,8 @@ class TheHive:
         self.thehive_url = get_config_variable(
             "THEHIVE_URL", ["thehive", "url"], config
         )
+        if isinstance(self.thehive_url, str):
+            self.thehive_url = self.thehive_url.rstrip("/")
         self.thehive_api_key = get_config_variable(
             "THEHIVE_API_KEY", ["thehive", "api_key"], config
         )

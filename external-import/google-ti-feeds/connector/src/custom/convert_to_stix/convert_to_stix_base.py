@@ -10,7 +10,7 @@ from connector.src.custom.configs.converter_config import (
     CONVERTER_CONFIGS,
 )
 from connector.src.utils.converters import GenericConverterFactory
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )

@@ -106,23 +106,21 @@ def collect_initial_access(
         return
 
     logger.info("[INITIAL ACCESS] Starting collection")
-    entities = client.get_initial_access()
-
-    # Initiate new work
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
-    stix_objects = _extract_stix_from_initial_access(
-        converter_to_stix=converter_to_stix,
-        entities=entities,
-        target_scope=target_scope,
-        logger=logger,
-    )
+    for page in client.iter_initial_access():
+        stix_objects = _extract_stix_from_initial_access(
+            converter_to_stix=converter_to_stix,
+            entities=page,
+            target_scope=target_scope,
+            logger=logger,
+        )
+        if stix_objects:
+            works.send_bundle(
+                helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
+            )
 
     works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
     logger.info("[INITIAL ACCESS] Data Source Completed!")

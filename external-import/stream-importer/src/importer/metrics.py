@@ -32,6 +32,13 @@ class Metrics:
             namespace=namespace,
             subsystem=subsystem,
         )
+        self._files_already_processed = Counter(
+            "files_already_processed_total",
+            "Number of files already processed",
+            ["name"],
+            namespace=namespace,
+            subsystem=subsystem,
+        )
         self._import_up = Gauge(
             "import_up",
             "Set to 1 if import is successfully running, 0 in case of issues (either incorrect file number or malformatted data)",
@@ -49,6 +56,9 @@ class Metrics:
 
     def read(self):
         self._read_files_total.labels(self.name).inc()
+
+    def file_already_processed(self):
+        self._files_already_processed.labels(self.name).inc()
 
     def import_down(self):
         self._import_up.labels(self.name).set(0.0)
