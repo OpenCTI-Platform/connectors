@@ -186,7 +186,21 @@ def paginate(func):
             if errors:
                 logger.error("Query completed with errors")
                 for error in errors:
-                    logger.error("Error: %s (code: %s)", error.message, error.code)
+                    # FalconPy returns each error as a dict
+                    # (e.g. ``{"code": 400, "message": "..."}``), not an
+                    # object with ``.message`` / ``.code`` attributes. Read
+                    # the fields defensively so a malformed (non-dict) entry
+                    # cannot mask the underlying API error with an
+                    # ``AttributeError``.
+                    if isinstance(error, dict):
+                        error_message = error.get("message")
+                        error_code = error.get("code")
+                    else:
+                        error_message = error
+                        error_code = None
+                    logger.error(
+                        "Error: %s (code: %s)", error_message, error_code
+                    )
 
             meta = response["meta"]
             if meta["pagination"] is not None:
