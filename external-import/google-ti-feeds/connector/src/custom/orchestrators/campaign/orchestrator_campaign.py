@@ -88,6 +88,7 @@ class OrchestratorCampaign(BaseOrchestrator):
             # "files",
             # "urls",
             # "ip_addresses",
+            "software_toolkits",
         ]
         try:
             async for gti_campaigns in self.client_api.fetch_campaigns(initial_state):

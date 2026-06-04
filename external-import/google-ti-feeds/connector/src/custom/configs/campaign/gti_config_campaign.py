@@ -31,7 +31,7 @@ class GTICampaignConfig(GTIBaseConfig):
         default=["google threat intelligence"],
         description="Comma-separated list of campaign origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
-        examples=["All", "partner,google threat intelligence", "crowdsourced"],
+        examples=["All", "partner", "google threat intelligence", "crowdsourced"],
     )
 
     campaign_extra_filters: ListFromString = Field(

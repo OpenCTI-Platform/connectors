@@ -11,7 +11,7 @@ WORKDIR /opt/opencti-connector-ransomware-live
 # the version is already pinned in ``requirements.txt`` and upgrading
 # it standalone produced non-reproducible builds whenever the upstream
 # pycti release stream moved.
-COPY requirements.txt .
+COPY src/requirements.txt .
 RUN apk --no-cache add libmagic libxslt libxml2 && \
     apk --no-cache add --virtual .build-deps git build-base libffi-dev libxslt-dev libxml2-dev && \
     pip3 install --no-cache-dir --upgrade pip && \

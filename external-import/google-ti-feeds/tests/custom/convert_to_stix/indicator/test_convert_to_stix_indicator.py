@@ -830,9 +830,8 @@ class TestRelationSoftwareToolkitValid:
     def test_software_toolkit_relation_valid(
         self, converter: ConvertToSTIXIndicator
     ) -> None:
-        # Given – ToolModel requires fields not provided by the source code (known
-        # TODO in production). Mock both ToolModel and OctiRelationshipModel to
-        # verify the relationship-creation logic.
+        # Given – mock Tool and Relationship from connectors_sdk.models to
+        # isolate the relationship-creation logic from SDK internals.
         import uuid
 
         tool_id = f"tool--{uuid.uuid4()}"
@@ -842,21 +841,21 @@ class TestRelationSoftwareToolkitValid:
         with (
             patch(
                 "connector.src.custom.convert_to_stix.indicator"
-                ".convert_to_stix_indicator.ToolModel"
-            ) as MockToolModel,
+                ".convert_to_stix_indicator.Tool"
+            ) as MockTool,
             patch(
                 "connector.src.custom.convert_to_stix.indicator"
-                ".convert_to_stix_indicator.OctiRelationshipModel"
-            ) as MockOctiRel,
+                ".convert_to_stix_indicator.Relationship"
+            ) as MockRelationship,
         ):
             mock_tool = MagicMock()
             mock_tool.to_stix2_object.return_value = fake_stix_tool
             mock_tool.id = tool_id
-            MockToolModel.return_value = mock_tool
+            MockTool.return_value = mock_tool
 
             mock_rel = MagicMock()
             mock_rel.to_stix2_object.return_value = fake_stix_rel
-            MockOctiRel.create.return_value = mock_rel
+            MockRelationship.return_value = mock_rel
 
             rels = _given_relationships(software_toolkit_name="Cobalt Strike")
             data = _given_file_entry(relationships=rels)

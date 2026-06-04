@@ -17,6 +17,9 @@ from connector.src.custom.configs.malware.batch_processor_config_malware import 
 from connector.src.custom.configs.report.batch_processor_config_report import (
     REPORT_BATCH_PROCESSOR_CONFIG,
 )
+from connector.src.custom.configs.software_toolkit.batch_processor_config_software_toolkit import (
+    SOFTWARE_TOOLKIT_BATCH_PROCESSOR_CONFIG,
+)
 from connector.src.custom.configs.threat_actor.batch_processor_config_threat_actor import (
     THREAT_ACTOR_BATCH_PROCESSOR_CONFIG,
 )
@@ -38,4 +41,5 @@ __all__ = [
     "VULNERABILITY_BATCH_PROCESSOR_CONFIG",
     "CAMPAIGN_BATCH_PROCESSOR_CONFIG",
     "INDICATOR_BATCH_PROCESSOR_CONFIG",
+    "SOFTWARE_TOOLKIT_BATCH_PROCESSOR_CONFIG",
 ]

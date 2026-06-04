@@ -90,6 +90,43 @@
       "minLength": 1,
       "type": "string"
     },
+    "GTI_SOFTWARE_TOOLKIT_IMPORT_START_DATE": {
+      "default": "P1D",
+      "description": "ISO 8601 duration string specifying how far back to import software toolkits (e.g., P1D for 1 day, P7D for 7 days)",
+      "format": "duration",
+      "type": "string"
+    },
+    "GTI_IMPORT_SOFTWARE_TOOLKITS": {
+      "default": false,
+      "description": "Whether to enable importing software toolkit data from GTI",
+      "type": "boolean"
+    },
+    "GTI_SOFTWARE_TOOLKIT_ORIGINS": {
+      "default": [
+        "google threat intelligence"
+      ],
+      "description": "Comma-separated list of software toolkit origins to import, or 'All' for all origins. Allowed values: All, partner, google threat intelligence",
+      "examples": [
+        "All",
+        "partner",
+        "google threat intelligence"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GTI_SOFTWARE_TOOLKIT_EXTRA_FILTERS": {
+      "default": [],
+      "description": "Optional list of additional filters to add to query when fetching software toolkits",
+      "examples": [
+        "name:Cobalt Strike"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "GTI_IMPORT_INDICATORS": {
       "default": false,
       "description": "Whether to enable importing IOC indicator data from GTI via Steady-State IOC Deltas API",
@@ -132,7 +169,8 @@
       "description": "Comma-separated list of campaign origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
       "examples": [
         "All",
-        "partner,google threat intelligence",
+        "partner",
+        "google threat intelligence",
         "crowdsourced"
       ],
       "items": {
@@ -174,7 +212,8 @@
       "description": "Comma-separated list of vulnerability origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
       "examples": [
         "All",
-        "partner,google threat intelligence",
+        "partner",
+        "google threat intelligence",
         "crowdsourced"
       ],
       "items": {
@@ -211,7 +250,8 @@
       "description": "Comma-separated list of malware family origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
       "examples": [
         "All",
-        "partner,google threat intelligence",
+        "partner",
+        "google threat intelligence",
         "crowdsourced"
       ],
       "items": {
@@ -253,7 +293,8 @@
       "description": "Comma-separated list of threat actor origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
       "examples": [
         "All",
-        "partner,google threat intelligence",
+        "partner",
+        "google threat intelligence",
         "crowdsourced"
       ],
       "items": {
@@ -315,7 +356,8 @@
       "description": "Comma-separated list of report origins to import, or 'All' for all origins. Allowed values: All, partner, crowdsourced, google threat intelligence",
       "examples": [
         "All",
-        "partner,google threat intelligence",
+        "partner",
+        "google threat intelligence",
         "crowdsourced"
       ],
       "items": {

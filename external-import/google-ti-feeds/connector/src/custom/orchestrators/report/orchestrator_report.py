@@ -86,6 +86,7 @@ class OrchestratorReport(BaseOrchestrator):
             "files",
             "urls",
             "ip_addresses",
+            "software_toolkits",
         ]
         try:
             async for gti_reports in self.client_api.fetch_reports(initial_state):
