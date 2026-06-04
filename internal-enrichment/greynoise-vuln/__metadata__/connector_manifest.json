@@ -9,7 +9,7 @@
     "Vulnerability Management"
   ],
   "verified": true,
-  "last_verified_date": null,
+  "last_verified_date": "2026-06-04",
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=6.3.4",

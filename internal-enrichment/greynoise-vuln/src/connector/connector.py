@@ -156,22 +156,20 @@ class GreyNoiseVulnConnector:
     def _generate_stix_note(self, stix_entity: dict, data: dict):
         today = datetime.today().strftime("%Y-%m-%d")
 
+        exploitation_activity = data["exploitation_activity"]
+
         content = (
             f"### GreyNoise Vulnerability - Exploitation Activity as of {today}\n\n"
-        )
-        content += "| Key                                                | Value |\n"
-        content += (
+            "| Key                                                | Value |\n"
             "| --------------------------------------------------- | ---------- |\n"
+            f"| Activity Seen | {exploitation_activity['activity_seen']} |\n"
+            f"| Benign IP Count - Last Day | {exploitation_activity['benign_ip_count_1d']} |\n"
+            f"| Benign IP Count - Last 10 Days | {exploitation_activity['benign_ip_count_10d']} |\n"
+            f"| Benign IP Count - Last 30 Days | {exploitation_activity['benign_ip_count_30d']} |\n"
+            f"| Threat IP Count - Last Day | {exploitation_activity['threat_ip_count_1d']} |\n"
+            f"| Threat IP Count - Last 10 Days | {exploitation_activity['threat_ip_count_10d']} |\n"
+            f"| Threat IP Count - Last 30 Days | {exploitation_activity['threat_ip_count_30d']} |\n"
         )
-        content += (
-            f"| Activity Seen | {data['exploitation_activity']['activity_seen']} |\n"
-        )
-        content += f"| Benign IP Count - Last Day | {data['exploitation_activity']['benign_ip_count_1d']} |\n"
-        content += f"| Benign IP Count - Last 10 Days | {data['exploitation_activity']['benign_ip_count_10d']} |\n"
-        content += f"| Benign IP Count - Last 30 Days | {data['exploitation_activity']['benign_ip_count_30d']} |\n"
-        content += f"| Threat IP Count - Last Day | {data['exploitation_activity']['threat_ip_count_1d']} |\n"
-        content += f"| Threat IP Count - Last 10 Days | {data['exploitation_activity']['threat_ip_count_10d']} |\n"
-        content += f"| Threat IP Count - Last 30 Days | {data['exploitation_activity']['threat_ip_count_30d']} |\n"
 
         note = stix2.Note(
             type="note",
@@ -222,7 +220,6 @@ class GreyNoiseVulnConnector:
             description="This software is maintained by",
             source_ref=f"{software_id}",
             target_ref=f"{org_id}",
-            confidence=100,
             created_by_ref=self.greynoise_identity["id"],
         )
         self.stix_objects.append(software_vendor_relationship)
@@ -232,7 +229,6 @@ class GreyNoiseVulnConnector:
             relationship_type="has",
             source_ref=f"{software_id}",
             target_ref=stix_entity["id"],
-            confidence=100,
             created_by_ref=self.greynoise_identity["id"],
         )
         self.stix_objects.append(software_vuln_relationship)
@@ -259,12 +255,7 @@ class GreyNoiseVulnConnector:
         This method creates and adds a bundle to "self.stix_objects" the IPv4 associated "vulnerability"
         provided by GreyNoise in Stix2 format.
         """
-        kev = False
-        if (
-            "cisa_kev_date_added" in data["timeline"]
-            and data["timeline"]["cisa_kev_date_added"]
-        ):
-            kev = True
+        kev = bool(data.get("timeline", {}).get("cisa_kev_date_added"))
 
         # Generate Vulnerability
         stix_vulnerability = stix2.Vulnerability(
@@ -369,23 +360,27 @@ class GreyNoiseVulnConnector:
 
                 if "CVE not found" == json_data:
                     stix_bundle = self.helper.stix2_create_bundle(self.stix_objects)
-                    bundles_sent = self.helper.send_stix2_bundle(stix_bundle)
+                    bundles_sent = self.helper.send_stix2_bundle(
+                        stix_bundle,
+                        cleanup_inconsistent_bundle=True,
+                    )
                     return (
                         "[CONNECTOR] No CVE found. Original Vulnerability sent:  "
-                        + str(len(bundles_sent))
-                        + " stix bundle(s) for worker import"
+                        f"{len(bundles_sent)} stix bundle(s) for worker import"
                     )
                 else:
                     # Generate a stix bundle
                     stix_bundle = self._generate_stix_bundle(json_data, stix_entity)
 
                     # Send stix2 bundle
-                    bundles_sent = self.helper.send_stix2_bundle(stix_bundle)
+                    bundles_sent = self.helper.send_stix2_bundle(
+                        stix_bundle,
+                        cleanup_inconsistent_bundle=True,
+                    )
 
                 return (
-                    "[CONNECTOR] Sent "
-                    + str(len(bundles_sent))
-                    + " stix bundle(s) for worker import"
+                    f"[CONNECTOR] Sent {len(bundles_sent)} stix bundle(s) "
+                    "for worker import"
                 )
 
             except Exception as e:
@@ -410,7 +405,8 @@ class GreyNoiseVulnConnector:
             )
             # If an error occurs, send the original stix objects back
             self.helper.send_stix2_bundle(
-                self.helper.stix2_create_bundle(data["stix_objects"])
+                self.helper.stix2_create_bundle(data["stix_objects"]),
+                cleanup_inconsistent_bundle=True,
             )
             raise e
 
