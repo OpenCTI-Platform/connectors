@@ -36,9 +36,10 @@ def transform_breach_to_bundle(payload: dict) -> dict:
                 "type": "attack-pattern",
                 "spec_version": "2.1",
                 "id": attack_pattern_id,
+                "created": published_at,
+                "modified": published_at,
                 "name": ttp["title"],
             }
-        )
         object_refs.append(attack_pattern_id)
 
     for malware in payload.get("relatedMalwares", []):
