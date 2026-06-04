@@ -1,26 +1,57 @@
 opencti:
-  url: 'http://localhost'
-  token: 'ChangeMe'
+  url: "http://localhost:8080" # The URL of the OpenCTI platform. Note that final `/` should be avoided. Example value: `http://opencti:8080`
+  token: "ChangeMe" # The default admin token configured in the OpenCTI platform parameters file.
 
-# connector:
-  # id: '30c40257-9514-4b54-bcc9-15445fe21e5e'
-  # name: 'ANY.RUN task'
-  # scope: 'Artifact,Url'
-  # auto: false # Enable/disable auto-enrichment of observables
-  # log_level: 'error'
+connector:
+  id: "ChangeMe" # A valid arbitrary `UUIDv4` that must be unique for this connector.
+  type: "INTERNAL_ENRICHMENT" # A connector type.
+  name: "ANY.RUN Sandbox" # A connector name to be shown in OpenCTI.
+  scope: "StixFile,Url" # Supported scope. E. g., `text/html`.
+  auto: false # Enable/disable auto-enrichment of observables
+  confidence_level: 75 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: "info" # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
 
 anyrun:
-  token: 'ChangeMe'
-  # max_tlp: 'TLP:AMBER'
-  # url: 'https://api.any.run'
-  # task_timer: 60
-  # os: 'windows'
-  # os_bitness: '64'  # Operating system bitness: `32` or `64`.
-  # os_version: '10'  # Windows version: `7`, `8.1`, `10`, or `11`.
-  # os_locale: 'en-US'
-  # os_browser: 'Google Chrome'  # Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`
-  # privacy: 'bylink'  # Task privacy: `public`, `bylink`, `owner`, `team`
-  # automated_interactivity: False
-  # ioc: True  # Import IOCs (domains, URLs, IPs) extracted during analysis
-  # mitre: False  # Create relationships to MITRE ATT&CK techniques.
-  # processes: False  # Import malicious process observables
+  api_key: "ChangeMe" # ANY.RUN Sandbox API-KEY. See "Generate API token" section in the README file.
+  enable_ioc: true # Add found indicators to the OpenCTI Indicators and Observables tab.
+
+anyrun_opt:
+  opt_timeout: 240 # Timeout option. Size range: 10-660 seconds.
+  opt_network_connect: true # Enable network connection.
+  opt_network_fakenet: false # Enable FakeNet feature.
+  opt_network_tor: false # Enable TOR using.
+  opt_network_geo: "fastest" # TOR geolocation option. Example: US, AU
+  opt_network_mitm: false # Enable HTTPS MITM Proxy using.
+  opt_network_residential_proxy: false # Residential proxy using.
+  opt_network_residential_proxy_geo: "fastest" # Residential proxy geolocation option. Example: US, AU.
+  opt_privacy_type: "bylink" # Privacy settings. Supports: public, bylink, owner, byteam.
+
+anyrun_obj:
+  obj_ext_extension: true # Automatically change file extension to valid.
+
+anyrun_env:
+  # Operating system. Supports: windows, linux, android. Only one of the
+  # ``anyrun_*_env`` sections below should be filled, matching this value.
+  os_type: "windows"
+  env_locale: "en-US" # Operation system's language. Use locale identifier or country name (Ex: "en-US" or "Brazil"). Case-insensitive.
+
+# Windows environment - used when ``anyrun_env.os_type`` is ``windows``.
+anyrun_windows_env:
+  env_version: "10" # Version of OS. Supports: 7, 10, 11.
+  env_bitness: "64" # Bitness of Operation System. Supports 32, 64.
+  env_type: "complete" # Environment preset type. You can select **development** env for OS Windows 10 x64. For all other cases, **complete** env is required.
+  obj_ext_startfolder: "temp" # Supports: desktop, home, downloads, appdata, temp, windows, root.
+  obj_ext_cmd: "" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
+  obj_force_elevation: false # Forces the file to execute with elevated privileges and an elevated token (for PE32, PE32+, PE64 files only).
+  obj_ext_browser: "Microsoft Edge" # Browser name. Supports: Google Chrome, Mozilla Firefox, Internet Explorer, Microsoft Edge. Only for the Url analysis.
+
+# Linux environment - used when ``anyrun_env.os_type`` is ``linux``.
+anyrun_linux_env:
+  obj_ext_startfolder: "temp" # Start object from. Supports: desktop, home, downloads, temp.
+  obj_ext_cmd: "" # Optional command-line arguments for the analyzed object. Use an empty string ("") to apply the default behavior.
+  run_as_root: true # Run file with superuser privileges.
+  obj_ext_browser: "Google Chrome" # Browser name. Supports: Google Chrome, Mozilla Firefox. Only for the Url analysis.
+
+# Android environment - used when ``anyrun_env.os_type`` is ``android``.
+anyrun_android_env:
+  obj_ext_cmd: "" # Optional command-line arguments for the analyzed object.

@@ -11,4 +11,6 @@ services:
       - CONNECTOR_AUTO=true
       - CONNECTOR_LOG_LEVEL=error
       #- YARA_TLP_LEVEL=clear
+      #- YARA_PROPAGATE_MALWARE_RELATIONSHIP=false # follow ``indicates`` Malware from matching YARA Indicators
+      #- YARA_PROPAGATE_LABELS=false               # copy YARA Indicator labels onto the matching Artifact
     restart: always

@@ -279,6 +279,28 @@ class TargetedIndustry(BaseModel):
     source: str | None = Field(default=None, description="Information supplier")
 
 
+class Motivation(BaseModel):
+    """Motivation associated with the campaign."""
+
+    confidence: str | None = Field(
+        default=None,
+        description="Confidence on the information or the attribution of the motivation",
+    )
+    description: str | None = Field(
+        default=None,
+        description="Description / additional information about the motivation",
+    )
+    first_seen: int | None = Field(
+        default=None,
+        description="First time this motivation was attributed to the campaign (UTC timestamp)",
+    )
+    last_seen: int | None = Field(
+        default=None,
+        description="Last time this motivation was attributed to the campaign (UTC timestamp)",
+    )
+    value: str | None = Field(default=None, description="Motivation value")
+
+
 class TargetedRegion(BaseModel):
     """Regions and countries known to be targeted by the campaign."""
 
@@ -390,6 +412,10 @@ class CampaignModel(BaseModel):
     targeted_regions_hierarchy: list[TargetedRegion] | None = Field(
         default=None,
         description="Regions and countries known to be targeted by the campaign",
+    )
+    motivations: list[Motivation] | None = Field(
+        default=None,
+        description="Motivations associated with the campaign such as espionage, financial gain, etc.",
     )
     top_icon_md5: list[str] | None = Field(
         default=None,

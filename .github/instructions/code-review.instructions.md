@@ -44,3 +44,11 @@ function isValidEmail(email) {
 }
 
 submitButton.enabled = isValidEmail(user.email);
+
+Neither use a datetime for Note.generate_id(). This will prevent the generation of duplicate notes which can lead to the saturation of the RabbitMQ queue. For example:
+
+// Instead of:
+Note.generate_id(created=datetime.now(), content="the content")
+
+// Consider:
+Note.generate_id(created=None, content="the content")

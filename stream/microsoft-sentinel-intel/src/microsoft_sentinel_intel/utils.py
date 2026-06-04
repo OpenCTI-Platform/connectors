@@ -1,10 +1,7 @@
-import re
 from datetime import datetime, timedelta
 
 from pycti import OpenCTIConnectorHelper
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE
-
-_STIX_PATTERN_TYPE_RE = re.compile(r"^\[([a-z0-9\-]+):")
 
 OBSERVABLE_TYPES = [
     "ipv4-addr",
@@ -64,20 +61,6 @@ def is_stix_indicator(data: dict) -> bool:
     return data.get("type") == "indicator" and data.get("pattern_type", "").startswith(
         "stix"
     )
-
-
-def extract_pattern_type(pattern: str) -> str | None:
-    """Extract the observable type from a STIX pattern string (e.g. 'ipv4-addr').
-
-    For compound patterns (e.g. "[ipv4-addr:...] OR [domain-name:...]"),
-    only the first type is returned. This is used as a query hint to narrow
-    Sentinel API results, not as an exact filter.
-
-    :param pattern: STIX pattern string (e.g. "[ipv4-addr:value = '1.1.1.1']")
-    :return: First observable type if found, None otherwise.
-    """
-    match = _STIX_PATTERN_TYPE_RE.match(pattern)
-    return match.group(1) if match else None
 
 
 def is_observable(data: dict) -> bool:

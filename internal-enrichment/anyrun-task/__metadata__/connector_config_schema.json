@@ -21,7 +21,7 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "Artifact",
+        "StixFile",
         "Url"
       ],
       "description": "The scope of the connector.",
@@ -52,107 +52,55 @@
       "description": "Whether the connector should run automatically when an entity is created or updated.",
       "type": "boolean"
     },
-    "ANYRUN_TOKEN": {
-      "description": "ANY.RUN API token for authentication.",
+    "ANYRUN_API_KEY": {
+      "description": "ANY.RUN Sandbox API-KEY. See 'Generate API KEY' section in the README file.",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "ANYRUN_MAX_TLP": {
-      "default": "TLP:AMBER",
-      "description": "Maximum TLP level for the connector.",
-      "enum": [
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED"
-      ],
-      "type": "string"
-    },
-    "ANYRUN_URL": {
-      "default": "https://api.any.run/",
-      "description": "Base URL for the ANY.RUN API.",
-      "format": "uri",
-      "maxLength": 2083,
-      "minLength": 1,
-      "type": "string"
-    },
-    "ANYRUN_TASK_TIMER": {
-      "default": 60,
-      "description": "Sandbox execution time in seconds.",
-      "type": "integer"
-    },
-    "ANYRUN_OS": {
-      "default": "windows",
-      "description": "Operating system for sandbox environment.",
-      "type": "string"
-    },
-    "ANYRUN_BITNESS": {
+    "ANYRUN_OPT_TIMEOUT": {
       "default": null,
-      "deprecated": true,
-      "type": "string",
-      "description": "Use ANYRUN_OS_BITNESS instead."
+      "type": "integer",
+      "description": "Select analysis completion time. Size range: 10-660 seconds."
     },
-    "ANYRUN_OS_BITNESS": {
-      "default": "64",
-      "description": "Operating system bitness: `32` or `64`.",
-      "enum": [
-        "32",
-        "64"
-      ],
+    "ANYRUN_OPT_NETWORK_CONNECT": {
+      "default": true,
+      "description": "Enable network connection.",
+      "type": "boolean"
+    },
+    "ANYRUN_OPT_NETWORK_FAKENET": {
+      "default": false,
+      "description": "Enable FakeNet feature.",
+      "type": "boolean"
+    },
+    "ANYRUN_TOR": {
+      "default": false,
+      "description": "Enable TOR using.",
+      "type": "boolean"
+    },
+    "ANYRUN_GEO": {
+      "default": "fastest",
+      "description": "TOR geolocation option. Example: US, AU",
       "type": "string"
     },
-    "ANYRUN_VERSION": {
-      "default": null,
-      "deprecated": true,
-      "type": "string",
-      "description": "Use ANYRUN_OS_VERSION instead."
+    "ANYRUN_MITM": {
+      "default": false,
+      "description": "Enable HTTPS MITM Proxy using.",
+      "type": "boolean"
     },
-    "ANYRUN_OS_VERSION": {
-      "default": "10",
-      "description": "Windows version: `7`, `8.1`, `10`, or `11`.",
-      "enum": [
-        "7",
-        "8.1",
-        "10",
-        "11"
-      ],
+    "ANYRUN_RESIDENTIAL_PROXY": {
+      "default": false,
+      "description": "Residential proxy using.",
+      "type": "boolean"
+    },
+    "ANYRUN_RESIDENTIAL_PROXY_GEO": {
+      "default": "fastest",
+      "description": "Residential proxy geolocation option. Example: US, AU.",
       "type": "string"
     },
-    "ANYRUN_LOCALE": {
-      "default": null,
-      "deprecated": true,
-      "type": "string",
-      "description": "Use ANYRUN_OS_LOCALE instead."
-    },
-    "ANYRUN_OS_LOCALE": {
-      "default": "en-US",
-      "description": "Operating system language locale.",
-      "type": "string"
-    },
-    "ANYRUN_BROWSER": {
-      "default": null,
-      "deprecated": true,
-      "type": "string",
-      "description": "Use ANYRUN_OS_BROWSER instead."
-    },
-    "ANYRUN_OS_BROWSER": {
-      "default": "Google Chrome",
-      "description": "Browser for URL analysis: `Google Chrome`, `Mozilla Firefox`, `Opera`, `Internet Explorer`, `Microsoft Edge`.",
-      "enum": [
-        "Google Chrome",
-        "Mozilla Firefox",
-        "Opera",
-        "Internet Explorer",
-        "Microsoft Edge"
-      ],
-      "type": "string"
-    },
-    "ANYRUN_PRIVACY": {
+    "ANYRUN_PRIVACY_TYPE": {
       "default": "bylink",
-      "description": "Task privacy: `public`, `bylink`, `owner`, `team`.",
+      "description": "Privacy settings.",
       "enum": [
         "public",
         "bylink",
@@ -161,31 +109,99 @@
       ],
       "type": "string"
     },
-    "ANYRUN_AUTOMATED_INTERACTIVITY": {
-      "default": false,
-      "description": "Enable ML-based automated interactivity during analysis.",
-      "type": "boolean"
-    },
-    "ANYRUN_IOC": {
+    "ANYRUN_OBJ_EXT_EXTENSION": {
       "default": true,
-      "description": "Import IOCs (domains, URLs, IPs) extracted during analysis.",
+      "description": "Automatically change file extension to valid.",
       "type": "boolean"
     },
-    "ANYRUN_MITRE": {
-      "default": false,
-      "description": "Create relationships to MITRE ATT&CK techniques.",
+    "ANYRUN_ENV_LOCALE": {
+      "default": "en-US",
+      "description": "Operation system's language. Use locale identifier or country name (Ex: en-US or Brazil). Case-insensitive.",
+      "type": "string"
+    },
+    "ANYRUN_OS_TYPE": {
+      "default": "windows",
+      "description": "Operating system.",
+      "enum": [
+        "windows",
+        "linux",
+        "android"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_ENV_VERSION": {
+      "default": "10",
+      "description": "Windows environment version.",
+      "enum": [
+        "7",
+        "10",
+        "11"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_ENV_BITNESS": {
+      "default": "64",
+      "description": "Operating system bitness: 32 or 64 for Windows, 64 for Linux and Android.",
+      "enum": [
+        "32",
+        "64"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_ENV_TYPE": {
+      "default": "complete",
+      "description": "Windows environment type. You can select development env for OS Windows 10 x64. For all other cases, complete env is required.",
+      "enum": [
+        "complete",
+        "development"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_OBJ_EXT_STARTFOLDER": {
+      "default": "temp",
+      "description": "Start object from.",
+      "enum": [
+        "desktop",
+        "home",
+        "downloads",
+        "appdata",
+        "temp",
+        "windows",
+        "root"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_OBJ_EXT_CMD": {
+      "default": "",
+      "description": "Optional command-line arguments for the analyzed object. Use an empty string '' to apply the default behavior.",
+      "type": "string"
+    },
+    "ANYRUN_OBJ_FORCE_ELEVATION": {
+      "default": true,
+      "description": "Forces the file to execute with elevated privileges and an elevated token (for PE32, PE32+, PE64 files only).",
       "type": "boolean"
     },
-    "ANYRUN_PROCESSES": {
-      "default": false,
-      "description": "Import malicious process observables.",
+    "ANYRUN_OBJ_EXT_BROWSER": {
+      "default": "Google Chrome",
+      "description": "Browser name.",
+      "enum": [
+        "Google Chrome",
+        "Mozilla Firefox",
+        "Internet Explorer",
+        "Microsoft Edge"
+      ],
+      "type": "string"
+    },
+    "ANYRUN_RUN_AS_ROOT": {
+      "default": true,
+      "description": "Run file with superuser privileges.",
       "type": "boolean"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "ANYRUN_TOKEN"
+    "ANYRUN_API_KEY"
   ],
   "additionalProperties": true
 }

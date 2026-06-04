@@ -1,9 +1,12 @@
+from datetime import datetime
+
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_BOTNET
 from vclib.util.config import (
     SCOPE_INFRASTRUCTURE,
+    SCOPE_REPORT,
     SCOPE_VULNERABILITY,
     compare_config_to_target_scope,
 )
@@ -57,13 +60,14 @@ def _extract_stix_from_botnet(
 
     logger.info("[BOTNET] Parsing data into STIX objects")
     for entity in entities:
+        entity_objects = []
         infrastructure = None
 
         if SCOPE_INFRASTRUCTURE in target_scope and entity.botnet_name is not None:
             infrastructure = _create_infra(
                 converter_to_stix=converter_to_stix, entity=entity, logger=logger
             )
-            result.append(infrastructure)
+            entity_objects.append(infrastructure)
 
         if SCOPE_VULNERABILITY in target_scope and entity.cve is not None:
             for cve in entity.cve:
@@ -72,9 +76,9 @@ def _extract_stix_from_botnet(
                     cve=cve,
                     logger=logger,
                 )
-                result.append(vuln)
+                entity_objects.append(vuln)
                 if infrastructure is not None:
-                    result.append(
+                    entity_objects.append(
                         _create_rel_related_to(
                             infrastructure=infrastructure,
                             vulnerability=vuln,
@@ -87,6 +91,40 @@ def _extract_stix_from_botnet(
                             logger=logger,
                         )
                     )
+
+        if (
+            SCOPE_REPORT in target_scope
+            and entity_objects
+            and entity.botnet_name
+            and entity.date_added
+        ):
+            # ``published`` uses ``entity.date_added`` rather than
+            # ``datetime.now(timezone.utc)``: ``Report.generate_id``
+            # hashes ``name + published``, so a wall-clock ``now()``
+            # would mint a brand-new Report id on every connector run
+            # and the platform would accumulate one duplicate Report
+            # per botnet per cycle. ``date_added`` is a stable,
+            # entity-derived ISO-8601 value, so the resulting Report
+            # id is deterministic across runs and updates patch the
+            # same Report in place. Guards on ``botnet_name`` and
+            # ``date_added`` skip Report creation rather than
+            # crashing the run on a partial payload.
+            cve_count = len(entity.cve) if entity.cve else 0
+            description = (
+                f"{entity.botnet_name} is a botnet known to exploit "
+                f"{cve_count} {'vulnerability' if cve_count == 1 else 'vulnerabilities'} "
+                f"as tracked by VulnCheck."
+            )
+            report = converter_to_stix.create_report(
+                name=entity.botnet_name,
+                published=datetime.fromisoformat(entity.date_added),
+                object_refs=[obj["id"] for obj in entity_objects],
+                description=description,
+                labels=[entity.botnet_name],
+            )
+            entity_objects.append(report)
+
+        result.extend(entity_objects)
     return result
 
 
@@ -95,7 +133,7 @@ def collect_botnets(
 ) -> None:
     # Check if data source is in scope for this run
     source_name = "Botnet"
-    target_scope = [SCOPE_INFRASTRUCTURE, SCOPE_VULNERABILITY]
+    target_scope = [SCOPE_INFRASTRUCTURE, SCOPE_VULNERABILITY, SCOPE_REPORT]
     target_scope = compare_config_to_target_scope(
         config=config,
         target_scope=target_scope,
@@ -108,23 +146,21 @@ def collect_botnets(
         return
 
     logger.info("[BOTNET] Starting collection")
-    entities = client.get_botnets()
-
-    # Initiate new work
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
-    stix_objects = _extract_stix_from_botnet(
-        converter_to_stix=converter_to_stix,
-        entities=entities,
-        target_scope=target_scope,
-        logger=logger,
-    )
+    for page in client.iter_botnets():
+        stix_objects = _extract_stix_from_botnet(
+            converter_to_stix=converter_to_stix,
+            entities=page,
+            target_scope=target_scope,
+            logger=logger,
+        )
+        if stix_objects:
+            works.send_bundle(
+                helper=helper, logger=logger, stix_objects=stix_objects, work_id=work_id
+            )
 
     works.finish_work(
-        helper=helper,
-        logger=logger,
-        stix_objects=stix_objects,
-        work_id=work_id,
-        work_name=source_name,
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
     logger.info("[BOTNET] Data Source Completed!")

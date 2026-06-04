@@ -9,6 +9,10 @@ from typing import Callable, Dict, List
 import stix2
 import yaml
 from pycti import (
+    CustomObservableICCID,
+    CustomObservableIMEI,
+    CustomObservableIMSI,
+    CustomObservablePhoneNumber,
     OpenCTIConnectorHelper,
     Report,
     StixCoreRelationship,
@@ -313,17 +317,11 @@ class ReportImporter:
             ]
             # external_references = [x['standard_id'] for x in report.get('externalReferences', [])]
             # labels = [x['standard_id'] for x in report.get('objectLabel', [])]
-            author = context_entity.get("createdBy")
         else:
             object_markings = []
-            author = None
-        if author is not None:
-            author = author.get("standard_id", None)
         for match in parsed:
             if match[RESULT_FORMAT_TYPE] == OBSERVABLE_CLASS:
-                self._process_observable(
-                    match, object_markings, author, entities, observables
-                )
+                self._process_observable(match, object_markings, entities, observables)
             elif match[RESULT_FORMAT_TYPE] == ENTITY_CLASS:
                 stix_type = "-".join(
                     x[:1].upper() + x[1:]
@@ -359,7 +357,6 @@ class ReportImporter:
         self,
         match: Dict,
         object_markings=None,
-        author=None,
         entities=None,
         observables=None,
     ):
@@ -432,104 +429,82 @@ class ReportImporter:
             return entity_stix
         else:
             observable = None
+            # SCO custom properties shared across every emitted observable
+            # type. ``x_opencti_created_by_ref`` is intentionally NOT set
+            # here: per OpenCTI-Platform/opencti#14105 the importer no
+            # longer propagates the triggering entity's author onto the
+            # extracted observables — they must keep the bundle author
+            # (or no author) so that, in draft mode, a list of IPs
+            # extracted from a Report does not silently inherit the
+            # Report's author.
+            custom_properties = {
+                "x_opencti_create_indicator": self.create_indicator,
+            }
             if match[RESULT_FORMAT_CATEGORY] == "Autonomous-System.number":
                 observable = stix2.AutonomousSystem(
                     number=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Domain-Name.value":
                 observable = stix2.DomainName(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Email-Addr.value":
                 observable = stix2.EmailAddress(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.name":
                 observable = stix2.File(
                     name=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "IPv4-Addr.value":
                 observable = stix2.IPv4Address(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "IPv6-Addr.value":
                 observable = stix2.IPv6Address(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Mac-Addr.value":
                 observable = stix2.MACAddress(
                     value=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.MD5":
                 observable = stix2.File(
                     hashes={"MD5": match[RESULT_FORMAT_MATCH]},
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-1":
                 observable = stix2.File(
                     hashes={"SHA-1": match[RESULT_FORMAT_MATCH]},
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "File.hashes.SHA-256":
                 observable = stix2.File(
                     hashes={"SHA-256": match[RESULT_FORMAT_MATCH]},
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Windows-Registry-Key.key":
                 observable = stix2.WindowsRegistryKey(
                     key=match[RESULT_FORMAT_MATCH],
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
                 )
             elif match[RESULT_FORMAT_CATEGORY] == "Url.value":
                 value = match[RESULT_FORMAT_MATCH]
@@ -538,10 +513,31 @@ class ReportImporter:
                 observable = stix2.URL(
                     value=value,
                     object_marking_refs=object_markings,
-                    custom_properties={
-                        "x_opencti_create_indicator": self.create_indicator,
-                        "created_by_ref": author,
-                    },
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "Phone-Number.value":
+                observable = CustomObservablePhoneNumber(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IMEI.value":
+                observable = CustomObservableIMEI(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "ICCID.value":
+                observable = CustomObservableICCID(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
+                )
+            elif match[RESULT_FORMAT_CATEGORY] == "IMSI.value":
+                observable = CustomObservableIMSI(
+                    value=match[RESULT_FORMAT_MATCH],
+                    object_marking_refs=object_markings,
+                    custom_properties=custom_properties,
                 )
             if observable is not None and observables is not None:
                 observables.append(observable)

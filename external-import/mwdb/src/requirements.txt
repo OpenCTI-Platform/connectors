@@ -1,3 +1,3 @@
-pycti==7.260422.0
-urllib3==2.6.3
-mwdblib==4.6.0
+pycti==7.260604.0
+urllib3==2.7.0
+mwdblib==4.7.0
