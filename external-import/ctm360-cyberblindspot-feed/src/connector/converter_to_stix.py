@@ -3,8 +3,14 @@ import re
 import uuid
 
 import stix2
-from connector.utils import generate_deterministic_id, normalize_timestamp
-from pycti import Identity, OpenCTIConnectorHelper
+from connector.utils import normalize_timestamp
+from pycti import (
+    Identity,
+    Indicator,
+    Malware,
+    OpenCTIConnectorHelper,
+    StixCoreRelationship,
+)
 
 
 class ConverterToStix:
@@ -181,7 +187,7 @@ class ConverterToStix:
                         "CTM360-CyberBlindSpot", f"malware:{malware_family}"
                     )
                     malware_obj = stix2.Malware(
-                        id=f"malware--{uuid.uuid5(uuid.NAMESPACE_URL, f'cbs-malware-{malware_family}')}",
+                        id=Malware.generate_id(malware_family),
                         name=malware_family,
                         is_family=True,
                         description="Malware family detected by CTM360 CyberBlindSpot",
@@ -206,8 +212,8 @@ class ConverterToStix:
                     if malware_obj is not None:
                         objects.append(
                             stix2.Relationship(
-                                id=generate_deterministic_id(
-                                    "relationship", malware_obj.id, ip_obs.id
+                                id=StixCoreRelationship.generate_id(
+                                    "uses", malware_obj.id, ip_obs.id
                                 ),
                                 relationship_type="uses",
                                 source_ref=malware_obj.id,
@@ -230,8 +236,8 @@ class ConverterToStix:
                 if malware_obj is not None:
                     objects.append(
                         stix2.Relationship(
-                            id=generate_deterministic_id(
-                                "relationship", malware_obj.id, domain_obs.id
+                            id=StixCoreRelationship.generate_id(
+                                "uses", malware_obj.id, domain_obs.id
                             ),
                             relationship_type="uses",
                             source_ref=malware_obj.id,
@@ -252,8 +258,8 @@ class ConverterToStix:
                 if malware_obj is not None:
                     objects.append(
                         stix2.Relationship(
-                            id=generate_deterministic_id(
-                                "relationship", malware_obj.id, email_obs.id
+                            id=StixCoreRelationship.generate_id(
+                                "uses", malware_obj.id, email_obs.id
                             ),
                             relationship_type="uses",
                             source_ref=malware_obj.id,
@@ -320,10 +326,6 @@ class ConverterToStix:
             # --- Indicator for breached credential ---
             indicator_value = email or username
             if indicator_value:
-                indicator_seed = f"cbs-breach-indicator-{cred_id}-{indicator_value}"
-                indicator_id = (
-                    f"indicator--{uuid.uuid5(uuid.NAMESPACE_URL, indicator_seed)}"
-                )
                 if email and "@" in email:
                     pattern = f"[email-addr:value = '{self._escape_stix_value(email)}']"
                     indicator_name = f"Breached credential: {email}"
@@ -333,6 +335,11 @@ class ConverterToStix:
                         f"'{self._escape_stix_value(username)}']"
                     )
                     indicator_name = f"Breached credential: {username}"
+
+                # Derive the Indicator id from its STIX pattern via the pycti
+                # generator so the same credential pattern de-duplicates across
+                # connectors (not just within this one).
+                indicator_id = Indicator.generate_id(pattern)
 
                 indicator = stix2.Indicator(
                     id=indicator_id,
@@ -356,8 +363,8 @@ class ConverterToStix:
                 if email and "@" in email:
                     objects.append(
                         stix2.Relationship(
-                            id=generate_deterministic_id(
-                                "relationship", indicator_id, email_obs.id
+                            id=StixCoreRelationship.generate_id(
+                                "based-on", indicator_id, email_obs.id
                             ),
                             relationship_type="based-on",
                             source_ref=indicator_id,
@@ -369,8 +376,8 @@ class ConverterToStix:
                 # Indicator --based-on--> UserAccount
                 objects.append(
                     stix2.Relationship(
-                        id=generate_deterministic_id(
-                            "relationship", indicator_id, user_account.id
+                        id=StixCoreRelationship.generate_id(
+                            "based-on", indicator_id, user_account.id
                         ),
                         relationship_type="based-on",
                         source_ref=indicator_id,
@@ -379,6 +386,10 @@ class ConverterToStix:
                     )
                 )
 
+            # The Note id is seeded from stable content fields rather than
+            # pycti's Note.generate_id(created, content): `created` falls back to
+            # import time when the CBS record has no date, so a generator keyed on
+            # it would mint a fresh Note every run and duplicate the same breach.
             note_seed = f"cbs-breach-{cred_id}-{email}-{username}"
             note_id = f"note--{uuid.uuid5(uuid.NAMESPACE_URL, note_seed)}"
             note = stix2.Note(
@@ -459,14 +470,15 @@ class ConverterToStix:
                 )
                 objects.append(domain_obs)
 
+                pattern = f"[domain-name:value = '{self._escape_stix_value(domain)}']"
                 indicator = stix2.Indicator(
-                    id=f"indicator--{uuid.uuid5(uuid.NAMESPACE_URL, f'cbs-domainprot-{finding_id}')}",
+                    id=Indicator.generate_id(pattern),
                     name=f"Suspicious domain: {domain}",
                     description=(
                         f"Domain protection finding: {finding_type}. "
                         f"Risk score: {risk_score}. Status: {status}."
                     ),
-                    pattern=f"[domain-name:value = '{self._escape_stix_value(domain)}']",
+                    pattern=pattern,
                     pattern_type="stix",
                     valid_from=created,
                     created_by_ref=self.author.id,
@@ -477,8 +489,8 @@ class ConverterToStix:
 
                 objects.append(
                     stix2.Relationship(
-                        id=generate_deterministic_id(
-                            "relationship", indicator.id, domain_obs.id
+                        id=StixCoreRelationship.generate_id(
+                            "based-on", indicator.id, domain_obs.id
                         ),
                         relationship_type="based-on",
                         source_ref=indicator.id,
@@ -501,8 +513,8 @@ class ConverterToStix:
                     if domain:
                         objects.append(
                             stix2.Relationship(
-                                id=generate_deterministic_id(
-                                    "relationship", domain_obs.id, ip_obs.id
+                                id=StixCoreRelationship.generate_id(
+                                    "resolves-to", domain_obs.id, ip_obs.id
                                 ),
                                 relationship_type="resolves-to",
                                 source_ref=domain_obs.id,

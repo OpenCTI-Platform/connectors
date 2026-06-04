@@ -1,10 +1,9 @@
 """Tests for the connector utility helpers."""
 
 import re
-import uuid
 from datetime import datetime, timezone
 
-from connector.utils import generate_deterministic_id, normalize_timestamp
+from connector.utils import normalize_timestamp
 
 ISO_Z_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
@@ -89,36 +88,3 @@ class TestNormalizeTimestamp:
             tzinfo=timezone.utc
         )
         assert abs((parsed - before).total_seconds()) < 5
-
-
-class TestGenerateDeterministicId:
-    """generate_deterministic_id must be stable and namespaced by STIX type."""
-
-    def test_format_and_prefix(self):
-        result = generate_deterministic_id("relationship", "a", "b")
-        assert result.startswith("relationship--")
-        uuid.UUID(result.split("--", 1)[1])  # must be a valid UUID
-
-    def test_is_deterministic(self):
-        first = generate_deterministic_id("relationship", "src", "dst")
-        second = generate_deterministic_id("relationship", "src", "dst")
-        assert first == second
-
-    def test_different_inputs_differ(self):
-        assert generate_deterministic_id(
-            "relationship", "a", "b"
-        ) != generate_deterministic_id("relationship", "a", "c")
-
-    def test_matches_uuid5_seed(self):
-        # Args are joined with "|" (not "-") to avoid seed collisions when the
-        # args themselves contain "-" (as STIX IDs do).
-        expected = uuid.uuid5(uuid.NAMESPACE_URL, "x|y")
-        assert (
-            generate_deterministic_id("indicator", "x", "y") == f"indicator--{expected}"
-        )
-
-    def test_separator_avoids_collision(self):
-        # ("a-b", "c") and ("a", "b-c") must not collapse to the same seed.
-        assert generate_deterministic_id(
-            "relationship", "a-b", "c"
-        ) != generate_deterministic_id("relationship", "a", "b-c")

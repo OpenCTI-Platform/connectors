@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.converter_to_stix import ConverterToStix
+from pycti import Indicator, Malware, StixCoreRelationship
 
 
 @pytest.fixture
@@ -198,6 +199,40 @@ class TestObservableAuthorAttribution:
         assert {o.type for o in observables} == {"domain-name", "ipv4-addr"}
         for obs in observables:
             assert obs.x_opencti_created_by_ref == converter.author.id
+
+
+class TestPyctiGeneratedIds:
+    """SDO/SRO ids must come from pycti generators for cross-connector dedup."""
+
+    def test_malware_id_uses_pycti_generator(self, converter):
+        objects = converter.malware_logs_to_stix(
+            [{"id": "M1", "malware_family": "RedLine", "ip": "1.2.3.4"}]
+        )
+        malware = next(o for o in objects if o.type == "malware")
+        assert malware.id == Malware.generate_id("RedLine")
+
+    def test_breached_indicator_id_uses_pycti_generator(self, converter):
+        objects = converter.breached_credentials_to_stix(
+            [{"id": "C1", "email": "jdoe@example.com"}]
+        )
+        indicator = next(o for o in objects if o.type == "indicator")
+        assert indicator.id == Indicator.generate_id(indicator.pattern)
+
+    def test_domain_indicator_id_uses_pycti_generator(self, converter):
+        objects = converter.domain_protection_to_stix(
+            [{"id": "D1", "domain": "bad.example"}]
+        )
+        indicator = next(o for o in objects if o.type == "indicator")
+        assert indicator.id == Indicator.generate_id(indicator.pattern)
+
+    def test_relationship_id_uses_pycti_generator(self, converter):
+        objects = converter.malware_logs_to_stix(
+            [{"id": "M1", "malware_family": "RedLine", "ip": "1.2.3.4"}]
+        )
+        rel = next(o for o in objects if o.type == "relationship")
+        assert rel.id == StixCoreRelationship.generate_id(
+            rel.relationship_type, rel.source_ref, rel.target_ref
+        )
 
 
 class TestIncidentsToStix:

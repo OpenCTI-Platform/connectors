@@ -1,4 +1,3 @@
-import uuid
 from datetime import datetime, timezone
 
 
@@ -74,16 +73,3 @@ def normalize_timestamp(ts) -> str:
         return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
     except (ValueError, AttributeError):
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def generate_deterministic_id(stix_type: str, *args: str) -> str:
-    """Generate a deterministic STIX ID from type and seed values.
-
-    Args are joined with ``|`` rather than ``-``: STIX IDs (the usual seed
-    inputs) already contain ``-``, so a ``-`` separator would let different arg
-    tuples collapse to the same seed (e.g. ``("a-b", "c")`` and ``("a", "b-c")``
-    both yield ``"a-b-c"``) and mint identical IDs for distinct objects. ``|``
-    does not occur in STIX IDs, so the seed is unambiguous.
-    """
-    seed = "|".join(str(a) for a in args)
-    return f"{stix_type}--{uuid.uuid5(uuid.NAMESPACE_URL, seed)}"
