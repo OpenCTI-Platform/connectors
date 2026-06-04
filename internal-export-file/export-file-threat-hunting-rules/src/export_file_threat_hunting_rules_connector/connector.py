@@ -48,9 +48,9 @@ class DataCollector:
                     break
             else:
                 self.helper.connector_logger.warning(
-                    f"Unable to process object name: {entity_data_sdo.get("name")}, pattern is not {str(self.pattern_types)}"
+                    f"Unable to process object name: {entity_data_sdo.get('name')}, pattern is not {str(self.pattern_types)}"
                 )
-                self.errors.append({entity_data_sdo.get("name")})
+                self.errors.append(entity_data_sdo.get("name"))
 
         self.compile()
 
@@ -110,9 +110,7 @@ class ConnectorExportFileThreatHunting:
             # Workaround for platform using .unknown file extension
             if splitext(file_name)[1] == ".unknown":
                 file_name = splitext(file_name)[0] + "." + "zip"
-                self.helper.connector_logger.debug(
-                    f"file_format renamed to {file_name}"
-                )
+                self.helper.connector_logger.debug(f"file_name renamed to {file_name}")
 
             # Activated when SELECTION IS MADE from search results, and export is triggered
             if export_scope == "selection":
@@ -224,8 +222,13 @@ class ConnectorExportFileThreatHunting:
                 # case of a single export on a YARA indicator
                 if export_type == "simple":
                     if entity_type == "Indicator":
-                        self.helper.connector_logger.info(
-                            f"entity_data = {entity_data}"
+                        self.helper.connector_logger.debug(
+                            "Processing single indicator export",
+                            {
+                                "id": entity_data.get("id"),
+                                "name": entity_data.get("name"),
+                                "pattern_type": entity_data.get("pattern_type"),
+                            },
                         )
                         collector.extract([entity_data])
                         collector.compile()
@@ -262,38 +265,47 @@ class ConnectorExportFileThreatHunting:
                     # Due to usage of process_multiple_fields
                     entities_list = []
                     object_ids = entity_data.get("objectsIds")
-                    self.helper.connector_logger.info(f"entity_data = {entity_data}")
+                    self.helper.connector_logger.debug(
+                        "Processing full container export",
+                        {
+                            "id": entity_data.get("id"),
+                            "name": entity_data.get("name"),
+                            "objects_count": len(object_ids or []),
+                        },
+                    )
 
                     # If doing a full export, also check & include the current entity
                     if entity_data.get("pattern_type") in collector.pattern_types:
                         entities_list.append(entity_data)
 
-                    self.helper.connector_logger.info(f"objectIds = {object_ids}")
-
                     if object_ids is not None and len(object_ids) != 0:
                         # Filters need to cumulate the access markings + the list of inner object ids
+                        selection_filter_groups = [
+                            {
+                                "mode": "or",
+                                "filters": [
+                                    {
+                                        "key": "ids",
+                                        "values": entity_data["objectsIds"],
+                                    }
+                                ],
+                                "filterGroups": [],
+                            }
+                        ]
+                        # ``access_filter`` can be None; only add it when present so the
+                        # payload never contains a null filter group (which breaks the API).
+                        if access_filter is not None:
+                            selection_filter_groups.append(access_filter)
                         export_selection_filter = {
                             "mode": "and",
-                            "filterGroups": [
-                                {
-                                    "mode": "or",
-                                    "filters": [
-                                        {
-                                            "key": "ids",
-                                            "values": entity_data["objectsIds"],
-                                        }
-                                    ],
-                                    "filterGroups": [],
-                                },
-                                access_filter,
-                            ],
+                            "filterGroups": selection_filter_groups,
                             "filters": [],
                         }
                         entities_list = self.helper.api_impersonate.opencti_stix_object_or_stix_relationship.list(
                             filters=export_selection_filter, getAll=True
                         )
-                        self.helper.connector_logger.info(
-                            f"entities_list (A) = {entities_list}"
+                        self.helper.connector_logger.debug(
+                            f"Resolved {len(entities_list)} object(s) from container ids"
                         )
 
                     else:
@@ -309,8 +321,8 @@ class ConnectorExportFileThreatHunting:
                             )
                             entities_list.append(indicator)
 
-                        self.helper.connector_logger.info(
-                            f"entities_list (B) = {entities_list}"
+                        self.helper.connector_logger.debug(
+                            f"Resolved {len(entities_list)} indicator(s) from relationships"
                         )
 
                     collector.extract(entities_list)

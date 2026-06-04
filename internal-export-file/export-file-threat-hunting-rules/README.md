@@ -65,7 +65,7 @@ Below are the parameters you'll need to set for running the connector properly:
 |-----------------|------------------------|-----------------------------|--------------------------------|-----------|----------------------------------------------------------------------------------------|
 | Connector ID    | `id`                   | `CONNECTOR_ID`              | /                              | Yes       | A unique `UUIDv4` identifier for this connector instance.                              |
 | Connector Name  | `name`                 | `CONNECTOR_NAME`            | ExportFileThreatHuntingRules   | No        | Name of the connector.                                                                 |
-| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | Threat Hunting                 | Yes       | The MIME type is `application/zip` but use "Threat Hunting" as a description.          |
+| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | application/zip                | Yes       | Export MIME type (`application/zip`), consistent with `config.yml.sample`; the platform matches this scope for export selection. |
 | Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | info                           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`. |
 
 ## Deployment
