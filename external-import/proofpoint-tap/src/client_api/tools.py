@@ -79,6 +79,11 @@ class _PickleClientResponse:
         def get_debug(self: "_PickleClientResponse._FakeLoop") -> bool:
             return False
 
+    class _FakeStreamWriter:
+        """Fake stream writer to satisfy aiohttp's ClientResponse constructor."""
+
+        output_size = 0
+
     def __init__(self, response: "ClientResponse") -> None:
         """Initialize the PickleClientResponse."""
         self.method = response.method
@@ -102,6 +107,7 @@ class _PickleClientResponse:
             method=self.method,
             url=self.url,
             writer=self.writer,
+            stream_writer=self._FakeStreamWriter(),  # type: ignore[arg-type]
             continue100=self.continue100,
             timer=self.timer,  # type: ignore[arg-type]
             request_info=self.request_info,  # type: ignore[arg-type]
