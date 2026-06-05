@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/comlaude_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Comlaude",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "comlaude",
+        "stix"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": "500MB",
+      "description": "The maximum queue threshold.",
+      "type": "string"
+    },
+    "CONNECTOR_RUN_AND_TERMINATE": {
+      "default": false,
+      "description": "Whether to run the connector once and terminate.",
+      "type": "boolean"
+    },
+    "COMLAUDE_USERNAME": {
+      "description": "The Comlaude API username.",
+      "type": "string"
+    },
+    "COMLAUDE_PASSWORD": {
+      "description": "The Comlaude API password.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COMLAUDE_API_KEY": {
+      "description": "The Comlaude API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COMLAUDE_GROUP_ID": {
+      "description": "The Comlaude group ID to query domains from.",
+      "type": "string"
+    },
+    "COMLAUDE_SCORE": {
+      "default": 15,
+      "description": "The default score for created observables (0 to 100).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "COMLAUDE_START_TIME": {
+      "default": "1970-01-01T00:00:00Z",
+      "description": "The start time for initial data import (ISO 8601 format).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "COMLAUDE_LABELS": {
+      "default": "comlaude,safelist",
+      "description": "Comma-separated list of labels to apply to created objects.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "COMLAUDE_USERNAME",
+    "COMLAUDE_PASSWORD",
+    "COMLAUDE_API_KEY",
+    "COMLAUDE_GROUP_ID"
+  ],
+  "additionalProperties": true
+}
