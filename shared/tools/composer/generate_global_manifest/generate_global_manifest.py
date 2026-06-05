@@ -29,7 +29,9 @@ class ManifestGenerator:
         Gather all connector contract paths
         """
         for repository_subdirectory in REPOSITORY_SUBDIRECTORIES_TO_INCLUDE:
-            for root, _, files in os.walk(repository_subdirectory):
+            for root, _, files in sorted(
+                os.walk(repository_subdirectory), key=lambda x: x[0]
+            ):
                 if os.path.basename(root) == __CONNECTOR_METADATA_DIRECTORY__:
                     connector_manifest_file_path = None
                     connector_config_json_schema_file_path = None
