@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/splunk_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_NAME": {
+      "default": "Splunk",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": "splunk",
+      "description": "The scope or type of data the connector is processing.",
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "STREAM",
+      "description": "Should always be set to STREAM for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to listen to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Listen to delete events in the stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Do not auto-resolve dependencies.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONSUMER_COUNT": {
+      "default": 10,
+      "description": "Number of consumer/worker threads used to push data to Splunk.",
+      "type": "integer"
+    },
+    "SPLUNK_URL": {
+      "description": "The Splunk instance URL (e.g. https://splunk.example.com:8089).",
+      "format": "uri",
+      "type": "string"
+    },
+    "SPLUNK_TOKEN": {
+      "description": "Authentication token for Splunk.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "SPLUNK_AUTH_TYPE": {
+      "default": "Bearer",
+      "description": "Authentication type for Splunk (e.g. Bearer).",
+      "type": "string"
+    },
+    "SPLUNK_OWNER": {
+      "description": "Splunk KV Store owner (e.g. nobody).",
+      "type": "string"
+    },
+    "SPLUNK_SSL_VERIFY": {
+      "default": true,
+      "description": "Verify SSL certificates when connecting to Splunk.",
+      "type": "boolean"
+    },
+    "SPLUNK_APP": {
+      "description": "Splunk app context for the KV Store (e.g. search).",
+      "type": "string"
+    },
+    "SPLUNK_KV_STORE_NAME": {
+      "description": "Name of the Splunk KV Store collection to use.",
+      "type": "string"
+    },
+    "SPLUNK_IGNORE_TYPES": {
+      "description": "Comma-separated list of STIX types to ignore.",
+      "type": "string"
+    },
+    "METRICS_ENABLE": {
+      "default": false,
+      "description": "Enable Prometheus metrics server.",
+      "type": "boolean"
+    },
+    "METRICS_PORT": {
+      "default": 9113,
+      "description": "Port on which Prometheus metrics are exposed.",
+      "type": "integer"
+    },
+    "METRICS_ADDR": {
+      "default": "0.0.0.0",
+      "description": "Address on which Prometheus metrics are exposed.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "SPLUNK_URL",
+    "SPLUNK_TOKEN",
+    "SPLUNK_OWNER",
+    "SPLUNK_APP",
+    "SPLUNK_KV_STORE_NAME",
+    "SPLUNK_IGNORE_TYPES"
+  ],
+  "additionalProperties": true
+}
