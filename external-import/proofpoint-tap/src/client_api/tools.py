@@ -101,8 +101,8 @@ class _PickleClientResponse:
         self.loop = None  # response._loop, # response._loop
         self.session = None  # response._session
 
-    def to_response(self) -> "ClientResponse":
-        """Convert the PickleClientResponse to a ClientResponse."""
+    def to_response(self) -> "ClientResponse":  # pragma: no cover
+        """Convert the PickleClientResponse to a ClientResponse (dev-only cache)."""
         response = ClientResponse(
             method=self.method,
             url=self.url,
