@@ -18,12 +18,6 @@ SDK_AVAILABLE = True
 # Skip ONLY when the SDK is truly absent (targeted ImportError).
 # L'import du converter se fait hors try/except : un vrai bug d'import doit
 # fail visibly, not be masked as "skipped".
-try:
-    import connectors_sdk  # noqa: F401
-    import pycti  # noqa: F401
-except ImportError:
-    SDK_AVAILABLE = False
-
 if SDK_AVAILABLE:
     from connectors_sdk.models import TLPMarking
     from osint_industries.converter_to_stix import ConverterToStix

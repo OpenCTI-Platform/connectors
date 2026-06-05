@@ -22,14 +22,6 @@ converter_mod = None
 # L'import du converter se fait ensuite SANS filet : tout autre bug
 # (chemin report_html, faute de syntaxe...) doit lever une vraie erreur
 # visible, et non se transformer en "skipped" silencieux.
-try:
-    import connectors_sdk  # noqa: F401
-    import pycti  # noqa: F401
-
-    SDK_AVAILABLE = True
-except ImportError:
-    SDK_AVAILABLE = False
-
 if SDK_AVAILABLE:
     from osint_industries import converter_to_stix as converter_mod
 
