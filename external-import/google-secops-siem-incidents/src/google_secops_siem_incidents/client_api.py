@@ -173,7 +173,9 @@ class GoogleSecOpsApiClient:
         ]
         if not all_alerts:
             return None
-        return min(alert.detection_timestamp for alert in all_alerts)
+
+        earliest = min(all_alerts, key=lambda a: parse_ts(a.detection_timestamp))
+        return earliest.detection_timestamp
 
     async def close(self) -> None:
         """Close the underlying HTTP session."""
