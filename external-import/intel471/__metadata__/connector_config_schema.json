@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/intel471_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Intel471",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "malware",
+        "vulnerability",
+        "indicator"
+      ],
+      "description": "The scope or type of data the connector is importing.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "INTEL471_API_USERNAME": {
+      "description": "Titan API username.",
+      "type": "string"
+    },
+    "INTEL471_API_KEY": {
+      "description": "Titan API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "INTEL471_INTERVAL_INDICATORS": {
+      "default": 60,
+      "description": "Minutes between indicator fetches. Set to 0 to disable.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_INDICATORS": {
+      "default": 0,
+      "description": "Epoch milliseconds for initial indicators fetch start date.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_YARA": {
+      "default": 60,
+      "description": "Minutes between YARA rule fetches. Set to 0 to disable.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_YARA": {
+      "default": 0,
+      "description": "Epoch milliseconds for initial YARA fetch start date.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_CVES": {
+      "default": 120,
+      "description": "Minutes between CVE report fetches. Set to 0 to disable.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_CVES": {
+      "default": 0,
+      "description": "Epoch milliseconds for initial CVE fetch start date.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_IOCS": {
+      "default": 120,
+      "description": "Minutes between IOC fetches. Set to 0 to disable.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_IOCS": {
+      "default": 0,
+      "description": "Epoch milliseconds for initial IOC fetch start date.",
+      "type": "integer"
+    },
+    "INTEL471_PROXY": {
+      "default": null,
+      "description": "Optional proxy URL (e.g., http://user:pass@localhost:3128).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "INTEL471_API_USERNAME",
+    "INTEL471_API_KEY"
+  ],
+  "additionalProperties": true
+}
