@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/rst_report_hub_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "RST Report Hub",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/json",
+        "application/pdf"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_BASE_URL": {
+      "default": "https://api.rstcloud.net/v1",
+      "description": "The base URL for the RST Cloud API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "RST_REPORT_HUB_API_KEY": {
+      "description": "The RST Cloud API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RST_REPORT_HUB_CONNECTION_TIMEOUT": {
+      "default": 30,
+      "description": "The connection timeout in seconds.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_READ_TIMEOUT": {
+      "default": 60,
+      "description": "The read timeout in seconds.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_RETRY_DELAY": {
+      "default": 30,
+      "description": "The delay in seconds between retry attempts.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_RETRY_ATTEMPTS": {
+      "default": 5,
+      "description": "The number of retry attempts for failed requests.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_IMPORT_START_DATE": {
+      "description": "The start date for importing reports (format: YYYYMMDD).",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_FETCH_INTERVAL": {
+      "default": 300,
+      "deprecated": true,
+      "description": "The interval in seconds between each fetch cycle.",
+      "type": "integer"
+    },
+    "RST_REPORT_HUB_LANGUAGE": {
+      "default": "eng",
+      "description": "The language of the reports to fetch (e.g., eng).",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_CREATE_OBSERVABLES": {
+      "default": false,
+      "description": "If true, observables will be created from indicators.",
+      "type": "boolean"
+    },
+    "RST_REPORT_HUB_CREATE_RELATED_TO": {
+      "default": true,
+      "description": "If true, related-to relationships will be included in the bundle.",
+      "type": "boolean"
+    },
+    "RST_REPORT_HUB_CREATE_CUSTOM_TTPS": {
+      "default": true,
+      "description": "If true, custom TTPs not yet in MITRE ATT&CK will be included.",
+      "type": "boolean"
+    },
+    "RST_REPORT_HUB_REPORT_LABELS_DISABLED": {
+      "default": "",
+      "description": "Comma-separated list of labels to exclude from reports (lowercase, numbers, underscores only).",
+      "type": "string"
+    },
+    "RST_REPORT_HUB_SET_DETECTION_FLAG": {
+      "default": false,
+      "description": "If true, the x_opencti_detection flag will be set to true for indicators.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "RST_REPORT_HUB_API_KEY"
+  ],
+  "additionalProperties": true
+}
