@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/joe_sandbox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Joe Sandbox",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "Url"
+      ],
+      "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 50,
+      "description": "The confidence level for this connector, from 0 (Unknown) to 100 (Fully trusted).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "JOE_SANDBOX_API_KEY": {
+      "description": "API key used to authenticate requests to the Joe Sandbox service.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "JOE_SANDBOX_API_URL": {
+      "default": "https://jbxcloud.joesecurity.org/api",
+      "description": "The Joe Sandbox API URL. Cloud Pro: https://jbxcloud.joesecurity.org/api, Cloud Basic: https://joesandbox.com/api.",
+      "format": "uri",
+      "type": "string"
+    },
+    "JOE_SANDBOX_ANALYSIS_URL": {
+      "default": "https://jbxcloud.joesecurity.org/analysis",
+      "description": "The Joe Sandbox analysis URL. Cloud Pro: https://jbxcloud.joesecurity.org/analysis, Cloud Basic: https://joesandbox.com/analysis.",
+      "format": "uri",
+      "type": "string"
+    },
+    "JOE_SANDBOX_ACCEPT_TAC": {
+      "default": true,
+      "description": "If true, you accept the Joe Sandbox Terms and Conditions at https://jbxcloud.joesecurity.org/tandc.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_API_TIMEOUT": {
+      "default": 30,
+      "description": "Time in seconds to timeout after calling the Joe Sandbox API.",
+      "type": "integer"
+    },
+    "JOE_SANDBOX_VERIFY_SSL": {
+      "default": true,
+      "description": "Verify SSL certificates for API calls.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_API_RETRIES": {
+      "default": 5,
+      "description": "How many times to retry API calls before giving up.",
+      "type": "integer"
+    },
+    "JOE_SANDBOX_PROXIES": {
+      "default": "",
+      "description": "A JSON encoded map of proxies to use for API calls. See https://requests.readthedocs.io/en/latest/user/advanced/?highlight=proxy#proxies.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_USER_AGENT": {
+      "default": "OpenCTI",
+      "description": "The user agent string sent with API requests to Joe Sandbox.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_REPORT_TYPES": {
+      "default": "executive,html,iochtml,iocjson,iocxml,unpackpe,stix,ida,pdf,pdfexecutive,misp,pcap,maec,memdumps,json,lightjsonfixed,xml,lightxml,pcapunified,pcapsslinspection",
+      "description": "Comma-separated list of report types to download/upload as external reference files.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_SYSTEMS": {
+      "default": "w10x64_office",
+      "description": "Comma-separated list of analysis systems to use.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_ANALYSIS_TIME": {
+      "default": 300,
+      "description": "Timeout for the analysis in seconds.",
+      "type": "integer"
+    },
+    "JOE_SANDBOX_INTERNET_ACCESS": {
+      "default": true,
+      "description": "Enable full internet access in the analysis (must be false if internet simulation is true).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_INTERNET_SIMULATION": {
+      "default": false,
+      "description": "Enable internet simulation (must be false if internet access is true).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_HYBRID_CODE_ANALYSIS": {
+      "default": true,
+      "description": "Enable Hybrid Code Analysis (HCA).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_HYBRID_DECOMPILATION": {
+      "default": true,
+      "description": "Enable Hybrid Decompilation (DEC).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_REPORT_CACHE": {
+      "default": false,
+      "description": "Enable the report cache. Check the cache for existing reports before running a full analysis.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_APK_INSTRUMENTATION": {
+      "default": true,
+      "description": "Perform APK DEX code instrumentation.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_AMSI_UNPACKING": {
+      "default": true,
+      "description": "Perform generic unpacking using the Microsoft Antimalware Scan Interface (AMSI).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_SSL_INSPECTION": {
+      "default": true,
+      "description": "Enable HTTPS inspection.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_VBA_INSTRUMENTATION": {
+      "default": false,
+      "description": "Enable VBA instrumentation (two analyses are performed).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_JS_INSTRUMENTATION": {
+      "default": false,
+      "description": "Enable Javascript instrumentation (two analyses are performed).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_JAVA_JAR_TRACING": {
+      "default": false,
+      "description": "Enable JAVA JAR tracing (two analyses are performed).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_DOTNET_TRACING": {
+      "default": false,
+      "description": "Enable .NET tracing (two analyses are performed).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_START_AS_NORMAL_USER": {
+      "default": false,
+      "description": "Starts the sample with normal user privileges.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_SYSTEM_DATE": {
+      "default": "",
+      "description": "Change the analyzer's system date (helpful for date-aware samples), format is YYYY-MM-DD.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_LANGUAGE_AND_LOCALE": {
+      "default": "",
+      "description": "Changes the language and locale of the analysis machine.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_LOCALIZED_INTERNET_COUNTRY": {
+      "default": "",
+      "description": "Select the country to use for routing internet access through.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_EMAIL_NOTIFICATION": {
+      "default": false,
+      "description": "Enable email notification upon analysis completion.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_ARCHIVE_NO_UNPACK": {
+      "default": false,
+      "description": "Do not unpack archives (zip, 7z etc) containing multiple files.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_HYPERVISOR_BASED_INSPECTION": {
+      "default": false,
+      "description": "Enable Hypervisor based Inspection.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_FAST_MODE": {
+      "default": false,
+      "description": "Fast Mode focuses on fast analysis and detection versus deep forensic analysis.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_SECONDARY_RESULTS": {
+      "default": true,
+      "description": "Enables secondary results such as Yara rule generation, classification via Joe Sandbox Class as well as several detail reports.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_COOKBOOK_FILE_PATH": {
+      "default": "",
+      "description": "Path to a cookbook to run for the analysis.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_DOCUMENT_PASSWORD": {
+      "default": "1234",
+      "description": "Password for decrypting documents like MS Office and PDFs.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_ARCHIVE_PASSWORD": {
+      "default": "infected",
+      "description": "This password will be used to decrypt archives (zip, 7z, rar etc.).",
+      "type": "string"
+    },
+    "JOE_SANDBOX_COMMAND_LINE_ARGUMENT": {
+      "default": "",
+      "description": "Will start the sample with the given command-line argument. Currently only available on Windows analyzers.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_ENCRYPT_WITH_PASSWORD": {
+      "default": "",
+      "description": "Encryption password for analyses, AES-256 is used to encrypt files and the password is deleted on the backend after encrypting files.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_BROWSER": {
+      "default": false,
+      "description": "Use a browser for analysis of URLs (false means download/execute).",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_URL_REPUTATION": {
+      "default": false,
+      "description": "Lookup the reputation of URLs and domains to improve the analysis. This option will send URLs and domains to third party services and WHOIS servers.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_EXPORT_TO_JBXVIEW": {
+      "default": false,
+      "description": "Export the report(s) from this analysis to Joe Sandbox View.",
+      "type": "boolean"
+    },
+    "JOE_SANDBOX_DELETE_AFTER_DAYS": {
+      "default": 30,
+      "description": "Delete the analysis after the specified number of days. If not set, the default value is used.",
+      "type": "integer"
+    },
+    "JOE_SANDBOX_PRIORITY": {
+      "default": "",
+      "description": "On-premise exclusive parameter. Set the priority of the submission between 1 and 10 (high value means higher priority).",
+      "type": "string"
+    },
+    "JOE_SANDBOX_DEFAULT_TLP": {
+      "default": "TLP:CLEAR",
+      "description": "The default TLP for newly created STIX objects.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "JOE_SANDBOX_YARA_COLOR": {
+      "default": "#0059f7",
+      "description": "The color for yara labels applied to the observable.",
+      "type": "string"
+    },
+    "JOE_SANDBOX_DEFAULT_COLOR": {
+      "default": "#54483b",
+      "description": "The color for default labels.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "JOE_SANDBOX_API_KEY",
+    "JOE_SANDBOX_API_URL",
+    "JOE_SANDBOX_ANALYSIS_URL"
+  ],
+  "additionalProperties": true
+}
