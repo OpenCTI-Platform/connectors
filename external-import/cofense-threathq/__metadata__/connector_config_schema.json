@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/cofense_threathq_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Cofense ThreatHQ",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Cofense ThreatHQ"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": 500,
+      "description": "The queue threshold in MBytes.",
+      "type": "number"
+    },
+    "CONNECTOR_RUN_AND_TERMINATE": {
+      "default": false,
+      "description": "If true, the connector will run once and terminate.",
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_QUEUE": {
+      "default": true,
+      "description": "If true, the connector will send data to the queue.",
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY": {
+      "default": false,
+      "description": "If true, the connector will send data to a directory.",
+      "type": "boolean"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_PATH": {
+      "description": "The path to the directory to send data to (required if CONNECTOR_SEND_TO_DIRECTORY is true).",
+      "type": "string"
+    },
+    "CONNECTOR_SEND_TO_DIRECTORY_RETENTION": {
+      "default": 7,
+      "description": "The retention period in days for data sent to the directory.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_TOKEN_USER": {
+      "description": "The Cofense ThreatHQ API token user.",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_TOKEN_PASSWORD": {
+      "description": "The Cofense ThreatHQ API token password.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COFENSE_THREATHQ_IMPORT_START_DATE": {
+      "default": "P30D",
+      "description": "The start date for importing data. Format: 'YYYY-MM-DD' or 'YYYY-MM-DD HH:MM:SS+HH:MM' or ISO 8601 duration.",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_API_BASE_URL": {
+      "default": "https://www.threathq.com/apiv1/",
+      "description": "The base URL for the Cofense ThreatHQ API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_API_LEAKY_BUCKET_RATE": {
+      "default": 10,
+      "description": "The leaky bucket rate for API requests.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_API_LEAKY_BUCKET_CAPACITY": {
+      "default": 10,
+      "description": "The leaky bucket capacity for API requests.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_API_RETRY": {
+      "default": 5,
+      "description": "The number of API request retries.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_API_BACKOFF": {
+      "default": "PT30S",
+      "description": "The backoff duration between API retries (ISO 8601 duration).",
+      "format": "duration",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_IMPACT_TO_EXCLUDE": {
+      "default": "",
+      "description": "Comma-separated list of impact levels to exclude. Available values: none, moderate, major.",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_IMPORT_REPORT_PDF": {
+      "default": true,
+      "description": "If true, import report PDFs from Cofense ThreatHQ.",
+      "type": "boolean"
+    },
+    "COFENSE_THREATHQ_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "The TLP marking level to apply.",
+      "enum": [
+        "clear",
+        "white",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_PROMOTE_OBSERVABLES_AS_INDICATORS": {
+      "default": true,
+      "description": "If true, promote observables as indicators.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "COFENSE_THREATHQ_TOKEN_USER",
+    "COFENSE_THREATHQ_TOKEN_PASSWORD"
+  ],
+  "additionalProperties": true
+}
