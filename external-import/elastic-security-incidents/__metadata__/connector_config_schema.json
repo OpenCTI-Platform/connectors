@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/elastic-security-incidents_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The URL of the OpenCTI platform.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Elastic Security Incidents",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "elastic-security-incidents"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT30M",
+      "description": "The period of time to await between two runs of the connector (ISO-8601 duration format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_URL": {
+      "description": "Elasticsearch cluster URL.",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_KIBANA_URL": {
+      "default": null,
+      "description": "Kibana URL (optional, will use Elasticsearch URL conversion if not provided).",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_API_KEY": {
+      "description": "API key for Elasticsearch.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "ELASTIC_SECURITY_VERIFY_SSL": {
+      "default": true,
+      "description": "Whether to verify SSL certificates when connecting to Elasticsearch.",
+      "type": "boolean"
+    },
+    "ELASTIC_SECURITY_CA_CERT": {
+      "default": null,
+      "description": "Path to CA certificate file for SSL verification.",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_IMPORT_START_DATE": {
+      "default": null,
+      "description": "Initial import start date in ISO-8601 format (defaults to 7 days ago if not set).",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Whether to import security alerts from Elastic.",
+      "type": "boolean"
+    },
+    "ELASTIC_SECURITY_IMPORT_CASES": {
+      "default": true,
+      "description": "Whether to import security cases from Elastic.",
+      "type": "boolean"
+    },
+    "ELASTIC_SECURITY_ALERT_STATUSES": {
+      "default": null,
+      "description": "Comma-separated list of alert statuses to import (e.g. open,acknowledged,closed). Leave empty to import all.",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_ALERT_RULE_TAGS": {
+      "default": null,
+      "description": "Comma-separated list of alert rule tags to filter by (e.g. Domain: Endpoint,OS: Windows). Leave empty to import all.",
+      "type": "string"
+    },
+    "ELASTIC_SECURITY_CASE_STATUSES": {
+      "default": null,
+      "description": "Comma-separated list of case statuses to import (e.g. open,in-progress,closed). Leave empty to import all.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "ELASTIC_SECURITY_URL",
+    "ELASTIC_SECURITY_API_KEY"
+  ],
+  "additionalProperties": true
+}
