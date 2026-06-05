@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/taxii-post_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "TAXII POST",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "taxii"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The ID of the live stream to connect to.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen to delete events from the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Set to true unless synchronizing between OpenCTI platforms.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 80,
+      "description": "Default confidence level for the connector (0-100).",
+      "type": "integer"
+    },
+    "TAXII_URL": {
+      "description": "The URL of the TAXII server.",
+      "format": "uri",
+      "type": "string"
+    },
+    "TAXII_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify SSL certificates.",
+      "type": "boolean"
+    },
+    "TAXII_API_ROOT": {
+      "default": "root",
+      "description": "The TAXII API root path segment between server URL and /collections/.",
+      "type": "string"
+    },
+    "TAXII_COLLECTION_ID": {
+      "description": "The target TAXII collection ID.",
+      "type": "string"
+    },
+    "TAXII_TOKEN": {
+      "default": null,
+      "description": "Bearer token for authentication. Takes precedence over basic auth.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TAXII_LOGIN": {
+      "default": null,
+      "description": "Username for basic authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TAXII_PASSWORD": {
+      "default": null,
+      "description": "Password for basic authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "TAXII_VERSION": {
+      "default": "2.1",
+      "description": "TAXII protocol version.",
+      "enum": [
+        "2.0",
+        "2.1"
+      ],
+      "type": "string"
+    },
+    "TAXII_STIX_VERSION": {
+      "default": "2.1",
+      "description": "STIX output version.",
+      "enum": [
+        "2.0",
+        "2.1"
+      ],
+      "type": "string"
+    },
+    "TAXII_DELETE_CREATED_BY_REF": {
+      "default": true,
+      "description": "Strip created_by_ref from objects before posting.",
+      "type": "boolean"
+    },
+    "TAXII_DELETE_MARKING_DEFINITION": {
+      "default": true,
+      "description": "Strip object_marking_refs from objects before posting.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "TAXII_URL",
+    "TAXII_COLLECTION_ID"
+  ],
+  "additionalProperties": true
+}
