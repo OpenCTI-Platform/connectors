@@ -16,7 +16,7 @@ import pytest
 # et que le SDK est absent, on skippe proprement.
 SRC = os.path.join(os.path.dirname(__file__), "..", "src")
 sys.path.insert(0, SRC)
-
+SDK_AVAILABLE = True
 converter_mod = None
 # Skip ONLY when the SDK is truly absent (targeted ImportError).
 # L'import du converter se fait ensuite SANS filet : tout autre bug
