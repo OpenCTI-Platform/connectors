@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/intel471_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Intel471",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "malware",
+        "vulnerability",
+        "indicator"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_UPDATE_EXISTING_DATA": {
+      "default": false,
+      "description": "Whether to update existing data in OpenCTI.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 70,
+      "description": "The confidence level of data produced by this connector.",
+      "type": "integer"
+    },
+    "INTEL471_API_USERNAME": {
+      "description": "The Intel 471 API username.",
+      "type": "string"
+    },
+    "INTEL471_API_KEY": {
+      "description": "The Intel 471 API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "INTEL471_PROXY": {
+      "description": "Optional proxy URL for Intel 471 API requests.",
+      "format": "uri",
+      "type": "string"
+    },
+    "INTEL471_INTERVAL_INDICATORS": {
+      "default": 60,
+      "description": "The interval in minutes between each run of the indicators stream.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_INDICATORS": {
+      "default": 0,
+      "description": "The initial history in hours for the indicators stream.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_YARA": {
+      "default": 60,
+      "description": "The interval in minutes between each run of the YARA stream.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_YARA": {
+      "default": 0,
+      "description": "The initial history in hours for the YARA stream.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_CVES": {
+      "default": 120,
+      "description": "The interval in minutes between each run of the CVEs stream.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_CVES": {
+      "default": 0,
+      "description": "The initial history in hours for the CVEs stream.",
+      "type": "integer"
+    },
+    "INTEL471_INTERVAL_IOCS": {
+      "default": 120,
+      "description": "The interval in minutes between each run of the IOCs stream.",
+      "type": "integer"
+    },
+    "INTEL471_INITIAL_HISTORY_IOCS": {
+      "default": 0,
+      "description": "The initial history in hours for the IOCs stream.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "INTEL471_API_USERNAME",
+    "INTEL471_API_KEY"
+  ],
+  "additionalProperties": true
+}
