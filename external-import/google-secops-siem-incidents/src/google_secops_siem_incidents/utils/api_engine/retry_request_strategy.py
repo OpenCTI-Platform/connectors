@@ -67,10 +67,19 @@ class RetryRequestStrategy(BaseRequestStrategy):
         if isinstance(self._limiter_config, BaseRateLimiter):
             return self._limiter_config
         cfg = self._limiter_config
+        try:
+            key = cfg["key"]
+            max_requests = cfg["max_requests"]
+            period = cfg["period"]
+        except KeyError as exc:
+            raise ApiValidationError(
+                f"Invalid rate_limiter config: missing key {exc.args[0]!r}"
+            ) from exc
+
         return RateLimiterRegistry.get_or_create(
-            key=cfg["key"],
-            max_requests=cfg["max_requests"],
-            period=cfg["period"],
+            key=key,
+            max_requests=max_requests,
+            period=period,
         )
 
     def _parse_response(
