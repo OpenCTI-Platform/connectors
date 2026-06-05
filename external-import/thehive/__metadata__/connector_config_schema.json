@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/thehive_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "TheHive",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "thehive"
+      ],
+      "description": "The scope or type of data the connector is importing.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "THEHIVE_URL": {
+      "description": "URL of the TheHive instance.",
+      "format": "uri",
+      "type": "string"
+    },
+    "THEHIVE_API_KEY": {
+      "description": "TheHive API key for authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "THEHIVE_CHECK_SSL": {
+      "default": true,
+      "description": "Verify SSL certificates when connecting to TheHive.",
+      "type": "boolean"
+    },
+    "THEHIVE_ORGANIZATION_NAME": {
+      "description": "TheHive organization name used as the identity in OpenCTI.",
+      "type": "string"
+    },
+    "THEHIVE_IMPORT_FROM_DATE": {
+      "default": null,
+      "description": "Start date for importing data from TheHive (ISO 8601 format, e.g. 2021-01-01T00:00:00).",
+      "format": "date-time",
+      "type": "string"
+    },
+    "THEHIVE_IMPORT_ONLY_TLP": {
+      "default": "0,1,2,3,4",
+      "description": "Comma-separated TLP levels to import (0=clear, 1=green, 2=amber, 3=amber+strict, 4=red).",
+      "type": "string"
+    },
+    "THEHIVE_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Import alerts from TheHive in addition to cases.",
+      "type": "boolean"
+    },
+    "THEHIVE_IMPORT_ATTACHMENTS": {
+      "default": false,
+      "description": "Enable or disable the import of case attachments from TheHive.",
+      "type": "boolean"
+    },
+    "THEHIVE_SEVERITY_MAPPING": {
+      "default": "1:low,2:medium,3:high,4:critical",
+      "description": "Mapping of TheHive severity levels to OpenCTI severity labels (format: level:label,level:label).",
+      "type": "string"
+    },
+    "THEHIVE_CASE_STATUS_MAPPING": {
+      "default": "",
+      "description": "Mapping of TheHive case statuses to OpenCTI status IDs (format: TheHiveStatus:OpenCTI_Status_ID).",
+      "type": "string"
+    },
+    "THEHIVE_TASK_STATUS_MAPPING": {
+      "default": "",
+      "description": "Mapping of TheHive task statuses to OpenCTI status IDs (format: Waiting:ID1,InProgress:ID2,Completed:ID3).",
+      "type": "string"
+    },
+    "THEHIVE_ALERT_STATUS_MAPPING": {
+      "default": "",
+      "description": "Mapping of TheHive alert statuses to OpenCTI status IDs (format: TheHiveStatus:OpenCTI_Status_ID).",
+      "type": "string"
+    },
+    "THEHIVE_USER_MAPPING": {
+      "default": "",
+      "description": "Mapping of TheHive assignee emails to OpenCTI user IDs (format: email1:userID1,email2:userID2).",
+      "type": "string"
+    },
+    "THEHIVE_INTERVAL": {
+      "default": 5,
+      "description": "Polling interval in minutes between data fetches from TheHive.",
+      "type": "integer"
+    },
+    "THEHIVE_CASE_TAG_WHITELIST": {
+      "default": "",
+      "description": "Comma-separated list of tags; only cases with these tags will be imported.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "THEHIVE_URL",
+    "THEHIVE_API_KEY",
+    "THEHIVE_ORGANIZATION_NAME"
+  ],
+  "additionalProperties": true
+}
