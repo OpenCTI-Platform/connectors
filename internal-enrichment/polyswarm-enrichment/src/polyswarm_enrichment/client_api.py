@@ -143,10 +143,20 @@ class ConnectorClient:
         self._polykg_url = config.polykg_api_url
         if self._polykg_url:
             self._polykg_url = self._polykg_url.rstrip("/")
+        # polykg enrichment is opt-in: a blank POLYKG_API_URL disables every
+        # profile / attack-pattern lookup. Guard on this flag rather than
+        # building a schemeless "/v3/kg/..." URL, which raises MissingSchema.
+        self._polykg_enabled = bool(self._polykg_url)
         self._circuit_breakers["polykg"] = CircuitBreaker(
             failure_threshold=1, cooldown_seconds=300
         )
-        self._check_polykg_connectivity()
+        if self._polykg_enabled:
+            self._check_polykg_connectivity()
+        else:
+            self.helper.log_info(
+                "[CLIENT] polykg enrichment disabled (POLYKG_API_URL not set); "
+                "skipping malware-profile and attack-pattern lookups"
+            )
 
     def _validate_api_access(self) -> None:
         """Verify API key and community access. Raises on auth failure."""
@@ -757,6 +767,8 @@ class ConnectorClient:
 
         Returns the profile dict or None if not found / unreachable.
         """
+        if not self._polykg_enabled:
+            return None
         if not family_name:
             return None
 
@@ -799,6 +811,8 @@ class ConnectorClient:
 
     def has_profiles(self) -> bool:
         """Check if the polykg profile endpoint is reachable."""
+        if not self._polykg_enabled:
+            return False
         try:
             resp = requests.get(
                 f"{self._polykg_url}/v3/kg/profile",
@@ -815,6 +829,8 @@ class ConnectorClient:
         Returns dict with 'techniques' and 'type_mappings' keys,
         or None if polykg is unreachable.
         """
+        if not self._polykg_enabled:
+            return None
         circuit = self._circuit_breakers["polykg"]
         can_execute, reason = circuit.can_execute()
         if not can_execute:
