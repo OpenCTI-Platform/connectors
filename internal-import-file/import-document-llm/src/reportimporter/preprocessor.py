@@ -8,7 +8,6 @@ Supports:
 """
 
 import csv
-import platform
 import re
 import threading
 from dataclasses import dataclass
@@ -328,11 +327,15 @@ def _process_pdf(
         return None
 
     if pdf_ocr_enabled:
-        cfg = (
-            pdf_ocr_config
-            if isinstance(pdf_ocr_config, PdfOcrConfig)
-            else PdfOcrConfig(gpu=(platform.system() != "Windows"), serialize_gpu=True)
-        )
+        if isinstance(pdf_ocr_config, PdfOcrConfig):
+            cfg = pdf_ocr_config
+        elif pdf_ocr_config is not None:
+            # A ConfigParser-like object: read the OCR knobs from it.
+            cfg = PdfOcrConfig.from_opencti(pdf_ocr_config)
+        else:
+            # Default config auto-detects CUDA, so we never force GPU OCR on a
+            # CPU-only host.
+            cfg = PdfOcrConfig()
         reader_cache = _READER_CACHE
         _helper.connector_logger.debug(f"PDF OCR config: {cfg}")
     else:

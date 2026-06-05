@@ -50,7 +50,7 @@ Emit newline-delimited JSON (NDJSON).
 * MUST NOT invent observables.
 
 **Observable Categories:**
-Autonomous-System.number, Domain-Name.value, Email-Addr.value, Email-Message.value, File.name, File.hashes.MD5, File.hashes.SHA-1, File.hashes.SHA-256, File.hashes.SHA-512, IPv4-Range.value, IPv4-Addr.value, IPv4-CIDR.value, IPv6-Addr.value, Mac-Addr.value, Windows-Registry-Key.key, Url.value, Directory, X509-Certificate.issuer, X509-Certificate.subject, X509-Certificate.sha1_fingerprint, X509-Certificate.sha256_fingerprint, Mutex, User-Account, Process, Artifact
+Autonomous-System.number, Domain-Name.value, Email-Addr.value, Email-Message.value, File.name, File.hashes.MD5, File.hashes.SHA-1, File.hashes.SHA-256, File.hashes.SHA-512, IPv4-Range.value, IPv4-Addr.value, IPv4-CIDR.value, IPv6-Addr.value, Mac-Addr.value, Windows-Registry-Key.key, Url.value, Directory, X509-Certificate.issuer, X509-Certificate.subject, X509-Certificate.serial, X509-Certificate.sha1_fingerprint, X509-Certificate.sha256_fingerprint, Phone-Number, Mutex, User-Account, Process, Artifact
 
 **Entity Categories:**
 Threat-Actor-Group, Threat-Actor-Individual, Intrusion-Set, Campaign, Malware, Tool, Attack-Pattern.x_mitre_id, Vulnerability.name, Organization, Individual, Country, Region, City, Sector, Infrastructure, Course-Of-Action, Incident, Channel

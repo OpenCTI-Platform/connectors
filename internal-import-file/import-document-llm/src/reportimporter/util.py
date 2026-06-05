@@ -98,13 +98,16 @@ def _cp(cp: dict | None) -> dict:
 
 def _sco_cp(cp: dict | None) -> dict:
     """
-    SCOs cannot use created_by_ref etc. Strip those fields while
-    preserving other custom properties.
+    SCOs cannot carry ``created_by_ref`` directly, so map it to the OpenCTI
+    custom property ``x_opencti_created_by_ref`` (rather than dropping it) and
+    preserve any other custom properties.
     """
     if not cp:
         return {}
     cp = dict(cp)
-    cp.pop("created_by_ref", None)
+    created_by_ref = cp.pop("created_by_ref", None)
+    if created_by_ref:
+        cp["x_opencti_created_by_ref"] = created_by_ref
     return {"custom_properties": cp} if cp else {}
 
 

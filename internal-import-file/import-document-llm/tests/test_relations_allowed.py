@@ -95,7 +95,7 @@ class TestRelationMatrix:
         )
         mapping = load_allowed_relations(helper)
         assert mapping[("MALWARE", "INFRASTRUCTURE")] == {"USES"}
-        assert all("_" in "".join(k) or True for k in mapping)  # nounderscore skipped
+        # The underscore-less "nounderscore" key is skipped, leaving only the valid pair.
         assert len(mapping) == 1
 
     def test_is_relation_allowed(self):
