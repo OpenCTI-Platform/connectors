@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/import-document_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The URL of the OpenCTI platform.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ImportDocument",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/pdf",
+        "text/plain",
+        "text/html",
+        "text/markdown"
+      ],
+      "description": "Comma-separated list of supported MIME types.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_IMPORT_FILE",
+      "default": "INTERNAL_IMPORT_FILE",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enable or disable automatic import of files matching the scope.",
+      "type": "boolean"
+    },
+    "CONNECTOR_ONLY_CONTEXTUAL": {
+      "default": false,
+      "description": "If true, only extract data when an entity context is provided.",
+      "type": "boolean"
+    },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": true,
+      "description": "If enabled, bundles are sent for validation before import.",
+      "type": "boolean"
+    },
+    "IMPORT_DOCUMENT_CREATE_INDICATOR": {
+      "default": false,
+      "description": "If true, creates an Indicator for each extracted observable.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
