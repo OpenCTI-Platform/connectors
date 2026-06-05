@@ -169,7 +169,10 @@ class RetryRequestStrategy(BaseRequestStrategy):
         if limiter is not None:
             await limiter.acquire()
         for hook in self._hooks:
-            await hook.before(request)
+            try:
+                await hook.before(request)
+            except Exception as exc:
+                raise ApiError(str(exc)) from exc
 
     async def execute(self, request: BaseRequestModel) -> Any:
         """Execute the request with retries, circuit breaking, and rate limiting.
