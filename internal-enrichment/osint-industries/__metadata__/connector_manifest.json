@@ -8,6 +8,7 @@
     "Enrichment & Analysis"
   ],
   "verified": false,
+  "last_verified_date":null,
   "playbook_supported": true,
   "max_confidence_level": 75,
   "support_version": ">= 6.8.12",
