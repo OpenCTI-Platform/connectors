@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/import-external-reference_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ImportExternalReference",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "External-Reference"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enable or disable auto-import of external references.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 15,
+      "description": "The confidence level for the connector (0-100).",
+      "type": "integer"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_PDF": {
+      "default": true,
+      "description": "Import external reference content as a PDF file.",
+      "type": "boolean"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_IMPORT_AS_MD": {
+      "default": true,
+      "description": "Import external reference content as a Markdown file.",
+      "type": "boolean"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_IMPORT_PDF_AS_MD": {
+      "default": true,
+      "description": "If import as Markdown is enabled, try to convert PDF content to Markdown.",
+      "type": "boolean"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_TIMESTAMP_FILES": {
+      "default": false,
+      "description": "Timestamp imported files to prevent overwriting previous versions.",
+      "type": "boolean"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_CACHE_SIZE": {
+      "default": 32,
+      "description": "Size of the LRU URL cache to prevent fetching the same object repeatedly.",
+      "type": "integer"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_CACHE_TTL": {
+      "default": 3600,
+      "description": "Time-to-live in seconds for cache entries.",
+      "type": "integer"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_BROWSER_WORKER_COUNT": {
+      "default": 4,
+      "description": "Number of browser worker threads to use for rendering.",
+      "type": "integer"
+    },
+    "IMPORT_EXTERNAL_REFERENCE_MAX_DOWNLOAD_SIZE": {
+      "default": 52428800,
+      "description": "Maximum download size in bytes (default: 50 MB).",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}
