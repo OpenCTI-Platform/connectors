@@ -465,7 +465,18 @@ When your connector is ready:
 1. **Ensure all quality checks pass** (linting, tests, documentation)
 2. **Test in a production-like environment**
 3. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
-   - Always start your PR title with _[Connector Name]_ followed by a meaningful description
+   - PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/) format, enforced automatically by CI:
+     ```
+     type(scope?)!?: description (#123)
+     ```
+     - **type**: one of `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`
+     - **scope**: optional — use the connector name or affected area (e.g. `alienvault`)
+     - **description**: must start with a lowercase letter
+     - **`(#123)`**: required — the linked issue number at the end
+   - Examples:
+     - `feat(alienvault): add pagination support (#42)`
+     - `fix: resolve config loading issue (#99)`
+     - `feat(misp)!: remove deprecated feed endpoint (#150)`
    - Describe the changes introduced by the PR
    - Reference any issues that will be closed upon merging, using the _Close_ keyword followed by the GitHub issue link
 4. **Respond to review feedback** from maintainers

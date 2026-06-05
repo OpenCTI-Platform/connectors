@@ -11,7 +11,7 @@
     "filigran team"
   ],
   "prConcurrentLimit": 2,
-  "commitMessagePrefix": "[tool] chore(deps):",
+  "commitMessagePrefix": "chore(renovate):",
   "packageRules": [
     {
       "matchUpdateTypes": [
