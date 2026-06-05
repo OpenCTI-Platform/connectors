@@ -465,7 +465,18 @@ When your connector is ready:
 1. **Ensure all quality checks pass** (linting, tests, documentation)
 2. **Test in a production-like environment**
 3. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
-   - Title your PR following the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with a GitHub issue reference: `type(scope?)!?: description (#issue)`, using the connector name as the lowercase scope (e.g. `feat(crowdstrike): add endpoint security import (#1234)`). The old `[Connector Name]` bracket prefix is **discontinued**. Allowed types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`. See [`.github/LABELS.md`](.github/LABELS.md) for the full taxonomy.
+   - PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format, enforced automatically by CI:
+     ```
+     type(scope?)!?: description (#123)
+     ```
+     - **type**: one of `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`
+     - **scope**: optional — use the connector name or affected area (e.g. `alienvault`)
+     - **description**: must start with a lowercase letter
+     - **`(#123)`**: required — the linked issue number at the end
+   - Examples:
+     - `feat(alienvault): add pagination support (#42)`
+     - `fix: resolve config loading issue (#99)`
+     - `feat(misp)!: remove deprecated feed endpoint (#150)`
    - Describe the changes introduced by the PR
    - Reference any issues that will be closed upon merging, using the _Close_ keyword followed by the GitHub issue link
 4. **Respond to review feedback** from maintainers
