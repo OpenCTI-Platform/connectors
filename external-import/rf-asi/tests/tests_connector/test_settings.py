@@ -24,6 +24,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                 "rf_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
+                    "project_id": "test-project-id",
                     "tlp_level": "clear",
                 },
             },
@@ -40,8 +41,8 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                 },
                 "rf_asi": {
-                    "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
+                    "project_id": "test-project-id",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -98,6 +99,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "rf_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
+                    "project_id": "test-project-id",
                     "tlp_level": "clear",
                 },
             },
@@ -119,11 +121,34 @@ def test_settings_should_accept_valid_input(settings_dict):
                 "rf_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
+                    "project_id": "test-project-id",
                     "tlp_level": "clear",
                 },
             },
             "connector.id",
             id="missing_connector_id",
+        ),
+        pytest.param(
+            {
+                "opencti": {
+                    "url": "http://localhost:8080",
+                    "token": "test-token",
+                },
+                "connector": {
+                    "id": "connector-id",
+                    "name": "Test Connector",
+                    "scope": "test, connector",
+                    "log_level": "error",
+                    "duration_period": "PT5M",
+                },
+                "rf_asi": {
+                    "api_base_url": "http://test.com",
+                    "api_key": "test-api-key",
+                    "tlp_level": "clear",
+                },
+            },
+            "rf_asi.project_id",
+            id="missing_project_id",
         ),
     ],
 )

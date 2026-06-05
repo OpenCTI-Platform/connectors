@@ -5,12 +5,15 @@ opencti:
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'Template Connector' # optional (default: 'Template Connector')
-  scope: 'ChangeMe'
+  name: 'Recorded Future ASI Exposures' # optional (default: 'Recorded Future ASI Exposures')
+  scope: 'incident' # optional (default: 'incident')
   log_level: 'error' # optional (default: 'error')
-  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
 rf_asi:
-  api_base_url: 'ChangeMe'
+  api_base_url: 'https://api.securitytrails.com/v2' # optional (default: 'https://api.securitytrails.com/v2')
   api_key: 'ChangeMe'
-  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+  project_id: 'ChangeMe'
+  tlp_level: 'amber+strict' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+  portal_base_url: # optional, portal base URL for external reference deep links
+  page_limit: 100 # optional, number of exposures per API page, min 1, max 1000 (default: 100)

@@ -55,7 +55,7 @@ class RfAsiConnector:
         self.client = RfAsiClient(
             self.helper,
             base_url=self.config.rf_asi.api_base_url,
-            api_key=self.config.rf_asi.api_key,
+            api_key=self.config.rf_asi.api_key.get_secret_value(),
             # Pass any arguments necessary to the client
         )
         self.converter_to_stix = ConverterToStix(

@@ -8,12 +8,15 @@ services:
       - OPENCTI_TOKEN=CHANGEME
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME # optional (default: 'Template Connector')
-      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_NAME=Recorded Future ASI Exposures # optional (default: 'Recorded Future ASI Exposures')
+      - CONNECTOR_SCOPE=incident # optional (default: 'incident')
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-rf-asi
-      - RF_ASI_API_BASE_URL=CHANGEME
+      - RF_ASI_API_BASE_URL=https://api.securitytrails.com/v2 # optional (default: 'https://api.securitytrails.com/v2')
       - RF_ASI_API_KEY=CHANGEME
-      - RF_ASI_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - RF_ASI_PROJECT_ID=CHANGEME
+      - RF_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+      - RF_ASI_PORTAL_BASE_URL= # optional, portal base URL for external reference deep links
+      - RF_ASI_PAGE_LIMIT=100 # optional, number of exposures per API page, min 1, max 1000 (default: 100)
     restart: always

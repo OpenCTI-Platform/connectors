@@ -5,8 +5,9 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    ListFromString,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -17,7 +18,11 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="RfAsiConnector",
+        default="Recorded Future ASI Exposures",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector.",
+        default=["incident"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -30,8 +35,12 @@ class RfAsiConfig(BaseConfigModel):
     Define parameters and/or defaults for the configuration specific to the `RfAsiConnector`.
     """
 
-    api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
+    api_base_url: HttpUrl = Field(
+        description="API base URL.",
+        default="https://api.securitytrails.com/v2",
+    )
+    api_key: SecretStr = Field(description="API key for authentication.")
+    project_id: str = Field(description="ASI project ID to fetch exposures from.")
     tlp_level: Literal[
         "clear",
         "white",
@@ -41,7 +50,17 @@ class RfAsiConfig(BaseConfigModel):
         "red",
     ] = Field(
         description="Default TLP level of the imported entities.",
-        default="clear",
+        default="amber+strict",
+    )
+    portal_base_url: HttpUrl | None = Field(
+        description="Optional portal base URL for external reference deep links.",
+        default=None,
+    )
+    page_limit: int = Field(
+        description="Number of exposures to fetch per API page.",
+        default=100,
+        ge=1,
+        le=1000,
     )
 
 

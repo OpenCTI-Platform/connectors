@@ -44,6 +44,7 @@ class StubConnectorSettings(ConnectorSettings):
                 "rf_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
+                    "project_id": "test-project-id",
                     "tlp_level": "clear",
                 },
             }
