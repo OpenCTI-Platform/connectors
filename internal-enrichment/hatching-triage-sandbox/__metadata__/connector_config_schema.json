@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/hatching_triage_sandbox_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Hatching Triage Sandbox",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "Url"
+      ],
+      "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "HATCHING_TRIAGE_SANDBOX_BASE_URL": {
+      "default": "https://tria.ge/api",
+      "description": "Base URL of the Hatching Triage API.",
+      "format": "uri",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_TOKEN": {
+      "description": "API token used to authenticate requests to the Hatching Triage service.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "HATCHING_TRIAGE_SANDBOX_USE_EXISTING_ANALYSIS": {
+      "default": true,
+      "description": "If true, retrieves existing analysis results instead of submitting a new one.",
+      "type": "boolean"
+    },
+    "HATCHING_TRIAGE_SANDBOX_FAMILY_COLOR": {
+      "default": "#0059f7",
+      "description": "Label color for malware family.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_BOTNET_COLOR": {
+      "default": "#f79e00",
+      "description": "Label color for botnet.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_CAMPAIGN_COLOR": {
+      "default": "#7a01e5",
+      "description": "Label color for campaign.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_TAG_COLOR": {
+      "default": "#54483b",
+      "description": "Label color for all other labels.",
+      "type": "string"
+    },
+    "HATCHING_TRIAGE_SANDBOX_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "HATCHING_TRIAGE_SANDBOX_TOKEN"
+  ],
+  "additionalProperties": true
+}
