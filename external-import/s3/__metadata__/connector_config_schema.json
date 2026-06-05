@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/s3_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "S3 Bucket",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "s3"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT30S",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "S3_REGION": {
+      "default": "us-east-1",
+      "description": "The AWS region for the S3 bucket.",
+      "type": "string"
+    },
+    "S3_ENDPOINT_URL": {
+      "description": "Optional endpoint URL for S3-compatible services.",
+      "format": "uri",
+      "type": "string"
+    },
+    "S3_ACCESS_KEY_ID": {
+      "description": "The AWS access key ID.",
+      "type": "string"
+    },
+    "S3_SECRET_ACCESS_KEY": {
+      "description": "The AWS secret access key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "S3_BUCKET_NAME": {
+      "description": "The name of the S3 bucket to poll.",
+      "type": "string"
+    },
+    "S3_BUCKET_PREFIXES": {
+      "default": "ACI_TI,ACI_Vuln",
+      "description": "Comma-separated list of bucket prefixes to scan.",
+      "type": "string"
+    },
+    "S3_AUTHOR": {
+      "description": "Optional organization name used as created_by_ref.",
+      "type": "string"
+    },
+    "S3_MARKING": {
+      "default": "TLP:GREEN",
+      "description": "Default TLP marking for imported data.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "S3_INTERVAL": {
+      "default": 30,
+      "description": "Polling interval in seconds.",
+      "type": "integer"
+    },
+    "S3_ATTACH_ORIGINAL_FILE": {
+      "default": false,
+      "description": "Whether to attach the original JSON file to vulnerabilities.",
+      "type": "boolean"
+    },
+    "S3_DELETE_AFTER_IMPORT": {
+      "default": true,
+      "description": "Whether to delete files from S3 after processing.",
+      "type": "boolean"
+    },
+    "S3_NO_SPLIT_BUNDLES": {
+      "default": true,
+      "description": "Whether to avoid splitting STIX bundles.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "S3_ACCESS_KEY_ID",
+    "S3_SECRET_ACCESS_KEY",
+    "S3_BUCKET_NAME"
+  ],
+  "additionalProperties": true
+}
