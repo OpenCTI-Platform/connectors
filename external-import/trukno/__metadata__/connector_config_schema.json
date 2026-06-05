@@ -85,14 +85,7 @@
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_ID",
-    "CONNECTOR_NAME",
-    "CONNECTOR_SCOPE",
-    "CONNECTOR_TYPE",
-    "TRUKNO_API_BASE_URL",
-    "TRUKNO_API_KEY",
-    "TRUKNO_INTERVAL_MINUTES",
-    "TRUKNO_INITIAL_LOOKBACK_DAYS"
+    "TRUKNO_API_KEY"
   ],
   "additionalProperties": true
 }

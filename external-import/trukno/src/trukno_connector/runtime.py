@@ -7,7 +7,12 @@ from datetime import datetime, timezone
 import yaml
 from pycti import OpenCTIConnectorHelper
 from trukno_connector.client import TruKnoClient
-from trukno_connector.config import load_config, merge_config_with_env
+from trukno_connector.config import (
+    DEFAULT_CONNECTOR_NAME,
+    DEFAULT_CONNECTOR_SCOPE,
+    load_config,
+    merge_config_with_env,
+)
 from trukno_connector.state import ConnectorState, next_checkpoint
 from trukno_connector.transform import transform_breach_to_bundle
 
@@ -51,6 +56,8 @@ def _prepare_helper_config(raw: dict) -> dict:
     helper_config = dict(raw)
     connector = helper_config.setdefault("connector", {})
     connector.setdefault("type", "EXTERNAL_IMPORT")
+    connector.setdefault("name", DEFAULT_CONNECTOR_NAME)
+    connector.setdefault("scope", DEFAULT_CONNECTOR_SCOPE)
     connector.setdefault("log_level", "info")
     return helper_config
 

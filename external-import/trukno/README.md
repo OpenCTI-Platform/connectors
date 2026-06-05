@@ -20,7 +20,14 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 
 ### Requirements
 
-- OpenCTI Platform >= 6.x
+| Dependency       | Version                        |
+|------------------|--------------------------------|
+| OpenCTI Platform | >= 7.x (tested on 7.260604.0)  |
+| pycti            | == 7.260604.0                  |
+| PyYAML           | ~= 6.0.2                       |
+| requests         | ~= 2.32.3                      |
+| Python           | 3.12 (Docker image)            |
+
 - Network access to the TruKno API
 - A valid TruKno API key
 
@@ -28,22 +35,22 @@ It does not yet create threat actors, intrusion sets, indicators, vulnerabilitie
 
 The connector can be configured with environment variables through `docker-compose.yml` or with `src/config.yml`.
 
-Required variables:
+At minimum you must supply:
 
 - `OPENCTI_URL`
 - `OPENCTI_TOKEN`
-- `CONNECTOR_ID`
-- `CONNECTOR_NAME`
-- `CONNECTOR_SCOPE`
-- `TRUKNO_API_BASE_URL`
+- `CONNECTOR_ID` (a unique UUID for this connector instance)
 - `TRUKNO_API_KEY`
-- `TRUKNO_INTERVAL_MINUTES`
-- `TRUKNO_INITIAL_LOOKBACK_DAYS`
 
-Recommended helper variables:
+The remaining variables are optional and fall back to the defaults documented in `__metadata__/connector_config_schema.json`:
 
-- `CONNECTOR_TYPE=EXTERNAL_IMPORT`
-- `CONNECTOR_LOG_LEVEL=info`
+- `CONNECTOR_NAME` (default `TruKno`)
+- `CONNECTOR_SCOPE` (default `report,attack-pattern,malware`)
+- `CONNECTOR_TYPE` (default `EXTERNAL_IMPORT`)
+- `CONNECTOR_LOG_LEVEL` (default `info`)
+- `TRUKNO_API_BASE_URL` (default `https://api.trukno.com/v2`)
+- `TRUKNO_INTERVAL_MINUTES` (default `60`)
+- `TRUKNO_INITIAL_LOOKBACK_DAYS` (default `30`)
 
 Additional metadata for Connector Manager and operator documentation is available in:
 

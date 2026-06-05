@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 from typing import Mapping
 
+DEFAULT_CONNECTOR_NAME = "TruKno"
+DEFAULT_CONNECTOR_SCOPE = "report,attack-pattern,malware"
+DEFAULT_TRUKNO_API_BASE_URL = "https://api.trukno.com/v2"
+DEFAULT_INTERVAL_MINUTES = 60
+DEFAULT_INITIAL_LOOKBACK_DAYS = 30
+
 
 @dataclass(slots=True)
 class ConnectorConfig:
@@ -47,6 +53,13 @@ def _require_field(section: dict, section_name: str, field_name: str) -> str:
     value = section.get(field_name)
     if value in (None, ""):
         raise ValueError(f"{section_name}.{field_name} is required")
+    return value
+
+
+def _optional_field(section: dict, field_name: str, default):
+    value = section.get(field_name)
+    if value in (None, ""):
+        return default
     return value
 
 
@@ -98,16 +111,20 @@ def load_config(config: dict | None) -> ConnectorConfig:
         opencti_url=_require_field(opencti, "opencti", "url"),
         opencti_token=_require_field(opencti, "opencti", "token"),
         connector_id=_require_field(connector, "connector", "id"),
-        connector_name=_require_field(connector, "connector", "name"),
-        connector_scope=_require_field(connector, "connector", "scope"),
-        trukno_api_base_url=_require_field(trukno, "trukno", "api_base_url"),
+        connector_name=_optional_field(connector, "name", DEFAULT_CONNECTOR_NAME),
+        connector_scope=_optional_field(connector, "scope", DEFAULT_CONNECTOR_SCOPE),
+        trukno_api_base_url=_optional_field(
+            trukno, "api_base_url", DEFAULT_TRUKNO_API_BASE_URL
+        ),
         trukno_api_key=_require_field(trukno, "trukno", "api_key"),
         interval_minutes=_require_positive_int(
-            _require_field(trukno, "trukno", "interval_minutes"),
+            _optional_field(trukno, "interval_minutes", DEFAULT_INTERVAL_MINUTES),
             "trukno.interval_minutes",
         ),
         initial_lookback_days=_require_positive_int(
-            _require_field(trukno, "trukno", "initial_lookback_days"),
+            _optional_field(
+                trukno, "initial_lookback_days", DEFAULT_INITIAL_LOOKBACK_DAYS
+            ),
             "trukno.initial_lookback_days",
         ),
     )
