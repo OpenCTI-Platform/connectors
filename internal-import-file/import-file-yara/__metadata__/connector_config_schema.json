@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/import-file-yara_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ImportFileYARA",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": ["text/yara+plain"],
+      "description": "The MIME types of files the connector can process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_IMPORT_FILE",
+      "default": "INTERNAL_IMPORT_FILE",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "info",
+      "description": "The minimum level of logs to display.",
+      "enum": ["debug", "info", "warn", "warning", "error"],
+      "type": "string"
+    },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": true,
+      "description": "Validate any bundle before import.",
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enable or disable auto-import of files.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 15,
+      "description": "The confidence level of the connector, from 0 (Unknown) to 100 (Fully trusted).",
+      "maximum": 100,
+      "minimum": 0,
+      "type": "integer"
+    },
+    "YARA_IMPORT_FILE_SPLIT_RULES": {
+      "default": true,
+      "description": "If true, creates individual STIX Indicators for each YARA rule in the file. If false, combines all rules into one Indicator.",
+      "type": "boolean"
+    }
+  },
+  "required": ["OPENCTI_URL", "OPENCTI_TOKEN"],
+  "additionalProperties": true
+}
