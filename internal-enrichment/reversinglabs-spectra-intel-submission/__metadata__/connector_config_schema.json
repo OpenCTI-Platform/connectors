@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/reversinglabs-spectra-intel-submission_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ReversingLabs Spectra Intelligence Submission",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Artifact",
+        "Url",
+        "StixFile",
+        "File"
+      ],
+      "description": "The scope defines the set of entity types that the enrichment connector is allowed to process.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_TYPE": {
+      "default": "INTERNAL_ENRICHMENT",
+      "description": "Should always be set to INTERNAL_ENRICHMENT for this connector.",
+      "type": "string"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enables or disables automatic enrichment of observables for OpenCTI.",
+      "type": "boolean"
+    },
+    "REVERSINGLABS_SPECTRA_INTELLIGENCE_URL": {
+      "default": "data.reversinglabs.com",
+      "description": "The URL of the ReversingLabs Spectra Intelligence service.",
+      "type": "string"
+    },
+    "REVERSINGLABS_SPECTRA_INTELLIGENCE_USERNAME": {
+      "description": "Username used to authenticate requests to the ReversingLabs Spectra Intelligence service.",
+      "type": "string"
+    },
+    "REVERSINGLABS_SPECTRA_INTELLIGENCE_PASSWORD": {
+      "description": "Password used to authenticate requests to the ReversingLabs Spectra Intelligence service.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "REVERSINGLABS_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "REVERSINGLABS_SANDBOX_OS": {
+      "default": "windows10",
+      "description": "The operating system platform for sandbox dynamic analysis.",
+      "enum": [
+        "windows7",
+        "windows10",
+        "windows11",
+        "macos11",
+        "linux"
+      ],
+      "type": "string"
+    },
+    "REVERSINGLABS_SANDBOX_INTERNET_SIM": {
+      "default": false,
+      "description": "Enables or disables internet simulation in the sandbox environment.",
+      "type": "boolean"
+    },
+    "REVERSINGLABS_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Enables or disables creation of indicators from analysis results.",
+      "type": "boolean"
+    },
+    "REVERSINGLABS_POLL_INTERVAL": {
+      "default": 250,
+      "description": "Interval in seconds between polling for analysis results (minimum 250).",
+      "minimum": 250,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "REVERSINGLABS_SPECTRA_INTELLIGENCE_URL",
+    "REVERSINGLABS_SPECTRA_INTELLIGENCE_USERNAME",
+    "REVERSINGLABS_SPECTRA_INTELLIGENCE_PASSWORD"
+  ],
+  "additionalProperties": true
+}
