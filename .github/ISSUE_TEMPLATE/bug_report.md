@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a bug report to help us improve OpenCTI
-title: ''
+title: 'fix: '
 labels: bug, needs triage
 assignees: ''
 
