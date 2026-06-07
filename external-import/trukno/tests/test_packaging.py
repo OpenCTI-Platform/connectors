@@ -6,9 +6,14 @@ CONNECTOR_ROOT = Path(__file__).resolve().parent.parent
 def test_dockerfile_removes_build_only_git_after_installing_requirements():
     dockerfile = (CONNECTOR_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert "apt-get install -y --no-install-recommends git libmagic1" in dockerfile
-    assert dockerfile.index("pip install --no-cache-dir -r requirements.txt") < (
-        dockerfile.index("apt-get purge -y --auto-remove git")
+    # Align with the repo's standard Alpine connector image (see
+    # templates/external-import/Dockerfile): build-only toolchain (git,
+    # build-base) is added before installing requirements and removed after,
+    # so it is not left in the final image.
+    assert "python:3.12-alpine" in dockerfile
+    assert "apk --no-cache add git build-base" in dockerfile
+    assert dockerfile.index("pip3 install --no-cache-dir -r requirements.txt") < (
+        dockerfile.index("apk del git build-base")
     )
 
 

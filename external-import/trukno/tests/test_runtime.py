@@ -87,6 +87,59 @@ def test_run_once_persists_checkpoint_after_each_successful_send_before_mid_batc
     assert state.last_seen_updated_at == "2026-04-20T10:00:00Z"
 
 
+def test_run_once_marks_work_errored_on_mid_batch_failure():
+    class HelperWithWork(DummyHelper):
+        def __init__(self):
+            super().__init__()
+            self.connect_id = "connector-id"
+            self.api = MagicMock()
+            self.api.work.initiate_work.return_value = "work-1"
+
+    helper = HelperWithWork()
+    state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+
+    class FailingClient(DummyClient):
+        def get_breach_details(self, breach_id):
+            if breach_id == "b2":
+                raise RuntimeError("boom")
+            return super().get_breach_details(breach_id)
+
+    client = FailingClient(
+        [
+            type("Item", (), {"id": "b1", "updated_at": "2026-04-20T10:00:00Z"})(),
+            type("Item", (), {"id": "b2", "updated_at": "2026-04-20T12:00:00Z"})(),
+        ]
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        run_once(helper=helper, client=client, state=state)
+
+    helper.api.work.to_processed.assert_called_once()
+    _, kwargs = helper.api.work.to_processed.call_args
+    assert kwargs.get("in_error") is True
+
+
+def test_run_once_marks_work_processed_on_success():
+    class HelperWithWork(DummyHelper):
+        def __init__(self):
+            super().__init__()
+            self.connect_id = "connector-id"
+            self.api = MagicMock()
+            self.api.work.initiate_work.return_value = "work-1"
+
+    helper = HelperWithWork()
+    state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+    client = DummyClient(
+        [type("Item", (), {"id": "b1", "updated_at": "2026-04-20T10:00:00Z"})()]
+    )
+
+    run_once(helper=helper, client=client, state=state)
+
+    helper.api.work.to_processed.assert_called_once()
+    _, kwargs = helper.api.work.to_processed.call_args
+    assert kwargs.get("in_error") is False
+
+
 def test_build_runtime_reads_env_when_config_file_is_absent(monkeypatch):
     helper_calls = []
     client_calls = []

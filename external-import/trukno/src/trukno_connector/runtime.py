@@ -86,10 +86,12 @@ def _start_work(helper, connector_name: str) -> str | None:
     return api.work.initiate_work(connect_id, friendly_name)
 
 
-def _complete_work(helper, work_id: str | None, message: str) -> None:
+def _complete_work(
+    helper, work_id: str | None, message: str, in_error: bool = False
+) -> None:
     if work_id is None:
         return
-    helper.api.work.to_processed(work_id, message)
+    helper.api.work.to_processed(work_id, message, in_error=in_error)
 
 
 def build_runtime():
@@ -121,12 +123,25 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
 
     work_id = _start_work(helper, connector_name)
     sent_count = 0
-    for item in items:
-        payload = client.get_breach_details(item.id)
-        bundle = transform_breach_to_bundle(payload)
-        helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
-        _persist_checkpoint(helper, state, item.updated_at)
-        sent_count += 1
+    try:
+        for item in items:
+            payload = client.get_breach_details(item.id)
+            bundle = transform_breach_to_bundle(payload)
+            helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
+            _persist_checkpoint(helper, state, item.updated_at)
+            sent_count += 1
+    except Exception as exc:
+        # Don't leave the work item stuck in a running state if a breach
+        # fetch/transform/send fails mid-batch: mark it errored (the per-item
+        # checkpoint above means the next cycle resumes after the last
+        # successfully imported breach) and re-raise so main() logs and backs off.
+        _complete_work(
+            helper,
+            work_id,
+            f"TruKno import failed after {sent_count} bundle(s): {exc}",
+            in_error=True,
+        )
+        raise
 
     _complete_work(
         helper,
