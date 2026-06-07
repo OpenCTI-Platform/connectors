@@ -3,7 +3,10 @@ import json
 from conftest import FIXTURES
 from trukno_connector.opencti_compat import cleanup_bundle_for_opencti
 from trukno_connector.state import ConnectorState, next_checkpoint
-from trukno_connector.transform import transform_breach_to_bundle
+from trukno_connector.transform import (
+    REFERENCE_OBJECT_TIMESTAMP,
+    transform_breach_to_bundle,
+)
 
 
 def test_first_run_uses_bootstrap_window():
@@ -33,15 +36,45 @@ def test_transform_includes_linked_attack_patterns_and_malware():
 
     assert {obj["type"] for obj in linked_objects} == {"attack-pattern", "malware"}
     assert set(report["object_refs"]) == {obj["id"] for obj in linked_objects}
+    # The report is unique per breach, so it carries the breach publish date.
+    assert report["created"] == payload["publishedAt"]
+    assert report["published"] == payload["publishedAt"]
     attack_pattern = next(
         obj for obj in linked_objects if obj["type"] == "attack-pattern"
     )
     malware = next(obj for obj in linked_objects if obj["type"] == "malware")
-    assert attack_pattern["created"] == payload["publishedAt"]
-    assert attack_pattern["modified"] == payload["publishedAt"]
-    assert malware["created"] == payload["publishedAt"]
-    assert malware["modified"] == payload["publishedAt"]
+    # Shared reference objects use a stable timestamp (not the breach date) so the
+    # same id always yields an identical object.
+    assert attack_pattern["created"] == REFERENCE_OBJECT_TIMESTAMP
+    assert attack_pattern["modified"] == REFERENCE_OBJECT_TIMESTAMP
+    assert malware["created"] == REFERENCE_OBJECT_TIMESTAMP
+    assert malware["modified"] == REFERENCE_OBJECT_TIMESTAMP
     assert malware["malware_types"] == ["unknown"]
+
+
+def test_shared_reference_objects_are_stable_across_breaches():
+    """The same TTP/malware referenced by two breaches with different publish
+    dates must produce byte-identical attack-pattern/malware objects (same id
+    AND same timestamps), so OpenCTI does not flip-flop them on re-ingest."""
+    base = json.loads(
+        (FIXTURES / "breach_with_entities.json").read_text(encoding="utf-8")
+    )
+    first = dict(base, id="breach-a", publishedAt="2026-01-01T00:00:00Z")
+    second = dict(base, id="breach-b", publishedAt="2026-02-02T00:00:00Z")
+
+    def _linked(bundle):
+        return {
+            obj["id"]: obj
+            for obj in bundle["objects"]
+            if obj["type"] in ("attack-pattern", "malware")
+        }
+
+    first_linked = _linked(transform_breach_to_bundle(first))
+    second_linked = _linked(transform_breach_to_bundle(second))
+
+    assert first_linked.keys() == second_linked.keys()
+    for stix_id, obj in first_linked.items():
+        assert obj == second_linked[stix_id]
 
 
 def test_cleanup_removes_unsupported_relationships_and_preserves_opencti_properties():

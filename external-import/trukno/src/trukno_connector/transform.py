@@ -4,6 +4,14 @@ from trukno_connector.opencti_compat import cleanup_bundle_for_opencti
 
 STIX_NAMESPACE = uuid.UUID("00abedb4-aa42-466c-9c01-fed23315a9b7")
 
+# attack-pattern / malware objects are shared reference entities keyed by their
+# own stable id, so the same TTP/malware can be referenced by many breaches. Their
+# created/modified must therefore be stable too: deriving them from each enclosing
+# breach's publishedAt would emit the same STIX id with different timestamps,
+# making OpenCTI flip-flop the object on every ingest. Use a fixed reference
+# timestamp so a given id always produces an identical object.
+REFERENCE_OBJECT_TIMESTAMP = "1970-01-01T00:00:00Z"
+
 
 def deterministic_stix_id(stix_type: str, key: str) -> str:
     return f"{stix_type}--{uuid.uuid5(STIX_NAMESPACE, key)}"
@@ -36,8 +44,8 @@ def transform_breach_to_bundle(payload: dict) -> dict:
                 "type": "attack-pattern",
                 "spec_version": "2.1",
                 "id": attack_pattern_id,
-                "created": published_at,
-                "modified": published_at,
+                "created": REFERENCE_OBJECT_TIMESTAMP,
+                "modified": REFERENCE_OBJECT_TIMESTAMP,
                 "name": ttp["title"],
             }
         )
@@ -50,8 +58,8 @@ def transform_breach_to_bundle(payload: dict) -> dict:
                 "type": "malware",
                 "spec_version": "2.1",
                 "id": malware_id,
-                "created": published_at,
-                "modified": published_at,
+                "created": REFERENCE_OBJECT_TIMESTAMP,
+                "modified": REFERENCE_OBJECT_TIMESTAMP,
                 "name": malware["title"],
                 "is_family": False,
                 "malware_types": ["unknown"],

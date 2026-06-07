@@ -39,8 +39,9 @@ At minimum you must supply:
 
 - `OPENCTI_URL`
 - `OPENCTI_TOKEN`
-- `CONNECTOR_ID` (a unique UUID for this connector instance)
 - `TRUKNO_API_KEY`
+
+`CONNECTOR_ID` (a unique UUID for this connector instance) is also required at runtime. For manual or `docker-compose` deployments you must set it yourself; when the connector is deployed through the OpenCTI Connector Manager it is generated and injected automatically, which is why it is not listed as `required` in `__metadata__/connector_config_schema.json`.
 
 The remaining variables are optional and fall back to the defaults documented in `__metadata__/connector_config_schema.json`:
 
