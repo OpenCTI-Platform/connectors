@@ -117,11 +117,23 @@ class TestExportDictListToCsv:
                 "hashes": [{"algorithm": "MD5", "hash": "abc"}],
             }
         ]
-        headers = _csv_headers(
-            connector.export_dict_list_to_csv(data, ["observable_value", "hashes"])
+        rows = list(
+            csv.reader(
+                io.StringIO(
+                    connector.export_dict_list_to_csv(
+                        data, ["observable_value", "hashes"]
+                    )
+                ),
+                delimiter=";",
+            )
         )
+        headers = rows[0]
         assert "hashes" in headers
         assert "hashes_SHA-256" in headers
+        # The MD5 expansion header must use the "hashes_" prefix so the
+        # row-generation logic actually populates it (regression test).
+        assert "hashes_MD5" in headers
+        assert rows[1][headers.index("hashes_MD5")] == "abc"
 
 
 class TestExportListVisibleColumns:
