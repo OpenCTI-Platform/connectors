@@ -22,9 +22,13 @@
     - [Processing Details](#processing-details)
     - [Generated STIX Objects](#generated-stix-objects)
   - [Debugging](#debugging)
+  - [Use Case: Playbook-Based Scout Query Enrichment](#use-case-playbook-based-scout-query-enrichment)
+    - [Step 1: Verify Connector Installation](#step-1-verify-connector-installation)
+    - [Step 2: Create and Configure a Playbook](#step-2-create-and-configure-a-playbook)
+    - [Step 3: Create an Indicator](#step-3-create-an-indicator)
+    - [Step 4: Run and Verify Enrichment](#step-4-run-and-verify-enrichment)
   - [Additional Information](#additional-information)
     - [Early Access](#early-access)
-    - [Use Case](#use-case-playbook-based-scout-query-enrichment)
 
 ---
 
