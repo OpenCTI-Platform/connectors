@@ -465,7 +465,7 @@ When your connector is ready:
 1. **Ensure all quality checks pass** (linting, tests, documentation)
 2. **Test in a production-like environment**
 3. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
-   - Always start your PR title with _[Connector Name]_ followed by a meaningful description
+   - Title your PR following the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with a GitHub issue reference: `type(scope?)!?: description (#issue)`, using the connector name as the lowercase scope (e.g. `feat(crowdstrike): add endpoint security import (#1234)`). The old `[Connector Name]` bracket prefix is **discontinued**. Allowed types: `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `revert`. See [`.github/LABELS.md`](.github/LABELS.md) for the full taxonomy.
    - Describe the changes introduced by the PR
    - Reference any issues that will be closed upon merging, using the _Close_ keyword followed by the GitHub issue link
 4. **Respond to review feedback** from maintainers
