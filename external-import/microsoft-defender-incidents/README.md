@@ -55,7 +55,7 @@ Another interesting link:
 
 ### Requirements
 
-- OpenCTI Platform >= 6.4
+- OpenCTI Platform >= 6.6.0
 
 ## Configuration variables
 
@@ -75,26 +75,27 @@ Below are the parameters you'll need to set for OpenCTI:
 
 Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml `connector` | Docker environment variable | Default         | Mandatory | Description                                                                              |
-|-----------------|------------------------|-----------------------------|-----------------|-----------|------------------------------------------------------------------------------------------|
-| Connector ID    | `id`                   | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | `type`                 | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | `name`                 | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter         | config.yml `connector` | Docker environment variable   | Default                        | Mandatory | Description                                                                               |
+|-------------------|------------------------|-------------------------------|--------------------------------|-----------|------------------------------------------------------------------------------------------|
+| Connector ID      | `id`                   | `CONNECTOR_ID`                | /                              | Yes       | A unique `UUIDv4` identifier for this connector instance.                                 |
+| Connector Type    | `type`                 | `CONNECTOR_TYPE`              | `EXTERNAL_IMPORT`              | No        | Should always be set to `EXTERNAL_IMPORT` for this connector.                             |
+| Connector Name    | `name`                 | `CONNECTOR_NAME`              | `Microsoft Defender Incidents` | No        | Name of the connector.                                                                    |
+| Connector Scope   | `scope`                | `CONNECTOR_SCOPE`             | `defender`                     | No        | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
+| Log Level         | `log_level`            | `CONNECTOR_LOG_LEVEL`         | `error`                        | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.    |
+| Duration Period   | `duration_period`      | `CONNECTOR_DURATION_PERIOD`   | `PT1H`                         | No        | The period of time to await between two runs of the connector (ISO-8601 format).          |
 
 ### Connector extra parameters environment variables
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter         | config.yml `microsoft_defender_incidents` | Docker environment variable                      | Default                            | Mandatory | Description                                                                                                              |
-|-------------------|-------------------------------------------|--------------------------------------------------|------------------------------------|-----------|--------------------------------------------------------------------------------------------------------------------------|
-| Tenant ID         | `tenant_id`                               | `MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID`         |                                    | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.                                          |
-| Client ID         | `client_id`                               | `MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID`         |                                    | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.                                          |
-| Client Secret     | `client_secret`                           | `MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET`     |                                    | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.                                      |
-| API Base URL      | `api_base_url`                            | `MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL`      | `https://graph.microsoft.com/v1.0` | Yes       | The resource the API will use.                                                                                           |
-| Incident URL Path | `incident_path`                           | `MICROSOFT_DEFENDER_INCIDENTS_INCIDENT_PATH`     | `/security/incidents`              | Yes       | The incident URL that will be used.                                                                                      |
-| Import start date | `import_start_date`                       | `MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE` | `2020-01-01T00:00:00Z`             | No        | Import starting date (in YYYY-MM-DD format or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set   |
+| Parameter         | config.yml `microsoft_defender_incidents` | Docker environment variable                      | Default                            | Mandatory | Description                                                                                                            |
+|-------------------|-------------------------------------------|--------------------------------------------------|------------------------------------|-----------|----------------------------------------------------------------------------------------------------------------------|
+| Tenant ID         | `tenant_id`                               | `MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID`         | /                                  | Yes       | Your Azure App Tenant ID, see the screenshot to help you find this information.                                       |
+| Client ID         | `client_id`                               | `MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID`         | /                                  | Yes       | Your Azure App Client ID, see the screenshot to help you find this information.                                       |
+| Client Secret     | `client_secret`                           | `MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET`     | /                                  | Yes       | Your Azure App Client secret, See the screenshot to help you find this information.                                   |
+| API Base URL      | `api_base_url`                            | `MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL`      | `https://graph.microsoft.com/v1.0` | No        | The Microsoft Graph API base URL used to retrieve incidents.                                                          |
+| Incident URL Path | `incident_path`                           | `MICROSOFT_DEFENDER_INCIDENTS_INCIDENT_PATH`     | `/security/incidents`              | No        | The Microsoft Graph API path used to retrieve incidents.                                                              |
+| Import start date | `import_start_date`                       | `MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE` | `2020-01-01T00:00:00Z`             | No        | Import starting date (in YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ format) - used only if connector's state is not set yet.  |
 
 ## Deployment
 
