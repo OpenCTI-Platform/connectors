@@ -33,7 +33,7 @@ class ConnectorClient:
 
             oauth_token = response_json["access_token"]
 
-            self.session.headers.update({"Authorization": oauth_token})
+            self.session.headers.update({"Authorization": "Bearer " + oauth_token})
         except Exception as e:
             raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
 
