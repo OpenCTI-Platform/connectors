@@ -1,7 +1,7 @@
 ---
 name: Bug report
 about: Create a bug report to help us improve the OpenCTI connectors
-title: 'fix: '
+title: 'fix(connector-name): '
 labels: needs triage, bug
 assignees: ''
 type: bug
