@@ -463,11 +463,6 @@ class TestProcessGroupTtps:
 
 
 # ---------------------------------------------------------------------------
-# Per-run deduplication of processed_groups
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # RansomwareAPIConnector._collect_group_enrichment_objects — deduplication
 # ---------------------------------------------------------------------------
 
@@ -609,3 +604,42 @@ class TestProcessExternalReferencesToggle:
         assert "http://darkweb.onion/victim/abc" not in urls
         assert "https://www.ransomware.live/id/abc" in urls
         assert "https://images.ransomware.live/victims/abc.png" in urls
+
+
+# ---------------------------------------------------------------------------
+# Per-run reset of processed_groups across reused connector instances
+# ---------------------------------------------------------------------------
+
+
+class TestProcessedGroupsResetPerRun:
+    """``schedule_iso`` reuses the connector instance across runs, so each
+    collection sweep must start with an empty ``processed_groups`` set."""
+
+    def _make_connector(self):
+        from ransomwarelive.ransom_conn import RansomwareAPIConnector
+
+        connector = RansomwareAPIConnector.__new__(RansomwareAPIConnector)
+        connector.helper = MagicMock()
+        connector.config = MagicMock()
+        connector.api_client = MagicMock()
+        # Empty /groups payload makes both collectors return early right after
+        # the reset, isolating the dedup-guard reset from the rest of the run.
+        connector.api_client.get_feed.return_value = []
+        connector.last_run = None
+        # Simulate a group enriched on a previous run still being tracked.
+        connector.processed_groups = {"acme-ransomware"}
+        return connector
+
+    def test_collect_intelligence_resets_processed_groups(self):
+        connector = self._make_connector()
+
+        connector.collect_intelligence()
+
+        assert connector.processed_groups == set()
+
+    def test_collect_historic_intelligence_resets_processed_groups(self):
+        connector = self._make_connector()
+
+        connector.collect_historic_intelligence()
+
+        assert connector.processed_groups == set()

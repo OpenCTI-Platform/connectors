@@ -426,7 +426,8 @@ class ConverterToStix:
             create_leak_post_refs (bool): whether to include the direct leak post
                 URL (``post_url``) as an external reference
         Returns:
-            external_references: stix2 ExternalReference object
+            external_references: list of stix2 ExternalReference objects
+                (empty list when ``item`` carries none of the expected fields)
         """
         external_references = []
         fields = ["screenshot", "website"]

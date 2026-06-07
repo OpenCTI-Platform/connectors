@@ -45,6 +45,9 @@ class RansomwareAPIConnector:
         self.api_client = RansomwareAPIClient(helper=self.helper)
         # Track groups already enriched this run to avoid re-fetching/re-emitting
         # the same leak-site domains and TTP relationships for every victim.
+        # Reset at the start of each collection sweep (see
+        # ``collect_intelligence`` / ``collect_historic_intelligence``) because
+        # ``schedule_iso`` reuses this instance across scheduled runs.
         self.processed_groups: set[str] = set()
 
     def location_fetcher(self, country: str):
@@ -601,6 +604,13 @@ class RansomwareAPIConnector:
 
     def collect_historic_intelligence(self):
         """Collects historic intelligence from ransomware.live"""
+        # ``schedule_iso`` reuses the same connector instance across every
+        # scheduled run, so the per-run group-enrichment dedup guard has to be
+        # cleared at the start of each collection sweep. Otherwise a group
+        # enriched on an earlier run stays in ``processed_groups`` forever and
+        # its newly disclosed leak sites / TTPs are silently skipped until the
+        # process restarts.
+        self.processed_groups = set()
         # fetching group information
         group_data = self.api_client.get_feed("groups")
         if not group_data:
@@ -748,6 +758,11 @@ class RansomwareAPIConnector:
 
     def collect_intelligence(self):
         """Collects intelligence from the last 24 on ransomware.live"""
+        # Reset the per-run group-enrichment dedup guard (see
+        # ``collect_historic_intelligence``): the connector instance is reused
+        # across scheduled runs, so without this a group enriched on a previous
+        # run would be skipped forever and never pick up new leak sites / TTPs.
+        self.processed_groups = set()
         group_data = self.api_client.get_feed("groups")
         if not group_data:
             self.helper.connector_logger.info(
