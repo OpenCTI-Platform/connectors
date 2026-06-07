@@ -1,9 +1,10 @@
 ---
 name: Feature request
-about: Ask for a new feature/connector to be implemented in OpenCTI
+about: Suggest a new feature or capability for the OpenCTI connectors
 title: 'feat: '
-labels: feature, needs triage
+labels: needs triage, feature
 assignees: ''
+type: feature
 
 ---
 
@@ -11,20 +12,18 @@ assignees: ''
 
 <!-- Please describe the use case for which you need a solution. -->
 
-## Current Workaround
+## Current workaround
 
-<!-- Please describe how you currently solve or work around this problem, given OpenCTI's limitation. -->
+<!-- Please describe how you currently solve or work around this problem. -->
 
-## Proposed Solution
+## Proposed solution
 
-<!-- Please describe the solution you would like OpenCTI to provide, to solve the problem above. -->
+<!-- Please describe the solution you would like to be provided. -->
 
-## Additional Information
+## Additional information
 
 <!-- Any additional information, including logs or screenshots if you have any. -->
 
-## Would you be willing to submit a PR?
+## If the feature request is approved, would you be willing to submit a PR?
 
-<!-- A PR is a shortcut for a "pull request". Here more details on the idea behind a PR https://docs.github.com/en/github/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests -->
-
-We strongly encourage you to submit a PR if you want and whenever you want. If your issue concern a "Community-support" connector, your PR will probably be accepted after some review. If the connector is "Partner-support" or "Filigran-support", a dev team make take over but will base its work on your PR, speeding the process. It will be much appreciated.
+Yes / No (help can be provided if you need assistance submitting a PR)
