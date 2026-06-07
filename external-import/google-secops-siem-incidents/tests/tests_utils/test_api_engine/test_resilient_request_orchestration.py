@@ -16,6 +16,7 @@ from google_secops_siem_incidents.utils.api_engine.api_request_model import (
 from google_secops_siem_incidents.utils.api_engine.circuit_breaker import CircuitBreaker
 from google_secops_siem_incidents.utils.api_engine.exceptions import (
     ApiCircuitOpenError,
+    ApiError,
     ApiHttpError,
     ApiValidationError,
 )
@@ -481,3 +482,88 @@ async def test_retry_loop_limits_attempts_to_max_retries():
     strategy, http_client = await _given_server_always_fails_500()
     await _when_api_request_made(strategy)
     _then_exactly_max_retries_attempts_made(http_client)
+
+
+# ---------------------------------------------------------------------------
+# Scenario: Validation errors fail fast and are not retried
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_validation_error_is_not_retried():
+    """A deterministic parse/validation failure is raised on the first attempt."""
+
+    async def _given_server_always_returns_wrong_keys():
+        http_client = AsyncMock(spec=AioHttpClient)
+        http_client.request = AsyncMock(return_value={"other_key": {}})
+        cb = MagicMock(spec=CircuitBreaker)
+        cb.is_open = MagicMock(return_value=False)
+        strategy = RetryRequestStrategy(
+            http_client=http_client,
+            circuit_breaker=cb,
+            max_retries=3,
+            backoff=0,
+        )
+        return strategy, http_client
+
+    async def _when_request_extracts_missing_field(strategy):
+        request = MagicMock(spec=ApiRequestModel)
+        request.method = "GET"
+        request.url = "https://example.com/api"
+        request.headers = {}
+        request.params = {}
+        request.json_body = None
+        request.data = None
+        request.timeout = None
+        request.response_key = "data"
+        request.response_model = None
+        return await strategy.execute(request)
+
+    def _then_request_made_once_without_retry(http_client):
+        assert http_client.request.call_count == 1
+
+    strategy, http_client = await _given_server_always_returns_wrong_keys()
+    with pytest.raises(ApiValidationError):
+        await _when_request_extracts_missing_field(strategy)
+    _then_request_made_once_without_retry(http_client)
+
+
+# ---------------------------------------------------------------------------
+# Scenario: After-hook failures surface as ApiError, never a raw exception
+# ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_after_hook_exception_wrapped_as_api_error():
+    """A raw exception raised by an after-hook is wrapped in ApiError."""
+
+    async def _given_strategy_with_failing_after_hook():
+        http_client = AsyncMock(spec=AioHttpClient)
+        http_client.request = AsyncMock(return_value={"ok": True})
+        cb = MagicMock(spec=CircuitBreaker)
+        cb.is_open = MagicMock(return_value=False)
+        hook = MagicMock(spec=BaseRequestHook)
+        hook.before = AsyncMock()
+        hook.after = AsyncMock(side_effect=RuntimeError("hook boom"))
+        strategy = RetryRequestStrategy(
+            http_client=http_client,
+            circuit_breaker=cb,
+            max_retries=1,
+            backoff=0,
+            hooks=[hook],
+        )
+        return strategy
+
+    async def _when_api_request_made(strategy):
+        request = MagicMock(spec=ApiRequestModel)
+        request.method = "GET"
+        request.url = "https://example.com/api"
+        request.headers = {}
+        request.params = {}
+        request.json_body = None
+        request.data = None
+        request.timeout = None
+        request.response_key = None
+        request.response_model = None
+        return await strategy.execute(request)
+
+    strategy = await _given_strategy_with_failing_after_hook()
+    with pytest.raises(ApiError) as exc_info:
+        await _when_api_request_made(strategy)
+    assert "hook boom" in str(exc_info.value)

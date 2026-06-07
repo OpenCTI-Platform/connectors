@@ -221,7 +221,13 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 self._breaker.reset()
 
                 for hook in self._hooks:
-                    await hook.after(request, response)
+                    try:
+                        await hook.after(request, response)
+                    except Exception as exc:
+                        # Keep the api_engine contract: callers only ever see
+                        # ApiError subclasses, never raw hook exceptions
+                        # (mirrors the before-hook handling in _pre_request).
+                        raise ApiError(str(exc)) from exc
 
                 return self._parse_response(
                     response,
@@ -230,6 +236,12 @@ class RetryRequestStrategy(BaseRequestStrategy):
                 )
 
             except ApiCircuitOpenError:
+                raise
+
+            except ApiValidationError:
+                # Parse/validation failures are deterministic: the same response
+                # would fail identically on every retry, so fail fast instead of
+                # burning the retry budget.
                 raise
 
             except ApiHttpError as exc:

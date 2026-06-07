@@ -1,5 +1,6 @@
 """Entrypoint for the Google SecOps external-import connector."""
 
+import sys
 import traceback
 
 from google_secops_siem_incidents import ConnectorSettings, GoogleSecOpsConnector
@@ -13,4 +14,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
