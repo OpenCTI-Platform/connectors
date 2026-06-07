@@ -64,6 +64,6 @@ jobs:
     steps:
       - uses: Slashgear/action-check-pr-title@76166c63ec0b25cdbe693e5e972e83ca186313fb
         with:
-          regexp: '^\[\w+.+\].+$'
+          regexp: '^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9._/-]+\))?!?: .+ \(#[0-9]+\)$'
           flags: "gm"
-          helpMessage: "Format: '[Connector Name] Message' for example '[MISP] updating a doc page'. see https://github.com/OpenCTI-Platform/connectors/blob/master/CONTRIBUTING.md#contributing"
+          helpMessage: "Format: 'type(scope?): description (#issue)' - e.g. 'feat(misp): add new mapping (#1234)'. Use the connector name as the scope. See https://github.com/OpenCTI-Platform/connectors/blob/master/CONTRIBUTING.md"
