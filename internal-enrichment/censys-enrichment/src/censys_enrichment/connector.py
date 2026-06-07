@@ -1,22 +1,15 @@
-from typing import Any, Generator
+from typing import Any, Iterator
 
 from censys_enrichment.client import Client
-from censys_enrichment.converter import Converter
+from censys_enrichment.converters import get_converter
+from censys_enrichment.converters.base import CensysConverter
+from censys_enrichment.errors import (
+    EntityNotInScopeError,
+    MaxTlpError,
+)
 from censys_enrichment.settings import ConfigLoader
 from connectors_sdk.models import BaseObject
 from pycti import OpenCTIConnectorHelper
-
-
-class EntityNotInScopeError(Exception):
-    """Custom exception for entity not in scope"""
-
-
-class MaxTlpError(Exception):
-    """Custom exception for exceeding maximum TLP level"""
-
-
-class EntityTypeNotSupportedError(Exception):
-    """Custom exception for unsupported entity type"""
 
 
 class Connector:
@@ -27,12 +20,10 @@ class Connector:
         config: ConfigLoader,
         helper: OpenCTIConnectorHelper,
         client: Client,
-        converter: Converter,
     ) -> None:
         self.config = config
         self.helper = helper
         self.client = client
-        self.converter = converter
 
     def _send_bundle(self, stix_objects: list[dict[str, Any]]) -> str:
         bundle = self.helper.stix2_create_bundle(items=stix_objects)
@@ -63,39 +54,26 @@ class Connector:
 
     def _generate_octi_objects(
         self, stix_entity: dict[str, Any]
-    ) -> Generator[BaseObject, None, None]:
-        match stix_entity["type"]:
-            case "ipv4-addr" | "ipv6-addr":
-                return self.converter.generate_octi_objects(
-                    stix_entity=stix_entity,
-                    data=self.client.fetch_ip(stix_entity["value"]),
-                )
-            case "x509-certificate":
-                return self.converter.generate_octi_objects_from_certs(
-                    certs=list(self.client.fetch_certs(hashes=stix_entity["hashes"])),
-                )
-            case "domain-name":
+    ) -> Iterator[BaseObject]:
+        # Annotate ``Iterator`` (not ``Generator``) so the type
+        # matches the ``list_iterator`` returned by
+        # ``iter(converter.to_stix(...))``. Keeping ``return
+        # iter(...)`` instead of rewriting as a real ``yield from``
+        # generator is deliberate: the converter dispatch
+        # (``_get_converter`` → ``get_converter`` →
+        # ``EntityTypeNotSupportedError``) must run eagerly so
+        # misconfigured entity types surface at call time rather
+        # than only when something starts iterating the returned
+        # object — the test suite (and the ``_message_callback``
+        # error path that wraps this) both rely on the eager
+        # behaviour.
+        converter = self._get_converter(entity_type=stix_entity["type"])
+        return iter(converter.to_stix(observable=stix_entity))
 
-                def _generate_domain_objects():
-                    # yield objects from associated hosts
-                    yield from self.converter.generate_octi_objects_from_hosts(
-                        stix_entity=stix_entity,
-                        hosts=list(self.client.fetch_hosts(stix_entity["value"])),
-                    )
-                    # yield certificates associated with the domain
-                    yield from self.converter.generate_octi_objects_from_domain_certs(
-                        stix_entity=stix_entity,
-                        certs=list(
-                            self.client.fetch_certs_by_domain(stix_entity["value"])
-                        ),
-                    )
-
-                return _generate_domain_objects()
-
-            case _:
-                raise EntityTypeNotSupportedError(
-                    f"Observable type {stix_entity['type']} not supported"
-                )
+    def _get_converter(self, entity_type: str) -> CensysConverter:
+        converter = get_converter(entity_type=entity_type)
+        converter.client = self.client
+        return converter
 
     def _process(
         self,
