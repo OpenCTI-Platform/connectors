@@ -276,7 +276,7 @@ class GreyNoiseVulnConnector:
         )
         self.stix_objects.append(stix_vulnerability)
 
-    def _generate_stix_bundle(self, data: dict, stix_entity: dict) -> str:
+    def _generate_stix_bundle(self, data: dict, stix_entity: dict) -> str | None:
         """
         This method create a bundle in Stix2 format.
 
