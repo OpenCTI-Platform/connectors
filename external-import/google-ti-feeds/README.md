@@ -23,7 +23,8 @@ This connector ingests **reports, campaigns, threat actors, malware families, so
   - [3. Threat Actors](#3-threat-actors)
   - [4. Malware Families](#4-malware-families)
   - [5. Vulnerabilities](#5-vulnerabilities)
-  - [6. Indicators / IOCs](#6-indicators--iocs)
+  - [6. Software Toolkits](#6-software-toolkits)
+  - [7. Indicators / IOCs](#7-indicators--iocs)
 - [Data mapping](#data-mapping)
   - [Intrusion-Set](#intrusion-set)
   - [Malware](#malware)
@@ -46,15 +47,24 @@ This connector ingests **reports, campaigns, threat actors, malware families, so
 The **Google Threat Intelligence (GTI) Feeds Connector** ingests threat intelligence from the
 [Google Threat Intelligence API](https://gtidocs.virustotal.com/reference/reports) into OpenCTI.
 
-| Collection         | Config toggle                | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced                                                                                                  |
-|--------------------|-----------------------------|--------------------|---------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Reports            | `GTI_IMPORT_REPORTS`         | ✅ Yes             | Report              | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note  |
-| Campaigns          | `GTI_IMPORT_CAMPAIGNS`       | ❌ No              | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool                                                     |
-| Threat Actors      | `GTI_IMPORT_THREAT_ACTORS`   | ❌ No              | Intrusion-Set       | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool                                                                    |
-| Malware Families   | `GTI_IMPORT_MALWARE_FAMILIES`| ❌ No              | Malware             | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities                                                                    |
-| Software Toolkits  | `GTI_IMPORT_SOFTWARE_TOOLKITS`| ❌ No             | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                           |
-| Vulnerabilities    | `GTI_IMPORT_VULNERABILITIES` | ❌ No              | Vulnerability       | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software)                                                                 |
-| Indicators (IOC)   | `GTI_IMPORT_INDICATORS`      | ❌ No              | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                           |
+| Collection         | Config toggle                | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced                                                                                                  |
+
+|--------------------|-----------------------------|--------------------|---------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+
+| Reports            | `GTI_IMPORT_REPORTS`         | ✅ Yes             | Report              | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note  |
+
+| Campaigns          | `GTI_IMPORT_CAMPAIGNS`       | ❌ No              | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool                                                     |
+
+| Threat Actors      | `GTI_IMPORT_THREAT_ACTORS`   | ❌ No              | Intrusion-Set       | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool                                                                    |
+
+| Malware Families   | `GTI_IMPORT_MALWARE_FAMILIES`| ❌ No              | Malware             | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities                                                                    |
+
+| Software Toolkits  | `GTI_IMPORT_SOFTWARE_TOOLKITS`| ❌ No             | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                           |
+
+| Vulnerabilities    | `GTI_IMPORT_VULNERABILITIES` | ❌ No              | Vulnerability       | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software)                                                                 |
+
+| Indicators (IOC)   | `GTI_IMPORT_INDICATORS`      | ❌ No              | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                           |
+
 
 ## Data collections
 
@@ -164,7 +174,6 @@ Additionally, `Location` and `Identity` (targeted countries, sectors) are extrac
 | `GTI_THREAT_ACTOR_EXTRA_FILTERS`   | Optional list of additional filters to add to query when fetching threat actors  | `[]`                               | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type)                               |
 | `GTI_ENABLE_THREAT_ACTOR_ALIASES`  | Whether to enable importing threat actor aliases from GTI                        | `false`                            | `true` / `false`. [See details and recommendations in the "Important Data Limitations" section above](#important-data-limitations)                         |
 
-
 ### 4. Malware Families
 
 Fetches Google TI **[Malware Families](https://gtidocs.virustotal.com/reference/malware-family-object)** from the [GTI Collections API](https://gtidocs.virustotal.com/reference/list-collections).
@@ -228,7 +237,38 @@ All sub-entities are converted to STIX 2.1 objects and linked to the parent Vuln
 | `GTI_VULNERABILITY_ORIGINS`        | Filter by origin                                                                   | `["google threat intelligence"]` | [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values)                     |
 | `GTI_VULNERABILITY_EXTRA_FILTERS`  | Optional list of additional filters to add to query when fetching vulnerabilities  | `[]`                             | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type) |
 
-### 6. Indicators / IOCs
+### 6. Software Toolkits
+
+Fetches Google TI **[Software Toolkits](https://gtidocs.virustotal.com/reference/software-toolkit-object)** from the [GTI Collections API](https://gtidocs.virustotal.com/reference/list-collections).
+
+#### How it works
+
+The connector calls **`GET /collections`** with a filter on `collection_type:software-toolkit` and `last_modification_date` to retrieve only software toolkits modified since the last successful execution.
+The date is persisted in the connector state as `software_toolkit_next_cursor_start_date`; on first run, it is calculated from `GTI_SOFTWARE_TOOLKIT_IMPORT_START_DATE`.
+
+For each software toolkit returned, the connector fetches related sub-entities by calling **`GET /collections/{software_toolkit_id}/{subentity_type}`** for: `malware_families` and `attack_techniques`.
+
+All sub-entities are converted to STIX 2.1 objects and linked to the parent Tool entity.
+
+Additionally, `Location` and `Identity` (targeted countries, sectors) are extracted directly from the software toolkit's own attributes.
+
+> **Note:** Relationships between a software toolkit and other entities such as reports or campaigns are not fetched here. These links are established when the `reports` or `campaigns` collections are imported — they fetch `software_toolkits` as one of their sub-entities, which creates the link in OpenCTI.
+
+#### Sub-entities mapping
+
+| Sub-entity type     | OpenCTI entity produced |
+|---------------------|-------------------------|
+| `malware_families`  | Malware                 |
+| `attack_techniques` | Attack-Pattern          |
+
+#### Configurable filters
+
+| Variable                                | Description                                                                           | Default value                    | Supported values                                                                                                                                           |
+|-----------------------------------------|---------------------------------------------------------------------------------------|----------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `GTI_SOFTWARE_TOOLKIT_ORIGINS`          | Filter by origin                                                                      | `["google threat intelligence"]` | `All` or `google threat intelligence`, `partner`. [See available values](https://gtidocs.virustotal.com/docs/threat-intelligence-objects-modifiers-values) |
+| `GTI_SOFTWARE_TOOLKIT_EXTRA_FILTERS`    | Optional list of additional filters to add to query when fetching software toolkits   | `[]`                             | [See available filters](https://gtidocs.virustotal.com/reference/list-collections#allowed-filters-by-object-collection_type)                               |
+
+### 7. Indicators / IOCs
 
 Fetches **Indicators** via the GTI **IOC Delta feed API**. The IOC Delta feed is a feed that generates minute-based packages of updated IOCs, which are then combined into a larger hourly package.
 
