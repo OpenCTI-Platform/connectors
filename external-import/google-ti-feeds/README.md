@@ -609,7 +609,7 @@ Because the open-source data often uses **overlapping or conflicting aliases** f
 - This limitation affects the completeness of threat actor and malware entity relationships and may impact threat correlation capabilities.  
   Please be aware of this constraint when using the imported data for analysis and reporting.
 
-> **NOTE:** The connector now provides configuration options `enable_malware_aliases` and `enable_threat_actor_aliases` (both default to `False`) that allow you to override this behavior and enable alias importing. However, **we strongly recommend keeping these disabled by default** as mentioned above. Enabling aliases is at your own discretion and responsibility.
+> **NOTE:** The connector now provides configuration options `GTI_ENABLE_MALWARE_ALIASES` and `GTI_ENABLE_THREAT_ACTOR_ALIASES` (both default to `false`) that allow you to override this behavior and enable alias importing. However, **we strongly recommend keeping these disabled by default** as mentioned above. Enabling aliases is at your own discretion and responsibility.
 
 ---
 
@@ -710,7 +710,8 @@ Note: Your commits must be signed using a GPG key. Otherwise, your Pull Request 
 
 #### Linting and formatting
 
-Added to the connectors linting and formatting rules, this connector is developed and checked using ruff and mypy to ensure the code is type-checked and linted.
+Added to the connectors linting and formatting rules, this connector is developed and checked using ruff and mypy to ensure the code is type-checked and linted.
+
 The dedicated configurations are set in the `pyproject.toml` file.
 You can run the following commands to check the code:
 
