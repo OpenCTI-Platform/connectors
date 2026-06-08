@@ -24,28 +24,28 @@ class GreyNoiseVulnConnector:
         self.greynoise_ent_desc = self.config.greynoise_vuln.description
 
         # Define variables
-        self.tlp = None
         self.stix_objects = []
         self.integration_name = "opencti-vuln-enricher-v2.0"
 
-    def _extract_and_check_markings(self, opencti_entity: dict) -> bool:
+    def _extract_and_check_markings(self, opencti_entity: dict) -> None:
         """
-        Extract TLP, and we check if the variable "max_tlp" is less than
-        or equal to the markings access of the entity from OpenCTI.
-        If this is true, we can send the data to connector for enrichment.
+        Extract TLP and raise if the entity's marking exceeds max_tlp.
 
         :param opencti_entity: Parameter that contains all information about the entity,
                                including "objectMarking", the marking that the observable uses.
-        :return: A boolean
         """
 
+        tlp = "TLP:AMBER"
         for marking_definition in opencti_entity["objectMarking"]:
             if marking_definition["definition_type"] == "TLP":
-                self.tlp = marking_definition["definition"]
+                tlp = marking_definition["definition"]
 
-        is_valid_max_tlp = OpenCTIConnectorHelper.check_max_tlp(self.tlp, self.max_tlp)
-
-        return is_valid_max_tlp
+        if not OpenCTIConnectorHelper.check_max_tlp(tlp, self.max_tlp):
+            raise ValueError(
+                "[ERROR] Do not send any data, TLP of the observable is greater than MAX TLP, "
+                "the connector does not have access to this observable, "
+                "please check the group of the connector user"
+            )
 
     def _generate_stix_relationship(
         self,
@@ -53,8 +53,7 @@ class GreyNoiseVulnConnector:
         stix_core_relationship_type: str,
         target_ref: str,
         start_time: str | None = None,
-        stop_time: str | None = None,
-    ) -> dict:
+    ) -> stix2.Relationship:
         """
         This method allows you to create a relationship in Stix2 format.
 
@@ -62,7 +61,6 @@ class GreyNoiseVulnConnector:
         :param stix_core_relationship_type: Parameter,
         :param target_ref: This parameter is the "to" of the relationship.
         :param start_time: This parameter is the start of the relationship. Value not required, None by default.
-        :param stop_time: This parameter is the stop of the relationship. Value not required, None by default.
         :return: A dict
         """
 
@@ -73,7 +71,6 @@ class GreyNoiseVulnConnector:
             relationship_type=stix_core_relationship_type,
             source_ref=source_ref,
             start_time=start_time,
-            stop_time=stop_time,
             target_ref=target_ref,
             created_by_ref=self.greynoise_identity["id"],
         )
@@ -102,12 +99,12 @@ class GreyNoiseVulnConnector:
     def _get_match(data, key, value):
         return next((x for x in data if x[key] == value), None)
 
-    def _process_labels(self, data: dict) -> tuple:
+    def _process_labels(self, data: dict) -> list:
         """
         This method allows you to start the process of creating labels and recovering associated malware.
 
         :param data: A parameter that contains all the data about the IPv4 that was searched for in GreyNoise.
-        :return: A tuple (all labels, all malwares)
+        :return: A list of all labels
         """
 
         self.all_labels = []
@@ -325,7 +322,6 @@ class GreyNoiseVulnConnector:
 
     def _process_message(self, data: Dict) -> str:
         # Security to limit playbook triggers to something other than the scope initial
-        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
         entity_splited = data["entity_id"].split("--")
         entity_type = entity_splited[0].lower()
 
@@ -335,12 +331,7 @@ class GreyNoiseVulnConnector:
             opencti_entity = data["enrichment_entity"]
             self.stix_objects = data["stix_objects"]
 
-            is_valid_max_tlp = self._extract_and_check_markings(opencti_entity)
-            if not is_valid_max_tlp:
-                raise ValueError(
-                    "[ERROR] Do not send any data, TLP of the observable is greater than MAX TLP, "
-                    "the connector does not has access to this observable, please check the group of the connector user"
-                )
+            self._extract_and_check_markings(opencti_entity)
 
             # Extract Value from opencti entity data
             opencti_entity_value = stix_entity["name"]
