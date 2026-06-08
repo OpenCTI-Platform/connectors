@@ -609,14 +609,15 @@ Because the open-source data often uses **overlapping or conflicting aliases** f
 - This limitation affects the completeness of threat actor and malware entity relationships and may impact threat correlation capabilities.  
   Please be aware of this constraint when using the imported data for analysis and reporting.
 
-> **NOTE:** The connector now provides configuration options `GTI_ENABLE_MALWARE_ALIASES` and `GTI_ENABLE_THREAT_ACTOR_ALIASES` (both default to `false`) that allow you to override this behavior and enable alias importing. However, **we strongly recommend keeping these disabled by default** as mentioned above. Enabling aliases is at your own discretion and responsibility.
+> **NOTE:** The connector now provides configuration options `GTI_ENABLE_MALWARE_ALIASES` and `GTI_ENABLE_THREAT_ACTOR_ALIASES` (both default to `false`) that allow you to override this behavior and enable alias importing. However, **we strongly recommend keeping these disabled by default** as mentioned above. Enabling aliases is at your own discretion and responsibility.
+
 
 ---
 
 ## Installation
 
 ### Requirements
-
+- OpenCTI Platform version **6.5.1** or higher
 - OpenCTI Platform version **6.7.7** or higher
 - Docker & Docker Compose (for containerized deployment)
 - Valid GTI API credentials (token)
