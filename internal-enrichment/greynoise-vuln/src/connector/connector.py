@@ -322,6 +322,7 @@ class GreyNoiseVulnConnector:
 
     def _process_message(self, data: Dict) -> str:
         # Security to limit playbook triggers to something other than the scope initial
+        scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
         entity_splited = data["entity_id"].split("--")
         entity_type = entity_splited[0].lower()
 
@@ -380,11 +381,17 @@ class GreyNoiseVulnConnector:
                     "[ERROR] Unexpected Error occurred :", {"Exception": str(e)}
                 )
         else:
-            return self.helper.connector_logger.info(
+            self.helper.connector_logger.info(
                 "[INFO] The trigger does not concern the initial scope found in the config connector, "
                 "maybe choose a more specific filter in the playbook",
-                {"entity_id": data["entity_id"]},
+                {"entity_id": data["entity_id"], "event_type": data.get("event_type")},
             )
+            if not data.get("event_type"):
+                self.helper.send_stix2_bundle(
+                    self.helper.stix2_create_bundle(data["stix_objects"]),
+                    cleanup_inconsistent_bundle=True,
+                )
+            return "[INFO] Not in scope, original bundle returned unchanged"
 
     def process_message(self, data: Dict) -> str:
         try:
