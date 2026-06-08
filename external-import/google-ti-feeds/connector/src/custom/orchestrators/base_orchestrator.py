@@ -130,9 +130,7 @@ class BaseOrchestrator:
         batch_processor.add_items(all_entities)
 
     @staticmethod
-    def _filter_subentity_types(
-        subentity_types: list[str], entity: Any
-    ) -> list[str]:
+    def _filter_subentity_types(subentity_types: list[str], entity: Any) -> list[str]:
         """Filter subentity types based on the entity's counters.
 
         When the entity exposes a ``counters`` object (via ``attributes.counters``),
@@ -149,9 +147,7 @@ class BaseOrchestrator:
             A filtered list of subentity types worth fetching.
 
         """
-        counters = getattr(
-            getattr(entity, "attributes", None), "counters", None
-        )
+        counters = getattr(getattr(entity, "attributes", None), "counters", None)
         if counters is None:
             return subentity_types
 
@@ -160,4 +156,3 @@ class BaseOrchestrator:
             for subentity_type in subentity_types
             if getattr(counters, subentity_type, None) != 0
         ]
-
