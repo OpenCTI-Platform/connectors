@@ -56,7 +56,6 @@ class RfAsiConnector:
             self.helper,
             base_url=self.config.rf_asi.api_base_url,
             api_key=self.config.rf_asi.api_key.get_secret_value(),
-            # Pass any arguments necessary to the client
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
@@ -72,23 +71,19 @@ class RfAsiConnector:
         """
         stix_objects = []
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
+        exposures = self.client.list_exposures(
+            project_id=self.config.rf_asi.project_id,
+            limit=self.config.rf_asi.page_limit,
+        )
 
-        # Get entities from external sources
-        entities = self.client.get_entities()
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Fetched exposures from ASI API",
+            {"exposure_count": len(exposures)},
+        )
 
-        # Convert into STIX2 object and add it on a list
-        for entity in entities:
-            entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-            stix_objects.append(entity_to_stix)
+        for exposure in exposures:
+            stix_objects.append(self.converter_to_stix.exposure_to_incident(exposure))
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
-
-        # Ensure consistent bundle by adding the author and TLP marking
         if len(stix_objects):
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
@@ -107,7 +102,7 @@ class RfAsiConnector:
 
         try:
             # Get the current state
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             current_timestamp = int(datetime.timestamp(now))
             current_state = self.helper.get_state()
 
@@ -124,7 +119,7 @@ class RfAsiConnector:
                 )
 
             # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector rf_asi feed"
+            friendly_name = "Recorded Future ASI Exposures Import"
 
             # Initiate a new work
             work_id = self.helper.api.work.initiate_work(
