@@ -32,7 +32,7 @@ This connector ingests **reports, campaigns, threat actors, malware families, so
   - [Campaign](#campaign-gti-campaign)
   - [Vulnerability](#vulnerability-gti-vulnerability)
   - [Report](#report-gti-report)
-  - [Indicator](#indicator-gti-ioc-delta-feed)
+  - [Indicator](#indicator)
 - [Important API Quota Limitations](#important-api-quota-limitations)
 - [Important Data Limitations](#important-data-limitations)
 - [Installation](#installation)
