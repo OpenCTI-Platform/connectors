@@ -1,0 +1,29 @@
+{
+  "data": [
+    {
+      "signature": {
+        "id": "sig-001",
+        "name": "Exposed admin panel",
+        "description": "An administrative interface is publicly accessible.",
+        "severity": "critical",
+        "added_at": "2024-06-01T12:00:00Z"
+      },
+      "asset_count": 3
+    },
+    {
+      "signature": {
+        "id": "sig-002",
+        "name": "Open port 22",
+        "description": "SSH port detected on public IP.",
+        "severity": "moderate",
+        "added_at": "2024-06-02T08:15:00Z"
+      },
+      "asset_count": 12
+    }
+  ],
+  "meta": {
+    "pagination": {
+      "next_cursor": "cursor-page-2"
+    }
+  }
+}
