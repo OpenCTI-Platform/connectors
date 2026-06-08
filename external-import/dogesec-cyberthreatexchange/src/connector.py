@@ -77,7 +77,10 @@ class CyberThreatExchangeConnector:
             filters.update(added_after=q)
 
         for objects in self._retrieve(
-            f"v1/feeds/{feed_id}/objects/", list_key="objects", params=filters
+            f"v1/feeds/{feed_id}/objects/",
+            list_key="objects",
+            params=filters,
+            cursor_key="added_after",
         ):
             self.helper.log_info(
                 f"processing batch of {len(objects)} objects for feed {feed_id}"
@@ -92,7 +95,7 @@ class CyberThreatExchangeConnector:
             )
             self.helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
 
-    def _retrieve(self, path, list_key, params: dict = None):
+    def _retrieve(self, path, list_key, params: dict = None, cursor_key="cursor"):
         params = params or {}
         params.update(page_size=200)
         objects_count = 0
@@ -107,7 +110,7 @@ class CyberThreatExchangeConnector:
                 if cursor.startswith("http://") or cursor.startswith("https://"):
                     url = data["next"]
                 else:
-                    params.update(cursor=cursor)
+                    params.update({cursor_key: cursor})
             elif objects_count < data.get("total_results_count", 0):
                 params.update(page=data["page_number"] + 1)
             else:
