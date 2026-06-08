@@ -46,17 +46,15 @@ This connector ingests **reports, campaigns, threat actors, malware families, so
 The **Google Threat Intelligence (GTI) Feeds Connector** ingests threat intelligence from the
 [Google Threat Intelligence API](https://gtidocs.virustotal.com/reference/reports) into OpenCTI.
 
-It supports **7 independent, toggleable collections**:
-
-| Collection         | Enabled by default  | Main OpenCTI entity | Related OpenCTI entity(s) produced                                                                                                  |
-|--------------------|---------------------|---------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Reports            | ✅ Yes               | Report              | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note  |
-| Campaigns          | ❌ No                | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool                                                     |
-| Threat Actors      | ❌ No                | Intrusion-Set       | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool                                                                    |
-| Malware Families   | ❌ No                | Malware             | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities                                                                    |
-| Software Toolkits  | ❌ No                | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                           |
-| Vulnerabilities    | ❌ No                | Vulnerability       | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software)                                                                 |
-| Indicators (IOC)   | ❌ No                | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                           |
+| Collection         | Config toggle                | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced                                                                                                  |
+|--------------------|-----------------------------|--------------------|---------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| Reports            | `GTI_IMPORT_REPORTS`         | ✅ Yes             | Report              | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note  |
+| Campaigns          | `GTI_IMPORT_CAMPAIGNS`       | ❌ No              | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool                                                     |
+| Threat Actors      | `GTI_IMPORT_THREAT_ACTORS`   | ❌ No              | Intrusion-Set       | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool                                                                    |
+| Malware Families   | `GTI_IMPORT_MALWARE_FAMILIES`| ❌ No              | Malware             | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities                                                                    |
+| Software Toolkits  | `GTI_IMPORT_SOFTWARE_TOOLKITS`| ❌ No             | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                           |
+| Vulnerabilities    | `GTI_IMPORT_VULNERABILITIES` | ❌ No              | Vulnerability       | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software)                                                                 |
+| Indicators (IOC)   | `GTI_IMPORT_INDICATORS`      | ❌ No              | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                           |
 
 ## Data collections
 
@@ -617,7 +615,8 @@ Because the open-source data often uses **overlapping or conflicting aliases** f
 ## Installation
 
 ### Requirements
-- OpenCTI Platform version **6.5.1** or higher
+- OpenCTI Platform version **6.5.1** or higher
+
 - OpenCTI Platform version **6.7.7** or higher
 - Docker & Docker Compose (for containerized deployment)
 - Valid GTI API credentials (token)
