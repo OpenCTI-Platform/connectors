@@ -710,7 +710,7 @@ Note: Your commits must be signed using a GPG key. Otherwise, your Pull Request 
 
 #### Linting and formatting
 
-Added to the connectors linteing and formatting rules, this connector is developed and checked using ruff and mypy to ensure the code is type-checked and linted.
+Added to the connectors linting and formatting rules, this connector is developed and checked using ruff and mypy to ensure the code is type-checked and linted.
 The dedicated configurations are set in the `pyproject.toml` file.
 You can run the following commands to check the code:
 
