@@ -280,6 +280,51 @@ def test_retrieve_with_next_url(
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")
+def test_retrieve_with_next_cursor(
+    mock_session: MagicMock, connector: CyberThreatExchangeConnector
+) -> None:
+    """Test _retrieve with next cursor pagination"""
+    # Mock responses with next cursor
+    mock_response_1 = MagicMock()
+    mock_response_1.json.return_value = {
+        "next": "mycursor1",
+        "objects": [{"id": "obj-1"}, {"id": "onj-5"}],
+    }
+
+    mock_response_2 = MagicMock()
+    mock_response_2.json.return_value = {
+        "next": "another-cursor",
+        "objects": [{"id": "obj-2"}],
+    }
+    mock_response_3 = MagicMock()
+    mock_response_3.json.return_value = {
+        "next": None,
+        "objects": [{"id": "obj-3"}, {"id": "obj-4"}],
+    }
+
+    mock_session.get.side_effect = [mock_response_1, mock_response_2, mock_response_3]
+
+    batches = list(connector._retrieve("v1/test/?v=9", list_key="objects"))
+
+    assert len(batches) == 3
+    assert sum(map(len, batches)) == 5
+    # Verify second call used the next URL
+    mock_session.get.assert_has_calls(
+        [
+            call("https://test-ctx-url/v1/test/?v=9", params={"page_size": 200}),
+            call(
+                "https://test-ctx-url/v1/test/?v=9",
+                params={"page_size": 200, "cursor": "mycursor1"},
+            ),
+            call(
+                "https://test-ctx-url/v1/test/?v=9",
+                params={"page_size": 200, "cursor": "another-cursor"},
+            ),
+        ]
+    )
+
+
+@freezegun.freeze_time("2026-02-18T15:24:00Z")
 def test_get_and_process_objects_no_filter(
     mocker: MockerFixture,
     mock_session: MagicMock,

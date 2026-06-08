@@ -103,15 +103,15 @@ class CyberThreatExchangeConnector:
             data = resp.json()
             yield data[list_key]
             objects_count += len(data[list_key])
-            if ("next" in data and not data["next"]) or (
-                "total_results_count" in data
-                and data["total_results_count"] <= objects_count
-            ):
-                more = False
-            if "next" in data:
-                url = data["next"]
-            if "total_results_count" in data:
+            if cursor := data.get("next"):
+                if cursor.startswith("http://") or cursor.startswith("https://"):
+                    url = data["next"]
+                else:
+                    params.update(cursor=cursor)
+            elif objects_count < data.get("total_results_count", 0):
                 params.update(page=data["page_number"] + 1)
+            else:
+                break
         return []
 
     def retrieve(self, path, list_key, params: dict = None):
