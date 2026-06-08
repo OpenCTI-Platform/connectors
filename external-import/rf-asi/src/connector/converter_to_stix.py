@@ -1,182 +1,125 @@
-import ipaddress
+from datetime import datetime, timezone
 from typing import Literal
 
-import stix2
-import validators
-from pycti import (
-    Identity,
-    MarkingDefinition,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
+from connectors_sdk.models import (
+    ExternalReference,
+    Incident,
+    OrganizationAuthor,
+    TLPMarking,
 )
+from pydantic import HttpUrl
+from pycti import OpenCTIConnectorHelper
+from stix2 import Incident as Stix2Incident
+
+AUTHOR_NAME = "Recorded Future ASI"
+SOURCE_NAME = "Recorded Future ASI"
+INCIDENT_TYPE = "Attack Surface Monitoring"
+LABEL_ADDED = "rf-asi:added"
+
+SEVERITY_MAP = {
+    "critical": "critical",
+    "moderate": "medium",
+    "informational": "low",
+    "unknown": "low",
+}
 
 
 class ConverterToStix:
-    """
-    Provides methods for converting various types of input data into STIX 2.1 objects.
-
-    REQUIREMENTS:
-        - `generate_id()` methods from `pycti` library MUST be used to generate the `id` of each entity (except observables),
-        e.g. `pycti.Identity.generate_id(name="Source Name", identity_class="organization")` for a STIX Identity.
-    """
+    """Convert RF ASI exposure summaries into STIX 2.1 Incident objects."""
 
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
+        tlp_level: Literal[
+            "clear", "white", "green", "amber", "amber+strict", "red"
+        ],
+        project_id: str,
+        portal_base_url: HttpUrl | str | None = None,
     ):
         """
         Initialize the converter with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `tlp_level`) if necessary.
 
         Args:
-            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            tlp_level (str): The TLP level to add to the created STIX entities.
+            helper: The helper of the connector. Used for logs.
+            tlp_level: The TLP level to add to the created STIX entities.
+            project_id: ASI project ID used for external reference deep links.
+            portal_base_url: Optional portal base URL for external reference URLs.
         """
         self.helper = helper
-
-        self.author = self.create_author()
-        self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
-
-    @staticmethod
-    def create_author() -> dict:
-        """
-        Create Author
-        :return: Author in Stix2 object
-        """
-        author = stix2.Identity(
-            id=Identity.generate_id(name="Source Name", identity_class="organization"),
-            name="Source Name",
-            identity_class="organization",
-            description="DESCRIPTION",
-            external_references=[
-                stix2.ExternalReference(
-                    source_name="External Source",
-                    url="CHANGEME",
-                    description="DESCRIPTION",
-                )
-            ],
+        self.project_id = project_id
+        self.portal_base_url = (
+            str(portal_base_url).rstrip("/") if portal_base_url else None
         )
-        return author
+
+        self._author = OrganizationAuthor(name=AUTHOR_NAME)
+        self._tlp_marking = TLPMarking(level=tlp_level)
+        self.author = self._author.to_stix2_object()
+        self.tlp_marking = self._tlp_marking.to_stix2_object()
 
     @staticmethod
-    def _create_tlp_marking(level):
-        mapping = {
-            "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                custom_properties={
-                    "x_opencti_definition_type": "TLP",
-                    "x_opencti_definition": "TLP:AMBER+STRICT",
-                },
-            ),
-            "red": stix2.TLP_RED,
-        }
-        return mapping[level]
+    def map_severity(rf_severity: str | None) -> str:
+        """Map RF ASI severity values to OpenCTI incident severity."""
+        if not rf_severity:
+            return SEVERITY_MAP["unknown"]
+        return SEVERITY_MAP.get(rf_severity.lower(), SEVERITY_MAP["unknown"])
 
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
-        """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author,
+    def build_external_reference(self, signature: dict) -> ExternalReference:
+        """Build an external reference for an exposure signature."""
+        signature_id = signature.get("id") or ""
+        url = None
+        if self.portal_base_url and signature_id:
+            url = (
+                f"{self.portal_base_url}/projects/{self.project_id}"
+                f"/exposures/{signature_id}"
+            )
+        return ExternalReference(
+            source_name=SOURCE_NAME,
+            external_id=signature_id or None,
+            url=url,
         )
-        return relationship
-
-    # ===========================#
-    # Other Examples
-    # ===========================#
 
     @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
+    def _build_description(signature: dict, asset_count: int | None) -> str | None:
+        parts: list[str] = []
+        if description := signature.get("description"):
+            parts.append(description)
+        if asset_count is not None:
+            parts.append(f"Affected assets: {asset_count}")
+        return "\n\n".join(parts) if parts else None
 
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
+    def _resolve_created(self, signature: dict) -> datetime:
+        added_at = signature.get("added_at")
+        if added_at:
+            return added_at
+        self.helper.connector_logger.warning(
+            "[CONVERTER] Exposure missing added_at; using current timestamp",
+            {"signature_id": signature.get("id"), "name": signature.get("name")},
+        )
+        return datetime.now(timezone.utc)
 
-    @staticmethod
-    def _is_domain(value: str) -> bool:
+    def exposure_to_incident(self, exposure_summary: dict) -> Stix2Incident:
         """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
+        Convert an RF ASI exposure summary into a STIX 2.1 Incident.
 
-        if is_valid_domain:
-            return True
-        else:
-            return False
+        Args:
+            exposure_summary: API item with ``signature`` and ``asset_count`` fields.
 
-    def create_obs(self, value: str) -> dict:
+        Returns:
+            STIX 2.1 Incident object.
         """
-        Create observable according to value given
-        :param value: Value in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
-            stix_ipv4_address = stix2.IPv4Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv4_address
-        elif self._is_domain(value) is True:
-            stix_domain_name = stix2.DomainName(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )
+        signature = exposure_summary.get("signature") or {}
+        asset_count = exposure_summary.get("asset_count")
+
+        incident = Incident(
+            name=signature.get("name") or "Unknown exposure",
+            description=self._build_description(signature, asset_count),
+            created=self._resolve_created(signature),
+            incident_type=INCIDENT_TYPE,
+            severity=self.map_severity(signature.get("severity")),
+            source=SOURCE_NAME,
+            labels=[LABEL_ADDED],
+            author=self._author,
+            markings=[self._tlp_marking],
+            external_references=[self.build_external_reference(signature)],
+        )
+        return incident.to_stix2_object()

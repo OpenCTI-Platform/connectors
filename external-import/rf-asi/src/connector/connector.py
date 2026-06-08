@@ -61,7 +61,8 @@ class RfAsiConnector:
         self.converter_to_stix = ConverterToStix(
             self.helper,
             tlp_level=self.config.rf_asi.tlp_level,
-            # Pass any arguments necessary to the converter
+            project_id=self.config.rf_asi.project_id,
+            portal_base_url=self.config.rf_asi.portal_base_url,
         )
 
     def _collect_intelligence(self) -> list:
