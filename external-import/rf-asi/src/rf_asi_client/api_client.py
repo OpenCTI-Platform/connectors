@@ -7,63 +7,96 @@ class RfAsiClient:
     def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: str):
         """
         Initialize the client with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `api_key`) if necessary.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            base_url (str): The external API base URL.
+            base_url (HttpUrl): The external API base URL.
             api_key (str): The API key to authenticate the connector to the external API.
         """
         self.helper = helper
-
-        self.base_url = base_url
-        # Define headers in session and update when needed
-        headers = {"Bearer": api_key}
+        self.base_url = str(base_url).rstrip("/")
+        headers = {
+            "accept": "application/json",
+            "apikey": api_key,
+        }
         self.session = requests.Session()
         self.session.headers.update(headers)
 
-    def _request_data(self, api_url: str, params=None):
+    def _request_data(
+        self, api_url: str, params: dict | None = None
+    ) -> requests.Response:
         """
-        Internal method to handle API requests
-        :return: Response in JSON format
+        Internal method to handle API GET requests.
+
+        :param api_url: Full URL for the API endpoint.
+        :param params: Optional query parameters.
+        :return: HTTP response on success.
+        :raises requests.RequestException: On non-2xx responses or transport errors.
         """
-        try:
-            response = self.session.get(api_url, params=params)
+        self.helper.connector_logger.info(
+            "[API] HTTP Get Request to endpoint", {"url_path": api_url}
+        )
+        response = self.session.get(api_url, params=params, timeout=30)
+        response.raise_for_status()
+        return response
 
-            self.helper.connector_logger.info(
-                "[API] HTTP Get Request to endpoint", {"url_path": api_url}
-            )
-
-            response.raise_for_status()
-            return response
-
-        except requests.RequestException as err:
-            error_msg = "[API] Error while fetching data: "
-            self.helper.connector_logger.error(
-                error_msg, {"url_path": {api_url}, "error": {str(err)}}
-            )
-            return None
-
-    def get_entities(self, params=None) -> dict:
+    @staticmethod
+    def _parse_list_response(payload: dict) -> tuple[list[dict], str | None]:
         """
-        If params is None, retrieve all CVEs in National Vulnerability Database
-        :param params: Optional Params to filter what list to return
-        :return: A list of dicts of the complete collection of CVE from NVD
+        Extract exposure items and the next pagination cursor from a list response.
+
+        :param payload: JSON body from the exposures list endpoint.
+        :return: Tuple of exposure summary items and optional next cursor.
         """
-        try:
-            # ===========================
-            # === Add your code below ===
-            # ===========================
+        data = payload.get("data") or []
+        pagination = (payload.get("meta") or {}).get("pagination") or {}
+        next_cursor = pagination.get("next_cursor")
+        return data, next_cursor
 
-            # response = self._request_data(self.config.api_base_url, params=params)
+    def list_exposures(
+        self,
+        project_id: str,
+        limit: int = 100,
+        cursor: str | None = None,
+        **filters,
+    ) -> list[dict]:
+        """
+        List all exposures for a project, following cursor-based pagination.
 
-            # return response.json()
-            # ===========================
-            # === Add your code above ===
-            # ===========================
+        :param project_id: ASI project identifier.
+        :param limit: Number of exposures to fetch per page (1-1000).
+        :param cursor: Optional starting pagination cursor.
+        :param filters: Optional API query filters (e.g. filter_severity_min).
+        :return: All exposure summary dicts from the API (signature + asset_count).
+        :raises requests.RequestException: If the first page request fails.
+        """
+        exposures: list[dict] = []
+        next_cursor = cursor
+        url = f"{self.base_url}/projects/{project_id}/exposures"
 
-            raise NotImplementedError
+        while True:
+            params: dict = {"limit": limit, **filters}
+            if next_cursor:
+                params["cursor"] = next_cursor
 
-        except Exception as err:
-            self.helper.connector_logger.error(err)
+            try:
+                response = self._request_data(url, params=params)
+                page_items, next_cursor = self._parse_list_response(response.json())
+                exposures.extend(page_items)
+            except requests.RequestException as err:
+                self.helper.connector_logger.error(
+                    "[API] Error while fetching exposures",
+                    {"url_path": url, "error": str(err)},
+                )
+                if exposures:
+                    self.helper.connector_logger.warning(
+                        "[API] Returning partial exposure results after pagination failure",
+                        {"collected_count": len(exposures)},
+                    )
+                    return exposures
+                raise
+
+            if not next_cursor:
+                break
+
+        return exposures
