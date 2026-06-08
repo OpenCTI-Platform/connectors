@@ -11,9 +11,6 @@
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -38,42 +35,12 @@ The connector uses backward-sliding pagination: within a run, when a window retu
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+## Configuration variables
 
-### OpenCTI environment variables
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-| Parameter     | config.yml `opencti` | Docker environment variable | Default | Mandatory | Description                                          |
-|---------------|----------------------|-----------------------------|---------|-----------|------------------------------------------------------|
-| OpenCTI URL   | `url`                | `OPENCTI_URL`               | /       | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | `token`              | `OPENCTI_TOKEN`             | /       | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml `connector` | Docker environment variable | Default                       | Mandatory | Description                                                                            |
-|-----------------|------------------------|-----------------------------|-------------------------------|-----------|----------------------------------------------------------------------------------------|
-| Connector ID    | `id`                   | `CONNECTOR_ID`              | /                             | Yes       | A unique `UUIDv4` identifier for this connector instance.                              |
-| Connector Name  | `name`                 | `CONNECTOR_NAME`            | `Google SecOps`               | No        | Display name of the connector.                                                         |
-| Connector Scope | `scope`                | `CONNECTOR_SCOPE`           | `google-secops-siem-incidents`| No        | Scope token used to route messages to this connector.                                  |
-| Log Level       | `log_level`            | `CONNECTOR_LOG_LEVEL`       | `error`                       | No        | Verbosity of logs. Options: `debug`, `info`, `warn`, `error`.                          |
-| Duration Period | `duration_period`      | `CONNECTOR_DURATION_PERIOD` | `PT1H`                        | No        | Interval between two connector runs (ISO 8601 duration format).                        |
-
-### Connector extra parameters environment variables
-
-| Parameter               | Docker environment variable                                    | Default                                  | Mandatory | Description                                                                                      |
-|-------------------------|----------------------------------------------------------------|------------------------------------------|-----------|--------------------------------------------------------------------------------------------------|
-| Base URL                | `GOOGLE_SECOPS_SIEM_INCIDENTS_BASE_URL`              | `https://chronicle.googleapis.com`       | No        | Google SecOps API base URL. A region prefix is prepended at runtime.                             |
-| GCP project ID          | `GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_ID`            | /                                        | Yes       | Google Cloud project ID associated with the Google SecOps instance.                              |
-| Region                  | `GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_REGION`        | /                                        | Yes       | Google SecOps region prefix (e.g. `us`, `eu`, `asia`).                                           |
-| Instance                | `GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_INSTANCE`      | /                                        | Yes       | Google SecOps instance UUID.                                                                     |
-| Private key (PEM)       | `GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY`           | /                                        | Yes       | Service account private key in PEM format.                                                       |
-| Private key ID          | `GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY_ID`        | /                                        | Yes       | Service account private key ID.                                                                  |
-| Client email            | `GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_EMAIL`          | /                                        | Yes       | Service account client email (`*@*.iam.gserviceaccount.com`).                                    |
-| Client ID               | `GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_ID`             | /                                        | Yes       | Service account client ID (numeric).                                                             |
-| Client cert URL         | `GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_CERT_URL`       | /                                        | Yes       | Service account client certificate URL.                                                          |
-| TLP level               | `GOOGLE_SECOPS_SIEM_INCIDENTS_TLP_LEVEL`                       | `amber`                                  | No        | TLP marking applied to all imported entities. Values: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`. |
-| First start time        | `GOOGLE_SECOPS_SIEM_INCIDENTS_FIRST_START_TIME`                | `P1D`                                    | No        | How far back to fetch alerts on the very first run (ISO 8601 duration). Only used when no prior state exists. |
-
-> **Tip — service account JSON:** All credential fields map directly to the fields inside a GCP service account JSON key file. You can source them from there directly.
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -140,12 +107,15 @@ To force an immediate run, navigate to **Data management → Ingestion → Conne
 
 | Google SecOps source         | OpenCTI / STIX 2.1 entity      |
 |------------------------------|-------------------------------|
-| Rule alert                 | Incident                      |
-| `principal_ip` outcome     | IPv4 / IPv6 Address           |
-| `principal_hostname`       | Hostname                      |
-| `principal_user` outcome   | User Account                  |
-| File outcome               | File (with SHA-256 hash)      |
-| Alert → Observable links   | `related-to` Relationships    |
+| Rule alert                   | Incident                      |
+| `principal_ip` outcome       | IPv4 / IPv6 Address           |
+| `principal_hostname`         | Hostname                      |
+| `principal_user` outcome     | User Account                  |
+| File outcome                 | File (with SHA-256 hash)      |
+| Alert → Observable links     | `related-to` Relationships    |
+| `target_url` outcome  | URL |
+| `principal_user_email_addresses` + `target_user_email_addresses` outcome  | EmailAddress |
+| `mitre_attack_technique_id` outcome  | AttackPattern |
 
 All entities are tagged with the configured TLP marking and attributed to a **Google SecOps** organization identity.
 
