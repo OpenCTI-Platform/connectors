@@ -13,7 +13,7 @@ from stix2 import Incident as Stix2Incident
 
 AUTHOR_NAME = "Recorded Future ASI"
 SOURCE_NAME = "Recorded Future ASI"
-INCIDENT_TYPE = "Attack Surface Monitoring"
+INCIDENT_TYPE = "alert"
 LABEL_ADDED = "rf-asi:added"
 
 SEVERITY_MAP = {
