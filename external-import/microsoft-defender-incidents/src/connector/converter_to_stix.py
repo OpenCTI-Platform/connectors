@@ -76,9 +76,9 @@ class ConverterToStix:
         incident_modified_at = format_datetime(alert.get("lastUpdateDateTime"))
         incident_labels = [alert.get("category")] if alert.get("category") else None
         incident_description = (
-            alert.get("description", "")
-            + "\n\nRecommended Actions:\n\n"
-            + alert.get("recommendedActions", "")
+            f"{alert.get('description', '')}"
+            f"\n\nRecommended Actions:\n\n"
+            f"{alert.get('recommendedActions', '')}"
         )
 
         stix_incident = stix2.Incident(
@@ -118,10 +118,9 @@ class ConverterToStix:
         case_incident_name = incident.get("displayName")
         case_incident_created_at = format_datetime(incident.get("createdDateTime"))
         case_incident_description = (
-            "Incident from Microsoft Defender | classification: "
-            + incident.get("classification", "")
-            + " | determination: "
-            + incident.get("determination", "")
+            f"Incident from Microsoft Defender "
+            f"| classification: {incident.get('classification', '')} "
+            f"| determination: {incident.get('determination', '')}"
         )
 
         stix_case = CustomObjectCaseIncident(
