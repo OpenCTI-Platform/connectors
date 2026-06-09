@@ -5,11 +5,11 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
+
 import pytest
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "src"))
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
