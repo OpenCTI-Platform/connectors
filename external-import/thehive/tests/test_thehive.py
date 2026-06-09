@@ -97,3 +97,77 @@ class TheHiveTest(unittest.TestCase):
         )
 
         self.assertEqual(processed_comments[0]["id"], processed_comments[1]["id"])
+
+    def test_process_items_respects_tlp_filter(
+        self, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """process_items must skip items whose TLP is not in import_only_tlp and
+        send allowed items exactly once, under the work_id."""
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+        _connector.current_state = {}
+        _connector.thehive_import_from_date = 0
+        _connector.thehive_import_only_tlp = ["2"]
+
+        _now = int(time.time() * 1000)
+        allowed = {"tlp": 2, "title": "allowed", "_updatedAt": _now, "_createdAt": _now}
+        blocked = {"tlp": 3, "title": "blocked", "_updatedAt": _now, "_createdAt": _now}
+
+        process_func = MagicMock(return_value=sentinel.bundle)
+        work_id = _connector.helper.api.work.initiate_work.return_value
+
+        _connector.process_items(
+            type="case",
+            items=[allowed, blocked],
+            process_func=process_func,
+            last_date_key="last_case_date",
+        )
+
+        # Only the allowed item is converted and sent, and it carries the work_id.
+        process_func.assert_called_once_with(allowed, work_id)
+        _connector.helper.send_stix2_bundle.assert_called_once_with(
+            sentinel.bundle, work_id=work_id
+        )
+
+    def test_generate_case_bundle_does_not_self_send_main_bundle(
+        self, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """The main case bundle must be returned for process_items to send under the
+        work_id, not sent from within generate_case_bundle. The previous self-send
+        bypassed the TLP filter and ingested every case twice."""
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+        _connector.thehive_import_attachments = False
+
+        _connector.process_markings = MagicMock(return_value=[])
+        _connector.process_observables = MagicMock(return_value=([], []))
+        _connector.process_main_case = MagicMock(return_value=MagicMock())
+        _connector.process_tasks = MagicMock(return_value=[])
+        _connector.process_comments = MagicMock(return_value=[])
+        _connector.helper.stix2_create_bundle.return_value = sentinel.bundle
+
+        _now = int(time.time() * 1000)
+        case = {"title": "my case", "_createdAt": _now}
+
+        result = _connector.generate_case_bundle(case)
+
+        _connector.helper.send_stix2_bundle.assert_not_called()
+        self.assertEqual(result, sentinel.bundle)
+
+    def test_process_observables_and_relations_handles_missing_id(
+        self, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """When the converted observable has no `id`, the function must return
+        (observable, None) instead of raising UnboundLocalError."""
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+
+        observable_without_id = object()  # truthy, but has no `id` attribute
+        _connector.convert_observable = MagicMock(return_value=observable_without_id)
+
+        stix_observable, relation = _connector.process_observables_and_relations(
+            observable={}, markings=[], stix_incident=MagicMock()
+        )
+
+        self.assertIs(stix_observable, observable_without_id)
+        self.assertIsNone(relation)
