@@ -208,12 +208,13 @@ class TheHive:
             },
         )
 
-    def generate_alert_bundle(self, alert):
+    def generate_alert_bundle(self, alert, work_id=None):
         """Generate a STIX bundle from a given alert."""
 
         # Initial logging
         self.helper.log_info(f"Starting import for alert '{alert.get('title')}'")
         bundle_objects = []
+        markings = []
         try:
             markings = self.process_markings(alert)
             bundle_objects.extend(markings)
@@ -246,12 +247,13 @@ class TheHive:
             )
             return {}
 
-    def generate_case_bundle(self, case):
+    def generate_case_bundle(self, case, work_id=None):
         """Generates a STIX bundle from a TheHive case, with attachments."""
         self.helper.log_info(
             f"Starting generation of STIX bundle for case: {case.get('title')}"
         )
         bundle_objects = []
+        markings = []
 
         try:
             markings = self.process_markings(case)
@@ -311,18 +313,20 @@ class TheHive:
             self.helper.log_info(
                 f"Completed generation of STIX bundle for case: {case.get('title')}"
             )
-            self.helper.send_stix2_bundle(bundle)
-
+            # The main bundle is sent by process_items() with the work_id, after the
+            # TLP filter has been applied. Sending it here as well would both bypass
+            # that filter and ingest the case twice, so we only build it here.
         except Exception as e:
             self.helper.log_error(f"Error serializing STIX bundle for 'case': {str(e)}")
             return {}
 
-        # Send only STIX Artifacts in the background
+        # Send STIX Artifacts (attachments) under the same work as the case.
         if attachments:
             try:
                 self.helper.log_info("Sending STIX artifacts bundle (attachments)...")
                 self.helper.send_stix2_bundle(
-                    self.helper.stix2_create_bundle(attachments)
+                    self.helper.stix2_create_bundle(attachments),
+                    work_id=work_id,
                 )
 
             except Exception as e:
@@ -410,9 +414,9 @@ class TheHive:
             self.helper.connect_id, friendly_name
         )
         for item in items:
-            self.helper.log_debug(f"item: {items}")
+            self.helper.log_debug(f"item: {item}")
             if str(item.get("tlp")) in self.thehive_import_only_tlp:
-                stix_bundle = process_func(item)
+                stix_bundle = process_func(item, work_id)
                 self.helper.send_stix2_bundle(
                     stix_bundle,
                     work_id=work_id,
@@ -429,9 +433,7 @@ class TheHive:
 
     def process_logic(self, type, last_date_key, bundle_func):
         """Process case or alert based on returned query. Update state once complete."""
-        self.helper.log_info(
-            f"here the current state of the connector : {self.current_state}..."
-        )
+        self.helper.log_info(f"Current state of the connector: {self.current_state}")
         last_date = self.get_last_date(last_date_key, self.thehive_import_from_date)
         self.helper.log_info(f"Last Date: {last_date}(s)...")
         query = self.construct_query(type, last_date)
@@ -517,9 +519,7 @@ class TheHive:
         """Process all observables from a case."""
         try:
             case_id = case.get("_id")
-
-            self.helper.log_info(f"!!! here the value of case_id : {case_id}")
-            response = self.thehive_api.case.find_observables(case_id=case.get("_id"))
+            response = self.thehive_api.case.find_observables(case_id=case_id)
             if response and len(response) > 0:
                 observables = response
                 self.helper.log_info(
@@ -527,10 +527,7 @@ class TheHive:
                 )
                 processed_observables = []
                 object_refs = []
-                i = 1
                 for observable in observables:
-                    self.helper.log_info(f"!!! !!! observable n° {i}")
-                    i += 1
                     stix_observable = self.convert_observable(observable, markings)
                     if stix_observable:
                         if hasattr(stix_observable, "id"):
@@ -543,8 +540,8 @@ class TheHive:
                                 processed_observables.append(sighting)
                 return processed_observables, object_refs
             else:
-                self.helper.log_error(
-                    f"Failed to get observables for case: {case.get('title')}"
+                self.helper.log_info(
+                    f"No observables found for case: {case.get('title')}"
                 )
                 return [], []
         except Exception as e:
@@ -555,6 +552,8 @@ class TheHive:
 
     def process_observables_and_relations(self, observable, markings, stix_incident):
         """Function to process observables and create related STIX relations."""
+        stix_observable = None
+        stix_observable_relation = None
         try:
             stix_observable = self.convert_observable(observable, markings)
             if not stix_observable:
@@ -640,7 +639,7 @@ class TheHive:
             created_at = comment.get("_createdAt")
             if created_at is None:
                 self.helper.log_warning(
-                    f"Comment {comment.get('_id')} without ‘_createdAt’. Use the case creation date."
+                    f"Comment {comment.get('_id')} without '_createdAt'. Using the case creation date."
                 )
                 created_at = case.get("_createdAt")
                 if created_at is None:
@@ -681,7 +680,7 @@ class TheHive:
                     try:
                         url = f"{self.thehive_url}/api/v1/attachment/{file_id}/download"
                         self.helper.log_info(
-                            f"Download attachment {file_name} depuis {url}"
+                            f"Downloading attachment {file_name} from {url}"
                         )
 
                         response = requests.get(
