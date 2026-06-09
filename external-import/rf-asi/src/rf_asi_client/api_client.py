@@ -53,6 +53,31 @@ class RfAsiClient:
         next_cursor = pagination.get("next_cursor")
         return data, next_cursor
 
+    def list_exposures_page(
+        self,
+        project_id: str,
+        limit: int = 100,
+        cursor: str | None = None,
+        **filters,
+    ) -> tuple[list[dict], str | None]:
+        """
+        Fetch one page of exposures for a project.
+
+        :param project_id: ASI project identifier.
+        :param limit: Number of exposures to fetch per page (1-1000).
+        :param cursor: Optional pagination cursor.
+        :param filters: Optional API query filters (e.g. filter_severity_min).
+        :return: Tuple of exposure summary items and optional next cursor.
+        :raises requests.RequestException: On non-2xx responses or transport errors.
+        """
+        url = f"{self.base_url}/projects/{project_id}/exposures"
+        params: dict = {"limit": limit, **filters}
+        if cursor:
+            params["cursor"] = cursor
+
+        response = self._request_data(url, params=params)
+        return self._parse_list_response(response.json())
+
     def list_exposures(
         self,
         project_id: str,
@@ -75,13 +100,13 @@ class RfAsiClient:
         url = f"{self.base_url}/projects/{project_id}/exposures"
 
         while True:
-            params: dict = {"limit": limit, **filters}
-            if next_cursor:
-                params["cursor"] = next_cursor
-
             try:
-                response = self._request_data(url, params=params)
-                page_items, next_cursor = self._parse_list_response(response.json())
+                page_items, next_cursor = self.list_exposures_page(
+                    project_id,
+                    limit=limit,
+                    cursor=next_cursor,
+                    **filters,
+                )
                 exposures.extend(page_items)
             except requests.RequestException as err:
                 self.helper.connector_logger.error(

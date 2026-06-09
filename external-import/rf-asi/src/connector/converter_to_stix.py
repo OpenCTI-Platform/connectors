@@ -7,8 +7,8 @@ from connectors_sdk.models import (
     OrganizationAuthor,
     TLPMarking,
 )
-from pydantic import HttpUrl
 from pycti import OpenCTIConnectorHelper
+from pydantic import HttpUrl
 from stix2 import Incident as Stix2Incident
 
 AUTHOR_NAME = "Recorded Future ASI"
@@ -30,9 +30,7 @@ class ConverterToStix:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        tlp_level: Literal[
-            "clear", "white", "green", "amber", "amber+strict", "red"
-        ],
+        tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
         project_id: str,
         portal_base_url: HttpUrl | str | None = None,
     ):

@@ -84,7 +84,7 @@ class RfAsiConnector:
         for exposure in exposures:
             stix_objects.append(self.converter_to_stix.exposure_to_incident(exposure))
 
-        if len(stix_objects):
+        if stix_objects:
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
 
@@ -137,7 +137,7 @@ class RfAsiConnector:
             # ===========================
             stix_objects = self._collect_intelligence()
 
-            if len(stix_objects):
+            if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,

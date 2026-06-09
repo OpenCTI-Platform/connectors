@@ -1,5 +1,4 @@
 from connector import ConnectorSettings, RfAsiConnector
-from pycti import OpenCTIConnectorHelper
 
 
 def test_connector_settings_is_instantiated(stub_connector_settings):
