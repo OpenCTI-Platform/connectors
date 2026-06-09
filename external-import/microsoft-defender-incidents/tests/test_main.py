@@ -1,9 +1,15 @@
+import os
+import runpy
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from connector import ConnectorSettings, MicrosoftDefenderIncidentsConnector
 from pycti import OpenCTIConnectorHelper
+
+_MAIN_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
+)
 
 
 @pytest.fixture
@@ -103,3 +109,31 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
 
     assert connector.config == settings
     assert connector.helper == helper
+
+
+# ---------------------------------------------------------------------------
+# main.py entry point
+# ---------------------------------------------------------------------------
+
+
+def test_main_entry_point_success():
+    """main.py bootstraps settings, helper, connector and calls run()."""
+    mock_connector = MagicMock()
+
+    with patch("connector.ConnectorSettings") as mock_settings_cls, patch(
+        "connector.MicrosoftDefenderIncidentsConnector"
+    ) as mock_connector_cls, patch("pycti.OpenCTIConnectorHelper"):
+        mock_connector_cls.return_value = mock_connector
+        mock_settings_cls.return_value.to_helper_config.return_value = {}
+        runpy.run_path(_MAIN_PATH, run_name="__main__")
+
+    mock_connector.run.assert_called_once()
+
+
+def test_main_entry_point_exception_exits_with_code_1():
+    """main.py catches exceptions and exits with code 1."""
+    with patch("connector.ConnectorSettings", side_effect=ValueError("bad config")):
+        with pytest.raises(SystemExit) as exc_info:
+            runpy.run_path(_MAIN_PATH, run_name="__main__")
+
+    assert exc_info.value.code == 1
