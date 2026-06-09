@@ -1,6 +1,6 @@
 services:
   connector-polyswarm-sandbox:
-    image: opencti/connector-polyswarm-sandbox:rolling
+    image: opencti/connector-polyswarm-sandbox:7.260609.0
     environment:
       # ═══════════════════════════════════════════════════════════════════════
       # OpenCTI Configuration
