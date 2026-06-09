@@ -20,10 +20,11 @@ class ConnectorClient:
 
     def set_oauth_token(self):
         try:
-            url = f"https://login.microsoftonline.com/{self.config.tenant_id}/oauth2/v2.0/token"
+            mdi_config = self.config.microsoft_defender_incidents
+            url = f"https://login.microsoftonline.com/{mdi_config.tenant_id}/oauth2/v2.0/token"
             oauth_data = {
-                "client_id": self.config.client_id,
-                "client_secret": self.config.client_secret,
+                "client_id": mdi_config.client_id,
+                "client_secret": mdi_config.client_secret.get_secret_value(),
                 "grant_type": "client_credentials",
                 "scope": "https://graph.microsoft.com/.default",
             }
@@ -52,7 +53,7 @@ class ConnectorClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
 
-    def query_builder(self, date_str: str) -> requests:
+    def query_builder(self, date_str: str) -> requests.PreparedRequest:
         """
         Constructs the API URL with the necessary query parameters.
 
@@ -63,8 +64,9 @@ class ConnectorClient:
         :param date_str: date in iso 8601 format as a character string.
         :return: A fully constructed URL string for querying incidents.
         """
-        base_url = self.config.api_base_url
-        incident_path = self.config.incident_path
+        mdi_config = self.config.microsoft_defender_incidents
+        base_url = mdi_config.api_base_url
+        incident_path = mdi_config.incident_path
         params = {"$expand": "alerts", "$filter": f"lastUpdateDateTime gt {date_str}"}
         return requests.Request(
             "GET", f"{base_url}{incident_path}", params=params
@@ -143,6 +145,11 @@ class ConnectorClient:
                 last_incident_timestamp, tz=timezone.utc
             ).isoformat()
             request = self.query_builder(convert_date_str)
+            if not request.url:
+                self.helper.connector_logger.error(
+                    "Failed to build the API query URL for retrieving incidents."
+                )
+                return []
             all_incidents = self.pagination_incidents(request.url)
             return all_incidents
 
@@ -151,3 +158,4 @@ class ConnectorClient:
                 "An unknown error occurred during the recovery of all incidents",
                 {"error": str(err)},
             )
+            return []

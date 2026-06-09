@@ -1,13 +1,11 @@
 import sys
-from datetime import datetime
 
 import stix2
+from connector.client_api import ConnectorClient
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from connector.utils import detect_ip_version, find_matching_file_ids, format_date
 from pycti import OpenCTIConnectorHelper
-
-from .client_api import ConnectorClient
-from .config_variables import ConfigConnector
-from .converter_to_stix import ConverterToStix
-from .utils import detect_ip_version, find_matching_file_ids, format_date
 
 
 class MicrosoftDefenderIncidentsConnector:
@@ -23,13 +21,13 @@ class MicrosoftDefenderIncidentsConnector:
     ---
 
     Attributes
-        - `config (ConfigConnector())`:
+        - `config (ConnectorSettings)`:
             Initialize the connector with necessary configuration environment variables
-        - `helper (OpenCTIConnectorHelper(config))`:
+        - `helper (OpenCTIConnectorHelper)`:
             This is the helper to use.
             ALL connectors have to instantiate the connector helper with configurations.
             Doing this will do a lot of operations behind the scene.
-        - `converter_to_stix (ConnectorConverter(helper))`:
+        - `converter_to_stix (ConverterToStix)`:
             Provide methods for converting various types of input data into STIX 2.1 objects.
 
     ---
@@ -44,21 +42,19 @@ class MicrosoftDefenderIncidentsConnector:
 
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the Connector with necessary configurations
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
         self.tlp_marking = stix2.TLP_RED
+        self.client = ConnectorClient(self.helper, self.config)
         self.converter_to_stix = ConverterToStix(
             self.helper, self.config, self.tlp_marking
         )
 
-    def _get_last_incident_date(self) -> int:
+    def _get_last_incident_date(self) -> int | None:
         """
         Get last incident timestamp from connector's state.
         :return: Connector's state last incident timestamp
@@ -68,10 +64,12 @@ class MicrosoftDefenderIncidentsConnector:
             last_timestamp = state["last_incident_timestamp"]
             return last_timestamp
 
-        if self.config.import_start_date:
-            datetime_obj = datetime.fromisoformat(self.config.import_start_date)
-            last_timestamp = int(round(datetime_obj.timestamp()))
+        import_start_date = self.config.microsoft_defender_incidents.import_start_date
+        if import_start_date:
+            last_timestamp = int(round(import_start_date.timestamp()))
             return last_timestamp
+
+        return None
 
     def _set_last_incident_date(self, incident_timestamp: int):
         """
@@ -114,8 +112,8 @@ class MicrosoftDefenderIncidentsConnector:
                     )
                     stix_objects.append(stix_relationship_attack_pattern)
 
-            # This mapping is used for the priority of evidences because ‘processEvidence’ often includes information
-            # from ‘fileEvidence’ and ‘fileEvidence’ usually includes information from ‘fileHashEvidence’.
+            # This mapping is used for the priority of evidences because 'processEvidence' often includes information
+            # from 'fileEvidence' and 'fileEvidence' usually includes information from 'fileHashEvidence'.
             priority_evidence_files = {
                 "#microsoft.graph.security.processEvidence": 1,
                 "#microsoft.graph.security.fileEvidence": 2,
@@ -325,7 +323,7 @@ class MicrosoftDefenderIncidentsConnector:
 
         return stix_objects
 
-    def process_message(self):
+    def process_message(self) -> None:
         """
         Connector main process to collect incidents
         :return: None
@@ -372,7 +370,7 @@ class MicrosoftDefenderIncidentsConnector:
                 return
 
             # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
+            work_id = self.helper.api.work.initiate_work(  # noqa: VC317
                 self.helper.connect_id, self.helper.connect_name
             )
 
@@ -402,23 +400,25 @@ class MicrosoftDefenderIncidentsConnector:
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
+            if work_id:
+                message = f"{self.helper.connect_name} connector stopped during execution, last_incident_timestamp stored as {last_incident_timestamp}."
+                self.helper.api.work.to_processed(work_id, message, in_error=True)
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
 
     def run(self) -> None:
         """
-        Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
+        Run the main process encapsulated in a scheduler.
+        It allows you to schedule the process to run at a certain intervals.
+        This specific scheduler from the pycti connector helper will also check the queue size of a connector.
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
         allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
-        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        It requires the `duration_period` connector variable in ISO-8601 standard format.
         :return: None
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.duration_period,
+            duration_period=self.config.connector.duration_period,
         )
