@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     ListFromString,
 )
 from pydantic import Field, SecretStr
@@ -46,13 +47,13 @@ class MicrosoftDefenderIncidentsConfig(BaseConfigModel):
     client_secret: SecretStr = Field(
         description="Azure App Client Secret for Microsoft Graph API authentication.",
     )
-    import_start_date: str = Field(
+    import_start_date: DatetimeFromIsoString | None = Field(
         description=(
             "Start date for importing incidents in ISO 8601 format "
             "(e.g. '2025-01-01T00:00:00Z'). "
             "Used only on the first run; subsequent runs use the stored state."
         ),
-        default="2020-01-01T00:00:00Z",
+        default=None,
     )
     api_base_url: str = Field(
         description="Microsoft Graph API base URL.",

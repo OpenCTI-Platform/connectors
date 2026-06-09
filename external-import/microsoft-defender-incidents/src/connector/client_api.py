@@ -53,7 +53,7 @@ class ConnectorClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
 
-    def query_builder(self, date_str: str) -> requests:
+    def query_builder(self, date_str: str) -> requests.PreparedRequest:
         """
         Constructs the API URL with the necessary query parameters.
 
@@ -145,6 +145,11 @@ class ConnectorClient:
                 last_incident_timestamp, tz=timezone.utc
             ).isoformat()
             request = self.query_builder(convert_date_str)
+            if not request.url:
+                self.helper.connector_logger.error(
+                    "Failed to build the API query URL for retrieving incidents."
+                )
+                return []
             all_incidents = self.pagination_incidents(request.url)
             return all_incidents
 
@@ -153,3 +158,4 @@ class ConnectorClient:
                 "An unknown error occurred during the recovery of all incidents",
                 {"error": str(err)},
             )
+            return []
