@@ -9,10 +9,10 @@ services:
 
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe
-      - "CONNECTOR_NAME=Microsoft Defender Incidents"
-      - CONNECTOR_SCOPE=defender
-      - CONNECTOR_LOG_LEVEL=error
-      - CONNECTOR_DURATION_PERIOD=PT1H
+      # - "CONNECTOR_NAME=Microsoft Defender Incidents"
+      # - CONNECTOR_SCOPE=defender
+      # - CONNECTOR_LOG_LEVEL=error
+      # - CONNECTOR_DURATION_PERIOD=PT1H
 
       # Connector's definition parameters OPTIONAL
       # - CONNECTOR_QUEUE_THRESHOLD=500 # Default 500Mo, Float accepted
@@ -26,7 +26,7 @@ services:
       - MICROSOFT_DEFENDER_INCIDENTS_TENANT_ID=ChangeMe
       - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_ID=ChangeMe
       - MICROSOFT_DEFENDER_INCIDENTS_CLIENT_SECRET=ChangeMe
-      - MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE=2025-01-01T00:00:00Z
+      # - MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE=
       # - MICROSOFT_DEFENDER_INCIDENTS_API_BASE_URL=https://graph.microsoft.com/v1.0
       # - MICROSOFT_DEFENDER_INCIDENTS_INCIDENT_PATH=/security/incidents
     restart: always
