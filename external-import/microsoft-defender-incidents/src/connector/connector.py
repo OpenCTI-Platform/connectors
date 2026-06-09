@@ -1,5 +1,4 @@
 import sys
-from datetime import datetime
 
 import stix2
 from connector.client_api import ConnectorClient
@@ -55,7 +54,7 @@ class MicrosoftDefenderIncidentsConnector:
             self.helper, self.config, self.tlp_marking
         )
 
-    def _get_last_incident_date(self) -> int:
+    def _get_last_incident_date(self) -> int | None:
         """
         Get last incident timestamp from connector's state.
         :return: Connector's state last incident timestamp
@@ -67,9 +66,10 @@ class MicrosoftDefenderIncidentsConnector:
 
         import_start_date = self.config.microsoft_defender_incidents.import_start_date
         if import_start_date:
-            datetime_obj = datetime.fromisoformat(import_start_date)
-            last_timestamp = int(round(datetime_obj.timestamp()))
+            last_timestamp = int(round(import_start_date.timestamp()))
             return last_timestamp
+
+        return None
 
     def _set_last_incident_date(self, incident_timestamp: int):
         """
@@ -370,7 +370,7 @@ class MicrosoftDefenderIncidentsConnector:
                 return
 
             # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
+            work_id = self.helper.api.work.initiate_work(  # noqa: VC317
                 self.helper.connect_id, self.helper.connect_name
             )
 
@@ -400,6 +400,9 @@ class MicrosoftDefenderIncidentsConnector:
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
+            if work_id:
+                message = f"{self.helper.connect_name} connector stopped during execution, last_incident_timestamp stored as {last_incident_timestamp}."
+                self.helper.api.work.to_processed(work_id, message, in_error=True)
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
