@@ -54,7 +54,7 @@
     },
     "GOOGLE_SECOPS_SIEM_INCIDENTS_BASE_URL": {
       "default": "https://chronicle.googleapis.com",
-      "description": "Chronicle API base URL (region prefix added at runtime).",
+      "description": "API base URL (region prefix added at runtime).",
       "type": "string"
     },
     "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_ID": {
@@ -62,11 +62,11 @@
       "type": "string"
     },
     "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_REGION": {
-      "description": "Chronicle region (e.g. 'us', 'eu', 'asia').",
+      "description": "Region (e.g. 'us', 'eu', 'asia').",
       "type": "string"
     },
     "GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_INSTANCE": {
-      "description": "Chronicle instance UUID.",
+      "description": "Instance UUID.",
       "type": "string"
     },
     "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY": {
