@@ -17,6 +17,5 @@ services:
       - RF_ASI_API_KEY=CHANGEME
       - RF_ASI_PROJECT_ID=CHANGEME
       - RF_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
-      - RF_ASI_PORTAL_BASE_URL= # optional, portal base URL for external reference deep links
       - RF_ASI_PAGE_LIMIT=100 # optional, number of exposures per API page, min 1, max 1000 (default: 100)
     restart: always
