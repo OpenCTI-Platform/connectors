@@ -32,6 +32,7 @@ def make_fake_get_client_response() -> ClientResponse:
         method="GET",
         url=URL("/dummy"),
         writer=Mock(),
+        stream_writer=Mock(),
         continue100=None,
         timer=Mock(),
         request_info=Mock(),
