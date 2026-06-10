@@ -1,13 +1,19 @@
 {
-  "title": "Flare Connector",
+  "title": "Template Connector",
   "slug": "flare",
-  "description": "Fetches threat intelligence events from the Flare platform and imports them as STIX Incidents into OpenCTI.",
-  "short_description": "Import Flare threat events into OpenCTI as STIX Incidents.",
+  "description": "This connector integrates Flare (https://flare.io) — a cyber threat intelligence platform monitoring dark web, leak sites, threat actor forums, and other external sources — with OpenCTI. It periodically fetches new security events from the Flare API and converts them into STIX2 incidents with related observables. Supported event types include leaked credentials (emails, usernames), stealer logs from infected devices (with associated malware family), lookalike/typosquatting domains, and ransomware leak publications. Each event is imported as a STIX Incident linked to its relevant observables (EmailAddress, UserAccount, IPv4Address, DomainName, URL) via `related-to` relationships.",
+  "short_description": "Import Flare threat intelligence events (leaked credentials, stealer logs, lookalike domains, ransomware leaks) as STIX2 incidents into OpenCTI.",
+  "logo": null,
+  "use_cases" : [],
   "verified": true,
+  "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=6.8.12",
-  "container_type": "EXTERNAL_IMPORT",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/flare",
+  "manager_supported": false,
+  "container_version": "rolling",
   "container_image": "opencti/connector-flare",
-  "container_version": "rolling"
+  "container_type": "EXTERNAL_IMPORT"
 }

@@ -1,13 +1,9 @@
+import ipaddress
 import re
 from datetime import datetime, timezone
 from typing import Any, TypeAlias
 
 import stix2
-from pycti import Incident as PyctiIncident
-from pycti import Malware as PyctiMalware
-from pycti import MarkingDefinition
-from pycti import StixCoreRelationship
-
 from connector.events import (
     LeakedCredentialEvent,
     LookalikeDomainEvent,
@@ -18,10 +14,14 @@ from connector.events import (
     get_incident_type_from_event_type,
 )
 from connector.settings import ConnectorSettings
+from pycti import Incident as PyctiIncident
+from pycti import Malware as PyctiMalware
+from pycti import MarkingDefinition, StixCoreRelationship
 
 Observable: TypeAlias = (
     stix2.EmailAddress
     | stix2.IPv4Address
+    | stix2.IPv6Address
     | stix2.Malware
     | stix2.Relationship
     | stix2.UserAccount
@@ -30,6 +30,7 @@ Observable: TypeAlias = (
 )
 
 tlp_mapping = {
+    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -46,15 +47,24 @@ tlp_mapping = {
 }
 
 
+def str_to_ip_address(raw_ip_address: str) -> stix2.IPv4Address | stix2.IPv6Address:
+    ip_address = ipaddress.ip_address(raw_ip_address)
+    normalized = str(ip_address)
+    if ip_address.version == 4:
+        return stix2.IPv4Address(value=normalized)
+
+    return stix2.IPv6Address(value=normalized)
+
+
 class FlareToStixMapper:
     def __init__(
         self, config: ConnectorSettings, author_identity: stix2.Identity
     ) -> None:
         self.author = author_identity
-        tlp_level = tlp_mapping.get(config.flare_tlp_level)
+        tlp_level = tlp_mapping.get(config.flare.tlp_level)
         if tlp_level is None:
             raise ValueError(
-                f"Invalid TLP level {config.flare_tlp_level!r}. "
+                f"Invalid TLP level {config.flare.tlp_level!r}. "
                 f"Valid values are: {list(tlp_mapping.keys())}"
             )
         self.tlp_level: MarkingDefinition = tlp_level
@@ -68,7 +78,9 @@ class FlareToStixMapper:
         created_time = self.parse_timestamp(parsed_event.created_at)
         last_seen = self.parse_timestamp(parsed_event.matched_at)
 
-        incident_name = f"{get_event_title_from_event_type(parsed_event.type)} - {parsed_event.uid}"
+        incident_name = (
+            f"{get_event_title_from_event_type(parsed_event.type)} - {parsed_event.uid}"
+        )
         base_incident = stix2.Incident(
             id=PyctiIncident.generate_id(incident_name, created_time),
             name=incident_name,
@@ -148,7 +160,7 @@ class FlareToStixMapper:
                 if parsed_event.ip_addresses:
                     observables.extend(
                         [
-                            stix2.IPv4Address(value=ip_address)
+                            str_to_ip_address(ip_address)
                             for ip_address in parsed_event.ip_addresses
                             if ip_address != ""
                         ]
@@ -165,10 +177,12 @@ class FlareToStixMapper:
 
             case LeakedCredentialEvent():
                 email_re = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
-                if re.match(email_re, parsed_event.username) and parsed_event.username:
-                    observables.append(stix2.EmailAddress(value=parsed_event.username))
-                elif parsed_event.username:
-                    observables.append(stix2.UserAccount(user_id=parsed_event.username))
+                identity_value = parsed_event.username or parsed_event.identity_name
+                if identity_value:
+                    if re.match(email_re, identity_value):
+                        observables.append(stix2.EmailAddress(value=identity_value))
+                    else:
+                        observables.append(stix2.UserAccount(user_id=identity_value))
 
             case LookalikeDomainEvent():
                 if parsed_event.original_domain:
@@ -188,7 +202,9 @@ class FlareToStixMapper:
 
         for observable in observables:
             relation = stix2.Relationship(
-                id=StixCoreRelationship.generate_id("related-to", observable.id, incident.id),
+                id=StixCoreRelationship.generate_id(
+                    "related-to", observable.id, incident.id
+                ),
                 created=created_time,
                 modified=created_time,
                 relationship_type="related-to",

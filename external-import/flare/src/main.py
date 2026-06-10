@@ -2,23 +2,23 @@ import sys
 import traceback
 
 import stix2
-from pycti import Identity as PyctiIdentity
-from pycti import OpenCTIConnectorHelper
-
 from connector import ConnectorSettings, FlareConnector
 from connector.converter_to_stix import FlareToStixMapper
 from flare_client import FlareClient
+from pycti import Identity as PyctiIdentity
+from pycti import OpenCTIConnectorHelper
 
-if __name__ == "__main__":
+
+def main() -> None:
     try:
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
         flare_client = FlareClient(
             helper=helper,
-            api_key=settings.flare_api_key,
-            api_domain=settings.flare_api_domain,
-            tenant_id=settings.flare_tenant_id,
+            api_key=settings.flare.api_key,
+            base_url=settings.flare.api_base_url,
+            tenant_id=settings.flare.tenant_id,
         )
 
         author_identity = stix2.Identity(
@@ -40,3 +40,7 @@ if __name__ == "__main__":
     except Exception:
         traceback.print_exc()
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

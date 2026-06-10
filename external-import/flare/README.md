@@ -16,7 +16,7 @@ The Flare connector integrates OpenCTI with the Flare platform by ingesting even
     - [Usage](#usage)
 
 ## Introduction
-This connector fetches events from the Flare API and imports them into OpenCTI as Incidents with associated Indicator object, Observables and metadata such as severity, incident type and relevant dates.
+This connector fetches events from the Flare API and imports them into OpenCTI as Incidents with related observables and metadata such as severity, incident type and relevant dates.
 
 ## Installation
 ### Requirements
@@ -43,13 +43,13 @@ There are a number of configuration options, which are set either in `docker-com
 ### Connector extra parameters environment variables
 | Parameter               | config.yml          | Docker environment variable     | Default                | Mandatory | Description                                                                                   |
 | ----------------------- | ------------------- | ------------------------------- | ---------------------- | --------- | --------------------------------------------------------------------------------------------- |
-| API Domain              | flare.api_domain  | `FLARE_API_DOMAIN`            | api.flare.co | Yes       | Flare API domain                                                                            |
+| API Base URL              | flare.api_base_url  | `FLARE_API_BASE_URL`            | api.flare.io | Yes       | Flare API base URL|
 | API Key                 | flare.api_key       | `FLARE_API_KEY`                 |                        | Yes       | Flare API key                                                                                 |
 | Tenant Id               | flare.tenant_id     | `FLARE_TENANT_ID`               | (default tenant)       | No        | The tenant in Flare for which the feed should be ingested.                                    |
 | Event types             | flare.event_types   | `FLARE_EVENT_TYPES`             | stealer_log,domain,ransomleak,leak                  | No        | https://api.docs.flare.io/event-types/overview (supported types are stealer_log, domain, ransomleak and leak (leaked credentials))                                               |
 | Event actions           | flare.event_actions | `FLARE_EVENT_ACTIONS`           | (all)                  | No        | Which event state (action) to filter by. Available actions are `ignored` and `remediated` |
 | Historical polling days | flare.lookback_days | `FLARE_HISTORICAL_POLLING_DAYS` | 30                     | No        | Days of data to fetch on first run.                                                           |
-| TLP Level               | flare.tlp_level     | `FLARE_TLP_LEVEL`               | clear                  | No        | TLP marking for created STIX objects.                                                         |
+| TLP Level               | flare.tlp_level     | `FLARE_TLP_LEVEL`               | white                  | No        | TLP marking for created STIX objects.                                                         |
 
 ## Deployment
 ### Docker Deployment
@@ -70,7 +70,7 @@ docker build -t opencti/connector-flare:rolling .
       - CONNECTOR_SCOPE=Incident,Observable,Indicator
       - CONNECTOR_LOG_LEVEL=info
       - CONNECTOR_DURATION_PERIOD=PT1H
-      - FLARE_API_DOMAIN=api.flare.io
+      - FLARE_API_BASE_URL=api.flare.io
       - FLARE_API_KEY=fw_xxxxxx
       - FLARE_TENANT_ID=changeme
       - FLARE_EVENT_TYPES=changeme
@@ -89,7 +89,7 @@ docker compose up -d
 1. Copy and configure `config.yml` from the provided `config.yml.sample`
 2. Install dependencies:
 ```bash
-pip3 install -r requirements.txt
+pip3 install -r src/requirements.txt
 ```
 3. Start the connector:
 ```bash

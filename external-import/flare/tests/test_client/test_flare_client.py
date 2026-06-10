@@ -3,7 +3,6 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from flare_client.api_client import FlareClient
 
 
@@ -14,7 +13,7 @@ def _make_client() -> tuple[FlareClient, MagicMock, MagicMock]:
         client = FlareClient(
             helper=helper,
             api_key="test-key",
-            api_domain="api.test.io",
+            base_url="api.test.io",
             tenant_id=None,
         )
     return client, helper, mock_api

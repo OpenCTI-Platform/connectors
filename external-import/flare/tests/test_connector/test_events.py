@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from connector.events import (
     LeakedCredentialEvent,
     LookalikeDomainEvent,
@@ -14,7 +13,7 @@ from connector.events import (
     get_incident_type_from_event_type,
 )
 
-BASE_DIR = Path(__file__).parent / "test_events"
+BASE_DIR = Path(__file__).parent.parent / "test_events"
 
 
 def _load_json(filename: str) -> dict[str, Any]:
@@ -115,6 +114,7 @@ class TestGetEventFromEventJson:
             severity=activity["tenant_metadata"]["severity"],
             notes=activity["tenant_metadata"]["notes"],
             username="example@example.com",
+            identity_name="",
         )
 
     def test_bot_event_returns_stealer_log(self) -> None:
