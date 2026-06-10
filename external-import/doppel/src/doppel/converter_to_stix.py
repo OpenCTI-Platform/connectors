@@ -472,7 +472,7 @@ class ConverterToStix:
                     grouping_case, observables, stix_objects
                 )
                 if self.helper.api.stix_domain_object.read(id=grouping_case.get("id")):
-                     _ = self._handle_labels(alert, "GroupingCase", grouping_case)
+                    _ = self._handle_labels(alert, "GroupingCase", grouping_case)
 
             # #######- --------- Indicators ------------#######
             indicators = self._handle_indicators(alert, observables, stix_objects)
@@ -565,9 +565,11 @@ class ConverterToStix:
     def _handle_update_observables_labels(self, alert, observables):
         """If observable already exist in the OpenCTI we should update with new data."""
         for observable in observables:
-            existing = self.helper.api.stix_cyber_observable.read(id=observable.get("id"))
-             if existing:
-                 self._handle_labels(alert, "Observable", existing)
+            existing = self.helper.api.stix_cyber_observable.read(
+                id=observable.get("id")
+            )
+            if existing:
+                self._handle_labels(alert, "Observable", existing)
 
     def _handle_grouping_case_creation(self, alert, observables, stix_objects):
         """
@@ -704,9 +706,7 @@ class ConverterToStix:
         product_type = alert.get("product")
 
         alert_id = alert.get("id")
-        entity_value = (
-             alert.get("entity", "").replace("\\", "\\\\").replace("'", "\\'")
-        )
+        entity_value = alert.get("entity", "").replace("\\", "\\\\").replace("'", "\\'")
 
         created_at = (
             parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
@@ -1087,7 +1087,7 @@ class ConverterToStix:
         labels = [
             label["value"]
             for label in (obj or {}).get("objectLabel", [])
-             if label.get("value", "").startswith(managed_prefixes)
+            if label.get("value", "").startswith(managed_prefixes)
         ]
 
         return labels
