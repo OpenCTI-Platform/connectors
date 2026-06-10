@@ -2,9 +2,9 @@ services:
   connector-ismalicious:
     image: opencti/connector-ismalicious:latest
     environment:
-      - OPENCTI_URL=http://localhost
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
-      - CONNECTOR_ID=${CONNECTOR_ID}
+      - CONNECTOR_ID=${CONNECTOR_ID:-ismalicious-enrichment}
       - CONNECTOR_TYPE=INTERNAL_ENRICHMENT
       - CONNECTOR_NAME=isMalicious
       - CONNECTOR_SCOPE=IPv4-Addr,IPv6-Addr,Domain-Name
