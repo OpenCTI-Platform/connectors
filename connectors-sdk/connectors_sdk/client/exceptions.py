@@ -27,7 +27,11 @@ class ApiClientError(Exception):
 
 
 class ApiUnauthorizedError(ApiClientError):
-    """Raised on 401/403 responses."""
+    """Raised on 401 responses."""
+
+
+class ApiForbiddenError(ApiClientError):
+    """Raised on 403 responses."""
 
 
 class ApiNotFoundError(ApiClientError):
