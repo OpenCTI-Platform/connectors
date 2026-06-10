@@ -1,0 +1,24 @@
+opencti:
+  url: "http://localhost:8080"
+  token: "your-opencti-api-token"
+
+connector:
+  id: "ismalicious-enrichment"
+  type: "INTERNAL_ENRICHMENT"
+  name: "isMalicious"
+  scope: "IPv4-Addr,IPv6-Addr,Domain-Name"
+  log_level: "info"
+  # Set to true to automatically enrich all observables
+  auto: false
+
+ismalicious:
+  api_url: "https://api.ismalicious.com"
+  api_key: "your-ismalicious-api-key"
+  # Maximum TLP level to process
+  max_tlp: "TLP:AMBER"
+  # Observable types to enrich
+  enrich_ipv4: true
+  enrich_ipv6: true
+  enrich_domain: true
+  # Minimum score to report (0-100)
+  min_score_to_report: 0
