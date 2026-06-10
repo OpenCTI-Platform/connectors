@@ -24,8 +24,8 @@ Find below the detailed configuration options:
 | Connector Scope     | `CONNECTOR_SCOPE`           | No        | Observable types (default: `IPv4-Addr,IPv6-Addr,Domain-Name`)  |
 | Log Level           | `CONNECTOR_LOG_LEVEL`       | No        | Log level: `debug`, `info`, `warn`, `error` (default: `info`)  |
 | Auto Mode           | `CONNECTOR_AUTO`            | No        | Enable automatic enrichment (default: `false`)                 |
-| isMalicious API URL | `ISMALICIOUS_API_URL`       | No        | API URL (default: `https://ismalicious.com`)                   |
-| isMalicious API Key | `ISMALICIOUS_API_KEY`       | Yes       | Your isMalicious API key                                       |
+| isMalicious API URL | `ISMALICIOUS_API_URL`       | No        | API URL (default: `https://api.ismalicious.com`)               |
+| isMalicious API Key | `ISMALICIOUS_API_KEY`       | Yes       | Your isMalicious API key (sent as `X-API-KEY` header)          |
 | Max TLP             | `ISMALICIOUS_MAX_TLP`       | No        | Max TLP to process (default: `TLP:AMBER`)                      |
 | Enrich IPv4         | `ISMALICIOUS_ENRICH_IPV4`   | No        | Enrich IPv4 addresses (default: `true`)                        |
 | Enrich IPv6         | `ISMALICIOUS_ENRICH_IPV6`   | No        | Enrich IPv6 addresses (default: `true`)                        |
@@ -73,6 +73,39 @@ When an observable is enriched, the connector adds:
 - `IPv4-Addr` - IPv4 addresses
 - `IPv6-Addr` - IPv6 addresses
 - `Domain-Name` - Domain names
+
+## API Authentication
+
+The enrichment API expects:
+
+- **Base URL:** `https://api.ismalicious.com`
+- **Endpoint:** `GET /check?query=<value>&enrichment=standard`
+- **Authentication:** `X-API-KEY: <your-api-key>` header
+
+Example:
+
+```bash
+curl -H "X-API-KEY: <your-api-key>" \
+  "https://api.ismalicious.com/check?query=8.8.8.8&enrichment=standard"
+```
+
+This connector does **not** use Basic Auth or Bearer tokens for the enrichment API.
+
+## TAXII Feed Ingestion (Bulk Import)
+
+This connector is an **internal enrichment** connector only. It enriches individual observables already present in OpenCTI; it does **not** import STIX bundles or indicators from a TAXII feed.
+
+For scheduled bulk ingestion from isMalicious TAXII, use one of these approaches:
+
+1. **OpenCTI built-in TAXII feed** (`Data > Ingestion > TAXII Feeds`) — only if the TAXII server supports the auth types exposed in the OpenCTI UI (Bearer token or Basic user/password). The isMalicious TAXII endpoint currently requires an `x-api-key` header, which the built-in ingester does not support.
+2. **OpenCTI generic TAXII2 external-import connector** — supports custom API key headers. Configure with:
+   - `TAXII2_DISCOVERY_URL=https://api.ismalicious.com/taxii2/`
+   - `TAXII2_USE_APIKEY=true`
+   - `TAXII2_APIKEY_KEY=x-api-key`
+   - `TAXII2_APIKEY_VALUE=<your-api-key>`
+   - `CONNECTOR_DURATION_PERIOD=PT1H` (poll every hour)
+
+See [external-import/taxii2](../../external-import/taxii2/README.md) for full configuration.
 
 ## Additional Information
 

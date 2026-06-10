@@ -83,10 +83,10 @@ class IsMaliciousConnector:
         """Call isMalicious API to check an observable."""
         try:
             response = requests.get(
-                f"{self.api_url}/api/check",
+                f"{self.api_url}/check",
                 params={"query": observable_value, "enrichment": "standard"},
                 headers={
-                    "Authorization": f"Bearer {self.api_key}",
+                    "X-API-KEY": self.api_key,
                     "Accept": "application/json",
                 },
                 timeout=30,
