@@ -25,7 +25,7 @@ Find below the detailed configuration options:
 | Log Level           | `CONNECTOR_LOG_LEVEL`       | No        | Log level: `debug`, `info`, `warn`, `error` (default: `info`)  |
 | Auto Mode           | `CONNECTOR_AUTO`            | No        | Enable automatic enrichment (default: `false`)                 |
 | isMalicious API URL | `ISMALICIOUS_API_URL`       | No        | API URL (default: `https://api.ismalicious.com`)               |
-| isMalicious API Key | `ISMALICIOUS_API_KEY`       | Yes       | Your isMalicious API key (sent as `X-API-KEY` header)          |
+| isMalicious API Key | `ISMALICIOUS_API_KEY`       | Yes       | API credential from Dashboard → Account → Team Management (sent as `X-API-KEY`) |
 | Max TLP             | `ISMALICIOUS_MAX_TLP`       | No        | Max TLP to process (default: `TLP:AMBER`)                      |
 | Enrich IPv4         | `ISMALICIOUS_ENRICH_IPV4`   | No        | Enrich IPv4 addresses (default: `true`)                        |
 | Enrich IPv6         | `ISMALICIOUS_ENRICH_IPV6`   | No        | Enrich IPv6 addresses (default: `true`)                        |
@@ -95,17 +95,19 @@ This connector does **not** use Basic Auth or Bearer tokens for the enrichment A
 
 This connector is an **internal enrichment** connector only. It enriches individual observables already present in OpenCTI; it does **not** import STIX bundles or indicators from a TAXII feed.
 
-For scheduled bulk ingestion from isMalicious TAXII, use one of these approaches:
+For scheduled bulk ingestion (e.g. every hour), use isMalicious's **TAXII 2.1 feed** via OpenCTI's built-in TAXII connector or the generic TAXII2 external-import connector:
 
-1. **OpenCTI built-in TAXII feed** (`Data > Ingestion > TAXII Feeds`) — only if the TAXII server supports the auth types exposed in the OpenCTI UI (Bearer token or Basic user/password). The isMalicious TAXII endpoint currently requires an `x-api-key` header, which the built-in ingester does not support.
-2. **OpenCTI generic TAXII2 external-import connector** — supports custom API key headers. Configure with:
-   - `TAXII2_DISCOVERY_URL=https://api.ismalicious.com/taxii2/`
-   - `TAXII2_USE_APIKEY=true`
-   - `TAXII2_APIKEY_KEY=x-api-key`
-   - `TAXII2_APIKEY_VALUE=<your-api-key>`
-   - `CONNECTOR_DURATION_PERIOD=PT1H` (poll every hour)
+1. In OpenCTI, go to **Data > Ingestion > TAXII Feeds** and add a new feed.
+2. Set the Discovery URL to `https://api.ismalicious.com/taxii2/`
+3. For authentication, use one of:
+   - **Basic Auth**: username `api`, password = your full API credential from the dashboard (same base64 value as the `X-API-KEY` header)
+   - **Bearer token**: same credential value as the token
+   - **X-API-KEY header** (generic TAXII2 connector only): the base64 credential shown in Dashboard → Account → Team Management
+4. Select the collections to import and set the desired polling interval (e.g. `PT1H`).
 
-See [external-import/taxii2](../../external-import/taxii2/README.md) for full configuration.
+For the generic TAXII2 external-import connector, see [external-import/taxii2](../../external-import/taxii2/README.md).
+
+The enrichment connector and the TAXII feed complement each other — use both for full coverage.
 
 ## Additional Information
 
