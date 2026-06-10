@@ -1,4 +1,4 @@
-# OpenCTI LastInfoSec Connector
+# OpenCTI LastInfoSec Feed Connector
 
 | Status | Date | Comment |
 |--------|------|---------|
@@ -80,7 +80,7 @@ LastInfoSec (now part of Gatewatcher) provides comprehensive threat intelligence
 Build a Docker image using the provided Dockerfile:
 
 ```bash
-docker build -t opencti/connector-lastinfosec:latest .
+docker build -t opencti/connector-lastinfosec-feed:latest .
 ```
 
 Example `docker-compose.yml` (CTI feed enabled):
@@ -89,7 +89,7 @@ Example `docker-compose.yml` (CTI feed enabled):
 version: '3.2'
 services:
   connector-lastinfosec-cti:
-    image: opencti/connector-lastinfosec:latest
+    image: opencti/connector-lastinfosec-feed:latest
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
@@ -109,7 +109,7 @@ To enable multiple feeds, deploy separate instances:
 
 ```yaml
   connector-lastinfosec-cve:
-    image: opencti/connector-lastinfosec:latest
+    image: opencti/connector-lastinfosec-feed:latest
     environment:
       - OPENCTI_URL=http://localhost:8080
       - OPENCTI_TOKEN=ChangeMe
