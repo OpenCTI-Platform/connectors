@@ -11,6 +11,7 @@ def test_root_public_api_is_valid():
     imports = {
         "BaseConnectorSettings",
         "BaseConfigModel",
+        "BaseDataProcessor",
         "BaseExternalImportConnectorConfig",
         "BaseInternalEnrichmentConnectorConfig",
         "BaseInternalExportFileConnectorConfig",
@@ -18,15 +19,14 @@ def test_root_public_api_is_valid():
         "BaseStreamConnectorConfig",
         "ConfigError",
         "ConfigValidationError",
-        "ExternalImportConnectorState",
         "DatetimeFromIsoString",
         "Deprecate",
         "DeprecatedField",
         "ExternalImportConnector",
-        "ConnectorLogger",
-        "BaseDataProcessor",
-        "WorkManager",
+        "ExternalImportConnectorState",
         "ListFromString",
+        "Logger",
+        "logger",
     }
     missing = imports - set(root_api.__all__)
     extra = set(root_api.__all__) - imports
