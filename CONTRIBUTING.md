@@ -464,7 +464,11 @@ When your connector is ready:
 
 1. **Ensure all quality checks pass** (linting, tests, documentation)
 2. **Test in a production-like environment**
-3. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
+3. **Follow the commit message convention** — individual commit messages should use the same [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format as PR titles:
+   ```
+   type(scope?)!?: description (#123)
+   ```
+4. **Create a Pull Request** on the [connectors repository](https://github.com/OpenCTI-Platform/connectors)
    - PR titles **must** follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format, enforced automatically by CI:
      ```
      type(scope?)!?: description (#123)
@@ -479,8 +483,8 @@ When your connector is ready:
      - `feat(misp)!: remove deprecated feed endpoint (#150)`
    - Describe the changes introduced by the PR
    - Reference any issues that will be closed upon merging, using the _Close_ keyword followed by the GitHub issue link
-4. **Respond to review feedback** from maintainers
-5. **Update documentation** as needed
+5. **Respond to review feedback** from maintainers
+6. **Update documentation** as needed
 
 > [!IMPORTANT]  
 > When creating a Pull Request on this repository, ALWAYS create along with an associated GitHub issue describing the purpose of your contribution (what problem it fixes, what improvement it brings, or what new integration it provides).
