@@ -2,16 +2,23 @@ import time
 import unittest
 from unittest.mock import MagicMock, patch, sentinel
 
-import thehive as module
+import connector.connector as module
+
+
+def _make_mock_config():
+    mock_config = MagicMock()
+    mock_config.thehive.url = "http://thehive.example.com"
+    mock_config.thehive.api_key = "test-api-key"
+    mock_config.thehive.check_ssl = False
+    mock_config.thehive.organization_name = "TestOrg"
+    mock_config.thehive.import_from_date = None
+    mock_config.thehive.severity_mapping = []
+    return mock_config
 
 
 @patch.object(module, "TheHiveApi")
-@patch.object(module, "OpenCTIConnectorHelper")
-@patch.object(module, "yaml")
-@patch.object(module, "os")
 class TheHiveTest(unittest.TestCase):
-
-    def test_process_comments_simple(self, m_os, m_yaml, m_helper, m_thehiveapi):
+    def test_process_comments_simple(self, m_thehiveapi):
         """testing the calls made to hive API by the process_comments function"""
         _now = int(time.time() * 1000)
         _case = MagicMock()
@@ -31,8 +38,7 @@ class TheHiveTest(unittest.TestCase):
         _case_comment.get.side_effect = _case_comment_values.get
         m_thehiveapi.return_value.case.find_comments.return_value = [_case_comment]
 
-        m_os.path.isfile.return_value = False
-        _connector = module.TheHive()
+        _connector = module.TheHive(_make_mock_config(), MagicMock())
 
         processed_comments = _connector.process_comments(_case, _stix_case)
 
@@ -46,7 +52,7 @@ class TheHiveTest(unittest.TestCase):
         self.assertEqual(processed_comments[0]["content"], _comment)
         self.assertEqual(processed_comments[0]["object_refs"], [sentinel.stix_case_id])
 
-    def test_process_comments_duplicate(self, m_os, m_yaml, m_helper, m_thehiveapi):
+    def test_process_comments_duplicate(self, m_thehiveapi):
         """testing process_comments proper handling of duplicates"""
         _now = int(time.time() * 1000)
         _case = MagicMock()
@@ -69,8 +75,7 @@ class TheHiveTest(unittest.TestCase):
             _case_comment,
         ]
 
-        m_os.path.isfile.return_value = False
-        _connector = module.TheHive()
+        _connector = module.TheHive(_make_mock_config(), MagicMock())
 
         processed_comments = _connector.process_comments(_case, _stix_case)
 
