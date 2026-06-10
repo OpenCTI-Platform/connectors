@@ -122,7 +122,9 @@ class ConverterToStix:
 
         return {
             "type": "case-rft",
-            "id": PyctiCaseRft.generate_id(name=case_name, created=now),
+            "id": PyctiCaseRft.generate_id(
+                name=case_name, created=alert.get("created_at") or now
+            ),
             "name": case_name,
             "description": build_description(alert),
             "priority": priority,
