@@ -118,7 +118,10 @@ def test_handle_state_transition_with_alert_reverted_with_previous_state_reverte
 # Scenario: Handle state transitions with queue_state in reverted state
 # if observable already exists without a previous queue state
 def test_handle_state_transition_with_alert_reverted_without_previous_state(
-    converter, fake_no_indicators, caplog, expected_log_messages_with_alert_reverted_without_previous_state
+    converter,
+    fake_no_indicators,
+    caplog,
+    expected_log_messages_with_alert_reverted_without_previous_state,
 ):
     # Given an alert with queue_state in reverted state
     alert = _given_an_alert(caplog, queue_state="doppel_review")

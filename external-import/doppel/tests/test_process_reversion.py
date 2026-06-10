@@ -7,7 +7,9 @@ import pytest
 
 @pytest.fixture
 def fake_indicators(monkeypatch, converter):
-    indicators = [{"id": "fakeid", "standard_id": f"indicator--{uuid4()}", "revoked": False}]
+    indicators = [
+        {"id": "fakeid", "standard_id": f"indicator--{uuid4()}", "revoked": False}
+    ]
     monkeypatch.setattr(
         converter, "_find_indicators_by_alert_id_or_entity_value", lambda *_: indicators
     )
@@ -59,11 +61,9 @@ def _given_an_alert(caplog):
 # When we call _handle_indicators function with reversion alert
 def _when_call_process_reversion(converter, alert):
     stix_objects = []
-    observables = [{
-        "id": f"domain--{uuid4()}",
-        "type": "domain-name",
-        "value": "obs name"
-    }]
+    observables = [
+        {"id": f"domain--{uuid4()}", "type": "domain-name", "value": "obs name"}
+    ]
     return converter._handle_indicators(alert, observables, stix_objects)
 
 

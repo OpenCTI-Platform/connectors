@@ -109,11 +109,13 @@ def _given_an_alert(caplog, queue_state):
 # When we call _handle_indicators function with takedown alert
 def _when_call_process_takedown(converter, alert):
     stix_objects = []
-    observables = [{
-        "id": f"domain-name--{uuid4()}",
-        "type": "domain-name",
-        "value": alert.get("entity", "test.com")
-    }]
+    observables = [
+        {
+            "id": f"domain-name--{uuid4()}",
+            "type": "domain-name",
+            "value": alert.get("entity", "test.com"),
+        }
+    ]
     return converter._handle_indicators(alert, observables, stix_objects)
 
 
