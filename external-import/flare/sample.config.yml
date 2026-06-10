@@ -1,0 +1,20 @@
+opencti:
+  url: "http://opencti:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "ChangeMe"
+  type: "EXTERNAL_IMPORT"
+  name: "Flare"
+  scope: "Incident,Observable,Indicator"
+  log_level: "info"
+  duration_period: "PT1H"
+
+flare:
+  api_domain: "api.flare.io"
+  api_key: "ChangeMe"
+  tenant_id: ""
+  event_types: "stealer_log,domain,ransomleak,leak"
+  event_actions: ""
+  lookback_days: 30
+  tlp_level: "white"
