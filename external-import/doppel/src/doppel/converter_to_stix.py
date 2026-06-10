@@ -247,9 +247,7 @@ class ConverterToStix:
 
         self.helper.connector_logger.info(
             "[create indicator] Indicator created",
-            {
-                "indicators": indicator,
-            },
+            meta={"indicator": indicator},
         )
         return json.loads(indicator.serialize())
 
@@ -473,7 +471,8 @@ class ConverterToStix:
                 _ = self._handle_observable_grouping_case_relationship(
                     grouping_case, observables, stix_objects
                 )
-                _ = self._handle_labels(alert, "GroupingCase", grouping_case)
+                if self.helper.api.stix_domain_object.read(id=grouping_case.get("id")):
+                     _ = self._handle_labels(alert, "GroupingCase", grouping_case)
 
             # #######- --------- Indicators ------------#######
             indicators = self._handle_indicators(alert, observables, stix_objects)
@@ -521,6 +520,7 @@ class ConverterToStix:
                 )
 
                 if ip_address:
+                    ip_address = ip_address.replace("\\", "\\\\").replace("'", "\\'")
                     ipv4_observable = self._create_observable("ipv4", ip_address, alert)
                     stix_objects.append(ipv4_observable)
                     observables.append(ipv4_observable)
@@ -565,7 +565,9 @@ class ConverterToStix:
     def _handle_update_observables_labels(self, alert, observables):
         """If observable already exist in the OpenCTI we should update with new data."""
         for observable in observables:
-            self._handle_labels(alert, "Observable", observable)
+            existing = self.helper.api.stix_cyber_observable.read(id=observable.get("id"))
+             if existing:
+                 self._handle_labels(alert, "Observable", existing)
 
     def _handle_grouping_case_creation(self, alert, observables, stix_objects):
         """
@@ -702,7 +704,9 @@ class ConverterToStix:
         product_type = alert.get("product")
 
         alert_id = alert.get("id")
-        entity_value = alert.get("entity", "")
+        entity_value = (
+             alert.get("entity", "").replace("\\", "\\\\").replace("'", "\\'")
+        )
 
         created_at = (
             parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
@@ -743,6 +747,7 @@ class ConverterToStix:
             )
 
             if ip_address:
+                ip_address = ip_address.replace("\\", "\\\\").replace("'", "\\'")
                 pattern = f"[ipv4-addr:value = '{ip_address}']"
                 name = ip_address
 
@@ -873,7 +878,7 @@ class ConverterToStix:
 
             self.helper.api.stix_domain_object.update_field(
                 id=rft_case["id"],
-                input={"key": "revoked", "value": [str(revoke_rft_case).lower()]},
+                input={"key": "revoked", "value": revoke_rft_case},
             )
 
             # Add Note.
@@ -936,7 +941,7 @@ class ConverterToStix:
         except Exception as e:
             self.helper.connector_logger.error(
                 "[DoppelConverter] Failed to create relationship between RFT case and observable",
-                {"case_id": rft_case.id, "error": str(e)},
+                {"case_id": rft_case.get("id"), "error": str(e)},
             )
 
     def _handle_note_addition(self, obj, alert, observables, stix_objects):
@@ -980,7 +985,6 @@ class ConverterToStix:
         )
         stix_objects.append(note)
 
-    # ERR: If object already present then only try to update.
     def _handle_labels(self, alert, target_obj_type, target_object):
         """Update data in OpenCTI object based on changes in Alert."""
 
@@ -1082,8 +1086,8 @@ class ConverterToStix:
 
         labels = [
             label["value"]
-            for label in obj["objectLabel"]
-            if label["value"].startswith(managed_prefixes)
+            for label in (obj or {}).get("objectLabel", [])
+             if label.get("value", "").startswith(managed_prefixes)
         ]
 
         return labels

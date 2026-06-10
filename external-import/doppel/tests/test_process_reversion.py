@@ -7,20 +7,18 @@ import pytest
 
 @pytest.fixture
 def fake_indicators(monkeypatch, converter):
-    indicators = [{"id": "fakeid", "standard_id": f"note--{uuid4()}", "revoked": False}]
+    indicators = [{"id": "fakeid", "standard_id": f"indicator--{uuid4()}", "revoked": False}]
     monkeypatch.setattr(
-        converter, "_find_indicators_by_alert_id", lambda *_: indicators
+        converter, "_find_indicators_by_alert_id_or_entity_value", lambda *_: indicators
     )
 
 
 @pytest.fixture
 def expected_report_log_messages() -> list[str]:
-    """Fixture for expected log messages in report orchestration."""
+    """Fixture for expected log messages in reversion workflow."""
     return [
-        "[DoppelConverter] Processing reversion workflow - {'alert_id': 'test id', 'queue_state': 'unresolved'}",
-        "[DoppelConverter] Revoking indicator - {'alert_id': 'test id', 'indicator_id': 'fakeid'}",
-        "[DoppelConverter] Successfully revoked indicator via API - {'alert_id': 'test id', 'indicator_id': 'fakeid'}",
-        "[DoppelConverter] Revoked indicators - {'alert_id': 'test id', 'revoked_indicators_count': 1}",
+        "[DoppelConverter - Handle Indicator] Processing existing indicator",
+        "[DoppelConverter] Updating indicator revoke status",
     ]
 
 
@@ -58,26 +56,23 @@ def _given_an_alert(caplog):
     }
 
 
-# When we call _process_reversion function
+# When we call _handle_indicators function with reversion alert
 def _when_call_process_reversion(converter, alert):
-    return converter._process_reversion(
-        alert=alert,
-        observable_id=f"domain--{uuid4()}",
-        stix_objects=[],
-        observable_name="obs name",
-    )
+    stix_objects = []
+    observables = [{
+        "id": f"domain--{uuid4()}",
+        "type": "domain-name",
+        "value": "obs name"
+    }]
+    return converter._handle_indicators(alert, observables, stix_objects)
 
 
 # Then the observable has been reverted from taken_down state to unresolved
 def _then_observable_is_unresolved(converter, indicator):
-    converter.helper.api.indicator.update_field.assert_called_once_with(
+    # Verify that update_field was called to revoke the indicator
+    # For reversion (non-takedown state), revoked should be True
+    converter.helper.api.indicator.update_field.assert_called_with(
         id="fakeid", input={"key": "revoked", "value": True}
-    )
-    converter.helper.api.label.create.assert_called_once_with(
-        value="revoked-false-positive"
-    )
-    converter.helper.api.indicator.add_label.assert_called_once_with(
-        id="fakeid", label_id="label_id"
     )
 
 

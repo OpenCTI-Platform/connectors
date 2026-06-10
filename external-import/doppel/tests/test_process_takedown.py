@@ -15,35 +15,33 @@ def fake_indicators_with_results(monkeypatch, converter):
         }
     ]
     monkeypatch.setattr(
-        converter, "_find_indicators_by_alert_id", lambda *_: indicators
+        converter, "_find_indicators_by_alert_id_or_entity_value", lambda *_: indicators
     )
 
 
 @pytest.fixture
 def fake_empty_indicators(monkeypatch, converter):
-    indicators = None
+    indicators = []
     monkeypatch.setattr(
-        converter, "_find_indicators_by_alert_id", lambda *_: indicators
+        converter, "_find_indicators_by_alert_id_or_entity_value", lambda *_: indicators
     )
 
 
 @pytest.fixture
 def expected_log_messages_without_indicator_creation() -> list[str]:
-    """Fixture for expected log messages in report orchestration."""
+    """Fixture for expected log messages in takedown with existing indicator."""
     return [
-        "[DoppelConverter] Processing takedown workflow - {'alert_id': 'test id', 'queue_state': 'taken down'}",
-        "[DoppelConverter] Un-revoking indicator after re-takedown - {'alert_id': 'test id', 'indicator_standard_id': 'indicator--867322cc-57e2-4027-8dee-3802c6c33ecd'}",
+        "[DoppelConverter - Handle Indicator] Processing existing indicator",
+        "[DoppelConverter] Updating indicator revoke status",
     ]
 
 
 @pytest.fixture
 def expected_log_messages_with_indicator_creation() -> list[str]:
-    """Fixture for expected log messages in report orchestration."""
+    """Fixture for expected log messages in takedown with new indicator."""
     return [
-        "[DoppelConverter] Processing takedown workflow - {'alert_id': 'test id', 'queue_state': 'taken down'}",
-        "[Process taken down] New Indicator created - {'alert_id': 'test id', 'name': 'test.com', 'indicator_pattern': \"[domain-name:value = 'test.com']\"}",
-        # "[DoppelConverter] Created based-on relationship for new indicator - {'alert_id': 'test id', 'indicator_id': 'indicator--6ca61515-7ea1-538b-8e4d-666bcfba472a', 'observable_id': 'domain--40020b21-186e-4239-8f78-8b67582322c7'}",
-        "[DoppelConverter] Created indicator for takedown alert - {'alert_id': 'test id', 'pattern': \"[domain-name:value = 'test.com']\"}",
+        "[DoppelConverter - Handle Indicator] Processing a new indicator",
+        "[create indicator] Indicator created",
     ]
 
 
@@ -108,14 +106,15 @@ def _given_an_alert(caplog, queue_state):
     }
 
 
-# When we call _process_takedown function
+# When we call _handle_indicators function with takedown alert
 def _when_call_process_takedown(converter, alert):
-    return converter._process_takedown(
-        alert=alert,
-        observable_id=f"domain-name--{uuid4()}",
-        stix_objects=[],
-        observable_name="obs name",
-    )
+    stix_objects = []
+    observables = [{
+        "id": f"domain-name--{uuid4()}",
+        "type": "domain-name",
+        "value": alert.get("entity", "test.com")
+    }]
+    return converter._handle_indicators(alert, observables, stix_objects)
 
 
 # Then the observable has a queue_state to taken_down
