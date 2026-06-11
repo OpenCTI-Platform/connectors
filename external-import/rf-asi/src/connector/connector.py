@@ -82,7 +82,26 @@ class RfAsiConnector:
         )
 
         for exposure in exposures:
-            stix_objects.append(self.converter_to_stix.exposure_to_incident(exposure))
+            signature_id = exposure["signature"]["id"]
+            assets_data = self.client.get_exposure_assets(
+                project_id=self.config.rf_asi.project_id,
+                signature_id=signature_id,
+                limit=self.config.rf_asi.page_limit,
+            )
+
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Fetched exposure assets from ASI API",
+                {
+                    "signature_id": signature_id,
+                    "asset_count": len(assets_data.get("asset_exposures") or []),
+                },
+            )
+
+            sdk_objects = self.converter_to_stix.build_exposure_objects(
+                exposure,
+                assets_data,
+            )
+            stix_objects.extend(obj.to_stix2_object() for obj in sdk_objects)
 
         if stix_objects:
             stix_objects.append(self.converter_to_stix.author)

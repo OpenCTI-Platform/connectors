@@ -12,6 +12,9 @@ def test_collect_intelligence_returns_incidents_author_and_marking(
 ):
     connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
     connector.client.list_exposures = MagicMock(return_value=all_exposure_items)
+    connector.client.get_exposure_assets = MagicMock(
+        return_value={"signature": {}, "asset_exposures": []}
+    )
 
     stix_objects = connector._collect_intelligence()
 
@@ -29,6 +32,12 @@ def test_collect_intelligence_returns_incidents_author_and_marking(
         project_id="test-project-id",
         limit=100,
     )
+    assert connector.client.get_exposure_assets.call_count == len(all_exposure_items)
+    connector.client.get_exposure_assets.assert_any_call(
+        project_id="test-project-id",
+        signature_id="sig-001",
+        limit=100,
+    )
 
     first_exposure = all_exposure_items[0]["signature"]
     assert incidents[0]["name"] == first_exposure["name"]
@@ -44,7 +53,9 @@ def test_collect_intelligence_returns_empty_list_when_no_exposures(
 ):
     connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
     connector.client.list_exposures = MagicMock(return_value=[])
+    connector.client.get_exposure_assets = MagicMock()
 
     stix_objects = connector._collect_intelligence()
 
     assert stix_objects == []
+    connector.client.get_exposure_assets.assert_not_called()
