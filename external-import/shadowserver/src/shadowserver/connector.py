@@ -1,125 +1,155 @@
+"""Shadowserver data processor."""
+
+from __future__ import annotations
+
+from collections.abc import Generator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta
-from typing import Generator
+from typing import Any
 
-from lib.external_import import ExternalImportConnector
-from pycti import OpenCTIConnectorHelper
+from connectors_sdk import BaseDataProcessor
 from shadowserver.api import ShadowserverAPI
-from shadowserver.settings import ConnectorSettings
+from shadowserver.constants import TLP_MAP
+from shadowserver.stix_transform import ShadowserverStixTransformation
 from shadowserver.utils import remove_duplicates
 
 
-class CustomConnector(ExternalImportConnector):
+class ShadowserverProcessor(BaseDataProcessor):
+    """Collect Shadowserver reports and convert them to STIX bundles.
 
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, config: ConnectorSettings
-    ) -> None:
-        """Initialization of the connector"""
-        super().__init__(helper, config)
-        self.first_run = True
-        self.lookback = None
-        if last_run := self.state.get("last_run"):
-            last_run = (
-                datetime.fromtimestamp(last_run, tz=UTC)
-                if isinstance(last_run, float | int)
-                else datetime.fromisoformat(last_run)
-            )
-            self.lookback = (
-                self.start_time - last_run
-            ).days + self.config.shadowserver.lookback
-            self.first_run = False
-        else:
-            self.lookback = self.config.shadowserver.initial_lookback
-        self.helper.connector_logger.info(
-            f"Connector initialized. Lookback: {self.lookback} days. First run: {self.first_run}"
-        )
+    Pipeline:
+        collect() → fetches report list per day, downloads each report in parallel,
+                    yields (date_str, report_meta, report_rows) per report
+        transform() → converts raw report rows to STIX objects, yields bundle per report
+    """
 
-    def _collect_intelligence(self) -> Generator[tuple[list, str], None, None]:
-        """Collects intelligence from channels
+    work_name: str = "Shadowserver import"
 
-        Add your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
-        Some sample code is provided as a guide to add a specific observable and a reference to the main object.
-        Consider adding additional methods to the class to make the code more readable.
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
-        Returns:
-            stix_objects: A list of STIX2 objects."""
-        self.helper.connector_logger.info(
-            f"{self.helper.connect_name} connector is starting the collection of objects..."
-        )
-        api_key = self.config.shadowserver.api_key.get_secret_value()
-        api_secret = self.config.shadowserver.api_secret.get_secret_value()
-        marking_refs = self.config.shadowserver.marking
+    def post_init(self) -> None:
+        """Post-initialization hook for setting up the processor after dependencies are injected."""
+        self._config = self.settings.shadowserver  # type: ignore[attr-defined]
+        self._marking_refs = TLP_MAP[self._config.marking]
+
+    # ------------------------------------------------------------------
+    # DataProcessor pipeline
+    # ------------------------------------------------------------------
+
+    def collect(self) -> Generator[tuple[str, dict, list], None, None]:
+        """Fetch report lists and download report data, yielding one item per report.
+
+        For each day in the lookback window the report list is retrieved, then all
+        reports for that day are downloaded in parallel.  Only reports that contain
+        data are yielded.
+
+        Yields:
+            Tuples of (date_str, report_meta, report_rows) for each non-empty report.
+        """
+        lookback = self._get_lookback()
+        api_key = self._config.api_key.get_secret_value()
+        api_secret = self._config.api_secret.get_secret_value()
+        marking_refs_str = self._config.marking
+        report_types = self._config.report_types
+        report_names = self._config.report_names
+        max_threads = self._config.max_threads
+
         shadowserver_api = ShadowserverAPI(
             api_key=api_key,
             api_secret=api_secret,
-            marking_refs=marking_refs,
+            marking_refs=marking_refs_str,
         )
-        report_types = self.config.shadowserver.report_types
-        report_names = self.config.shadowserver.report_names
-        if report_types:
-            self.helper.connector_logger.info(
-                f"Report types to retrieve: {', '.join(report_types)}."
-            )
-        if report_names:
-            self.helper.connector_logger.info(
-                f"Report names to retrieve: {', '.join(report_names)}."
-            )
 
-        for days_lookback in range(self.lookback, -1, -1):
-            stix_objects = []
-            date = self.start_time - timedelta(days=days_lookback)
+        if report_types:
+            self.logger.info(f"Report types to retrieve: {', '.join(report_types)}.")
+        if report_names:
+            self.logger.info(f"Report names to retrieve: {', '.join(report_names)}.")
+
+        def _download(report: dict) -> tuple[dict, list]:
+            worker_api = ShadowserverAPI(
+                api_key=api_key,
+                api_secret=api_secret,
+                marking_refs=marking_refs_str,
+            )
+            return report, worker_api.get_report_data(report=report)
+
+        start_time = datetime.now(tz=UTC)
+        for days_lookback in range(lookback, -1, -1):
+            date = start_time - timedelta(days=days_lookback)
             date_str = date.strftime("%Y-%m-%d")
-            self.helper.connector_logger.info(f"Getting reports for {date_str}.")
+
+            self.logger.info(f"Getting reports for {date_str}.")
             report_list = shadowserver_api.get_report_list(
                 date=date_str, reports=report_names, type=report_types
             )
             if not report_list:
-                self.helper.connector_logger.info(f"No reports found for {date_str}.")
+                self.logger.info(f"No reports found for {date_str}.")
                 continue
-            self.helper.connector_logger.info(f"Found {len(report_list)} reports.")
-            incident = {
-                "create": self.config.shadowserver.create_incident,
-                "severity": self.config.shadowserver.incident_severity,
-                "priority": self.config.shadowserver.incident_priority,
-            }
 
-            def _get_stix_report_worker(report: dict) -> list:
-                worker_shadowserver_api = ShadowserverAPI(
-                    api_key=api_key,
-                    api_secret=api_secret,
-                    marking_refs=marking_refs,
-                )
-                return worker_shadowserver_api.get_stix_report(
-                    report=report,
-                    api_helper=self.helper,
-                    incident=incident,
-                )
-
-            with ThreadPoolExecutor(
-                max_workers=self.config.shadowserver.max_threads
-            ) as executor:
-                futures = [
-                    executor.submit(
-                        _get_stix_report_worker,
-                        report,
-                    )
-                    for report in report_list
-                ]
-
+            self.logger.info(
+                f"Found {len(report_list)} reports for {date_str}. Downloading..."
+            )
+            with ThreadPoolExecutor(max_workers=max_threads) as executor:
+                futures = {
+                    executor.submit(_download, report): report for report in report_list
+                }
                 for future in as_completed(futures):
                     try:
-                        report_stix_objects = future.result()
-                        stix_objects.extend(
-                            stix_object
-                            for stix_object in report_stix_objects
-                            if stix_object
-                        )
+                        report_meta, report_rows = future.result()
+                        if report_rows:
+                            yield date_str, report_meta, report_rows
                     except Exception as e:
-                        self.helper.connector_logger.error(
-                            f"Error processing report: {e}"
-                        )
-            self.helper.connector_logger.info(
-                f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
-            )
-            unique_stix_objects = remove_duplicates(stix_objects)
-            yield unique_stix_objects, date_str
+                        self.logger.error(f"Error downloading report: {e}")
+
+    def transform(
+        self, data: Generator[tuple[str, dict, list], None, None]
+    ) -> Generator[list[Any], None, None]:
+        """Convert raw report rows to STIX objects, yielding one bundle per report.
+
+        Updates ``self.work_name`` per day so the WorkManager creates one work per day.
+
+        Args:
+            data: Generator of (date_str, report_meta, report_rows) tuples from collect().
+
+        Yields:
+            Deduplicated list of STIX objects per report.
+        """
+        incident = {
+            "create": self._config.create_incident,
+            "severity": self._config.incident_severity,
+            "priority": self._config.incident_priority,
+        }
+
+        for date_str, report_meta, report_rows in data:
+            # Change work_name per day → WorkManager closes previous work and opens a new one
+            self.work_name = f"Shadowserver import for {date_str}"
+            try:
+                stix_objects = ShadowserverStixTransformation(
+                    marking_refs=self._marking_refs,
+                    report_list=report_rows,
+                    report=report_meta,
+                    incident=incident,
+                ).get_stix_objects()
+                report_stix_objects = [obj for obj in stix_objects if obj]
+                if not report_stix_objects:
+                    continue
+                unique_objects = remove_duplicates(report_stix_objects)
+                self.logger.info(
+                    f"Sending {len(unique_objects)} STIX2 objects for {date_str}..."
+                )
+                yield unique_objects
+            except Exception as e:
+                self.logger.error(f"Error transforming report: {e}")
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _get_lookback(self) -> int:
+        """Compute the lookback in days based on state."""
+        if self.state.last_run:
+            now = datetime.now(tz=UTC)
+            return (now - self.state.last_run).days + self._config.lookback
+        return self._config.initial_lookback
