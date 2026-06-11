@@ -119,7 +119,7 @@ class TheHiveTest(unittest.TestCase):
         )
 
         # Only the allowed item is converted and sent, and it carries the work_id.
-        process_func.assert_called_once_with(allowed, work_id)
+        process_func.assert_called_once_with(allowed, work_id=work_id)
         _connector.helper.send_stix2_bundle.assert_called_once_with(
             sentinel.bundle, work_id=work_id
         )

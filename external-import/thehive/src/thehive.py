@@ -420,7 +420,12 @@ class TheHive:
         raise Exception({"message": api_error_msg})
 
     def process_items(self, type, items, process_func, last_date_key):
-        """Process items, execute process_func, and send_stix2_bundle."""
+        """Convert and send items under a single work, updating the watermark.
+
+        For each item allowed by the TLP filter, ``process_func(item, work_id)``
+        must return a STIX bundle, which is then sent under ``work_id``. The
+        watermark advances for every fetched item, including TLP-skipped ones.
+        """
         friendly_name = f"TheHive processing ({type}) @ {datetime.now().isoformat()}"
         self.helper.log_info(f"Processing type ({type}) and ({len(items)}) item(s).")
         last_date = self.current_state.get(last_date_key, self.thehive_import_from_date)
@@ -431,7 +436,7 @@ class TheHive:
         for item in items:
             self.helper.log_debug(f"item: {item}")
             if str(item.get("tlp")) in self.thehive_import_only_tlp:
-                stix_bundle = process_func(item, work_id)
+                stix_bundle = process_func(item, work_id=work_id)
                 self.helper.send_stix2_bundle(
                     stix_bundle,
                     work_id=work_id,
