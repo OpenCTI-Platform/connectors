@@ -205,3 +205,59 @@ class TheHiveTest(unittest.TestCase):
 
         self.assertIs(stix_observable, observable_without_id)
         self.assertIsNone(relation)
+
+    def test_generate_case_bundle_sends_attachments_with_work_id(
+        self, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """When attachment import is enabled and attachments exist, the attachments
+        bundle must be sent under the caller's work_id, while the main case bundle
+        is still returned (not self-sent)."""
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+        _connector.thehive_import_attachments = True
+
+        _connector.process_markings = MagicMock(return_value=[])
+        _connector.process_observables = MagicMock(return_value=([], []))
+        _connector.process_main_case = MagicMock(return_value=MagicMock())
+        _connector.process_tasks = MagicMock(return_value=[])
+        _connector.process_comments = MagicMock(return_value=[])
+        # Empty opencti_files keeps the stix_case re-creation path out of the test.
+        _connector.process_attachments = MagicMock(
+            return_value=([sentinel.artifact], [])
+        )
+
+        _now = int(time.time() * 1000)
+        case = {"title": "my case", "_createdAt": _now}
+
+        result = _connector.generate_case_bundle(case, work_id=sentinel.work_id)
+
+        # Only the attachments bundle is sent, and it carries the work_id.
+        _connector.helper.send_stix2_bundle.assert_called_once_with(
+            _connector.helper.stix2_create_bundle.return_value,
+            work_id=sentinel.work_id,
+        )
+        # The main case bundle is still returned for process_items to send.
+        self.assertEqual(result, _connector.helper.stix2_create_bundle.return_value)
+
+    def test_generate_alert_bundle_drops_none_relation(
+        self, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """A None relation (observable converted but relationship missing) must not
+        be appended to the bundle: a None element aborts the send downstream."""
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+
+        _connector.process_markings = MagicMock(return_value=[])
+        _connector.create_stix_alert_incident = MagicMock(return_value=MagicMock())
+        _connector.process_observables_and_relations = MagicMock(
+            return_value=(sentinel.observable, None)
+        )
+
+        _now = int(time.time() * 1000)
+        alert = {"title": "my alert", "_createdAt": _now, "artifacts": [{}]}
+
+        _connector.generate_alert_bundle(alert, work_id=sentinel.work_id)
+
+        bundle_objects = _connector.helper.stix2_create_bundle.call_args[0][0]
+        self.assertIn(sentinel.observable, bundle_objects)
+        self.assertNotIn(None, bundle_objects)
