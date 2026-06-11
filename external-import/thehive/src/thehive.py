@@ -242,7 +242,10 @@ class TheHive:
             )
             if stix_observable:
                 bundle_objects.append(stix_observable)
-                bundle_objects.append(stix_relation)
+                # The relation can be None (e.g. relationship construction failed);
+                # a None element in the bundle aborts the whole send downstream.
+                if stix_relation:
+                    bundle_objects.append(stix_relation)
         try:
             bundle = self.helper.stix2_create_bundle(bundle_objects)
             self.helper.log_info(f"Completed import for alert '{alert.get('title')}'")
