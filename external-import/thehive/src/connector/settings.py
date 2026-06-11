@@ -85,35 +85,35 @@ class _TheHiveConfig(BaseConfigModel):
             "Comma-separated mapping of TheHive case extendedStatus to an OpenCTI "
             "workflow status id, as 'thehive_status:opencti_status_id' pairs."
         ),
-        default=[],
+        default_factory=list,
     )
     task_status_mapping: ListFromString = Field(
         description=(
             "Comma-separated mapping of TheHive task status to an OpenCTI workflow "
             "status id, as 'thehive_status:opencti_status_id' pairs."
         ),
-        default=[],
+        default_factory=list,
     )
     alert_status_mapping: ListFromString = Field(
         description=(
             "Comma-separated mapping of TheHive alert status to an OpenCTI workflow "
             "status id, as 'thehive_status:opencti_status_id' pairs."
         ),
-        default=[],
+        default_factory=list,
     )
     user_mapping: ListFromString = Field(
         description=(
             "Comma-separated mapping of TheHive assignee email to an OpenCTI user id, "
             "as 'email:opencti_user_id' pairs."
         ),
-        default=[],
+        default_factory=list,
     )
     case_tag_whitelist: ListFromString = Field(
         description=(
             "Comma-separated list of case tags; if set, only cases bearing one of these "
             "tags are imported."
         ),
-        default=[],
+        default_factory=list,
     )
     interval: int = Field(
         description="Number of minutes to wait between two runs of the connector.",

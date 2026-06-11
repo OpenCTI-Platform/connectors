@@ -127,7 +127,6 @@
       "type": "array"
     },
     "THEHIVE_CASE_STATUS_MAPPING": {
-      "default": [],
       "description": "Comma-separated mapping of TheHive case extendedStatus to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs.",
       "items": {
         "type": "string"
@@ -135,7 +134,6 @@
       "type": "array"
     },
     "THEHIVE_TASK_STATUS_MAPPING": {
-      "default": [],
       "description": "Comma-separated mapping of TheHive task status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs.",
       "items": {
         "type": "string"
@@ -143,7 +141,6 @@
       "type": "array"
     },
     "THEHIVE_ALERT_STATUS_MAPPING": {
-      "default": [],
       "description": "Comma-separated mapping of TheHive alert status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs.",
       "items": {
         "type": "string"
@@ -151,7 +148,6 @@
       "type": "array"
     },
     "THEHIVE_USER_MAPPING": {
-      "default": [],
       "description": "Comma-separated mapping of TheHive assignee email to an OpenCTI user id, as 'email:opencti_user_id' pairs.",
       "items": {
         "type": "string"
@@ -159,7 +155,6 @@
       "type": "array"
     },
     "THEHIVE_CASE_TAG_WHITELIST": {
-      "default": [],
       "description": "Comma-separated list of case tags; if set, only cases bearing one of these tags are imported.",
       "items": {
         "type": "string"

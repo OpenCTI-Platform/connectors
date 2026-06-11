@@ -46,9 +46,7 @@ class TheHive:
         self.helper = helper
 
         # TheHive connection settings
-        self.thehive_url = str(config.thehive.url)
-        if isinstance(self.thehive_url, str):
-            self.thehive_url = self.thehive_url.rstrip("/")
+        self.thehive_url = str(config.thehive.url).rstrip("/")
         self.thehive_api_key = config.thehive.api_key
         self.thehive_check_ssl = config.thehive.check_ssl
         self.thehive_organization_name = config.thehive.organization_name

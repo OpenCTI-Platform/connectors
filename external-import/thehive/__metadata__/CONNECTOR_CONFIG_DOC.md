@@ -22,9 +22,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | THEHIVE_IMPORT_ALERTS | `boolean` |  | boolean | `true` | Whether to import TheHive alerts in addition to cases. |  |
 | THEHIVE_IMPORT_ATTACHMENTS | `boolean` |  | boolean | `false` | Whether to import case attachments as STIX artifacts. |  |
 | THEHIVE_SEVERITY_MAPPING | `array` |  | string | `["1:01 - low", "2:02 - medium", "3:03 - high", "4:04 - critical"]` | Comma-separated mapping of TheHive severity (1-4) to an OpenCTI severity label, as 'level:label' pairs. | ```1:01 - low,2:02 - medium,3:03 - high,4:04 - critical``` |
-| THEHIVE_CASE_STATUS_MAPPING | `array` |  | string | `[]` | Comma-separated mapping of TheHive case extendedStatus to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs. |  |
-| THEHIVE_TASK_STATUS_MAPPING | `array` |  | string | `[]` | Comma-separated mapping of TheHive task status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs. |  |
-| THEHIVE_ALERT_STATUS_MAPPING | `array` |  | string | `[]` | Comma-separated mapping of TheHive alert status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs. |  |
-| THEHIVE_USER_MAPPING | `array` |  | string | `[]` | Comma-separated mapping of TheHive assignee email to an OpenCTI user id, as 'email:opencti_user_id' pairs. |  |
-| THEHIVE_CASE_TAG_WHITELIST | `array` |  | string | `[]` | Comma-separated list of case tags; if set, only cases bearing one of these tags are imported. |  |
+| THEHIVE_CASE_STATUS_MAPPING | `array` |  | string |  | Comma-separated mapping of TheHive case extendedStatus to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs. |  |
+| THEHIVE_TASK_STATUS_MAPPING | `array` |  | string |  | Comma-separated mapping of TheHive task status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs. |  |
+| THEHIVE_ALERT_STATUS_MAPPING | `array` |  | string |  | Comma-separated mapping of TheHive alert status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs. |  |
+| THEHIVE_USER_MAPPING | `array` |  | string |  | Comma-separated mapping of TheHive assignee email to an OpenCTI user id, as 'email:opencti_user_id' pairs. |  |
+| THEHIVE_CASE_TAG_WHITELIST | `array` |  | string |  | Comma-separated list of case tags; if set, only cases bearing one of these tags are imported. |  |
 | THEHIVE_INTERVAL | `integer` |  | `1 <= x ` | `5` | Number of minutes to wait between two runs of the connector. |  |
