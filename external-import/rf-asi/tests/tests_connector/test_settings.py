@@ -199,6 +199,61 @@ def test_rf_asi_retry_settings_defaults():
 
     settings = FakeConnectorSettings()
 
-    assert settings.rf_asi.retry_max_attempts == 5
+    assert settings.rf_asi.retry_max_attempts == 3
     assert settings.rf_asi.retry_initial_seconds == 1
     assert settings.rf_asi.retry_max_seconds == 60
+
+
+def _make_fake_connector_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    return FakeConnectorSettings()
+
+
+def _base_valid_settings_dict(**rf_asi_overrides: Any) -> dict[str, Any]:
+    rf_asi = {
+        "api_key": "test-api-key",
+        "project_id": "test-project-id",
+    }
+    rf_asi.update(rf_asi_overrides)
+    return {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "test-token",
+        },
+        "connector": {
+            "id": "connector-id",
+            "scope": "test, connector",
+        },
+        "rf_asi": rf_asi,
+    }
+
+
+@pytest.mark.parametrize(
+    "rf_asi_overrides",
+    [
+        pytest.param({"filter_severity_min": "critical"}, id="filter_severity_min"),
+        pytest.param({"filter_severity_exact": "moderate"}, id="filter_severity_exact"),
+    ],
+)
+def test_settings_should_accept_valid_severity_filters(rf_asi_overrides):
+    settings = _make_fake_connector_settings(
+        _base_valid_settings_dict(**rf_asi_overrides)
+    )
+
+    for key, value in rf_asi_overrides.items():
+        assert getattr(settings.rf_asi, key) == value
+
+
+def test_settings_should_reject_both_severity_filters():
+    with pytest.raises(ConfigValidationError) as err:
+        _make_fake_connector_settings(
+            _base_valid_settings_dict(
+                filter_severity_min="critical",
+                filter_severity_exact="moderate",
+            )
+        )
+    assert str("Error validating configuration") in str(err)

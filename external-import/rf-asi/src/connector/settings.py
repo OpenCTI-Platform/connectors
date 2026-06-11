@@ -7,7 +7,9 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr
+from pydantic import Field, HttpUrl, SecretStr, model_validator
+
+ExposureSeverity = Literal["unknown", "informational", "moderate", "critical"]
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -91,6 +93,22 @@ class RfAsiConfig(BaseConfigModel):
         ge=1,
         le=300,
     )
+    filter_severity_min: ExposureSeverity | None = Field(
+        description="Only import exposures at or above this severity.",
+        default=None,
+    )
+    filter_severity_exact: ExposureSeverity | None = Field(
+        description="Only import exposures matching this severity exactly.",
+        default=None,
+    )
+
+    @model_validator(mode="after")
+    def validate_severity_filters(self) -> "RfAsiConfig":
+        if self.filter_severity_min and self.filter_severity_exact:
+            raise ValueError(
+                "Only one of filter_severity_min or filter_severity_exact may be set."
+            )
+        return self
 
 
 class ConnectorSettings(BaseConnectorSettings):

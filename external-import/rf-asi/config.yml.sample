@@ -21,3 +21,5 @@ rf_asi:
   retry_max_attempts: 3 # optional, max HTTP attempts per request, min 1, max 10 (default: 3)
   retry_initial_seconds: 1 # optional, initial retry backoff in seconds, min 0.1, max 30 (default: 1)
   retry_max_seconds: 60 # optional, max retry backoff in seconds, min 1, max 300 (default: 60)
+  # filter_severity_min: moderate # optional, import exposures at or above this severity; values: unknown, informational, moderate, critical (mutually exclusive with filter_severity_exact)
+  # filter_severity_exact: critical # optional, import exposures matching this severity exactly; same values (mutually exclusive with filter_severity_min)

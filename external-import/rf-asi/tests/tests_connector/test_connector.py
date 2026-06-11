@@ -243,3 +243,63 @@ def test_process_message_resumes_from_stored_exposures_cursor(
         run_limit=1,
         cursor="cursor-page-2",
     )
+
+
+def test_collect_intelligence_passes_filter_severity_min(
+    opencti_helper,
+    make_stub_connector_settings,
+    all_exposure_items,
+):
+    settings = make_stub_connector_settings(filter_severity_min="critical")
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures = MagicMock(return_value=[])
+    connector.client.get_exposure_assets = MagicMock()
+
+    connector._collect_intelligence()
+
+    connector.client.list_exposures.assert_called_once_with(
+        project_id="test-project-id",
+        limit=100,
+        filter_severity_min="critical",
+    )
+
+
+def test_collect_intelligence_passes_filter_severity_exact(
+    opencti_helper,
+    make_stub_connector_settings,
+):
+    settings = make_stub_connector_settings(filter_severity_exact="moderate")
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures = MagicMock(return_value=[])
+    connector.client.get_exposure_assets = MagicMock()
+
+    connector._collect_intelligence()
+
+    connector.client.list_exposures.assert_called_once_with(
+        project_id="test-project-id",
+        limit=100,
+        filter_severity_exact="moderate",
+    )
+
+
+def test_collect_intelligence_with_run_limit_passes_filter_severity_min(
+    opencti_helper,
+    make_stub_connector_settings,
+):
+    settings = make_stub_connector_settings(
+        run_limit=1,
+        filter_severity_min="moderate",
+    )
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures_batch = MagicMock(return_value=([], None))
+    connector.client.get_exposure_assets = MagicMock()
+
+    connector._collect_intelligence()
+
+    connector.client.list_exposures_batch.assert_called_once_with(
+        project_id="test-project-id",
+        page_limit=100,
+        run_limit=1,
+        cursor=None,
+        filter_severity_min="moderate",
+    )

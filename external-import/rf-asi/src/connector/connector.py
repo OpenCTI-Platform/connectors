@@ -67,6 +67,14 @@ class RfAsiConnector:
             portal_base_url=self.config.rf_asi.portal_base_url,
         )
 
+    def _exposure_filters(self) -> dict[str, str]:
+        rf = self.config.rf_asi
+        if rf.filter_severity_min is not None:
+            return {"filter_severity_min": rf.filter_severity_min}
+        if rf.filter_severity_exact is not None:
+            return {"filter_severity_exact": rf.filter_severity_exact}
+        return {}
+
     def _collect_intelligence(
         self, exposures_cursor: str | None = None
     ) -> tuple[list, str | None]:
@@ -79,10 +87,13 @@ class RfAsiConnector:
         stix_objects = []
         next_cursor: str | None = None
 
+        filters = self._exposure_filters()
+
         if self.config.rf_asi.run_limit is None:
             exposures = self.client.list_exposures(
                 project_id=self.config.rf_asi.project_id,
                 limit=self.config.rf_asi.page_limit,
+                **filters,
             )
         else:
             exposures, next_cursor = self.client.list_exposures_batch(
@@ -90,6 +101,7 @@ class RfAsiConnector:
                 page_limit=self.config.rf_asi.page_limit,
                 run_limit=self.config.rf_asi.run_limit,
                 cursor=exposures_cursor,
+                **filters,
             )
             self.helper.connector_logger.info(
                 "[CONNECTOR] Fetched exposure batch from ASI API",
