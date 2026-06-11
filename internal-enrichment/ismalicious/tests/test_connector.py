@@ -2,7 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
 import requests
 from connector import IsMaliciousConnector
 from connector.models import (
@@ -14,7 +13,9 @@ from connector.models import (
 from pydantic import SecretStr
 
 
-def _make_connector(api_key: str = "test-credential") -> tuple[IsMaliciousConnector, MagicMock]:
+def _make_connector(
+    api_key: str = "test-credential",
+) -> tuple[IsMaliciousConnector, MagicMock]:
     config = ConfigLoader(
         opencti=OpenCTIConfig(
             url="http://localhost:8080",
