@@ -124,6 +124,40 @@ class TheHiveTest(unittest.TestCase):
             sentinel.bundle, work_id=work_id
         )
 
+    def test_process_items_advances_watermark_past_skipped_items(
+        self, m_os, m_yaml, m_helper, m_thehiveapi
+    ):
+        """The state watermark must advance even for items skipped by the TLP
+        filter, so high-TLP items are not refetched on every run (and an
+        all-skipped batch does not stall state forever)."""
+        m_os.path.isfile.return_value = False
+        _connector = module.TheHive()
+        _connector.current_state = {}
+        _connector.thehive_import_from_date = 0
+        _connector.thehive_import_only_tlp = ["2"]
+
+        blocked_updated_ms = 50_000_000
+        blocked = {
+            "tlp": 3,
+            "title": "blocked",
+            "_updatedAt": blocked_updated_ms,
+            "_createdAt": blocked_updated_ms,
+        }
+        process_func = MagicMock(return_value=sentinel.bundle)
+
+        updated_last_date = _connector.process_items(
+            type="case",
+            items=[blocked],
+            process_func=process_func,
+            last_date_key="last_case_date",
+        )
+
+        # The blocked item is neither converted nor sent...
+        process_func.assert_not_called()
+        _connector.helper.send_stix2_bundle.assert_not_called()
+        # ...yet the watermark advances past it (get_updated_date adds +1s).
+        self.assertEqual(updated_last_date, int(blocked_updated_ms / 1000) + 1)
+
     def test_generate_case_bundle_does_not_self_send_main_bundle(
         self, m_os, m_yaml, m_helper, m_thehiveapi
     ):
