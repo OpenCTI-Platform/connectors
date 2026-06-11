@@ -101,7 +101,7 @@ docker-compose logs -f connector-polyswarm-sandbox
 | `POLYSWARM_SANDBOX_PROVIDER` | `both` | `cape`, `triage`, or `both` |
 | `POLYSWARM_JSON_REPORT_ENABLED` | `true` | Attach JSON reports |
 | `POLYSWARM_PDF_REPORT_ENABLED` | `true` | Attach PDF reports |
-| `POLYSWARM_LLM_REPORT_ENABLED` | `true` | Generate AI threat analysis summaries |
+| `POLYSWARM_LLM_REPORT_ENABLED` | `false` | Generate AI threat analysis summaries (opt-in) |
 | `POLYSWARM_LLM_REPORT_TIMEOUT` | `120` | LLM report generation timeout (seconds) |
 
 #### Sandbox Settings

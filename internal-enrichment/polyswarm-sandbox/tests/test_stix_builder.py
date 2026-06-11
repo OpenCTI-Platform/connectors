@@ -263,3 +263,44 @@ class TestErrorNotes:
     def test_error_note_references_entity(self, builder):
         note = builder.create_error_note(ENTITY, "Cat", "det", [])
         assert ENTITY_ID in note["object_refs"]
+
+
+# ── AI summary formatting ────────────────────────────────────────────────────
+
+
+class TestAiSummarySection:
+    """Guard the AI summary formatter against the dict-vs-str crash.
+
+    The PolySwarm SDK returns the LLM report already parsed as a dict; the
+    formatter used to call .strip() on it and raise AttributeError, crashing
+    the whole STIX bundle build. It must accept a dict or a JSON string.
+    """
+
+    REPORT = {
+        "bottom_line": "Malicious RAT with C2 beacon.",
+        "observations": ["process injection", "credential dumping"],
+        "recommended_actions": "Isolate the host.",
+    }
+
+    def test_accepts_dict_report(self):
+        out = StixBuilder._format_ai_summary_section(dict(self.REPORT))
+        text = "\n".join(out)
+        assert "## AI Summary" in text
+        assert "Malicious RAT with C2 beacon." in text
+        assert "Isolate the host." in text
+
+    def test_accepts_json_string_report(self):
+        import json
+
+        out = StixBuilder._format_ai_summary_section(json.dumps(self.REPORT))
+        text = "\n".join(out)
+        assert "Malicious RAT with C2 beacon." in text
+
+    def test_empty_inputs_return_no_section(self):
+        assert StixBuilder._format_ai_summary_section(None) == []
+        assert StixBuilder._format_ai_summary_section("") == []
+        assert StixBuilder._format_ai_summary_section({}) == []
+
+    def test_plain_text_string_is_passed_through(self):
+        out = StixBuilder._format_ai_summary_section("not json, just prose")
+        assert any("not json, just prose" in line for line in out)
