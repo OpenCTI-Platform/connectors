@@ -64,17 +64,38 @@ class RfAsiConnector:
             portal_base_url=self.config.rf_asi.portal_base_url,
         )
 
-    def _collect_intelligence(self) -> list:
+    def _collect_intelligence(
+        self, exposures_cursor: str | None = None
+    ) -> tuple[list, str | None]:
         """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        Collect intelligence from the source and convert into STIX object.
+
+        :param exposures_cursor: Optional pagination cursor when run_limit is set.
+        :return: Tuple of STIX objects and optional next cursor for the next batch.
         """
         stix_objects = []
+        next_cursor: str | None = None
 
-        exposures = self.client.list_exposures(
-            project_id=self.config.rf_asi.project_id,
-            limit=self.config.rf_asi.page_limit,
-        )
+        if self.config.rf_asi.run_limit is None:
+            exposures = self.client.list_exposures(
+                project_id=self.config.rf_asi.project_id,
+                limit=self.config.rf_asi.page_limit,
+            )
+        else:
+            exposures, next_cursor = self.client.list_exposures_batch(
+                project_id=self.config.rf_asi.project_id,
+                page_limit=self.config.rf_asi.page_limit,
+                run_limit=self.config.rf_asi.run_limit,
+                cursor=exposures_cursor,
+            )
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Fetched exposure batch from ASI API",
+                {
+                    "run_limit": self.config.rf_asi.run_limit,
+                    "imported_count": len(exposures),
+                    "has_next_cursor": next_cursor is not None,
+                },
+            )
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Fetched exposures from ASI API",
@@ -107,7 +128,7 @@ class RfAsiConnector:
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
 
-        return stix_objects
+        return stix_objects, next_cursor if self.config.rf_asi.run_limit else None
 
     def process_message(self) -> None:
         """
@@ -154,7 +175,12 @@ class RfAsiConnector:
             # ===========================
             # === Add your code below ===
             # ===========================
-            stix_objects = self._collect_intelligence()
+            exposures_cursor = None
+            if self.config.rf_asi.run_limit is not None:
+                if current_state is not None:
+                    exposures_cursor = current_state.get("exposures_cursor")
+
+            stix_objects, next_cursor = self._collect_intelligence(exposures_cursor)
 
             if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -186,6 +212,13 @@ class RfAsiConnector:
                 current_state["last_run"] = current_state_datetime
             else:
                 current_state = {"last_run": current_state_datetime}
+
+            if self.config.rf_asi.run_limit is not None:
+                if next_cursor:
+                    current_state["exposures_cursor"] = next_cursor
+                else:
+                    current_state.pop("exposures_cursor", None)
+
             self.helper.set_state(current_state)
 
             message = (

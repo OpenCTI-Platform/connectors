@@ -68,6 +68,11 @@ class RfAsiConfig(BaseConfigModel):
         ge=1,
         le=1000,
     )
+    run_limit: int | None = Field(
+        description="Max exposures to import per connector run. None = no limit (current behavior).",
+        default=None,
+        ge=1,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

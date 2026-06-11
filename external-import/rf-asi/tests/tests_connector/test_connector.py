@@ -16,7 +16,7 @@ def test_collect_intelligence_returns_incidents_author_and_marking(
         return_value={"signature": {}, "asset_exposures": []}
     )
 
-    stix_objects = connector._collect_intelligence()
+    stix_objects, _ = connector._collect_intelligence()
 
     incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
     identities = [obj for obj in stix_objects if obj["type"] == "identity"]
@@ -55,7 +55,7 @@ def test_collect_intelligence_returns_empty_list_when_no_exposures(
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
-    stix_objects = connector._collect_intelligence()
+    stix_objects, _ = connector._collect_intelligence()
 
     assert stix_objects == []
     connector.client.get_exposure_assets.assert_not_called()
@@ -71,7 +71,7 @@ def test_collect_intelligence_bundle_includes_related_entities(
     connector.client.list_exposures = MagicMock(return_value=all_exposure_items[:1])
     connector.client.get_exposure_assets = MagicMock(return_value=all_exposure_assets)
 
-    stix_objects = connector._collect_intelligence()
+    stix_objects, _ = connector._collect_intelligence()
 
     incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
     ipv4_addresses = [obj for obj in stix_objects if obj["type"] == "ipv4-addr"]
@@ -102,4 +102,144 @@ def test_collect_intelligence_bundle_includes_related_entities(
     assert all(relationship.source_ref == incident_id for relationship in relationships)
     assert all(
         relationship.relationship_type == "related-to" for relationship in relationships
+    )
+
+
+def test_collect_intelligence_with_run_limit_uses_batch(
+    opencti_helper,
+    make_stub_connector_settings,
+    all_exposure_items,
+):
+    settings = make_stub_connector_settings(run_limit=1)
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    batch_items = all_exposure_items[:1]
+    connector.client.list_exposures_batch = MagicMock(
+        return_value=(batch_items, "cursor-page-2")
+    )
+    connector.client.list_exposures = MagicMock()
+    connector.client.get_exposure_assets = MagicMock(
+        return_value={"signature": {}, "asset_exposures": []}
+    )
+
+    stix_objects, next_cursor = connector._collect_intelligence()
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert len(incidents) == 1
+    assert next_cursor == "cursor-page-2"
+    connector.client.list_exposures_batch.assert_called_once_with(
+        project_id="test-project-id",
+        page_limit=100,
+        run_limit=1,
+        cursor=None,
+    )
+    connector.client.list_exposures.assert_not_called()
+    assert connector.client.get_exposure_assets.call_count == 1
+
+
+def test_collect_intelligence_with_run_limit_passes_exposures_cursor(
+    opencti_helper,
+    make_stub_connector_settings,
+):
+    settings = make_stub_connector_settings(run_limit=1)
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures_batch = MagicMock(return_value=([], None))
+    connector.client.get_exposure_assets = MagicMock()
+
+    connector._collect_intelligence(exposures_cursor="cursor-page-2")
+
+    connector.client.list_exposures_batch.assert_called_once_with(
+        project_id="test-project-id",
+        page_limit=100,
+        run_limit=1,
+        cursor="cursor-page-2",
+    )
+
+
+def _mock_process_message_dependencies(
+    opencti_helper,
+    *,
+    initial_state: dict | None = None,
+):
+    opencti_helper.get_state = MagicMock(return_value=initial_state)
+    opencti_helper.set_state = MagicMock()
+    opencti_helper.api.work.initiate_work = MagicMock(return_value="work-id")
+    opencti_helper.api.work.to_processed = MagicMock()
+    opencti_helper.stix2_create_bundle = MagicMock(return_value="bundle")
+    opencti_helper.send_stix2_bundle = MagicMock(return_value=["bundle-id"])
+
+
+def test_process_message_persists_exposures_cursor_when_batch_has_more_pages(
+    opencti_helper,
+    make_stub_connector_settings,
+    all_exposure_items,
+):
+    settings = make_stub_connector_settings(run_limit=1)
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures_batch = MagicMock(
+        return_value=(all_exposure_items[:1], "cursor-page-2")
+    )
+    connector.client.get_exposure_assets = MagicMock(
+        return_value={"signature": {}, "asset_exposures": []}
+    )
+    _mock_process_message_dependencies(
+        opencti_helper,
+        initial_state={"last_run": "2024-01-01 00:00:00"},
+    )
+
+    connector.process_message()
+
+    opencti_helper.set_state.assert_called_once()
+    saved_state = opencti_helper.set_state.call_args.args[0]
+    assert saved_state["exposures_cursor"] == "cursor-page-2"
+    assert "last_run" in saved_state
+
+
+def test_process_message_clears_exposures_cursor_when_cycle_complete(
+    opencti_helper,
+    make_stub_connector_settings,
+    all_exposure_items,
+):
+    settings = make_stub_connector_settings(run_limit=1)
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures_batch = MagicMock(
+        return_value=(all_exposure_items[:1], None)
+    )
+    connector.client.get_exposure_assets = MagicMock(
+        return_value={"signature": {}, "asset_exposures": []}
+    )
+    _mock_process_message_dependencies(
+        opencti_helper,
+        initial_state={
+            "last_run": "2024-01-01 00:00:00",
+            "exposures_cursor": "cursor-page-2",
+        },
+    )
+
+    connector.process_message()
+
+    saved_state = opencti_helper.set_state.call_args.args[0]
+    assert "exposures_cursor" not in saved_state
+    assert "last_run" in saved_state
+
+
+def test_process_message_resumes_from_stored_exposures_cursor(
+    opencti_helper,
+    make_stub_connector_settings,
+):
+    settings = make_stub_connector_settings(run_limit=1)
+    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures_batch = MagicMock(return_value=([], None))
+    connector.client.get_exposure_assets = MagicMock()
+    _mock_process_message_dependencies(
+        opencti_helper,
+        initial_state={"exposures_cursor": "cursor-page-2"},
+    )
+
+    connector.process_message()
+
+    connector.client.list_exposures_batch.assert_called_once_with(
+        project_id="test-project-id",
+        page_limit=100,
+        run_limit=1,
+        cursor="cursor-page-2",
     )

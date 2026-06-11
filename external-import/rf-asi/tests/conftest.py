@@ -34,37 +34,49 @@ def mock_opencti_connector_helper(monkeypatch):
 
 
 @pytest.fixture
-def stub_connector_settings() -> ConnectorSettings:
+def make_stub_connector_settings():
+    """Factory to create connector settings with optional rf_asi overrides."""
+
+    def _make(**rf_asi_overrides: Any) -> ConnectorSettings:
+        rf_asi_config = {
+            "api_base_url": "https://api.securitytrails.com/v2",
+            "api_key": "test-api-key",
+            "project_id": "test-project-id",
+            "tlp_level": "amber+strict",
+            "portal_base_url": "https://portal.example.com",
+            "page_limit": 100,
+        }
+        rf_asi_config.update(rf_asi_overrides)
+
+        class StubConnectorSettings(ConnectorSettings):
+            @classmethod
+            def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+                return handler(
+                    {
+                        "opencti": {
+                            "url": "http://localhost:8080",
+                            "token": "test-token",
+                        },
+                        "connector": {
+                            "id": "connector-id",
+                            "name": "Test Connector",
+                            "scope": "incident",
+                            "log_level": "error",
+                            "duration_period": "PT5M",
+                        },
+                        "rf_asi": rf_asi_config,
+                    }
+                )
+
+        return StubConnectorSettings()
+
+    return _make
+
+
+@pytest.fixture
+def stub_connector_settings(make_stub_connector_settings) -> ConnectorSettings:
     """Return connector settings backed by a fixed in-memory config dict."""
-
-    class StubConnectorSettings(ConnectorSettings):
-        @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-            return handler(
-                {
-                    "opencti": {
-                        "url": "http://localhost:8080",
-                        "token": "test-token",
-                    },
-                    "connector": {
-                        "id": "connector-id",
-                        "name": "Test Connector",
-                        "scope": "incident",
-                        "log_level": "error",
-                        "duration_period": "PT5M",
-                    },
-                    "rf_asi": {
-                        "api_base_url": "https://api.securitytrails.com/v2",
-                        "api_key": "test-api-key",
-                        "project_id": "test-project-id",
-                        "tlp_level": "amber+strict",
-                        "portal_base_url": "https://portal.example.com",
-                        "page_limit": 100,
-                    },
-                }
-            )
-
-    return StubConnectorSettings()
+    return make_stub_connector_settings()
 
 
 @pytest.fixture

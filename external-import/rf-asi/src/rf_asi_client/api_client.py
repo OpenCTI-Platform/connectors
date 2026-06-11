@@ -143,6 +143,65 @@ class RfAsiClient:
 
         return exposures
 
+    def list_exposures_batch(
+        self,
+        project_id: str,
+        *,
+        page_limit: int,
+        run_limit: int,
+        cursor: str | None = None,
+        **filters,
+    ) -> tuple[list[dict], str | None]:
+        """
+        Fetch up to ``run_limit`` exposures, following cursor-based pagination.
+
+        :param project_id: ASI project identifier.
+        :param page_limit: Number of exposures to fetch per API page.
+        :param run_limit: Maximum exposures to collect in this batch.
+        :param cursor: Optional starting pagination cursor.
+        :param filters: Optional API query filters (e.g. filter_severity_min).
+        :return: Tuple of exposure summary items and optional next cursor for resuming.
+        :raises requests.RequestException: If the first page request fails.
+        """
+        exposures: list[dict] = []
+        next_cursor = cursor
+        url = f"{self.base_url}/projects/{project_id}/exposures"
+
+        while len(exposures) < run_limit:
+            remaining = run_limit - len(exposures)
+            try:
+                page_items, next_cursor = self.list_exposures_page(
+                    project_id,
+                    limit=min(page_limit, remaining),
+                    cursor=next_cursor,
+                    **filters,
+                )
+                exposures.extend(page_items)
+            except requests.RequestException as err:
+                self.helper.connector_logger.error(
+                    "[API] Error while fetching exposures",
+                    {"url_path": url, "error": str(err)},
+                )
+                if exposures:
+                    self.helper.connector_logger.warning(
+                        "[API] Returning partial exposure results after pagination failure",
+                        {"collected_count": len(exposures)},
+                    )
+                    if len(exposures) > run_limit:
+                        exposures = exposures[:run_limit]
+                    return exposures, next_cursor
+                raise
+
+            if len(exposures) >= run_limit:
+                break
+            if not next_cursor:
+                break
+
+        if len(exposures) > run_limit:
+            exposures = exposures[:run_limit]
+
+        return exposures, next_cursor
+
     def get_exposure_assets_page(
         self,
         project_id: str,

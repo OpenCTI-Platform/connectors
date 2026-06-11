@@ -267,3 +267,127 @@ def test_parse_assets_response_handles_missing_fields():
     assert signature == {}
     assert asset_exposures == []
     assert next_cursor is None
+
+
+def test_list_exposures_batch_run_limit_one_preserves_cursor(
+    opencti_helper, exposures_list_page
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(exposures_list_page),
+    ) as mock_get:
+        exposures, next_cursor = client.list_exposures_batch(
+            "test-project-id",
+            page_limit=100,
+            run_limit=1,
+        )
+
+    assert len(exposures) == 1
+    assert exposures[0] == exposures_list_page["data"][0]
+    assert next_cursor == "cursor-page-2"
+    assert mock_get.call_count == 1
+    assert mock_get.call_args.kwargs["params"] == {"limit": 1}
+
+
+def test_list_exposures_batch_run_limit_two_from_cursor_completes_cycle(
+    opencti_helper, exposures_list_page_last
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(exposures_list_page_last),
+    ) as mock_get:
+        exposures, next_cursor = client.list_exposures_batch(
+            "test-project-id",
+            page_limit=100,
+            run_limit=2,
+            cursor="cursor-page-2",
+        )
+
+    assert exposures == exposures_list_page_last["data"]
+    assert next_cursor is None
+    assert mock_get.call_count == 1
+    assert mock_get.call_args.kwargs["params"] == {
+        "limit": 2,
+        "cursor": "cursor-page-2",
+    }
+
+
+def test_list_exposures_batch_run_limit_three_spans_both_pages(
+    opencti_helper,
+    exposures_list_page,
+    exposures_list_page_last,
+    all_exposure_items,
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        side_effect=[
+            _mock_response(exposures_list_page),
+            _mock_response(exposures_list_page_last),
+        ],
+    ) as mock_get:
+        exposures, next_cursor = client.list_exposures_batch(
+            "test-project-id",
+            page_limit=100,
+            run_limit=3,
+        )
+
+    assert exposures == all_exposure_items
+    assert next_cursor is None
+    assert mock_get.call_count == 2
+
+    first_call_kwargs = mock_get.call_args_list[0].kwargs
+    second_call_kwargs = mock_get.call_args_list[1].kwargs
+
+    assert first_call_kwargs["params"] == {"limit": 3}
+    assert second_call_kwargs["params"] == {
+        "limit": 1,
+        "cursor": "cursor-page-2",
+    }
+
+
+def test_list_exposures_batch_stops_at_first_page_when_run_limit_reached(
+    opencti_helper, exposures_list_page
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(exposures_list_page),
+    ) as mock_get:
+        exposures, next_cursor = client.list_exposures_batch(
+            "test-project-id",
+            page_limit=100,
+            run_limit=2,
+        )
+
+    assert len(exposures) == 2
+    assert exposures == exposures_list_page["data"]
+    assert next_cursor == "cursor-page-2"
+    assert mock_get.call_count == 1
+    assert mock_get.call_args.kwargs["params"] == {"limit": 2}
