@@ -17,7 +17,7 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
 
     id: str = Field(
         description="A UUID v4 to identify the connector in OpenCTI.",
-        default="ChangeMe",
+        default="52a897dc-d4b0-46b0-8694-bf94a814da4e",
     )
     name: str = Field(
         description="The name of the connector.",

@@ -4,7 +4,7 @@ opencti:
 
 connector:
   type: 'INTERNAL_ENRICHMENT'
-  #id: 'ChangeMe' # Optional (default: 'ChangeMe')
+  #id: '52a897dc-d4b0-46b0-8694-bf94a814da4e'
   #name: 'GreyNoise Vulnerability Enrichment' # Optional (default: 'GreyNoise Vulnerability Enrichment')
   #scope: 'vulnerability' # Optional (default: ['vulnerability'])
   #auto: true # Optional (default: false)
