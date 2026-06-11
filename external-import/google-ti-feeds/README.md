@@ -47,15 +47,24 @@ This connector ingests **reports, campaigns, threat actors, malware families, so
 
 The **Google Threat Intelligence (GTI) Feeds Connector** ingests threat intelligence from the
 [Google Threat Intelligence API](https://gtidocs.virustotal.com/reference/reports) into OpenCTI.
-| Collection | Config toggle | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced |
-|------------|--------------|--------------------|---------------------|------------------------------------|
-| Reports | `GTI_IMPORT_REPORTS` | ✅ Yes | Report | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note |
-| Campaigns | `GTI_IMPORT_CAMPAIGNS` | ❌ No | Campaign | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool |
-| Threat Actors | `GTI_IMPORT_THREAT_ACTORS` | ❌ No | Intrusion-Set | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool |
-| Malware Families | `GTI_IMPORT_MALWARE_FAMILIES` | ❌ No | Malware | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities |
-| Software Toolkits | `GTI_IMPORT_SOFTWARE_TOOLKITS` | ❌ No | Tool | Location, Sector, Malware, Attack-Pattern |
-| Vulnerabilities | `GTI_IMPORT_VULNERABILITIES` | ❌ No | Vulnerability | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software) |
-| Indicators (IOC) | `GTI_IMPORT_INDICATORS` | ❌ No | Indicator | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool
+| Collection | Config toggle | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced |
+
+|------------|--------------|--------------------|---------------------|------------------------------------|
+
+| Reports | `GTI_IMPORT_REPORTS` | ✅ Yes | Report | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note |
+
+| Campaigns | `GTI_IMPORT_CAMPAIGNS` | ❌ No | Campaign | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool |
+
+| Threat Actors | `GTI_IMPORT_THREAT_ACTORS` | ❌ No | Intrusion-Set | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool |
+
+| Malware Families | `GTI_IMPORT_MALWARE_FAMILIES` | ❌ No | Malware | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities |
+
+| Software Toolkits | `GTI_IMPORT_SOFTWARE_TOOLKITS` | ❌ No | Tool | Location, Sector, Malware, Attack-Pattern |
+
+| Vulnerabilities | `GTI_IMPORT_VULNERABILITIES` | ❌ No | Vulnerability | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software) |
+
+| Indicators (IOC) | `GTI_IMPORT_INDICATORS` | ❌ No | Indicator | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool
+
 | Indicators (IOC)   | `GTI_IMPORT_INDICATORS`      | ❌ No              | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                           |
 
 
@@ -571,10 +580,10 @@ These entities are **always produced** when a Report is ingested, as they are pa
 #### Relationship mapping from sub-entities (requires dedicated collection)
 
 These relationships are **only produced when the Reports collection is enabled**, as they require fetching additional sub-entities via dedicated API calls. All sub-entities are added to the Report's `object_refs`.
-
-| GTI Concept              | STIX Object Produced | Linked to Report via       |
-|--------------------------|----------------------|----------------------------|
-| `threat_actors`          | Intrusion-Set        | `object_refs`              |
+| `domains`             | Domain-Name          | `object_refs`              |
+| `files`               | File                 | `object_refs`              |
+| `urls`                | URL                  | `object_refs`              |
+| `ip_addresses`        | IPv4-Addr            | `object_refs`              |
 | `malware_families`       | Malware              | `object_refs`              |
 | `campaigns`              | Campaign             | `object_refs`              |
 | `software_toolkits`      | Tool                 | `object_refs`              |
