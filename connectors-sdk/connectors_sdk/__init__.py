@@ -2,6 +2,16 @@
 
 __version__ = "0.1.0"
 
+from connectors_sdk.client import (
+    ApiClientError,
+    ApiForbiddenError,
+    ApiNotFoundError,
+    ApiRateLimitError,
+    ApiServerError,
+    ApiUnauthorizedError,
+    BaseClientApi,
+    RateLimit,
+)
 from connectors_sdk.connectors.external_import._work_manager import WorkManager
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
@@ -34,6 +44,15 @@ from connectors_sdk.settings.exceptions import (
 from connectors_sdk.states.states import ExternalImportConnectorState
 
 __all__ = [
+    # HTTP Client
+    "BaseClientApi",
+    "RateLimit",
+    "ApiClientError",
+    "ApiForbiddenError",
+    "ApiNotFoundError",
+    "ApiRateLimitError",
+    "ApiServerError",
+    "ApiUnauthorizedError",
     # Base Settings
     "BaseConnectorSettings",
     # Base Configs
