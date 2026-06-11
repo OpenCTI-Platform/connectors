@@ -7,10 +7,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
 import requests
-from pycti import OpenCTIConnectorHelper
 from requests.exceptions import RequestException
-from shadowserver.constants import BASE_URL, DOWNLOAD_URL, LIMIT, TIMEOUT, TLP_MAP
-from shadowserver.stix_transform import ShadowserverStixTransformation
+from shadowserver.constants import BASE_URL, DOWNLOAD_URL, LIMIT, TIMEOUT
 from shadowserver.utils import from_csv_to_list, validate_date_format
 
 LOGGER = logging.getLogger(__name__)
@@ -21,22 +19,17 @@ class ShadowserverAPI:
     This class interacts with the Shadowserver API to retrieve and process reports.
     """
 
-    def __init__(self, api_key: str, api_secret: str, marking_refs: str):
+    def __init__(self, api_key: str, api_secret: str):
         """
         Initializes a new instance of the API class.
 
         Parameters:
             api_key (str): The API key for authentication.
             api_secret (str): The API secret for authentication.
-            marking_refs (str, optional): The marking references. Defaults to "TLP:WHITE".
-
-        Raises:
-            ValueError: If marking_refs is invalid.
         """
         self.base_url = BASE_URL
         self.api_key = api_key
         self.api_secret = api_secret
-        self.marking_refs = TLP_MAP[marking_refs]
         self.session = requests.Session()
 
     def _generate_hmac(self, request: dict) -> Tuple[bytes, str]:
@@ -144,25 +137,20 @@ class ShadowserverAPI:
         """
         return self._request(uri_path="reports/types", request={})
 
-    def get_stix_report(
+    def get_report_data(
         self,
         report: dict,
-        api_helper: OpenCTIConnectorHelper,
         limit: int = LIMIT,
-        incident: dict = {},
-        labels: List[str] = ["Shadowserver"],
     ) -> list[Any]:
         """
-        Retrieves a STIX report based on the specified report parameters.
+        Download and parse a Shadowserver report as a list of row dicts.
 
         Args:
             report (dict): The report parameters containing 'id' and 'report' keys.
-            api_helper (OpenCTIConnectorHelper): The OpenCTI connector helper instance.
-            limit (int, optional): The maximum number of results to return. Defaults to LIMIT.
-            labels (list, optional): Labels to apply to the STIX objects. Defaults to ['Shadowserver'].
+            limit (int, optional): Unused, kept for API compatibility. Defaults to LIMIT.
 
         Returns:
-            list: A list of STIX objects.
+            list: Parsed rows from the CSV report, or an empty list on failure.
         """
         if not report.get("id") or not report.get("report"):
             raise ValueError(f"Invalid report: {report}")
@@ -173,17 +161,7 @@ class ShadowserverAPI:
         csv_content = self.get_report(report_id=report.get("id"))
 
         if csv_content:
-            # Parse CSV content into list of dictionaries
             report_list = from_csv_to_list(csv_content)
             LOGGER.debug(f"Report list length: {len(report_list)}")
-            stix_transformation = ShadowserverStixTransformation(
-                marking_refs=self.marking_refs,
-                report_list=report_list,
-                report=report,
-                labels=labels,
-                api_helper=api_helper,
-                incident=incident,
-            )
-            return stix_transformation.get_stix_objects()
-        else:
-            return []
+            return report_list
+        return []
