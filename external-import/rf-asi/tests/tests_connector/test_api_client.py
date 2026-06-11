@@ -156,3 +156,114 @@ def test_parse_list_response_handles_missing_fields():
 
     assert data == []
     assert next_cursor is None
+
+
+def test_get_exposure_assets_page_returns_signature_assets_and_cursor(
+    opencti_helper, exposure_assets_page
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(exposure_assets_page),
+    ) as mock_get:
+        signature, asset_exposures, next_cursor = client.get_exposure_assets_page(
+            "test-project-id",
+            "sig-001",
+            limit=100,
+        )
+
+    assert signature == exposure_assets_page["data"]["signature"]
+    assert asset_exposures == exposure_assets_page["data"]["asset_exposures"]
+    assert next_cursor == "assets-cursor-page-2"
+    assert mock_get.call_count == 1
+    assert mock_get.call_args.kwargs["params"] == {"limit": 100}
+    assert mock_get.call_args.args[0] == (
+        "https://api.securitytrails.com/v2/projects/test-project-id/exposures/sig-001"
+    )
+
+
+def test_get_exposure_assets_follows_cursor_pagination(
+    opencti_helper,
+    exposure_assets_page,
+    exposure_assets_page_last,
+    all_exposure_assets,
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        side_effect=[
+            _mock_response(exposure_assets_page),
+            _mock_response(exposure_assets_page_last),
+        ],
+    ) as mock_get:
+        assets_data = client.get_exposure_assets(
+            "test-project-id",
+            "sig-001",
+            limit=100,
+        )
+
+    assert assets_data == all_exposure_assets
+    assert mock_get.call_count == 2
+
+    first_call_kwargs = mock_get.call_args_list[0].kwargs
+    second_call_kwargs = mock_get.call_args_list[1].kwargs
+
+    assert first_call_kwargs["params"] == {"limit": 100}
+    assert second_call_kwargs["params"] == {
+        "limit": 100,
+        "cursor": "assets-cursor-page-2",
+    }
+
+
+def test_get_exposure_assets_returns_partial_results_on_mid_pagination_failure(
+    opencti_helper, exposure_assets_page
+):
+    client = RfAsiClient(
+        opencti_helper,
+        base_url="https://api.securitytrails.com/v2",
+        api_key="test-api-key",
+    )
+
+    failing_response = MagicMock()
+    failing_response.raise_for_status.side_effect = requests.HTTPError(
+        "502 Bad Gateway"
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        side_effect=[
+            _mock_response(exposure_assets_page),
+            failing_response,
+        ],
+    ):
+        assets_data = client.get_exposure_assets(
+            "test-project-id",
+            "sig-001",
+            limit=100,
+        )
+
+    assert assets_data == {
+        "signature": exposure_assets_page["data"]["signature"],
+        "asset_exposures": exposure_assets_page["data"]["asset_exposures"],
+    }
+
+
+def test_parse_assets_response_handles_missing_fields():
+    signature, asset_exposures, next_cursor = RfAsiClient._parse_assets_response({})
+
+    assert signature == {}
+    assert asset_exposures == []
+    assert next_cursor is None

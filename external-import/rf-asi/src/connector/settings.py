@@ -22,7 +22,13 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["incident"],
+        default=[
+            "incident",
+            "vulnerability",
+            "ipv4-addr",
+            "ipv6-addr",
+            "domain-name",
+        ],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",

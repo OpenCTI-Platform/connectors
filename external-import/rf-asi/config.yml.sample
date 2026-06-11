@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'Recorded Future ASI Exposures' # optional (default: 'Recorded Future ASI Exposures')
-  scope: 'incident' # optional (default: 'incident')
+  scope: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name' # optional (default: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name')
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 

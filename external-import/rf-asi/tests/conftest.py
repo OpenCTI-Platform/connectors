@@ -91,3 +91,29 @@ def all_exposure_items(
 ) -> list[dict[str, Any]]:
     """Flattened exposure items from all fixture pages."""
     return exposures_list_page["data"] + exposures_list_page_last["data"]
+
+
+@pytest.fixture
+def exposure_assets_page() -> dict[str, Any]:
+    """First paginated exposure assets API response."""
+    return load_fixture("exposure_assets_page.json")
+
+
+@pytest.fixture
+def exposure_assets_page_last() -> dict[str, Any]:
+    """Final paginated exposure assets API response."""
+    return load_fixture("exposure_assets_page_last.json")
+
+
+@pytest.fixture
+def all_exposure_assets(
+    exposure_assets_page, exposure_assets_page_last
+) -> dict[str, Any]:
+    """Aggregated exposure assets from all fixture pages."""
+    return {
+        "signature": exposure_assets_page["data"]["signature"],
+        "asset_exposures": (
+            exposure_assets_page["data"]["asset_exposures"]
+            + exposure_assets_page_last["data"]["asset_exposures"]
+        ),
+    }

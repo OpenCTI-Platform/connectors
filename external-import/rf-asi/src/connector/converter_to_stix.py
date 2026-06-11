@@ -15,7 +15,7 @@ from connectors_sdk.models import (
 )
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
-from connectors_sdk.models.octi import related_to
+from connectors_sdk.models.enums import RelationshipType
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 from stix2.v21 import Incident as Stix2Incident
@@ -65,9 +65,9 @@ class ConverterToStix:
         self.author = self._author.to_stix2_object()
         self.tlp_marking = self._tlp_marking.to_stix2_object()
 
-        self._observable_cache: dict[tuple[ObservableType, str], BaseObservableEntity] = (
-            {}
-        )
+        self._observable_cache: dict[
+            tuple[ObservableType, str], BaseObservableEntity
+        ] = {}
         self._vulnerability_cache: dict[str, Vulnerability] = {}
 
     @staticmethod
@@ -272,7 +272,13 @@ class ConverterToStix:
                 continue
             if is_new:
                 objects.append(vulnerability)
-            relationships.append(incident | related_to | vulnerability)
+            relationships.append(
+                Relationship(
+                    type=RelationshipType.RELATED_TO,
+                    source=incident,
+                    target=vulnerability,
+                )
+            )
 
         for asset_exposure in exposure_assets_response.get("asset_exposures") or []:
             asset_id = asset_exposure.get("asset_id")
@@ -291,7 +297,13 @@ class ConverterToStix:
                 continue
             if is_new:
                 objects.append(observable)
-            relationships.append(incident | related_to | observable)
+            relationships.append(
+                Relationship(
+                    type=RelationshipType.RELATED_TO,
+                    source=incident,
+                    target=observable,
+                )
+            )
 
         objects.extend(relationships)
         return objects

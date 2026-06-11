@@ -9,7 +9,7 @@ services:
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=Recorded Future ASI Exposures # optional (default: 'Recorded Future ASI Exposures')
-      - CONNECTOR_SCOPE=incident # optional (default: 'incident')
+      - CONNECTOR_SCOPE=incident,vulnerability,ipv4-addr,ipv6-addr,domain-name # optional (default: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name')
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-rf-asi
