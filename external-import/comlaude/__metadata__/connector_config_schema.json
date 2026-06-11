@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/comlaude_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Comlaude",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "comlaude",
+        "stix"
+      ],
+      "description": "The scope or type of data the connector is importing.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT2H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_RUN_AND_TERMINATE": {
+      "default": false,
+      "description": "Terminate the container after a successful execution.",
+      "type": "boolean"
+    },
+    "CONNECTOR_QUEUE_THRESHOLD": {
+      "default": "500MB",
+      "description": "Optional queue threshold (e.g., 500MB).",
+      "type": "string"
+    },
+    "COMLAUDE_USERNAME": {
+      "description": "Username for the account with API access in Comlaude.",
+      "type": "string"
+    },
+    "COMLAUDE_PASSWORD": {
+      "description": "Password for the account with API access in Comlaude.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COMLAUDE_API_KEY": {
+      "description": "API Key for the account with API access in Comlaude.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COMLAUDE_GROUP_ID": {
+      "description": "Group ID for the Comlaude API domain search.",
+      "type": "string"
+    },
+    "COMLAUDE_SCORE": {
+      "default": 15,
+      "description": "Default score value to be assigned to domains (0 to 100).",
+      "type": "integer"
+    },
+    "COMLAUDE_START_TIME": {
+      "description": "Earliest entry to retrieve (e.g., 1970-01-01T00:00:00Z).",
+      "type": "string"
+    },
+    "COMLAUDE_LABELS": {
+      "default": "comlaude,safelist",
+      "description": "Comma-separated labels to apply to STIX Objects.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "COMLAUDE_USERNAME",
+    "COMLAUDE_PASSWORD",
+    "COMLAUDE_API_KEY",
+    "COMLAUDE_GROUP_ID",
+    "COMLAUDE_START_TIME"
+  ],
+  "additionalProperties": true
+}

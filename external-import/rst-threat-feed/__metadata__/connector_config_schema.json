@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/rst-threat-feed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "RST Threat Feed",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/json"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "P1D",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "RST_THREAT_FEED_BASEURL": {
+      "default": "https://api.rstcloud.net/v1",
+      "description": "The base URL of the RST Cloud API.",
+      "type": "string"
+    },
+    "RST_THREAT_FEED_APIKEY": {
+      "description": "The API key for accessing the RST Cloud threat feed.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "RST_THREAT_FEED_SSL_VERIFY": {
+      "default": true,
+      "description": "Whether to verify SSL certificates when connecting to the API.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_CONTIMEOUT": {
+      "default": 30,
+      "description": "Connection timeout in seconds for feed downloads.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_READTIMEOUT": {
+      "default": 120,
+      "description": "Read timeout in seconds for feed downloads.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_RETRY": {
+      "default": 2,
+      "description": "Number of retries for feed download attempts.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_INTERVAL": {
+      "default": 86400,
+      "description": "Feed download interval in seconds.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_MAX_RETRIES": {
+      "default": 3,
+      "description": "Maximum number of retries for connection issues when sending the STIX bundle to OpenCTI.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_RETRY_DELAY": {
+      "default": 10,
+      "description": "Initial delay in seconds between retries when sending the STIX bundle to OpenCTI.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_RETRY_BACKOFF_MULTIPLIER": {
+      "default": 2.0,
+      "description": "Multiplier applied to the retry delay for exponential backoff.",
+      "type": "number"
+    },
+    "RST_THREAT_FEED_IP": {
+      "default": true,
+      "description": "Whether to import IP address indicators.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_DOMAIN": {
+      "default": true,
+      "description": "Whether to import domain name indicators.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_URL": {
+      "default": true,
+      "description": "Whether to import URL indicators.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_HASH": {
+      "default": true,
+      "description": "Whether to import file hash indicators.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_LATEST": {
+      "default": "day",
+      "description": "Time range for the feed data to retrieve.",
+      "enum": [
+        "1h",
+        "4h",
+        "12h",
+        "day"
+      ],
+      "type": "string"
+    },
+    "RST_THREAT_FEED_MIN_SCORE_IMPORT": {
+      "default": 20,
+      "description": "Minimum score threshold for importing indicators. Indicators below this score will be ignored.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_MIN_SCORE_DETECTION_IP": {
+      "default": 45,
+      "description": "Minimum score to set x_opencti_detection to true for IP indicators.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_MIN_SCORE_DETECTION_DOMAIN": {
+      "default": 45,
+      "description": "Minimum score to set x_opencti_detection to true for domain indicators.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_MIN_SCORE_DETECTION_URL": {
+      "default": 45,
+      "description": "Minimum score to set x_opencti_detection to true for URL indicators.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_MIN_SCORE_DETECTION_HASH": {
+      "default": 45,
+      "description": "Minimum score to set x_opencti_detection to true for hash indicators.",
+      "type": "integer"
+    },
+    "RST_THREAT_FEED_ONLY_NEW": {
+      "default": true,
+      "description": "Whether to import only new indicators (not previously seen).",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_ONLY_ATTRIBUTED": {
+      "default": false,
+      "description": "Whether to import only indicators attributed to a specific threat actor or malware.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_KEEP_NAMED_VULNS": {
+      "default": true,
+      "description": "Whether to keep named vulnerabilities in the feed data.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_CREATE_MITRE_TTPS": {
+      "default": false,
+      "description": "Whether to create relationships between indicators and MITRE ATT&CK TTPs. Enabling this will create a large number of relationships.",
+      "type": "boolean"
+    },
+    "RST_THREAT_FEED_CREATE_CUSTOM_TTPS": {
+      "default": true,
+      "description": "Whether to create custom Attack-Pattern objects and relationships for named techniques not yet covered by MITRE.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "RST_THREAT_FEED_APIKEY"
+  ],
+  "additionalProperties": true
+}
