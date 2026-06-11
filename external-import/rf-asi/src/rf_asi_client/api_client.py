@@ -53,6 +53,23 @@ class RfAsiClient:
         next_cursor = pagination.get("next_cursor")
         return data, next_cursor
 
+    @staticmethod
+    def _parse_assets_response(payload: dict) -> tuple[dict, list[dict], str | None]:
+        """
+        Extract signature, asset exposures, and next cursor from a get-assets response.
+
+        :param payload: JSON body from the exposure assets endpoint.
+        :return: Tuple of signature dict, asset exposure items, and optional next cursor.
+        """
+        data = payload.get("data") or {}
+        if not isinstance(data, dict):
+            data = {}
+        signature = data.get("signature") or {}
+        asset_exposures = data.get("asset_exposures") or []
+        pagination = (payload.get("meta") or {}).get("pagination") or {}
+        next_cursor = pagination.get("next_cursor")
+        return signature, asset_exposures, next_cursor
+
     def list_exposures_page(
         self,
         project_id: str,
@@ -125,3 +142,91 @@ class RfAsiClient:
                 break
 
         return exposures
+
+    def get_exposure_assets_page(
+        self,
+        project_id: str,
+        signature_id: str,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> tuple[dict, list[dict], str | None]:
+        """
+        Fetch one page of assets for an exposure signature.
+
+        :param project_id: ASI project identifier.
+        :param signature_id: Exposure signature identifier.
+        :param limit: Number of assets to fetch per page (1-1000).
+        :param cursor: Optional pagination cursor.
+        :return: Tuple of signature dict, asset exposure items, and optional next cursor.
+        :raises requests.RequestException: On non-2xx responses or transport errors.
+        """
+        url = f"{self.base_url}/projects/{project_id}/exposures/{signature_id}"
+        params: dict = {"limit": limit}
+        if cursor:
+            params["cursor"] = cursor
+
+        response = self._request_data(url, params=params)
+        return self._parse_assets_response(response.json())
+
+    def get_exposure_assets(
+        self,
+        project_id: str,
+        signature_id: str,
+        limit: int = 100,
+        cursor: str | None = None,
+    ) -> dict:
+        """
+        Fetch all assets for an exposure signature, following cursor-based pagination.
+
+        :param project_id: ASI project identifier.
+        :param signature_id: Exposure signature identifier.
+        :param limit: Number of assets to fetch per page (1-1000).
+        :param cursor: Optional starting pagination cursor.
+        :return: Dict with ``signature`` and accumulated ``asset_exposures`` items.
+        :raises requests.RequestException: If the first page request fails.
+        """
+        signature: dict = {}
+        asset_exposures: list[dict] = []
+        next_cursor = cursor
+        url = f"{self.base_url}/projects/{project_id}/exposures/{signature_id}"
+
+        while True:
+            try:
+                page_signature, page_assets, next_cursor = (
+                    self.get_exposure_assets_page(
+                        project_id,
+                        signature_id,
+                        limit=limit,
+                        cursor=next_cursor,
+                    )
+                )
+                if page_signature:
+                    signature = page_signature
+                asset_exposures.extend(page_assets)
+            except requests.RequestException as err:
+                self.helper.connector_logger.error(
+                    "[API] Error while fetching exposure assets",
+                    {
+                        "url_path": url,
+                        "signature_id": signature_id,
+                        "error": str(err),
+                    },
+                )
+                if signature or asset_exposures:
+                    self.helper.connector_logger.warning(
+                        "[API] Returning partial exposure asset results after pagination failure",
+                        {
+                            "signature_id": signature_id,
+                            "collected_count": len(asset_exposures),
+                        },
+                    )
+                    return {
+                        "signature": signature,
+                        "asset_exposures": asset_exposures,
+                    }
+                raise
+
+            if not next_cursor:
+                break
+
+        return {"signature": signature, "asset_exposures": asset_exposures}
