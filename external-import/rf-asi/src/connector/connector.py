@@ -56,6 +56,9 @@ class RfAsiConnector:
             self.helper,
             base_url=self.config.rf_asi.api_base_url,
             api_key=self.config.rf_asi.api_key.get_secret_value(),
+            retry_max_attempts=self.config.rf_asi.retry_max_attempts,
+            retry_initial_seconds=self.config.rf_asi.retry_initial_seconds,
+            retry_max_seconds=self.config.rf_asi.retry_max_seconds,
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,

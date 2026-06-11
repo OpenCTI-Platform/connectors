@@ -12,6 +12,28 @@ def _mock_response(payload: dict) -> MagicMock:
     return response
 
 
+def _error_response(status_code: int, headers: dict | None = None) -> MagicMock:
+    response = MagicMock()
+    response.status_code = status_code
+    response.headers = headers or {}
+
+    def raise_for_status() -> None:
+        raise requests.HTTPError(response=response)
+
+    response.raise_for_status = raise_for_status
+    return response
+
+
+def _client(opencti_helper, **kwargs) -> RfAsiClient:
+    defaults = {
+        "base_url": "https://api.securitytrails.com/v2",
+        "api_key": "test-api-key",
+        "retry_max_attempts": 3,
+    }
+    defaults.update(kwargs)
+    return RfAsiClient(opencti_helper, **defaults)
+
+
 def test_client_sets_apikey_header(opencti_helper):
     client = RfAsiClient(
         opencti_helper,
@@ -364,6 +386,72 @@ def test_list_exposures_batch_run_limit_three_spans_both_pages(
         "limit": 1,
         "cursor": "cursor-page-2",
     }
+
+
+def test_request_data_retries_on_429_then_succeeds(
+    opencti_helper, exposures_list_page
+):
+    client = _client(opencti_helper)
+
+    with patch("time.sleep"), patch.object(
+        client.session,
+        "get",
+        side_effect=[
+            _error_response(429),
+            _mock_response(exposures_list_page),
+        ],
+    ) as mock_get:
+        items, next_cursor = client.list_exposures_page("test-project-id", limit=100)
+
+    assert items == exposures_list_page["data"]
+    assert next_cursor == "cursor-page-2"
+    assert mock_get.call_count == 2
+
+
+def test_request_data_honors_retry_after_header(
+    opencti_helper, exposures_list_page
+):
+    client = _client(opencti_helper)
+
+    with patch("time.sleep") as mock_sleep, patch.object(
+        client.session,
+        "get",
+        side_effect=[
+            _error_response(429, headers={"Retry-After": "15"}),
+            _mock_response(exposures_list_page),
+        ],
+    ):
+        client.list_exposures_page("test-project-id", limit=100)
+
+    mock_sleep.assert_called_with(15)
+
+
+def test_request_data_raises_after_retry_exhausted(opencti_helper):
+    client = _client(opencti_helper)
+
+    with patch("time.sleep"), patch.object(
+        client.session,
+        "get",
+        return_value=_error_response(429),
+    ) as mock_get:
+        with pytest.raises(requests.HTTPError):
+            client.list_exposures_page("test-project-id", limit=100)
+
+    assert mock_get.call_count == 3
+
+
+def test_request_data_does_not_retry_401(opencti_helper):
+    client = _client(opencti_helper)
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_error_response(401),
+    ) as mock_get:
+        with pytest.raises(requests.HTTPError):
+            client.list_exposures_page("test-project-id", limit=100)
+
+    assert mock_get.call_count == 1
 
 
 def test_list_exposures_batch_stops_at_first_page_when_run_limit_reached(

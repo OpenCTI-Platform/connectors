@@ -1,10 +1,47 @@
 import requests
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
+from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential_jitter
+from tenacity.wait import wait_base
+
+
+class _RetryAfterOrExponentialWait(wait_base):
+    """Honor Retry-After on 429; otherwise use exponential backoff with jitter."""
+
+    def __init__(
+        self,
+        exponential_wait: wait_base,
+        max_seconds: float,
+    ) -> None:
+        self._exponential_wait = exponential_wait
+        self._max_seconds = max_seconds
+
+    def __call__(self, retry_state) -> float:
+        exc = retry_state.outcome.exception()
+        if isinstance(exc, requests.HTTPError) and exc.response is not None:
+            if exc.response.status_code == 429:
+                retry_after = exc.response.headers.get("Retry-After")
+                if retry_after is not None:
+                    try:
+                        return min(int(retry_after), self._max_seconds)
+                    except (ValueError, TypeError):
+                        pass
+        return self._exponential_wait(retry_state)
 
 
 class RfAsiClient:
-    def __init__(self, helper: OpenCTIConnectorHelper, base_url: HttpUrl, api_key: str):
+    _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+
+    def __init__(
+        self,
+        helper: OpenCTIConnectorHelper,
+        base_url: HttpUrl,
+        api_key: str,
+        *,
+        retry_max_attempts: int = 3,
+        retry_initial_seconds: float = 1,
+        retry_max_seconds: float = 60,
+    ):
         """
         Initialize the client with necessary configuration.
 
@@ -12,15 +49,38 @@ class RfAsiClient:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             base_url (HttpUrl): The external API base URL.
             api_key (str): The API key to authenticate the connector to the external API.
+            retry_max_attempts (int): Maximum HTTP request attempts before giving up.
+            retry_initial_seconds (float): Initial backoff delay for retried requests.
+            retry_max_seconds (float): Maximum backoff delay between retry attempts.
         """
         self.helper = helper
         self.base_url = str(base_url).rstrip("/")
+        self.retry_max_attempts = retry_max_attempts
+        self.retry_initial_seconds = retry_initial_seconds
+        self.retry_max_seconds = retry_max_seconds
         headers = {
             "accept": "application/json",
             "apikey": api_key,
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
+
+    @classmethod
+    def _is_retryable(cls, exc: BaseException) -> bool:
+        if isinstance(exc, (requests.ConnectionError, requests.Timeout)):
+            return True
+        if isinstance(exc, requests.HTTPError):
+            if exc.response is None:
+                return False
+            return exc.response.status_code in cls._RETRYABLE_STATUS_CODES
+        return False
+
+    def _request_once(
+        self, api_url: str, params: dict | None = None
+    ) -> requests.Response:
+        response = self.session.get(api_url, params=params, timeout=30)
+        response.raise_for_status()
+        return response
 
     def _request_data(
         self, api_url: str, params: dict | None = None
@@ -36,9 +96,41 @@ class RfAsiClient:
         self.helper.connector_logger.info(
             "[API] HTTP Get Request to endpoint", {"url_path": api_url}
         )
-        response = self.session.get(api_url, params=params, timeout=30)
-        response.raise_for_status()
-        return response
+
+        def _log_before_sleep(retry_state) -> None:
+            exc = retry_state.outcome.exception()
+            status_code = None
+            if isinstance(exc, requests.HTTPError) and exc.response is not None:
+                status_code = exc.response.status_code
+            wait_seconds = (
+                retry_state.next_action.sleep if retry_state.next_action else 0
+            )
+            self.helper.connector_logger.warning(
+                "[API] Retrying HTTP request after failure",
+                {
+                    "status_code": status_code,
+                    "attempt": retry_state.attempt_number,
+                    "max_attempts": self.retry_max_attempts,
+                    "wait_seconds": wait_seconds,
+                    "url_path": api_url,
+                },
+            )
+
+        retryer = Retrying(
+            retry=retry_if_exception(self._is_retryable),
+            stop=stop_after_attempt(self.retry_max_attempts),
+            wait=_RetryAfterOrExponentialWait(
+                wait_exponential_jitter(
+                    initial=self.retry_initial_seconds,
+                    max=self.retry_max_seconds,
+                    jitter=1,
+                ),
+                self.retry_max_seconds,
+            ),
+            before_sleep=_log_before_sleep,
+            reraise=True,
+        )
+        return retryer(self._request_once, api_url, params)
 
     @staticmethod
     def _parse_list_response(payload: dict) -> tuple[list[dict], str | None]:

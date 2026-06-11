@@ -73,6 +73,24 @@ class RfAsiConfig(BaseConfigModel):
         default=None,
         ge=1,
     )
+    retry_max_attempts: int = Field(
+        description="Maximum HTTP request attempts (including the first) before giving up.",
+        default=5,
+        ge=1,
+        le=10,
+    )
+    retry_initial_seconds: float = Field(
+        description="Initial backoff delay in seconds for retried requests.",
+        default=1,
+        ge=0.1,
+        le=30,
+    )
+    retry_max_seconds: float = Field(
+        description="Maximum backoff delay in seconds between retry attempts.",
+        default=60,
+        ge=1,
+        le=300,
+    )
 
 
 class ConnectorSettings(BaseConnectorSettings):

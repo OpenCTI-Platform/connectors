@@ -174,3 +174,31 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+def test_rf_asi_retry_settings_defaults():
+    settings_dict = {
+        "opencti": {
+            "url": "http://localhost:8080",
+            "token": "test-token",
+        },
+        "connector": {
+            "id": "connector-id",
+            "scope": "test, connector",
+        },
+        "rf_asi": {
+            "api_key": "test-api-key",
+            "project_id": "test-project-id",
+        },
+    }
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(settings_dict)
+
+    settings = FakeConnectorSettings()
+
+    assert settings.rf_asi.retry_max_attempts == 5
+    assert settings.rf_asi.retry_initial_seconds == 1
+    assert settings.rf_asi.retry_max_seconds == 60

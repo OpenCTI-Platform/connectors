@@ -19,4 +19,7 @@ services:
       - RF_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
       - RF_ASI_PAGE_LIMIT=100 # optional, API page size (HTTP request chunk), min 1, max 1000 (default: 100)
       # - RF_ASI_RUN_LIMIT=50 # optional, max exposures processed per connector run, min 1 (default: no limit)
+      # - RF_ASI_RETRY_MAX_ATTEMPTS=3 # optional, max HTTP attempts per request, min 1, max 10 (default: 3)
+      # - RF_ASI_RETRY_INITIAL_SECONDS=1 # optional, initial retry backoff in seconds, min 0.1, max 30 (default: 1)
+      # - RF_ASI_RETRY_MAX_SECONDS=60 # optional, max retry backoff in seconds, min 1, max 300 (default: 60)
     restart: always
