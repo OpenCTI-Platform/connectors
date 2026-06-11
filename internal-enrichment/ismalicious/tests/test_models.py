@@ -1,8 +1,5 @@
 """Tests for isMalicious connector configuration."""
 
-import os
-
-import pytest
 from connector.models import ConfigLoader, IsMaliciousConfig
 from pydantic import SecretStr
 
