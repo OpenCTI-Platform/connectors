@@ -215,16 +215,16 @@ class GreyNoiseVulnConnector:
             ),
             relationship_type="related-to",
             description="This software is maintained by",
-            source_ref=f"{software_id}",
-            target_ref=f"{org_id}",
+            source_ref=software_id,
+            target_ref=org_id,
             created_by_ref=self.greynoise_identity["id"],
         )
         self.stix_objects.append(software_vendor_relationship)
 
         software_vuln_relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id("related-to", software_id, org_id),
+            id=StixCoreRelationship.generate_id("has", software_id, stix_entity["id"]),
             relationship_type="has",
-            source_ref=f"{software_id}",
+            source_ref=software_id,
             target_ref=stix_entity["id"],
             created_by_ref=self.greynoise_identity["id"],
         )
@@ -323,8 +323,8 @@ class GreyNoiseVulnConnector:
     def _process_message(self, data: Dict) -> str:
         # Security to limit playbook triggers to something other than the scope initial
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_splited = data["entity_id"].split("--")
-        entity_type = entity_splited[0].lower()
+        entity_parts = data["entity_id"].split("--")
+        entity_type = entity_parts[0].lower()
 
         if entity_type in scopes:
             # OpenCTI entity information retrieval
@@ -406,7 +406,7 @@ class GreyNoiseVulnConnector:
                 self.helper.stix2_create_bundle(data["stix_objects"]),
                 cleanup_inconsistent_bundle=True,
             )
-            raise e
+            raise
 
     def run(self) -> None:
         self.helper.listen(message_callback=self.process_message)
