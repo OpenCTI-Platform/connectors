@@ -580,10 +580,14 @@ These entities are **always produced** when a Report is ingested, as they are pa
 #### Relationship mapping from sub-entities (requires dedicated collection)
 
 These relationships are **only produced when the Reports collection is enabled**, as they require fetching additional sub-entities via dedicated API calls. All sub-entities are added to the Report's `object_refs`.
-| `domains`             | Domain-Name          | `object_refs`              |
-| `files`               | File                 | `object_refs`              |
-| `urls`                | URL                  | `object_refs`              |
-| `ip_addresses`        | IPv4-Addr            | `object_refs`              |
+| `domains`             | Domain-Name          | `object_refs`              |
+
+| `files`               | File                 | `object_refs`              |
+
+| `urls`                | URL                  | `object_refs`              |
+
+| `ip_addresses`        | IPv4-Addr            | `object_refs`              |
+
 | `malware_families`       | Malware              | `object_refs`              |
 | `campaigns`              | Campaign             | `object_refs`              |
 | `software_toolkits`      | Tool                 | `object_refs`              |
@@ -602,9 +606,8 @@ These relationships are **only produced when the Reports collection is enabled**
 
 For each IOC type, an **Indicator** is created with `create_observables=True`, which also generates the associated STIX Observable automatically.
 
-| IOC Type | Indicator `name`                        | Indicator `pattern`                                           | Observable Type     |
+| `url`    | URL value                               | `[url:value = '...']`                                         | URL                 |
 |----------|-----------------------------------------|---------------------------------------------------------------|---------------------|
-| `file`   | `meaningful_name` or file hash          | `[file:hashes.'SHA-256' = '...' OR ...]`                      | File                |
 | `ip`     | IP address                              | `[ipv4-addr:value = '...']` or `[ipv6-addr:value = '...']`    | IPv4-Addr/IPv6-Addr |
 | `url`    | URL value                               | `[url:value = '...']`                                         | Url                 |
 | `domain` | Domain name                             | `[domain-name:value = '...']`                                 | Domain-Name         |
