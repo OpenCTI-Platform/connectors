@@ -75,7 +75,7 @@ class RfAsiConfig(BaseConfigModel):
     )
     retry_max_attempts: int = Field(
         description="Maximum HTTP request attempts (including the first) before giving up.",
-        default=5,
+        default=3,
         ge=1,
         le=10,
     )
