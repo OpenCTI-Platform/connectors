@@ -146,7 +146,13 @@ class TheHive:
         )
 
     def generate_alert_bundle(self, alert, work_id=None):
-        """Generate a STIX bundle from a given alert."""
+        """Generate and return a STIX bundle from a given alert.
+
+        The returned bundle is sent by ``process_items`` under ``work_id``.
+        ``work_id`` is accepted only for a signature consistent with
+        ``generate_case_bundle`` and is unused here (alerts have no background
+        artifact sends).
+        """
         self.helper.connector_logger.info(
             f"Starting import for alert '{alert.get('title')}'"
         )
@@ -187,7 +193,13 @@ class TheHive:
             return {}
 
     def generate_case_bundle(self, case, work_id=None):
-        """Generates a STIX bundle from a TheHive case, with attachments."""
+        """Generate and return a STIX bundle from a TheHive case.
+
+        The main case bundle is returned for ``process_items`` to send under
+        ``work_id`` (so the TLP filter applies and the case is not sent twice).
+        ``work_id`` is used here to attach the separate background attachments
+        bundle to the same work.
+        """
         self.helper.connector_logger.info(
             f"Starting generation of STIX bundle for case: {case.get('title')}"
         )
@@ -356,12 +368,14 @@ class TheHive:
                     work_id=work_id,
                     cleanup_inconsistent_bundle=True,
                 )
-
-                updated_last_date = self.get_updated_date(item, updated_last_date)
             else:
                 self.helper.connector_logger.warning(
                     f"Ignoring {item.get('title')} due to TLP too high."
                 )
+            # Advance the watermark for every fetched item, including those skipped
+            # by the TLP filter, so skipped items are not refetched on every run
+            # (and an all-skipped batch does not stall state forever).
+            updated_last_date = self.get_updated_date(item, updated_last_date)
         message = f"Processing complete, last update: {updated_last_date}"
         self.helper.api.work.to_processed(work_id, message)
         return updated_last_date
