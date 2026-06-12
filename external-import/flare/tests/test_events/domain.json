@@ -1,0 +1,117 @@
+{
+  "activity": {
+    "data": {
+      "es_id": "1\/domain\/flare\/examples.com",
+      "es_score": 1.0,
+      "highlights": {},
+      "id": "examples.com",
+      "index": "domain",
+      "metadata": {
+        "estimated_created_at": "2025-10-20T23:15:59.521157+00:00",
+        "event_id": null,
+        "first_crawled_at": "2025-10-20T23:15:59.521157+00:00",
+        "last_crawled_at": "2025-10-26T00:29:04.263918+00:00",
+        "payload_digest": null,
+        "scraped_at": "2025-10-26T00:29:04.264838+00:00",
+        "source": "flare",
+        "crawled_by": null,
+        "flare_url": "https:\/\/app.flare.io\/#\/domain\/flare\/examples.com"
+      },
+      "uid": "domain\/flare\/examples.com",
+      "url": null,
+      "browser_url": null,
+      "name": "examples.com",
+      "registered_at": null,
+      "feed": null,
+      "identifier_domain": [
+        "example.com"
+      ],
+      "cert_data": null,
+      "subject": null,
+      "issuer": null,
+      "features": {
+        "domains": [
+          "example.com",
+          "examples.com"
+        ],
+        "emails": null,
+        "ip_addresses": null,
+        "ip_addresses_cidr": null,
+        "reversed_domains": [
+          "com.example",
+          "com.examples"
+        ],
+        "urls": null,
+        "usernames": null,
+        "vulnerabilities": null
+      }
+    },
+    "duplicates": [],
+    "header": {
+      "actor": "",
+      "actor_id": null,
+      "bank": null,
+      "bin": null,
+      "brand": null,
+      "credential_count": null,
+      "category_name": "domain",
+      "content_hash": "domain\/example\/examples.com",
+      "content_preview": "Domain examples.com",
+      "country": null,
+      "duplicates": [],
+      "es_score": 1.0,
+      "expiration": null,
+      "highlights": {},
+      "host": null,
+      "id": "examples.com",
+      "infection_date": null,
+      "parent_id": null,
+      "parent_title": null,
+      "parent_title_en": null,
+      "parent_uid": null,
+      "parent_uids": [
+        "domain\/flare\/examples.com"
+      ],
+      "risk": {
+        "score": 1
+      },
+      "similar_items_count": 0,
+      "source": "flare",
+      "source_name": "dnstwist",
+      "target_name": "dnstwist",
+      "tags": [],
+      "notes": null,
+      "state_code": null,
+      "timestamp": "2025-10-20T23:15:59.521157+00:00",
+      "title": "examples.com",
+      "type": "domain",
+      "uid": "domain\/flare\/examples.com",
+      "user_risk_score": null,
+      "user_notes": null,
+      "ignored_at": null,
+      "remediated_at": null,
+      "verb": "",
+      "external_url": null,
+      "external_netloc": null,
+      "can_have_duplicates": true,
+      "priority_action_uuid_related": false,
+      "analyzers_items_uids": [],
+      "victim_name": null,
+      "contains_secrets": null,
+      "secrets_metadata": null
+    },
+    "history_logs": null,
+    "metadata": {
+      "estimated_created_at": "2025-10-20T23:15:59.521157+00:00",
+      "event_id": null,
+      "first_crawled_at": "2025-10-20T23:15:59.521157+00:00",
+      "last_crawled_at": "2025-10-26T00:29:04.263918+00:00",
+      "payload_digest": null,
+      "scraped_at": "2025-10-26T00:29:04.264838+00:00",
+      "source": "flare",
+      "crawled_by": null,
+      "flare_url": "https:\/\/app.flare.io\/#\/domain\/driller_dnstwist\/examples.com"
+    },
+    "similar_items": []
+  }
+}
