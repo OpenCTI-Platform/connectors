@@ -6,3 +6,8 @@ select = ["E", "W", "F", "I", "N", "UP", "S", "B", "A", "C4", "PIE", "RSE", "RET
 
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+addopts = [
+    "--cov=connector"
+]

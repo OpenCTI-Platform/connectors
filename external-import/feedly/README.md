@@ -24,14 +24,14 @@ The Feedly connector imports threat intelligence from Feedly AI-powered news fee
 
 ## Introduction
 
-Feedly is an AI-powered news aggregator that helps security teams track threat intelligence from various sources. This connector imports articles from configured Feedly streams, extracting threat intelligence entities and creating reports in OpenCTI.
+Feedly Threat Intelligence monitors thousands of open-source channels, including security blogs, advisories, research publications, social media, and security news. It uses AI Models to extract structured threat intelligence: actors, malware, TTPs, CVEs, IoCs, and the relationships between them. This connector brings that intelligence into OpenCTI automatically, populating your knowledge graph with current, source-linked STIX 2.1 reports so your team spends less time collecting and more time analyzing.
 
 ## Installation
 
 ### Requirements
 
 - OpenCTI Platform >= 6.x
-- Feedly account with API access
+- Feedly Threat Intelligence account with API access
 - Feedly API key
 
 ## Configuration variables

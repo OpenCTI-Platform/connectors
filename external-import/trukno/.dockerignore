@@ -1,0 +1,7 @@
+src/config.yml
+src/__pycache__
+src/trukno_connector/__pycache__
+src/logs
+src/.venv
+tests
+
