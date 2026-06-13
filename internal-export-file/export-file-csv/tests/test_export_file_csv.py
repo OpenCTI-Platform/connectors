@@ -12,8 +12,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-_SRC = os.path.join(os.path.dirname(__file__), "..", "src", "export-file-csv.py")
+_SRC = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "src", "export-file-csv.py")
+)
 _spec = importlib.util.spec_from_file_location("export_file_csv", _SRC)
+if _spec is None or _spec.loader is None:
+    raise ImportError(f"Could not load export-file-csv module from {_SRC}")
 export_file_csv = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(export_file_csv)
 ExportFileCsv = export_file_csv.ExportFileCsv
@@ -32,50 +36,60 @@ def _csv_headers(csv_text):
     return next(csv.reader(io.StringIO(csv_text), delimiter=";"))
 
 
-class TestSelectExportHeaders:
+class TestSelectExportColumns:
     def test_no_columns_returns_all(self):
         data_headers = ["a", "b", "c"]
-        assert ExportFileCsv._select_export_headers(data_headers, None) == data_headers
-        assert ExportFileCsv._select_export_headers(data_headers, []) == data_headers
+        expected = [("a", "a", None), ("b", "b", None), ("c", "c", None)]
+        assert ExportFileCsv._select_export_columns(data_headers, None) == expected
+        assert ExportFileCsv._select_export_columns(data_headers, []) == expected
 
     def test_filters_and_preserves_order(self):
         data_headers = ["a", "b", "c", "d"]
-        assert ExportFileCsv._select_export_headers(data_headers, ["c", "a"]) == [
-            "c",
-            "a",
+        assert ExportFileCsv._select_export_columns(data_headers, ["c", "a"]) == [
+            ("c", "c", None),
+            ("a", "a", None),
         ]
 
     def test_maps_presentation_ids_to_export_keys(self):
         data_headers = ["from", "to", "relationship_type", "creators", "created_at"]
         columns = ["fromName", "toName", "relationship_type", "creator"]
-        assert ExportFileCsv._select_export_headers(data_headers, columns) == [
-            "from",
-            "to",
-            "relationship_type",
-            "creators",
+        assert ExportFileCsv._select_export_columns(data_headers, columns) == [
+            ("fromName", "from", None),
+            ("toName", "to", None),
+            ("relationship_type", "relationship_type", None),
+            ("creator", "creators", None),
         ]
 
-    def test_deduplicates_aliased_columns(self):
-        # fromName and fromType both map to "from" -> a single "from" column.
+    def test_from_name_and_type_are_distinct_columns(self):
+        # fromName and fromType both read the "from" endpoint but project
+        # different sub-fields, so they must stay two distinct columns.
         data_headers = ["from", "to"]
-        assert ExportFileCsv._select_export_headers(
+        assert ExportFileCsv._select_export_columns(
             data_headers, ["fromName", "fromType"]
-        ) == ["from"]
+        ) == [
+            ("fromName", "from", None),
+            ("fromType", "from", "entity_type"),
+        ]
+
+    def test_deduplicates_exact_duplicate_columns(self):
+        data_headers = ["from", "to"]
+        assert ExportFileCsv._select_export_columns(
+            data_headers, ["fromName", "fromName"]
+        ) == [("fromName", "from", None)]
 
     def test_drops_columns_without_matching_key(self):
         data_headers = ["from", "to", "relationship_type"]
-        assert ExportFileCsv._select_export_headers(
+        assert ExportFileCsv._select_export_columns(
             data_headers, ["toName", "does_not_exist"]
-        ) == ["to"]
+        ) == [("toName", "to", None)]
 
     def test_falls_back_to_all_when_nothing_matches(self):
         # A non-empty request that resolves to nothing must not yield an empty
         # export; fall back to all columns.
         data_headers = ["from", "to"]
-        assert (
-            ExportFileCsv._select_export_headers(data_headers, ["does_not_exist"])
-            == data_headers
-        )
+        assert ExportFileCsv._select_export_columns(
+            data_headers, ["does_not_exist"]
+        ) == [("from", "from", None), ("to", "to", None)]
 
 
 class TestExportDictListToCsv:
@@ -105,9 +119,32 @@ class TestExportDictListToCsv:
             data, ["fromName", "toName", "relationship_type"]
         )
         rows = list(csv.reader(io.StringIO(out), delimiter=";"))
-        assert rows[0] == ["from", "to", "relationship_type"]
+        # The requested presentation ids are kept as the output headers.
+        assert rows[0] == ["fromName", "toName", "relationship_type"]
         # Nested dicts are rendered via their representative value.
         assert rows[1] == ["Actor", "1.2.3.4", "uses"]
+
+    def test_from_name_and_type_export_distinct_values(self):
+        # Regression for the reviewer feedback: selecting both fromName and
+        # fromType must yield two columns - the endpoint's name and its entity
+        # type - instead of collapsing into a single "from" column.
+        connector = _make_connector()
+        data = [
+            {
+                "from": {"name": "Emotet", "entity_type": "Malware"},
+                "to": {
+                    "observable_value": "1.2.3.4",
+                    "entity_type": "IPv4-Addr",
+                },
+                "relationship_type": "uses",
+            }
+        ]
+        out = connector.export_dict_list_to_csv(
+            data, ["fromName", "fromType", "toName", "toType"]
+        )
+        rows = list(csv.reader(io.StringIO(out), delimiter=";"))
+        assert rows[0] == ["fromName", "fromType", "toName", "toType"]
+        assert rows[1] == ["Emotet", "Malware", "1.2.3.4", "IPv4-Addr"]
 
     def test_hashes_expansion_still_applies(self):
         connector = _make_connector()
