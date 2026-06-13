@@ -7,7 +7,12 @@ from models.configs.config_loader import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 from ransomwarelive.api_client import RansomwareAPIClient, RansomwareAPIError
 from ransomwarelive.converter_to_stix import ConverterToStix
-from ransomwarelive.utils import domain_extractor, is_domain, safe_datetime
+from ransomwarelive.utils import (
+    domain_extractor,
+    get_group_entry,
+    is_domain,
+    safe_datetime,
+)
 
 ONE_DAY_IN_SECONDS = 86400
 
@@ -29,12 +34,21 @@ class RansomwareAPIConnector:
         # added in ``models/configs/connector_configs.py``. Going through
         # the pydantic attribute keeps the value type-checked and the
         # supported TLP enumeration enforced.
-        self.converter_to_stix = ConverterToStix(self.config.connector.marking_value)
+        self.converter_to_stix = ConverterToStix(
+            self.config.connector.marking_value,
+            self.config.connector.create_leak_site_domains,
+        )
         self.marking = self.converter_to_stix.marking
         self.last_run = None
         self.last_run_datetime_with_ingested_data = None
         self.author = self.converter_to_stix.author
         self.api_client = RansomwareAPIClient(helper=self.helper)
+        # Track groups already enriched this run to avoid re-fetching/re-emitting
+        # the same leak-site domains and TTP relationships for every victim.
+        # Reset at the start of each collection sweep (see
+        # ``collect_intelligence`` / ``collect_historic_intelligence``) because
+        # ``schedule_iso`` reuses this instance across scheduled runs.
+        self.processed_groups: set[str] = set()
 
     def location_fetcher(self, country: str):
         """
@@ -128,6 +142,113 @@ class RansomwareAPIConnector:
             )
             return None
 
+    def attack_pattern_fetcher(self, technique_id: str) -> str | None:
+        """
+        Return the STIX ID of an AttackPattern in OpenCTI by MITRE technique ID.
+
+        Param:
+            technique_id: MITRE ATT&CK technique ID (e.g. "T1190")
+        Return:
+            STIX ID string (e.g. "attack-pattern--uuid") or None if not found
+        """
+        try:
+            result = self.helper.api.attack_pattern.read(
+                filters={
+                    "mode": "and",
+                    "filters": [
+                        {
+                            "key": "x_mitre_id",
+                            "values": [technique_id],
+                            "operator": "eq",
+                        }
+                    ],
+                    "filterGroups": [],
+                }
+            )
+            if result and result.get("standard_id"):
+                return result["standard_id"]
+            return None
+        except Exception as e:
+            self.helper.connector_logger.error(
+                "Error fetching attack pattern",
+                {"technique_id": technique_id, "error": e},
+            )
+            return None
+
+    def process_group_ttps(
+        self,
+        group_entry: dict,
+        intrusion_set: stix2.IntrusionSet,
+    ) -> list:
+        """
+        Create 'uses' relationships from an IntrusionSet to ATT&CK AttackPatterns
+        listed in the group's TTPs.  Silently skips any technique not found in OpenCTI
+        (e.g. when the MITRE ATT&CK connector has not yet run).
+
+        Params:
+            group_entry (dict): single group entry from /v2/groups API
+            intrusion_set (stix2.IntrusionSet): the group's IntrusionSet object
+        Returns:
+            list of 'uses' Relationship objects (the referenced AttackPatterns
+            are resolved from OpenCTI by id and are not added to the bundle)
+        """
+        objects = []
+        for tactic in group_entry.get("ttps") or []:
+            for technique in tactic.get("techniques") or []:
+                technique_id = technique.get("technique_id")
+                if not technique_id:
+                    continue
+                attack_pattern_id = self.attack_pattern_fetcher(technique_id)
+                if attack_pattern_id:
+                    relation = self.converter_to_stix.create_relationship(
+                        source_ref=intrusion_set.get("id"),
+                        target_ref=attack_pattern_id,
+                        relationship_type="uses",
+                    )
+                    objects.append(relation)
+        return objects
+
+    def _collect_group_enrichment_objects(
+        self,
+        group_name: str,
+        group_data: list[dict],
+        intrusion_set: stix2.IntrusionSet,
+    ) -> list:
+        """
+        Return leak-site and TTP STIX objects for a group, or an empty list if the
+        group has already been processed this run (deduplication guard).
+
+        Params:
+            group_name (str): group name as it appears in victim data
+            group_data (list[dict]): full /v2/groups API response for this run
+            intrusion_set (stix2.IntrusionSet): the group's IntrusionSet object
+        Returns:
+            list of stix2 objects to add to the bundle
+        """
+        if group_name in self.processed_groups:
+            return []
+        group_entry = get_group_entry(group_name, group_data)
+        if not group_entry:
+            # Don't mark the group processed until a matching entry is found, so
+            # a partial/inconsistent API response doesn't permanently skip it.
+            return []
+        self.processed_groups.add(group_name)
+        objects = []
+        if self.config.connector.create_leak_site_domains:
+            objects.extend(
+                self.converter_to_stix.process_group_leak_sites(
+                    group_entry=group_entry,
+                    intrusion_set=intrusion_set,
+                )
+            )
+        objects.extend(
+            self.process_group_ttps(
+                group_entry=group_entry,
+                intrusion_set=intrusion_set,
+            )
+        )
+        return objects
+
     def create_bundle_list(self, item, group_data):
         """
         Retrieve STIX objects from the ransomware.live API data and add it in bundle list
@@ -158,7 +279,10 @@ class RansomwareAPIConnector:
         # practice) and only rebuilt it via ``process_external_references``
         # *after* the Campaign had already been created, so the Campaign
         # missed its screenshot / website / post URL references.
-        external_references = self.converter_to_stix.process_external_references(item)
+        external_references = self.converter_to_stix.process_external_references(
+            item,
+            create_leak_post_refs=self.config.connector.create_leak_post_refs,
+        )
 
         # 2. Creating Threat Actor object
         threat_actor = None
@@ -228,6 +352,15 @@ class RansomwareAPIConnector:
             bundle_objects.append(intrusion_set)
             if relation_victim_intrusion:
                 bundle_objects.append(relation_victim_intrusion)
+            # Leak-site DomainName observables and IntrusionSet->AttackPattern
+            # 'uses' relationships for this group (deduped per run).
+            bundle_objects.extend(
+                self._collect_group_enrichment_objects(
+                    group_name=intrusion_set_name,
+                    group_data=group_data,
+                    intrusion_set=intrusion_set,
+                )
+            )
 
             # Link Intrusion Set <-> Threat Actor
             if (
@@ -471,6 +604,13 @@ class RansomwareAPIConnector:
 
     def collect_historic_intelligence(self):
         """Collects historic intelligence from ransomware.live"""
+        # ``schedule_iso`` reuses the same connector instance across every
+        # scheduled run, so the per-run group-enrichment dedup guard has to be
+        # cleared at the start of each collection sweep. Otherwise a group
+        # enriched on an earlier run stays in ``processed_groups`` forever and
+        # its newly disclosed leak sites / TTPs are silently skipped until the
+        # process restarts.
+        self.processed_groups = set()
         # fetching group information
         group_data = self.api_client.get_feed("groups")
         if not group_data:
@@ -618,6 +758,11 @@ class RansomwareAPIConnector:
 
     def collect_intelligence(self):
         """Collects intelligence from the last 24 on ransomware.live"""
+        # Reset the per-run group-enrichment dedup guard (see
+        # ``collect_historic_intelligence``): the connector instance is reused
+        # across scheduled runs, so without this a group enriched on a previous
+        # run would be skipped forever and never pick up new leak sites / TTPs.
+        self.processed_groups = set()
         group_data = self.api_client.get_feed("groups")
         if not group_data:
             self.helper.connector_logger.info(

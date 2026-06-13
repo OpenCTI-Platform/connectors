@@ -1,0 +1,16 @@
+opencti:
+  url: "http://opencti:8080"
+  token: "ChangeMe"
+
+connector:
+  id: "00000000-0000-4000-8000-000000000000"
+  type: "EXTERNAL_IMPORT"
+  name: "TruKno"
+  scope: "report,attack-pattern,malware"
+  log_level: "info"
+
+trukno:
+  api_base_url: "https://api.trukno.com/v2"
+  api_key: "ChangeMe"
+  interval_minutes: 60
+  initial_lookback_days: 30
