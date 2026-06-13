@@ -22,7 +22,12 @@ class ConverterToStix:
     - generate_id() for each entity from OpenCTI pycti library except observables to create
     """
 
-    def __init__(self, marking_value: str, create_leak_site_domains: bool = True):
+    def __init__(self, marking_value: str, create_leak_site_domains: bool = False):
+        # Defaults to ``False`` so leak-site URL/domain enrichment is opt-in:
+        # this mirrors the ``CONNECTOR_CREATE_LEAK_SITE_DOMAINS`` config default
+        # and fails closed for the compliance-sensitive behaviour, so any call
+        # site that forgets to pass the flag does not silently emit leak-site
+        # links. The connector always passes the configured value explicitly.
         self.marking = self.load_marking_definition(marking_value)
         self.author = self.create_author()
         self.create_leak_site_domains = create_leak_site_domains
@@ -416,7 +421,7 @@ class ConverterToStix:
         return domain, relation_victim_domain
 
     def process_external_references(
-        self, item: dict, create_leak_post_refs: bool = True
+        self, item: dict, create_leak_post_refs: bool = False
     ):
         """
         Process external references to stix2
@@ -424,7 +429,10 @@ class ConverterToStix:
         Params:
             item (dict): dict of data from api call
             create_leak_post_refs (bool): whether to include the direct leak post
-                URL (``post_url``) as an external reference
+                URL (``post_url``) as an external reference. Defaults to ``False``
+                (opt-in) to mirror the ``CONNECTOR_CREATE_LEAK_POST_REFS`` config
+                default and fail closed for this compliance-sensitive behaviour;
+                the connector always passes the configured value explicitly
         Returns:
             external_references: list of stix2 ExternalReference objects
                 (empty list when ``item`` carries none of the expected fields)

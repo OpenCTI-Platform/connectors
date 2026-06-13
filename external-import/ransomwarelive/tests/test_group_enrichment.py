@@ -137,7 +137,10 @@ class TestExtractGroupAliasesAndRefs:
         urls = [r.get("url") for r in ext_refs]
         assert "https://www.ransomware.live/group/acme-ransomware" in urls
 
-    def test_extracts_slug_urls_as_external_references(self, converter):
+    def test_extracts_slug_urls_as_external_references(self):
+        # Leak-site slug URLs are opt-in (create_leak_site_domains defaults to
+        # False), so this test constructs a converter that explicitly enables it.
+        converter = ConverterToStix("TLP:CLEAR", create_leak_site_domains=True)
         entry = get_group_entry("acme-ransomware", GROUP_DATA)
         _, ext_refs = converter._extract_group_aliases_and_refs(entry)
         urls = [r.get("url") for r in ext_refs]
@@ -154,7 +157,10 @@ class TestExtractGroupAliasesAndRefs:
         assert aliases is None
         assert ext_refs is None
 
-    def test_deduplicates_refs_when_slug_matches_group_url(self, converter):
+    def test_deduplicates_refs_when_slug_matches_group_url(self):
+        # Slug refs are only emitted when leak-site enrichment is enabled, so
+        # the dedup against the group URL is exercised with it explicitly on.
+        converter = ConverterToStix("TLP:CLEAR", create_leak_site_domains=True)
         entry = {
             "name": "dup-group",
             "altname": None,
@@ -180,6 +186,15 @@ class TestExtractGroupAliasesAndRefs:
         c = ConverterToStix("TLP:CLEAR", create_leak_site_domains=False)
         entry = get_group_entry("acme-ransomware", GROUP_DATA)
         _, ext_refs = c._extract_group_aliases_and_refs(entry)
+        urls = [r.get("url") for r in ext_refs]
+        assert "http://acmeabcdef1234567890.onion" not in urls
+        assert "https://www.ransomware.live/group/acme-ransomware" in urls
+
+    def test_slug_urls_omitted_by_default(self, converter):
+        # create_leak_site_domains defaults to False (fail closed), so the
+        # default converter must not emit leak-site slug URLs.
+        entry = get_group_entry("acme-ransomware", GROUP_DATA)
+        _, ext_refs = converter._extract_group_aliases_and_refs(entry)
         urls = [r.get("url") for r in ext_refs]
         assert "http://acmeabcdef1234567890.onion" not in urls
         assert "https://www.ransomware.live/group/acme-ransomware" in urls
@@ -600,6 +615,21 @@ class TestProcessExternalReferencesToggle:
             "post_url": "http://darkweb.onion/victim/abc",
         }
         refs = converter.process_external_references(item, create_leak_post_refs=False)
+        urls = [r.get("url") for r in refs]
+        assert "http://darkweb.onion/victim/abc" not in urls
+        assert "https://www.ransomware.live/id/abc" in urls
+        assert "https://images.ransomware.live/victims/abc.png" in urls
+
+    def test_post_url_excluded_by_default(self):
+        # create_leak_post_refs defaults to False (fail closed), so the direct
+        # leak-post URL must not be emitted unless explicitly enabled.
+        converter = ConverterToStix("TLP:CLEAR")
+        item = {
+            "website": "https://www.ransomware.live/id/abc",
+            "screenshot": "https://images.ransomware.live/victims/abc.png",
+            "post_url": "http://darkweb.onion/victim/abc",
+        }
+        refs = converter.process_external_references(item)
         urls = [r.get("url") for r in refs]
         assert "http://darkweb.onion/victim/abc" not in urls
         assert "https://www.ransomware.live/id/abc" in urls
