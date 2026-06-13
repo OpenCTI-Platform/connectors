@@ -54,11 +54,15 @@ def _load_raw_config() -> dict:
 
 def _prepare_helper_config(raw: dict) -> dict:
     helper_config = dict(raw)
-    connector = helper_config.setdefault("connector", {})
-    connector.setdefault("type", "EXTERNAL_IMPORT")
-    connector.setdefault("name", DEFAULT_CONNECTOR_NAME)
-    connector.setdefault("scope", DEFAULT_CONNECTOR_SCOPE)
-    connector.setdefault("log_level", "info")
+    # Mirror load_config's behaviour: treat missing *and* blank values as unset
+    # so an explicit empty string (e.g. connector.name: "") falls back to the
+    # same default the parsed config uses, keeping the helper and config in sync.
+    connector = dict(helper_config.get("connector") or {})
+    connector["type"] = connector.get("type") or "EXTERNAL_IMPORT"
+    connector["name"] = connector.get("name") or DEFAULT_CONNECTOR_NAME
+    connector["scope"] = connector.get("scope") or DEFAULT_CONNECTOR_SCOPE
+    connector["log_level"] = connector.get("log_level") or "info"
+    helper_config["connector"] = connector
     return helper_config
 
 
@@ -127,9 +131,13 @@ def run_once(helper, client, state, connector_name: str = "TruKno"):
         for item in items:
             payload = client.get_breach_details(item.id)
             bundle = transform_breach_to_bundle(payload)
-            helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
+            # A breach with no linkable attack-pattern/malware yields an empty
+            # bundle (no STIX-valid report can be built); advance the checkpoint
+            # so it is not refetched, but do not send an empty bundle.
+            if bundle["objects"]:
+                helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
+                sent_count += 1
             _persist_checkpoint(helper, state, item.updated_at)
-            sent_count += 1
     except Exception as exc:
         # Don't leave the work item stuck in a running state if a breach
         # fetch/transform/send fails mid-batch: mark it errored (the per-item

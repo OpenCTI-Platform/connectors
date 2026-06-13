@@ -52,6 +52,28 @@ def test_transform_includes_linked_attack_patterns_and_malware():
     assert malware["malware_types"] == ["unknown"]
 
 
+def test_transform_omits_report_when_breach_has_no_linkable_entities():
+    """STIX 2.1 requires report.object_refs to contain at least one id, so a
+    breach with no relatedTTPs/relatedMalwares must not emit an (invalid) report
+    with an empty object_refs list."""
+    payload = json.loads((FIXTURES / "breach_detail.json").read_text(encoding="utf-8"))
+
+    bundle = transform_breach_to_bundle(payload)
+
+    assert bundle["objects"] == []
+
+
+def test_transform_report_object_refs_is_never_empty_when_emitted():
+    payload = json.loads(
+        (FIXTURES / "breach_with_entities.json").read_text(encoding="utf-8")
+    )
+
+    bundle = transform_breach_to_bundle(payload)
+    report = next(obj for obj in bundle["objects"] if obj["type"] == "report")
+
+    assert report["object_refs"]
+
+
 def test_shared_reference_objects_are_stable_across_breaches():
     """The same TTP/malware referenced by two breaches with different publish
     dates must produce byte-identical attack-pattern/malware objects (same id

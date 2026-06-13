@@ -34,6 +34,7 @@ class DummyClient:
             "title": "Example",
             "publishedAt": "2026-04-20T12:00:00Z",
             "summary": "Summary",
+            "relatedTTPs": [{"id": "ttp-1", "title": "Credential Access"}],
         }
 
 
@@ -61,6 +62,55 @@ def test_run_once_fetches_transforms_and_sends_bundle():
     report = next(obj for obj in bundle["objects"] if obj["type"] == "report")
     assert report["name"] == "Example"
     assert updated_state.last_seen_updated_at == "2026-04-20T10:00:00Z"
+
+
+def test_run_once_skips_breach_without_linkable_entities_but_advances_checkpoint():
+    helper = DummyHelper()
+    state = ConnectorState(last_seen_updated_at="2026-04-20T00:00:00Z")
+
+    class EmptyBreachClient(DummyClient):
+        def get_breach_details(self, breach_id):
+            return {
+                "id": breach_id,
+                "title": "Empty breach",
+                "publishedAt": "2026-04-20T12:00:00Z",
+                "summary": "No linkable entities",
+            }
+
+    client = EmptyBreachClient(
+        [type("Item", (), {"id": "b1", "updated_at": "2026-04-20T10:00:00Z"})()]
+    )
+
+    updated_state = run_once(helper=helper, client=client, state=state)
+
+    # No STIX-valid report can be built without object_refs, so nothing is sent,
+    # but the checkpoint still advances so the breach is not refetched forever.
+    assert helper.sent == []
+    assert updated_state.last_seen_updated_at == "2026-04-20T10:00:00Z"
+    assert helper.persisted == [{"last_seen_updated_at": "2026-04-20T10:00:00Z"}]
+
+
+def test_prepare_helper_config_falls_back_to_defaults_for_blank_connector_fields():
+    helper_config = runtime._prepare_helper_config(
+        {"connector": {"name": "", "scope": "", "log_level": ""}}
+    )
+
+    connector = helper_config["connector"]
+    assert connector["type"] == "EXTERNAL_IMPORT"
+    assert connector["name"] == runtime.DEFAULT_CONNECTOR_NAME
+    assert connector["scope"] == runtime.DEFAULT_CONNECTOR_SCOPE
+    assert connector["log_level"] == "info"
+
+
+def test_prepare_helper_config_preserves_explicit_connector_fields():
+    helper_config = runtime._prepare_helper_config(
+        {"connector": {"name": "Custom", "scope": "report", "log_level": "debug"}}
+    )
+
+    connector = helper_config["connector"]
+    assert connector["name"] == "Custom"
+    assert connector["scope"] == "report"
+    assert connector["log_level"] == "debug"
 
 
 def test_run_once_persists_checkpoint_after_each_successful_send_before_mid_batch_failure():

@@ -18,24 +18,8 @@ def deterministic_stix_id(stix_type: str, key: str) -> str:
 
 
 def transform_breach_to_bundle(payload: dict) -> dict:
-    published_at = payload["publishedAt"]
-    report_id = deterministic_stix_id("report", payload["id"])
     object_refs = []
     objects = []
-
-    report = {
-        "type": "report",
-        "spec_version": "2.1",
-        "id": report_id,
-        "name": payload["title"],
-        "created": published_at,
-        "modified": published_at,
-        "published": published_at,
-        "description": payload.get("summary", ""),
-        "report_types": ["threat-report"],
-        "object_refs": object_refs,
-    }
-    objects.append(report)
 
     for ttp in payload.get("relatedTTPs", []):
         attack_pattern_id = deterministic_stix_id("attack-pattern", ttp["id"])
@@ -66,6 +50,26 @@ def transform_breach_to_bundle(payload: dict) -> dict:
             }
         )
         object_refs.append(malware_id)
+
+    # STIX 2.1 requires report.object_refs to reference at least one object, so
+    # only emit the report when the breach has at least one linkable
+    # attack-pattern/malware. Breaches with neither carry no graph value in this
+    # connector's current scope; the caller skips the resulting empty bundle.
+    if object_refs:
+        published_at = payload["publishedAt"]
+        report = {
+            "type": "report",
+            "spec_version": "2.1",
+            "id": deterministic_stix_id("report", payload["id"]),
+            "name": payload["title"],
+            "created": published_at,
+            "modified": published_at,
+            "published": published_at,
+            "description": payload.get("summary", ""),
+            "report_types": ["threat-report"],
+            "object_refs": object_refs,
+        }
+        objects.insert(0, report)
 
     bundle = {
         "type": "bundle",

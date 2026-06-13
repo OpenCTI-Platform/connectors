@@ -11,7 +11,7 @@
   "last_verified_date": null,
   "playbook_supported": false,
   "max_confidence_level": 50,
-  "support_version": ">=7.260604.0",
+  "support_version": ">=7.260609.0",
   "subscription_link": "https://trukno.com",
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/trukno",
   "manager_supported": false,
