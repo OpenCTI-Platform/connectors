@@ -1,0 +1,27 @@
+version: '3'
+services:
+  connector-google-secops-siem-incidents:
+    image: opencti/connector-google-secops-siem-incidents:latest
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=ChangeMe # optional (default: 'Google SecOps')
+      # - CONNECTOR_SCOPE=google-secops-siem-incidents # optional (default: 'google-secops-siem-incidents')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-google-secops-siem-incidents
+      # - GOOGLE_SECOPS_SIEM_INCIDENTS_BASE_URL=https://chronicle.googleapis.com # optional (default: 'https://chronicle.googleapis.com')
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_ID=ChangeMe
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_REGION=ChangeMe # e.g. 'us', 'eu', 'asia'
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_PROJECT_INSTANCE=ChangeMe # Chronicle instance UUID
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY=ChangeMe # Service account private key (PEM)
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_PRIVATE_KEY_ID=ChangeMe
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_EMAIL=ChangeMe
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_ID=ChangeMe
+      - GOOGLE_SECOPS_SIEM_INCIDENTS_CLIENT_CERT_URL=ChangeMe
+      # - GOOGLE_SECOPS_SIEM_INCIDENTS_TLP_LEVEL=amber # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+      # - GOOGLE_SECOPS_SIEM_INCIDENTS_FIRST_START_TIME=P1D # optional, ISO-8601 duration to look back on first run (default: 'P1D')
+    restart: always

@@ -26,7 +26,7 @@
         "X509-Certificate",
         "Domain-Name"
       ],
-      "description": "The scope of the connector.",
+      "description": "The scope of the connector. Must be a subset of: ['Domain-Name', 'IPv4-Addr', 'IPv6-Addr', 'X509-Certificate'].",
       "items": {
         "type": "string"
       },
