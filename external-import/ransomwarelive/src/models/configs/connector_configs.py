@@ -110,6 +110,14 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
             "label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent."
         ),
     )
+    create_leak_site_domains: bool = Field(
+        default=False,
+        description="Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
+    )
+    create_leak_post_refs: bool = Field(
+        default=False,
+        description="Whether to include the leak post URL as an external reference on victim reports",
+    )
 
     @field_validator("type")
     def force_value_for_type_to_be_external_import(cls, value):
