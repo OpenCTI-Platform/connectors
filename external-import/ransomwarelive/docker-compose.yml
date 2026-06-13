@@ -25,6 +25,8 @@ services:
       - CONNECTOR_CREATE_INTRUSION_SET=false
       - CONNECTOR_CREATE_CAMPAIGN=false
       - CONNECTOR_CREATE_REPORT=false
+      - CONNECTOR_CREATE_LEAK_SITE_DOMAINS=false
+      - CONNECTOR_CREATE_LEAK_POST_REFS=false
       # TLP marking applied to every emitted STIX object. Allowed values:
       # TLP:CLEAR (default) / TLP:WHITE / TLP:GREEN / TLP:AMBER /
       # TLP:AMBER+STRICT / TLP:RED.
