@@ -328,41 +328,63 @@ class RestoreFilesConnector:
             )
             if len(objects_with_missing) > 0:
                 # Create the work
+                # is_multipart=True: a directory restore can emit several
+                # bundles (and send_stix2_bundle can split one), so the work
+                # must only complete on the to_processed call below.
                 work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+                    self.helper.connect_id, friendly_name, is_multipart=True
                 )
+                in_error = False
+                # Default message so the finally block can always close the work,
+                # even if an exception is raised before message is reassigned.
+                message = "Restore dir run, storing last_run as {0}".format(entry.name)
                 # 06 - Send the bundle to the worker queue
                 stix_bundle = {
                     "type": "bundle",
                     "objects": objects_with_missing,
                 }
-                if self.direct_creation:
-                    # Bundle must be split for reordering
-                    bundles = stix2_splitter.split_bundle(stix_bundle, False)
-                    self.helper.log_info(
-                        "restore dir "
-                        + entry.name
-                        + " with "
-                        + str(len(bundles))
-                        + " bundles (direct creation)"
-                    )
-                    for bundle in bundles:
-                        self.helper.api.stix2.import_bundle_from_json(
-                            json.dumps(bundle), True
+                # Close the work in a finally block so it is never left stuck
+                # "in-progress" if splitting / importing / sending the bundle(s)
+                # raises. On error we re-raise (keeping the existing crash
+                # behaviour) without advancing the resume cursor below.
+                try:
+                    if self.direct_creation:
+                        # Bundle must be split for reordering
+                        bundles = stix2_splitter.split_bundle(stix_bundle, False)
+                        self.helper.log_info(
+                            "restore dir "
+                            + entry.name
+                            + " with "
+                            + str(len(bundles))
+                            + " bundles (direct creation)"
                         )
-                    # 06 - Save the state
-                    self.helper.set_state({"current": entry.name})
-                else:
-                    self.helper.log_info("restore dir (worker bundles):" + entry.name)
-                    self.helper.send_stix2_bundle(
-                        json.dumps(stix_bundle), work_id=work_id
+                        for bundle in bundles:
+                            self.helper.api.stix2.import_bundle_from_json(
+                                json.dumps(bundle), True
+                            )
+                        message = (
+                            "Restore dir run (direct creation), "
+                            "storing last_run as {0}".format(entry.name)
+                        )
+                    else:
+                        self.helper.log_info(
+                            "restore dir (worker bundles):" + entry.name
+                        )
+                        self.helper.send_stix2_bundle(
+                            json.dumps(stix_bundle), work_id=work_id
+                        )
+                        message = "Restore dir run, storing last_run as {0}".format(
+                            entry.name
+                        )
+                except Exception:
+                    in_error = True
+                    raise
+                finally:
+                    self.helper.api.work.to_processed(
+                        work_id, message, in_error=in_error
                     )
-                    message = "Restore dir run, storing last_run as {0}".format(
-                        entry.name
-                    )
-                    self.helper.api.work.to_processed(work_id, message)
-                    # 06 - Save the state
-                    self.helper.set_state({"current": entry.name})
+                # 06 - Save the state
+                self.helper.set_state({"current": entry.name})
         self.helper.log_info("restore run completed")
 
     def start(self):

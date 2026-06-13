@@ -32,12 +32,16 @@ class TemplateConnector:
     ---
 
     Best practices:
-        - `self.helper.api.work.initiate_work(...)` is used to initiate a new work
+        - `self.helper.api.work.initiate_work(...)` is used to initiate a new work.
+        Provide the `is_multipart=True` parameter if you might be sending multiple bundles
+        during the lifetime of the work.
         - `self.helper.schedule_iso()` is used to schedule connector's runs frequency
         - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
         - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
         - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to OpenCTI
         - `self.helper.set_state()` is used to store persistent data in connector's state
+        - `self.helper.api.work.to_processed(...)` MUST be called to notify the platform when all bundles were sent
+        or when an error occurred. Consider calling it in a `finally` block to make sure it gets called.
 
     """
 
@@ -104,6 +108,9 @@ class TemplateConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id = None
+        message = ""
+        in_error = False
         try:
             # Get the current state
             now = datetime.now()
@@ -125,9 +132,12 @@ class TemplateConnector:
             # Friendly name will be displayed on OpenCTI platform
             friendly_name = "Connector template feed"
 
-            # Initiate a new work
+            # Initiate a new work. is_multipart=True so the work only completes
+            # on the to_processed call in the finally block: send_stix2_bundle
+            # may split a large bundle into several expectations, which would
+            # otherwise let the work complete before every bundle is processed.
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name, is_multipart=True
             )
 
             self.helper.connector_logger.info(
@@ -177,18 +187,22 @@ class TemplateConnector:
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "
                 + str(last_run_datetime)
             )
-
-            self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
-
         except (KeyboardInterrupt, SystemExit):
+            in_error = True
+            message = "Connector stopped..."
             self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
+                message,
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            in_error = True
+            message = str(err)
+            self.helper.connector_logger.error(message)
+        finally:
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 
     def run(self) -> None:
         """
