@@ -48,8 +48,11 @@ class RedFlagDomainImportConnector:
             friendly_name = "Red Flag Domains run @ " + now.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
+            # is_multipart=True: send_stix2_bundle can split the bundle into
+            # several expectations, so the work must only complete on the
+            # to_processed call in the finally block.
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name, is_multipart=True
             )
             if current_state is not None and "last_run" in current_state:
                 last_seen = datetime.fromtimestamp(current_state["last_run"])

@@ -1,0 +1,6 @@
+mwdblib==4.7.0
+pycti==7.260609.0
+pytest==8.4.2
+python-dateutil
+stix2
+urllib3==2.7.0

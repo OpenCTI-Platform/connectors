@@ -328,8 +328,11 @@ class RestoreFilesConnector:
             )
             if len(objects_with_missing) > 0:
                 # Create the work
+                # is_multipart=True: a directory restore can emit several
+                # bundles (and send_stix2_bundle can split one), so the work
+                # must only complete on the to_processed call below.
                 work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+                    self.helper.connect_id, friendly_name, is_multipart=True
                 )
                 in_error = False
                 # Default message so the finally block can always close the work,

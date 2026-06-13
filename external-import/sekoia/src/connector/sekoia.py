@@ -77,8 +77,11 @@ class SekoiaConnector(object):
         in_error = False
         message = ""
         try:
+            # is_multipart=True: a run can push several bundles (and
+            # send_stix2_bundle can split one), so the work must only complete
+            # on the to_processed call in the finally block.
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name, is_multipart=True
             )
             cursor = self._run(cursor, work_id)
             message = f"Connector successfully run, cursor updated to {cursor}"

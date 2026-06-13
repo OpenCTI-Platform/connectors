@@ -595,8 +595,11 @@ class MWDB:
                 timestamp = int(time.time())
                 now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
                 friendly_name = "MWDB DEV run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
+                # is_multipart=True: process_virus sends one bundle per sample
+                # (and send_stix2_bundle can split a bundle), so the work must
+                # only complete on the to_processed call in the finally block.
                 self.workid = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
+                    self.helper.connect_id, friendly_name, is_multipart=True
                 )
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:

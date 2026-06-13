@@ -148,8 +148,11 @@ class LastInfoSec:
                     friendly_name = "LastInfoSec CTI run @ " + now.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
+                    # is_multipart=True: push_data may send several bundles and
+                    # send_stix2_bundle can itself split a bundle, so the work
+                    # must only complete on the to_processed call below.
                     work_id = self.helper.api.work.initiate_work(
-                        self.helper.connect_id, friendly_name
+                        self.helper.connect_id, friendly_name, is_multipart=True
                     )
                     self.push_data(lastinfosec_data, timestamp, work_id)
             except Exception:

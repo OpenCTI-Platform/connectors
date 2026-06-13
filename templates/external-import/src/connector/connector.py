@@ -132,9 +132,12 @@ class TemplateConnector:
             # Friendly name will be displayed on OpenCTI platform
             friendly_name = "Connector template feed"
 
-            # Initiate a new work
+            # Initiate a new work. is_multipart=True so the work only completes
+            # on the to_processed call in the finally block: send_stix2_bundle
+            # may split a large bundle into several expectations, which would
+            # otherwise let the work complete before every bundle is processed.
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name, is_multipart=True
             )
 
             self.helper.connector_logger.info(
