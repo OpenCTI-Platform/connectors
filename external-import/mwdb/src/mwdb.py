@@ -640,7 +640,12 @@ class MWDB:
                         self.helper.set_state(state)
                         message = "Done"
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        # Flag the run as failed so the finally block closes the
+                        # work with in_error=True instead of silently marking a
+                        # failed search/processing run as successfully processed.
+                        in_error = True
+                        message = str(e)
+                        self.helper.log_error(message)
             except (KeyboardInterrupt, SystemExit):
                 message = "Connector stop"
                 in_error = True

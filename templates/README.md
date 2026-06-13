@@ -396,7 +396,11 @@ self.helper.schedule_iso(
 
 A Connector performing an import should follow the following sequence:
 
-* Initialize a new `work` by calling `initiate_work`
+* Initialize a new `work` by calling `initiate_work`. If the work may emit more than one bundle,
+pass `is_multipart=True`: otherwise the Work can transition to `complete` as soon as the first
+bundle is processed by the workers, before the remaining bundles are handled. Note that
+`send_stix2_bundle` may split a single large bundle into several bundles on your behalf, so set
+`is_multipart=True` whenever that is a possibility.
 * Generate one or more STIX bundles and send them using the `send_stix2_bundle` helper with the
 correct `work_id` argument
 * Notify the backend that all bundles got sent or that an error occurred via `to_processed`.
@@ -407,10 +411,13 @@ work_id = None
 message = "Done"
 in_error = False
 try:
+  # Pass is_multipart=True when this work may push more than one bundle (or when
+  # send_stix2_bundle may split a large bundle) so the Work only completes once
+  # to_processed is called below.
   work_id = self.helper.api.work.initiate_work(
-      self.helper.connect_id, friendly_name
+      self.helper.connect_id, friendly_name, is_multipart=True
   )
-  # Here you typically want to call `self.helper.send_stix2_bundle(bundle, work_id=work_id) for each
+  # Here you typically want to call `self.helper.send_stix2_bundle(bundle, work_id=work_id)` for each
   # data bundle to push it on the queue and let the workers import them in the platform.
 except Exception as ex:
   # You might want to treat several error cases differently, this is a basic handling

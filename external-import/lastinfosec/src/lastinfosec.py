@@ -139,19 +139,29 @@ class LastInfoSec:
         if req.status_code == 200:
             lastinfosec_data = req.json()
             work_id = None
-            if isinstance(lastinfosec_data, list) and len(lastinfosec_data) > 0:
-                friendly_name = "LastInfoSec CTI run @ " + now.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                self.push_data(lastinfosec_data, timestamp, work_id)
-            stop = time.perf_counter()
-            process_time_seconds = stop - start
-            if work_id is not None:
-                message = "Done in {0} seconds".format(process_time_seconds)
-                self.helper.api.work.to_processed(work_id, message)
+            in_error = False
+            # Close the work in a finally block so an initiated work is never
+            # left stuck "in-progress" if push_data raises (queue publish /
+            # network error) before to_processed is reached.
+            try:
+                if isinstance(lastinfosec_data, list) and len(lastinfosec_data) > 0:
+                    friendly_name = "LastInfoSec CTI run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name
+                    )
+                    self.push_data(lastinfosec_data, timestamp, work_id)
+            except Exception:
+                in_error = True
+                raise
+            finally:
+                process_time_seconds = time.perf_counter() - start
+                if work_id is not None:
+                    message = "Done in {0} seconds".format(process_time_seconds)
+                    self.helper.api.work.to_processed(
+                        work_id, message, in_error=in_error
+                    )
             time_to_sleep = run_interval - process_time_seconds
         else:
             message = "Connector error run, storing last_run as {0}".format(timestamp)
