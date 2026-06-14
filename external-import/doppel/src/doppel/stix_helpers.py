@@ -16,19 +16,23 @@ def calculate_priority(score) -> str:
         return "P4"
 
 
-def is_takedown_state(queue_state) -> bool:
+def in_takedown_state(queue_state) -> bool:
     """Check if alert is in takedown state"""
-    return queue_state and queue_state.lower() in ["actioned", "taken_down"]
+    return bool(queue_state and queue_state.lower() in ["actioned", "taken_down"])
 
 
 def is_reverted_state(queue_state) -> bool:
     """Check if alert is reverted from takedown"""
-    return queue_state and queue_state.lower() in [
-        "archived",
-        "needs_confirmation",
-        "doppel_review",
-        "monitoring",
-    ]
+    return bool(
+        queue_state
+        and queue_state.lower()
+        in [
+            "archived",
+            "needs_confirmation",
+            "doppel_review",
+            "monitoring",
+        ]
+    )
 
 
 def build_external_references(alert) -> list:
