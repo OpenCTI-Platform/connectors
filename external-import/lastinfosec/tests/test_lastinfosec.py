@@ -82,6 +82,18 @@ def test_fetch_data_reraises_and_closes_work_on_error(monkeypatch):
     assert "boom" in processed_args[1]
 
 
+def test_fetch_data_slow_run_clamps_sleep_to_zero(monkeypatch):
+    connector = _make_connector()
+    connector.push_data = MagicMock()
+    _patch_requests(monkeypatch, _make_response(200, [{"type": "bundle"}]))
+
+    # run_interval=0 forces run_interval - process_time_seconds negative; the
+    # clamp must keep the returned sleep duration at 0 (never negative).
+    result = connector.fetch_data("https://example.test/feed", 0)
+
+    assert result == 0
+
+
 def test_fetch_data_interrupt_closes_work_in_error(monkeypatch):
     connector = _make_connector()
     connector.push_data = MagicMock(side_effect=KeyboardInterrupt())

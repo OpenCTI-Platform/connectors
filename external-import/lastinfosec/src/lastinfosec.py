@@ -182,7 +182,9 @@ class LastInfoSec:
                     self.helper.api.work.to_processed(
                         work_id, message, in_error=in_error
                     )
-            time_to_sleep = run_interval - process_time_seconds
+            # Clamp to 0: a run slower than run_interval would otherwise yield a
+            # negative value and crash the caller's time.sleep(time_to_sleep).
+            time_to_sleep = max(0, run_interval - process_time_seconds)
         else:
             message = "Connector error run, storing last_run as {0}".format(timestamp)
             self.helper.set_state({"last_run": timestamp})
