@@ -17,7 +17,7 @@ Field rules:
 Source priority (highest to lowest):
 
 1. Environment variables (Pydantic auto-strips the ``WHISPER_`` prefix).
-2. ``config.yml`` at the repo root, ``whisper:`` block (legacy compat).
+2. ``config.yml`` (probed near ``main.py`` / project root), ``whisper:`` block.
 3. Pydantic field defaults.
 
 Env-overrides-YAML is preserved from the original ``ConfigConnector`` /
@@ -36,8 +36,17 @@ __all__ = ["WhisperSettings", "load_yaml_config"]
 
 
 def load_yaml_config(path: Path | str | None = None) -> dict[str, Any]:
-    """Read the optional ``config.yml`` at the repo root and return the
-    parsed dict (empty if the file is absent).
+    """Read the optional ``config.yml`` and return the parsed dict (empty
+    if the file is absent).
+
+    When no explicit ``path`` is given, several common locations are
+    probed so the same code works across deployment layouts — the file
+    can sit next to ``main.py`` at the ``src/`` app root (the upstream
+    template / manual-deploy convention, where ``entrypoint.sh`` runs
+    ``python3 main.py`` from that directory) or one level higher at a
+    project root. The current working directory is also checked, which
+    covers the container case where the entrypoint ``cd``s into the app
+    root before launching.
 
     Loaded once at startup and passed to both ``OpenCTIConnectorHelper``
     (which reads its own ``OPENCTI__`` / ``CONNECTOR__`` / ``RABBITMQ__``
@@ -45,7 +54,13 @@ def load_yaml_config(path: Path | str | None = None) -> dict[str, Any]:
     its kwargs from the ``whisper:`` block before env vars override).
     """
     if path is None:
-        path = Path(__file__).resolve().parent.parent.parent / "config.yml"
+        here = Path(__file__).resolve()
+        candidates = [
+            here.parent.parent / "config.yml",  # <src>/config.yml (app root)
+            here.parent.parent.parent / "config.yml",  # project root
+            Path.cwd() / "config.yml",  # entrypoint cwd (container)
+        ]
+        path = next((c for c in candidates if c.is_file()), candidates[0])
     p = Path(path)
     if not p.is_file():
         return {}

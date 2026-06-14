@@ -2,9 +2,12 @@
 
 The templates carry two placeholders, ``$value`` and ``$limit``, both
 substituted into the query string client-side at call time. Whisper's Cypher
-engine **rejects parameterised values entirely** — the request body has no
-``params`` field; values must be Cypher literals. ``$value`` is
-JSON-escaped to safely produce a double-quoted Cypher string.
+engine does **not** support bound parameters for value substitution — values
+must be inlined as Cypher literals, so ``$value`` is JSON-escaped to safely
+produce a double-quoted Cypher string and ``$limit`` is inlined as an integer.
+(The HTTP client still sends an empty ``params: {}`` object in the request
+body for API-shape compatibility; Whisper ignores it. Do not rely on it to
+pass query values.)
 
 Whisper anchors searches on the ``name`` property of typed nodes (IPV4, IPV6,
 HOSTNAME, ASN). Main templates use ``-[r]-`` (undirected) and let the result

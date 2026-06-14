@@ -69,9 +69,9 @@ file (manual deployment). See [`src/config.yml.sample`](src/config.yml.sample).
 
 | Parameter | config.yml       | Docker environment variable | Default                          | Mandatory | Description                                                              |
 |-----------|------------------|-----------------------------|----------------------------------|-----------|--------------------------------------------------------------------------|
-| API URL   | whisper.api_url  | `WHISPER_API_URL`           | https://graph.whisper.security   | Yes       | Base URL of the Whisper graph API (the connector POSTs to `/api/query`). |
+| API URL   | whisper.api_url  | `WHISPER_API_URL`           |                                  | Yes       | Base URL of the Whisper graph API, e.g. `https://graph.whisper.security` (the connector POSTs to `/api/query`). |
 | API Key   | whisper.api_key  | `WHISPER_API_KEY`           |                                  | Yes       | Whisper API key, sent as the `X-API-Key` header.                         |
-| Max TLP   | whisper.max_tlp  | `WHISPER_MAX_TLP`           | TLP:AMBER                        | No        | Maximum TLP of an observable the connector will enrich.                  |
+| Max TLP   | whisper.max_tlp  | `WHISPER_MAX_TLP`           | TLP:AMBER+STRICT                 | No        | Maximum TLP of an observable the connector will enrich.                  |
 
 ## Deployment
 

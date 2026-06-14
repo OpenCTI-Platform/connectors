@@ -218,10 +218,10 @@ class WhisperConnector:
         """For Domain-Name seeds, run the directed `LINKS_TO` queries and
         return (extra_nodes, extra_edges, cap_overflow_notes).
 
-        Outbound edges are tagged ``description="LINKS_TO outbound"``.
+        Outbound edges are tagged ``description="links-to-outbound"``.
         Inbound edges have their source/target swapped (since the parser
         column-position default puts the seed on the source side, but the
-        inbound semantic is neighbour→seed) and tagged ``"LINKS_TO inbound"``.
+        inbound semantic is neighbour→seed) and tagged ``"links-to-inbound"``.
 
         If Whisper has more `LINKS_TO` than the cap in either direction,
         a STIX Note is emitted attached to the seed reporting the overflow.

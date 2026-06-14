@@ -57,7 +57,10 @@ class _RateLimitLoggingRetry(Retry):
                 retry_after = response.headers.get("Retry-After")
             except AttributeError:
                 pass
-            remaining = self.total - 1 if isinstance(self.total, int) else "?"
+            # ``self.total`` is the retry budget on the current instance and is
+            # decremented by ``super().increment()``; clamp so the log never
+            # shows a negative count near exhaustion.
+            remaining = max(0, self.total - 1) if isinstance(self.total, int) else "?"
             logger.info(
                 "Whisper API rate-limited (HTTP 429); retrying "
                 "(Retry-After=%s, retries_remaining=%s)",
