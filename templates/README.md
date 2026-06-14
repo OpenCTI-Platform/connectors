@@ -397,14 +397,14 @@ self.helper.schedule_iso(
 A Connector performing an import should follow the following sequence:
 
 * Initialize a new `work` by calling `initiate_work`. If the work may emit more than one bundle,
-pass `is_multipart=True`: otherwise the Work can transition to `complete` as soon as the first
-bundle is processed by the workers, before the remaining bundles are handled. Note that
-`send_stix2_bundle` may split a single large bundle into several bundles on your behalf, so set
-`is_multipart=True` whenever that is a possibility.
+  pass `is_multipart=True`: otherwise the Work can transition to `complete` as soon as the first
+  bundle is processed by the workers, before the remaining bundles are handled. Note that
+  `send_stix2_bundle` may split a single large bundle into several bundles on your behalf, so set
+  `is_multipart=True` whenever that is a possibility.
 * Generate one or more STIX bundles and send them using the `send_stix2_bundle` helper with the
-correct `work_id` argument
+  correct `work_id` argument
 * Notify the backend that all bundles got sent or that an error occurred via `to_processed`.
-Forgetting to call `to_processed` will prevent the Work from transitioning to the `complete` state.
+  Forgetting to call `to_processed` will prevent the Work from transitioning to the `complete` state.
 
 ```python
 work_id = None

@@ -82,6 +82,20 @@ def test_fetch_data_reraises_and_closes_work_on_error(monkeypatch):
     assert "boom" in processed_args[1]
 
 
+def test_fetch_data_interrupt_closes_work_in_error(monkeypatch):
+    connector = _make_connector()
+    connector.push_data = MagicMock(side_effect=KeyboardInterrupt())
+    _patch_requests(monkeypatch, _make_response(200, [{"type": "bundle"}]))
+
+    with pytest.raises(KeyboardInterrupt):
+        connector.fetch_data("https://example.test/feed", 600)
+
+    connector.helper.api.work.to_processed.assert_called_once()
+    _, processed_kwargs = connector.helper.api.work.to_processed.call_args
+    # An interrupt must close the work as in_error rather than as a success.
+    assert processed_kwargs.get("in_error") is True
+
+
 def test_fetch_data_empty_payload_skips_work(monkeypatch):
     connector = _make_connector()
     connector.push_data = MagicMock()

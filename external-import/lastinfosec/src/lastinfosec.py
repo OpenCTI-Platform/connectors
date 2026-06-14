@@ -156,6 +156,13 @@ class LastInfoSec:
                         self.helper.connect_id, friendly_name, is_multipart=True
                     )
                     self.push_data(lastinfosec_data, timestamp, work_id)
+            except (KeyboardInterrupt, SystemExit):
+                # The work is closed in the finally block, so flag the
+                # interrupted run as in_error before re-raising instead of
+                # closing it with a misleading "Done in ... seconds" message.
+                in_error = True
+                error_message = "connector stopped"
+                raise
             except Exception as ex:
                 in_error = True
                 error_message = str(ex)

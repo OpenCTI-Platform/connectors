@@ -376,6 +376,13 @@ class RestoreFilesConnector:
                         message = "Restore dir run, storing last_run as {0}".format(
                             entry.name
                         )
+                except (KeyboardInterrupt, SystemExit):
+                    # The work is closed in the finally block, so flag the
+                    # interrupted restore as in_error before re-raising instead
+                    # of closing it with the success-path message.
+                    in_error = True
+                    message = "Restore dir interrupted for {0}".format(entry.name)
+                    raise
                 except Exception as exception:
                     in_error = True
                     # Overwrite the success-path message so the Work status in

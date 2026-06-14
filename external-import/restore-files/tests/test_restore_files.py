@@ -119,3 +119,19 @@ def test_restore_files_error_does_not_advance_cursor(tmp_path):
     assert "boom" in processed_args[1]
 
     assert not connector.helper.set_state.called
+
+
+def test_restore_files_interrupt_closes_work_in_error(tmp_path):
+    connector = _make_connector(tmp_path, direct_creation=False)
+    connector.helper.send_stix2_bundle.side_effect = KeyboardInterrupt()
+
+    with pytest.raises(KeyboardInterrupt):
+        connector.restore_files()
+
+    to_processed = connector.helper.api.work.to_processed
+    assert to_processed.called
+    _, processed_kwargs = to_processed.call_args
+    # An interrupt must close the work as in_error and must not advance the
+    # resume cursor.
+    assert processed_kwargs.get("in_error") is True
+    assert not connector.helper.set_state.called

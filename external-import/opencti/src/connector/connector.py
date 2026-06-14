@@ -124,6 +124,14 @@ class OpenCTI:
                         + str(round(self.interval / 60 / 60 / 24, 2))
                         + " days"
                     )
+                except (KeyboardInterrupt, SystemExit):
+                    # The work is closed in the finally block, so flag the
+                    # interrupted run as in_error before re-raising instead of
+                    # letting it be reported as a successful run.
+                    in_error = True
+                    message = "Connector stopped"
+                    self.helper.log_info(message)
+                    raise
                 except Exception as e:
                     in_error = True
                     message = str(e)

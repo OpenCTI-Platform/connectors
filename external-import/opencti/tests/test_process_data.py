@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+import pytest
 from connector import OpenCTI
 
 
@@ -60,6 +61,21 @@ def test_process_data_closes_work_in_error_on_failure():
     connector.helper.set_state.side_effect = RuntimeError("boom")
 
     connector.process_data()
+
+    to_processed = connector.helper.api.work.to_processed
+    to_processed.assert_called_once()
+    assert to_processed.call_args.args[0] == "work-1"
+    assert to_processed.call_args.kwargs.get("in_error") is True
+
+
+def test_process_data_closes_work_in_error_on_interrupt():
+    connector = _make_connector()
+    # A KeyboardInterrupt during the run must close the work as in_error (not as
+    # a successful run) before the connector exits.
+    connector.helper.set_state.side_effect = KeyboardInterrupt()
+
+    with pytest.raises(SystemExit):
+        connector.process_data()
 
     to_processed = connector.helper.api.work.to_processed
     to_processed.assert_called_once()
