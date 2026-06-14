@@ -675,6 +675,14 @@ class Mandiant:
             self.helper.api.work.to_processed(report_work_id, "Finished_report")
             report_work_id = None
 
+        except (KeyboardInterrupt, SystemExit):
+            # Close the work as interrupted before re-raising so it is not left
+            # stuck "in-progress" when the connector is stopped mid-submission.
+            if report_work_id is not None:
+                self.helper.api.work.to_processed(
+                    report_work_id, "Interrupted", in_error=True
+                )
+            raise
         except Exception as err:
             self.helper.connector_logger.error(
                 "An error occurred during the report submission process",
