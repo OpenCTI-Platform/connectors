@@ -73,7 +73,8 @@ $ isort --profile black .
 # Fixing /path/to/connector/file.py
 # Push you feature/fix on Github
 $ git add [file(s)]
-$ git commit -m "[connector_name] descriptive message"
+$ git commit -m "feat(group-ib): descriptive message"
 $ git push origin [branch-name]
-# Open a pull request with the title "[connector_name] message"
+# Open a pull request whose title follows Conventional Commits: "type(scope?): description (#issue)"
+# Example: "feat(group-ib): add pagination support (#42)"
 ```

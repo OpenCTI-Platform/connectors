@@ -561,11 +561,18 @@ class PolySwarmClient:
         return None
 
     def create_llm_report(
-        self, instance_id: str | None = None, sandbox_task_id: str | None = None
+        self,
+        instance_id: str | None = None,
+        sandbox_task_id: str | None = None,
+        provider: str | None = None,
     ) -> str | None:
         """
         Create an LLM report task (non-blocking). Returns the report task ID immediately.
         Call collect_llm_report() later to poll and download the result.
+
+        The SDK's ``llm_report_create`` takes a provider-specific sandbox task
+        kwarg (``triage_sandbox_task_id`` or ``cape_sandbox_task_id``), not a
+        generic ``sandbox_task_id``. Map it from ``provider`` here.
         """
         if not instance_id and not sandbox_task_id:
             self.helper.log_warning(
@@ -583,11 +590,19 @@ class PolySwarmClient:
                 f"[POLYSWARM] Creating LLM report ({', '.join(source_desc)})"
             )
 
+            kwargs: dict[str, Any] = {
+                "instance_id": instance_id,
+                "operation": "LLM report create",
+            }
+            if sandbox_task_id:
+                if provider == "triage":
+                    kwargs["triage_sandbox_task_id"] = sandbox_task_id
+                else:
+                    kwargs["cape_sandbox_task_id"] = sandbox_task_id
+
             report_task = self._retry_sdk_call(
                 self.api.llm_report_create,
-                instance_id=instance_id,
-                sandbox_task_id=sandbox_task_id,
-                operation="LLM report create",
+                **kwargs,
             )
 
             if not report_task or not report_task.id:
@@ -612,8 +627,8 @@ class PolySwarmClient:
 
     def collect_llm_report(
         self, llm_task_id: str, timeout: int = 120, poll_interval: int = 5
-    ) -> str | None:
-        """Poll an existing LLM report task until complete, then download the result.
+    ) -> dict | str | None:
+        """Poll an existing LLM report task until complete, then return the result.
 
         Separated from ``create_llm_report`` so callers can fire creation early
         (as soon as scan/sandbox succeeds) and defer polling until other work finishes.
@@ -649,18 +664,16 @@ class PolySwarmClient:
                 )
                 return None
 
-            if report_task.state == "SUCCEEDED" and report_task.url:
-                # Download via the retry session rather than the SDK —
-                # the URL is a pre-signed S3 link, not an API endpoint.
-                response = self._session.get(report_task.url, timeout=60)
-                if response.status_code == 200:
-                    report_text = response.text
+            if report_task.state == "SUCCEEDED":
+                # polyswarm-api (>= 3.21) returns the report inline on the task.
+                report = getattr(report_task, "report", None)
+                if report:
                     self.helper.log_info(
-                        f"[POLYSWARM] LLM report {llm_task_id} downloaded ({len(report_text)} chars)"
+                        f"[POLYSWARM] LLM report {llm_task_id} retrieved"
                     )
-                    return report_text
+                    return report
                 self.helper.log_warning(
-                    f"[POLYSWARM] LLM report download failed: HTTP {response.status_code}"
+                    f"[POLYSWARM] LLM report {llm_task_id} succeeded but no report content"
                 )
                 return None
 

@@ -181,7 +181,6 @@ class FlashpointConnector:
             work_id = None
             number_indicators = 0
             last_modified = start_date
-            seen_ids: set[str] = set()
             try:
                 for page_number, indicators_page in enumerate(
                     self.client.iter_indicators_pages(query_since), start=1
@@ -232,16 +231,17 @@ class FlashpointConnector:
                             )
 
                         converter = self.indicator_converter_to_stix
+                        page_seen_ids: set[str] = set()
                         for obj in page_main_indicators:
                             obj_id = getattr(obj, "id", None)
                             if isinstance(obj_id, str):
-                                seen_ids.add(obj_id)
+                                page_seen_ids.add(obj_id)
                         all_octi_objects = [
                             converter.marking,
                             converter.author,
                             *page_main_indicators,
                             *self._deduplicate_stix_objects(
-                                page_octi_objects, seen_ids
+                                page_octi_objects, page_seen_ids
                             ),
                         ]
                         all_stix_objects = [
@@ -256,7 +256,6 @@ class FlashpointConnector:
                             },
                         )
                         bundle = self.helper.stix2_create_bundle(all_stix_objects)
-                        # Make sure to not use cleanup_inconsistent_bundle here as some objects might have been already sent in previous pages.
                         self._send_bundle(work_id=work_id, serialized_bundle=bundle)
 
                     # Update state after each successful page to allow safe resume
