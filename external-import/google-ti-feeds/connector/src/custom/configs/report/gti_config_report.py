@@ -36,11 +36,16 @@ class GTIReportConfig(GTIBaseConfig):
         examples=["All", "Actor Profile,Malware Profile", "Threat Activity Alert"],
     )
 
+    report_download_pdf: bool = Field(
+        default=False,
+        description="Whether to download report PDFs from the GTI API and attach them to the STIX Report objects in OpenCTI",
+    )
+
     report_origins: ListFromString = Field(
         default=["google threat intelligence"],
         description="Comma-separated list of report origins to import, or 'All' for all origins. "
         f"Allowed values: {', '.join(ALLOWED_ORIGINS)}",
-        examples=["All", "partner,google threat intelligence", "crowdsourced"],
+        examples=["All", "partner", "google threat intelligence", "crowdsourced"],
     )
 
     report_extra_filters: ListFromString = Field(

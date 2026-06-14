@@ -71,7 +71,7 @@ class TestBaseDataProcessor:
         mock_logger: ConnectorLogger,
     ) -> None:
         processor.inject_dependencies(
-            config=MagicMock(),
+            settings=MagicMock(),
             helper=mock_helper,
             state=MagicMock(),
         )

@@ -24,8 +24,9 @@ SECTIONS_TO_NOTES = {
     "exploits": "exploit",
     "configurations": "configuration",
 }
-# CVSS extraction precedence (most recent / detailed metric first).
-CVSS_VERSIONS = ("cvssV4_0", "cvssV3_1", "cvssV3_0")
+# CVSS version keys used when searching metrics lists.
+CVSS_V3_VERSIONS = ("cvssV3_1", "cvssV3_0")
+CVSS_V4_VERSIONS = ("cvssV4_0",)
 
 
 class CVEProcessor:
@@ -293,29 +294,111 @@ class CVEProcessor:
         cna: dict[str, Any],
         adp_containers: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        metric = cls._find_cvss_metric(cna.get("metrics") or [])
-        if metric is None:
+        all_metrics = cna.get("metrics") or []
+        if not cls._has_supported_cvss_metric(all_metrics):
+            all_metrics = []
             for adp in adp_containers:
-                metric = cls._find_cvss_metric(adp.get("metrics") or [])
-                if metric is not None:
+                candidate_metrics = adp.get("metrics") or []
+                if cls._has_supported_cvss_metric(candidate_metrics):
+                    all_metrics = candidate_metrics
                     break
-        if metric is None:
+
+        if not all_metrics:
             return {}
 
-        return {
-            "x_opencti_cvss_base_score": metric.get("baseScore", ""),
-            "x_opencti_cvss_base_severity": metric.get("baseSeverity", ""),
-            "x_opencti_cvss_attack_vector": metric.get("attackVector", ""),
-            "x_opencti_cvss_integrity_impact": metric.get("integrityImpact", ""),
-            "x_opencti_cvss_availability_impact": metric.get("availabilityImpact", ""),
-            "x_opencti_cvss_confidentiality_impact": metric.get(
-                "confidentialityImpact", ""
-            ),
-        }
+        props: dict[str, Any] = {}
+
+        v3_metric = cls._find_cvss_metric(all_metrics, CVSS_V3_VERSIONS)
+        if v3_metric:
+            props.update(
+                {
+                    "x_opencti_cvss_base_score": v3_metric.get("baseScore", ""),
+                    "x_opencti_cvss_base_severity": v3_metric.get("baseSeverity", ""),
+                    "x_opencti_cvss_attack_vector": v3_metric.get("attackVector", ""),
+                    "x_opencti_cvss_attack_complexity": v3_metric.get(
+                        "attackComplexity", ""
+                    ),
+                    "x_opencti_cvss_privileges_required": v3_metric.get(
+                        "privilegesRequired", ""
+                    ),
+                    "x_opencti_cvss_user_interaction": v3_metric.get(
+                        "userInteraction", ""
+                    ),
+                    "x_opencti_cvss_scope": v3_metric.get("scope", ""),
+                    "x_opencti_cvss_integrity_impact": v3_metric.get(
+                        "integrityImpact", ""
+                    ),
+                    "x_opencti_cvss_availability_impact": v3_metric.get(
+                        "availabilityImpact", ""
+                    ),
+                    "x_opencti_cvss_confidentiality_impact": v3_metric.get(
+                        "confidentialityImpact", ""
+                    ),
+                    "x_opencti_cvss_vector_string": v3_metric.get("vectorString", ""),
+                }
+            )
+
+        v4_metric = cls._find_cvss_metric(all_metrics, CVSS_V4_VERSIONS)
+        if v4_metric:
+            props.update(
+                {
+                    "x_opencti_cvss_v4_base_score": v4_metric.get("baseScore", ""),
+                    "x_opencti_cvss_v4_base_severity": v4_metric.get(
+                        "baseSeverity", ""
+                    ),
+                    "x_opencti_cvss_v4_attack_vector": v4_metric.get(
+                        "attackVector", ""
+                    ),
+                    "x_opencti_cvss_v4_attack_complexity": v4_metric.get(
+                        "attackComplexity", ""
+                    ),
+                    "x_opencti_cvss_v4_attack_requirements": v4_metric.get(
+                        "attackRequirements", ""
+                    ),
+                    "x_opencti_cvss_v4_privileges_required": v4_metric.get(
+                        "privilegesRequired", ""
+                    ),
+                    "x_opencti_cvss_v4_user_interaction": v4_metric.get(
+                        "userInteraction", ""
+                    ),
+                    "x_opencti_cvss_v4_confidentiality_impact_v": v4_metric.get(
+                        "vulnConfidentialityImpact", ""
+                    ),
+                    "x_opencti_cvss_v4_confidentiality_impact_s": v4_metric.get(
+                        "subConfidentialityImpact", ""
+                    ),
+                    "x_opencti_cvss_v4_integrity_impact_v": v4_metric.get(
+                        "vulnIntegrityImpact", ""
+                    ),
+                    "x_opencti_cvss_v4_integrity_impact_s": v4_metric.get(
+                        "subIntegrityImpact", ""
+                    ),
+                    "x_opencti_cvss_v4_availability_impact_v": v4_metric.get(
+                        "vulnAvailabilityImpact", ""
+                    ),
+                    "x_opencti_cvss_v4_availability_impact_s": v4_metric.get(
+                        "subAvailabilityImpact", ""
+                    ),
+                    "x_opencti_cvss_v4_vector_string": v4_metric.get(
+                        "vectorString", ""
+                    ),
+                }
+            )
+
+        return props
+
+    @classmethod
+    def _has_supported_cvss_metric(cls, metrics: list[dict[str, Any]]) -> bool:
+        return bool(
+            cls._find_cvss_metric(metrics, CVSS_V3_VERSIONS)
+            or cls._find_cvss_metric(metrics, CVSS_V4_VERSIONS)
+        )
 
     @staticmethod
-    def _find_cvss_metric(metrics: list[dict[str, Any]]) -> dict[str, Any] | None:
-        for version in CVSS_VERSIONS:
+    def _find_cvss_metric(
+        metrics: list[dict[str, Any]], versions: tuple[str, ...]
+    ) -> dict[str, Any] | None:
+        for version in versions:
             for metric in metrics:
                 if version in metric and isinstance(metric[version], dict):
                     return metric[version]

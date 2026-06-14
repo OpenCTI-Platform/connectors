@@ -60,18 +60,56 @@
     },
     "CONNECTOR_PULL_HISTORY": {
       "default": false,
-      "description": "Whether to pull historic data. It is not recommended to set it to true as there will a large influx of data",
+      "description": "Whether to pull historic data. It is not recommended to set it to ``true`` as there will be a large influx of data.",
       "type": "boolean"
     },
     "CONNECTOR_HISTORY_START_YEAR": {
       "default": 2023,
-      "description": "The year to start from",
+      "description": "Year (or ``YYYYMM``) to start the historical backfill from. Accepts the four-digit year shape (``2023``) \u2014 backfill begins on January 1st of that year \u2014 or the six-digit year-month shape (``202306``) \u2014 backfill begins on the first of that month. The ransomware.live feed only goes back to 2020; values older than 2020 are clamped to ``2020-01`` at runtime.",
       "exclusiveMinimum": 0,
       "type": "integer"
     },
     "CONNECTOR_CREATE_THREAT_ACTOR": {
       "default": false,
-      "description": "Whether to create a Threat Actor object",
+      "description": "Whether to create a Threat Actor object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_INTRUSION_SET": {
+      "default": false,
+      "description": "Whether to create an Intrusion Set object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_CAMPAIGN": {
+      "default": false,
+      "description": "Whether to create a Campaign object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_REPORT": {
+      "default": false,
+      "description": "Whether to create a Report object.",
+      "type": "boolean"
+    },
+    "CONNECTOR_MARKING_VALUE": {
+      "default": "TLP:CLEAR",
+      "description": "TLP marking attached to every emitted STIX object. ``TLP:CLEAR`` (default) is the OpenCTI-specific modern label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_CREATE_LEAK_SITE_DOMAINS": {
+      "default": false,
+      "description": "Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
+      "type": "boolean"
+    },
+    "CONNECTOR_CREATE_LEAK_POST_REFS": {
+      "default": false,
+      "description": "Whether to include the leak post URL as an external reference on victim reports",
       "type": "boolean"
     }
   },

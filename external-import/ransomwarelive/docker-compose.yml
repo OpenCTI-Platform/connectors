@@ -1,12 +1,34 @@
 version: '3'
 services:
-  connector-ransomwarelive:
-    image: opencti/connector-ransomwarelive:latest
+  connector_ransomwarelive:
+    image: opencti/connector-ransomwarelive:rolling
+    container_name: connector_ransomwarelive
     environment:
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
       - CONNECTOR_ID=ChangeMe
-      - CONNECTOR_NAME=RansomwareLive
-      - CONNECTOR_SCOPE=ransomwarelive
-      - CONNECTOR_LOG_LEVEL=error
+      - "CONNECTOR_NAME=Ransomware Connector"
+      # Comma-separated STIX entity types this connector is allowed to
+      # write. The set below mirrors the entities ``create_bundle_list``
+      # actually emits — including every flag-gated optional SDO and
+      # the relationships that bind them together. Trim it down to the
+      # subset matching the ``CONNECTOR_CREATE_*`` flags enabled below
+      # if you want a tighter scope.
+      - CONNECTOR_SCOPE=identity,domain-name,location,threat-actor,intrusion-set,campaign,report,relationship
+      - CONNECTOR_LOG_LEVEL=info # Log level: debug, info, warn, error
+      - CONNECTOR_DURATION_PERIOD=PT12H # ISO 8601 period between two scheduled runs
+      - CONNECTOR_PULL_HISTORY=false # Set to true to backfill historical data; produces a large initial ingest
+      - CONNECTOR_HISTORY_START_YEAR=2023 # Data only goes back to 2020
+      # Optional entity-creation flags. Every flag defaults to false so
+      # the connector's default bundle stays minimal; opt in explicitly.
+      - CONNECTOR_CREATE_THREAT_ACTOR=false
+      - CONNECTOR_CREATE_INTRUSION_SET=false
+      - CONNECTOR_CREATE_CAMPAIGN=false
+      - CONNECTOR_CREATE_REPORT=false
+      - CONNECTOR_CREATE_LEAK_SITE_DOMAINS=false
+      - CONNECTOR_CREATE_LEAK_POST_REFS=false
+      # TLP marking applied to every emitted STIX object. Allowed values:
+      # TLP:CLEAR (default) / TLP:WHITE / TLP:GREEN / TLP:AMBER /
+      # TLP:AMBER+STRICT / TLP:RED.
+      - CONNECTOR_MARKING_VALUE=TLP:CLEAR
     restart: always

@@ -1,0 +1,24 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'  # Valid UUIDv4
+  type: 'INTERNAL_ENRICHMENT'
+  name: 'PolySwarm Hash Enrichment'
+  scope: 'StixFile,Artifact'
+  auto: true
+  confidence_level: 80
+  log_level: 'info'
+
+polyswarm:
+  api_key: 'ChangeMe'
+  community: 'default'        # 'default' or 'private' (enables dual-community)
+  max_polling_time: 120
+  # max_tlp: 'TLP:AMBER'     # Refuse enrichment above this TLP (default: no limit)
+  # replace_with_lower_score: true  # Set false to keep higher existing scores
+
+# Optional: polykg knowledge graph for advanced profile enrichment
+# Leave commented out to run without polykg (basic enrichment still works)
+# polykg:
+#   api_url: 'http://polykg:4141'

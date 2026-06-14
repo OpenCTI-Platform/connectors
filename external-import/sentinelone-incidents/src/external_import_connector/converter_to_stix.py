@@ -1,3 +1,5 @@
+from urllib.parse import urljoin
+
 import stix2
 from pycti import (
     AttackPattern,
@@ -14,6 +16,21 @@ class ConverterToStix:
     def __init__(self, helper):
         self.helper = helper
         self.author = self._create_author()
+        # Expose the connector-wide TLP marking so the caller in
+        # ``connector.py`` can append it to every per-incident bundle
+        # alongside the author Identity. ``send_stix2_bundle`` is
+        # called with ``cleanup_inconsistent_bundle=True`` which strips
+        # any reference whose target SDO is not also in the bundle —
+        # the previous shape included the author but not the
+        # MarkingDefinition, so every ``object_marking_refs=[stix2.TLP_RED.id]``
+        # referenced from the Incident / UserAccount / AttackPattern /
+        # Note / Indicator / Relationship SDOs would be silently
+        # stripped at cleanup time and the resulting OpenCTI objects
+        # would land unmarked. Matches the pattern used by
+        # ``elastic-security-incidents`` (the closest sibling
+        # connector), where ``tlp_marking`` is prepended to every
+        # bundle alongside the author.
+        self.tlp_marking = stix2.TLP_RED
 
     def _create_author(self) -> dict:
         """
@@ -49,10 +66,23 @@ class ConverterToStix:
         account_id = incident_data.get("agentRealtimeInfo", {}).get(
             "accountId", "unknown"
         )
+        # Use ``.get(...)`` chains rather than direct ``[...]``
+        # indexing: every other field on ``incident_data`` is read
+        # defensively, and a single SentinelOne payload missing
+        # ``threatInfo.threatName`` or
+        # ``threatInfo.mitigationStatusDescription`` (both are
+        # documented as optional in some signal shapes) would
+        # otherwise raise ``KeyError`` here and abort the whole batch
+        # via the outer ``except Exception`` in ``connector.py`` —
+        # silently dropping every later incident in the same cycle
+        # along with this one.
+        threat_info = incident_data.get("threatInfo", {})
+        threat_name = threat_info.get("threatName", "unknown")
+        mitigation_status = threat_info.get("mitigationStatusDescription", "unknown")
         description = (
             f"Threat detected on machine {machine} under account {account_name} (id: {account_id})."
-            f"\nThreat Name: {incident_data['threatInfo']['threatName']}."
-            f"\nMitigation Status: {incident_data['threatInfo']['mitigationStatusDescription']}."
+            f"\nThreat Name: {threat_name}."
+            f"\nMitigation Status: {mitigation_status}."
         )
         labels = [
             indicator.get("category", "")
@@ -60,14 +90,22 @@ class ConverterToStix:
             if indicator.get("category", "") != ""
         ]
 
+        # ``ConfigConnector`` strips the trailing ``/`` from
+        # ``s1_url``, so concatenating ``{s1_url}incidents/...``
+        # used to produce a broken URL of the form
+        # ``https://<tenant>.sentinelone.netincidents/threats/...``.
+        # Compose with ``urljoin`` so the host and the incident path
+        # are always separated by exactly one ``/``, regardless of
+        # whether the operator stored ``s1_url`` with or without a
+        # trailing slash.
         external_s1_ref = stix2.ExternalReference(
             source_name="SentinelOne",
-            url=f"{s1_url}incidents/threats/{incident_id}/overview",
+            url=urljoin(f"{s1_url}/", f"incidents/threats/{incident_id}/overview"),
             description="View Incident In SentinelOne",
         )
 
-        name = incident_data.get("threatInfo", {}).get("threatName", "")
-        created = incident_data.get("threatInfo", {}).get("identifiedAt", "")
+        name = f"{threat_name} - {incident_id}"
+        created = threat_info.get("identifiedAt", "")
 
         incident = stix2.Incident(
             id=Incident.generate_id(name, created),
@@ -77,7 +115,7 @@ class ConverterToStix:
             description=description,
             labels=labels,
             created=created,
-            external_references=[external_s1_ref] if external_s1_ref else None,
+            external_references=[external_s1_ref],
             object_marking_refs=[stix2.TLP_RED.id],
             custom_properties={"source": self.author.name},
         )
@@ -86,10 +124,16 @@ class ConverterToStix:
 
     def create_user_account_observable(
         self, s1_incident: dict, cti_incident_id: str
-    ) -> list[stix2.UserAccount, stix2.Relationship]:
+    ) -> list:
         """
         Creates a Stix UserAccount Observable from a SentinelOne incident
         alongside a relationship to the incident.
+
+        Returns an empty list when the incident carries no usable
+        ``agentComputerName`` — the caller in ``connector.py`` extends
+        a single ``stix_objects`` list with the return value and used
+        to crash with ``TypeError: 'NoneType' is not iterable`` when
+        this function returned ``None`` instead.
         """
 
         self.helper.connector_logger.debug(
@@ -100,7 +144,7 @@ class ConverterToStix:
             "agentComputerName", ""
         )
         if not endpoint_name:
-            return None
+            return []
 
         account_name = s1_incident.get("agentRealtimeInfo", {}).get(
             "accountName", "unknown"
@@ -112,7 +156,7 @@ class ConverterToStix:
 
         endpoint_observable = stix2.UserAccount(
             account_type="hostname",
-            user_id=endpoint_name,
+            user_id=f"{endpoint_name} - {account_id}",
             object_marking_refs=[stix2.TLP_RED.id],
             custom_properties={"description": desc},
         )
@@ -141,58 +185,37 @@ class ConverterToStix:
 
         attack_patterns = []
 
-        for pattern in incident_data.get("indicators", []):
-            pattern_name = (
-                pattern.get("category", "")
-                + ": "
-                + ", ".join(
-                    [
-                        tactic.get("name", "")
-                        for tactic in pattern.get("tactics", [])
-                        if tactic.get("name", "") != ""
-                    ]
-                )
-            )
-
-            attack_pattern = stix2.AttackPattern(
-                id=AttackPattern.generate_id(pattern_name),
-                created_by_ref=self.author,
-                name=pattern_name,
-                description=pattern.get("description", ""),
-                object_marking_refs=[stix2.TLP_RED.id],
-            )
-
-            for tactic in pattern.get("tactics", []):
-                sub_desc = ", ".join(
-                    [
-                        technique.get("name", "")
-                        for technique in tactic.get("techniques", [])
-                        if technique.get("name", "") != ""
-                    ]
-                )
-
-                sub_name = "[sub] " + tactic.get("name", "")
-                sub_pattern = stix2.AttackPattern(
-                    id=AttackPattern.generate_id(sub_name),
-                    created_by_ref=self.author,
-                    name=sub_name,
-                    description=sub_desc,
-                    external_references=[
-                        create_mitre_reference(technique)
-                        for technique in tactic.get("techniques", [])
-                    ],
-                    object_marking_refs=[stix2.TLP_RED.id],
-                )
-
-                attack_patterns.append(sub_pattern)
-                attack_patterns.append(
-                    self.create_relationship(cti_incident_id, sub_pattern["id"], "uses")
-                )
-
-            attack_patterns.append(attack_pattern)
-            attack_patterns.append(
-                self.create_relationship(cti_incident_id, attack_pattern["id"], "uses")
-            )
+        for indicator in incident_data.get("indicators", []):
+            for tactic in indicator.get("tactics", []):
+                for technique in tactic.get("techniques", []):
+                    # Skip techniques without a usable name —
+                    # ``AttackPattern.generate_id("")`` would otherwise
+                    # produce a single constant deterministic id for
+                    # every nameless technique, silently collapsing
+                    # them into one empty-name SDO that collides with
+                    # every other nameless technique across all
+                    # incidents.
+                    technique_name = (technique.get("name") or "").strip()
+                    if not technique_name:
+                        self.helper.connector_logger.debug(
+                            "Skipping technique with empty name",
+                            meta={"technique": technique},
+                        )
+                        continue
+                    attack_pattern = stix2.AttackPattern(
+                        id=AttackPattern.generate_id(technique_name),
+                        created_by_ref=self.author,
+                        name=technique_name,
+                        description=indicator.get("description", ""),
+                        external_references=[create_mitre_reference(technique)],
+                        object_marking_refs=[stix2.TLP_RED.id],
+                    )
+                    attack_patterns.append(attack_pattern)
+                    attack_patterns.append(
+                        self.create_relationship(
+                            cti_incident_id, attack_pattern["id"], "uses"
+                        )
+                    )
 
         return attack_patterns
 

@@ -12,6 +12,7 @@ from pycti import (
     Infrastructure,
     Location,
     Malware,
+    Report,
     StixCoreRelationship,
     ThreatActorGroup,
     Vulnerability,
@@ -584,6 +585,29 @@ class ConverterToStix:
             object_marking_refs=[stix2.TLP_AMBER],
         )
         return course_of_action
+
+    def create_report(
+        self,
+        name: str,
+        published: datetime,
+        object_refs: list,
+        description: str = "",
+        labels: list[str] | None = None,
+    ) -> stix2.Report:
+        # ``labels`` defaults to ``None`` rather than ``[]`` to avoid the
+        # mutable-default pitfall: a shared list would accumulate
+        # mutations across calls and leak labels between Reports.
+        return stix2.Report(
+            id=Report.generate_id(name, published.strftime("%Y-%m-%dT%H:%M:%SZ")),
+            name=name,
+            description=description,
+            published=published,
+            report_types=["threat-report"],
+            object_refs=object_refs,
+            created_by_ref=self.author,
+            object_marking_refs=[stix2.TLP_AMBER],
+            labels=labels if labels is not None else [],
+        )
 
     def create_mitre_data_source(
         self,

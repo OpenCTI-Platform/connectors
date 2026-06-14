@@ -1,0 +1,29 @@
+services:
+  connector-ctm360-cyna:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=${OPENCTI_ADMIN_TOKEN}
+      - CONNECTOR_ID=${CONNECTOR_CTM360_CYNA_ID}
+      - CONNECTOR_NAME=CTM360-CYNA
+      - CONNECTOR_SCOPE=ctm360-cyna
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=PT24H
+      - CTM360_CYNA_API_BASE_URL=https://cyna.ctm360.com
+      - CTM360_CYNA_API_KEY=${CTM360_CYNA_API_KEY}
+      - CTM360_CYNA_IMPORT_INTERVAL=86400
+      - CTM360_CYNA_PAGE_SIZE=25
+      - CTM360_CYNA_MAX_PAGES=100
+    restart: always
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+    pids_limit: 100
