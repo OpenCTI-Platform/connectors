@@ -164,9 +164,9 @@ class ConverterToStix:
 
     def _create_relationship(
         self, source_id: str, target_id: str, relationship_type: str
-    ):
+    ) -> dict:
         """
-        Create Stix2Relationship object
+        Create Stix2Relationship object (returns the serialized STIX dict).
         """
         relationship = Stix2Relationship(
             id=PyctiStixCoreRelationship.generate_id(
@@ -190,9 +190,9 @@ class ConverterToStix:
         note_body: str,
         note_refs: list,
         note_timestamp,
-    ) -> Note:
+    ) -> dict:
         """
-        Create Note object
+        Create Note object (returns the serialized STIX dict).
         """
         note = Note(
             id=PyctiNote.generate_id(
@@ -217,9 +217,9 @@ class ConverterToStix:
         name: str,
         created_at: datetime,
         modified: datetime,
-    ) -> Indicator:
+    ) -> dict:
         """
-        Create Indicator object
+        Create Indicator object (returns the serialized STIX dict).
         """
         priority = calculate_priority(alert.get("score", 0))
         labels_flat = build_labels(alert)
@@ -1079,10 +1079,14 @@ class ConverterToStix:
             "brand:",
         )
 
-        if target_obj_type == "Observable":
-            obj = self.helper.api.stix_cyber_observable.read(id=obj.get("id"))
-        elif target_obj_type == "GroupingCase":
-            obj = self.helper.api.stix_domain_object.read(id=obj.get("id"))
+        # Only re-read from the API when the caller did not already provide the
+        # object's labels, to avoid an avoidable round-trip per alert (the
+        # observable caller already passes a server-read object with objectLabel).
+        if obj is not None and "objectLabel" not in obj:
+            if target_obj_type == "Observable":
+                obj = self.helper.api.stix_cyber_observable.read(id=obj.get("id"))
+            elif target_obj_type == "GroupingCase":
+                obj = self.helper.api.stix_domain_object.read(id=obj.get("id"))
 
         labels = [
             label["value"]
