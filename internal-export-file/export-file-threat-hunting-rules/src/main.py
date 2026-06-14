@@ -1,9 +1,8 @@
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from export_file_threat_hunting_rules_connector import ConnectorExportFileThreatHunting
 from export_file_threat_hunting_rules_connector.config_loader import ConfigConnector
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     """
