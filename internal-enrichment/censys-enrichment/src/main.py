@@ -13,7 +13,6 @@ import traceback
 
 from censys_enrichment.client import Client
 from censys_enrichment.connector import Connector
-from censys_enrichment.converter import Converter
 from censys_enrichment.settings import ConfigLoader
 from pycti import OpenCTIConnectorHelper
 
@@ -28,12 +27,10 @@ if __name__ == "__main__":
             organisation_id=config.censys_enrichment.organisation_id.get_secret_value(),
             token=config.censys_enrichment.token.get_secret_value(),
         )
-        converter = Converter()
         connector = Connector(
             config=config,
             helper=helper,
             client=client,
-            converter=converter,
         )
         connector.run()
     except Exception:

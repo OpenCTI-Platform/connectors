@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime
-from typing import Optional, cast
+from typing import Optional
 
 from feedly.api_client.enterprise.indicators_of_compromise import StixIoCDownloader
 from feedly.api_client.session import FeedlySession
@@ -29,21 +29,34 @@ class FeedlyConnector:
         self.enable_relationships = enable_relationships
 
     def fetch_and_publish(self, stream_id: str, newer_than: datetime) -> Optional[str]:
-        bundle = self.fetch_bundle(stream_id, newer_than)
-        if not bundle["objects"]:
-            return
-        self.cti_helper.send_stix2_bundle(json.dumps(bundle))
-        return self._get_last_article_published_date(bundle)
+        last_article_published_date = None
+        total_reports = 0
 
-    def fetch_bundle(self, stream_id: str, newer_than: datetime) -> dict:
-        bundle = StixIoCDownloader(
+        downloader = StixIoCDownloader(
             session=self.feedly_session,
             newer_than=newer_than,
             older_than=None,
             stream_id=stream_id,
-        ).download_all()
+        )
 
-        bundle = cast("dict", bundle)
+        for batch in downloader.stream_bundles():
+            bundle = self._process_bundle(batch)
+            if not bundle["objects"]:
+                continue
+            total_reports += self._count_reports(bundle)
+            self.cti_helper.send_stix2_bundle(json.dumps(bundle))
+            batch_last_date = self._get_last_article_published_date(bundle)
+            if batch_last_date:
+                if (
+                    last_article_published_date is None
+                    or batch_last_date > last_article_published_date
+                ):
+                    last_article_published_date = batch_last_date
+
+        self.cti_helper.log_info(f"Found {total_reports} new reports")
+        return last_article_published_date
+
+    def _process_bundle(self, bundle: dict) -> dict:
         self._make_reports_content_instead_of_descriptions(bundle)
         self._add_main_observable_type_to_indicators(bundle)
         self._transform_threat_actors_to_intrusion_sets(bundle)
@@ -53,7 +66,6 @@ class FeedlyConnector:
         if not self.enable_relationships:
             self._filter_relationships(bundle)
 
-        self.cti_helper.log_info(f"Found {self._count_reports(bundle)} new reports")
         return bundle
 
     @staticmethod

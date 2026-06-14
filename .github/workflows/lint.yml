@@ -8,6 +8,7 @@ on:
       - 'lts/*'
     tags-ignore:
       - '**'
+  pull_request:
   workflow_call:
 
 env:

@@ -1,0 +1,17 @@
+services:
+  connector-trukno:
+    build: .
+    image: opencti/connector-trukno:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=00000000-0000-4000-8000-000000000000
+      - CONNECTOR_TYPE=EXTERNAL_IMPORT
+      - CONNECTOR_NAME=TruKno
+      - CONNECTOR_SCOPE=report,attack-pattern,malware
+      - CONNECTOR_LOG_LEVEL=info
+      - TRUKNO_API_BASE_URL=https://api.trukno.com/v2
+      - TRUKNO_API_KEY=ChangeMe
+      - TRUKNO_INTERVAL_MINUTES=60
+      - TRUKNO_INITIAL_LOOKBACK_DAYS=30
+    restart: always

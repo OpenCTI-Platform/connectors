@@ -129,21 +129,14 @@ class PolySwarmConnector:
     def _entity_in_scope(self, data: dict[str, Any]) -> bool:
         """Check if entity type is in connector scope.
 
-        Extracts type from STIX ID (e.g. 'artifact--<uuid>') with fallback
-        to enrichment_entity.entity_type for non-STIX-formatted IDs.
+        Uses the authoritative ``enrichment_entity.entity_type`` rather than
+        parsing the STIX ID prefix. A StixFile observable has id
+        ``file--<uuid>`` but entity_type ``StixFile``, so deriving the type
+        from the ID prefix never matches a ``StixFile`` scope entry.
         """
         scopes = self.helper.connect_scope.lower().replace(" ", "").split(",")
-        entity_id = data.get("entity_id", "")
-
-        entity_type = ""
-        if entity_id and "--" in entity_id:
-            entity_type = entity_id.split("--")[0].lower()
-
-        if not entity_type:
-            opencti_entity = data.get("enrichment_entity", {})
-            entity_type = (
-                opencti_entity.get("entity_type", "") if opencti_entity else ""
-            ).lower()
+        opencti_entity = data.get("enrichment_entity") or {}
+        entity_type = opencti_entity.get("entity_type", "").lower()
 
         if entity_type in scopes:
             return True
@@ -470,7 +463,7 @@ class PolySwarmConnector:
                                 and provider not in llm_task_ids
                             ):
                                 llm_id = self.polyswarm_client.create_llm_report(
-                                    sandbox_task_id=task_id
+                                    sandbox_task_id=task_id, provider=provider
                                 )
                                 if llm_id:
                                     llm_task_ids[provider] = llm_id

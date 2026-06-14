@@ -959,24 +959,33 @@ class StixBuilder:
     # ============= SEPARATE NOTES =============
 
     @staticmethod
-    def _format_ai_summary_section(llm_report: str | None) -> list[str]:
+    def _format_ai_summary_section(llm_report: str | dict | None) -> list[str]:
         """
         Parse LLM report JSON and format as markdown section.
         Renders: bottom_line, observations, recommended_actions.
         Returns list of content lines to insert into a note.
+
+        The PolySwarm SDK returns the report already parsed as a dict; the S3
+        download fallback returns a JSON string. Accept either.
         """
-        if not llm_report or not llm_report.strip():
+        if not llm_report:
             return []
 
-        try:
-            report_data = json.loads(llm_report)
-        except (json.JSONDecodeError, TypeError):
-            # If not valid JSON, treat as plain text
-            return [
-                "## AI Summary",
-                llm_report.strip() if isinstance(llm_report, str) else str(llm_report),
-                "",
-            ]
+        if isinstance(llm_report, dict):
+            report_data = llm_report
+        elif isinstance(llm_report, str):
+            if not llm_report.strip():
+                return []
+            try:
+                report_data = json.loads(llm_report)
+            except (json.JSONDecodeError, TypeError):
+                # If not valid JSON, treat as plain text
+                return ["## AI Summary", llm_report.strip(), ""]
+        else:
+            return []
+
+        if not isinstance(report_data, dict):
+            return ["## AI Summary", str(report_data).strip(), ""]
 
         parts = ["## AI Summary\n"]
 

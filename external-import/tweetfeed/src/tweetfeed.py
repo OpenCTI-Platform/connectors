@@ -86,7 +86,7 @@ class TweetFeed:
 
     @staticmethod
     def _get_state_value(
-            state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
+        state: Optional[Mapping[str, Any]], key: str, default: Optional[Any] = None
     ) -> Any:
         if state is not None:
             return state.get(key, default)
@@ -224,8 +224,8 @@ class TweetFeed:
                 last_run_datetime = last_run_datetime + timedelta(days=-1)
 
                 if last_run is None or (
-                        (timestamp - last_run)
-                        > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
+                    (timestamp - last_run)
+                    > ((int(self.tweetfeed_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("Connector will run!")
                     datetimex = datetime.utcfromtimestamp(timestamp).strftime(
@@ -389,15 +389,17 @@ class TweetFeed:
                     malwsearc = self.helper.api.malware.read(
                         filters={
                             "mode": "and",
-                            "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                            "filters": [
+                                {"key": "name", "values": [taglabel.lower().strip()]}
+                            ],
                             "filterGroups": [],
                         }
                     )
                     if malwsearc:
                         if (
-                                malwsearc["name"].lower().strip()
-                                == taglabel.lower().strip().replace(" ", "")
-                                or malwsearc["name"].lower().strip() == taglabel.lower()
+                            malwsearc["name"].lower().strip()
+                            == taglabel.lower().strip().replace(" ", "")
+                            or malwsearc["name"].lower().strip() == taglabel.lower()
                         ):
                             # Create relation and continue indicates
                             self.helper.api.stix_core_relationship.create(
@@ -411,7 +413,9 @@ class TweetFeed:
                     intrusion = self.helper.api.intrusion_set.read(
                         filters={
                             "mode": "and",
-                            "filters": [{"key": "name", "values": [taglabel.lower().strip()]}],
+                            "filters": [
+                                {"key": "name", "values": [taglabel.lower().strip()]}
+                            ],
                             "filterGroups": [],
                         }
                     )

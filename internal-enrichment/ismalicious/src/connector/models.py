@@ -11,7 +11,7 @@ from pydantic import BaseModel, SecretStr
 class IsMaliciousConfig(BaseModel):
     """isMalicious API configuration."""
 
-    api_url: str = "https://ismalicious.com"
+    api_url: str = "https://api.ismalicious.com"
     api_key: SecretStr
     max_tlp: str = "TLP:AMBER"
     # Observable types to enrich
@@ -67,7 +67,7 @@ class ConfigLoader(BaseModel):
             ),
             ismalicious=IsMaliciousConfig(
                 api_url=os.environ.get(
-                    "ISMALICIOUS_API_URL", "https://ismalicious.com"
+                    "ISMALICIOUS_API_URL", "https://api.ismalicious.com"
                 ),
                 api_key=SecretStr(os.environ.get("ISMALICIOUS_API_KEY", "")),
                 max_tlp=os.environ.get("ISMALICIOUS_MAX_TLP", "TLP:AMBER"),
@@ -112,7 +112,7 @@ class ConfigLoader(BaseModel):
             ),
             ismalicious=IsMaliciousConfig(
                 api_url=data.get("ismalicious", {}).get(
-                    "api_url", "https://ismalicious.com"
+                    "api_url", "https://api.ismalicious.com"
                 ),
                 api_key=SecretStr(data.get("ismalicious", {}).get("api_key", "")),
                 max_tlp=data.get("ismalicious", {}).get("max_tlp", "TLP:AMBER"),
