@@ -8,3 +8,4 @@ ioc-finder==7.3.0
 dateparser==1.4.0
 pyhumps==3.8.0
 chardet==5.2.0
+python-docx==1.1.2
