@@ -8,6 +8,7 @@ absolute path with an explicit spec/loader guard.
 import importlib.util
 import os
 import sys
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -81,3 +82,18 @@ def test_start_up_inner_error_marks_work_failed():
     assert args[0] == "work-1"
     assert kwargs.get("in_error") is True
     assert "boom" in args[1]
+
+
+def test_start_up_skips_work_when_interval_not_elapsed():
+    connector = _build_connector()
+    # A recent last_run keeps the interval check from firing, so the connector
+    # has nothing to import. No work should be initiated (and therefore none
+    # closed) on an idle pass.
+    connector.helper.get_state.return_value = {"last_run": int(time.time())}
+
+    with pytest.raises(SystemExit):
+        connector.start_up()
+
+    connector.helper.api.work.initiate_work.assert_not_called()
+    connector.helper.api.work.to_processed.assert_not_called()
+    connector.mwdb.search_files.assert_not_called()

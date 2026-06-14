@@ -140,6 +140,7 @@ class LastInfoSec:
             lastinfosec_data = req.json()
             work_id = None
             in_error = False
+            error_message = None
             # Close the work in a finally block so an initiated work is never
             # left stuck "in-progress" if push_data raises (queue publish /
             # network error) before to_processed is reached.
@@ -155,13 +156,22 @@ class LastInfoSec:
                         self.helper.connect_id, friendly_name, is_multipart=True
                     )
                     self.push_data(lastinfosec_data, timestamp, work_id)
-            except Exception:
+            except Exception as ex:
                 in_error = True
+                error_message = str(ex)
                 raise
             finally:
                 process_time_seconds = time.perf_counter() - start
                 if work_id is not None:
-                    message = "Done in {0} seconds".format(process_time_seconds)
+                    # Report a failure message (with the exception) on error so
+                    # the Work status in OpenCTI is not misleadingly shown as a
+                    # successful "Done in ... seconds" run.
+                    if in_error:
+                        message = "Failed after {0} seconds: {1}".format(
+                            process_time_seconds, error_message
+                        )
+                    else:
+                        message = "Done in {0} seconds".format(process_time_seconds)
                     self.helper.api.work.to_processed(
                         work_id, message, in_error=in_error
                     )

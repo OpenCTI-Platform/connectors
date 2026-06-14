@@ -376,8 +376,14 @@ class RestoreFilesConnector:
                         message = "Restore dir run, storing last_run as {0}".format(
                             entry.name
                         )
-                except Exception:
+                except Exception as exception:
                     in_error = True
+                    # Overwrite the success-path message so the Work status in
+                    # OpenCTI reflects the failure instead of a misleading
+                    # "Restore dir run, storing last_run as ..." message.
+                    message = "Restore dir failed for {0}: {1}".format(
+                        entry.name, str(exception)
+                    )
                     raise
                 finally:
                     self.helper.api.work.to_processed(

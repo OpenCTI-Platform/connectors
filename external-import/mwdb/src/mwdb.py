@@ -593,14 +593,6 @@ class MWDB:
             message = ""
             try:
                 timestamp = int(time.time())
-                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                friendly_name = "MWDB DEV run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-                # is_multipart=True: process_virus sends one bundle per sample
-                # (and send_stix2_bundle can split a bundle), so the work must
-                # only complete on the to_processed call in the finally block.
-                self.workid = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name, is_multipart=True
-                )
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
@@ -621,6 +613,19 @@ class MWDB:
                     (timestamp - last_run) > ((int(self.mwdb_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("MWDB importing")
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                    friendly_name = "MWDB DEV run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    # is_multipart=True: process_virus sends one bundle per sample
+                    # (and send_stix2_bundle can split a bundle), so the work must
+                    # only complete on the to_processed call in the finally block.
+                    # The work is only initiated when there is data to import, so
+                    # idle interval checks no longer create empty works that would
+                    # be closed with an uninformative message.
+                    self.workid = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name, is_multipart=True
+                    )
                     if not last_run or last_run < conf_startdate:
                         current_date = conf_startdate
                     else:

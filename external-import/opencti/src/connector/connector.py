@@ -90,26 +90,49 @@ class OpenCTI:
                 friendly_name = "OpenCTI datasets run @ " + now.strftime(
                     "%Y-%m-%d %H:%M:%S"
                 )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name, is_multipart=True
-                )
-                for url in self.urls:
-                    try:
-                        data = self.retrieve_data(url)
-                        if self.remove_creator:
-                            data = self.creator_removal(data)
-                        self.send_bundle(work_id, data)
-                    except Exception as e:
-                        self.helper.log_error(str(e))
-                message = f"Connector successfully run, storing last_run as {timestamp}"
-                self.helper.log_info(message)
-                self.helper.set_state({"last_run": timestamp})
-                self.helper.api.work.to_processed(work_id, message)
-                self.helper.log_info(
-                    "Last_run stored, next run in: "
-                    + str(round(self.interval / 60 / 60 / 24, 2))
-                    + " days"
-                )
+                work_id = None
+                in_error = False
+                # Default message in case the run is interrupted before either
+                # the success or the error branch reassigns it.
+                message = "Connector run interrupted"
+                # Close the work in a finally block: with is_multipart=True the
+                # work only completes on the explicit to_processed call, so an
+                # exception after initiate_work (e.g. set_state failing) would
+                # otherwise leave it stuck "in-progress" forever.
+                try:
+                    # is_multipart=True: each url pushes its own bundle (and
+                    # send_stix2_bundle can split one), so the work must only
+                    # complete on the to_processed call in the finally block.
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name, is_multipart=True
+                    )
+                    for url in self.urls:
+                        try:
+                            data = self.retrieve_data(url)
+                            if self.remove_creator:
+                                data = self.creator_removal(data)
+                            self.send_bundle(work_id, data)
+                        except Exception as e:
+                            self.helper.log_error(str(e))
+                    message = (
+                        f"Connector successfully run, storing last_run as {timestamp}"
+                    )
+                    self.helper.log_info(message)
+                    self.helper.set_state({"last_run": timestamp})
+                    self.helper.log_info(
+                        "Last_run stored, next run in: "
+                        + str(round(self.interval / 60 / 60 / 24, 2))
+                        + " days"
+                    )
+                except Exception as e:
+                    in_error = True
+                    message = str(e)
+                    self.helper.log_error(message)
+                finally:
+                    if work_id is not None:
+                        self.helper.api.work.to_processed(
+                            work_id, message, in_error=in_error
+                        )
             else:
                 new_interval = self.interval - (timestamp - last_run)
                 self.helper.log_info(

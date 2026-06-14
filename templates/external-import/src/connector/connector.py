@@ -33,15 +33,15 @@ class TemplateConnector:
 
     Best practices:
         - `self.helper.api.work.initiate_work(...)` is used to initiate a new work.
-        Provide the `is_multipart=True` parameter if you might be sending multiple bundles
-        during the lifetime of the work.
+          Provide the `is_multipart=True` parameter if you might be sending multiple bundles
+          during the lifetime of the work.
         - `self.helper.schedule_iso()` is used to schedule connector's runs frequency
         - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
         - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
         - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to OpenCTI
         - `self.helper.set_state()` is used to store persistent data in connector's state
         - `self.helper.api.work.to_processed(...)` MUST be called to notify the platform when all bundles were sent
-        or when an error occurred. Consider calling it in a `finally` block to make sure it gets called.
+          or when an error occurred. Consider calling it in a `finally` block to make sure it gets called.
 
     """
 

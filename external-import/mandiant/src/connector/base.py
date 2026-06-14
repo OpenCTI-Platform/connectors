@@ -682,7 +682,7 @@ class Mandiant:
             )
             if report_work_id is not None:
                 self.helper.api.work.to_processed(
-                    report_work_id, "Failed", in_error=True
+                    report_work_id, f"Failed: {err}", in_error=True
                 )
 
     def _run(

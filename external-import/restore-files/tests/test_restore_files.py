@@ -112,7 +112,10 @@ def test_restore_files_error_does_not_advance_cursor(tmp_path):
 
     to_processed = connector.helper.api.work.to_processed
     assert to_processed.called
-    _, processed_kwargs = to_processed.call_args
+    processed_args, processed_kwargs = to_processed.call_args
     assert processed_kwargs.get("in_error") is True
+    # The failure message must reflect the error rather than the success-path
+    # "Restore dir run, storing last_run as ..." text.
+    assert "boom" in processed_args[1]
 
     assert not connector.helper.set_state.called

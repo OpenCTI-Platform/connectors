@@ -75,8 +75,11 @@ def test_fetch_data_reraises_and_closes_work_on_error(monkeypatch):
     connector.helper.api.work.initiate_work.assert_called_once()
 
     connector.helper.api.work.to_processed.assert_called_once()
-    _, processed_kwargs = connector.helper.api.work.to_processed.call_args
+    processed_args, processed_kwargs = connector.helper.api.work.to_processed.call_args
     assert processed_kwargs.get("in_error") is True
+    # The failure message must carry the exception instead of a misleading
+    # "Done in ... seconds" success message.
+    assert "boom" in processed_args[1]
 
 
 def test_fetch_data_empty_payload_skips_work(monkeypatch):
