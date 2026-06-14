@@ -35,7 +35,7 @@ class ExportFileCsv:
         headers = sorted(set().union(*(d.keys() for d in data)))
         if "hashes" in headers:
             headers = headers + [
-                "hashes.MD5",
+                "hashes_MD5",
                 "hashes_SHA-1",
                 "hashes_SHA-256",
                 "hashes_SHA-512",

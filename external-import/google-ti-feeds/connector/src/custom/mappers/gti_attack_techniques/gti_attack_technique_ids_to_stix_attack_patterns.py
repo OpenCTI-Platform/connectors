@@ -22,10 +22,7 @@ from connector.src.custom.models.gti.gti_attack_technique_id_model import (
 from connector.src.stix.octi.models.attack_pattern_model import OctiAttackPatternModel
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.utils.converters.generic_converter_config import BaseMapper
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
-    OrganizationAuthor,
-    TLPMarking,
-)
+from connectors_sdk.models import OrganizationAuthor, TLPMarking
 from stix2.v21 import AttackPattern  # type: ignore
 
 

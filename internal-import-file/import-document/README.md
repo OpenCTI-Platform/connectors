@@ -34,7 +34,7 @@
 
 ## Introduction
 
-This connector allows organizations to **extract threat intelligence from documents** and feed it into OpenCTI. It parses document files (PDF, TXT, HTML, Markdown, CSV) and extracts:
+This connector allows organizations to **extract threat intelligence from documents** and feed it into OpenCTI. It parses document files (PDF, DOCX, TXT, HTML, Markdown, CSV) and extracts:
 
 - **Entities**: Matches text against existing entities in the OpenCTI knowledge base (threat actors, malware, campaigns, etc.)
 - **Observables**: Extracts IOCs using regex patterns and the `ioc_finder` library (IP addresses, domains, URLs, hashes, etc.)
@@ -47,7 +47,8 @@ The connector can operate in two modes:
 
 ### Requirements
 
-- OpenCTI Platform >= 5.6.1
+- OpenCTI Platform >= 6.8.0
+- For the Phone Number, IMEI, ICCID and IMSI observable types: a pycti / OpenCTI release that ships the matching `CustomObservable*` classes (pycti >= 7.260224.0, OpenCTI server-side support added in [opencti/#14237](https://github.com/OpenCTI-Platform/opencti/pull/14237))
 
 ## Configuration variables
 
@@ -70,7 +71,7 @@ Below are the parameters you'll need to set for running the connector properly:
 |--------------------------|--------------------------|------------------------------------|-----------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID             | `id`                     | `CONNECTOR_ID`                     | /                                                   | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Name           | `name`                   | `CONNECTOR_NAME`                   | ImportDocument                                      | No        | Name of the connector.                                                                   |
-| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/html,text/markdown  | Yes       | Comma-separated list of supported MIME types.                                            |
+| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/csv,text/html,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document  | Yes       | Comma-separated list of supported MIME types.                                            |
 | Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false                                               | No        | Enable/disable automatic import of files matching the scope.                             |
 | Connector Only Contextual| `only_contextual`        | `CONNECTOR_ONLY_CONTEXTUAL`        | false                                               | No        | If `true`, only extract data when an entity context is provided.                         |
 | Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                                               | No        | If enabled, bundles are sent for validation before import.                               |
@@ -131,7 +132,7 @@ This is an **Internal Import File** connector. It processes files uploaded to Op
 To use this connector:
 
 1. Navigate to **Data** → **Import** in the OpenCTI platform
-2. Upload a document file (PDF, TXT, HTML, MD, or CSV)
+2. Upload a document file (PDF, DOCX, TXT, HTML, MD, or CSV)
 3. Select this connector to process the file
 4. Optionally, select an entity to associate the extracted data with (contextual import)
 
@@ -174,7 +175,7 @@ flowchart TD
 graph LR
     subgraph "Document"
         direction TB
-        Document[PDF / TXT / HTML / MD / CSV]
+        Document[PDF / DOCX / TXT / HTML / MD / CSV]
         TextContent[Text Content]
     end
 
@@ -245,20 +246,24 @@ Entities are matched against the OpenCTI knowledge base using name and aliases:
 
 Observables are extracted using regex patterns and the `ioc_finder` library:
 
-| Observable Type | STIX Field | Supported | Notes |
-|-----------------|------------|-----------|-------|
-| Autonomous System | `AutonomousSystem.number` | ✅ | |
-| Domain Name | `DomainName.value` | ✅ | |
-| Email Address | `Email-Addr.value` | ✅ | |
+| Observable Type | STIX Field | Supported | Notes   |
+|-----------------|------------|-----------|---------|
+| Autonomous System | `Autonomous-System.number` | ✅ |         |
+| Domain Name | `Domain-Name.value` | ✅ |         |
+| Email Address | `Email-Addr.value` | ✅ |         |
+| Phone Number | `Phone-Number.value` | ✅ | Requires pycti >= 7.260224.0 |
+| IMEI | `IMEI.value` | ✅ | Requires pycti >= 7.260224.0. A bare 15-digit number is reported as IMSI by default (IMEI is 14-16 digits, IMSI is 14-15) — see [Known issues](#known-issues). |
+| ICCID | `ICCID.value` | ✅ | Requires pycti >= 7.260224.0 |
+| IMSI | `IMSI.value` | ✅ | Requires pycti >= 7.260224.0 |
 | File (name) | `File.name` | ⚠️ | Partial |
-| File (MD5) | `File.hashes.MD5` | ✅ | |
-| File (SHA-1) | `File.hashes.SHA-1` | ✅ | |
-| File (SHA-256) | `File.hashes.SHA-256` | ✅ | |
-| IPv4 Address | `IPv4-Addr.value` | ✅ | |
-| IPv6 Address | `IPv6-Addr.value` | ✅ | |
-| MAC Address | `Mac-Addr.value` | ✅ | |
-| URL | `Url.value` | ✅ | |
-| Windows Registry Key | `WindowsRegistryKey.key` | ⚠️ | Partial |
+| File (MD5) | `File.hashes.MD5` | ✅ |         |
+| File (SHA-1) | `File.hashes.SHA-1` | ✅ |         |
+| File (SHA-256) | `File.hashes.SHA-256` | ✅ |         |
+| IPv4 Address | `IPv4-Addr.value` | ✅ |         |
+| IPv6 Address | `IPv6-Addr.value` | ✅ |         |
+| MAC Address | `Mac-Addr.value` | ✅ |         |
+| URL | `Url.value` | ✅ |         |
+| Windows Registry Key | `Windows-Registry-Key.key` | ⚠️ | Partial |
 
 ✅ = Fully implemented | ⚠️ = Partially implemented
 
@@ -271,6 +276,7 @@ Observables are extracted using regex patterns and the `ioc_finder` library:
 | HTML | `text/html` | BeautifulSoup |
 | Markdown | `text/markdown` | Direct text |
 | CSV | `text/csv` | Direct text |
+| DOCX | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | python-docx |
 
 ## Advanced configuration
 
@@ -351,6 +357,10 @@ The connector can have issues parsing a PDF created from a webpage using "Micros
 
 - **Attack Patterns**: Requires the MITRE connector to be activated for matching ATT&CK technique IDs
 - **Vulnerabilities**: Requires the CVE connector to be activated for matching CVE identifiers
+
+### IMEI vs IMSI overlap (15-digit numbers)
+
+The IMEI regex matches 15-16 digit numbers and the IMSI regex matches 14-15 digit numbers, so a bare 15-digit number could legitimately be either. The current ruleset declares the IMSI entry after IMEI in `observable_config.ini`, so a 15-digit number is reported as an IMSI. Operators who need to correct a specific extraction can edit the observable type from the OpenCTI workbench / draft before validation.
 
 ## Additional information
 

@@ -7,7 +7,10 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=IPQS Fraud and Risk Scoring
-      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number
+      # ``User-Account`` activates the Darkweb-Leak branch (PR #6399);
+      # ``Artifact`` activates the malware-file-scanner branch
+      # (PR #5970 / issue #6199).
+      - CONNECTOR_SCOPE=Domain-Name,IPv4-Addr,Email-Addr,Url,Phone-Number,User-Account,Artifact
       - CONNECTOR_AUTO=true
       - CONNECTOR_CONFIDENCE_LEVEL=15 # From 0 (Unknown) to 100 (Fully trusted)
       - CONNECTOR_LOG_LEVEL=error
@@ -17,4 +20,12 @@ services:
       - IPQS_IP_ADD_RELATIONSHIPS=true # Whether or not to add ASN relationships
       # Domain specific config settings
       - IPQS_DOMAIN_ADD_RELATIONSHIPS=true # Whether or not to add IP resolution relationships
+      # TLP handling. IPQS_MAX_TLP is enforced before the entity-type
+      # dispatch and therefore applies to every enrichment branch
+      # (IP / Email / URL / Phone / User-Account / Artifact). IPQS_DEFAULT_TLP
+      # is the marking attached to the STIX objects emitted by the
+      # Artifact / failure-note branches when the observable carries
+      # no explicit marking.
+      - IPQS_DEFAULT_TLP=TLP:CLEAR # Used when the observable carries no explicit marking
+      - IPQS_MAX_TLP=TLP:AMBER # Observables with a higher TLP are skipped (every branch)
     restart: always

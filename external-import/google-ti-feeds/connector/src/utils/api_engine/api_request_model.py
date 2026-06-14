@@ -18,4 +18,4 @@ class ApiRequestModel(BaseRequestModel):
     json_payload: dict[str, Any] | None = None
     response_key: str | None = None
     model: type[BaseModel] | None = None
-    timeout: int | None = None
+    timeout: float | None = None

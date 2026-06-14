@@ -6,7 +6,7 @@ from typing import Any
 from connector.src.custom.models.gti.gti_report_model import GTIReportData
 from connector.src.stix.octi.models.relationship_model import OctiRelationshipModel
 from connector.src.stix.v21.models.sros.relationship_model import RelationshipModel
-from connectors_sdk.models.octi import (  # type: ignore[import-untyped]
+from connectors_sdk.models import (  # type: ignore[import-untyped]
     OrganizationAuthor,
     TLPMarking,
 )

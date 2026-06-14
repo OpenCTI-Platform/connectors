@@ -1,0 +1,4 @@
+# Install the connector's pinned runtime dependencies so the test environment
+# mirrors production (run_test.sh then swaps in local connectors-sdk / latest pycti).
+-r ../src/requirements.txt
+pytest>=7.4.0

@@ -81,6 +81,10 @@ class ReportImporter(BaseImporter):
         self.scopes = scopes
         self.report_extract_iocs = report_extract_iocs or []
         self.malware_guess_cache: dict[str, str] = {}
+        # Cache the "missing indicator scope" outcome so we don't hammer the
+        # CrowdStrike API with calls that we already know will return a 403
+        # for the lifetime of this importer instance.
+        self._missing_indicator_scope = False
 
     def run(self, state: dict[str, Any]) -> dict[str, Any]:
         self._info(
@@ -277,15 +281,92 @@ class ReportImporter(BaseImporter):
         try:
             related_indicators = []
             related_indicators_with_related_entities = []
-            _limit = 10000
+            # ``QueryIntelIndicatorEntities`` (``GET /intel/combined/indicators/v1``)
+            # is hard-capped at 5000 records per call by FalconPy /
+            # CrowdStrike (see https://www.falconpy.io/Service-Collections/Intel.html#queryintelindicatorentities).
+            # The previous value (``10000``) exceeded the cap and would
+            # be silently truncated server-side, leaving reports with
+            # 5001-10000 IOCs missing entries. Reports with more than
+            # 5000 IOCs are exceedingly rare; if they ever surface here
+            # the right answer is marker-based pagination (mirroring
+            # the indicator importer), not a higher one-shot limit.
+            _limit = 5000
             _sort = "last_updated|asc"
             _fql_filter = f"reports:['{report_name}']"
 
-            # Getting IOCs linked and based on report name
+            # If a previous call already returned a 403 (no indicator scope),
+            # short-circuit further calls for the lifetime of this importer
+            # instance — the API client credentials are not going to gain the
+            # missing scope between two reports in the same run.
+            if self._missing_indicator_scope:
+                return related_indicators_with_related_entities
+
+            # Getting IOCs linked and based on report name.
+            # ``deep_pagination=True`` was previously passed here but
+            # FalconPy's ``QueryIntelIndicatorEntities`` doesn't expose
+            # such a keyword, so it was silently dropped. Drop it
+            # explicitly so this call survives the
+            # ``IndicatorsAPI.get_combined_indicator_entities`` signature
+            # change that removed the spurious kwarg.
             response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=_limit, sort=_sort, fql_filter=_fql_filter, deep_pagination=True
+                limit=_limit, sort=_sort, fql_filter=_fql_filter
             )
-            related_indicators.extend(response["resources"])
+
+            # Check if response has resources or if it's an error response.
+            # ``resources`` can legitimately be ``None`` (or another
+            # non-iterable) when the upstream returned a degenerate body —
+            # extracting via ``response.get("resources") or []`` keeps the
+            # ``extend`` call crash-free and matches the defensive pattern
+            # already used elsewhere in this connector (see the indicator
+            # importer). Without this guard a ``{"resources": None}``
+            # response re-introduces the ``TypeError: ... is not iterable``
+            # secondary crash that the surrounding ``try/except`` would
+            # swallow, masking the real diagnostic.
+            if "resources" in response:
+                resources = response.get("resources") or []
+                related_indicators.extend(resources)
+            elif "errors" in response:
+                # API returned an error (e.g., 403 permission denied).
+                # ``errors`` can legitimately be an empty list / ``None``
+                # (the upstream sometimes reports a generic failure
+                # without a specific item) or, on a malformed payload,
+                # a non-list value the SDK forgot to wrap. Normalise to
+                # an actual list before indexing so this defensive path
+                # cannot re-introduce the original ``IndexError`` /
+                # ``KeyError`` it was supposed to prevent.
+                raw_errors = response.get("errors")
+                errors = raw_errors if isinstance(raw_errors, (list, tuple)) else []
+                first_error = errors[0] if errors else {}
+                error_code = (
+                    first_error.get("code") if isinstance(first_error, dict) else None
+                )
+                if error_code == 403:
+                    self._warning(
+                        "Skipping IOC fetching for report {0} - no indicator scope permission",
+                        report_name,
+                    )
+                    # Remember that this token can't access the indicator
+                    # scope so we don't re-issue the same 403-producing call
+                    # for every subsequent report in this run.
+                    self._missing_indicator_scope = True
+                    return (
+                        related_indicators_with_related_entities  # Return what we have
+                    )
+                else:
+                    # Other errors should be logged
+                    self._warning(
+                        "Error fetching related IOCs for report {0}: {1}",
+                        report_name,
+                        str(response),
+                    )
+                    return related_indicators_with_related_entities
+            else:
+                # Unexpected response format
+                self._warning(
+                    "Unexpected response format when fetching indicators for report {0}",
+                    report_name,
+                )
+                return related_indicators_with_related_entities
 
             if related_indicators is not None:
                 for indicator in related_indicators:

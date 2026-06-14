@@ -1,0 +1,92 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: GET
+    uri: https://api.polyswarm.network/v3/sandbox/sandboxtask/latest?community=default&sha256=ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa&sandbox=triage
+  response:
+    body:
+      string: '{"result":{"account_number":null,"artifact":{"extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","failed":false,"filename":"wanncry.exe","mimetype":"application/x-dosexec","size":3514368},"community":"mainnet1","config":{"network_enabled":true,"provider":{"id":"2","name":"triage","slug":"triage","tool":"triage_sandbox_v0"},"vm":{}},"created":"2024-01-06T01:49:57.982407+00:00","expiration":"2024-01-06T02:19:57.992382+00:00","id":"34544761573827306","instance_id":"4723562756369773","report":{"analysis":{"family":["wannacry"],"score":10,"tags":["family:wannacry","discovery","persistence","ransomware","spyware","stealer","worm"]},"extracted":[{"path":"C:\\Users\\Admin\\AppData\\Local\\Temp\\@Please_Read_Me@.txt","ransom_note":{"family":"wannacry","note":"Q:  What''s
+        wrong with my files?\r\n\r\nA:  Ooops, your important files are encrypted.
+        It means you will not be able to access them anymore until they are decrypted.\r\n    If
+        you follow our instructions, we guarantee that you can decrypt all your files
+        quickly and safely!\r\n    Let''s start decrypting!\r\n\r\nQ:  What do I do?\r\n\r\nA:  First,
+        you need to pay service fees for the decryption.\r\n    Please send $300 worth
+        of bitcoin to this bitcoin address: 12t9YDPgwueZ9NyMgw519p7AA8isjr6SMw\r\n\r\n    Next,
+        please find an application file named \"@WanaDecryptor@.exe\". It is the decrypt
+        software.\r\n    Run and follow the instructions! (You may need to disable
+        your antivirus for a while.)\r\n    \r\nQ:  How can I trust?\r\n\r\nA:  Don''t
+        worry about decryption.\r\n    We will decrypt your files surely because nobody
+        will trust us if we cheat users.\r\n    \r\n\r\n*   If you need our assistance,
+        send a message by clicking <Contact Us> on the decryptor window.\r\n","wallets":["12t9YDPgwueZ9NyMgw519p7AA8isjr6SMw"]},"resource":"behavioral1/files/0x0001000000019a55-303.dat","tasks":["behavioral1"]}],"extracted_c2_ip_port":[],"extracted_c2_ips":[],"malware_family":["wannacry"],"sample_id":"240106-b88q6sbbfb","targets":[{"family":["wannacry"],"iocs":{"ips":["127.0.0.1","167.114.66.61","131.188.40.189","64.113.32.29","178.16.208.56","154.35.175.225","120.29.217.46","128.31.0.39","213.61.66.116","62.102.148.67","171.25.193.9"]},"md5":"84c82835a5d21bbcf75a61706d8ab549","score":10,"sha1":"5ff465afaabcbf0150d1a3ab2c2e74f3a4426467","sha256":"ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa","sha512":"90723a50c20ba3643d625595fd6be8dcf88d70ff7f4b4719a88f055d5b3149a4231018ea30d375171507a147e59f73478c0c27948590794554d031e7d54b7244","signatures":[{"desc":"WannaCry
+        is a ransomware cryptoworm.","label":"wannacry","name":"Wannacry","score":10,"tags":["ransomware","worm","family:wannacry"]},{"desc":"Ransomware
+        often targets backup files to inhibit system recovery.","label":"deletes_shadows","name":"Deletes
+        shadow copies","score":9,"tags":["ransomware"],"ttp":["T1107","T1490"]},{"label":"fw_startup_file","name":"Drops
+        startup file","score":7},{"name":"Executes dropped EXE","score":7},{"name":"Loads
+        dropped DLL","score":7},{"label":"file_permission_mod","name":"Modifies file
+        permissions","score":7,"tags":["discovery"],"ttp":["T1222"]},{"desc":"Infostealers
+        often target stored browser data, which can include saved credentials etc.","label":"browser_user_data_harvesting","name":"Reads
+        user/profile data of web browsers","score":7,"tags":["spyware","stealer"],"ttp":["T1005","T1081"]},{"label":"creates_runkey_registry","name":"Adds
+        Run key to start application","score":6,"tags":["persistence"],"ttp":["T1060","T1112"]},{"label":"changes_wallpaper_reg","name":"Sets
+        desktop wallpaper using registry","score":5,"tags":["ransomware"],"ttp":["T1491","T1112"]},{"desc":"Attempts
+        to interact with connected storage/optical drive(s).","label":"file_antivm_ide_drive","name":"Enumerates
+        physical storage devices","score":3,"ttp":["T1082"]},{"desc":"Shadow copies
+        are often targeted by ransomware to inhibit system recovery.","label":"vssadmin_shadows_general","name":"Interacts
+        with shadow copies","tags":["ransomware"],"ttp":["T1107","T1490"]},{"label":"reg_modifies_key","name":"Modifies
+        registry key","ttp":["T1112"]},{"name":"Suspicious behavior: EnumeratesProcesses"},{"name":"Suspicious
+        use of AdjustPrivilegeToken"},{"name":"Suspicious use of SetWindowsHookEx"},{"name":"Suspicious
+        use of WriteProcessMemory"},{"desc":"The Volume Shadow Copy service is used
+        to manage backups/snapshots.","label":"win_volshadow_com_clsid","name":"Uses
+        Volume Shadow Copy service COM API","tags":["ransomware"]},{"label":"attrib_generic","name":"Views/modifies
+        file attributes","tags":["evasion"],"ttp":["T1158"]}],"size":3514368,"ssdeep":"98304:QqPoBhz1aRxcSUDk36SAEdhvxWa9P593R8yAVp2g3x:QqPe1Cxcxk3ZAEUadzR8yc4gB","tags":["family:wannacry","discovery","persistence","ransomware","spyware","stealer","worm"],"target":"ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa","tasks":["behavioral1"]}],"ttp":["T1107","T1490","T1222","T1005","T1081","T1060","T1112","T1491","T1112","T1082","T1107","T1490","T1112","T1158"],"version":"0.2.3"},"sandbox":"triage","sandbox_artifacts":[{"created":"2024-01-06T01:52:17.555138+00:00","extended_type":"JSON
+        data","id":"538552853","instance_id":"95364085667839201","mimetype":"application/json","name":"triage_raw_report.json","sandbox_task_id":"34544761573827306","type":"raw_report"},{"created":"2024-01-06T01:52:19.343345+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552861","instance_id":"75725284245638751","mimetype":"application/x-dosexec","name":"b9c5d4339809e0ad9a00d4d3dd26fdf44a32819a54abf846bb9b560d81391c25","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:17.662430+00:00","extended_type":"JSON
+        data","id":"538552854","instance_id":"6008467793678903","mimetype":"application/json","name":"triage_report.json","sandbox_task_id":"34544761573827306","type":"report"},{"created":"2024-01-06T01:52:20.873056+00:00","extended_type":"PE32
+        executable (DLL) (GUI) Intel 80386, for MS Windows","id":"538552867","instance_id":"19923010807164172","mimetype":"application/x-dosexec","name":"77a250e81fdaf9a075b1244a9434c30bf449012c9b647b265fa81a7b0db2513f","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:21.174739+00:00","extended_type":"PE32
+        executable (DLL) (console) Intel 80386, for MS Windows","id":"538552869","instance_id":"4895196102778551","mimetype":"application/x-dosexec","name":"f28caebe9bc6aa5a72635acb4f0e24500494e306d8e8b2279e7930981281683f","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:18.119866+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552855","instance_id":"31098058389993004","mimetype":"application/x-dosexec","name":"b9c5d4339809e0ad9a00d4d3dd26fdf44a32819a54abf846bb9b560d81391c25","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:18.819207+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552859","instance_id":"71959041253895191","mimetype":"application/x-dosexec","name":"4a468603fdcb7a2eb5770705898cf9ef37aade532a7964642ecd705a74794b79","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:18.217257+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552856","instance_id":"82322877012275732","mimetype":"application/x-dosexec","name":"2ca2d550e603d74dedda03156023135b38da3630cb014e3d00b1263358c5f00d","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:18.698472+00:00","extended_type":"PE32
+        executable (DLL) (GUI) Intel 80386, for MS Windows","id":"538552858","instance_id":"31377731175821150","mimetype":"application/x-dosexec","name":"6203953b5aaf37000c179145d3f97f7f5b3338629210fd020afd5bd222b068c6","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:18.368372+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552857","instance_id":"89491584653185202","mimetype":"application/x-dosexec","name":"4a468603fdcb7a2eb5770705898cf9ef37aade532a7964642ecd705a74794b79","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:19.185661+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552860","instance_id":"43651471602817944","mimetype":"application/x-dosexec","name":"b9c5d4339809e0ad9a00d4d3dd26fdf44a32819a54abf846bb9b560d81391c25","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:20.068849+00:00","extended_type":"PE32
+        executable (console) Intel 80386 (stripped to external PDB), for MS Windows","id":"538552863","instance_id":"6201460324180142","mimetype":"application/x-dosexec","name":"e48673680746fbe027e8982f62a83c298d6fb46ad9243de8e79b7e5a24dcd4eb","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:19.688477+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552862","instance_id":"60743928129537392","mimetype":"application/x-dosexec","name":"b9c5d4339809e0ad9a00d4d3dd26fdf44a32819a54abf846bb9b560d81391c25","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:20.072256+00:00","extended_type":"PE32
+        executable (GUI) Intel 80386, for MS Windows","id":"538552864","instance_id":"16126053486351511","mimetype":"application/x-dosexec","name":"b9c5d4339809e0ad9a00d4d3dd26fdf44a32819a54abf846bb9b560d81391c25","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:20.558626+00:00","extended_type":"PE32
+        executable (console) Intel 80386 (stripped to external PDB), for MS Windows","id":"538552865","instance_id":"26893584343933565","mimetype":"application/x-dosexec","name":"e48673680746fbe027e8982f62a83c298d6fb46ad9243de8e79b7e5a24dcd4eb","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:21.133305+00:00","extended_type":"PE32
+        executable (DLL) (GUI) Intel 80386, for MS Windows","id":"538552868","instance_id":"88989130828129018","mimetype":"application/x-dosexec","name":"77a250e81fdaf9a075b1244a9434c30bf449012c9b647b265fa81a7b0db2513f","sandbox_task_id":"34544761573827306","type":"dropped_file"},{"created":"2024-01-06T01:52:20.771074+00:00","extended_type":"PE32
+        executable (console) Intel 80386 (stripped to external PDB), for MS Windows","id":"538552866","instance_id":"53244459076755926","mimetype":"application/x-dosexec","name":"e48673680746fbe027e8982f62a83c298d6fb46ad9243de8e79b7e5a24dcd4eb","sandbox_task_id":"34544761573827306","type":"dropped_file"}],"sha256":"ed01ebfbc9eb5bbea545af4d01bf5f1071661840480439c6e5babe8e080e41aa","status":"SUCCEEDED","team_account_number":null,"upload_url":null},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '10870'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:29:05 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+version: 1

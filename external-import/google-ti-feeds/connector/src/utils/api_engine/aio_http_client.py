@@ -88,8 +88,9 @@ class AioHttpClient(BaseHttpClient):
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
         json_payload: dict[str, Any] | None = None,
-        timeout: int | None = None,
-    ) -> Any:
+        timeout: float | None = None,
+        as_bytes: bool = False,
+    ) -> dict[str, Any] | tuple[int, bytes]:
         """Make an asynchronous HTTP request using aiohttp.
 
         Args:
@@ -100,9 +101,10 @@ class AioHttpClient(BaseHttpClient):
             data (dict[str, Any] | None, optional): The data to include in the request body. Defaults to None.
             json_payload (dict[str, Any] | None, optional): The JSON data to include in the request body. Defaults to None.
             timeout (int | None, optional): The timeout in seconds for the request. Defaults to None.
+            as_bytes (bool, optional): Whether to return raw bytes instead of parsed JSON. Defaults to False.
 
         Returns:
-            dict[str, Any]: The JSON response from the server.
+            dict[str, Any] | tuple[int, bytes]: The JSON response from the server or raw bytes.
 
         Raises:
             ApiTimeoutError: If the request times out.
@@ -112,7 +114,7 @@ class AioHttpClient(BaseHttpClient):
         """
         actual_timeout = ClientTimeout(total=timeout or self.default_timeout)
         self._logger.debug(
-            f"{LOG_PREFIX} Making request",
+            f"{LOG_PREFIX} Making {'bytes ' if as_bytes else ''}request",
             {
                 "method": method,
                 "url": url,
@@ -131,17 +133,8 @@ class AioHttpClient(BaseHttpClient):
                     data=data,
                     json=json_payload,
                 ) as response:
-                    self._logger.debug(
-                        f"{LOG_PREFIX} Received response",
-                        {
-                            "status": response.status,
-                            "method": method,
-                            "url": url,
-                        },
-                    )
                     if response.status >= 400:
                         response_text = await response.text()
-
                         self._logger.warning(
                             f"{LOG_PREFIX} HTTP Error",
                             {
@@ -152,7 +145,30 @@ class AioHttpClient(BaseHttpClient):
                             },
                         )
                         raise ApiHttpError(response.status, response_text)
+
+                    if as_bytes:
+                        content = await response.read()
+                        self._logger.debug(
+                            f"{LOG_PREFIX} Received bytes response",
+                            {
+                                "status": response.status,
+                                "content_size": len(content),
+                                "method": method,
+                                "url": url,
+                            },
+                        )
+                        return response.status, content
+
+                    self._logger.debug(
+                        f"{LOG_PREFIX} Received response",
+                        {
+                            "status": response.status,
+                            "method": method,
+                            "url": url,
+                        },
+                    )
                     return await response.json(content_type=None)
+
         except TimeoutError as e:
             self._logger.warning(
                 f"{LOG_PREFIX} Request timed out",
@@ -174,16 +190,15 @@ class AioHttpClient(BaseHttpClient):
                     },
                 )
                 raise ApiNetworkError(f"Network connectivity issue: {str(e)}") from e
-            else:
-                self._logger.warning(
-                    f"{LOG_PREFIX} ClientError",
-                    {
-                        "url": url,
-                        "error": str(e),
-                    },
-                )
-                raise ApiHttpError(0, str(e)) from e
-        except ApiHttpError:
+            self._logger.warning(
+                f"{LOG_PREFIX} ClientError",
+                {
+                    "url": url,
+                    "error": str(e),
+                },
+            )
+            raise ApiHttpError(0, str(e)) from e
+        except (ApiTimeoutError, ApiNetworkError, ApiHttpError):
             raise
         except Exception as e:
             if self._is_network_error(e):

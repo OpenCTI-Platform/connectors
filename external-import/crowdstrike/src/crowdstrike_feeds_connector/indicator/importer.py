@@ -56,6 +56,18 @@ class IndicatorImporter(BaseImporter):
     _NAME = "Indicator"
 
     _LATEST_INDICATOR_TIMESTAMP = "latest_indicator_timestamp"
+    # Persisted last ``_marker`` value seen across runs. ``_marker`` is
+    # ``<unix_timestamp_10chars><unique_suffix>``, so resuming from the
+    # bare ``last_updated`` timestamp (the legacy state key, seconds
+    # granularity) makes the FQL ``_marker:>='1700000005'`` match every
+    # marker whose timestamp prefix is ``1700000005`` — including the
+    # indicators we already processed in the previous run. Persisting
+    # the exact last marker shrinks the boundary overlap to (at most)
+    # the single indicator whose marker we stored, which the downstream
+    # STIX-ID dedup already absorbs. Missing key is a normal state for
+    # deployments upgrading from a prior version of the connector — the
+    # importer falls back to the timestamp resume in that case.
+    _LATEST_INDICATOR_MARKER = "latest_indicator_marker"
 
     def __init__(self, config: IndicatorImporterConfig) -> None:
         """Initialize CrowdStrike indicator importer."""
@@ -113,10 +125,14 @@ class IndicatorImporter(BaseImporter):
         fetch_timestamp = state.get(
             self._LATEST_INDICATOR_TIMESTAMP, self.default_latest_timestamp
         )
+        # Optional - older state shapes (pre-marker-resume) won't carry
+        # this key and the fetch falls back to the timestamp-based
+        # marker, which is correct for the very first run after upgrade.
+        fetch_marker = state.get(self._LATEST_INDICATOR_MARKER)
 
         latest_indicator_updated_datetime: datetime | None = None
 
-        indicator_batch = self._fetch_indicators(fetch_timestamp)
+        indicator_batch = self._fetch_indicators(fetch_timestamp, fetch_marker)
         if indicator_batch:
             latest_batch_updated_datetime = self._process_indicators(indicator_batch)
 
@@ -133,71 +149,246 @@ class IndicatorImporter(BaseImporter):
                 latest_indicator_updated_datetime
             )
 
+        # Persist the highest ``_marker`` actually observed during this
+        # run for exact cross-run continuation. We take the last item's
+        # ``_marker`` because ``_paginated_query_indicators`` sorts by
+        # ``_marker.asc`` and only extends ``resources`` with the
+        # (cap-sliced) accepted page, so the last item carries the
+        # highest accepted marker. When the field is missing on the
+        # last item, fall back to the previously-persisted marker
+        # rather than dropping the key — losing the marker would
+        # silently re-trigger the seconds-granularity overlap on the
+        # next run.
+        next_marker = (
+            indicator_batch[-1].get("_marker") if indicator_batch else None
+        ) or fetch_marker
+
+        new_state: Dict[str, Any] = {
+            self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_updated_timestamp,
+        }
+        if next_marker:
+            new_state[self._LATEST_INDICATOR_MARKER] = next_marker
+
         self._info(
             "Indicator importer completed, latest fetch {0}.",
             timestamp_to_datetime(latest_indicator_updated_timestamp),
         )
 
-        return {self._LATEST_INDICATOR_TIMESTAMP: latest_indicator_updated_timestamp}
+        return new_state
 
     def _clear_report_fetcher_cache(self) -> None:
         self.report_fetcher.clear_cache()
 
-    def _fetch_indicators(self, fetch_timestamp: int) -> List[dict]:
+    # FalconPy / CrowdStrike caps a single ``QueryIntelIndicatorEntities``
+    # call at 5000 records. We pick 1000 over the maximum to keep each
+    # API response's wire payload and in-memory dict list bounded - the
+    # connector aggregates every page into a single list before
+    # ``_process_indicators`` runs (so a single 5000-record response
+    # would otherwise pin ~5x the per-request memory) - and to keep
+    # individual request times short enough that a transient
+    # 5xx / timeout loses one round-trip of progress rather than a
+    # large one. Smaller pages also produce more frequent
+    # "Fetched indicator batch" log lines, which is useful for
+    # progress visibility on a long sweep.
+    _PAGE_LIMIT = 1000
+
+    def _fetch_indicators(
+        self, fetch_timestamp: int, fetch_marker: Optional[str] = None
+    ) -> List[dict]:
         """Fetch all indicators updated since ``fetch_timestamp``.
 
-        Walks every page exposed by the CrowdStrike API (``Next-Page`` HTTP
-        header) up to the configured ``max_records_per_run`` cap (when set).
-        Returns the full list of resources in a single batch so the downstream
-        ``_process_indicators`` step can compute the latest ``last_updated``
-        timestamp across the whole run.
-        """
-        limit = 1000
-        sort = "last_updated|asc"
-        fql_filter = f"last_updated:>{fetch_timestamp}"
+        Walks the CrowdStrike indicator API using marker-based deep
+        pagination (the ``_marker`` FQL field, sorted ``_marker.asc``)
+        up to the configured ``max_records_per_run`` cap when set.
+        Returns the full list of resources in a single batch so the
+        downstream ``_process_indicators`` step can compute the latest
+        ``last_updated`` timestamp across the whole run.
 
+        ``fetch_marker`` is the previously-persisted last ``_marker``
+        from the importer state and, when supplied, is preferred over
+        ``fetch_timestamp`` for the initial cursor (the persisted
+        marker carries the unique suffix and pins resume to the exact
+        boundary indicator). It is ``None`` on the first run after
+        upgrade.
+        """
+        return self._paginated_query_indicators(
+            limit=self._PAGE_LIMIT,
+            fetch_timestamp=fetch_timestamp,
+            fetch_marker=fetch_marker,
+        )
+
+    def _build_fql_filter(self, marker: str) -> str:
+        """Build the FQL filter used for a single indicator API call.
+
+        The base clause is ``_marker:>='<marker>'`` — CrowdStrike's
+        documented deep-pagination contract for ``QueryIntelIndicatorEntities``
+        (see https://www.falconpy.io/Usage/Response-Handling.html).
+
+        On the first run / after a state migration, ``marker`` is the
+        importer state's ``last_updated`` timestamp (Unix seconds);
+        this matches the 10-character timestamp prefix of every
+        ``_marker`` so we pick up from that second onward. On every
+        subsequent run, ``marker`` is the exact ``_marker`` of the
+        last indicator we accepted in the previous run, persisted in
+        state under ``latest_indicator_marker`` — using the full
+        marker (with its unique suffix) pins the resume cursor to the
+        exact boundary indicator instead of all indicators that share
+        the same second.
+        """
+        fql_filter = f"_marker:>='{marker}'"
         if self.exclude_types:
             fql_filter = f"{fql_filter}+type:!{self.exclude_types}"
-
-        return self._paginated_query_indicators(limit, sort, fql_filter)
+        return fql_filter
 
     def _paginated_query_indicators(
-        self, limit: int, sort: str, fql_filter: str
+        self,
+        limit: int,
+        fetch_timestamp: int,
+        fetch_marker: Optional[str] = None,
     ) -> List[dict]:
         """Walk every page of the indicator API and return the aggregated list.
 
-        The continuation token is the ``next_page`` string returned by the
-        upstream API and forwarded as-is by :class:`IndicatorsAPI`. When
-        ``max_records_per_run`` is set, pagination stops as soon as that many
-        indicators have been collected; the cap is enforced at the resource
-        level by slicing the *last* page to exactly the remaining quota, so
-        the aggregated batch contains at most ``max_records_per_run`` records
-        and we never yield a record beyond the cap.
+        Pagination relies on CrowdStrike's documented marker-based deep
+        pagination: each indicator carries a monotonically-increasing
+        ``_marker`` field whose first 10 characters are a Unix timestamp
+        (in seconds). The first call filters with the importer state
+        timestamp; subsequent calls advance the marker using the last
+        indicator returned by the previous page. Pagination ends when:
+
+        * the API returns an empty page (the primary, authoritative
+          termination signal - when no indicators match the current
+          ``_marker:>='<cursor>'`` filter, the API returns an empty
+          ``resources`` list and we are done), OR
+        * the last accepted indicator on a page is missing its
+          ``_marker`` field (defensive - prevents an infinite loop on
+          a malformed response), OR
+        * the marker does not advance between two consecutive pages
+          (defensive - same anti-spin guard for an API that wedges on
+          one cursor), OR
+        * the configured ``max_records_per_run`` cap is reached.
+
+        The cap is enforced at the resource level — the *last* page is
+        sliced down to the remaining quota — so the aggregated batch
+        contains at most ``max_records_per_run`` records and we never
+        yield a record beyond the cap.
+
+        NOTE: The previous implementation tried to paginate via a
+        ``Next-Page`` HTTP header / ``next_page`` continuation token,
+        but ``GET /intel/combined/indicators/v1`` does *not* expose
+        those (they are reserved for other CrowdStrike Service
+        Collections such as Hosts), so the loop only ever ran once and
+        every run capped at a single ``limit``-sized batch.
         """
+        # Sort ascending by ``_marker`` so the last indicator on a page
+        # always carries the largest ``_marker`` we have seen so far —
+        # the cursor that drives the next call.
+        sort = "_marker.asc"
         resources: List[dict] = []
-        next_page_token: Optional[str] = None
-        meta_total: Optional[int] = None
+        # Resume from the persisted ``_marker`` when available so the
+        # boundary doesn't re-fetch every indicator that shares the
+        # same second prefix; otherwise fall back to the seconds-
+        # granularity timestamp for the initial run.
+        current_marker: str = fetch_marker or str(fetch_timestamp)
+        # Tracks the ``_marker`` of the last row we accepted on the
+        # previous iteration so the anti-spin guard below catches
+        # an API that returns the same trailing marker twice in a
+        # row. Left ``None`` on iteration one - the cross-run
+        # inclusive-boundary case (the persisted cursor row showing
+        # up again because FQL ``_marker:>='<cursor>'`` matches the
+        # cursor itself) is handled explicitly by the strip below.
+        last_seen_marker: Optional[str] = None
+        # Tracks the ``id`` of the last row we accepted, used to
+        # strip the within-run inclusive-boundary duplicate on
+        # subsequent pages. See the within-run strip block below.
+        last_accepted_id: Optional[str] = None
 
         while True:
+            fql_filter = self._build_fql_filter(current_marker)
+
             response = self.indicators_api_cs.get_combined_indicator_entities(
-                limit=limit,
-                sort=sort,
-                fql_filter=fql_filter,
-                deep_pagination=True,
-                next_page=next_page_token,
+                limit=limit, sort=sort, fql_filter=fql_filter
             )
 
             page_resources = response.get("resources") or []
             if not page_resources:
                 break
 
-            # ``meta.pagination`` can legitimately be missing or null - guard
-            # against both so we don't AttributeError on the .get() below.
+            # Cross-run inclusive-boundary strip: the FQL clause
+            # ``_marker:>='<cursor>'`` is *inclusive*, so when we
+            # resume with a persisted ``fetch_marker`` the very
+            # first page may include the boundary indicator we
+            # already accepted (and persisted) on the previous run.
+            # Drop it BEFORE applying the per-run cap or extending
+            # the aggregate. Two reasons this matters:
+            #
+            # * Without the strip, a tight ``max_records_per_run``
+            #   (e.g. ``1``) lets the duplicate boundary row
+            #   consume the entire quota on every run - the page is
+            #   sliced down to ``[boundary]``, ``next_marker``
+            #   resolves back to the same persisted cursor, state
+            #   never advances and the connector never reaches
+            #   newer indicators.
+            # * Without the strip we always pay for one idempotent
+            #   re-process of the boundary indicator on every
+            #   resume. The OpenCTI side absorbs the duplicate via
+            #   STIX-ID dedup, but the bundle still pays the
+            #   ingest cost.
+            #
+            # On the first iteration we don't yet have a
+            # ``last_accepted_id`` from this run, so the cross-run
+            # boundary is identified by marker comparison instead.
+            # On a fresh run ``fetch_marker`` is ``None`` and the
+            # strip is a no-op.
+            if (
+                fetch_marker is not None
+                and not resources
+                and page_resources[0].get("_marker") == fetch_marker
+            ):
+                page_resources = page_resources[1:]
+                if not page_resources:
+                    # The only row on the page was the duplicate
+                    # boundary - nothing new since the previous run.
+                    break
+
+            # Within-run inclusive-boundary strip: on iterations 2+
+            # the same FQL ``_marker:>='<cursor>'`` clause returns
+            # the previous iteration's last row again as the first
+            # row of the new page. Identify the duplicate by ``id``
+            # rather than ``_marker`` because two *different*
+            # indicators can pathologically share a marker (the
+            # anti-spin test ``test_pagination_stops_when_marker_does_not_advance``
+            # pins that case) - matching on ``id`` is the only
+            # signal that the row is truly the same indicator we
+            # just accepted, not a coincidental marker collision
+            # between two distinct indicators.
+            #
+            # Stripping here matters because without it the
+            # duplicate row would (a) be counted against
+            # ``max_records_per_run`` once per continuation page,
+            # which inflates the apparent fetch volume and starves
+            # the genuine forward progress at the tail of a tight
+            # cap, and (b) be re-processed downstream (idempotent
+            # on the OpenCTI side via STIX-ID dedup, but the
+            # bundle still pays the ingest cost).
+            if (
+                last_accepted_id is not None
+                and page_resources[0].get("id") == last_accepted_id
+            ):
+                page_resources = page_resources[1:]
+                if not page_resources:
+                    # The page was just the duplicate boundary - no
+                    # forward progress here. The anti-spin guard
+                    # below would also fire on the next iteration
+                    # with the same marker, but breaking now saves
+                    # a round-trip.
+                    break
+
+            # ``meta.pagination`` can legitimately be missing or null —
+            # guard against both so we don't AttributeError on the
+            # ``.get()`` below.
             meta = response.get("meta") or {}
             pagination = meta.get("pagination") or {}
-            page_total = pagination.get("total")
-            if page_total is not None:
-                meta_total = page_total
+            meta_total = pagination.get("total")
 
             remaining_cap = self._remaining_cap(len(resources))
             if remaining_cap is not None and remaining_cap <= 0:
@@ -208,19 +399,38 @@ class IndicatorImporter(BaseImporter):
                 page_resources = page_resources[:remaining_cap]
 
             resources.extend(page_resources)
+            # Capture the last accepted row's ``id`` for the
+            # within-run inclusive-boundary strip on the next
+            # iteration. Use the post-cap-slice ``page_resources``
+            # so we record the actual last row in ``resources``,
+            # not the original last row from the API response.
+            last_accepted_id = page_resources[-1].get("id")
+
+            # Marker for the next page = ``_marker`` of the last indicator
+            # we accepted on this page. Fall back gracefully when the
+            # field is missing so a single malformed response cannot
+            # spin the loop forever on the same marker.
+            next_marker = page_resources[-1].get("_marker")
 
             self.helper.connector_logger.info(
                 "Fetched indicator batch",
                 {
                     "batch_size": len(page_resources),
                     "total_fetched": len(resources),
-                    "total_available": meta_total,
-                    "remaining": (
-                        max(0, meta_total - len(resources))
-                        if meta_total is not None
-                        else None
-                    ),
+                    # ``meta.pagination.total`` is the count of records
+                    # matching the *current request's* FQL filter
+                    # (``_marker:>='<cursor>'`` + any ``type:!<exclude>``
+                    # clause). It decreases as the marker advances
+                    # because the FQL changes per call, not because the
+                    # field has a special "remaining" semantics - so
+                    # surface it under a neutral name that does not
+                    # claim either contract. ``utils.paginate`` in this
+                    # repo uses the same field as the absolute total
+                    # for offset-based queries elsewhere.
+                    "matching_filter_total": meta_total,
                     "max_records_per_run": self.max_records_per_run,
+                    "current_marker": current_marker,
+                    "next_marker": next_marker,
                 },
             )
 
@@ -231,12 +441,36 @@ class IndicatorImporter(BaseImporter):
                 self._log_run_cap_reached(len(resources))
                 break
 
-            # ``next_page`` is a single continuation token (string) returned by
-            # ``IndicatorsAPI.get_combined_indicator_entities``. An empty / None
-            # value marks the end of the iteration.
-            next_page_token = response.get("next_page")
-            if not next_page_token:
+            if not next_marker:
+                self.helper.connector_logger.warning(
+                    "Last indicator on page is missing '_marker' field; "
+                    "stopping pagination to avoid an infinite loop",
+                    {"indicator_id": page_resources[-1].get("id")},
+                )
                 break
+
+            # Defensive: if the marker doesn't advance (e.g. the API
+            # returns the same page again), break instead of looping
+            # forever. ``_marker`` is monotonically increasing per the
+            # API contract, so equality means we're stuck.
+            if last_seen_marker is not None and next_marker == last_seen_marker:
+                self.helper.connector_logger.warning(
+                    "Indicator pagination marker did not advance; "
+                    "stopping to avoid an infinite loop",
+                    {"marker": next_marker},
+                )
+                break
+
+            # NOTE: no ``meta_total <= 0`` early-stop. CrowdStrike's
+            # contract is that ``total`` reflects records matching the
+            # current request; when no records match, the API returns
+            # an empty ``resources`` list and the empty-page check at
+            # the top of the loop already breaks. A ``total == 0``
+            # response alongside non-empty ``resources`` would be an
+            # API inconsistency and is not a normal-flow termination.
+
+            last_seen_marker = next_marker
+            current_marker = next_marker
 
         return resources
 

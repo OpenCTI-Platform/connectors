@@ -6,6 +6,7 @@ __pycache__
 *.iml
 test
 config.yml
+!.github/ISSUE_TEMPLATE/config.yml
 docker-compose-test.yml
 Pipfile*
 .DS_Store

@@ -1,5 +1,4 @@
-from typing import TYPE_CHECKING, Optional
-from urllib.parse import parse_qs, urlparse
+from typing import TYPE_CHECKING
 
 from .base_api import BaseCrowdstrikeClient
 
@@ -18,59 +17,35 @@ class IndicatorsAPI(BaseCrowdstrikeClient):
         limit: int,
         sort: str,
         fql_filter: str,
-        deep_pagination: bool,
-        next_page: Optional[str] = None,
     ) -> dict:
         """Get info about indicators that match provided FQL filters.
 
-        :param limit: Maximum number of records to return (max: 5000).
-        :param sort: The property to sort by (e.g. ``created_date|desc``).
-        :param fql_filter: FQL query expression used to filter the results.
-        :param deep_pagination: Whether to enable CrowdStrike's deep pagination.
-        :param next_page: Continuation token returned by a previous call as
-            ``response_body["next_page"]``. Pass ``None`` for the first page.
-        :return: Parsed response body, augmented with a ``next_page`` key whose
-            value is either the next-page token (string) or ``None`` when the
-            iteration is complete.
-        """
-        kwargs = {
-            "limit": limit,
-            "sort": sort,
-            "filter": fql_filter,
-            "deep_pagination": deep_pagination,
-        }
-        if next_page:
-            kwargs["next_page"] = next_page
+        Thin wrapper around the FalconPy ``QueryIntelIndicatorEntities``
+        operation (``GET /intel/combined/indicators/v1``). The only
+        keyword arguments accepted by that operation are ``fields``,
+        ``filter``, ``include_deleted``, ``include_relations``, ``limit``,
+        ``offset``, ``parameters``, ``q`` and ``sort`` — there is no
+        ``deep_pagination`` flag and no continuation-token parameter, and
+        the response carries no ``Next-Page`` HTTP header. Deep pagination
+        is handled by the caller via the ``_marker`` FQL field (see the
+        importer for the loop). Keeping this method *single-page* avoids
+        re-introducing the silently-ignored ``deep_pagination`` / ``next_page``
+        keywords that previously caused the connector to only ever fetch
+        the first page.
 
-        response = self.cs_intel.query_indicator_entities(**kwargs)
+        :param limit: Maximum number of records to return (max: 5000).
+        :param sort: The property to sort by (e.g. ``_marker.asc``).
+        :param fql_filter: FQL query expression used to filter the results.
+        :return: Parsed response body (``response["body"]``).
+        """
+        response = self.cs_intel.query_indicator_entities(
+            limit=limit, sort=sort, filter=fql_filter
+        )
 
         self.handle_api_error(response)
         self.helper.connector_logger.info("Getting combined indicator entities...")
 
-        response_body = response["body"]
-        response_body["next_page"] = self.get_next_page(response)
-
-        return response_body
-
-    @staticmethod
-    def get_next_page(response: dict) -> Optional[str]:
-        """Extract the next-page continuation token from a response.
-
-        CrowdStrike exposes pagination through a ``Next-Page`` HTTP header that
-        contains a URL whose query string carries the ``next_page`` parameter.
-        We extract that value and return it as-is so it can be passed back to
-        :meth:`get_combined_indicator_entities`. Returns ``None`` when there
-        is no next page.
-        """
-        headers = response.get("headers") or {}
-        next_page_url = headers.get("Next-Page")
-        if not next_page_url:
-            return None
-
-        parsed_query = parse_qs(urlparse(next_page_url).query)
-        token_values = parsed_query.get("next_page") or []
-        if not token_values:
-            return None
-
-        token = token_values[0]
-        return token or None
+        # ``handle_api_error`` normalises ``response["body"]`` to ``{}``
+        # when the upstream omits it, but we still guard here so the
+        # contract is explicit at the call site.
+        return response.get("body") or {}

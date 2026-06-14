@@ -104,12 +104,17 @@ class ConnectorVulnCheck:
             stix2.TLP_WHITE,
             self.converter_to_stix.author,
         ]
+        works.send_bundle(
+            helper=self.helper,
+            logger=self.helper.connector_logger,
+            stix_objects=stix_objects,
+            work_id=work_id,
+        )
         works.finish_work(
-            self.helper,
-            self.helper.connector_logger,
-            stix_objects,
-            work_id,
-            work_name,
+            helper=self.helper,
+            logger=self.helper.connector_logger,
+            work_id=work_id,
+            work_name=work_name,
         )
 
     def process_message(self) -> None:

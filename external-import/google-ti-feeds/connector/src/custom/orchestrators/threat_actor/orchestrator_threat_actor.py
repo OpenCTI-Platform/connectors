@@ -88,6 +88,7 @@ class OrchestratorThreatActor(BaseOrchestrator):
             # "files",
             # "urls",
             # "ip_addresses",
+            "software_toolkits",
         ]
         try:
             async for gti_threat_actors in self.client_api.fetch_threat_actors(

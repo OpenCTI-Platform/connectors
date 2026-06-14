@@ -1,0 +1,21 @@
+{
+  "title": "Mattermost",
+  "slug": "mattermost",
+  "description": "OpenCTI external-import connector that imports messages, attachments, authors and thread relationships from one or more Mattermost channels.",
+  "short_description": "Import Mattermost messages, attachments and threads into OpenCTI.",
+  "logo": null,
+  "use_cases": [
+    "Threat Intelligence"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 100,
+  "support_version": ">=6.4.3",
+  "subscription_link": null,
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/mattermost",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-mattermost",
+  "container_type": "EXTERNAL_IMPORT"
+}

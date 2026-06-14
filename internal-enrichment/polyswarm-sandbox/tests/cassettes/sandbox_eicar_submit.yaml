@@ -1,0 +1,144 @@
+interactions:
+- request:
+    body: '{"artifact_name": "eicar.com", "artifact_type": "FILE", "community": "default",
+      "provider_slug": "cape", "vm_slug": "win-10-build-19041", "network_enabled":
+      0, "arguments": ""}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '176'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: POST
+    uri: https://api.polyswarm.network/v3/sandbox/sandboxtask/instance
+  response:
+    body:
+      string: '{"result":{"account_number":null,"artifact":{"extended_type":null,"failed":false,"filename":"eicar.com","mimetype":null,"size":null},"community":"mainnet1","config":{"arguments":"","artifact_type":"FILE","browser":null,"network_enabled":false,"provider":{"id":"1","name":"cape","slug":"cape","tool":"cape_sandbox_v2"},"target":"eicar.com","vm":{"architecture":"x64","id":"100","language":"English
+        (United States)","name":"Microsoft Windows 10 Pro Build 19041","os_name":"Microsoft
+        Windows 10 Pro","os_version":"10.0.19041 Build 19041","slug":"win-10-build-19041"}},"created":"2026-04-02T16:29:03.849954+00:00","expiration":"2026-04-02T19:29:03.854296+00:00","id":"90410531575984983","instance_id":"36672250981227572","report":{},"sandbox":"cape","sandbox_artifacts":[],"sha256":null,"status":"PENDING","team_account_number":null,"upload_url":"https://ps-storage-prodv2-artifact-index.s3.us-east-2.amazonaws.com/instances/fd/c6/08/fdc60838-a8a4-42eb-b5a3-45ee9799c1ec?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARD7S6WCVBXF6ZSO5%2F20260402%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260402T162903Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=be831dd83fd865e420d8495909881d93df8340e2d38d86c7ecd19c3451de4057"},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '1250'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:29:03 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: !!python/object/new:_io.BytesIO
+      state: !!python/tuple
+      - !!binary |
+        WDVPIVAlQEFQWzRcUFpYNTQoUF4pN0NDKTd9JEVJQ0FSLVNUQU5EQVJELUFOVElWSVJVUy1URVNU
+        LUZJTEUhJEgrSCo=
+      - 0
+      - null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '68'
+      User-Agent:
+      - python-requests/2.32.3
+    method: PUT
+    uri: https://ps-storage-prodv2-artifact-index.s3.us-east-2.amazonaws.com/instances/fd/c6/08/fdc60838-a8a4-42eb-b5a3-45ee9799c1ec?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIARD7S6WCVBXF6ZSO5%2F20260402%2Fus-east-2%2Fs3%2Faws4_request&X-Amz-Date=20260402T162903Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=be831dd83fd865e420d8495909881d93df8340e2d38d86c7ecd19c3451de4057
+  response:
+    body:
+      string: ''
+    headers:
+      Content-Length:
+      - '0'
+      Date:
+      - Thu, 02 Apr 2026 16:29:05 GMT
+      ETag:
+      - '"44d88612fea8a8f36de82e1278abb02f"'
+      Server:
+      - AmazonS3
+      x-amz-checksum-crc64nvme:
+      - Zoer9MJBF1Q=
+      x-amz-checksum-type:
+      - FULL_OBJECT
+      x-amz-expiration:
+      - expiry-date="Sat, 04 Apr 2026 00:00:00 GMT", rule-id="expiration-artifact-index_0-instances"
+      x-amz-id-2:
+      - VjhfDhYeJPCCp9x6IW8BBHIInrSs0JjZdlCWQGc0QU30jqJaHwdgp2YgPvdlGv97ssHWNpC4Yy88YdIM96MGQLLuSJLUahO8
+      x-amz-request-id:
+      - 6QN97SKBM4GT9WC0
+      x-amz-server-side-encryption:
+      - AES256
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"community": "default"}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - SCRUBBED
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '24'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - polyswarm_api/3.17.1 (x86_64-Linux-CPython-3.12.13)
+    method: PUT
+    uri: https://api.polyswarm.network/v3/sandbox/sandboxtask/instance?id=90410531575984983
+  response:
+    body:
+      string: '{"result":{"account_number":null,"artifact":{"extended_type":null,"failed":false,"filename":"eicar.com","mimetype":null,"size":null},"community":"mainnet1","config":{"arguments":"","artifact_type":"FILE","browser":null,"network_enabled":false,"provider":{"id":"1","name":"cape","slug":"cape","tool":"cape_sandbox_v2"},"target":"eicar.com","vm":{"architecture":"x64","id":"100","language":"English
+        (United States)","name":"Microsoft Windows 10 Pro Build 19041","os_name":"Microsoft
+        Windows 10 Pro","os_version":"10.0.19041 Build 19041","slug":"win-10-build-19041"}},"created":"2026-04-02T16:29:03.849954+00:00","expiration":"2026-04-02T19:29:03.854296+00:00","id":"90410531575984983","instance_id":"36672250981227572","report":{},"sandbox":"cape","sandbox_artifacts":[],"sha256":null,"status":"PENDING","team_account_number":null,"upload_url":null},"status":"OK"}
+
+        '
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - Authorization
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '863'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Apr 2026 16:29:04 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      X-Billing-ID:
+      - '83243072086525'
+    status:
+      code: 200
+      message: OK
+version: 1

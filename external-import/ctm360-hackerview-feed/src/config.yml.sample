@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'  # UUIDv4
+  name: 'CTM360-HackerView'
+  scope: 'CTM360-HackerView'
+  log_level: 'info'
+  duration_period: 'PT24H'
+
+ctm360_hackerview_feed:
+  api_base_url: 'https://hackerview.ctm360.com'
+  api_key: 'ChangeMe'
+  import_issues: true
+  import_resolved_issues: true
+  import_domain_assets: true
+  import_host_assets: true
+  import_ip_assets: true

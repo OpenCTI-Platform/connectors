@@ -1,0 +1,14 @@
+opencti:
+  url: 'http://localhost:PORT'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  name: 'SigmaHQ'
+  scope: 'Indicator,Attack-Pattern,Vulnerability,Identity,Marking-Definition,Relationship'
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'P1D' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'P1D')
+
+sigmahq:
+  rule_package: 'sigma_all_rules' # optional, available values: 'sigma_all_rules', 'sigma_core++', 'sigma_core+', 'sigma_core', 'sigma_emerging_threats_addon', (default: 'sigma_all_rules')
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')

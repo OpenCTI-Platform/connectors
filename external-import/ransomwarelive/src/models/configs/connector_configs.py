@@ -49,15 +49,74 @@ class _ConfigLoaderConnector(ConfigBaseSettings):
     # Connector's custom parameters
     pull_history: bool = Field(
         default=False,
-        description="Whether to pull historic data. It is not recommended to set it to true as there will a large influx of data",
+        description=(
+            "Whether to pull historic data. It is not recommended to set it "
+            "to ``true`` as there will be a large influx of data."
+        ),
     )
     history_start_year: PositiveInt = Field(
         default=2023,
-        description="The year to start from",
+        description=(
+            "Year (or ``YYYYMM``) to start the historical backfill "
+            "from. Accepts the four-digit year shape (``2023``) — "
+            "backfill begins on January 1st of that year — or the "
+            "six-digit year-month shape (``202306``) — backfill "
+            "begins on the first of that month. The ransomware.live "
+            "feed only goes back to 2020; values older than 2020 "
+            "are clamped to ``2020-01`` at runtime."
+        ),
     )
+
+    # Entity-creation flags. Every flag defaults to ``False`` so the
+    # connector's default bundle stays minimal (Victim + Indicator-like
+    # objects); the operator opts into the broader Threat Actor /
+    # Intrusion Set / Campaign / Report SDOs explicitly. Defaults
+    # mirror the README configuration table so docs and runtime agree.
     create_threat_actor: bool = Field(
         default=False,
-        description="Whether to create a Threat Actor object",
+        description="Whether to create a Threat Actor object.",
+    )
+    create_intrusion_set: bool = Field(
+        default=False,
+        description="Whether to create an Intrusion Set object.",
+    )
+    create_campaign: bool = Field(
+        default=False,
+        description="Whether to create a Campaign object.",
+    )
+    create_report: bool = Field(
+        default=False,
+        description="Whether to create a Report object.",
+    )
+
+    # TLP marking applied to every emitted SDO. ``TLP:CLEAR`` is the
+    # OpenCTI-specific modern label (rendered via the
+    # ``x_opencti_definition='TLP:CLEAR'`` extension in
+    # ``ConverterToStix.load_marking_definition``); ``TLP:WHITE`` is
+    # the legacy STIX 2.1 equivalent and is kept for backwards
+    # compatibility with deployments still using the old name.
+    marking_value: Literal[
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED",
+    ] = Field(
+        default="TLP:CLEAR",
+        description=(
+            "TLP marking attached to every emitted STIX object. "
+            "``TLP:CLEAR`` (default) is the OpenCTI-specific modern "
+            "label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent."
+        ),
+    )
+    create_leak_site_domains: bool = Field(
+        default=False,
+        description="Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet",
+    )
+    create_leak_post_refs: bool = Field(
+        default=False,
+        description="Whether to include the leak post URL as an external reference on victim reports",
     )
 
     @field_validator("type")
