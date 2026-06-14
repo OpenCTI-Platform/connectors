@@ -55,9 +55,17 @@ def _coerce_bool(value, default: bool) -> bool:
 class PdfOcrConfig:
     languages: tuple[str, ...] = ("en",)
     gpu: bool = torch.cuda.is_available()
-    serialize_gpu: bool = gpu
+    # ``serialize_gpu`` defaults to ``gpu``, but a plain field default (``= gpu``)
+    # would bind to the class-definition value of ``gpu`` rather than the
+    # per-instance one, so ``PdfOcrConfig(gpu=True)`` would keep the import-time
+    # default. ``None`` means "follow gpu" and is resolved in __post_init__.
+    serialize_gpu: Optional[bool] = None
     min_img_area: int = 40_000
     page_raster_dpi: int = 300
+
+    def __post_init__(self) -> None:
+        if self.serialize_gpu is None:
+            object.__setattr__(self, "serialize_gpu", self.gpu)
 
     @classmethod
     def from_opencti(cls, parser) -> "PdfOcrConfig":

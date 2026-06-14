@@ -26,6 +26,9 @@ import ijson
 import tiktoken
 from openai import AzureOpenAI
 from openai import OpenAI as OpenAIClient
+from reportimporter.regex_scanner import (
+    OBSERVABLE_LABELS,
+)
 from reportimporter.regex_scanner import Span as RegexSpan
 from reportimporter.regex_scanner import (
     _short_hash,
@@ -962,7 +965,10 @@ class LLMHelper:
         base_start = int(chunk.get("start", 0) or 0)
 
         def _infer_role(label: str) -> str:
-            return "observable" if "." in (label or "") else "entity"
+            # Classify against the shared observable set so dotted *entity*
+            # categories (e.g. Attack-Pattern.x_mitre_id, Vulnerability.name) are
+            # not mistaken for observables the way a bare "." check would be.
+            return "observable" if (label or "") in OBSERVABLE_LABELS else "entity"
 
         for obj in items:
             if not isinstance(obj, dict):

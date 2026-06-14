@@ -178,9 +178,9 @@ class TestCreateStixObject:
         assert util.create_stix_object("Not-A-Category", "x", [], {}) == []
 
     def test_malware_analysis_factory_is_dropped_gracefully(self):
-        # The Malware-Analysis factory builds an incomplete MalwareAnalysis
-        # (no result/analysis_sco_refs), so stix2 raises and create_stix_object
-        # swallows it and returns [] rather than crashing the import.
+        # A valid STIX 2.1 Malware Analysis needs result/analysis_sco_refs, which
+        # the extractor does not provide, so the factory returns None and
+        # create_stix_object maps that to [] (no exception, nothing emitted).
         assert util.create_stix_object("Malware-Analysis", "scan", [], {}) == []
 
     def test_invalid_domain_factory_returns_empty(self):

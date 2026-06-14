@@ -21,14 +21,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     rustc \
     cargo \
     libmagic1 \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    poppler-utils \
     && apt-get clean && rm -rf /var/lib/apt/lists/* \
     && python -m pip install --no-cache-dir --upgrade pip setuptools wheel \
     && python -m pip install --no-cache-dir -r requirements.txt -c constraints.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu \
-    && apt-get remove -y --purge build-essential git rustc cargo libmagic1 tesseract-ocr tesseract-ocr-eng poppler-utils \
+    && apt-get remove -y --purge build-essential git rustc cargo libmagic1 \
     && apt-get autoremove -y && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /root/.cache/pip
 

@@ -33,7 +33,6 @@ from pycti import (
     IntrusionSet,
     Location,
     Malware,
-    MalwareAnalysis,
     ThreatActor,
     ThreatActorGroup,
     Tool,
@@ -671,16 +670,13 @@ stix_object_mapping: dict[str, Callable[[str, list[str], dict[str, Any]], Any]] 
     "Mac-Addr.value": lambda v, om, cp: stix2.MACAddress(
         value=v.strip().lower(), allow_custom=True, **_mk(om), **_sco_cp(cp)
     ),
-    "Malware-Analysis": lambda v, om, cp: stix2.MalwareAnalysis(
-        id=MalwareAnalysis.generate_id(
-            result_name=v.strip(), product=(cp or {}).get("product") or "unknown"
-        ),
-        result_name=v.strip(),
-        product=(cp or {}).get("product") or "unknown",
-        allow_custom=True,
-        **_mk(om),
-        **_sco_cp(cp),
-    ),
+    # STIX 2.1 requires at least one of `result` / `analysis_sco_refs` on a
+    # Malware Analysis object. The extractor only provides a bare value here, so a
+    # valid object cannot be built; skip the category cleanly (returning None,
+    # which create_stix_object maps to []) instead of constructing an object that
+    # raises AtLeastOnePropertyError. Re-enable once the extractor supplies a
+    # result verdict or analysis SCO references.
+    "Malware-Analysis": lambda v, om, cp: None,
     "Mutex": lambda v, om, cp: stix2.Mutex(
         name=v.strip(), allow_custom=True, **_mk(om), **_sco_cp(cp)
     ),
