@@ -6,7 +6,7 @@
 
 ## Table of Contents
 
-- [OpenCTI Export File Threat Hunting Rules Connector](#opencti-connector-export-file-threat-hunting-rules)
+- [OpenCTI Export File Threat Hunting Rules Connector](#opencti-export-file-threat-hunting-rules-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -167,7 +167,7 @@ For exporting selected indicators from a list:
 
 1. Fetches all selected STIX Domain Objects using `main_filter`
 2. Iterates through each entity
-3. Checks if `pattern_type == "[yara, sigma, snort]"`
+3. Checks if `pattern_type` is one of [yara, sigma, snort]
 4. Collects valid [yara, sigma, snort] patterns
 5. Logs warning and reports error for non-[yara, sigma, snort] indicators (but will not fail as long as there is a valid result)
 6. Joins all patterns and uploads the file
@@ -178,7 +178,7 @@ For exporting indicators matching filters:
 
 1. Combines `list_params.filters` with `access_filter`
 2. Fetches all matching entities using `export_entities_list`
-3. Filters for `pattern_type == "[yara, sigma, snort]"`
+3. Filters for `pattern_type` being one of [yara, sigma, snort]
 4. Collects and joins [yara, sigma, snort] patterns
 5. Uploads the combined file
 

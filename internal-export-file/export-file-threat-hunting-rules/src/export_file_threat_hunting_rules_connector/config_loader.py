@@ -20,11 +20,13 @@ class ConfigConnector:
         :return: Configuration dictionary
         """
         config_file_path = Path(__file__).parents[1].joinpath("config.yml")
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
+        if os.path.isfile(config_file_path):
+            # Use a context manager (closes the handle) and safe_load to avoid
+            # resource leaks and the risks of the full YAML loader.
+            with open(config_file_path, encoding="utf-8") as config_file:
+                config = yaml.safe_load(config_file) or {}
+        else:
+            config = {}
         config.setdefault("connector", {}).update({"type": "INTERNAL_EXPORT_FILE"})
 
         return config

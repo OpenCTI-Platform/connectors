@@ -319,7 +319,20 @@ class ConnectorExportFileThreatHunting:
                             indicator = self.helper.api_impersonate.indicator.read(
                                 id=stix_indicator_relation["to"]["id"]
                             )
-                            entities_list.append(indicator)
+                            # ``read()`` can return None (concurrent deletion /
+                            # access change); skip it so ``DataCollector.extract``
+                            # does not crash on ``None.get(...)`` later.
+                            if indicator is not None:
+                                entities_list.append(indicator)
+                            else:
+                                self.helper.connector_logger.debug(
+                                    "Skipping unreadable indicator from relationship",
+                                    {
+                                        "indicator_id": stix_indicator_relation["to"][
+                                            "id"
+                                        ]
+                                    },
+                                )
 
                         self.helper.connector_logger.debug(
                             f"Resolved {len(entities_list)} indicator(s) from relationships"
@@ -352,10 +365,13 @@ class ConnectorExportFileThreatHunting:
             return "Export done"
 
         except Exception as err:
-            # Handling other unexpected exceptions
-            return self.helper.connector_logger.error(
+            # Handling other unexpected exceptions. ``connector_logger.error``
+            # returns None, so log first and then return a string to honour the
+            # declared ``-> str`` return contract.
+            self.helper.connector_logger.error(
                 "[CONNECTOR] Unexpected Error occurred", {"error_message": str(err)}
             )
+            return "Export failed"
 
     def run(self) -> None:
         """
