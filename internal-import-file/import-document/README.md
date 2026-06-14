@@ -34,7 +34,7 @@
 
 ## Introduction
 
-This connector allows organizations to **extract threat intelligence from documents** and feed it into OpenCTI. It parses document files (PDF, TXT, HTML, Markdown, CSV) and extracts:
+This connector allows organizations to **extract threat intelligence from documents** and feed it into OpenCTI. It parses document files (PDF, DOCX, TXT, HTML, Markdown, CSV) and extracts:
 
 - **Entities**: Matches text against existing entities in the OpenCTI knowledge base (threat actors, malware, campaigns, etc.)
 - **Observables**: Extracts IOCs using regex patterns and the `ioc_finder` library (IP addresses, domains, URLs, hashes, etc.)
@@ -71,7 +71,7 @@ Below are the parameters you'll need to set for running the connector properly:
 |--------------------------|--------------------------|------------------------------------|-----------------------------------------------------|-----------|------------------------------------------------------------------------------------------|
 | Connector ID             | `id`                     | `CONNECTOR_ID`                     | /                                                   | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Name           | `name`                   | `CONNECTOR_NAME`                   | ImportDocument                                      | No        | Name of the connector.                                                                   |
-| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/html,text/markdown  | Yes       | Comma-separated list of supported MIME types.                                            |
+| Connector Scope          | `scope`                  | `CONNECTOR_SCOPE`                  | application/pdf,text/plain,text/csv,text/html,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document  | Yes       | Comma-separated list of supported MIME types.                                            |
 | Connector Auto           | `auto`                   | `CONNECTOR_AUTO`                   | false                                               | No        | Enable/disable automatic import of files matching the scope.                             |
 | Connector Only Contextual| `only_contextual`        | `CONNECTOR_ONLY_CONTEXTUAL`        | false                                               | No        | If `true`, only extract data when an entity context is provided.                         |
 | Validate Before Import   | `validate_before_import` | `CONNECTOR_VALIDATE_BEFORE_IMPORT` | false                                               | No        | If enabled, bundles are sent for validation before import.                               |
@@ -132,7 +132,7 @@ This is an **Internal Import File** connector. It processes files uploaded to Op
 To use this connector:
 
 1. Navigate to **Data** → **Import** in the OpenCTI platform
-2. Upload a document file (PDF, TXT, HTML, MD, or CSV)
+2. Upload a document file (PDF, DOCX, TXT, HTML, MD, or CSV)
 3. Select this connector to process the file
 4. Optionally, select an entity to associate the extracted data with (contextual import)
 
@@ -175,7 +175,7 @@ flowchart TD
 graph LR
     subgraph "Document"
         direction TB
-        Document[PDF / TXT / HTML / MD / CSV]
+        Document[PDF / DOCX / TXT / HTML / MD / CSV]
         TextContent[Text Content]
     end
 
@@ -276,6 +276,7 @@ Observables are extracted using regex patterns and the `ioc_finder` library:
 | HTML | `text/html` | BeautifulSoup |
 | Markdown | `text/markdown` | Direct text |
 | CSV | `text/csv` | Direct text |
+| DOCX | `application/vnd.openxmlformats-officedocument.wordprocessingml.document` | python-docx |
 
 ## Advanced configuration
 
