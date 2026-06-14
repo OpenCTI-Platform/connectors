@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/thehive_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "TheHive",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5M",
+      "description": "Period of time to await between two runs of the connector (ISO-8601). Currently informational: scheduling still uses 'thehive.interval' (minutes); this becomes the scheduling source in a future version.",
+      "format": "duration",
+      "type": "string"
+    },
+    "THEHIVE_URL": {
+      "description": "Base URL of the TheHive instance.",
+      "examples": [
+        "https://thehive.changeme.com"
+      ],
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "THEHIVE_API_KEY": {
+      "description": "API key used to authenticate against TheHive.",
+      "type": "string"
+    },
+    "THEHIVE_ORGANIZATION_NAME": {
+      "description": "Name of the organization used as the author of imported data in OpenCTI.",
+      "examples": [
+        "MyCompany"
+      ],
+      "type": "string"
+    },
+    "THEHIVE_CHECK_SSL": {
+      "default": true,
+      "description": "Whether to verify TheHive's TLS certificate.",
+      "type": "boolean"
+    },
+    "THEHIVE_IMPORT_FROM_DATE": {
+      "default": null,
+      "description": "Earliest creation/update date to import from, as an ISO-8601 datetime (e.g. '2021-01-01T00:00:00'). Defaults to the connector's first start time.",
+      "examples": [
+        "2021-01-01T00:00:00"
+      ],
+      "type": "string"
+    },
+    "THEHIVE_IMPORT_ONLY_TLP": {
+      "default": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "description": "Comma-separated TheHive TLP levels (0-4) to import.",
+      "examples": [
+        "0,1,2,3,4"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_IMPORT_ALERTS": {
+      "default": true,
+      "description": "Whether to import TheHive alerts in addition to cases.",
+      "type": "boolean"
+    },
+    "THEHIVE_IMPORT_ATTACHMENTS": {
+      "default": false,
+      "description": "Whether to import case attachments as STIX artifacts.",
+      "type": "boolean"
+    },
+    "THEHIVE_SEVERITY_MAPPING": {
+      "default": [
+        "1:01 - low",
+        "2:02 - medium",
+        "3:03 - high",
+        "4:04 - critical"
+      ],
+      "description": "Comma-separated mapping of TheHive severity (1-4) to an OpenCTI severity label, as 'level:label' pairs.",
+      "examples": [
+        "1:01 - low,2:02 - medium,3:03 - high,4:04 - critical"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_CASE_STATUS_MAPPING": {
+      "description": "Comma-separated mapping of TheHive case extendedStatus to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_TASK_STATUS_MAPPING": {
+      "description": "Comma-separated mapping of TheHive task status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_ALERT_STATUS_MAPPING": {
+      "description": "Comma-separated mapping of TheHive alert status to an OpenCTI workflow status id, as 'thehive_status:opencti_status_id' pairs.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_USER_MAPPING": {
+      "description": "Comma-separated mapping of TheHive assignee email to an OpenCTI user id, as 'email:opencti_user_id' pairs.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_CASE_TAG_WHITELIST": {
+      "description": "Comma-separated list of case tags; if set, only cases bearing one of these tags are imported.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "THEHIVE_INTERVAL": {
+      "default": 5,
+      "description": "Number of minutes to wait between two runs of the connector.",
+      "minimum": 1,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "THEHIVE_URL",
+    "THEHIVE_API_KEY",
+    "THEHIVE_ORGANIZATION_NAME"
+  ],
+  "additionalProperties": true
+}

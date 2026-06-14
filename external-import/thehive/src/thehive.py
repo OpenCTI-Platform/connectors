@@ -1,14 +1,13 @@
 import base64
 import json
-import os
 import sys
 import time
 import traceback
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import requests
 import stix2
-import yaml
 from constants import DEFAULT_DATETIME, DEFAULT_UTC_DATETIME, PAP_MAPPINGS, TLP_MAPPINGS
 from dateutil.parser import parse
 from hive_observable_transform import (
@@ -25,7 +24,6 @@ from pycti import (
     StixCoreRelationship,
     StixSightingRelationship,
     Task,
-    get_config_variable,
 )
 from thehive4py import TheHiveApi
 from thehive4py.query import Gt, In
@@ -36,104 +34,41 @@ from thehive4py.types.case import OutputCase
 
 from utils import format_datetime  # isort: skip
 
+if TYPE_CHECKING:
+    from connector.settings import ConnectorSettings
+
 
 class TheHive:
-    def __init__(self):
-        # Instantiate the connector helper from config
-        config_file_path = os.path.dirname(os.path.abspath(__file__)) + "/config.yml"
-        config = (
-            yaml.load(open(config_file_path), Loader=yaml.FullLoader)
-            if os.path.isfile(config_file_path)
-            else {}
-        )
-        self.helper = OpenCTIConnectorHelper(config)
-        # Extra config
-        self.thehive_url = get_config_variable(
-            "THEHIVE_URL", ["thehive", "url"], config
-        )
-        if isinstance(self.thehive_url, str):
-            self.thehive_url = self.thehive_url.rstrip("/")
-        self.thehive_api_key = get_config_variable(
-            "THEHIVE_API_KEY", ["thehive", "api_key"], config
-        )
-        self.thehive_check_ssl = get_config_variable(
-            "THEHIVE_CHECK_SSL", ["thehive", "check_ssl"], config, False, True
-        )
-        self.thehive_organization_name = get_config_variable(
-            "THEHIVE_ORGANIZATION_NAME", ["thehive", "organization_name"], config
-        )
-        self.thehive_import_from_date = get_config_variable(
-            "THEHIVE_IMPORT_FROM_DATE",
-            ["thehive", "import_from_date"],
-            config,
-            False,
-            format_datetime(time.time(), DEFAULT_DATETIME),
-        )
-        self.thehive_import_from_date = parse(self.thehive_import_from_date).timestamp()
-        self.thehive_import_only_tlp = get_config_variable(
-            "THEHIVE_IMPORT_ONLY_TLP",
-            ["thehive", "import_only_tlp"],
-            config,
-            False,
-            "0,1,2,3,4",
-        ).split(",")
-        self.thehive_import_alerts = get_config_variable(
-            "THEHIVE_IMPORT_ALERTS", ["thehive", "import_alerts"], config, False, True
-        )
-        self.thehive_import_attachments = get_config_variable(
-            "THEHIVE_IMPORT_ATTACHMENTS",
-            ["thehive", "import_attachments"],
-            config,
-            False,
-            False,  # ← default value: attachments DISABLED
-        )
+    def __init__(
+        self, config: "ConnectorSettings", helper: OpenCTIConnectorHelper
+    ) -> None:
+        self.config = config
+        self.helper = helper
 
-        self.thehive_severity_mapping = get_config_variable(
-            "THEHIVE_SEVERITY_MAPPING",
-            ["thehive", "severity_mapping"],
-            config,
-            False,
-            "1:01 - low,2:02 - medium,3:03 - high,4:04 - critical",
-        ).split(",")
-        self.thehive_case_status_mapping = get_config_variable(
-            "THEHIVE_CASE_STATUS_MAPPING",
-            ["thehive", "case_status_mapping"],
-            config,
-            False,
-            "",
-        ).split(",")
-        self.thehive_case_tag_whitelist = get_config_variable(
-            "THEHIVE_CASE_TAG_WHITELIST",
-            ["thehive", "case_tag_whitelist"],
-            config,
-            False,
-            "",
-        ).split(",")
-        self.thehive_task_status_mapping = get_config_variable(
-            "THEHIVE_TASK_STATUS_MAPPING",
-            ["thehive", "case_task_mapping"],
-            config,
-            False,
-            "",
-        ).split(",")
-        self.thehive_alert_status_mapping = get_config_variable(
-            "THEHIVE_ALERT_STATUS_MAPPING",
-            ["thehive", "case_alert_mapping"],
-            config,
-            False,
-            "",
-        ).split(",")
-        self.thehive_user_mapping = get_config_variable(
-            "THEHIVE_USER_MAPPING", ["thehive", "user_mapping"], config, False, ""
-        ).split(",")
-        self.thehive_interval = get_config_variable(
-            "THEHIVE_INTERVAL", ["thehive", "interval"], config, True
+        # TheHive connection settings
+        self.thehive_url = str(config.thehive.url).rstrip("/")
+        self.thehive_api_key = config.thehive.api_key
+        self.thehive_check_ssl = config.thehive.check_ssl
+        self.thehive_organization_name = config.thehive.organization_name
+
+        # Import behaviour
+        import_from_date = config.thehive.import_from_date or format_datetime(
+            time.time(), DEFAULT_DATETIME
         )
-        self.update_existing_data = get_config_variable(
-            "CONNECTOR_UPDATE_EXISTING_DATA",
-            ["connector", "update_existing_data"],
-            config,
-        )
+        self.thehive_import_from_date = parse(import_from_date).timestamp()
+        self.thehive_import_only_tlp = config.thehive.import_only_tlp
+        self.thehive_import_alerts = config.thehive.import_alerts
+        self.thehive_import_attachments = config.thehive.import_attachments
+
+        # Mappings
+        self.thehive_severity_mapping = config.thehive.severity_mapping
+        self.thehive_case_status_mapping = config.thehive.case_status_mapping
+        self.thehive_case_tag_whitelist = config.thehive.case_tag_whitelist
+        self.thehive_task_status_mapping = config.thehive.task_status_mapping
+        self.thehive_alert_status_mapping = config.thehive.alert_status_mapping
+        self.thehive_user_mapping = config.thehive.user_mapping
+        self.thehive_interval = config.thehive.interval
+
         self.identity = self.helper.api.identity.create(
             type="Organization",
             name=self.thehive_organization_name,
@@ -768,13 +703,3 @@ class TheHive:
                 f"End of current run loop, running next interval in {self.get_interval()} second(s)."
             )
             time.sleep(self.get_interval())
-
-
-if __name__ == "__main__":
-    try:
-        theHiveConnector = TheHive()
-        theHiveConnector.run()
-    except Exception as e:
-        print(e)
-        time.sleep(10)
-        sys.exit(0)
