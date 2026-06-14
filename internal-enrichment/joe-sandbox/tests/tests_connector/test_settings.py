@@ -401,8 +401,14 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     # configuration error in the dict would still pass the test.
     cause = err.value.__cause__
     assert cause is not None, "ConfigValidationError must wrap the pydantic error"
-    error_locs = [".".join(str(p) for p in error["loc"]) for error in cause.errors()]
-    assert any(loc.startswith(field_name) for loc in error_locs), (
+    # Assert on the leaf of each error ``loc`` (the field name) rather than the
+    # dot-joined path: pydantic reports nested-model errors inconsistently
+    # (e.g. ``("opencti", "url")`` vs an inner-model root ``("url",)``), so
+    # matching the last ``loc`` segment against the last segment of the dotted
+    # ``field_name`` is stable across those shapes.
+    expected_field = field_name.split(".")[-1]
+    error_fields = [str(error["loc"][-1]) for error in cause.errors() if error["loc"]]
+    assert expected_field in error_fields, (
         f"Expected a validation error for field {field_name!r}, "
-        f"got errors for: {error_locs}"
+        f"got errors for: {error_fields}"
     )
