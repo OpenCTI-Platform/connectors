@@ -411,23 +411,23 @@ work_id = None
 message = "Done"
 in_error = False
 try:
-  # Pass is_multipart=True when this work may push more than one bundle (or when
-  # send_stix2_bundle may split a large bundle) so the Work only completes once
-  # to_processed is called below.
-  work_id = self.helper.api.work.initiate_work(
-      self.helper.connect_id, friendly_name, is_multipart=True
-  )
-  # Here you typically want to call `self.helper.send_stix2_bundle(bundle, work_id=work_id)` for each
-  # data bundle to push it on the queue and let the workers import them in the platform.
+    # Pass is_multipart=True when this work may push more than one bundle (or when
+    # send_stix2_bundle may split a large bundle) so the Work only completes once
+    # to_processed is called below.
+    work_id = self.helper.api.work.initiate_work(
+        self.helper.connect_id, friendly_name, is_multipart=True
+    )
+    # Here you typically want to call `self.helper.send_stix2_bundle(bundle, work_id=work_id)` for each
+    # data bundle to push it on the queue and let the workers import them in the platform.
 except Exception as ex:
-  # You might want to treat several error cases differently, this is a basic handling
-  message = "Failed: {}".format(str(ex))
-  in_error = True
+    # You might want to treat several error cases differently, this is a basic handling
+    message = "Failed: {}".format(str(ex))
+    in_error = True
 finally:
-  # It's important to notify the backend that the connector finished pushing all bundles on the queue.
-  # The Work will be able to transition to `complete` when all bundles get treated by the workers.
-  if work_id is not None:
-    self.helper.api.work.to_processed(work_id, message, in_error=in_error)
+    # It's important to notify the backend that the connector finished pushing all bundles on the queue.
+    # The Work will be able to transition to `complete` when all bundles get treated by the workers.
+    if work_id is not None:
+        self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 ```
 
 Get current state
