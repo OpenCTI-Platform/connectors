@@ -29,6 +29,7 @@ class ConnectorClient:
                 "scope": "https://graph.microsoft.com/.default",
             }
             response = requests.post(url, data=oauth_data)
+            response.raise_for_status()
             response_json = json.loads(response.text)
 
             oauth_token = response_json["access_token"]
@@ -66,7 +67,7 @@ class ConnectorClient:
         """
         config = self.config.microsoft_defender_incidents
         base_url = str(config.api_base_url).rstrip("/")
-        incident_path = config.incident_path
+        incident_path = "/" + config.incident_path.lstrip("/")
         params = {"$expand": "alerts", "$filter": f"lastUpdateDateTime gt {date_str}"}
         return requests.Request(
             "GET", f"{base_url}{incident_path}", params=params
