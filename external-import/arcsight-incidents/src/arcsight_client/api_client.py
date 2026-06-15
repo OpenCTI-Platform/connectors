@@ -189,6 +189,12 @@ class ArcSightClient:
         (5xx) are retried; other 4xx responses (e.g. 401/403/404) fail fast
         without retrying. Failing fast on 401 also lets the caller re-issue the
         auth token immediately instead of after three backoff sleeps.
+
+        Errors are logged with the path and the exception type/status code only -
+        never ``str(err)`` - because the login request carries the ArcSight
+        password as a query parameter and a ``requests`` exception string usually
+        embeds the full request URL, which would leak the credentials (and auth
+        token) into the logs.
         """
         url = f"{self._base_url}{path}"
         for attempt in range(self.REQUEST_ATTEMPTS):
@@ -200,7 +206,7 @@ class ArcSightClient:
             except requests.RequestException as err:
                 self.helper.connector_logger.warning(
                     "[API] ArcSight request failed",
-                    meta={"url": url, "error": str(err)},
+                    meta={"path": path, "error_type": type(err).__name__},
                 )
                 if last_attempt:
                     return None
@@ -211,7 +217,7 @@ class ArcSightClient:
                 if last_attempt:
                     self.helper.connector_logger.warning(
                         "[API] ArcSight request failed",
-                        meta={"url": url, "status_code": response.status_code},
+                        meta={"path": path, "status_code": response.status_code},
                     )
                     return None
                 time.sleep(self.BACKOFF_FACTOR * (2**attempt))
@@ -222,7 +228,11 @@ class ArcSightClient:
             except requests.HTTPError as err:
                 self.helper.connector_logger.warning(
                     "[API] ArcSight request failed",
-                    meta={"url": url, "error": str(err)},
+                    meta={
+                        "path": path,
+                        "status_code": response.status_code,
+                        "error_type": type(err).__name__,
+                    },
                 )
                 return None
             return response
