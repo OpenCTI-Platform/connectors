@@ -57,8 +57,6 @@ class FortiSIEMConnector:
 
         :param msg: Message event from the stream.
         """
-        self.check_stream_id()
-
         try:
             data = json.loads(msg.data)["data"]
         except (json.JSONDecodeError, KeyError, TypeError) as err:
@@ -67,5 +65,6 @@ class FortiSIEMConnector:
         self._handle_indicator(msg.event, data)
 
     def run(self) -> None:
-        """Start listening to the OpenCTI live stream."""
+        """Validate the stream id, then listen to the OpenCTI live stream."""
+        self.check_stream_id()
         self.helper.listen_stream(message_callback=self.process_message)
