@@ -104,6 +104,35 @@ def test_create_incident_exposed_data_builds_observables():
     assert _incident(objects)["name"] == "Breach Rule : BigBreach"
 
 
+def test_generate_exposed_data_content_with_files_and_items():
+    converter = _converter()
+    detail = {
+        "notification": {
+            "id": "n",
+            "created_date": "2026-05-02T00:00:00Z",
+            "breach_summary": {
+                "name": "B",
+                "files": [
+                    {
+                        "name": "leak.txt",
+                        "size": 1234,
+                        "complete_data_set": True,
+                        "download_urls": ["http://x/leak"],
+                    },
+                    {},
+                ],
+            },
+        },
+        "breach_details": {"items": [{"email": "a@b.com", "login_id": "l"}]},
+    }
+
+    content = converter.generate_exposed_data_content(detail)
+
+    assert "### Files" in content
+    assert "leak.txt" in content
+    assert "### Breach Details" in content
+
+
 def test_create_incident_post_with_highlights_truncates_title():
     converter = _converter()
     long_highlight = "x" * 80
