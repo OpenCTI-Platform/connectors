@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import stix2
-from pycti import Identity, Incident, MarkingDefinition
+from pycti import CaseIncident, CustomObjectCaseIncident, Identity, MarkingDefinition
 
 _TLP_MAPPING = {
     "clear": stix2.TLP_WHITE,
@@ -74,8 +74,14 @@ class ConverterToStix:
                 dt = datetime.now(timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-    def create_incident(self, record: dict) -> Optional[stix2.Incident]:
-        """Create a STIX Incident from a Swimlane record dictionary."""
+    def create_case_incident(self, record: dict) -> Optional[CustomObjectCaseIncident]:
+        """
+        Create a STIX Case-Incident from a Swimlane record dictionary.
+
+        Swimlane is a case-management (SOAR) platform, so its records map to an
+        OpenCTI Case-Incident (not an Incident, which is reserved for
+        alerts/detections).
+        """
         tracking = str(
             record.get("trackingId")
             or record.get("trackingFull")
@@ -96,8 +102,8 @@ class ConverterToStix:
                 {"source_name": "Swimlane", "external_id": external_id}
             ]
 
-        return stix2.Incident(
-            id=Incident.generate_id(name, created),
+        return CustomObjectCaseIncident(
+            id=CaseIncident.generate_id(name, created),
             name=name,
             description=description,
             created=created,
@@ -105,8 +111,5 @@ class ConverterToStix:
             created_by_ref=self.author["id"],
             object_marking_refs=[self.tlp_marking],
             external_references=external_references,
-            custom_properties={
-                "source": "Swimlane",
-                "incident_type": "alert",
-            },
+            object_refs=[],
         )

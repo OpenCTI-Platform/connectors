@@ -1,9 +1,12 @@
 # OpenCTI Swimlane Connector
 
 The Swimlane connector is an **external-import** connector that imports records
-from a Swimlane application into OpenCTI as STIX Incidents, so SOC cases managed
-in Swimlane can be correlated and enriched with the threat intelligence curated in
-OpenCTI.
+from a Swimlane application into OpenCTI as STIX **Case-Incidents**, so SOC cases
+managed in Swimlane can be correlated and enriched with the threat intelligence
+curated in OpenCTI.
+
+Swimlane is a case-management (SOAR) platform, so its records are modeled as
+OpenCTI Case-Incidents (a STIX Incident is reserved for alerts/detections).
 
 Table of Contents
 
@@ -23,9 +26,9 @@ Table of Contents
 
 Swimlane is a security orchestration, automation and response (SOAR) platform.
 This connector periodically queries the Swimlane REST API for records in a
-configured application and imports them into OpenCTI as STIX 2.1 Incidents. Field
-mapping is intentionally generic because Swimlane applications use custom schemas;
-the record tracking id is used as the incident name and the record id as an
+configured application and imports them into OpenCTI as STIX 2.1 Case-Incidents.
+Field mapping is intentionally generic because Swimlane applications use custom
+schemas; the record tracking id is used as the case name and the record id as an
 external reference.
 
 ## Requirements
@@ -99,6 +102,6 @@ python main.py
 ## Behavior
 
 On each run the connector fetches records from the configured Swimlane application
-(capped at `max_records`), converts each record to a STIX Incident, and sends the
-bundle to OpenCTI. OpenCTI deduplicates incidents by their deterministic id across
-runs.
+(capped at `max_records`), converts each record to a STIX Case-Incident, and sends
+the bundle to OpenCTI. OpenCTI deduplicates case-incidents by their deterministic
+id across runs.
