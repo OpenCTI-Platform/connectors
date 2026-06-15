@@ -27,10 +27,12 @@ class FortiSIEMConnector:
         self.client = FortiSIEMClient(config, helper)
 
     def check_stream_id(self) -> None:
-        """Raise a ValueError if the live stream ID is missing."""
+        """Raise a ValueError if the live stream ID is missing or left as a placeholder."""
+        stream_id = self.helper.connect_live_stream_id
         if (
-            self.helper.connect_live_stream_id is None
-            or self.helper.connect_live_stream_id == "ChangeMe"
+            stream_id is None
+            or not str(stream_id).strip()
+            or str(stream_id).strip().lower() == "changeme"
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
