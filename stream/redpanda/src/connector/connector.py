@@ -43,8 +43,8 @@ class RedpandaConnector:
 
         try:
             data = json.loads(msg.data)["data"]
-        except Exception as err:
-            raise ValueError(f"Cannot process the message: {err}")
+        except (json.JSONDecodeError, KeyError, TypeError) as err:
+            raise ValueError(f"Cannot process the message: {err}") from err
 
         if self.client.produce_event(msg.event, data):
             self.helper.connector_logger.info(
