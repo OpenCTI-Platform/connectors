@@ -271,7 +271,9 @@ class ConverterToStix:
 
         self.helper.connector_logger.info(
             "[create indicator] Indicator created",
-            meta={"indicator": indicator},
+            # Log stable primitive fields, not the raw stix2 Indicator object
+            # (which is not JSON-serializable and would break/spam structured logs).
+            meta={"id": indicator.id, "name": name, "pattern": pattern},
         )
         return json.loads(indicator.serialize())
 
