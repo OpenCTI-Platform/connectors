@@ -249,6 +249,7 @@ def test_create_knowledge_artifact_without_detail_url(stub_connector, artifact_m
 
 
 def test_submit_returns_verdict(stub_connector):
+    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
     stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"data")
     stub_connector.client.submit_file = MagicMock(return_value="sid-1")
     stub_connector.client.get_submission_verdict = MagicMock(return_value=FORTI_RESULT)
@@ -261,6 +262,73 @@ def test_submit_returns_verdict(stub_connector):
 
 def test_submit_no_import_files_returns_none(stub_connector):
     assert stub_connector._submit({"importFiles": []}) is None
+
+
+def test_download_file_no_import_files(stub_connector):
+    name, content, error = stub_connector._download_file({"importFiles": []})
+    assert content is None
+    assert "No file attached" in error
+
+
+def test_download_file_rejects_declared_oversize(stub_connector):
+    entity = {
+        "importFiles": [
+            {"id": "f1", "name": "big.bin", "size": stub_connector.max_file_size + 1}
+        ]
+    }
+    name, content, error = stub_connector._download_file(entity)
+    assert content is None
+    assert "limit" in error
+
+
+def test_download_file_rejects_empty(stub_connector):
+    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
+    stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"")
+    entity = {"importFiles": [{"id": "f1", "name": "empty.bin"}]}
+
+    name, content, error = stub_connector._download_file(entity)
+    assert content is None
+    assert "empty" in error
+
+
+def test_download_file_success(stub_connector):
+    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
+    stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"payload")
+    entity = {"importFiles": [{"id": "f1", "name": "malware.exe"}]}
+
+    name, content, error = stub_connector._download_file(entity)
+    assert error is None
+    assert name == "malware.exe"
+    assert content == b"payload"
+
+
+def test_submit_skips_on_download_error(stub_connector):
+    stub_connector.client.submit_file = MagicMock()
+    stub_connector._download_file = MagicMock(return_value=(None, None, "boom"))
+
+    assert stub_connector._submit({"importFiles": [{"id": "f1"}]}) is None
+    stub_connector.client.submit_file.assert_not_called()
+
+
+def test_submit_unknown_defaults_to_true():
+    from connector import ConnectorSettings
+
+    class _Settings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler):
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "t"},
+                    "connector": {"id": "c", "scope": "StixFile,Artifact"},
+                    "fortisandbox": {
+                        "api_base_url": "https://fsa.example.com",
+                        "username": "u",
+                        "password": "p",
+                    },
+                }
+            )
+
+    assert _Settings().fortisandbox.submit_unknown is True
 
 
 def test_search_hash_unknown_rating_returns_none(stub_connector):

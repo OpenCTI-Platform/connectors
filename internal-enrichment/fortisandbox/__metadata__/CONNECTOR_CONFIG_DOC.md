@@ -18,5 +18,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | FORTISANDBOX_API_VERSION | `string` |  | string | `"4.2.4"` | FortiSandbox JSON-RPC API version sent with every request. |
 | FORTISANDBOX_SSL_VERIFY | `boolean` |  | boolean | `true` | Whether to verify the FortiSandbox TLS certificate. |
-| FORTISANDBOX_SUBMIT_UNKNOWN | `boolean` |  | boolean | `false` | Submit unknown files for on-demand analysis when no verdict exists yet (requires the observable to carry an uploaded file). |
+| FORTISANDBOX_SUBMIT_UNKNOWN | `boolean` |  | boolean | `true` | Submit unknown files for on-demand analysis when no verdict exists yet (requires the observable to carry an uploaded file). Enabled by default so Artifacts uploaded to OpenCTI are detonated in FortiSandbox. |
+| FORTISANDBOX_MAX_FILE_SIZE | `integer` |  | integer | `33554432` | Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to FortiSandbox. |
+| FORTISANDBOX_SUBMISSION_TIMEOUT | `integer` |  | integer | `600` | Maximum time (in seconds) to wait for a submitted file's verdict before giving up. |
 | FORTISANDBOX_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Maximum TLP of the observable the connector is allowed to enrich. |

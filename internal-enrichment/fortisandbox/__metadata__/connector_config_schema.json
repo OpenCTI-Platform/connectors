@@ -80,9 +80,19 @@
       "type": "boolean"
     },
     "FORTISANDBOX_SUBMIT_UNKNOWN": {
-      "default": false,
-      "description": "Submit unknown files for on-demand analysis when no verdict exists yet (requires the observable to carry an uploaded file).",
+      "default": true,
+      "description": "Submit unknown files for on-demand analysis when no verdict exists yet (requires the observable to carry an uploaded file). Enabled by default so Artifacts uploaded to OpenCTI are detonated in FortiSandbox.",
       "type": "boolean"
+    },
+    "FORTISANDBOX_MAX_FILE_SIZE": {
+      "default": 33554432,
+      "description": "Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to FortiSandbox.",
+      "type": "integer"
+    },
+    "FORTISANDBOX_SUBMISSION_TIMEOUT": {
+      "default": 600,
+      "description": "Maximum time (in seconds) to wait for a submitted file's verdict before giving up.",
+      "type": "integer"
     },
     "FORTISANDBOX_MAX_TLP": {
       "default": "TLP:AMBER",
