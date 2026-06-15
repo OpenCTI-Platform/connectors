@@ -19,6 +19,15 @@ def test_amber_strict_marking():
     assert converter.tlp_marking["definition_type"] == "statement"
 
 
+def test_clear_marking_is_distinct_from_white():
+    # TLP:CLEAR must be its own custom statement marking, not STIX TLP:WHITE.
+    clear = _converter("clear").tlp_marking
+    assert clear["definition_type"] == "statement"
+    assert clear["x_opencti_definition"] == "TLP:CLEAR"
+    white = _converter("white").tlp_marking
+    assert white.get("name") == "TLP:WHITE"
+
+
 @pytest.mark.parametrize(
     "value, expected_year",
     [
