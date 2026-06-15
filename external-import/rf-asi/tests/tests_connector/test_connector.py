@@ -87,21 +87,36 @@ def test_collect_intelligence_bundle_includes_related_entities(
     assert len(ipv6_addresses) == 1
     assert len(domain_names) == 1
     assert len(vulnerabilities) == 1
-    assert len(relationships) == 4
+    assert len(relationships) == 7
     assert len(identities) == 1
     assert len(markings) == 1
 
     incident_id = incidents[0].id
-    related_target_refs = {relationship.target_ref for relationship in relationships}
+    vulnerability_id = vulnerabilities[0].id
+    related_to = [
+        rel for rel in relationships if rel.relationship_type == "related-to"
+    ]
+    has_relationships = [
+        rel for rel in relationships if rel.relationship_type == "has"
+    ]
     observable_and_vulnerability_ids = {
         obj.id
         for obj in (ipv4_addresses + ipv6_addresses + domain_names + vulnerabilities)
     }
 
-    assert related_target_refs == observable_and_vulnerability_ids
-    assert all(relationship.source_ref == incident_id for relationship in relationships)
+    assert len(related_to) == 4
+    assert {relationship.target_ref for relationship in related_to} == (
+        observable_and_vulnerability_ids
+    )
+    assert all(relationship.source_ref == incident_id for relationship in related_to)
+
+    assert len(has_relationships) == 3
     assert all(
-        relationship.relationship_type == "related-to" for relationship in relationships
+        relationship.source_ref in observable_and_vulnerability_ids
+        for relationship in has_relationships
+    )
+    assert all(
+        relationship.target_ref == vulnerability_id for relationship in has_relationships
     )
 
 

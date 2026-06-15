@@ -305,5 +305,24 @@ class ConverterToStix:
                 )
             )
 
+        for asset_exposure in exposure_assets_response.get("asset_exposures") or []:
+            asset_id = asset_exposure.get("asset_id")
+            if not asset_id:
+                continue
+            observable, _ = self._get_or_create_observable(asset_id, asset_exposure)
+            if observable is None:
+                continue
+            for vuln_dict in assets_signature.get("vulnerabilities") or []:
+                vulnerability, _ = self._get_or_create_vulnerability(vuln_dict)
+                if vulnerability is None:
+                    continue
+                relationships.append(
+                    Relationship(
+                        type=RelationshipType.HAS,
+                        source=observable,
+                        target=vulnerability,
+                    )
+                )
+
         objects.extend(relationships)
         return objects

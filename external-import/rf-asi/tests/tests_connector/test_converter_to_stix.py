@@ -197,7 +197,7 @@ def test_build_exposure_objects_maps_assets_vulnerabilities_and_relationships(
     assert len(incidents) == 1
     assert len(observables) == 3
     assert len(vulnerabilities) == 1
-    assert len(relationships) == 4
+    assert len(relationships) == 7
 
     ipv4_observables = [obj for obj in observables if isinstance(obj, IPV4Address)]
     ipv6_observables = [obj for obj in observables if isinstance(obj, IPV6Address)]
@@ -225,13 +225,25 @@ def test_build_exposure_objects_maps_assets_vulnerabilities_and_relationships(
     )
 
     incident = incidents[0]
-    related_targets = {relationship.target.id for relationship in relationships}
-    expected_target_ids = {obj.id for obj in observables + vulnerabilities}
-    for relationship in relationships:
-        assert relationship.type == "related-to"
+    related_to = [rel for rel in relationships if rel.type == "related-to"]
+    has_relationships = [rel for rel in relationships if rel.type == "has"]
+
+    assert len(related_to) == 4
+    related_targets = {relationship.target.id for relationship in related_to}
+    expected_related_to_target_ids = {obj.id for obj in observables + vulnerabilities}
+    for relationship in related_to:
         assert relationship.source == incident
-        assert relationship.target.id in expected_target_ids
-    assert related_targets == expected_target_ids
+        assert relationship.target.id in expected_related_to_target_ids
+    assert related_targets == expected_related_to_target_ids
+
+    assert len(has_relationships) == 3
+    observable_ids = {obj.id for obj in observables}
+    for relationship in has_relationships:
+        assert relationship.source.id in observable_ids
+        assert relationship.target == vulnerability
+    assert {relationship.source.id for relationship in has_relationships} == {
+        obj.id for obj in observables
+    }
 
 
 def test_build_exposure_objects_relationship_stix_refs_are_stable(
@@ -290,3 +302,81 @@ def test_build_exposure_objects_deduplicates_observables_and_vulnerabilities(
     assert second_observables == []
     assert len(first_vulnerabilities) == 1
     assert second_vulnerabilities == []
+
+
+def test_build_exposure_objects_has_relationship_stix_refs_are_stable(
+    converter, exposures_list_page, all_exposure_assets
+):
+    exposure = exposures_list_page["data"][0]
+    sdk_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+
+    has_relationships = [
+        obj
+        for obj in sdk_objects
+        if isinstance(obj, Relationship) and obj.type == "has"
+    ]
+    assert len(has_relationships) == 3
+
+    first_relationship = has_relationships[0]
+    second_relationship = has_relationships[0]
+
+    first_stix_relationship = first_relationship.to_stix2_object()
+    second_stix_relationship = second_relationship.to_stix2_object()
+
+    assert first_stix_relationship.id == second_stix_relationship.id
+    assert first_stix_relationship.source_ref == first_relationship.source.id
+    assert first_stix_relationship.target_ref == first_relationship.target.id
+    assert first_stix_relationship.id == PyctiStixCoreRelationship.generate_id(
+        relationship_type="has",
+        source_ref=first_relationship.source.id,
+        target_ref=first_relationship.target.id,
+        start_time=None,
+        stop_time=None,
+    )
+
+
+def test_build_exposure_objects_skips_has_when_no_vulnerabilities(
+    converter, exposures_list_page, all_exposure_assets
+):
+    exposure = exposures_list_page["data"][0]
+    assets_without_vulns = {
+        "signature": {"vulnerabilities": []},
+        "asset_exposures": all_exposure_assets["asset_exposures"],
+    }
+
+    sdk_objects = converter.build_exposure_objects(exposure, assets_without_vulns)
+
+    relationships = [obj for obj in sdk_objects if isinstance(obj, Relationship)]
+    related_to = [rel for rel in relationships if rel.type == "related-to"]
+    has_relationships = [rel for rel in relationships if rel.type == "has"]
+
+    assert len(related_to) == 3
+    assert len(has_relationships) == 0
+
+
+def test_build_exposure_objects_has_scales_with_multiple_cves(
+    converter, exposures_list_page, all_exposure_assets
+):
+    exposure = exposures_list_page["data"][0]
+    assets_with_two_cves = {
+        "signature": {
+            "vulnerabilities": [
+                all_exposure_assets["signature"]["vulnerabilities"][0],
+                {
+                    "name": "CVE-2024-5678",
+                    "cvss_v3": {"base_score": 7.5},
+                },
+            ],
+        },
+        "asset_exposures": all_exposure_assets["asset_exposures"],
+    }
+
+    sdk_objects = converter.build_exposure_objects(exposure, assets_with_two_cves)
+
+    has_relationships = [
+        obj
+        for obj in sdk_objects
+        if isinstance(obj, Relationship) and obj.type == "has"
+    ]
+
+    assert len(has_relationships) == 6
