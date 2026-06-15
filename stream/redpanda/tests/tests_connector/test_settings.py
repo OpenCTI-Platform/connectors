@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Self
 
 import pytest
 from connector import ConnectorSettings
@@ -27,7 +27,7 @@ def _valid_settings() -> dict[str, Any]:
 def test_settings_should_accept_valid_input():
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(_valid_settings())
 
     settings = FakeConnectorSettings()
@@ -40,7 +40,7 @@ def test_settings_should_accept_valid_input():
 def test_settings_should_apply_redpanda_defaults():
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(_valid_settings())
 
     settings = FakeConnectorSettings()
@@ -56,7 +56,7 @@ def test_settings_should_accept_valid_topic(topic):
 
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(config)
 
     settings = FakeConnectorSettings()
@@ -71,7 +71,7 @@ def test_settings_should_reject_invalid_topic(topic):
 
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(config)
 
     with pytest.raises(ConfigValidationError):
@@ -99,7 +99,7 @@ def test_settings_should_reject_invalid_topic(topic):
 def test_settings_should_raise_when_invalid_input(settings_dict):
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(settings_dict)
 
     with pytest.raises(ConfigValidationError) as err:
