@@ -88,8 +88,9 @@ class ConverterToStix:
                 markings.append(marking_id)
             enriched["object_marking_refs"] = markings
 
-            # Only SDOs (which carry a `created` timestamp) accept `created_by_ref`;
-            # SCOs use the OpenCTI custom property instead.
+            # Only SDOs (which carry a `created` timestamp) are attributed to the
+            # ThreatCover author; SCOs are passed through in their native form (no
+            # author ref) so OpenCTI keeps them as-is.
             if "created" in enriched and "created_by_ref" not in enriched:
                 enriched["created_by_ref"] = author_id
 

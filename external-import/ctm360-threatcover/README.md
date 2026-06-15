@@ -69,9 +69,9 @@ Below are the parameters you'll need to set for running the connector properly:
 | --------------- | ---------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
 | Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
 | Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
+| Connector Name  | name       | `CONNECTOR_NAME`            | CTM360 ThreatCover | No        | Name of the connector.                                                                   |
 | Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
 
 ### Connector extra parameters environment variables
 
@@ -127,7 +127,7 @@ docker compose up -d
 Create a file `config.yml` based on the provided `config.yml.sample`.
 
 Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
+your environment.
 
 Install the required python dependencies (preferably in a virtual environment):
 
