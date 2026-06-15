@@ -47,25 +47,17 @@ This connector ingests **reports, campaigns, threat actors, malware families, so
 
 The **Google Threat Intelligence (GTI) Feeds Connector** ingests threat intelligence from the
 [Google Threat Intelligence API](https://gtidocs.virustotal.com/reference/reports) into OpenCTI.
-| Collection | Config toggle | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced |
 
-|------------|--------------|--------------------|---------------------|------------------------------------|
-
-| Reports | `GTI_IMPORT_REPORTS` | ✅ Yes | Report | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note |
-
-| Campaigns | `GTI_IMPORT_CAMPAIGNS` | ❌ No | Campaign | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool |
-
-| Threat Actors | `GTI_IMPORT_THREAT_ACTORS` | ❌ No | Intrusion-Set | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool |
-
-| Malware Families | `GTI_IMPORT_MALWARE_FAMILIES` | ❌ No | Malware | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities |
-
-| Software Toolkits | `GTI_IMPORT_SOFTWARE_TOOLKITS` | ❌ No | Tool | Location, Sector, Malware, Attack-Pattern |
-
-| Vulnerabilities | `GTI_IMPORT_VULNERABILITIES` | ❌ No | Vulnerability | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software) |
-
-| Indicators (IOC) | `GTI_IMPORT_INDICATORS` | ❌ No | Indicator | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool
-
-| Indicators (IOC)   | `GTI_IMPORT_INDICATORS`      | ❌ No              | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                           |
+| Collection        | Config toggle                  | Enabled by default | Main OpenCTI entity | Related OpenCTI entity(s) produced                                                                                                 |
+|-------------------|--------------------------------|--------------------|---------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| Reports           | `GTI_IMPORT_REPORTS`           | ✅ Yes              | Report              | Location, Sector, Malware, Tool, Intrusion-Set, Attack-Pattern, Vulnerability, Indicator, Observable (Domain, File, IP, URL), Note |
+| Campaigns         | `GTI_IMPORT_CAMPAIGNS`         | ❌ No               | Campaign            | Location, Sector, Intrusion-Set, Malware, Attack-Pattern, Vulnerabilities, Tool                                                    |
+| Threat Actors     | `GTI_IMPORT_THREAT_ACTORS`     | ❌ No               | Intrusion-Set       | Location, Sector, Attack-Pattern, Malware, Vulnerabilities, Tool                                                                   |
+| Malware Families  | `GTI_IMPORT_MALWARE_FAMILIES`  | ❌ No               | Malware             | Location, Sector, Intrusion-Set, Attack-Pattern, Vulnerabilities                                                                   |
+| Software Toolkits | `GTI_IMPORT_SOFTWARE_TOOLKITS` | ❌ No               | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                          |
+| Vulnerabilities   | `GTI_IMPORT_VULNERABILITIES`   | ❌ No               | Vulnerability       | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software)                                                                |
+| Indicators (IOC)  | `GTI_IMPORT_INDICATORS`        | ❌ No               | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                          |
+| Indicators (IOC)  | `GTI_IMPORT_INDICATORS`        | ❌ No               | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                          |
 
 
 ## Data collections
@@ -501,26 +493,26 @@ These relationships are **only produced when the Campaigns collection is enabled
 
 #### Attribute mapping
 
-| GTI Vulnerability Field                 | STIX Field                             | Notes                                                                 |
-|-----------------------------------------|----------------------------------------|-----------------------------------------------------------------------|
-| `name`                                  | `name`                                 | The CVE identifier (e.g., CVE-2024-1234)                              |
-| `description`                           | `description`                          | Full text description of the vulnerability                            |
-| `creation_date`                         | `created`                              | UTC timestamp of object creation                                      |
-| `last_modification_date`                | `modified`                             | UTC timestamp of last modification                                    |
-| `cvss.cvssv3_x.base_score`              | `x_opencti_base_score`                 | CVSS v3.x base score                                                  |
-| `cvss.cvssv3_x.vector`                  | `x_opencti_cvss_vector_string`         | CVSS v3.x vector string (normalized to 3.1)                           |
-| `cvss.cvssv3_x.temporal_score`          | `x_opencti_cvss_temporal_score`        | CVSS v3.x temporal score                                              |
-| `cvss.cvssv2_0.base_score`              | `x_opencti_cvss_v2_base_score`         | CVSS v2.0 base score                                                  |
-| `cvss.cvssv2_0.vector`                  | `x_opencti_cvss_v2_vector_string`      | CVSS v2.0 vector string                                               |
-| `cvss.cvssv2_0.temporal_score`          | `x_opencti_cvss_v2_temporal_score`     | CVSS v2.0 temporal score                                              |
-| `cvss.cvssv4_x.score`                   | `x_opencti_cvss_v4_base_score`         | CVSS v4.x score                                                       |
-| `cvss.cvssv4_x.vector`                  | `x_opencti_cvss_v4_vector_string`      | CVSS v4.x vector string                                               |
-| `cvss.cvssv4_x.threat.exploit_maturity` | `x_opencti_cvss_v4_exploit_maturity` | CVSS v4.x exploit maturity                                           |
-| `epss.score`                            | `x_opencti_epss_score`                 | EPSS probability of exploitation in next 30 days                      |
-| `epss.percentile`                       | `x_opencti_epss_percentile`            | EPSS percentile                                                       |
-| `cwe.id`                                | `x_opencti_cwe`                        | CWE identifier                                                        |
-| `tags_details`                          | `labels`                               | From `tags_details[].value`                                           |
-| `sources`                               | `external_references`                  | Source URLs and GTI VirusTotal link                                    |
+| GTI Vulnerability Field                 | STIX Field                           | Notes                                            |
+|-----------------------------------------|--------------------------------------|--------------------------------------------------|
+| `name`                                  | `name`                               | The CVE identifier (e.g., CVE-2024-1234)         |
+| `description`                           | `description`                        | Full text description of the vulnerability       |
+| `creation_date`                         | `created`                            | UTC timestamp of object creation                 |
+| `last_modification_date`                | `modified`                           | UTC timestamp of last modification               |
+| `cvss.cvssv3_x.base_score`              | `x_opencti_base_score`               | CVSS v3.x base score                             |
+| `cvss.cvssv3_x.vector`                  | `x_opencti_cvss_vector_string`       | CVSS v3.x vector string (normalized to 3.1)      |
+| `cvss.cvssv3_x.temporal_score`          | `x_opencti_cvss_temporal_score`      | CVSS v3.x temporal score                         |
+| `cvss.cvssv2_0.base_score`              | `x_opencti_cvss_v2_base_score`       | CVSS v2.0 base score                             |
+| `cvss.cvssv2_0.vector`                  | `x_opencti_cvss_v2_vector_string`    | CVSS v2.0 vector string                          |
+| `cvss.cvssv2_0.temporal_score`          | `x_opencti_cvss_v2_temporal_score`   | CVSS v2.0 temporal score                         |
+| `cvss.cvssv4_x.score`                   | `x_opencti_cvss_v4_base_score`       | CVSS v4.x score                                  |
+| `cvss.cvssv4_x.vector`                  | `x_opencti_cvss_v4_vector_string`    | CVSS v4.x vector string                          |
+| `cvss.cvssv4_x.threat.exploit_maturity` | `x_opencti_cvss_v4_exploit_maturity` | CVSS v4.x exploit maturity                       |
+| `epss.score`                            | `x_opencti_epss_score`               | EPSS probability of exploitation in next 30 days |
+| `epss.percentile`                       | `x_opencti_epss_percentile`          | EPSS percentile                                  |
+| `cwe.id`                                | `x_opencti_cwe`                      | CWE identifier                                   |
+| `tags_details`                          | `labels`                             | From `tags_details[].value`                      |
+| `sources`                               | `external_references`                | Source URLs and GTI VirusTotal link              |
 
 #### First-level entities produced (composite mapping)
 
@@ -551,52 +543,51 @@ These relationships are **only produced when the Vulnerabilities collection is e
 
 #### Attribute mapping
 
-| GTI Report Field           | STIX Field              | Notes                                                                            |
-|----------------------------|-------------------------|----------------------------------------------------------------------------------|
-| `name`                     | `name`                  | Title of the report                                                              |
-| `autogenerated_summary`    | `description`           | ML-generated summary used as STIX description                                    |
-| `content`                  | `x_opencti_content`     | Full report content, converted from Markdown to HTML                             |
-| `report_type`              | `report_types`          | Type of report (e.g., News, Actor Profile, OSINT)                                |
-| `creation_date`            | `created` / `published` | UTC timestamp of report creation, also used as published date                 |
-| `last_modification_date`   | `modified`              | UTC timestamp of last modification                                               |
-| `intended_effects`         | `labels`                | Intended effects of the threat                                                   |
-| `threat_scape`             | `labels`                | Topic areas covered by the report                                                |
-| `motivations`              | `labels`                | From `motivations[].value`                                                       |
-| `link`                     | `external_references`   | URL to the original source report                                                |
-| `id`                       | `external_references`   | Link to the GTI VirusTotal page for this report                                  |
-| `author`                   | `created_by_ref`        | Report author mapped to an Identity (Organization)                               |
+| GTI Report Field         | STIX Field              | Notes                                                         |
+|--------------------------|-------------------------|---------------------------------------------------------------|
+| `name`                   | `name`                  | Title of the report                                           |
+| `autogenerated_summary`  | `description`           | ML-generated summary used as STIX description                 |
+| `content`                | `x_opencti_content`     | Full report content, converted from Markdown to HTML          |
+| `report_type`            | `report_types`          | Type of report (e.g., News, Actor Profile, OSINT)             |
+| `creation_date`          | `created` / `published` | UTC timestamp of report creation, also used as published date |
+| `last_modification_date` | `modified`              | UTC timestamp of last modification                            |
+| `intended_effects`       | `labels`                | Intended effects of the threat                                |
+| `threat_scape`           | `labels`                | Topic areas covered by the report                             |
+| `motivations`            | `labels`                | From `motivations[].value`                                    |
+| `link`                   | `external_references`   | URL to the original source report                             |
+| `id`                     | `external_references`   | Link to the GTI VirusTotal page for this report               |
+| `author`                 | `created_by_ref`        | Report author mapped to an Identity (Organization)            |
 
 #### First-level entities produced (composite mapping)
 
 These entities are **always produced** when a Report is ingested, as they are part of the composite report conversion.
 
-| GTI Concept                    | STIX Object Produced     | Notes                                                            |
-|--------------------------------|--------------------------|------------------------------------------------------------------|
-| `targeted_regions_hierarchy`   | Location                 | Countries from targeted regions, added to Report's `object_refs` |
-| `targeted_industries_tree`     | Identity (Sector)        | Sectors from targeted industries, added to Report's `object_refs`|
-| `author`                       | Identity (Organization)  | Author identity, used as `created_by_ref`                        |
-| `analyst_comment`              | Note                     | Analyst comment attached to the report via `object_refs`         |
+| GTI Concept                  | STIX Object Produced    | Notes                                                             |
+|------------------------------|-------------------------|-------------------------------------------------------------------|
+| `targeted_regions_hierarchy` | Location                | Countries from targeted regions, added to Report's `object_refs`  |
+| `targeted_industries_tree`   | Identity (Sector)       | Sectors from targeted industries, added to Report's `object_refs` |
+| `author`                     | Identity (Organization) | Author identity, used as `created_by_ref`                         |
+| `analyst_comment`            | Note                    | Analyst comment attached to the report via `object_refs`          |
 
 #### Relationship mapping from sub-entities (requires dedicated collection)
 
 These relationships are **only produced when the Reports collection is enabled**, as they require fetching additional sub-entities via dedicated API calls. All sub-entities are added to the Report's `object_refs`.
-| `domains`             | Domain-Name          | `object_refs`              |
 
-| `files`               | File                 | `object_refs`              |
-
-| `urls`                | URL                  | `object_refs`              |
-
-| `ip_addresses`        | IPv4-Addr            | `object_refs`              |
-
-| `malware_families`       | Malware              | `object_refs`              |
-| `campaigns`              | Campaign             | `object_refs`              |
-| `software_toolkits`      | Tool                 | `object_refs`              |
-| `vulnerabilities`        | Vulnerability        | `object_refs`              |
-| `attack_techniques`      | Attack-Pattern       | `object_refs`              |
-| `domains`                | Domain-Name          | `object_refs`              |
-| `files`                  | File                 | `object_refs`              |
-| `urls`                   | Url                  | `object_refs`              |
-| `ip_addresses`           | IPv4-Addr            | `object_refs`              |
+| GTI Concept         | STIX Source Object | STIX Relationship | STIX Target Object |
+|---------------------|--------------------|-------------------|--------------------|
+| `domains`           | Domain-Name        | `object_refs`     | Report             |
+| `files`             | File               | `object_refs`     | Report             |
+| `urls`              | URL                | `object_refs`     | Report             |
+| `ip_addresses`      | IPv4-Addr          | `object_refs`     | Report             |
+| `malware_families`  | Malware            | `object_refs`     | Report             |
+| `campaigns`         | Campaign           | `object_refs`     | Report             |
+| `software_toolkits` | Tool               | `object_refs`     | Report             |
+| `vulnerabilities`   | Vulnerability      | `object_refs`     | Report             |
+| `attack_techniques` | Attack-Pattern     | `object_refs`     | Report             |
+| `domains`           | Domain-Name        | `object_refs`     | Report             |
+| `files`             | File               | `object_refs`     | Report             |
+| `urls`              | Url                | `object_refs`     | Report             |
+| `ip_addresses`      | IPv4-Addr          | `object_refs`     | Report             |
 
 ---
 
@@ -606,11 +597,12 @@ These relationships are **only produced when the Reports collection is enabled**
 
 For each IOC type, an **Indicator** is created with `create_observables=True`, which also generates the associated STIX Observable automatically.
 
-| `url`    | URL value                               | `[url:value = '...']`                                         | URL                 |
-|----------|-----------------------------------------|---------------------------------------------------------------|---------------------|
-| `ip`     | IP address                              | `[ipv4-addr:value = '...']` or `[ipv6-addr:value = '...']`    | IPv4-Addr/IPv6-Addr |
-| `url`    | URL value                               | `[url:value = '...']`                                         | Url                 |
-| `domain` | Domain name                             | `[domain-name:value = '...']`                                 | Domain-Name         |
+| GTI IOC type | STIX Pattern                                               | Main Observable Type |
+|--------------|------------------------------------------------------------|----------------------|
+| `url`        | `[url:value = '...']`                                      | URL                  |
+| `ip`         | `[ipv4-addr:value = '...']` or `[ipv6-addr:value = '...']` | IPv4-Addr/IPv6-Addr  |
+| `url`        | `[url:value = '...']`                                      | Url                  |
+| `domain`     | `[domain-name:value = '...']`                              | Domain-Name          |
 
 **Common Indicator attributes:**
 
