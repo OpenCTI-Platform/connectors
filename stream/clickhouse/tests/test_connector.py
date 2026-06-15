@@ -59,6 +59,7 @@ def test_process_message_raises_on_invalid_payload():
 
 def test_run_ensures_table_and_listens():
     connector, helper, client = _make_connector()
+    client.ensure_table.return_value = True
 
     connector.run()
 
@@ -66,3 +67,39 @@ def test_run_ensures_table_and_listens():
     helper.listen_stream.assert_called_once_with(
         message_callback=connector.process_message
     )
+
+
+def test_run_aborts_when_schema_cannot_be_ensured():
+    connector, helper, client = _make_connector()
+    client.ensure_table.return_value = False
+
+    with pytest.raises(RuntimeError):
+        connector.run()
+
+    helper.listen_stream.assert_not_called()
+
+
+def test_event_timestamp_is_derived_from_stream_id():
+    # OpenCTI event ids are Redis stream ids: "<milliseconds>-<sequence>".
+    msg = SimpleNamespace(id="1700000000123-0")
+    assert ClickHouseConnector._event_timestamp(msg) == 1700000000
+
+
+def test_event_timestamp_falls_back_when_id_missing():
+    msg = SimpleNamespace(event="create", data="{}")
+    assert ClickHouseConnector._event_timestamp(msg) > 0
+
+
+def test_process_message_passes_event_date_to_client():
+    connector, _, client = _make_connector()
+    client.insert_event.return_value = True
+
+    msg = SimpleNamespace(
+        id="1700000000123-0",
+        event="create",
+        data=json.dumps({"data": {"id": "indicator--1", "type": "indicator"}}),
+    )
+    connector.process_message(msg)
+
+    assert client.insert_event.call_args.args[0] == "create"
+    assert client.insert_event.call_args.args[2] == 1700000000

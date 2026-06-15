@@ -64,12 +64,18 @@ class ClickHouseClient:
                 return False
         return True
 
-    def insert_event(self, operation: str, data: dict) -> bool:
+    def insert_event(
+        self, operation: str, data: dict, event_date: Optional[int] = None
+    ) -> bool:
         """
         Insert a single OpenCTI stream event into the ClickHouse table.
 
         :param operation: The stream operation (create, update, delete).
         :param data: The STIX object carried by the stream event.
+        :param event_date: The OpenCTI event time as a Unix timestamp (seconds).
+            Stored explicitly so the row reflects when the event occurred in
+            OpenCTI rather than the ClickHouse server insertion time. Defaults to
+            the current time when not provided.
         :return: True if the row was written, False otherwise.
         """
         row = {
@@ -77,6 +83,7 @@ class ClickHouseClient:
             "entity_type": str(data.get("type", "")),
             "operation": operation,
             "data": json.dumps(data, separators=(",", ":")),
+            "event_date": int(event_date if event_date is not None else time.time()),
         }
         query = f"INSERT INTO {self._qualified_table()} FORMAT JSONEachRow"
         response = self._request(

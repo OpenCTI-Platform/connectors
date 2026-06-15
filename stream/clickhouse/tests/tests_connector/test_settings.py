@@ -80,3 +80,25 @@ def test_settings_should_raise_when_invalid_input(settings_dict):
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
     assert str("Error validating configuration") in str(err)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("database", "my-db"),
+        ("database", "db;DROP TABLE x"),
+        ("table", "opencti stream"),
+        ("table", "1invalid"),
+    ],
+)
+def test_settings_should_reject_invalid_clickhouse_identifiers(field, value):
+    bad = _valid_settings()
+    bad["clickhouse"][field] = value
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(bad)
+
+    with pytest.raises(ConfigValidationError):
+        FakeConnectorSettings()
