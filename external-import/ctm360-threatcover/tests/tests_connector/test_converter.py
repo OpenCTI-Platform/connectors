@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock
 
+import stix2
 from connector.converter_to_stix import ConverterToStix
 
 
@@ -16,6 +17,17 @@ def test_author_is_identity():
 def test_amber_strict_marking():
     converter = _converter("amber+strict")
     assert converter.tlp_marking["definition_type"] == "statement"
+    assert converter.tlp_marking["x_opencti_definition"] == "TLP:AMBER+STRICT"
+
+
+def test_clear_marking_is_opencti_custom_not_white():
+    converter = _converter("clear")
+    # TLP:CLEAR must be the OpenCTI custom statement marking (definition_type
+    # "statement" + x_opencti_definition), not the legacy STIX TLP:WHITE whose
+    # definition_type is "tlp" (they share the same deterministic id).
+    assert stix2.TLP_WHITE["definition_type"] == "tlp"
+    assert converter.tlp_marking["definition_type"] == "statement"
+    assert converter.tlp_marking["x_opencti_definition"] == "TLP:CLEAR"
 
 
 def test_process_objects_attributes_sdo():

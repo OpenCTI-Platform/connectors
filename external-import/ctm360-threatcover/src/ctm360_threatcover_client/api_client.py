@@ -158,7 +158,13 @@ class Ctm360ThreatcoverClient:
                 break
             next_id = response.get("next")
             if not next_id:
-                break
+                # more=True but no cursor: raise instead of silently returning a
+                # partial page. Returning here would let the connector advance
+                # added_after and permanently skip the remaining objects.
+                raise Ctm360ThreatcoverAPIError(
+                    "CTM360 ThreatCover TAXII page reported more=true without a next "
+                    "cursor; aborting to avoid skipping data"
+                )
             try:
                 # When paging with `next`, the cursor already encodes the query.
                 response = collection.get_objects(next=next_id)

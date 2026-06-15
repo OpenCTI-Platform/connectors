@@ -155,6 +155,16 @@ def test_get_objects_paginates():
     assert collection.get_objects.call_args.kwargs == {"next": "cursor-1"}
 
 
+def test_get_objects_raises_when_more_without_next():
+    # more=True but no next cursor must raise, not silently return a partial page
+    # (which would let the connector advance added_after and skip data).
+    client = _make_client()
+    collection = _attach_collection(client)
+    collection.get_objects.return_value = {"objects": [INDICATOR_A], "more": True}
+    with pytest.raises(Ctm360ThreatcoverAPIError):
+        client.get_objects()
+
+
 def test_get_objects_passes_added_after():
     client = _make_client()
     collection = _attach_collection(client)
