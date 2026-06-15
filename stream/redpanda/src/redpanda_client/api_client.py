@@ -54,8 +54,12 @@ class RedpandaClient:
         :param data: The STIX object carried by the stream event.
         :return: True if the record was produced, False otherwise.
         """
+        # Leave the record key unset when the STIX id is missing or falsy, so a
+        # None id is not serialized to the literal string "None" (str(None) is
+        # truthy), which would skew Kafka partitioning/compaction downstream.
+        raw_id = data.get("id")
         record = {
-            "key": str(data.get("id", "")) or None,
+            "key": str(raw_id) if raw_id else None,
             "value": {"operation": operation, "data": data},
         }
         payload = {"records": [record]}
@@ -76,7 +80,7 @@ class RedpandaClient:
             except requests.RequestException as err:
                 self.helper.connector_logger.warning(
                     "[API] Redpanda request failed",
-                    {"error": str(err)},
+                    meta={"error": str(err)},
                 )
                 if attempt < self.REQUEST_ATTEMPTS - 1:
                     time.sleep(self.BACKOFF_FACTOR * (2**attempt))

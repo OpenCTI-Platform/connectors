@@ -35,6 +35,31 @@ def test_produce_event_posts_record():
     assert call.kwargs["data"] is not None
 
 
+def test_produce_event_uses_stix_id_as_key():
+    import json
+
+    client = _make_client()
+    client.session.post.return_value = _response(200)
+
+    client.produce_event("create", {"id": "indicator--1", "type": "indicator"})
+    payload = json.loads(client.session.post.call_args.kwargs["data"].decode("utf-8"))
+    assert payload["records"][0]["key"] == "indicator--1"
+
+
+def test_produce_event_leaves_key_unset_when_id_missing_or_none():
+    import json
+
+    client = _make_client()
+    client.session.post.return_value = _response(200)
+
+    for data in ({"type": "indicator"}, {"id": None, "type": "indicator"}):
+        client.produce_event("create", data)
+        payload = json.loads(
+            client.session.post.call_args.kwargs["data"].decode("utf-8")
+        )
+        assert payload["records"][0]["key"] is None
+
+
 def test_produce_event_returns_false_on_error():
     client = _make_client()
     client.session.post.side_effect = requests.RequestException("boom")
