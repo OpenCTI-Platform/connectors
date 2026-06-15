@@ -57,8 +57,6 @@ The **Google Threat Intelligence (GTI) Feeds Connector** ingests threat intellig
 | Software Toolkits | `GTI_IMPORT_SOFTWARE_TOOLKITS` | ❌ No               | Tool                | Location, Sector, Malware, Attack-Pattern                                                                                          |
 | Vulnerabilities   | `GTI_IMPORT_VULNERABILITIES`   | ❌ No               | Vulnerability       | Malware, Intrusion-Set, Attack-Pattern, Note, Observable (Software)                                                                |
 | Indicators (IOC)  | `GTI_IMPORT_INDICATORS`        | ❌ No               | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                          |
-| Indicators (IOC)  | `GTI_IMPORT_INDICATORS`        | ❌ No               | Indicator           | Observable (File, IPv4, IPv6, URL, Domain), Malware, Tool                                                                          |
-
 
 ## Data collections
 
