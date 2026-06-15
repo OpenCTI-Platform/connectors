@@ -12,6 +12,10 @@ if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
 
 
+class SwimlaneClientError(Exception):
+    """Raised when Swimlane cannot be reached or returns an invalid response."""
+
+
 class SwimlaneClient:
     """Thin client around the Swimlane record search API."""
 
@@ -43,7 +47,17 @@ class SwimlaneClient:
         )
 
     def get_records(self) -> list:
-        """Fetch records from the configured Swimlane application."""
+        """
+        Fetch records from the configured Swimlane application.
+
+        :return: A list of record dictionaries (possibly empty when there are
+            genuinely no records).
+        :raises SwimlaneClientError: when the request fails (no response after
+            retries, or a non-retriable HTTP error) or returns a non-JSON /
+            unexpected body. This is kept distinct from "no records" so a transient
+            Swimlane failure surfaces as a run error (work marked ``in_error``)
+            instead of being silently reported as a successful empty run.
+        """
         path = f"/api/app/{self.config.application_id}/record/search"
         body = {
             "filters": [],
@@ -52,14 +66,14 @@ class SwimlaneClient:
         }
         response = self._request("post", path, json=body)
         if response is None:
-            return []
+            raise SwimlaneClientError("Failed to fetch Swimlane records")
         try:
-            return self._extract_records(response.json())
-        except ValueError:
-            self.helper.connector_logger.error(
-                "[API] Unexpected Swimlane records response"
-            )
-            return []
+            payload = response.json()
+        except ValueError as err:
+            raise SwimlaneClientError(
+                "Swimlane returned a non-JSON records response"
+            ) from err
+        return self._extract_records(payload)
 
     @staticmethod
     def _extract_records(payload) -> list:
@@ -70,7 +84,9 @@ class SwimlaneClient:
                 value = payload.get(key)
                 if isinstance(value, list):
                     return value
-        return []
+        raise SwimlaneClientError(
+            "Swimlane returned an unexpected records payload shape"
+        )
 
     def _request(self, method: str, path: str, **kwargs) -> Optional[requests.Response]:
         """
