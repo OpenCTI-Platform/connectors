@@ -65,12 +65,22 @@ def test_non_indicator_is_ignored():
     client.add_indicator.assert_not_called()
 
 
-@pytest.mark.parametrize("live_stream_id", [None, "ChangeMe"])
+@pytest.mark.parametrize(
+    "live_stream_id",
+    [None, "ChangeMe", "CHANGEME", "changeme", "  ChangeMe  ", "", "   "],
+)
 def test_check_stream_id_raises_when_missing(live_stream_id):
     connector, _, _ = _make_connector(live_stream_id=live_stream_id)
 
     with pytest.raises(ValueError):
         connector.check_stream_id()
+
+
+@pytest.mark.parametrize("live_stream_id", ["live", "a-real-stream-uuid"])
+def test_check_stream_id_accepts_real_id(live_stream_id):
+    connector, _, _ = _make_connector(live_stream_id=live_stream_id)
+
+    connector.check_stream_id()
 
 
 def test_process_message_raises_on_invalid_payload():
