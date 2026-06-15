@@ -288,7 +288,7 @@ def test_retrieve_with_next_cursor(
     mock_response_1 = MagicMock()
     mock_response_1.json.return_value = {
         "next": "mycursor1",
-        "objects": [{"id": "obj-1"}, {"id": "onj-5"}],
+        "objects": [{"id": "obj-1"}, {"id": "obj-5"}],
     }
 
     mock_response_2 = MagicMock()
@@ -306,7 +306,7 @@ def test_retrieve_with_next_cursor(
 
     batches = list(
         connector._retrieve(
-            "v1/test/?v=9", list_key="objects", cursor_key="cursor_key_x"
+            "v1/test/?type=sometype", list_key="objects", cursor_key="cursor_key_x"
         )
     )
 
@@ -315,13 +315,13 @@ def test_retrieve_with_next_cursor(
     # Verify second call used the next URL
     mock_session.get.assert_has_calls(
         [
-            call("https://test-ctx-url/v1/test/?v=9", params={"page_size": 200}),
+            call("https://test-ctx-url/v1/test/?type=sometype", params={"page_size": 200}),
             call(
-                "https://test-ctx-url/v1/test/?v=9",
+                "https://test-ctx-url/v1/test/?type=sometype",
                 params={"page_size": 200, "cursor_key_x": "mycursor1"},
             ),
             call(
-                "https://test-ctx-url/v1/test/?v=9",
+                "https://test-ctx-url/v1/test/?type=sometype",
                 params={"page_size": 200, "cursor_key_x": "another-cursor"},
             ),
         ]

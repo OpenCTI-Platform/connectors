@@ -96,12 +96,11 @@ class CyberThreatExchangeConnector:
             self.helper.send_stix2_bundle(json.dumps(bundle), work_id=work_id)
 
     def _retrieve(self, path, list_key, params: dict = None, cursor_key="cursor"):
-        params = params or {}
+        params = (params or {}).copy()
         params.update(page_size=200)
         objects_count = 0
-        more = True
         url = urljoin(self.base_url, path)
-        while more:
+        while True:
             resp = self.session.get(url, params=params.copy())
             data = resp.json()
             to_yield = data[list_key]
