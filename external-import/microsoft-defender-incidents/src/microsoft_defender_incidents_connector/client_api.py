@@ -36,7 +36,9 @@ class ConnectorClient:
 
             self.session.headers.update({"Authorization": "Bearer " + oauth_token})
         except Exception as e:
-            raise ValueError("[ERROR] Failed generating oauth token {" + str(e) + "}")
+            raise ValueError(
+                "[ERROR] Failed generating oauth token {" + str(e) + "}"
+            ) from e
 
     def retries_builder(self) -> None:
         """
@@ -54,7 +56,7 @@ class ConnectorClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
 
-    def query_builder(self, date_str: str) -> requests:
+    def query_builder(self, date_str: str) -> requests.PreparedRequest:
         """
         Constructs the API URL with the necessary query parameters.
 
