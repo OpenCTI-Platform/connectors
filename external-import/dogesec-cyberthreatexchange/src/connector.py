@@ -104,7 +104,9 @@ class CyberThreatExchangeConnector:
         while more:
             resp = self.session.get(url, params=params.copy())
             data = resp.json()
-            yield data[list_key]
+            to_yield = data[list_key]
+            if to_yield:
+                yield to_yield
             objects_count += len(data[list_key])
             if cursor := data.get("next"):
                 if cursor.startswith("http://") or cursor.startswith("https://"):
