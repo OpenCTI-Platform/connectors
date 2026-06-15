@@ -1,10 +1,13 @@
 # OpenCTI LogRhythm Incidents Connector
 
 The LogRhythm Incidents connector is an **external-import** connector that pulls
-cases from LogRhythm SIEM into OpenCTI as STIX Incidents. It is the import side of
-a bidirectional integration: pair it with the existing `stream/logrhythm`
+cases from LogRhythm SIEM into OpenCTI as STIX **Case-Incidents**. It is the import
+side of a bidirectional integration: pair it with the existing `stream/logrhythm`
 connector (which feeds LogRhythm lists from OpenCTI) to send IOCs out and bring
 cases in.
+
+LogRhythm cases are case-management artifacts, so they are modeled as OpenCTI
+Case-Incidents (a STIX Incident is reserved for alarms/detections).
 
 Table of Contents
 
@@ -96,5 +99,5 @@ python main.py
 ## Behavior
 
 On each run the connector fetches cases from the LogRhythm Case API (capped at
-`max_cases`), converts each case to a STIX Incident and sends the bundle to
-OpenCTI. OpenCTI deduplicates incidents by their deterministic id across runs.
+`max_cases`), converts each case to a STIX Case-Incident and sends the bundle to
+OpenCTI. OpenCTI deduplicates case-incidents by their deterministic id across runs.
