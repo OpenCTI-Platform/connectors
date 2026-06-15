@@ -69,10 +69,15 @@ class ConverterToStix:
         elif isinstance(value, (int, float)) or (
             isinstance(value, str) and value.isdigit()
         ):
-            epoch = float(value)
-            if epoch > 1e12:  # milliseconds
-                epoch /= 1000.0
-            dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
+            try:
+                epoch = float(value)
+                if epoch > 1e12:  # milliseconds
+                    epoch /= 1000.0
+                dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
+            except (OverflowError, OSError, ValueError):
+                # Out-of-range or non-finite epoch: fall back deterministically
+                # instead of crashing the connector run.
+                dt = _FALLBACK_DT
         else:
             try:
                 dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))

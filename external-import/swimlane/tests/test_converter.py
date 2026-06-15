@@ -36,6 +36,13 @@ def test_to_iso_uses_deterministic_fallback():
     assert ConverterToStix._to_iso(None).startswith("1970-01-01")
 
 
+def test_to_iso_handles_out_of_range_epoch():
+    # An out-of-range epoch must not raise OverflowError/OSError; it falls back to
+    # the deterministic anchor instead of crashing the run.
+    assert ConverterToStix._to_iso(10**30).startswith("1970-01-01")
+    assert ConverterToStix._to_iso("9" * 400).startswith("1970-01-01")
+
+
 def test_case_incident_id_is_stable_without_timestamp():
     converter = _converter()
     first = converter.create_case_incident({"trackingId": "INC-1"})
