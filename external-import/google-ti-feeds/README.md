@@ -595,12 +595,12 @@ These relationships are **only produced when the Reports collection is enabled**
 
 For each IOC type, an **Indicator** is created with `create_observables=True`, which also generates the associated STIX Observable automatically.
 
-| GTI IOC type | STIX Pattern                                               | Main Observable Type |
-|--------------|------------------------------------------------------------|----------------------|
-| `url`        | `[url:value = '...']`                                      | URL                  |
-| `ip`         | `[ipv4-addr:value = '...']` or `[ipv6-addr:value = '...']` | IPv4-Addr/IPv6-Addr  |
-| `url`        | `[url:value = '...']`                                      | Url                  |
-| `domain`     | `[domain-name:value = '...']`                              | Domain-Name          |
+| GTI IOC type | STIX Pattern                                                                                | Main Observable Type |
+|--------------|---------------------------------------------------------------------------------------------|----------------------|
+| `url`        | `[url:value = '...']`                                                                       | URL                  |
+| `ip`         | `[ipv4-addr:value = '...']` or `[ipv6-addr:value = '...']`                                  | IPv4-Addr/IPv6-Addr  |
+| `file`       | `[file:hashes.'SHA-256' = '...' OR file:hashes.MD5 = '...' OR file:hashes.'SHA-1' = '...']` | File                 |
+| `domain`     | `[domain-name:value = '...']`                                                               | Domain-Name          |
 
 **Common Indicator attributes:**
 
