@@ -30,21 +30,21 @@ def test_to_iso(value, expected_year):
     assert expected_year in ConverterToStix._to_iso(value)
 
 
-def test_create_incident():
+def test_create_case_incident():
     converter = _converter()
-    incident = converter.create_incident(
+    case = converter.create_case_incident(
         {
             "trackingId": "INC-42",
             "id": "rec-123",
             "createdDate": "2024-05-01T00:00:00Z",
         }
     )
-    assert incident["type"] == "incident"
-    assert incident["name"] == "Swimlane incident INC-42"
-    assert incident["external_references"][0]["external_id"] == "rec-123"
+    assert case["type"] == "case-incident"
+    assert case["name"] == "Swimlane incident INC-42"
+    assert case["external_references"][0]["external_id"] == "rec-123"
 
 
-def test_create_incident_minimal():
+def test_create_case_incident_minimal():
     converter = _converter()
-    incident = converter.create_incident({})
-    assert incident["name"] == "Swimlane incident"
+    case = converter.create_case_incident({})
+    assert case["name"] == "Swimlane incident"

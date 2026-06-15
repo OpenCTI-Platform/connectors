@@ -24,9 +24,9 @@ class SwimlaneConnector:
     def _collect_intelligence(self) -> list:
         stix_objects: list = []
         for record in self.client.get_records():
-            incident = self.converter.create_incident(record)
-            if incident is not None:
-                stix_objects.append(incident)
+            case_incident = self.converter.create_case_incident(record)
+            if case_incident is not None:
+                stix_objects.append(case_incident)
 
         if stix_objects:
             stix_objects.append(self.converter.author)
