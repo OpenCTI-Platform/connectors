@@ -97,3 +97,36 @@ def test_request_retries_on_rate_limit():
     assert result is not None
     assert client.session.post.call_count == 2
     sleep.assert_called_once()
+
+
+def _http_error_response(status: int) -> MagicMock:
+    response = _response(status)
+    error = requests.HTTPError(f"{status} error")
+    error.response = response
+    response.raise_for_status.side_effect = error
+    return response
+
+
+def test_request_does_not_retry_on_client_error():
+    # Non-429 4xx responses are not retriable: fail fast without backoff.
+    client = _make_client()
+    client.session.post.return_value = _http_error_response(401)
+
+    with patch("clickhouse_client.api_client.time.sleep") as sleep:
+        result = client._request(params={"query": "SELECT 1"})
+
+    assert result is None
+    assert client.session.post.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_request_retries_on_server_error():
+    # 5xx responses are transient and must be retried up to REQUEST_ATTEMPTS.
+    client = _make_client()
+    client.session.post.return_value = _http_error_response(500)
+
+    with patch("clickhouse_client.api_client.time.sleep"):
+        result = client._request(params={"query": "SELECT 1"})
+
+    assert result is None
+    assert client.session.post.call_count == ClickHouseClient.REQUEST_ATTEMPTS

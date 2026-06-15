@@ -89,6 +89,18 @@ def test_run_aborts_when_schema_cannot_be_ensured():
     helper.listen_stream.assert_not_called()
 
 
+def test_run_aborts_when_stream_id_missing():
+    # A placeholder/blank stream id must fail fast at startup, before the schema
+    # is created or the stream is listened to.
+    connector, helper, client = _make_connector(live_stream_id="ChangeMe")
+
+    with pytest.raises(ValueError):
+        connector.run()
+
+    client.ensure_table.assert_not_called()
+    helper.listen_stream.assert_not_called()
+
+
 def test_event_timestamp_is_derived_from_stream_id():
     # OpenCTI event ids are Redis stream ids: "<milliseconds>-<sequence>".
     msg = SimpleNamespace(id="1700000000123-0")
@@ -97,6 +109,12 @@ def test_event_timestamp_is_derived_from_stream_id():
 
 def test_event_timestamp_falls_back_when_id_missing():
     msg = SimpleNamespace(event="create", data="{}")
+    assert ClickHouseConnector._event_timestamp(msg) > 0
+
+
+def test_event_timestamp_falls_back_when_id_unparseable():
+    # A non-numeric event id must not raise; it falls back to the receipt time.
+    msg = SimpleNamespace(id="not-a-redis-id")
     assert ClickHouseConnector._event_timestamp(msg) > 0
 
 

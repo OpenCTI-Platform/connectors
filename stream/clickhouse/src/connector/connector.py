@@ -60,8 +60,6 @@ class ClickHouseConnector:
 
         :param msg: Message event from the stream.
         """
-        self.check_stream_id()
-
         try:
             data = json.loads(msg.data)["data"]
         except (json.JSONDecodeError, KeyError, TypeError) as err:
@@ -73,7 +71,8 @@ class ClickHouseConnector:
             )
 
     def run(self) -> None:
-        """Ensure the ClickHouse schema exists then listen to the OpenCTI live stream."""
+        """Validate config, ensure the ClickHouse schema exists, then listen to the stream."""
+        self.check_stream_id()
         if not self.client.ensure_table():
             raise RuntimeError(
                 "Failed to ensure the ClickHouse schema exists; aborting startup."
