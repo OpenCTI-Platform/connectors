@@ -139,3 +139,31 @@ def test_request_returns_none_on_error():
 
     with patch("arcsight_client.api_client.time.sleep"):
         assert client._request("get", "/x") is None
+
+
+def test_request_fails_fast_on_4xx_without_retry():
+    client = _make_client()
+    unauthorized = MagicMock()
+    unauthorized.status_code = 401
+    unauthorized.raise_for_status.side_effect = requests.HTTPError("401")
+    client.session.request.return_value = unauthorized
+
+    with patch("arcsight_client.api_client.time.sleep") as sleep:
+        assert client._request("get", "/x") is None
+
+    assert client.session.request.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_request_retries_on_server_error():
+    client = _make_client()
+    server_error = MagicMock()
+    server_error.status_code = 503
+    client.session.request.side_effect = [server_error, _json_response({})]
+
+    with patch("arcsight_client.api_client.time.sleep") as sleep:
+        result = client._request("get", "/x")
+
+    assert result is not None
+    assert client.session.request.call_count == 2
+    sleep.assert_called_once()

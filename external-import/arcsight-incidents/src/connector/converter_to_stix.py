@@ -13,7 +13,6 @@ from pycti import (
 )
 
 _TLP_MAPPING = {
-    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -44,6 +43,20 @@ def _amber_strict() -> stix2.MarkingDefinition:
     )
 
 
+def _clear() -> stix2.MarkingDefinition:
+    # TLP:CLEAR is a distinct OpenCTI marking (custom statement marking with
+    # x_opencti_definition="TLP:CLEAR"), not an alias of STIX TLP:WHITE.
+    return stix2.MarkingDefinition(
+        id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        custom_properties={
+            "x_opencti_definition_type": "TLP",
+            "x_opencti_definition": "TLP:CLEAR",
+        },
+    )
+
+
 class ConverterToStix:
     """Convert ArcSight ESM case dictionaries into STIX 2.1 objects."""
 
@@ -52,6 +65,8 @@ class ConverterToStix:
         self.author = self._create_author()
         if tlp_level == "amber+strict":
             self.tlp_marking = _amber_strict()
+        elif tlp_level == "clear":
+            self.tlp_marking = _clear()
         else:
             self.tlp_marking = _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
 

@@ -9,7 +9,7 @@ services:
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=ArcSight Incidents # optional (default: 'ArcSight Incidents')
-      - CONNECTOR_SCOPE=arcsight # optional
+      - CONNECTOR_SCOPE=arcsight # required
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=PT15M # optional (default: 'PT15M')
       # ArcSight parameters
