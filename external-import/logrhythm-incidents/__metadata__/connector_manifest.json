@@ -1,0 +1,21 @@
+{
+  "title": "LogRhythm Incidents",
+  "slug": "logrhythm-incidents",
+  "description": "The OpenCTI LogRhythm Incidents connector imports cases from LogRhythm SIEM into OpenCTI as STIX Incidents. It periodically pulls cases through the LogRhythm Case API and converts them to STIX 2.1 Incidents (with priority-based severity, timestamps and an external reference). Paired with the existing LogRhythm stream connector (which feeds LogRhythm lists from OpenCTI), it provides the import side of a bidirectional integration.",
+  "short_description": "Import LogRhythm cases into OpenCTI as STIX Incidents (bidirectional import side).",
+  "logo": null,
+  "use_cases": [
+    "SIEM & Analytics"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260609.0",
+  "subscription_link": "https://logrhythm.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/logrhythm-incidents",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-logrhythm-incidents",
+  "container_type": "EXTERNAL_IMPORT"
+}
