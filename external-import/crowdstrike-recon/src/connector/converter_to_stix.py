@@ -305,8 +305,20 @@ class ConverterToStix:
             )
             return []
 
+        try:
+            incident_date = parse(created_date)
+        except (ValueError, OverflowError, TypeError):
+            self.helper.connector_logger.warning(
+                "Notification has an unparseable created_date, skipping alert",
+                meta={
+                    "item_type": item_type,
+                    "created_date": created_date,
+                    "notification_id": notification.get("id"),
+                },
+            )
+            return []
+
         stix_objects = []
-        incident_date = parse(created_date)
         # incident_type is derived from the CrowdStrike notification item_type
         incident_type = item_type or "alert"
         incident_labels = []

@@ -216,6 +216,21 @@ def test_create_incident_missing_created_date_returns_empty():
     assert converter.create_incident(notification_detail=detail) == []
 
 
+def test_create_incident_unparseable_created_date_returns_empty():
+    converter = _converter()
+    detail = {
+        "notification": {
+            "id": "n9",
+            "created_date": "not-a-real-date",
+            "item_type": "post",
+            "highlights": ["x"],
+        },
+        "details": {},
+    }
+
+    assert converter.create_incident(notification_detail=detail) == []
+
+
 def test_create_incident_unsupported_type_returns_empty():
     converter = _converter()
     detail = {
