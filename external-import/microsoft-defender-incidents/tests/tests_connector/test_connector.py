@@ -66,15 +66,6 @@ def test_get_last_incident_date_from_import_start_date(connector, mock_config):
     assert result == int(dt.timestamp())
 
 
-def test_get_last_incident_date_returns_none_when_no_state_no_start_date(
-    connector, mock_config
-):
-    connector.helper.get_state.return_value = None
-    mock_config.microsoft_defender_incidents.import_start_date = None
-    result = connector._get_last_incident_date()
-    assert result is None
-
-
 # ---------------------------------------------------------------------------
 # _set_last_incident_date
 # ---------------------------------------------------------------------------

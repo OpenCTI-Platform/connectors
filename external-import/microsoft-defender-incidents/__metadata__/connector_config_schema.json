@@ -67,8 +67,8 @@
       "writeOnly": true
     },
     "MICROSOFT_DEFENDER_INCIDENTS_IMPORT_START_DATE": {
-      "default": null,
-      "description": "Start date for importing incidents in ISO 8601 format (e.g. '2025-01-01T00:00:00Z'). Used only on the first run; subsequent runs use the stored state.",
+      "default": "P30D",
+      "description": "Start date for importing incidents in ISO 8601 format (e.g. '2025-01-01T00:00:00Z' or a timedelta ie: 'P30D'). Used only on the first run; subsequent runs use the stored state.",
       "format": "date-time",
       "type": "string"
     },

@@ -54,7 +54,7 @@ class MicrosoftDefenderIncidentsConnector:
             self.helper, self.config, self.tlp_marking
         )
 
-    def _get_last_incident_date(self) -> int | None:
+    def _get_last_incident_date(self) -> int:
         """
         Get last incident timestamp from connector's state.
         :return: Connector's state last incident timestamp
@@ -65,9 +65,8 @@ class MicrosoftDefenderIncidentsConnector:
             return last_timestamp
 
         import_start_date = self.config.microsoft_defender_incidents.import_start_date
-        if import_start_date:
-            last_timestamp = int(round(import_start_date.timestamp()))
-            return last_timestamp
+        last_timestamp = int(round(import_start_date.timestamp()))
+        return last_timestamp
 
         return None
 

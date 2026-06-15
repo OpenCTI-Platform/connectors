@@ -51,8 +51,8 @@ def test_format_datetime_with_empty_string():
 
 
 def test_format_datetime_preserves_non_utc_offset():
-    result = format_datetime("2024-06-01T12:00:00")
-    assert result.endswith("Z") or "T" in result
+    result = format_datetime("2024-06-01T12:00:00+05:30")
+    assert result == "2024-06-01T12:00:00+05:30"
 
 
 def test_format_date_returns_int():
