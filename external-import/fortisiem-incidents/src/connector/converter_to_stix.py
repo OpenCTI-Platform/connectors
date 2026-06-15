@@ -8,7 +8,6 @@ import stix2
 from pycti import Identity, Incident, MarkingDefinition, StixCoreRelationship
 
 _TLP_MAPPING = {
-    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -36,6 +35,21 @@ def _amber_strict() -> stix2.MarkingDefinition:
     )
 
 
+def _clear() -> stix2.MarkingDefinition:
+    # TLP:CLEAR is a distinct OpenCTI marking (a custom statement marking with
+    # x_opencti_definition="TLP:CLEAR"), not an alias of STIX TLP:WHITE. Using
+    # TLP_WHITE here would surface TLP:WHITE in OpenCTI instead of TLP:CLEAR.
+    return stix2.MarkingDefinition(
+        id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        custom_properties={
+            "x_opencti_definition_type": "TLP",
+            "x_opencti_definition": "TLP:CLEAR",
+        },
+    )
+
+
 class ConverterToStix:
     """Convert FortiSIEM incident dictionaries into STIX 2.1 objects."""
 
@@ -44,6 +58,8 @@ class ConverterToStix:
         self.author = self._create_author()
         if tlp_level == "amber+strict":
             self.tlp_marking = _amber_strict()
+        elif tlp_level == "clear":
+            self.tlp_marking = _clear()
         else:
             self.tlp_marking = _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
 
@@ -157,19 +173,19 @@ class ConverterToStix:
             return stix2.IPv4Address(
                 value=value,
                 object_marking_refs=[self.tlp_marking],
-                custom_properties={"created_by_ref": self.author["id"]},
+                custom_properties={"x_opencti_created_by_ref": self.author["id"]},
             )
         if isinstance(ip, ipaddress.IPv6Address):
             return stix2.IPv6Address(
                 value=value,
                 object_marking_refs=[self.tlp_marking],
-                custom_properties={"created_by_ref": self.author["id"]},
+                custom_properties={"x_opencti_created_by_ref": self.author["id"]},
             )
         if "." in value and " " not in value:
             return stix2.DomainName(
                 value=value,
                 object_marking_refs=[self.tlp_marking],
-                custom_properties={"created_by_ref": self.author["id"]},
+                custom_properties={"x_opencti_created_by_ref": self.author["id"]},
             )
         return None
 

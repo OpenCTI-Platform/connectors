@@ -19,6 +19,13 @@ def test_amber_strict_marking():
     assert converter.tlp_marking["definition_type"] == "statement"
 
 
+def test_clear_marking_is_distinct_tlp_clear():
+    # TLP:CLEAR must be its own custom statement marking, not an alias of TLP:WHITE.
+    converter = _converter("clear")
+    assert converter.tlp_marking["definition_type"] == "statement"
+    assert converter.tlp_marking["x_opencti_definition"] == "TLP:CLEAR"
+
+
 @pytest.mark.parametrize(
     "value, expected_year",
     [
@@ -91,6 +98,15 @@ def test_create_observable(value, stix_type):
 def test_create_observable_none(value):
     converter = _converter()
     assert converter.create_observable(value) is None
+
+
+@pytest.mark.parametrize("value", ["198.51.100.1", "2001:db8::1", "evil.example.com"])
+def test_observable_carries_x_opencti_created_by_ref(value):
+    # SCOs must attribute the author via x_opencti_created_by_ref (not created_by_ref),
+    # otherwise OpenCTI ignores the attribution.
+    converter = _converter()
+    observable = converter.create_observable(value)
+    assert observable["x_opencti_created_by_ref"] == converter.author["id"]
 
 
 def test_create_relationship():
