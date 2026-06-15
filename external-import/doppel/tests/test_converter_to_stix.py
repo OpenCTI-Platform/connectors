@@ -497,6 +497,26 @@ def test_create_case_rft_exposes_workflow_id_top_level(converter):
     assert "allow_custom" not in case
 
 
+def test_indicator_name_is_raw_value_while_pattern_is_escaped(converter):
+    """The indicator name must keep the raw entity value; only the pattern escapes it."""
+    alert = _domains_alert(alert_id="alert_quote", queue_state="actioned")
+    alert["entity"] = "ex'ample.com"
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    indicators = [
+        obj
+        for obj in result
+        if isinstance(obj, dict) and obj.get("type") == "indicator"
+    ]
+    assert indicators
+    indicator = indicators[0]
+    assert indicator["name"] == "ex'ample.com"
+    assert "\\'" in indicator["pattern"]
+
+
 def test_create_case_rft_id_is_deterministic_without_created_at(converter):
     """A missing created_at must still yield a stable (deterministic) case id."""
     converter.enable_rft_case = True

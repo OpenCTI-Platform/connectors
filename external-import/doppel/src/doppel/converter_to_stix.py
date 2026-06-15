@@ -727,7 +727,10 @@ class ConverterToStix:
         product_type = alert.get("product")
 
         alert_id = alert.get("id")
-        entity_value = alert.get("entity", "").replace("\\", "\\\\").replace("'", "\\'")
+        # Keep the raw entity for the indicator name (used by name-based lookups)
+        # and only escape the value embedded into the STIX pattern.
+        raw_entity_value = alert.get("entity", "")
+        entity_value = raw_entity_value.replace("\\", "\\\\").replace("'", "\\'")
 
         # Fall back to a timezone-aware "now" so STIX objects never receive a
         # None (or naive) created/modified timestamp.
@@ -739,7 +742,7 @@ class ConverterToStix:
 
         if product_type == "telco":
             pattern = f"[tracking-number:value = '{entity_value}']"
-            name = entity_value
+            name = raw_entity_value
             phone_number_indicator = self._create_indicator(
                 alert, pattern, name, created_at, modified_at
             )
@@ -751,7 +754,7 @@ class ConverterToStix:
             indicators.append(phone_number_indicator)
         elif product_type == "domains":
             pattern = f"[domain-name:value = '{entity_value}']"
-            name = entity_value
+            name = raw_entity_value
 
             domain_indicator = self._create_indicator(
                 alert, pattern, name, created_at, modified_at
@@ -765,9 +768,12 @@ class ConverterToStix:
             )
 
             if ip_address:
-                ip_address = ip_address.replace("\\", "\\\\").replace("'", "\\'")
-                pattern = f"[ipv4-addr:value = '{ip_address}']"
-                name = ip_address
+                raw_ip_address = ip_address
+                escaped_ip_address = raw_ip_address.replace("\\", "\\\\").replace(
+                    "'", "\\'"
+                )
+                pattern = f"[ipv4-addr:value = '{escaped_ip_address}']"
+                name = raw_ip_address
 
                 ipv4_indicator = self._create_indicator(
                     alert, pattern, name, created_at, modified_at
@@ -777,7 +783,7 @@ class ConverterToStix:
                 indicators.append(ipv4_indicator)
         elif product_type in DOPPEL_ALERT_TYPES_EXCEPT_DOMAIN_AND_TELCO:
             pattern = f"[domain-name:value = '{entity_value}']"
-            name = entity_value
+            name = raw_entity_value
             domain_indicator = self._create_indicator(
                 alert, pattern, name, created_at, modified_at
             )
