@@ -1,0 +1,21 @@
+version: '3'
+services:
+  connector-ctm360-threatcover:
+    image: opencti/connector-ctm360-threatcover:latest # 'ctm360-threatcover' being the name of connector's directory
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type EXTERNAL_IMPORT
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=CTM360 ThreatCover # optional (default: 'CTM360 ThreatCover')
+      - CONNECTOR_SCOPE=ctm360-threatcover # optional
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector-ctm360-threatcover
+      - CTM360_THREATCOVER_API_ROOT_URL=https://<tenant>.ctm360.com/taxii2/api # CTM360 ThreatCover TAXII 2.1 API root URL
+      - CTM360_THREATCOVER_API_TOKEN=CHANGEME # CTM360 ThreatCover API token (TAXII Authorization header)
+      - CTM360_THREATCOVER_COLLECTION_ID=CHANGEME # the ThreatCover 'Observables' TAXII collection id
+      - CTM360_THREATCOVER_TLP_LEVEL=amber # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+      - CTM360_THREATCOVER_VERIFY_SSL=true # optional (default: true)
+    restart: always

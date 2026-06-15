@@ -1,0 +1,18 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'CTM360 ThreatCover' # optional (default: 'CTM360 ThreatCover')
+  scope: 'ctm360-threatcover' # optional
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+ctm360_threatcover:
+  api_root_url: 'https://<tenant>.ctm360.com/taxii2/api' # CTM360 ThreatCover TAXII 2.1 API root URL
+  api_token: 'ChangeMe' # CTM360 ThreatCover API token (sent as the TAXII Authorization header)
+  collection_id: 'ChangeMe' # the ThreatCover 'Observables' TAXII collection id
+  tlp_level: 'amber' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber')
+  verify_ssl: true # optional (default: true)
