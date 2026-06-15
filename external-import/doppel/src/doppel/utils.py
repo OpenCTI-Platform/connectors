@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 
-def parse_iso_datetime(timestamp_str):
+def parse_iso_datetime(timestamp_str: object | None) -> datetime | None:
     """
     Parse an ISO-8601 string into a timezone-aware datetime.
 
