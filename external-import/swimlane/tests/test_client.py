@@ -1,8 +1,9 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
-from swimlane_client import SwimlaneClient
+from swimlane_client import SwimlaneClient, SwimlaneClientError
 
 
 def _make_client() -> SwimlaneClient:
@@ -30,7 +31,11 @@ def test_extract_records_variants():
     assert SwimlaneClient._extract_records([{"id": "1"}]) == [{"id": "1"}]
     assert SwimlaneClient._extract_records({"results": [{"id": "2"}]}) == [{"id": "2"}]
     assert SwimlaneClient._extract_records({"docs": [{"id": "3"}]}) == [{"id": "3"}]
-    assert SwimlaneClient._extract_records({"unexpected": 1}) == []
+    # A well-formed but empty result set is not an error.
+    assert SwimlaneClient._extract_records({"results": []}) == []
+    # An unrecognized payload shape is treated as a fetch error, not "no records".
+    with pytest.raises(SwimlaneClientError):
+        SwimlaneClient._extract_records({"unexpected": 1})
 
 
 def test_get_records_posts_search():
@@ -45,11 +50,37 @@ def test_get_records_posts_search():
     assert call.kwargs["json"]["pageSize"] == 100
 
 
-def test_get_records_returns_empty_on_error():
+def test_get_records_raises_on_request_failure():
+    # A fetch failure must raise (not return []), so the run is marked in error
+    # instead of looking like a successful "no data" run.
     client = _make_client()
     client.session.request.side_effect = requests.RequestException("boom")
     with patch("swimlane_client.api_client.time.sleep"):
-        assert client.get_records() == []
+        with pytest.raises(SwimlaneClientError):
+            client.get_records()
+
+
+def test_get_records_raises_on_non_json_response():
+    client = _make_client()
+    bad = _response(None)
+    bad.json.side_effect = ValueError("not json")
+    client.session.request.return_value = bad
+    with pytest.raises(SwimlaneClientError):
+        client.get_records()
+
+
+def test_get_records_raises_on_unexpected_shape():
+    client = _make_client()
+    client.session.request.return_value = _response({"unexpected": 1})
+    with pytest.raises(SwimlaneClientError):
+        client.get_records()
+
+
+def test_get_records_returns_empty_on_empty_results():
+    # A well-formed but empty result set is a successful empty run, not an error.
+    client = _make_client()
+    client.session.request.return_value = _response({"results": []})
+    assert client.get_records() == []
 
 
 def test_request_retries_on_rate_limit():
