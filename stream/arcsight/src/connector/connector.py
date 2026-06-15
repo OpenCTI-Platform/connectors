@@ -58,8 +58,8 @@ class ArcSightConnector:
 
         try:
             data = json.loads(msg.data)["data"]
-        except Exception as err:
-            raise ValueError(f"Cannot process the message: {err}")
+        except (json.JSONDecodeError, KeyError, TypeError) as err:
+            raise ValueError(f"Cannot process the message: {err}") from err
 
         self._handle_indicator(msg.event, data)
 
