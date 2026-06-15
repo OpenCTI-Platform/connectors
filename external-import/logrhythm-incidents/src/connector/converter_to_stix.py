@@ -4,7 +4,13 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import stix2
-from pycti import CaseIncident, CustomObjectCaseIncident, Identity, MarkingDefinition
+from pycti import (
+    CaseIncident,
+    CustomObjectCaseIncident,
+    Identity,
+    Incident,
+    MarkingDefinition,
+)
 
 _TLP_MAPPING = {
     "clear": stix2.TLP_WHITE,
@@ -92,7 +98,67 @@ class ConverterToStix:
             return _PRIORITY_MAPPING.get(int(value), "low")
         return "low"
 
-    def create_case_incident(self, case: dict) -> Optional[CustomObjectCaseIncident]:
+    @staticmethod
+    def _map_risk(value) -> str:
+        """Map a LogRhythm alarm risk score (0-100) to an OpenCTI severity."""
+        try:
+            score = int(value)
+        except (TypeError, ValueError):
+            return "low"
+        if score >= 80:
+            return "critical"
+        if score >= 60:
+            return "high"
+        if score >= 40:
+            return "medium"
+        return "low"
+
+    def create_incident(self, alarm: dict) -> Optional[stix2.Incident]:
+        """
+        Create a STIX Incident from a LogRhythm alarm.
+
+        LogRhythm alarms are detections/alerts, so they map to an OpenCTI Incident
+        (the case that groups them is modeled as a Case-Incident).
+        """
+        alarm_id = str(alarm.get("alarmId") or alarm.get("id") or "").strip()
+        name = (
+            alarm.get("alarmRuleName")
+            or alarm.get("name")
+            or (f"LogRhythm alarm {alarm_id}" if alarm_id else "LogRhythm alarm")
+        )
+        created = self._to_iso(
+            alarm.get("alarmDate")
+            or alarm.get("dateInserted")
+            or alarm.get("dateCreated")
+        )
+        severity = self._map_risk(alarm.get("riskScore"))
+        description = alarm.get("text") or "Alarm imported from LogRhythm."
+
+        external_references = None
+        if alarm_id:
+            external_references = [
+                {"source_name": "LogRhythm", "external_id": alarm_id}
+            ]
+
+        return stix2.Incident(
+            id=Incident.generate_id(name, created),
+            name=name,
+            description=description,
+            created=created,
+            modified=created,
+            created_by_ref=self.author["id"],
+            object_marking_refs=[self.tlp_marking],
+            external_references=external_references,
+            custom_properties={
+                "source": "LogRhythm",
+                "severity": severity,
+                "incident_type": "alert",
+            },
+        )
+
+    def create_case_incident(
+        self, case: dict, object_refs=None
+    ) -> Optional[CustomObjectCaseIncident]:
         """
         Create a STIX Case-Incident from a LogRhythm case dictionary.
 
@@ -125,5 +191,5 @@ class ConverterToStix:
             created_by_ref=self.author["id"],
             object_marking_refs=[self.tlp_marking],
             external_references=external_references,
-            object_refs=[],
+            object_refs=object_refs or [],
         )

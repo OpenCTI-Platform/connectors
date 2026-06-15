@@ -1,13 +1,18 @@
 # OpenCTI LogRhythm Incidents Connector
 
 The LogRhythm Incidents connector is an **external-import** connector that pulls
-cases from LogRhythm SIEM into OpenCTI as STIX **Case-Incidents**. It is the import
+cases and their alarm evidence from LogRhythm SIEM into OpenCTI. It is the import
 side of a bidirectional integration: pair it with the existing `stream/logrhythm`
 connector (which feeds LogRhythm lists from OpenCTI) to send IOCs out and bring
 cases in.
 
-LogRhythm cases are case-management artifacts, so they are modeled as OpenCTI
-Case-Incidents (a STIX Incident is reserved for alarms/detections).
+LogRhythm exposes two distinct concepts that map to two STIX entities:
+
+- **Alarms** (detections/alerts) attached to a case are modeled as STIX
+  **Incidents**.
+- The **case** itself (a case-management artifact) is modeled as a STIX
+  **Case-Incident** that references the alarm Incidents it groups through its
+  `object_refs`.
 
 Table of Contents
 
@@ -26,9 +31,11 @@ Table of Contents
 ## Introduction
 
 LogRhythm is a SIEM platform. This connector periodically queries the LogRhythm
-Case API for cases and imports them into OpenCTI as STIX 2.1 Incidents, attributed
-to a LogRhythm author identity and marked with a configurable TLP. The LogRhythm
-case priority (1-5) is mapped to the OpenCTI incident severity.
+Case API for cases and their alarm evidence, then imports them into OpenCTI as STIX
+2.1 Case-Incidents (the cases) and Incidents (the alarms), attributed to a LogRhythm
+author identity and marked with a configurable TLP. The LogRhythm case priority
+(1-5) is mapped to the Case-Incident severity, and the alarm risk score (0-100) to
+the Incident severity.
 
 ## Requirements
 
@@ -99,5 +106,8 @@ python main.py
 ## Behavior
 
 On each run the connector fetches cases from the LogRhythm Case API (capped at
-`max_cases`), converts each case to a STIX Case-Incident and sends the bundle to
-OpenCTI. OpenCTI deduplicates case-incidents by their deterministic id across runs.
+`max_cases`). For every case it also fetches the attached alarm evidence, converts
+each alarm to a STIX Incident, and converts the case to a STIX Case-Incident that
+references those Incidents through its `object_refs`. The resulting bundle is sent
+to OpenCTI, which deduplicates both entity types by their deterministic id across
+runs.

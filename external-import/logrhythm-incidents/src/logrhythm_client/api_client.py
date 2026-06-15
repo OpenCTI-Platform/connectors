@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from connector.settings import ConnectorSettings
 
 CASES_PATH = "/lr-case-api/cases"
+CASE_ALARMS_PATH = "/lr-case-api/cases/{case_id}/evidence/alarms"
 
 
 class LogRhythmClient:
@@ -52,19 +53,34 @@ class LogRhythmClient:
         if response is None:
             return []
         try:
-            return self._extract_cases(response.json())
+            return self._extract_list(
+                response.json(), ("cases", "items", "data", "results")
+            )
         except ValueError:
             self.helper.connector_logger.error(
                 "[API] Unexpected LogRhythm cases response"
             )
             return []
 
+    def get_case_alarms(self, case_id) -> list:
+        """Fetch the alarm evidence attached to a LogRhythm case."""
+        path = CASE_ALARMS_PATH.format(case_id=case_id)
+        response = self._request("get", path)
+        if response is None:
+            return []
+        try:
+            return self._extract_list(
+                response.json(), ("alarms", "items", "data", "results")
+            )
+        except ValueError:
+            return []
+
     @staticmethod
-    def _extract_cases(payload) -> list:
+    def _extract_list(payload, keys) -> list:
         if isinstance(payload, list):
             return payload
         if isinstance(payload, dict):
-            for key in ("cases", "items", "data", "results"):
+            for key in keys:
                 value = payload.get(key)
                 if isinstance(value, list):
                     return value
