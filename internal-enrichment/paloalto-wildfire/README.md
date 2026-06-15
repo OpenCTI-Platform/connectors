@@ -4,7 +4,9 @@ The Palo Alto Networks WildFire connector is an **internal-enrichment** connecto
 enriches `StixFile` and `Artifact` observables with WildFire file verdicts.
 
 For each observable, the connector queries the WildFire public API by hash
-(MD5 / SHA-1 / SHA-256). When WildFire knows the sample, the connector:
+(MD5 / SHA-1 / SHA-256). When the hash is unknown and the observable carries an uploaded
+file, the connector submits it to WildFire for analysis and polls for the verdict
+(enabled by default via `submit_unknown`). When WildFire has a verdict, the connector:
 
 - maps the WildFire verdict (benign, grayware, phishing, malware, command-and-control)
   to an OpenCTI score and a `wildfire:<verdict>` label,
@@ -84,6 +86,9 @@ Below are the parameters you'll need to set for the connector:
 | ------------ | ------------ | ---------------------------------- | ------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------- |
 | API key      | api_key      | `PALOALTO_WILDFIRE_API_KEY`        |                                                  | Yes       | The Palo Alto Networks WildFire API key.                                                                   |
 | API base URL | api_base_url | `PALOALTO_WILDFIRE_API_BASE_URL`   | `https://wildfire.paloaltonetworks.com/publicapi` | No        | The WildFire API base URL (use the appropriate cloud region or a WildFire appliance URL).                  |
+| Submit unknown | submit_unknown | `PALOALTO_WILDFIRE_SUBMIT_UNKNOWN` | `true`                                         | No        | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet.      |
+| Max file size | max_file_size | `PALOALTO_WILDFIRE_MAX_FILE_SIZE` | `33554432`                                       | No        | Max size (bytes) of a file the connector downloads from OpenCTI and submits (32 MiB).                      |
+| Submission timeout | submission_timeout | `PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT` | `600`                                 | No        | Max time (seconds) to wait for a submitted file's verdict.                                                 |
 | Max TLP      | max_tlp      | `PALOALTO_WILDFIRE_MAX_TLP`        | `TLP:AMBER`                                       | No        | Maximum TLP of the observable the connector is allowed to enrich.                                          |
 
 ## Deployment
@@ -146,12 +151,17 @@ download of data by re-running the connector.
 On each enrichment request the connector:
 
 1. Selects the strongest available hash on the observable (SHA-256 > SHA-1 > MD5).
-2. Calls `POST /get/verdict` on the WildFire API. If the hash is unknown (or the
-   verdict is pending/error), the original bundle is returned unchanged.
-3. Calls `POST /get/report` to complete the file hashes and file type when available.
-4. Enriches the observable with an `x_opencti_score`, a `wildfire:<verdict>` label, the
+2. Calls `POST /get/verdict` on the WildFire API.
+3. If the hash is unknown and `submit_unknown` is enabled (default) and the observable
+   carries an uploaded file, the connector downloads the file from OpenCTI storage
+   (enforcing `max_file_size` and rejecting empty files), submits it (`POST /submit/file`),
+   and polls `POST /get/verdict` until the verdict is final (bounded by
+   `submission_timeout`). This is the primary path for `Artifact` observables uploaded to
+   OpenCTI. If still no verdict, the original bundle is returned unchanged.
+4. Calls `POST /get/report` to complete the file hashes and file type when available.
+5. Enriches the observable with an `x_opencti_score`, a `wildfire:<verdict>` label, the
    resolved hashes, and (for `StixFile`) the file size.
-5. Creates a STIX Malware Analysis object (`product = WildFire`) referencing the
+6. Creates a STIX Malware Analysis object (`product = WildFire`) referencing the
    observable, with the WildFire result mapped to the STIX `malware-result` vocabulary.
 
 WildFire verdict mapping:
@@ -164,7 +174,8 @@ WildFire verdict mapping:
 | 4                | phishing              | 80    | malicious               |
 | 5                | command-and-control   | 95    | malicious               |
 
-File submission/detonation is out of scope; the connector enriches by hash only.
+The connector looks up a verdict by hash first and only submits a file when the hash is
+unknown and a file is attached to the observable, avoiding unnecessary detonations.
 
 ## Debugging
 

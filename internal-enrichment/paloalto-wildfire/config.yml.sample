@@ -13,4 +13,7 @@ connector:
 paloalto_wildfire:
   api_key: 'ChangeMe'
   api_base_url: 'https://wildfire.paloaltonetworks.com/publicapi' # optional (default: cloud endpoint)
+  submit_unknown: true # optional, submit unknown files (carried by the observable) for analysis (default: true)
+  max_file_size: 33554432 # optional, max size in bytes of a file to download/submit (default: 33554432 = 32 MiB)
+  submission_timeout: 600 # optional, max seconds to wait for a submitted file verdict (default: 600)
   max_tlp: 'TLP:AMBER' # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')

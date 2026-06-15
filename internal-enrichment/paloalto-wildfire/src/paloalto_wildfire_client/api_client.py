@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import xml.etree.ElementTree as ET
 from typing import Optional
 
@@ -11,6 +12,8 @@ from requests.adapters import HTTPAdapter, Retry
 
 # WildFire returns -102 when a hash is unknown to the cloud.
 VERDICT_NOT_FOUND = -102
+# WildFire returns -100 while a submitted sample is still being analysed.
+VERDICT_PENDING = -100
 
 
 class WildfireAPIError(Exception):
@@ -85,12 +88,68 @@ class PaloaltoWildfireClient:
             return None
         return verdict
 
+    def get_verdict_code(self, file_hash: str) -> Optional[int]:
+        """Return the raw WildFire verdict code (including negatives), or ``None``."""
+        response = self._post("/get/verdict", {"hash": file_hash})
+        if response is None:
+            return None
+        return self._parse_verdict(response.text)
+
     def get_report(self, file_hash: str) -> Optional[dict]:
         """Return the WildFire report fields for a file hash, or ``None``."""
         response = self._post("/get/report", {"hash": file_hash, "format": "xml"})
         if response is None:
             return None
         return self._parse_report(response.text)
+
+    def submit_file(self, file_name: str, content: bytes) -> Optional[str]:
+        """Submit a file for analysis, returning the sample SHA-256 (or ``None``)."""
+        url = self.base_url + "/submit/file"
+        files = {"file": (file_name, content)}
+        try:
+            response = self.session.post(
+                url, data={"apikey": self.api_key}, files=files, timeout=self.TIMEOUT
+            )
+            response.raise_for_status()
+        except requests.HTTPError as err:
+            raise WildfireAPIError(
+                "WildFire API request error: "
+                f"{err.response.status_code} ({err.response.reason})"
+            ) from err
+        return self._parse_sha256(response.text)
+
+    def poll_verdict(
+        self, file_hash: str, max_wait: int = 600, interval: int = 30
+    ) -> Optional[int]:
+        """
+        Poll the verdict for a submitted sample until it is final (bounded by max_wait).
+
+        Returns the final non-negative verdict code, or ``None`` if it stays pending,
+        errors, or is rejected.
+        """
+        waited = 0
+        while waited <= max_wait:
+            verdict = self.get_verdict_code(file_hash)
+            if verdict is None:
+                return None
+            if verdict >= 0:
+                return verdict
+            if verdict != VERDICT_PENDING:
+                return None
+            time.sleep(interval)
+            waited += interval
+        return None
+
+    @staticmethod
+    def _parse_sha256(xml_text: str) -> Optional[str]:
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError:
+            return None
+        node = root.find(".//sha256")
+        if node is not None and node.text:
+            return node.text.strip()
+        return None
 
     @staticmethod
     def _parse_verdict(xml_text: str) -> Optional[int]:

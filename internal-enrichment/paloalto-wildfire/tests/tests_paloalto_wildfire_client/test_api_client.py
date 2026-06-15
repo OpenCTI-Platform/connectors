@@ -1,8 +1,17 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 from paloalto_wildfire_client import PaloaltoWildfireClient, WildfireAPIError
+
+SUBMIT_XML = (
+    "<wildfire><upload-file-info><sha256>abc123</sha256>"
+    "</upload-file-info></wildfire>"
+)
+VERDICT_PENDING_XML = (
+    "<wildfire><get-verdict-info><verdict>-100</verdict>"
+    "</get-verdict-info></wildfire>"
+)
 
 VERDICT_XML = (
     "<wildfire><get-verdict-info><sha256>abc</sha256>"
@@ -108,3 +117,49 @@ def test_post_raises_on_http_error():
 
     with pytest.raises(WildfireAPIError):
         client.get_verdict("abc")
+
+
+def test_get_verdict_code_returns_raw_pending():
+    client = _make_client()
+    client.session.post.return_value = _response(VERDICT_PENDING_XML)
+    assert client.get_verdict_code("abc") == -100
+
+
+def test_submit_file_returns_sha256():
+    client = _make_client()
+    client.session.post.return_value = _response(SUBMIT_XML)
+    assert client.submit_file("malware.exe", b"data") == "abc123"
+
+
+def test_submit_file_raises_on_http_error():
+    client = _make_client()
+    err_response = MagicMock()
+    err_response.status_code = 403
+    err_response.reason = "Forbidden"
+    bad = MagicMock()
+    bad.raise_for_status.side_effect = requests.HTTPError(response=err_response)
+    client.session.post.return_value = bad
+
+    with pytest.raises(WildfireAPIError):
+        client.submit_file("malware.exe", b"data")
+
+
+def test_poll_verdict_returns_final():
+    client = _make_client()
+    with patch.object(client, "get_verdict_code", side_effect=[-100, 1]), patch(
+        "paloalto_wildfire_client.api_client.time.sleep"
+    ):
+        assert client.poll_verdict("abc") == 1
+
+
+def test_poll_verdict_returns_none_on_error_code():
+    client = _make_client()
+    with patch.object(client, "get_verdict_code", side_effect=[-100, -103]), patch(
+        "paloalto_wildfire_client.api_client.time.sleep"
+    ):
+        assert client.poll_verdict("abc") is None
+
+
+def test_parse_sha256():
+    assert PaloaltoWildfireClient._parse_sha256(SUBMIT_XML) == "abc123"
+    assert PaloaltoWildfireClient._parse_sha256("not-xml") is None

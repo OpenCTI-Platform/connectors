@@ -30,24 +30,37 @@ def _load(name: str) -> dict:
         return json.load(f)
 
 
+def _settings_dict(submit_unknown: bool = False) -> dict:
+    return {
+        "opencti": {"url": "http://localhost:8080", "token": "test-token"},
+        "connector": {
+            "id": "connector-id",
+            "name": "Test Connector",
+            "scope": "StixFile,Artifact",
+            "log_level": "error",
+            "auto": True,
+        },
+        "paloalto_wildfire": {
+            "api_key": "test-api-key",
+            "submit_unknown": submit_unknown,
+        },
+    }
+
+
 class StubConnectorSettings(ConnectorSettings):
-    """Deterministic settings for tests."""
+    """Deterministic settings for tests (submission disabled)."""
 
     @classmethod
     def _load_config_dict(cls, _, handler) -> dict[str, Any]:
-        return handler(
-            {
-                "opencti": {"url": "http://localhost:8080", "token": "test-token"},
-                "connector": {
-                    "id": "connector-id",
-                    "name": "Test Connector",
-                    "scope": "StixFile,Artifact",
-                    "log_level": "error",
-                    "auto": True,
-                },
-                "paloalto_wildfire": {"api_key": "test-api-key"},
-            }
-        )
+        return handler(_settings_dict())
+
+
+class StubConnectorSettingsSubmit(ConnectorSettings):
+    """Deterministic settings for tests (submission enabled)."""
+
+    @classmethod
+    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        return handler(_settings_dict(submit_unknown=True))
 
 
 @pytest.fixture
@@ -69,7 +82,23 @@ def dummy_connector(mock_opencti_connector_helper):
     connector = PaloaltoWildfireConnector(config=settings, helper=helper)
     connector.client = MagicMock()
     connector._search_hash = MagicMock()
+    connector._submit = MagicMock()
     connector._create_knowledge = MagicMock()
+    connector._send_bundle = MagicMock()
+    return connector
+
+
+@pytest.fixture
+def submit_connector(mock_opencti_connector_helper):
+    settings = StubConnectorSettingsSubmit()
+    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    helper.send_stix2_bundle = MagicMock()
+
+    connector = PaloaltoWildfireConnector(config=settings, helper=helper)
+    connector.client = MagicMock()
+    connector._search_hash = MagicMock(return_value=None)
+    connector._submit = MagicMock(return_value=WILDFIRE_RESULT)
+    connector._create_knowledge = MagicMock(return_value=["bundle"])
     connector._send_bundle = MagicMock()
     return connector
 
@@ -134,8 +163,17 @@ def test_process_message_no_verdict_sends_original(dummy_connector, file_message
 
     dummy_connector._process_message(file_message)
 
+    dummy_connector._submit.assert_not_called()  # submit_unknown is False
     dummy_connector._create_knowledge.assert_not_called()
     dummy_connector._send_bundle.assert_called_with(file_message["stix_objects"])
+
+
+def test_process_message_submits_when_enabled(submit_connector, file_message):
+    submit_connector._process_message(file_message)
+
+    submit_connector._search_hash.assert_called_once()
+    submit_connector._submit.assert_called_once()
+    submit_connector._create_knowledge.assert_called_once()
 
 
 def test_create_knowledge_file(stub_connector, file_message):
@@ -210,3 +248,77 @@ def test_search_hash_with_verdict(stub_connector):
     )
     assert result["verdict"] == 1
     assert result["hash"] == "s"
+
+
+def test_download_file_no_import_files(stub_connector):
+    name, content, error = stub_connector._download_file({"importFiles": []})
+    assert content is None
+    assert "No file attached" in error
+
+
+def test_download_file_rejects_declared_oversize(stub_connector):
+    entity = {
+        "importFiles": [
+            {"id": "f1", "name": "big.bin", "size": stub_connector.max_file_size + 1}
+        ]
+    }
+    name, content, error = stub_connector._download_file(entity)
+    assert content is None
+    assert "limit" in error
+
+
+def test_download_file_rejects_empty(stub_connector):
+    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
+    stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"")
+    entity = {"importFiles": [{"id": "f1", "name": "empty.bin"}]}
+
+    name, content, error = stub_connector._download_file(entity)
+    assert content is None
+    assert "empty" in error
+
+
+def test_download_file_success(stub_connector):
+    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
+    stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"payload")
+    entity = {"importFiles": [{"id": "f1", "name": "malware.exe"}]}
+
+    name, content, error = stub_connector._download_file(entity)
+    assert error is None
+    assert name == "malware.exe"
+    assert content == b"payload"
+
+
+def test_submit_returns_verdict(stub_connector):
+    stub_connector.helper.api.api_url = "http://localhost:8080/graphql"
+    stub_connector.helper.api.fetch_opencti_file = MagicMock(return_value=b"data")
+    stub_connector.client.submit_file = MagicMock(return_value="sha256-1")
+    stub_connector.client.poll_verdict = MagicMock(return_value=1)
+    stub_connector.client.get_report = MagicMock(return_value={"sha256": "sha256-1"})
+
+    entity = {"importFiles": [{"id": "f1", "name": "malware.exe"}]}
+    result = stub_connector._submit(entity)
+    assert result["verdict"] == 1
+    assert result["hash"] == "sha256-1"
+
+
+def test_submit_skips_on_download_error(stub_connector):
+    stub_connector.client.submit_file = MagicMock()
+    stub_connector._download_file = MagicMock(return_value=(None, None, "boom"))
+
+    assert stub_connector._submit({"importFiles": [{"id": "f1"}]}) is None
+    stub_connector.client.submit_file.assert_not_called()
+
+
+def test_submit_unknown_defaults_to_true():
+    class _Settings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler):
+            return handler(
+                {
+                    "opencti": {"url": "http://localhost:8080", "token": "t"},
+                    "connector": {"id": "c", "scope": "StixFile,Artifact"},
+                    "paloalto_wildfire": {"api_key": "k"},
+                }
+            )
+
+    assert _Settings().paloalto_wildfire.submit_unknown is True
