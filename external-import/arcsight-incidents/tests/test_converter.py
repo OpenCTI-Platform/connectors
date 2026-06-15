@@ -147,3 +147,35 @@ def test_create_incident_scalar_base_event_id():
     converter = _converter()
     incident = converter.create_incident({"baseEventIds": "b42", "priority": 3})
     assert incident["external_references"][0]["external_id"] == "b42"
+
+
+def test_incidents_with_same_name_different_event_id_have_distinct_ids():
+    # Distinct events that happen to share a name must not collapse into one
+    # Incident: the event id is part of the id seed.
+    converter = _converter()
+    a = converter.create_incident({"name": "Same", "eventId": "e1"})
+    b = converter.create_incident({"name": "Same", "eventId": "e2"})
+    assert a["id"] != b["id"]
+
+
+def test_incident_timestamps_use_stable_fallback_without_timestamp():
+    # With no source timestamp, created/modified must be a fixed sentinel (not
+    # "now"), so the same Incident is not re-sent with drifting timestamps.
+    converter = _converter()
+    incident = converter.create_incident({"name": "x", "eventId": "e1"})
+    assert incident["created"] == incident["modified"]
+    assert str(incident["created"]).startswith("1970-01-01")
+
+
+def test_case_incidents_with_same_name_different_external_id_have_distinct_ids():
+    converter = _converter()
+    a = converter.create_case_incident({"name": "Same", "resourceid": "A"})
+    b = converter.create_case_incident({"name": "Same", "resourceid": "B"})
+    assert a["id"] != b["id"]
+
+
+def test_case_incident_timestamps_use_stable_fallback_without_timestamp():
+    converter = _converter()
+    case = converter.create_case_incident({"name": "x", "resourceid": "A"})
+    assert str(case["created"]).startswith("1970-01-01")
+    assert str(case["modified"]).startswith("1970-01-01")
