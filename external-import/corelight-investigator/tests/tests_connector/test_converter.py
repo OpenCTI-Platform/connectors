@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -17,6 +18,18 @@ def test_author_is_identity():
 def test_amber_strict_marking():
     converter = _converter("amber+strict")
     assert converter.tlp_marking["definition_type"] == "statement"
+    assert converter.tlp_marking["x_opencti_definition"] == "TLP:AMBER+STRICT"
+
+
+def test_clear_marking_is_statement_not_white():
+    # TLP:CLEAR must be a distinct statement marking, not an alias of TLP:WHITE,
+    # so OpenCTI shows the correct label.
+    clear = _converter("clear").tlp_marking
+    assert clear["definition_type"] == "statement"
+    assert clear["x_opencti_definition"] == "TLP:CLEAR"
+
+    white = _converter("white").tlp_marking
+    assert white["definition_type"] == "tlp"
 
 
 @pytest.mark.parametrize(
@@ -57,6 +70,39 @@ def test_create_incident_default_name():
     converter = _converter()
     incident = converter.create_incident({"alert_id": "x", "EventType": "Alert"})
     assert incident["name"] == "Corelight Alert x"
+
+
+def test_incident_id_is_stable_without_timestamp():
+    # No source timestamp: the id must not depend on "now", so re-importing the same
+    # alert keeps the same Incident id instead of creating duplicates each run.
+    converter = _converter()
+    alert = {"alert_id": "x", "EventType": "Alert"}
+    assert (
+        converter.create_incident(alert)["id"] == converter.create_incident(alert)["id"]
+    )
+
+
+def test_incident_uses_source_timestamp():
+    # The STIX created/modified must reflect the source timestamp, not "now".
+    converter = _converter()
+    incident = converter.create_incident(
+        {"alert_id": "a-1", "name": "n", "timestamp": "2024-05-01T00:00:00Z"}
+    )
+    serialized = json.loads(incident.serialize())
+    assert serialized["created"].startswith("2024-05-01T00:00:00")
+    assert serialized["modified"] == serialized["created"]
+
+
+@pytest.mark.parametrize("value", [None, "", "not-a-date"])
+def test_parse_timestamp_returns_none_for_invalid(value):
+    assert ConverterToStix._parse_timestamp(value) is None
+
+
+def test_parse_timestamp_handles_epoch_seconds_and_millis():
+    assert ConverterToStix._parse_timestamp(0).year == 1970
+    assert ConverterToStix._parse_timestamp(
+        1_700_000_000_000
+    ) == ConverterToStix._parse_timestamp(1_700_000_000)
 
 
 def test_create_observables():

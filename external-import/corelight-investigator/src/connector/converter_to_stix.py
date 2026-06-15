@@ -7,8 +7,8 @@ from typing import Optional
 import stix2
 from pycti import Identity, Incident, MarkingDefinition, StixCoreRelationship
 
+# TLP levels that map directly to a stix2 built-in MarkingDefinition.
 _TLP_MAPPING = {
-    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -23,16 +23,30 @@ _SOURCE_IP_FIELDS = ("src_ip", "source_ip", "src", "id_orig_h")
 _DEST_IP_FIELDS = ("dst_ip", "dest_ip", "destination_ip", "dst", "id_resp_h")
 
 
-def _amber_strict() -> stix2.MarkingDefinition:
+def _statement_marking(definition: str) -> stix2.MarkingDefinition:
+    """Build a custom statement MarkingDefinition for a TLP level.
+
+    TLP:CLEAR and TLP:AMBER+STRICT are not stix2 built-ins. OpenCTI materializes them
+    as statement markings whose canonical id is derived from the definition, so the UI
+    shows the correct label instead of aliasing TLP:WHITE / TLP:AMBER (matches
+    connectors-sdk ``TLPMarking.to_stix2_object``).
+    """
     return stix2.MarkingDefinition(
-        id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        id=MarkingDefinition.generate_id("TLP", definition),
         definition_type="statement",
         definition={"statement": "custom"},
-        custom_properties={
-            "x_opencti_definition_type": "TLP",
-            "x_opencti_definition": "TLP:AMBER+STRICT",
-        },
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
     )
+
+
+def _resolve_tlp_marking(tlp_level: str) -> stix2.MarkingDefinition:
+    if tlp_level == "clear":
+        return _statement_marking("TLP:CLEAR")
+    if tlp_level == "amber+strict":
+        return _statement_marking("TLP:AMBER+STRICT")
+    return _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
 
 
 class ConverterToStix:
@@ -41,10 +55,7 @@ class ConverterToStix:
     def __init__(self, helper, tlp_level: str):
         self.helper = helper
         self.author = self._create_author()
-        if tlp_level == "amber+strict":
-            self.tlp_marking = _amber_strict()
-        else:
-            self.tlp_marking = _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
+        self.tlp_marking = _resolve_tlp_marking(tlp_level)
 
     @staticmethod
     def _create_author() -> stix2.Identity:
@@ -58,26 +69,33 @@ class ConverterToStix:
         )
 
     @staticmethod
-    def _to_iso(value) -> str:
+    def _parse_timestamp(value) -> Optional[datetime]:
+        """Parse a Corelight timestamp into an aware UTC datetime.
+
+        Returns ``None`` when the value is missing or cannot be parsed, so callers can
+        tell a real source timestamp apart from a "now" fallback.
+        """
         if value is None or value == "":
-            dt = datetime.now(timezone.utc)
-        elif isinstance(value, (int, float)) or (
-            isinstance(value, str) and value.isdigit()
+            return None
+        if isinstance(value, (int, float)) or (
+            isinstance(value, str) and value.strip().isdigit()
         ):
             epoch = float(value)
             if epoch > 1e12:  # milliseconds
                 epoch /= 1000.0
-            dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
-        else:
-            try:
-                dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-                dt = (
-                    dt.replace(tzinfo=timezone.utc)
-                    if dt.tzinfo is None
-                    else dt.astimezone(timezone.utc)
-                )
-            except ValueError:
-                dt = datetime.now(timezone.utc)
+            return datetime.fromtimestamp(epoch, tz=timezone.utc)
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return (
+            dt.replace(tzinfo=timezone.utc)
+            if dt.tzinfo is None
+            else dt.astimezone(timezone.utc)
+        )
+
+    @staticmethod
+    def _format_iso(dt: datetime) -> str:
         return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
     @staticmethod
@@ -107,12 +125,17 @@ class ConverterToStix:
                 else f"Corelight {event_type}"
             )
         )
-        created = self._to_iso(
+        source_dt = self._parse_timestamp(
             alert.get("timestamp")
             or alert.get("ts")
             or alert.get("start_time")
             or alert.get("created")
         )
+        # When the alert has no usable timestamp, fall back to "now" for the STIX
+        # created/modified fields but seed generate_id with None, so a re-imported
+        # alert keeps a stable Incident id instead of creating a new one each run.
+        created = self._format_iso(source_dt or datetime.now(timezone.utc))
+        id_seed = self._format_iso(source_dt) if source_dt is not None else None
         severity = self._map_severity(alert.get("severity"))
         description = (
             alert.get("description")
@@ -127,7 +150,7 @@ class ConverterToStix:
             ]
 
         return stix2.Incident(
-            id=Incident.generate_id(name, created),
+            id=Incident.generate_id(name, id_seed),
             name=name,
             description=description,
             created=created,
