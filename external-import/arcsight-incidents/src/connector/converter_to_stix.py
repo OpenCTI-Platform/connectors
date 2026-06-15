@@ -30,6 +30,12 @@ _SEVERITY_BANDS = [
 # OpenCTI case priority derived from the severity.
 _PRIORITY_MAPPING = {"critical": "P1", "high": "P2", "medium": "P3", "low": "P4"}
 
+# Fixed sentinel used when ArcSight provides no usable timestamp. Falling back to
+# this constant (instead of "now") keeps the STIX created/modified - and the
+# deterministic id - constant across runs, so a timestamp-less event/case is not
+# re-sent with drifting timestamps and needlessly updated every cycle.
+_FALLBACK_TIMESTAMP = "1970-01-01T00:00:00.000Z"
+
 
 def _amber_strict() -> stix2.MarkingDefinition:
     return stix2.MarkingDefinition(
@@ -157,11 +163,18 @@ class ConverterToStix:
             or event.get("startTime")
             or event.get("managerReceiptTime")
         )
-        # Seed generate_id with the source timestamp only. With no usable timestamp,
-        # created falls back to "now" for display but the id seed is None, so a
-        # re-imported event keeps a stable id instead of duplicating each run.
-        created = self._format_iso(source_dt or datetime.now(timezone.utc))
+        # Deterministic id: seed generate_id with the event id (so distinct events
+        # do not collide when their names repeat) plus the source timestamp. With
+        # no usable timestamp the timestamp seed is None and created/modified fall
+        # back to a fixed sentinel (never "now"), so a re-imported event keeps a
+        # stable id and is not re-sent with drifting timestamps each run.
+        id_seed_name = f"{name} [{event_id}]" if event_id else name
         id_seed = self._format_iso(source_dt) if source_dt is not None else None
+        created = (
+            self._format_iso(source_dt)
+            if source_dt is not None
+            else _FALLBACK_TIMESTAMP
+        )
         severity = self._map_severity(event.get("priority", event.get("agentSeverity")))
         description = (
             event.get("message") or "Security event imported from ArcSight ESM."
@@ -174,7 +187,7 @@ class ConverterToStix:
             ]
 
         return stix2.Incident(
-            id=Incident.generate_id(name, id_seed),
+            id=Incident.generate_id(id_seed_name, id_seed),
             name=name,
             description=description,
             created=created,
@@ -207,13 +220,21 @@ class ConverterToStix:
         source_dt = self._parse_timestamp(
             case.get("createdTimestamp") or case.get("createTime")
         )
-        created = self._format_iso(source_dt or datetime.now(timezone.utc))
+        # See create_incident: seed the id with the case external id (so distinct
+        # cases do not collide when names repeat) plus the source timestamp, and
+        # fall back to a fixed sentinel - never "now" - when the case carries no
+        # usable timestamp, so a re-imported case keeps a stable Case-Incident id
+        # and is not re-sent with drifting created/modified each run.
+        id_seed_name = f"{name} [{external_id}]" if external_id else name
+        id_seed = self._format_iso(source_dt) if source_dt is not None else None
+        created = (
+            self._format_iso(source_dt)
+            if source_dt is not None
+            else _FALLBACK_TIMESTAMP
+        )
         modified = self._to_iso(
             case.get("modifiedTimestamp") or case.get("modifiedTime") or created
         )
-        # See create_incident: seed the id with the source timestamp only so a
-        # re-imported case keeps a stable Case-Incident id.
-        id_seed = self._format_iso(source_dt) if source_dt is not None else None
         severity = self._map_severity(
             case.get("consequenceSeverity", case.get("severity"))
         )
@@ -230,7 +251,7 @@ class ConverterToStix:
             ]
 
         return CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(name, id_seed),
+            id=CaseIncident.generate_id(id_seed_name, id_seed),
             name=name,
             description=description,
             severity=severity,
