@@ -120,10 +120,14 @@ class FortiSIEMClient:
                 continue
 
             if response.status_code == 429 or response.status_code >= 500:
+                status_code = response.status_code
+                # Release the connection back to the pool before sleeping/retrying
+                # or returning, since the response body is not consumed here.
+                response.close()
                 if last_attempt:
                     self.helper.connector_logger.warning(
                         "[API] FortiSIEM request failed",
-                        meta={"url": url, "status_code": response.status_code},
+                        meta={"url": url, "status_code": status_code},
                     )
                     return None
                 time.sleep(self.BACKOFF_FACTOR * (2**attempt))
@@ -132,6 +136,8 @@ class FortiSIEMClient:
             try:
                 response.raise_for_status()
             except requests.HTTPError as err:
+                # Release the connection back to the pool on a non-retriable 4xx.
+                response.close()
                 self.helper.connector_logger.warning(
                     "[API] FortiSIEM request failed",
                     meta={"url": url, "error": str(err)},

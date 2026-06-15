@@ -128,3 +128,31 @@ def test_request_retries_on_server_error():
     assert result is not None
     assert client.session.request.call_count == 2
     sleep.assert_called_once()
+
+
+def test_request_closes_response_on_4xx():
+    # A non-retriable 4xx response must be released back to the connection pool.
+    client = _make_client()
+    forbidden = _response(403)
+    forbidden.raise_for_status.side_effect = requests.HTTPError("403")
+    client.session.request.return_value = forbidden
+
+    with patch("fortisiem_client.api_client.time.sleep"):
+        assert client._request("post", "/phoenix/rest/watchlist/addTo", json={}) is None
+
+    forbidden.close.assert_called_once()
+
+
+def test_request_closes_superseded_response_before_retry():
+    # The 429 response that is not returned is closed; the returned 200 is not.
+    client = _make_client()
+    rate_limited = _response(429)
+    ok = _response(200)
+    client.session.request.side_effect = [rate_limited, ok]
+
+    with patch("fortisiem_client.api_client.time.sleep"):
+        result = client._request("post", "/phoenix/rest/watchlist/addTo", json={})
+
+    assert result is ok
+    rate_limited.close.assert_called_once()
+    ok.close.assert_not_called()
