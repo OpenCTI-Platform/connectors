@@ -119,6 +119,16 @@ def test_post_raises_on_http_error():
         client.get_verdict("abc")
 
 
+def test_post_wraps_non_http_request_errors():
+    # Connection/timeout/retry errors (not HTTPError) must also be wrapped as
+    # WildfireAPIError so callers see a single, consistent error type.
+    client = _make_client()
+    client.session.post.side_effect = requests.ConnectionError("boom")
+
+    with pytest.raises(WildfireAPIError):
+        client.get_verdict("abc")
+
+
 def test_get_verdict_code_returns_raw_pending():
     client = _make_client()
     client.session.post.return_value = _response(VERDICT_PENDING_XML)

@@ -49,7 +49,7 @@ class PaloaltoWildfireClient:
             allowed_methods=None,
             status_forcelist=[429, 500, 502, 503, 504],
             respect_retry_after_header=True,
-            raise_on_status=True,
+            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
@@ -61,16 +61,25 @@ class PaloaltoWildfireClient:
         payload["apikey"] = self.api_key
         try:
             response = self.session.post(url, data=payload, timeout=self.TIMEOUT)
-            self.helper.connector_logger.debug("[API] WildFire request", {"url": url})
+            self.helper.connector_logger.debug(
+                "[API] WildFire request", meta={"url": url}
+            )
             if response.status_code == 404:
                 # WildFire returns 404 when the sample/report is unknown.
                 return None
             response.raise_for_status()
             return response
         except requests.HTTPError as err:
+            status = err.response.status_code if err.response is not None else "?"
+            reason = err.response.reason if err.response is not None else ""
             raise WildfireAPIError(
-                "WildFire API request error: "
-                f"{err.response.status_code} ({err.response.reason})"
+                f"WildFire API request error: {status} ({reason})"
+            ) from err
+        except requests.RequestException as err:
+            # Retry exhaustion (RetryError), timeouts and connection errors are not
+            # HTTPError; wrap them so callers always see a WildfireAPIError.
+            raise WildfireAPIError(
+                f"WildFire API request failed: {type(err).__name__}"
             ) from err
 
     def get_verdict(self, file_hash: str) -> Optional[int]:
@@ -112,9 +121,14 @@ class PaloaltoWildfireClient:
             )
             response.raise_for_status()
         except requests.HTTPError as err:
+            status = err.response.status_code if err.response is not None else "?"
+            reason = err.response.reason if err.response is not None else ""
             raise WildfireAPIError(
-                "WildFire API request error: "
-                f"{err.response.status_code} ({err.response.reason})"
+                f"WildFire API request error: {status} ({reason})"
+            ) from err
+        except requests.RequestException as err:
+            raise WildfireAPIError(
+                f"WildFire API request failed: {type(err).__name__}"
             ) from err
         return self._parse_sha256(response.text)
 

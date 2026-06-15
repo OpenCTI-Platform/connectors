@@ -197,6 +197,17 @@ def test_create_knowledge_file(stub_connector, file_message):
     assert "wildfire:malware" in enriched["labels"]
     assert enriched["hashes"]["MD5"] == WILDFIRE_RESULT["report"]["md5"]
     assert enriched["size"] == 1024
+    # The WildFire report file type is mapped onto the STIX File mime_type.
+    assert enriched["mime_type"] == WILDFIRE_RESULT["report"]["filetype"]
+
+    # The Malware Analysis object must carry markings (inherited or default) so the
+    # enrichment never produces an unmarked object.
+    malware_analysis = next(
+        o
+        for o in result
+        if not isinstance(o, dict) and getattr(o, "type", None) == "malware-analysis"
+    )
+    assert malware_analysis["object_marking_refs"]
 
 
 def test_create_knowledge_artifact(stub_connector, artifact_message):

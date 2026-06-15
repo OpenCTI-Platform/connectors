@@ -63,7 +63,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "Test Connector"
     assert helper.connect_scope == "test,connector"
     assert helper.log_level == "ERROR"
-    assert helper.connect_auto == True
+    assert helper.connect_auto is True
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):
