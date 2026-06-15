@@ -21,7 +21,7 @@ always returns the (enriched) bundle.
 
 Table of Contents
 
-- [OpenCTI FortiSandbox Connector](#opencti-internal-enrichment-connector-fortisandbox)
+- [OpenCTI FortiSandbox Connector](#opencti-fortisandbox-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -49,7 +49,7 @@ and turns it into OpenCTI knowledge.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.13
+- OpenCTI Platform >= 6.8.12
 - A FortiSandbox instance reachable from the connector, and API credentials
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
@@ -185,8 +185,7 @@ FortiSandbox rating mapping:
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 

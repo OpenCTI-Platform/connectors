@@ -55,7 +55,7 @@ class FortisandboxClient:
             allowed_methods=None,
             status_forcelist=[429, 500, 502, 503, 504],
             respect_retry_after_header=True,
-            raise_on_status=True,
+            raise_on_status=False,
         )
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("https://", adapter)
@@ -76,9 +76,16 @@ class FortisandboxClient:
             )
             response.raise_for_status()
         except requests.HTTPError as err:
+            status = err.response.status_code if err.response is not None else "?"
+            reason = err.response.reason if err.response is not None else ""
             raise FortiSandboxAPIError(
-                "FortiSandbox API request error: "
-                f"{err.response.status_code} ({err.response.reason})"
+                f"FortiSandbox API request error: {status} ({reason})"
+            ) from err
+        except requests.RequestException as err:
+            # Retry exhaustion (RetryError), timeouts and connection errors are not
+            # HTTPError; wrap them so callers always see a FortiSandboxAPIError.
+            raise FortiSandboxAPIError(
+                f"FortiSandbox API request failed: {type(err).__name__}"
             ) from err
         try:
             return response.json()
@@ -157,7 +164,7 @@ class FortisandboxClient:
         """Poll a submission until any of its jobs has a rating (bounded by max_wait)."""
         self._ensure_session()
         waited = 0
-        while waited <= max_wait:
+        while True:
             data = self._call(
                 "get",
                 [{"url": "/scan/result/get-jobs-of-submission", "sid": sid}],
@@ -166,9 +173,11 @@ class FortisandboxClient:
                 rating = self._get_job(self._job_id(job))
                 if rating is not None:
                     return rating
-            time.sleep(interval)
+            # Stop once the budget is spent; do not sleep one extra interval past it.
             waited += interval
-        return None
+            if waited > max_wait:
+                return None
+            time.sleep(interval)
 
     @staticmethod
     def _job_id(job):

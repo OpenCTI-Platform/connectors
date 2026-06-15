@@ -122,3 +122,31 @@ def test_call_raises_on_http_error():
 
     with pytest.raises(FortiSandboxAPIError):
         client.get_file_rating("abc")
+
+
+def test_call_wraps_non_http_request_errors():
+    # Connection/timeout/retry errors (not HTTPError) must also be wrapped as
+    # FortiSandboxAPIError so callers see a single, consistent error type.
+    client = _make_client()
+    client.session_token = "TOKEN"
+    client.session.post.side_effect = requests.ConnectionError("boom")
+
+    with pytest.raises(FortiSandboxAPIError):
+        client.get_file_rating("abc")
+
+
+def test_get_submission_verdict_does_not_sleep_past_max_wait():
+    # With the budget already spent, the poll loop must return without sleeping
+    # one extra interval beyond max_wait.
+    client = _make_client()
+    client.session_token = "TOKEN"
+    client.session.post.side_effect = [
+        _response({"result": {"data": [{"jid": "5"}]}}),  # get-jobs-of-submission
+        _response({"result": {"data": None}}),  # job: no rating yet
+    ]
+
+    with patch("fortisandbox_client.api_client.time.sleep") as sleep:
+        verdict = client.get_submission_verdict("sub-1", max_wait=0, interval=30)
+
+    assert verdict is None
+    sleep.assert_not_called()

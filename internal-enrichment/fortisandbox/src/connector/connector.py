@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 import stix2
 from connector.settings import ConnectorSettings
 from fortisandbox_client import FortiSandboxAPIError, FortisandboxClient
-from pycti import Identity, MalwareAnalysis, OpenCTIConnectorHelper
+from pycti import (
+    Identity,
+    MalwareAnalysis,
+    MarkingDefinition,
+    OpenCTIConnectorHelper,
+)
 
 # FortiSandbox rating -> OpenCTI score (0-100).
 _RATING_SCORES = {
@@ -25,6 +30,20 @@ _RATING_RESULTS = {
     "low risk": "suspicious",
     "clean": "benign",
 }
+
+
+def _tlp_clear() -> stix2.MarkingDefinition:
+    # OpenCTI models TLP:CLEAR as a custom statement marking, not as the legacy STIX
+    # TLP:WHITE; using TLP_WHITE would emit the wrong marking in the bundle.
+    return stix2.MarkingDefinition(
+        id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        custom_properties={
+            "x_opencti_definition_type": "TLP",
+            "x_opencti_definition": "TLP:CLEAR",
+        },
+    )
 
 
 class FortisandboxConnector:
@@ -54,7 +73,7 @@ class FortisandboxConnector:
             identity_class="organization",
             description="File verdicts from Fortinet FortiSandbox.",
         )
-        self.tlp = stix2.TLP_WHITE
+        self.tlp = _tlp_clear()
         self.stix_objects: list = []
 
     @staticmethod
@@ -123,7 +142,7 @@ class FortisandboxConnector:
         file_name, content, error = self._download_file(opencti_entity)
         if error:
             self.helper.connector_logger.info(
-                "Skipping FortiSandbox submission.", {"reason": error}
+                "Skipping FortiSandbox submission.", meta={"reason": error}
             )
             return None
         sid = self.client.submit_file(file_name, content)
@@ -133,7 +152,7 @@ class FortisandboxConnector:
             )
             return None
         self.helper.connector_logger.info(
-            "Submitted file to FortiSandbox, waiting for verdict.", {"sid": sid}
+            "Submitted file to FortiSandbox, waiting for verdict.", meta={"sid": sid}
         )
         return self.client.get_submission_verdict(
             sid, max_wait=self.config.fortisandbox.submission_timeout
@@ -197,6 +216,10 @@ class FortisandboxConnector:
                 description=f"FortiSandbox rating: {rating}",
             )
 
+        # Inherit the source observable's markings so the enrichment never produces
+        # an unmarked (TLP-downgraded) Malware Analysis object; fall back to the
+        # connector default marking when the observable carries none.
+        markings = enriched_entity.get("object_marking_refs") or [self.tlp]
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name, "FortiSandbox"),
             product="FortiSandbox",
@@ -206,6 +229,7 @@ class FortisandboxConnector:
             result=_RATING_RESULTS.get(key, "unknown"),
             sample_ref=enriched_entity["id"],
             created_by_ref=self.identity.id,
+            object_marking_refs=markings,
             external_references=[external_reference],
         )
         enriched_objects.append(malware_analysis)
@@ -215,7 +239,7 @@ class FortisandboxConnector:
     def _process_observable(self, stix_entity: dict, opencti_entity: dict):
         self.helper.connector_logger.info(
             "Processing the observable",
-            {
+            meta={
                 "observable_type": opencti_entity["entity_type"],
                 "observable_value": opencti_entity.get("observable_value"),
             },
@@ -276,7 +300,7 @@ class FortisandboxConnector:
             raise
         except Exception as err:
             self.helper.connector_logger.error(
-                "[CONNECTOR] An unexpected error occurred", {"error": str(err)}
+                "[CONNECTOR] An unexpected error occurred", meta={"error": str(err)}
             )
             self._send_bundle(original_stix_objects)
             raise
