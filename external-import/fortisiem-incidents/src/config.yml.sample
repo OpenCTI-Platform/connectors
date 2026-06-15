@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'FortiSIEM Incidents' # optional (default: 'FortiSIEM Incidents')
-  scope: 'fortisiem' # optional
+  scope: 'fortisiem' # mandatory
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT15M' # optional (default: 'PT15M')
 
@@ -16,5 +16,5 @@ fortisiem_incidents:
   username: 'ChangeMe'
   password: 'ChangeMe'
   import_window_days: 7 # optional (default: 7)
-  tlp_level: 'amber' # optional, one of clear/green/amber/amber+strict/red (default: 'amber')
+  tlp_level: 'amber' # optional, one of clear/white/green/amber/amber+strict/red (default: 'amber')
   ssl_verify: true # optional (default: true)

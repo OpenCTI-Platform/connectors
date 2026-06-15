@@ -80,6 +80,17 @@ def test_create_incident_minimal():
     assert incident["name"] == "FortiSIEM Incident"
 
 
+def test_create_incident_id_stable_without_timestamp():
+    # With no source timestamp, the id must not depend on "now", so re-importing the
+    # same incident keeps the same id instead of creating duplicates each run.
+    converter = _converter()
+    incident = {"incidentTitle": "Suspicious login", "incidentId": 123}
+    assert (
+        converter.create_incident(incident)["id"]
+        == converter.create_incident(incident)["id"]
+    )
+
+
 @pytest.mark.parametrize(
     "value, stix_type",
     [

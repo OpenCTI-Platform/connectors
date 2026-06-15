@@ -58,6 +58,7 @@ class FortiSIEMIncidentsConnector:
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting FortiSIEM Incidents connector..."
         )
+        work_id = None
         try:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
@@ -67,6 +68,9 @@ class FortiSIEMIncidentsConnector:
                 self.helper.connect_id, "FortiSIEM Incidents run"
             )
 
+            # If the fetch fails, _collect_intelligence raises (FortiSIEMClientError),
+            # so the state below is NOT advanced and the same window is retried on the
+            # next run instead of being silently skipped.
             stix_objects = self._collect_intelligence(since)
             if stix_objects:
                 bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -84,6 +88,8 @@ class FortiSIEMIncidentsConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            if work_id:
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
         self.helper.schedule_process(

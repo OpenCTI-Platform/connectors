@@ -1,3 +1,3 @@
-from fortisiem_client.api_client import FortiSIEMClient
+from fortisiem_client.api_client import FortiSIEMClient, FortiSIEMClientError
 
-__all__ = ["FortiSIEMClient"]
+__all__ = ["FortiSIEMClient", "FortiSIEMClientError"]

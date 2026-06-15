@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 INCIDENTS_PATH = "/phoenix/rest/pub/incident"
 
 
+class FortiSIEMClientError(Exception):
+    """Raised when FortiSIEM cannot be reached or returns an invalid response."""
+
+
 class FortiSIEMClient:
     """Thin client around the FortiSIEM incidents REST API."""
 
@@ -49,18 +53,24 @@ class FortiSIEMClient:
         Fetch FortiSIEM incidents updated since the given timestamp.
 
         :param since: ISO-8601 timestamp used as the lower bound.
-        :return: A list of incident dictionaries (empty on failure).
+        :return: A list of incident dictionaries (possibly empty when there are
+            genuinely no new incidents).
+        :raises FortiSIEMClientError: when the request fails (no response after
+            retries) or returns a non-JSON body. This is distinct from "no new
+            incidents" so the caller does not advance its state past a window it
+            never actually fetched (which would silently skip incidents).
         """
         response = self._request("get", INCIDENTS_PATH, params={"update_from": since})
         if response is None:
-            return []
+            raise FortiSIEMClientError(
+                "Failed to fetch FortiSIEM incidents (no response after retries)"
+            )
         try:
             return self._extract_incidents(response.json())
-        except ValueError:
-            self.helper.connector_logger.error(
-                "[API] Unexpected FortiSIEM incidents response"
-            )
-            return []
+        except ValueError as err:
+            raise FortiSIEMClientError(
+                "FortiSIEM returned a non-JSON incidents response"
+            ) from err
 
     @staticmethod
     def _extract_incidents(payload) -> list:

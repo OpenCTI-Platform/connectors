@@ -124,12 +124,18 @@ class ConverterToStix:
         external_id = str(
             incident.get("incidentId") or incident.get("id") or ""
         ).strip()
-        created = self._to_iso(
-            incident.get("incidentFirstSeen") or incident.get("firstSeenTime")
+        source_created = incident.get("incidentFirstSeen") or incident.get(
+            "firstSeenTime"
         )
+        created = self._to_iso(source_created)
         modified = self._to_iso(
             incident.get("incidentLastSeen") or incident.get("lastSeenTime") or created
         )
+        # Seed the Incident id with the source timestamp only. When the incident has
+        # no first-seen timestamp, created falls back to "now"; passing None to
+        # generate_id keeps the id stable across runs instead of creating a duplicate
+        # Incident every import.
+        id_seed = created if source_created else None
         severity = self._map_severity(
             incident.get("incidentSeverity", incident.get("severity"))
         )
@@ -146,7 +152,7 @@ class ConverterToStix:
             ]
 
         return stix2.Incident(
-            id=Incident.generate_id(name, created),
+            id=Incident.generate_id(name, id_seed),
             name=name,
             description=description,
             created=created,

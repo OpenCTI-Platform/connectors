@@ -9,7 +9,7 @@ services:
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=FortiSIEM Incidents # optional (default: 'FortiSIEM Incidents')
-      - CONNECTOR_SCOPE=fortisiem # optional
+      - CONNECTOR_SCOPE=fortisiem # mandatory
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=PT15M # optional (default: 'PT15M')
       # FortiSIEM parameters

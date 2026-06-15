@@ -1,8 +1,9 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
 import requests
-from fortisiem_client import FortiSIEMClient
+from fortisiem_client import FortiSIEMClient, FortiSIEMClientError
 
 
 def _make_client() -> FortiSIEMClient:
@@ -60,11 +61,23 @@ def test_get_incidents_unexpected_shape_returns_empty():
     assert client.get_incidents("2026-01-01T00:00:00Z") == []
 
 
-def test_get_incidents_returns_empty_on_error():
+def test_get_incidents_raises_on_request_failure():
+    # A fetch failure must raise (not return []), so the connector does not advance
+    # its state past a window it never actually fetched.
     client = _make_client()
     client.session.request.side_effect = requests.RequestException("boom")
     with patch("fortisiem_client.api_client.time.sleep"):
-        assert client.get_incidents("2026-01-01T00:00:00Z") == []
+        with pytest.raises(FortiSIEMClientError):
+            client.get_incidents("2026-01-01T00:00:00Z")
+
+
+def test_get_incidents_raises_on_non_json_response():
+    client = _make_client()
+    bad = _response(None)
+    bad.json.side_effect = ValueError("not json")
+    client.session.request.return_value = bad
+    with pytest.raises(FortiSIEMClientError):
+        client.get_incidents("2026-01-01T00:00:00Z")
 
 
 def test_request_retries_on_rate_limit():
