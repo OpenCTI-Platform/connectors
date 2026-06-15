@@ -89,6 +89,9 @@ def test_process_message_handles_api_error(connector):
 
     connector.helper.connector_logger.error.assert_called()
     connector.helper.send_stix2_bundle.assert_not_called()
+    # the initiated work must be finalized (in error) rather than left dangling
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert connector.helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 
 
 def test_since_uses_window_when_no_state(connector):

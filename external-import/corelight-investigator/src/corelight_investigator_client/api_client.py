@@ -80,7 +80,7 @@ class CorelightInvestigatorClient:
         return []
 
     def _request(
-        self, method: str, path: str, params: dict = None
+        self, method: str, path: str, params: Optional[dict] = None
     ) -> Optional[requests.Response]:
         url = f"{self._base_url}{path}"
         for attempt in range(self.REQUEST_ATTEMPTS):

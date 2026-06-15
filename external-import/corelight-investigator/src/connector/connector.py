@@ -60,6 +60,7 @@ class CorelightInvestigatorConnector:
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting Corelight Investigator connector..."
         )
+        work_id = None
         try:
             now = datetime.now(timezone.utc)
             since = self._since()
@@ -85,8 +86,12 @@ class CorelightInvestigatorConnector:
             sys.exit(0)
         except CorelightInvestigatorAPIError as err:
             self.helper.connector_logger.error(str(err))
+            if work_id:
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            if work_id:
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
         self.helper.schedule_process(
