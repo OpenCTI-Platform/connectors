@@ -418,7 +418,9 @@ class ConverterToStix:
             inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_file_content(notification_detail)
         else:
-            self.helper.connector_logger.error(
+            # Unsupported types are expected and skipped, so log at warning level
+            # (matches the README) rather than error to avoid noise.
+            self.helper.connector_logger.warning(
                 "Unsupported notification type, skipping alert",
                 meta={
                     "item_type": item_type,

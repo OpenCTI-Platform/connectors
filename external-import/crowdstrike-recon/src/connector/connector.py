@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from crowdstrike_client import CrowdstrikeReconClient
+from dateutil.parser import parse
 from pycti import OpenCTIConnectorHelper
 
 
@@ -73,6 +74,7 @@ class CrowdstrikeReconConnector:
         """
         stix_objects = []
         most_recent_alert_date = None
+        most_recent_alert_dt = None
         # Get notifications
         notification_ids = self.client.query_notifications(from_date)
 
@@ -88,12 +90,21 @@ class CrowdstrikeReconConnector:
             created_date = (notification_detail.get("notification") or {}).get(
                 "created_date"
             )
-            # Track the maximum created_date explicitly so the saved state never
-            # regresses, regardless of the order the details are returned in.
-            if created_date and (
-                most_recent_alert_date is None or created_date > most_recent_alert_date
-            ):
-                most_recent_alert_date = created_date
+            # Track the maximum created_date so the saved state never regresses,
+            # regardless of the order the details are returned in. Parse to a
+            # datetime for the comparison (lexicographic string comparison is
+            # unsafe with fractional seconds / timezone offsets) but persist the
+            # original string.
+            if created_date:
+                try:
+                    created_dt = parse(created_date)
+                except (ValueError, OverflowError, TypeError):
+                    created_dt = None
+                if created_dt is not None and (
+                    most_recent_alert_dt is None or created_dt > most_recent_alert_dt
+                ):
+                    most_recent_alert_dt = created_dt
+                    most_recent_alert_date = created_date
 
             # convert notification into an OpenCTI Incident
             stix_entities = self.converter_to_stix.create_incident(

@@ -98,6 +98,22 @@ def test_query_notifications_stops_on_short_page():
     assert client.cs.query_notifications.call_count == 1
 
 
+def test_query_notifications_missing_total_continues_until_short_page():
+    client = _client()
+    full = {
+        "status_code": 200,
+        "body": {"resources": [f"id-{i}" for i in range(100)], "meta": {}},
+    }
+    short = {"status_code": 200, "body": {"resources": ["last"], "meta": {}}}
+    client.cs.query_notifications.side_effect = [full, short]
+
+    ids = client.query_notifications(from_date="2026-05-01T00:00:00Z")
+
+    # A missing/zero total must not stop pagination after a full first page.
+    assert len(ids) == 101
+    assert client.cs.query_notifications.call_count == 2
+
+
 def test_query_notifications_raises_on_api_error():
     client = _client()
     client.cs.query_notifications.return_value = {
