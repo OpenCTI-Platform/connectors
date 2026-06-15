@@ -529,6 +529,74 @@ def test_indicator_name_is_raw_value_while_pattern_is_escaped(converter):
     assert "\\'" in indicator["pattern"]
 
 
+def test_existing_indicator_without_objectlabel_rereads_to_remove_managed_labels(
+    converter,
+):
+    """When .list() omits objectLabel on an existing indicator, _get_labels_to_remove
+    must re-read it from the API so managed labels are removed (not accumulated)."""
+    alert = _domains_alert(alert_id="alert_ind_reread", queue_state="actioned")
+    # Indicator as returned by .list()/search: no objectLabel key.
+    existing_indicator = {
+        "id": "internal-indicator-id",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    # The API re-read returns the managed labels that must be removed.
+    converter.helper.api.stix_domain_object.read.return_value = {
+        "id": "internal-indicator-id",
+        "objectLabel": [
+            {"value": "queue_state:taken_down"},
+            {"value": "priority:P2"},
+        ],
+    }
+
+    converter.convert_alerts_to_stix([alert])
+
+    converter.helper.api.stix_domain_object.read.assert_any_call(
+        id="internal-indicator-id"
+    )
+    removed = {
+        call.kwargs.get("label_name")
+        for call in converter.helper.api.stix_domain_object.remove_label.call_args_list
+    }
+    assert "queue_state:taken_down" in removed
+    assert "priority:P2" in removed
+
+
+def test_existing_rft_case_without_objectlabel_rereads_to_remove_managed_labels(
+    converter,
+):
+    """Same re-read fallback for an existing RFT case fetched without objectLabel."""
+    converter.enable_rft_case = True
+    alert = _domains_alert(alert_id="alert_rft_reread", queue_state="actioned")
+    # RFT case as returned by .list()/search: no objectLabel key.
+    existing_case = {
+        "id": "internal-case-id",
+        "standard_id": "case-rft--11111111-1111-4111-8111-111111111111",
+    }
+    converter.helper.api.case_rft.list.return_value = [existing_case]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+    converter.helper.api.stix_domain_object.read.return_value = {
+        "id": "internal-case-id",
+        "objectLabel": [
+            {"value": "severity:high"},
+            {"value": "priority:P1"},
+        ],
+    }
+
+    converter.convert_alerts_to_stix([alert])
+
+    converter.helper.api.stix_domain_object.read.assert_any_call(id="internal-case-id")
+    removed = {
+        call.kwargs.get("label_name")
+        for call in converter.helper.api.stix_domain_object.remove_label.call_args_list
+    }
+    assert "severity:high" in removed
+    assert "priority:P1" in removed
+
+
 def test_create_case_rft_id_is_deterministic_without_created_at(converter):
     """A missing created_at must still yield a stable (deterministic) case id."""
     converter.enable_rft_case = True

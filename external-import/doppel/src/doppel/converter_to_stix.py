@@ -1137,10 +1137,14 @@ class ConverterToStix:
         # Only re-read from the API when the caller did not already provide the
         # object's labels, to avoid an avoidable round-trip per alert (the
         # observable caller already passes a server-read object with objectLabel).
+        # Indicators and RFT cases are fetched via .list()/search, which may omit
+        # objectLabel, so they must be re-read too - otherwise labels_to_remove is
+        # empty and managed labels (queue_state/severity/priority/...) accumulate
+        # instead of being replaced.
         if obj is not None and "objectLabel" not in obj:
             if target_obj_type == "Observable":
                 obj = self.helper.api.stix_cyber_observable.read(id=obj.get("id"))
-            elif target_obj_type == "GroupingCase":
+            elif target_obj_type in ("GroupingCase", "Indicator", "RFTCase"):
                 obj = self.helper.api.stix_domain_object.read(id=obj.get("id"))
 
         labels = [
