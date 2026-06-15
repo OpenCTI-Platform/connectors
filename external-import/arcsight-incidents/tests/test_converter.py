@@ -51,9 +51,9 @@ def test_map_severity(value, expected):
     assert ConverterToStix._map_severity(value) == expected
 
 
-def test_create_incident():
+def test_create_case_incident():
     converter = _converter()
-    incident = converter.create_incident(
+    case = converter.create_case_incident(
         {
             "name": "Investigation 42",
             "resourceid": "ABC123",
@@ -62,12 +62,13 @@ def test_create_incident():
             "message": "Case details",
         }
     )
-    assert incident["type"] == "incident"
-    assert incident["name"] == "Investigation 42"
-    assert incident["external_references"][0]["external_id"] == "ABC123"
+    assert case["type"] == "case-incident"
+    assert case["name"] == "Investigation 42"
+    assert case["external_references"][0]["external_id"] == "ABC123"
+    assert case["priority"] == "P1"
 
 
-def test_create_incident_minimal():
+def test_create_case_incident_minimal():
     converter = _converter()
-    incident = converter.create_incident({})
-    assert incident["name"] == "ArcSight Case"
+    case = converter.create_case_incident({})
+    assert case["name"] == "ArcSight Case"

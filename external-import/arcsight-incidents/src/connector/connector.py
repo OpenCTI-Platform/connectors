@@ -24,9 +24,9 @@ class ArcSightIncidentsConnector:
     def _collect_intelligence(self) -> list:
         stix_objects: list = []
         for case in self.client.get_cases():
-            incident = self.converter.create_incident(case)
-            if incident is not None:
-                stix_objects.append(incident)
+            case_incident = self.converter.create_case_incident(case)
+            if case_incident is not None:
+                stix_objects.append(case_incident)
 
         if stix_objects:
             stix_objects.append(self.converter.author)
