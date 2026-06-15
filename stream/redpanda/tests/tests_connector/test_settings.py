@@ -49,6 +49,35 @@ def test_settings_should_apply_redpanda_defaults():
     assert settings.redpanda.ssl_verify is True
 
 
+@pytest.mark.parametrize("topic", ["opencti", "opencti.events", "opencti_events-1"])
+def test_settings_should_accept_valid_topic(topic):
+    config = _valid_settings()
+    config["redpanda"]["topic"] = topic
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(config)
+
+    settings = FakeConnectorSettings()
+
+    assert settings.redpanda.topic == topic
+
+
+@pytest.mark.parametrize("topic", ["bad topic", "topic/with/slash", "", ".", ".."])
+def test_settings_should_reject_invalid_topic(topic):
+    config = _valid_settings()
+    config["redpanda"]["topic"] = topic
+
+    class FakeConnectorSettings(ConnectorSettings):
+        @classmethod
+        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+            return handler(config)
+
+    with pytest.raises(ConfigValidationError):
+        FakeConnectorSettings()
+
+
 @pytest.mark.parametrize(
     "settings_dict",
     [
