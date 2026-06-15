@@ -93,12 +93,8 @@ def test_collect_intelligence_bundle_includes_related_entities(
 
     incident_id = incidents[0].id
     vulnerability_id = vulnerabilities[0].id
-    related_to = [
-        rel for rel in relationships if rel.relationship_type == "related-to"
-    ]
-    has_relationships = [
-        rel for rel in relationships if rel.relationship_type == "has"
-    ]
+    related_to = [rel for rel in relationships if rel.relationship_type == "related-to"]
+    has_relationships = [rel for rel in relationships if rel.relationship_type == "has"]
     observable_and_vulnerability_ids = {
         obj.id
         for obj in (ipv4_addresses + ipv6_addresses + domain_names + vulnerabilities)
@@ -116,7 +112,8 @@ def test_collect_intelligence_bundle_includes_related_entities(
         for relationship in has_relationships
     )
     assert all(
-        relationship.target_ref == vulnerability_id for relationship in has_relationships
+        relationship.target_ref == vulnerability_id
+        for relationship in has_relationships
     )
 
 

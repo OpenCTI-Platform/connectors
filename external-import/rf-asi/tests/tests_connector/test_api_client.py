@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from rf_asi_client.api_client import RfAsiClient
+from rf_asi_client.api_client import HttpRetrySettings, RfAsiClient
 
 
 def _mock_response(payload: dict) -> MagicMock:
@@ -28,7 +28,7 @@ def _client(opencti_helper, **kwargs) -> RfAsiClient:
     defaults = {
         "base_url": "https://api.securitytrails.com/v2",
         "api_key": "test-api-key",
-        "retry_max_attempts": 3,
+        "retry": HttpRetrySettings(max_attempts=3),
     }
     defaults.update(kwargs)
     return RfAsiClient(opencti_helper, **defaults)
@@ -388,9 +388,7 @@ def test_list_exposures_batch_run_limit_three_spans_both_pages(
     }
 
 
-def test_request_data_retries_on_429_then_succeeds(
-    opencti_helper, exposures_list_page
-):
+def test_request_data_retries_on_429_then_succeeds(opencti_helper, exposures_list_page):
     client = _client(opencti_helper)
 
     with patch("time.sleep"), patch.object(
@@ -408,9 +406,7 @@ def test_request_data_retries_on_429_then_succeeds(
     assert mock_get.call_count == 2
 
 
-def test_request_data_honors_retry_after_header(
-    opencti_helper, exposures_list_page
-):
+def test_request_data_honors_retry_after_header(opencti_helper, exposures_list_page):
     client = _client(opencti_helper)
 
     with patch("time.sleep") as mock_sleep, patch.object(

@@ -1,32 +1,45 @@
+from dataclasses import dataclass
+
 import requests
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
-from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential_jitter
+from tenacity import (
+    Retrying,
+    retry_if_exception,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
 from tenacity.wait import wait_base
 
 
-class _RetryAfterOrExponentialWait(wait_base):
-    """Honor Retry-After on 429; otherwise use exponential backoff with jitter."""
+@dataclass(frozen=True)
+class HttpRetrySettings:
+    """HTTP retry/backoff configuration for API requests."""
 
-    def __init__(
-        self,
-        exponential_wait: wait_base,
-        max_seconds: float,
-    ) -> None:
-        self._exponential_wait = exponential_wait
-        self._max_seconds = max_seconds
+    max_attempts: int = 3
+    initial_seconds: float = 1
+    max_seconds: float = 60
 
-    def __call__(self, retry_state) -> float:
+
+def _retry_after_or_exponential_wait(
+    exponential_wait: wait_base,
+    max_seconds: float,
+):
+    """Return a tenacity wait callable honoring Retry-After on 429 responses."""
+
+    def wait(retry_state) -> float:
         exc = retry_state.outcome.exception()
         if isinstance(exc, requests.HTTPError) and exc.response is not None:
             if exc.response.status_code == 429:
                 retry_after = exc.response.headers.get("Retry-After")
                 if retry_after is not None:
                     try:
-                        return min(int(retry_after), self._max_seconds)
+                        return min(int(retry_after), max_seconds)
                     except (ValueError, TypeError):
                         pass
-        return self._exponential_wait(retry_state)
+        return exponential_wait(retry_state)
+
+    return wait
 
 
 class RfAsiClient:
@@ -37,10 +50,7 @@ class RfAsiClient:
         helper: OpenCTIConnectorHelper,
         base_url: HttpUrl,
         api_key: str,
-        *,
-        retry_max_attempts: int = 3,
-        retry_initial_seconds: float = 1,
-        retry_max_seconds: float = 60,
+        retry: HttpRetrySettings | None = None,
     ):
         """
         Initialize the client with necessary configuration.
@@ -49,15 +59,14 @@ class RfAsiClient:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
             base_url (HttpUrl): The external API base URL.
             api_key (str): The API key to authenticate the connector to the external API.
-            retry_max_attempts (int): Maximum HTTP request attempts before giving up.
-            retry_initial_seconds (float): Initial backoff delay for retried requests.
-            retry_max_seconds (float): Maximum backoff delay between retry attempts.
+            retry (HttpRetrySettings | None): HTTP retry/backoff settings.
         """
+        retry_settings = retry or HttpRetrySettings()
         self.helper = helper
         self.base_url = str(base_url).rstrip("/")
-        self.retry_max_attempts = retry_max_attempts
-        self.retry_initial_seconds = retry_initial_seconds
-        self.retry_max_seconds = retry_max_seconds
+        self.retry_max_attempts = retry_settings.max_attempts
+        self.retry_initial_seconds = retry_settings.initial_seconds
+        self.retry_max_seconds = retry_settings.max_seconds
         headers = {
             "accept": "application/json",
             "apikey": api_key,
@@ -119,7 +128,7 @@ class RfAsiClient:
         retryer = Retrying(
             retry=retry_if_exception(self._is_retryable),
             stop=stop_after_attempt(self.retry_max_attempts),
-            wait=_RetryAfterOrExponentialWait(
+            wait=_retry_after_or_exponential_wait(
                 wait_exponential_jitter(
                     initial=self.retry_initial_seconds,
                     max=self.retry_max_seconds,

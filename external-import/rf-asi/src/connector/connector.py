@@ -5,6 +5,7 @@ from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from rf_asi_client import RfAsiClient
+from rf_asi_client.api_client import HttpRetrySettings
 
 
 class RfAsiConnector:
@@ -56,9 +57,11 @@ class RfAsiConnector:
             self.helper,
             base_url=self.config.rf_asi.api_base_url,
             api_key=self.config.rf_asi.api_key.get_secret_value(),
-            retry_max_attempts=self.config.rf_asi.retry_max_attempts,
-            retry_initial_seconds=self.config.rf_asi.retry_initial_seconds,
-            retry_max_seconds=self.config.rf_asi.retry_max_seconds,
+            retry=HttpRetrySettings(
+                max_attempts=self.config.rf_asi.retry_max_attempts,
+                initial_seconds=self.config.rf_asi.retry_initial_seconds,
+                max_seconds=self.config.rf_asi.retry_max_seconds,
+            ),
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
