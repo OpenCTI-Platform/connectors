@@ -533,7 +533,10 @@ class ConverterToStix:
                 )
 
                 if ip_address:
-                    ip_address = ip_address.replace("\\", "\\\\").replace("'", "\\'")
+                    # Use the raw IP as the observable value; escaping is only
+                    # required when embedding the value into a STIX indicator
+                    # pattern (handled in _handle_indicators_new), not for the
+                    # observable's stored value.
                     ipv4_observable = self._create_observable("ipv4", ip_address, alert)
                     stix_objects.append(ipv4_observable)
                     observables.append(ipv4_observable)
