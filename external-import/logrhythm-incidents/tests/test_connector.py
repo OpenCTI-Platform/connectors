@@ -18,7 +18,7 @@ def test_collect_intelligence_builds_objects():
     objects = connector._collect_intelligence()
     types = [o["type"] for o in objects]
 
-    assert "incident" in types
+    assert "case-incident" in types
     assert "identity" in types  # author appended
 
 

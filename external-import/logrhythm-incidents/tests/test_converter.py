@@ -36,9 +36,9 @@ def test_map_severity(value, expected):
     assert ConverterToStix._map_severity(value) == expected
 
 
-def test_create_incident():
+def test_create_case_incident():
     converter = _converter()
-    incident = converter.create_incident(
+    case = converter.create_case_incident(
         {
             "name": "Case A",
             "number": "42",
@@ -47,12 +47,13 @@ def test_create_incident():
             "summary": "Case details",
         }
     )
-    assert incident["type"] == "incident"
-    assert incident["name"] == "Case A"
-    assert incident["external_references"][0]["external_id"] == "42"
+    assert case["type"] == "case-incident"
+    assert case["name"] == "Case A"
+    assert case["external_references"][0]["external_id"] == "42"
+    assert case["priority"] == "P1"
 
 
-def test_create_incident_minimal():
+def test_create_case_incident_minimal():
     converter = _converter()
-    incident = converter.create_incident({})
-    assert incident["name"] == "LogRhythm case"
+    case = converter.create_case_incident({})
+    assert case["name"] == "LogRhythm case"
