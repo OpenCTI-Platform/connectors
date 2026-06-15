@@ -9,7 +9,7 @@ services:
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=Corelight Investigator # optional (default: 'Corelight Investigator')
-      - CONNECTOR_SCOPE=corelight-investigator # optional
+      - CONNECTOR_SCOPE=corelight-investigator # mandatory
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-corelight-investigator

@@ -22,6 +22,12 @@ _SEVERITY_BANDS = [(9, "critical"), (7, "high"), (4, "medium"), (0, "low")]
 _SOURCE_IP_FIELDS = ("src_ip", "source_ip", "src", "id_orig_h")
 _DEST_IP_FIELDS = ("dst_ip", "dest_ip", "destination_ip", "dst", "id_resp_h")
 
+# Fixed sentinel used when an alert provides no usable timestamp. Falling back to
+# this constant (instead of "now") keeps the STIX created/modified - and the
+# deterministic id - constant across runs, so a timestamp-less alert is not
+# re-sent with drifting timestamps and needlessly updated every cycle.
+_FALLBACK_TIMESTAMP = "1970-01-01T00:00:00.000Z"
+
 
 def _statement_marking(definition: str) -> stix2.MarkingDefinition:
     """Build a custom statement MarkingDefinition for a TLP level.
@@ -131,11 +137,18 @@ class ConverterToStix:
             or alert.get("start_time")
             or alert.get("created")
         )
-        # When the alert has no usable timestamp, fall back to "now" for the STIX
-        # created/modified fields but seed generate_id with None, so a re-imported
-        # alert keeps a stable Incident id instead of creating a new one each run.
-        created = self._format_iso(source_dt or datetime.now(timezone.utc))
+        # Deterministic id: seed generate_id with the alert id (so distinct alerts
+        # do not collide when their names repeat) plus the source timestamp. With no
+        # usable timestamp the timestamp seed is None and created/modified fall back
+        # to a fixed sentinel (never "now"), so a re-imported alert keeps a stable id
+        # and is not re-sent with drifting timestamps each run.
+        id_seed_name = f"{name} [{alert_id}]" if alert_id else name
         id_seed = self._format_iso(source_dt) if source_dt is not None else None
+        created = (
+            self._format_iso(source_dt)
+            if source_dt is not None
+            else _FALLBACK_TIMESTAMP
+        )
         severity = self._map_severity(alert.get("severity"))
         description = (
             alert.get("description")
@@ -150,7 +163,7 @@ class ConverterToStix:
             ]
 
         return stix2.Incident(
-            id=Incident.generate_id(name, id_seed),
+            id=Incident.generate_id(id_seed_name, id_seed),
             name=name,
             description=description,
             created=created,
