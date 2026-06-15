@@ -282,7 +282,7 @@ class ConverterToStix:
         if indicators_list:
             self.helper.connector_logger.info(
                 "[DoppelConverter] Found indicators for alert_id",
-                {"alert_id": alert_id, "count": len(indicators_list)},
+                meta={"alert_id": alert_id, "count": len(indicators_list)},
             )
             return indicators_list
 
@@ -290,7 +290,7 @@ class ConverterToStix:
         else:
             self.helper.connector_logger.info(
                 "[DoppelConverter] No indicators found by workflow_id, trying name search",
-                {"alert_id": alert_id, "search_value": entity_value},
+                meta={"alert_id": alert_id, "search_value": entity_value},
             )
 
             # Search by indicator name (which is the observable value)
@@ -316,7 +316,7 @@ class ConverterToStix:
             if filtered_indicators:
                 self.helper.connector_logger.info(
                     "[DoppelConverter] Found indicators for alert_id",
-                    {"alert_id": alert_id, "count": len(filtered_indicators)},
+                    meta={"alert_id": alert_id, "count": len(filtered_indicators)},
                 )
                 return filtered_indicators
 
@@ -343,14 +343,14 @@ class ConverterToStix:
         if rft_cases:
             self.helper.connector_logger.info(
                 "[DoppelConverter] Found existing RFT cases for alert_id",
-                {"alert_id": alert_id, "count": len(rft_cases)},
+                meta={"alert_id": alert_id, "count": len(rft_cases)},
             )
             return rft_cases
         # If not found, search by name
         else:
             self.helper.connector_logger.info(
                 "[DoppelConverter] No RFT Cases found by workflow_id, trying name search",
-                {"alert_id": alert_id, "search_value": entity_value},
+                meta={"alert_id": alert_id, "search_value": entity_value},
             )
             case_name = f"Doppel Takedown - {entity_value} ({alert_id})"
             # Search by RFT Case name (which is the observable value)
@@ -376,7 +376,7 @@ class ConverterToStix:
             if filtered_rft_cases:
                 self.helper.connector_logger.info(
                     "[DoppelConverter] Found RFT Case for alert_id",
-                    {"alert_id": alert_id, "count": len(filtered_rft_cases)},
+                    meta={"alert_id": alert_id, "count": len(filtered_rft_cases)},
                 )
                 return filtered_rft_cases
 
@@ -461,7 +461,7 @@ class ConverterToStix:
             if not observables:
                 self.helper.connector_logger.warning(
                     "[DoppelConverter] No observables created for alert, skipping",
-                    {"alert_id": alert.get("id")},
+                    meta={"alert_id": alert.get("id")},
                 )
                 continue
             # Domain resolves-to IP relationship
@@ -551,13 +551,13 @@ class ConverterToStix:
             else:
                 self.helper.connector_logger.warning(
                     "[DoppelConverter] Unsupported product type, skipping alert",
-                    {"alert_id": alert.get("id"), "product_type": product_type},
+                    meta={"alert_id": alert.get("id"), "product_type": product_type},
                 )
             return observables
         except Exception as e:
             self.helper.connector_logger.error(
                 "[DoppelConverter] Failed to create observables",
-                {"alert_id": alert.get("id"), "error": str(e)},
+                meta={"alert_id": alert.get("id"), "error": str(e)},
             )
             raise
 
@@ -636,7 +636,7 @@ class ConverterToStix:
         if existing_indicators:
             self.helper.connector_logger.info(
                 "[DoppelConverter - Handle Indicator] Processing existing indicator",
-                {"alert_id": alert.get("id")},
+                meta={"alert_id": alert.get("id")},
             )
             self._handle_indicators_existing(
                 existing_indicators, alert, observables, stix_objects
@@ -648,7 +648,7 @@ class ConverterToStix:
 
             self.helper.connector_logger.info(
                 "[DoppelConverter - Handle Indicator] Processing a new indicator",
-                {"alert_id": alert.get("id")},
+                meta={"alert_id": alert.get("id")},
             )
 
             indicators = self._handle_indicators_new(alert, observables, stix_objects)
@@ -682,7 +682,7 @@ class ConverterToStix:
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Updating indicator revoke status",
-                {
+                meta={
                     "alert_id": alert_id,
                     "indicator_standard_id": indicator["standard_id"],
                     "setting revoked to": revoke_indicator,
@@ -719,7 +719,7 @@ class ConverterToStix:
         if not in_takedown_state(queue_state):
             self.helper.connector_logger.info(
                 "[DoppelConverter] Alert is not in takedown state, skipping indicator creation",
-                {"alert_id": alert.get("id"), "queue_state": queue_state},
+                meta={"alert_id": alert.get("id"), "queue_state": queue_state},
             )
             return []
         # else in_taken_down_state = actioned/taken_down
@@ -787,7 +787,7 @@ class ConverterToStix:
         else:
             self.helper.connector_logger.warning(
                 "[DoppelConverter] Unsupported product type, skipping alert",
-                {"alert_id": alert_id, "product_type": product_type},
+                meta={"alert_id": alert_id, "product_type": product_type},
             )
         return indicators
 
@@ -844,7 +844,7 @@ class ConverterToStix:
         if not self.enable_rft_case:
             self.helper.connector_logger.info(
                 "[Handle RFT Case] RFT Case Creation is not enabled by User.",
-                {
+                meta={
                     "RFT Case Creation enable": self.enable_rft_case,
                 },
             )
@@ -858,7 +858,7 @@ class ConverterToStix:
         if existing_rft_cases:
             self.helper.connector_logger.info(
                 "[DoppelConverter - Handle RFT Case] Processing existing RFT Case",
-                {"alert_id": alert.get("id")},
+                meta={"alert_id": alert.get("id")},
             )
             self._handle_rft_cases_existing(
                 existing_rft_cases, alert, observables, stix_objects
@@ -869,7 +869,7 @@ class ConverterToStix:
         else:
             self.helper.connector_logger.info(
                 "[DoppelConverter - Handle RFT Case] Processing New RFT Case",
-                {"alert_id": alert.get("id")},
+                meta={"alert_id": alert.get("id")},
             )
             rft_case = self._handle_rft_cases_new(alert, observables, stix_objects)
 
@@ -895,7 +895,7 @@ class ConverterToStix:
 
             self.helper.connector_logger.info(
                 "[DoppelConverter] Updating RFT case revoke status",
-                {
+                meta={
                     "alert_id": alert_id,
                     "case_standard_id": rft_case["id"],
                     "setting revoked to": revoke_rft_case,
@@ -927,7 +927,7 @@ class ConverterToStix:
         if not in_takedown_state(queue_state):
             self.helper.connector_logger.info(
                 "[DoppelConverter] Alert is not in takedown state, skipping RFT case creation",
-                {"alert_id": alert_id, "queue_state": queue_state},
+                meta={"alert_id": alert_id, "queue_state": queue_state},
             )
             return None
 
@@ -935,7 +935,7 @@ class ConverterToStix:
 
         self.helper.connector_logger.info(
             "[RFT Case] RFT Case Creation",
-            {"rft_case": rft_case},
+            meta={"rft_case": rft_case},
         )
 
         stix_objects.append(rft_case)
@@ -953,7 +953,7 @@ class ConverterToStix:
         try:
             self.helper.connector_logger.info(
                 "[RFT - Observable Relationship] RFT & Observable relationship",
-                {"rft_case": rft_case, "observables": observables},
+                meta={"rft_case": rft_case, "observables": observables},
             )
 
             # Existing cases (read from the API) expose their STIX id as
@@ -970,7 +970,7 @@ class ConverterToStix:
         except Exception as e:
             self.helper.connector_logger.error(
                 "[DoppelConverter] Failed to create relationship between RFT case and observable",
-                {"case_id": rft_case.get("id"), "error": str(e)},
+                meta={"case_id": rft_case.get("id"), "error": str(e)},
             )
 
     def _handle_note_addition(self, obj, alert, observables, stix_objects):
@@ -981,7 +981,7 @@ class ConverterToStix:
         ### Adding Note with details about update in Doppel queue state.
         self.helper.connector_logger.info(
             "[DoppelConverter] Note addition",
-            {"obj": obj, "observables": observables},
+            meta={"obj": obj, "observables": observables},
         )
 
         alert_id = alert.get("id")
@@ -1012,7 +1012,10 @@ class ConverterToStix:
     def _handle_labels(self, alert, target_obj_type, target_object):
         """Update data in OpenCTI object based on changes in Alert."""
 
+        # Include the current priority label so an updated object reflects the
+        # latest priority (the priority: prefix is managed/removed below).
         new_labels = build_labels(alert)
+        new_labels.append(f"priority:{calculate_priority(alert.get('score', 0))}")
 
         try:
             if target_obj_type == "Observable":
@@ -1098,7 +1101,7 @@ class ConverterToStix:
         except Exception as e:
             self.helper.connector_logger.warning(
                 "[DoppelConverter] Failed to update tags",
-                {"alert_id": alert.get("id"), "error": str(e)},
+                meta={"alert_id": alert.get("id"), "error": str(e)},
             )
 
     def _get_labels_to_remove(self, target_obj_type, obj):
@@ -1109,6 +1112,7 @@ class ConverterToStix:
             "severity:",
             "platform:",
             "brand:",
+            "priority:",
         )
 
         # Only re-read from the API when the caller did not already provide the
