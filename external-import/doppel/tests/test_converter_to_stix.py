@@ -382,3 +382,77 @@ def test_create_tlp_marking_levels():
         assert marking is not None
     strict = ConverterToStix._create_tlp_marking("amber+strict")
     assert strict.definition_type == "statement"
+
+
+def _relationships(result, relationship_type):
+    return [
+        obj
+        for obj in result
+        if isinstance(obj, dict)
+        and obj.get("type") == "relationship"
+        and obj.get("relationship_type") == relationship_type
+    ]
+
+
+def test_existing_indicator_creates_based_on_relationship(converter):
+    """An existing indicator still gets a based-on relationship (using its STIX standard_id)."""
+    alert = _domains_alert(alert_id="alert_exist_rel", queue_state="actioned")
+    existing_indicator = {
+        "id": "internal-indicator-id",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    based_on = _relationships(result, "based-on")
+    assert based_on, "expected a based-on relationship for the existing indicator"
+    assert any(
+        rel["source_ref"] == "indicator--e5a6f272-3595-4673-9097-f5be0df2a926"
+        for rel in based_on
+    )
+
+
+def test_existing_rft_case_creates_related_to_relationship(converter):
+    """An existing RFT case still gets a related-to relationship (using its STIX standard_id)."""
+    converter.enable_rft_case = True
+    alert = _domains_alert(alert_id="alert_rft_rel", queue_state="actioned")
+    existing_case = {
+        "id": "internal-case-id",
+        "standard_id": "case-rft--11111111-1111-4111-8111-111111111111",
+        "objectLabel": [],
+    }
+    converter.helper.api.case_rft.list.return_value = [existing_case]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    related_to = _relationships(result, "related-to")
+    assert any(
+        rel["source_ref"] == "case-rft--11111111-1111-4111-8111-111111111111"
+        for rel in related_to
+    )
+
+
+def test_create_case_rft_exposes_workflow_id_top_level(converter):
+    """The RFT case dict must carry x_opencti_* at top level (not nested) so it is queryable."""
+    converter.enable_rft_case = True
+    alert = _domains_alert(alert_id="alert_rft_wf", queue_state="actioned")
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+    converter.helper.api.case_rft.list.return_value = []
+
+    result = converter.convert_alerts_to_stix([alert])
+
+    cases = [
+        obj for obj in result if isinstance(obj, dict) and obj.get("type") == "case-rft"
+    ]
+    assert cases
+    case = cases[0]
+    assert case.get("x_opencti_workflow_id") == "alert_rft_wf"
+    # The stix2 constructor-only keys must not leak into the raw STIX dict.
+    assert "custom_properties" not in case
+    assert "allow_custom" not in case

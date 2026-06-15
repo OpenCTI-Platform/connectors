@@ -120,6 +120,13 @@ class ConverterToStix:
             obj["id"] for obj in object_refs if isinstance(obj, dict) and "id" in obj
         ]
 
+        # This is a hand-built STIX dict (not a stix2 object), so the x_opencti_*
+        # custom properties must live at the top level - nesting them under a
+        # "custom_properties" key (a stix2 constructor-only argument) would make
+        # them invalid STIX fields and, in particular, leave x_opencti_workflow_id
+        # unqueryable by _find_rft_cases_by_alert_id.
+        custom_properties = build_custom_properties(alert, self.author.id)
+
         return {
             "type": "case-rft",
             "id": PyctiCaseRft.generate_id(
@@ -131,11 +138,10 @@ class ConverterToStix:
             "severity": alert.get("severity"),
             "labels": build_labels(alert) + [f"priority:{priority}"],
             "external_references": build_external_references(alert),
-            "custom_properties": build_custom_properties(alert, self.author.id),
             "object_refs": object_ids,
             "created_by_ref": self.author.id,
             "object_marking_refs": [self.tlp_marking.id],
-            "allow_custom": True,
+            **custom_properties,
         }
 
     def _create_grouping_case(self, alert: dict, object_refs: list) -> Grouping:
@@ -471,8 +477,15 @@ class ConverterToStix:
                 _ = self._handle_observable_grouping_case_relationship(
                     grouping_case, observables, stix_objects
                 )
-                if self.helper.api.stix_domain_object.read(id=grouping_case.get("id")):
-                    _ = self._handle_labels(alert, "GroupingCase", grouping_case)
+                # Reuse the object read here for the existence check when updating
+                # labels, so _get_labels_to_remove does not read it again.
+                existing_grouping_case = self.helper.api.stix_domain_object.read(
+                    id=grouping_case.get("id")
+                )
+                if existing_grouping_case:
+                    _ = self._handle_labels(
+                        alert, "GroupingCase", existing_grouping_case
+                    )
 
             # #######- --------- Indicators ------------#######
             indicators = self._handle_indicators(alert, observables, stix_objects)
@@ -483,9 +496,9 @@ class ConverterToStix:
                 )
 
             # #######- --------- RFT Cases ------------#######
-            rft_case = self._handle_rft_case(alert, observables, stix_objects)
+            rft_cases = self._handle_rft_case(alert, observables, stix_objects)
             # # Build observable and RFT relationships
-            if rft_case:
+            for rft_case in rft_cases or []:
                 _ = self._handle_rft_case_observable_relationship(
                     rft_case, observables, stix_objects
                 )
@@ -623,6 +636,9 @@ class ConverterToStix:
             self._handle_indicators_existing(
                 existing_indicators, alert, observables, stix_objects
             )
+            # Return the existing indicators too so the caller still (re)creates
+            # the based-on relationship to the current observables.
+            return existing_indicators
         else:
 
             self.helper.connector_logger.info(
@@ -708,14 +724,11 @@ class ConverterToStix:
         alert_id = alert.get("id")
         entity_value = alert.get("entity", "").replace("\\", "\\\\").replace("'", "\\'")
 
-        created_at = (
-            parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
-        )
-        modified_at = (
-            parse_iso_datetime(alert.get("last_activity_timestamp"))
-            if alert.get("last_activity_timestamp")
-            else None
-        )
+        # Fall back to a timezone-aware "now" so STIX objects never receive a
+        # None (or naive) created/modified timestamp.
+        now = datetime.now(timezone.utc)
+        created_at = parse_iso_datetime(alert.get("created_at")) or now
+        modified_at = parse_iso_datetime(alert.get("last_activity_timestamp")) or now
 
         indicators = []
 
@@ -793,8 +806,13 @@ class ConverterToStix:
         """
 
         for indicator in indicators:
+            # Existing indicators (read from the API) expose their STIX id as
+            # "standard_id"; newly-created serialized indicators expose it as
+            # "id". Prefer standard_id so the relationship source is always a
+            # valid STIX id.
+            indicator_ref = indicator.get("standard_id") or indicator.get("id")
             indicator_based_on_observable_relationship = self._create_relationship(
-                source_id=indicator["id"],
+                source_id=indicator_ref,
                 target_id=observables[0][
                     "id"
                 ],  # Just build relationship with primary observable / Domain
@@ -837,9 +855,12 @@ class ConverterToStix:
                 "[DoppelConverter - Handle RFT Case] Processing existing RFT Case",
                 {"alert_id": alert.get("id")},
             )
-            _ = self._handle_rft_cases_existing(
+            self._handle_rft_cases_existing(
                 existing_rft_cases, alert, observables, stix_objects
             )
+            # Return the existing cases too so the caller still (re)creates the
+            # related-to relationships to the current observables.
+            return existing_rft_cases
         else:
             self.helper.connector_logger.info(
                 "[DoppelConverter - Handle RFT Case] Processing New RFT Case",
@@ -847,7 +868,7 @@ class ConverterToStix:
             )
             rft_case = self._handle_rft_cases_new(alert, observables, stix_objects)
 
-            return rft_case
+            return [rft_case] if rft_case else []
 
     def _handle_rft_cases_existing(
         self, existing_rft_cases, alert, observables, stix_objects
@@ -930,9 +951,12 @@ class ConverterToStix:
                 {"rft_case": rft_case, "observables": observables},
             )
 
+            # Existing cases (read from the API) expose their STIX id as
+            # "standard_id"; a newly-created case dict exposes it as "id".
+            case_ref = rft_case.get("standard_id") or rft_case.get("id")
             for observable in observables:
                 relationship = self._create_relationship(
-                    source_id=rft_case["id"],
+                    source_id=case_ref,
                     target_id=observable["id"],
                     relationship_type="related-to",
                 )
@@ -968,15 +992,10 @@ class ConverterToStix:
         note_refs = [filter_obj_id, observable_id]
 
         note_body = f"Alert {alert_id} has been {queue_state}"
-        created_at = (
-            parse_iso_datetime(alert["created_at"]) if alert.get("created_at") else None
-        )
-        modified_at = (
-            parse_iso_datetime(alert.get("last_activity_timestamp"))
-            if alert.get("last_activity_timestamp")
-            else None
-        )
-        note_timestamp = modified_at or created_at or datetime.now()
+        created_at = parse_iso_datetime(alert.get("created_at"))
+        modified_at = parse_iso_datetime(alert.get("last_activity_timestamp"))
+        # Timezone-aware fallback so the Note never gets a naive timestamp.
+        note_timestamp = modified_at or created_at or datetime.now(timezone.utc)
         note = self._create_note(
             note_content,
             note_body,
