@@ -53,7 +53,7 @@ class CrowdStrikeReconConfig(BaseConfigModel):
         default="",
     )
     filter_type: str = Field(
-        description="Filter notifications by type(s). Comma-separated string (e.g. 'typosquatting,phishing'). Empty means no filtering.",
+        description="Filter notifications by item type(s). Comma-separated string (e.g. 'typosquatting_domain,exposed_data'). Empty means no filtering.",
         default="",
     )
     filter_priority: str = Field(

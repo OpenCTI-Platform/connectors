@@ -1,7 +1,7 @@
 version: '3'
 services:
   connector-crowdstrike-recon:
-    image: opencti/connector-crowdstrike-recon:latest # 'template' being the name of connector's directory
+    image: opencti/connector-crowdstrike-recon:latest
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
