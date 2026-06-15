@@ -150,6 +150,24 @@ def test_get_or_create_feed_is_cached():
     client.session.request.assert_not_called()
 
 
+def test_get_or_create_feed_retries_after_transient_failure():
+    # A failed resolution must not be cached: the next call retries and resolves
+    # the feed instead of short-circuiting for the connector's lifetime.
+    client = _make_client()
+    client.session.request.side_effect = [
+        _response(200, {"threatFeeds": []}),  # 1st call: list -> nothing
+        _response(200, {}),  # 1st call: create -> no id (transient failure)
+        _response(  # 2nd call: list now returns the feed
+            200, {"threatFeeds": [{"id": "55", "name": "OpenCTI"}]}
+        ),
+    ]
+
+    assert client.get_or_create_feed() is None
+    assert client._feed_id is None
+    assert client.get_or_create_feed() == "55"
+    assert client._feed_id == "55"
+
+
 def test_add_indicator_skips_unsupported_pattern():
     client = _make_client()
 

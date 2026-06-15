@@ -77,8 +77,13 @@ class VectraClient:
         if feed_id is None:
             feed_id = self._create_feed()
 
-        self._feed_id = feed_id
-        return self._feed_id
+        # Only cache a successfully resolved id. Caching ``None`` would persist a
+        # transient failure (network hiccup, temporary 5xx) for the lifetime of
+        # the connector process; leaving ``_feed_id`` unset lets the next call
+        # retry feed resolution instead.
+        if feed_id is not None:
+            self._feed_id = feed_id
+        return feed_id
 
     def _endpoint(self, *parts: str) -> str:
         suffix = "/".join(part.strip("/") for part in parts if part)
