@@ -380,6 +380,18 @@ def test_create_tlp_marking_levels():
     for level in ["white", "clear", "green", "amber", "red"]:
         marking = ConverterToStix._create_tlp_marking(level)
         assert marking is not None
+
+    # TLP:CLEAR must be its own custom statement marking carrying
+    # x_opencti_definition="TLP:CLEAR" (so OpenCTI resolves it to TLP:CLEAR),
+    # not the plain STIX TLP:WHITE marking. The canonical marking id is shared
+    # with TLP:WHITE by design (CLEAR is the renamed WHITE in STIX 2.1).
+    clear = ConverterToStix._create_tlp_marking("clear")
+    white = ConverterToStix._create_tlp_marking("white")
+    assert clear.definition_type == "statement"
+    assert clear.x_opencti_definition == "TLP:CLEAR"
+    assert getattr(white, "name", None) == "TLP:WHITE"
+    assert getattr(white, "x_opencti_definition", None) != "TLP:CLEAR"
+
     strict = ConverterToStix._create_tlp_marking("amber+strict")
     assert strict.definition_type == "statement"
 

@@ -87,7 +87,19 @@ class ConverterToStix:
         """
         mapping = {
             "white": TLP_WHITE,
-            "clear": TLP_WHITE,
+            # TLP:CLEAR is a distinct OpenCTI marking (a custom statement marking
+            # with x_opencti_definition="TLP:CLEAR"), not an alias of STIX
+            # TLP:WHITE. Emitting TLP_WHITE here would surface TLP:WHITE in
+            # OpenCTI and break consistent marking ids across connectors.
+            "clear": Stix2MarkingDefinition(
+                id=PyctiMarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:CLEAR",
+                },
+            ),
             "green": TLP_GREEN,
             "amber": TLP_AMBER,
             "amber+strict": Stix2MarkingDefinition(
