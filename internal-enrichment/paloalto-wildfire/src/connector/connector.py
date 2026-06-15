@@ -53,6 +53,7 @@ class PaloaltoWildfireConnector:
             base_url=self.config.paloalto_wildfire.api_base_url,
         )
         self.max_tlp = self.config.paloalto_wildfire.max_tlp
+        self.max_file_size = self.config.paloalto_wildfire.max_file_size
 
         self.identity = stix2.Identity(
             id=Identity.generate_id(
@@ -90,6 +91,65 @@ class PaloaltoWildfireConnector:
             return None
         report = self.client.get_report(file_hash) or {}
         return {"verdict": verdict, "hash": file_hash, "report": report}
+
+    def _download_file(self, opencti_entity: dict):
+        """
+        Download the file attached to an observable from OpenCTI storage.
+
+        Returns a ``(filename, content, error)`` tuple. On success ``error`` is
+        ``None``; on failure ``content`` is ``None`` and ``error`` is a
+        human-readable reason (enforces ``max_file_size`` and rejects empty files).
+        """
+        import_files = opencti_entity.get("importFiles") or []
+        if not import_files:
+            return None, None, "No file attached to the observable."
+        file_entry = import_files[0]
+        file_id = file_entry.get("id")
+        if not file_id:
+            return None, None, "Attached file has no id."
+
+        file_name = file_entry.get("name", "artifact")
+        max_mb = round(self.max_file_size / (1024 * 1024), 1)
+
+        declared_size = file_entry.get("size")
+        if declared_size is not None and int(declared_size) > self.max_file_size:
+            return None, None, f"File '{file_name}' exceeds the {max_mb} MB limit."
+
+        api_url = self.helper.api.api_url.replace("/graphql", "")
+        file_uri = f"{api_url}/storage/get/{file_id}"
+        content = self.helper.api.fetch_opencti_file(file_uri, True)
+        if content is None:
+            return None, None, f"Failed to download file '{file_name}' from OpenCTI."
+        if len(content) == 0:
+            return None, None, f"File '{file_name}' is empty (0 bytes)."
+        if len(content) > self.max_file_size:
+            return None, None, f"File '{file_name}' exceeds the {max_mb} MB limit."
+        return file_name, content, None
+
+    def _submit(self, opencti_entity: dict):
+        """Submit the observable's file to WildFire and poll for a verdict."""
+        file_name, content, error = self._download_file(opencti_entity)
+        if error:
+            self.helper.connector_logger.info(
+                "Skipping WildFire submission.", {"reason": error}
+            )
+            return None
+        sha256 = self.client.submit_file(file_name, content)
+        if not sha256:
+            self.helper.connector_logger.warning(
+                "WildFire did not return a sample id for the submitted file."
+            )
+            return None
+        self.helper.connector_logger.info(
+            "Submitted file to WildFire, waiting for verdict.", {"sha256": sha256}
+        )
+        verdict = self.client.poll_verdict(
+            sha256, max_wait=self.config.paloalto_wildfire.submission_timeout
+        )
+        if verdict is None:
+            return None
+        report = self.client.get_report(sha256) or {}
+        return {"verdict": verdict, "hash": sha256, "report": report}
 
     def _create_knowledge(
         self, stix_entity: dict, opencti_entity: dict, result: dict
@@ -167,6 +227,8 @@ class PaloaltoWildfireConnector:
         )
         if opencti_entity["entity_type"] in ["StixFile", "Artifact"]:
             result = self._search_hash(opencti_entity)
+            if result is None and self.config.paloalto_wildfire.submit_unknown:
+                result = self._submit(opencti_entity)
             if result is None:
                 return None
             return self._create_knowledge(stix_entity, opencti_entity, result)

@@ -15,4 +15,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
 | PALOALTO_WILDFIRE_API_BASE_URL | `string` |  | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) | `"https://wildfire.paloaltonetworks.com/publicapi"` | WildFire API base URL (cloud region or appliance). |
+| PALOALTO_WILDFIRE_SUBMIT_UNKNOWN | `boolean` |  | boolean | `true` | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Enabled by default so Artifacts uploaded to OpenCTI are detonated. |
+| PALOALTO_WILDFIRE_MAX_FILE_SIZE | `integer` |  | integer | `33554432` | Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to WildFire. |
+| PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT | `integer` |  | integer | `600` | Maximum time (in seconds) to wait for a submitted file's verdict before giving up. |
 | PALOALTO_WILDFIRE_MAX_TLP | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:AMBER"` | Maximum TLP of the observable the connector is allowed to enrich. |

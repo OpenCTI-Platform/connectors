@@ -38,6 +38,28 @@ class PaloaltoWildfireConfig(BaseConfigModel):
         description="WildFire API base URL (cloud region or appliance).",
         default="https://wildfire.paloaltonetworks.com/publicapi",
     )
+    submit_unknown: bool = Field(
+        description=(
+            "Submit unknown files (carried by the observable) to WildFire for analysis "
+            "when no verdict exists yet. Enabled by default so Artifacts uploaded to "
+            "OpenCTI are detonated."
+        ),
+        default=True,
+    )
+    max_file_size: int = Field(
+        description=(
+            "Maximum size (in bytes) of a file the connector will download from OpenCTI "
+            "and submit to WildFire."
+        ),
+        default=33554432,
+    )
+    submission_timeout: int = Field(
+        description=(
+            "Maximum time (in seconds) to wait for a submitted file's verdict before "
+            "giving up."
+        ),
+        default=600,
+    )
     max_tlp: Literal[
         "TLP:CLEAR",
         "TLP:WHITE",

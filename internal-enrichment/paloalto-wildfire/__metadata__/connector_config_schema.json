@@ -66,6 +66,21 @@
       "minLength": 1,
       "type": "string"
     },
+    "PALOALTO_WILDFIRE_SUBMIT_UNKNOWN": {
+      "default": true,
+      "description": "Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Enabled by default so Artifacts uploaded to OpenCTI are detonated.",
+      "type": "boolean"
+    },
+    "PALOALTO_WILDFIRE_MAX_FILE_SIZE": {
+      "default": 33554432,
+      "description": "Maximum size (in bytes) of a file the connector will download from OpenCTI and submit to WildFire.",
+      "type": "integer"
+    },
+    "PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT": {
+      "default": 600,
+      "description": "Maximum time (in seconds) to wait for a submitted file's verdict before giving up.",
+      "type": "integer"
+    },
     "PALOALTO_WILDFIRE_MAX_TLP": {
       "default": "TLP:AMBER",
       "description": "Maximum TLP of the observable the connector is allowed to enrich.",
