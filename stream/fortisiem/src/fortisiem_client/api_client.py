@@ -98,9 +98,10 @@ class FortiSIEMClient:
         """
         Perform an HTTP request with retry/backoff.
 
-        Connection/timeout errors, rate limiting (429) and server-side errors
-        (5xx) are retried; other 4xx responses (e.g. 401/403/404) fail fast
-        without retrying, since retrying them only adds delay and log noise.
+        Connection and timeout errors, rate limiting (429) and server-side errors
+        (5xx) are retried. Other request failures (e.g. invalid URL/schema) and 4xx
+        responses (e.g. 401/403/404) fail fast without retrying, since retrying them
+        only adds delay and log noise.
         """
         url = f"{self._base_url}{path}"
         for attempt in range(self.REQUEST_ATTEMPTS):
@@ -109,7 +110,8 @@ class FortiSIEMClient:
                 response = self.session.request(
                     method, url, timeout=self.TIMEOUT, **kwargs
                 )
-            except requests.RequestException as err:
+            except (requests.ConnectionError, requests.Timeout) as err:
+                # Transient connection/timeout error: retry with backoff.
                 self.helper.connector_logger.warning(
                     "[API] FortiSIEM request failed",
                     meta={"url": url, "error": str(err)},
@@ -118,6 +120,13 @@ class FortiSIEMClient:
                     return None
                 time.sleep(self.BACKOFF_FACTOR * (2**attempt))
                 continue
+            except requests.RequestException as err:
+                # Non-transient request error (e.g. invalid URL/schema): fail fast.
+                self.helper.connector_logger.warning(
+                    "[API] FortiSIEM request failed",
+                    meta={"url": url, "error": str(err)},
+                )
+                return None
 
             if response.status_code == 429 or response.status_code >= 500:
                 status_code = response.status_code

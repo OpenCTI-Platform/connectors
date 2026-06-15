@@ -39,6 +39,7 @@ def _response(status: int = 200) -> MagicMock:
         ("[file:hashes.'SHA-256' = 'abc']", "abc"),
         ("[email-addr:value = 'a@b.com']", None),
         ("garbage", None),
+        ("", None),
     ],
 )
 def test_extract_value(pattern, expected):
@@ -128,6 +129,56 @@ def test_request_retries_on_server_error():
     assert result is not None
     assert client.session.request.call_count == 2
     sleep.assert_called_once()
+
+
+def test_request_retries_on_connection_error():
+    # Transient connection/timeout errors are retried with backoff.
+    client = _make_client()
+    client.session.request.side_effect = [
+        requests.ConnectionError("down"),
+        _response(200),
+    ]
+
+    with patch("fortisiem_client.api_client.time.sleep") as sleep:
+        result = client._request("post", "/phoenix/rest/watchlist/addTo", json={})
+
+    assert result is not None
+    assert client.session.request.call_count == 2
+    sleep.assert_called_once()
+
+
+def test_request_fails_fast_on_non_transient_request_error():
+    # A non-transient requests error (e.g. invalid URL/schema) is not retried.
+    client = _make_client()
+    client.session.request.side_effect = requests.exceptions.InvalidURL("bad url")
+
+    with patch("fortisiem_client.api_client.time.sleep") as sleep:
+        assert client._request("post", "/phoenix/rest/watchlist/addTo", json={}) is None
+
+    assert client.session.request.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_request_returns_none_when_connection_error_persists():
+    # A connection error on every attempt is retried then gives up.
+    client = _make_client()
+    client.session.request.side_effect = requests.ConnectionError("down")
+
+    with patch("fortisiem_client.api_client.time.sleep"):
+        assert client._request("post", "/phoenix/rest/watchlist/addTo", json={}) is None
+
+    assert client.session.request.call_count == FortiSIEMClient.REQUEST_ATTEMPTS
+
+
+def test_request_returns_none_when_rate_limited_on_every_attempt():
+    # 429 on every attempt is retried then gives up after REQUEST_ATTEMPTS.
+    client = _make_client()
+    client.session.request.return_value = _response(429)
+
+    with patch("fortisiem_client.api_client.time.sleep"):
+        assert client._request("post", "/phoenix/rest/watchlist/addTo", json={}) is None
+
+    assert client.session.request.call_count == FortiSIEMClient.REQUEST_ATTEMPTS
 
 
 def test_request_closes_response_on_4xx():
