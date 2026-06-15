@@ -150,3 +150,20 @@ def test_get_submission_verdict_does_not_sleep_past_max_wait():
 
     assert verdict is None
     sleep.assert_not_called()
+
+
+def test_get_submission_verdict_stops_at_max_wait_boundary():
+    # When the accumulated wait reaches max_wait exactly, the loop must return
+    # without sleeping again (the budget is already spent).
+    client = _make_client()
+    client.session_token = "TOKEN"
+    client.session.post.side_effect = [
+        _response({"result": {"data": [{"jid": "5"}]}}),  # get-jobs-of-submission
+        _response({"result": {"data": None}}),  # job: no rating yet
+    ]
+
+    with patch("fortisandbox_client.api_client.time.sleep") as sleep:
+        verdict = client.get_submission_verdict("sub-1", max_wait=30, interval=30)
+
+    assert verdict is None
+    sleep.assert_not_called()

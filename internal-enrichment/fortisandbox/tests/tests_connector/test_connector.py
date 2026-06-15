@@ -204,6 +204,24 @@ def test_create_knowledge_file(stub_connector, file_message):
     assert malware_analysis["object_marking_refs"]
 
 
+def test_create_knowledge_inherits_observable_marking(stub_connector, file_message):
+    # The observable carries TLP:AMBER; the Malware Analysis must inherit AMBER
+    # rather than be downgraded to the connector default marking.
+    data = file_message
+    stub_connector.stix_objects = data["stix_objects"]
+
+    result = stub_connector._create_knowledge(
+        data["stix_entity"], data["enrichment_entity"], FORTI_RESULT
+    )
+
+    malware_analysis = next(
+        o for o in result if getattr(o, "type", None) == "malware-analysis"
+    )
+    assert stix2.TLP_AMBER.id in malware_analysis["object_marking_refs"]
+    # The marking object is included in the bundle so the ref resolves.
+    assert any(getattr(o, "id", None) == stix2.TLP_AMBER.id for o in result)
+
+
 def test_extract_hash_priority():
     entity = {
         "hashes": [
