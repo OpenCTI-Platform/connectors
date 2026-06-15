@@ -194,6 +194,15 @@ def test_create_knowledge_file(stub_connector, file_message):
     assert "malware:W32/Agent" in enriched["labels"]
     assert enriched["hashes"]["MD5"] == FORTI_RESULT["md5"]
 
+    # The Malware Analysis object must carry markings (inherited or default) so the
+    # enrichment never produces an unmarked object.
+    malware_analysis = next(
+        o
+        for o in result
+        if not isinstance(o, dict) and getattr(o, "type", None) == "malware-analysis"
+    )
+    assert malware_analysis["object_marking_refs"]
+
 
 def test_extract_hash_priority():
     entity = {
