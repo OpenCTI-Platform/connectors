@@ -1,0 +1,200 @@
+name: Build Connector Image
+description: Build and push a single connector's Docker image (Alpine + optional FIPS)
+
+inputs:
+  connector_path:
+    description: "Path to the connector directory (e.g. external-import/mitre)"
+    required: true
+  connector_name:
+    description: "Connector name (e.g. mitre)"
+    required: true
+  fips:
+    description: "Whether to also build a FIPS image ('true' or 'false')"
+    required: true
+  image_tags:
+    description: "Comma-separated image tags (e.g. 'rolling' or '7.260529.0,latest')"
+    required: true
+  build_mode:
+    description: "Build mode: rolling, prerelease, or release"
+    required: true
+  platforms:
+    description: "Target platforms for docker buildx"
+    required: false
+    default: "linux/amd64,linux/arm64"
+  push:
+    description: "Whether to push images"
+    required: false
+    default: "true"
+  dockerhub_username:
+    description: "DockerHub username"
+    required: true
+  dockerhub_password:
+    description: "DockerHub password"
+    required: true
+  ghcr_username:
+    description: "GHCR username"
+    required: true
+  ghcr_token:
+    description: "GHCR token"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve RELEASE_REF
+      if: inputs.build_mode != 'release'
+      id: release-ref
+      shell: bash
+      run: |
+        PR_BASE_REF="${{ github.base_ref }}"
+
+        # Ensure candidate remote refs/history exist locally (actions/checkout may only fetch the current ref)
+        if git rev-parse --is-shallow-repository 2>/dev/null | grep -q true; then
+          git fetch --unshallow --quiet origin || true
+        fi
+        git fetch --prune --no-tags --quiet origin \
+          "+refs/heads/master:refs/remotes/origin/master" \
+          "+refs/heads/release/6.9.x:refs/remotes/origin/release/6.9.x" \
+          "+refs/heads/lts/*:refs/remotes/origin/lts/*" || true
+
+        if [ -n "${PR_BASE_REF:-}" ]; then
+          case "${PR_BASE_REF}" in
+            master|release/6.9.x|lts/*)
+              RESOLVED_RELEASE_REF="${PR_BASE_REF}"
+              ;;
+            *)
+              RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+              ;;
+          esac
+        else
+          RESOLVED_RELEASE_REF="$(bash ./shared/tools/ci/detect-base-branch.sh origin)"
+        fi
+        echo "release_ref=$RESOLVED_RELEASE_REF" >> "$GITHUB_OUTPUT"
+        echo "📌 RELEASE_REF: $RESOLVED_RELEASE_REF"
+
+    - name: Rewrite pycti and connectors-sdk dependencies
+      if: inputs.build_mode != 'release'
+      shell: bash
+      run: |
+        set -euo pipefail
+        CONNECTOR_DIR="${{ inputs.connector_path }}"
+        BUILD_MODE="${{ inputs.build_mode }}"
+        RELEASE_REF="${{ steps.release-ref.outputs.release_ref }}"
+        BRANCH="${{ github.ref_name }}"
+
+        cd "$CONNECTOR_DIR"
+
+        if [ "$BUILD_MODE" = "prerelease" ]; then
+          GIT_REF="$BRANCH"
+        else
+          GIT_REF="$RELEASE_REF"
+        fi
+
+        PYCTI_GIT="pycti @ git+https://github.com/OpenCTI-Platform/opencti.git@${GIT_REF}#subdirectory=client-python"
+        SDK_GIT="connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@${GIT_REF}#subdirectory=connectors-sdk"
+
+        echo "🔄 Rewriting pycti/connectors-sdk → git refs (${GIT_REF})"
+
+        find . -name requirements.txt -exec sed -i "s|^pycti==.*$|${PYCTI_GIT}|" {} \;
+        find . -name pyproject.toml -exec sed -i "s|pycti==.*$|${PYCTI_GIT}\",|" {} \;
+        find . -name requirements.txt -exec sed -i "s|^connectors-sdk.*$|${SDK_GIT}|" {} \;
+        find . -name pyproject.toml -exec sed -i "s|connectors-sdk.*$|${SDK_GIT}\",|" {} \;
+
+        echo "✅ Dependency rewrite complete"
+        if [ -f src/requirements.txt ]; then
+          echo "--- src/requirements.txt ---"
+          grep -E 'pycti|connectors-sdk' src/requirements.txt || echo "(no matches)"
+        fi
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+    - name: Login to DockerHub
+      if: inputs.push == 'true'
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+      with:
+        username: ${{ inputs.dockerhub_username }}
+        password: ${{ inputs.dockerhub_password }}
+
+    - name: Login to GitHub Container Registry
+      if: inputs.push == 'true'
+      uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+      with:
+        registry: ghcr.io
+        username: ${{ inputs.ghcr_username }}
+        password: ${{ inputs.ghcr_token }}
+
+    - name: Compute Docker tags
+      id: docker-tags
+      shell: bash
+      run: |
+        IMAGE_TAGS="${{ inputs.image_tags }}"
+        CONNECTOR_NAME="${{ inputs.connector_name }}"
+        REPO="opencti"
+
+        TAGS=""
+        IFS=',' read -ra TAG_ARRAY <<< "$IMAGE_TAGS"
+        for tag in "${TAG_ARRAY[@]}"; do
+          tag=$(echo "$tag" | xargs)
+          if [ -n "$TAGS" ]; then
+            TAGS="${TAGS}"$'\n'
+          fi
+          TAGS="${TAGS}${REPO}/connector-${CONNECTOR_NAME}:${tag}"$'\n'
+          TAGS="${TAGS}ghcr.io/opencti-platform/${REPO}/connector-${CONNECTOR_NAME}:${tag}"
+        done
+
+        {
+          echo "tags<<EOF"
+          echo "$TAGS"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Build and push
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+      with:
+        context: ${{ inputs.connector_path }}
+        file: ${{ inputs.connector_path }}/Dockerfile
+        pull: true
+        push: ${{ inputs.push == 'true' }}
+        platforms: ${{ inputs.platforms }}
+        tags: ${{ steps.docker-tags.outputs.tags }}
+
+    - name: Compute FIPS Docker tags
+      if: inputs.fips == 'true'
+      id: fips-tags
+      shell: bash
+      run: |
+        IMAGE_TAGS="${{ inputs.image_tags }}"
+        CONNECTOR_NAME="${{ inputs.connector_name }}"
+        REPO="opencti"
+
+        TAGS=""
+        IFS=',' read -ra TAG_ARRAY <<< "$IMAGE_TAGS"
+        for tag in "${TAG_ARRAY[@]}"; do
+          tag=$(echo "$tag" | xargs)
+          if [ -n "$TAGS" ]; then
+            TAGS="${TAGS}"$'\n'
+          fi
+          TAGS="${TAGS}${REPO}/connector-${CONNECTOR_NAME}:${tag}-fips"$'\n'
+          TAGS="${TAGS}ghcr.io/opencti-platform/${REPO}/connector-${CONNECTOR_NAME}:${tag}-fips"
+        done
+
+        {
+          echo "tags<<EOF"
+          echo "$TAGS"
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Build and push FIPS image
+      if: inputs.fips == 'true'
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+      with:
+        context: ${{ inputs.connector_path }}
+        file: ${{ inputs.connector_path }}/Dockerfile_fips
+        pull: true
+        push: ${{ inputs.push == 'true' }}
+        platforms: ${{ inputs.platforms }}
+        tags: ${{ steps.fips-tags.outputs.tags }}
