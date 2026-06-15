@@ -2,6 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from connector.connector import FortiSIEMIncidentsConnector
+from fortisiem_client import FortiSIEMClientError
 
 
 def _make_connector():
@@ -74,6 +75,22 @@ def test_process_message_handles_errors():
     connector.process_message()  # must not raise
 
     helper.connector_logger.error.assert_called()
+
+
+def test_process_message_does_not_advance_state_on_fetch_failure():
+    # A fetch failure must not advance last_run (otherwise a transient outage would
+    # silently skip incidents), and the work must be finalized in error.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {"last_run": "2026-01-01T00:00:00Z"}
+    helper.api.work.initiate_work.return_value = "work-1"
+    client.get_incidents.side_effect = FortiSIEMClientError("down")
+
+    connector.process_message()  # must not raise
+
+    helper.set_state.assert_not_called()
+    helper.send_stix2_bundle.assert_not_called()
+    helper.api.work.to_processed.assert_called_once()
+    assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 
 
 def test_run_schedules_process():
