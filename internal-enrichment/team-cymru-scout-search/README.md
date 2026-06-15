@@ -22,9 +22,13 @@
     - [Processing Details](#processing-details)
     - [Generated STIX Objects](#generated-stix-objects)
   - [Debugging](#debugging)
+  - [Use Case: Playbook-Based Scout Query Enrichment](#use-case-playbook-based-scout-query-enrichment)
+    - [Step 1: Verify Connector Installation](#step-1-verify-connector-installation)
+    - [Step 2: Create and Configure a Playbook](#step-2-create-and-configure-a-playbook)
+    - [Step 3: Create an Indicator](#step-3-create-an-indicator)
+    - [Step 4: Run and Verify Enrichment](#step-4-run-and-verify-enrichment)
   - [Additional Information](#additional-information)
     - [Early Access](#early-access)
-    - [Use Case](#use-case-playbook-based-scout-query-enrichment)
 
 ---
 
@@ -157,16 +161,16 @@ Enable debug logging by setting `CONNECTOR_LOG_LEVEL=debug` to see:
 
 ---
 
-### Use Case: Playbook-Based Scout Query Enrichment
+## Use Case: Playbook-Based Scout Query Enrichment
 
 This connector is designed for playbook-based searches where Scout query patterns are used to enrich indicators with threat intelligence data. Below is a step-by-step guide to set up automated enrichment.
 
-#### Step 1: Verify Connector Installation
+### Step 1: Verify Connector Installation
 
 1. Navigate to **Data > Ingestion > Monitoring** in OpenCTI.
 2. Confirm the **Scout Search Connector** appears in the list and is running.
 
-#### Step 2: Create and Configure a Playbook
+### Step 2: Create and Configure a Playbook
 
 1. Navigate to **Data > Processing > Automation**.
 2. Click **Create Playbook**, enter a name and description, then confirm.
@@ -178,7 +182,7 @@ This connector is designed for playbook-based searches where Scout query pattern
 6. Add the **"Send for ingestion"** component to store enriched data.
 7. Start the playbook via the three-dot menu and verify it shows _"Playbook is running"_.
 
-#### Step 3: Create an Indicator
+### Step 3: Create an Indicator
 
 1. Navigate to **Observations > Indicators**.
 2. Click **Create Indicator** and configure:
@@ -188,7 +192,7 @@ This connector is designed for playbook-based searches where Scout query pattern
    - **Marking:** TLP:GREEN (or appropriate level within the configured max TLP)
 3. Click **Create** to save.
 
-#### Step 4: Run and Verify Enrichment
+### Step 4: Run and Verify Enrichment
 
 1. Open the indicator detail page.
 2. Click **"Enroll in playbook"** and start the playbook, or use **manual enrichment** via the three-dot menu > Enrichment.

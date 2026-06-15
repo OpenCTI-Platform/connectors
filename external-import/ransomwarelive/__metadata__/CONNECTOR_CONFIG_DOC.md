@@ -20,3 +20,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | CONNECTOR_CREATE_CAMPAIGN | `boolean` |  | boolean | `false` | Whether to create a Campaign object. |
 | CONNECTOR_CREATE_REPORT | `boolean` |  | boolean | `false` | Whether to create a Report object. |
 | CONNECTOR_MARKING_VALUE | `string` |  | `TLP:CLEAR` `TLP:WHITE` `TLP:GREEN` `TLP:AMBER` `TLP:AMBER+STRICT` `TLP:RED` | `"TLP:CLEAR"` | TLP marking attached to every emitted STIX object. ``TLP:CLEAR`` (default) is the OpenCTI-specific modern label; ``TLP:WHITE`` is the legacy STIX 2.1 equivalent. |
+| CONNECTOR_CREATE_LEAK_SITE_DOMAINS | `boolean` |  | boolean | `false` | Whether to create DomainName observables for ransomware group leak sites and link them to the IntrusionSet |
+| CONNECTOR_CREATE_LEAK_POST_REFS | `boolean` |  | boolean | `false` | Whether to include the leak post URL as an external reference on victim reports |

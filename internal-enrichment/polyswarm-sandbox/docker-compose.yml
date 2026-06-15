@@ -43,7 +43,7 @@ services:
       # Enable/disable report generation and attachment
       - POLYSWARM_JSON_REPORT_ENABLED=true
       - POLYSWARM_PDF_REPORT_ENABLED=true
-      - POLYSWARM_LLM_REPORT_ENABLED=true
+      - POLYSWARM_LLM_REPORT_ENABLED=false
       - POLYSWARM_LLM_REPORT_TIMEOUT=120
       
       # ═══════════════════════════════════════════════════════════════════════

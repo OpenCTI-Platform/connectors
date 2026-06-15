@@ -1,5 +1,4 @@
 from copy import deepcopy
-from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 from feedly.opencti_connector.connector import FeedlyConnector
@@ -142,11 +141,11 @@ class TestFilterRelationships:
         assert len(report_out["object_refs"]) == 2
 
 
-# -- Integration tests: FeedlyConnector.fetch_bundle --------------------------
+# -- Integration tests: FeedlyConnector._process_bundle -----------------------
 
 
 def _make_fake_bundle():
-    """Return a realistic bundle as StixIoCDownloader.download_all() would."""
+    """Return a realistic bundle as a single batch from stream_bundles()."""
     return {
         "type": "bundle",
         "objects": [
@@ -184,44 +183,30 @@ def _make_fake_bundle():
 
 
 @patch("feedly.opencti_connector.connector.FeedlySession")
-@patch("feedly.opencti_connector.connector.StixIoCDownloader")
-class TestFetchBundleEnableRelationships:
-    def test_relationships_kept_by_default(self, mock_downloader_cls, mock_session_cls):
-        mock_downloader_cls.return_value.download_all.return_value = _make_fake_bundle()
+class TestProcessBundleEnableRelationships:
+    def test_relationships_kept_by_default(self, mock_session_cls):
         helper = MagicMock()
 
         connector = FeedlyConnector("fake-key", helper)
-        bundle = connector.fetch_bundle(
-            "stream-1", datetime(2025, 1, 1, tzinfo=timezone.utc)
-        )
+        bundle = connector._process_bundle(_make_fake_bundle())
 
         types = {o["type"] for o in bundle["objects"]}
         assert "relationship" in types
 
-    def test_relationships_removed_when_disabled(
-        self, mock_downloader_cls, mock_session_cls
-    ):
-        mock_downloader_cls.return_value.download_all.return_value = _make_fake_bundle()
+    def test_relationships_removed_when_disabled(self, mock_session_cls):
         helper = MagicMock()
 
         connector = FeedlyConnector("fake-key", helper, enable_relationships=False)
-        bundle = connector.fetch_bundle(
-            "stream-1", datetime(2025, 1, 1, tzinfo=timezone.utc)
-        )
+        bundle = connector._process_bundle(_make_fake_bundle())
 
         types = {o["type"] for o in bundle["objects"]}
         assert "relationship" not in types
 
-    def test_object_refs_cleaned_when_relationships_disabled(
-        self, mock_downloader_cls, mock_session_cls
-    ):
-        mock_downloader_cls.return_value.download_all.return_value = _make_fake_bundle()
+    def test_object_refs_cleaned_when_relationships_disabled(self, mock_session_cls):
         helper = MagicMock()
 
         connector = FeedlyConnector("fake-key", helper, enable_relationships=False)
-        bundle = connector.fetch_bundle(
-            "stream-1", datetime(2025, 1, 1, tzinfo=timezone.utc)
-        )
+        bundle = connector._process_bundle(_make_fake_bundle())
 
         report = next(o for o in bundle["objects"] if o["type"] == "report")
         assert "relationship--3333" not in report["object_refs"]

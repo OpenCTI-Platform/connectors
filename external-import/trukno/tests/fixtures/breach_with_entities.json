@@ -1,0 +1,18 @@
+{
+  "id": "breach-1",
+  "title": "Example breach",
+  "publishedAt": "2026-04-20T12:00:00Z",
+  "summary": "Summary",
+  "relatedTTPs": [
+    {
+      "id": "ttp-1",
+      "title": "Credential Access"
+    }
+  ],
+  "relatedMalwares": [
+    {
+      "id": "mw-1",
+      "title": "ExampleRAT"
+    }
+  ]
+}

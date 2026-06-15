@@ -7,7 +7,7 @@ connector:
   id: 'ChangeMe'
   name: 'ImportDocument'
   validate_before_import: true # Validate any bundle before import
-  scope: 'application/pdf,text/plain,text/html,text/markdown'
+  scope: 'application/pdf,text/plain,text/csv,text/html,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   auto: false # Enable/disable auto-import of file
   log_level: 'info'
 
