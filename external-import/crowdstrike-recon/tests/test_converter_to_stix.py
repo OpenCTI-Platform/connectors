@@ -8,6 +8,13 @@ def _converter():
     return ConverterToStix(helper=MagicMock(), tlp_level="amber+strict")
 
 
+def test_clear_tlp_marking_is_distinct_from_white():
+    converter = ConverterToStix(helper=MagicMock(), tlp_level="clear")
+    # "clear" must produce a distinct TLP:CLEAR marking, not an alias of
+    # TLP:WHITE.
+    assert converter.tlp_marking["x_opencti_definition"] == "TLP:CLEAR"
+
+
 def _types(stix_objects):
     return [obj["type"] for obj in stix_objects]
 

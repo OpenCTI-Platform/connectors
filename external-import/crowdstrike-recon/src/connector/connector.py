@@ -78,7 +78,7 @@ class CrowdstrikeReconConnector:
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Notifications retrieved from CrowdStrike Recon",
-            {"notifications": len(notification_ids)},
+            meta={"notifications": len(notification_ids)},
         )
 
         # Fetch notification details in batches (avoids one HTTP call per id)
@@ -115,7 +115,7 @@ class CrowdstrikeReconConnector:
         """
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
-            {"connector_name": self.helper.connect_name},
+            meta={"connector_name": self.helper.connect_name},
         )
 
         work_id = None
@@ -133,7 +133,7 @@ class CrowdstrikeReconConnector:
 
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector last alert ingested",
-                    {"last_alert_date": last_alert_date},
+                    meta={"last_alert_date": last_alert_date},
                 )
             else:
                 self.helper.connector_logger.info(
@@ -160,7 +160,7 @@ class CrowdstrikeReconConnector:
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
-                {"connector_name": self.helper.connect_name},
+                meta={"connector_name": self.helper.connect_name},
             )
 
             # Performing the collection of intelligence
@@ -178,7 +178,7 @@ class CrowdstrikeReconConnector:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": str(len(bundles_sent))},
+                    meta={"bundles_sent": str(len(bundles_sent))},
                 )
 
             current_state = self.helper.get_state()
@@ -203,7 +203,7 @@ class CrowdstrikeReconConnector:
             message = "Connector stopped..."
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.helper.connect_name},
+                meta={"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:

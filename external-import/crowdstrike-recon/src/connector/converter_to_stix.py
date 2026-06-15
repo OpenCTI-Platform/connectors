@@ -57,7 +57,17 @@ class ConverterToStix:
     def _create_tlp_marking(level):
         mapping = {
             "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
+            # OpenCTI treats TLP:CLEAR as a distinct marking (not an alias of
+            # TLP:WHITE), matching connectors_sdk.models.tlp_marking.
+            "clear": stix2.MarkingDefinition(
+                id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+                definition_type="statement",
+                definition={"statement": "custom"},
+                custom_properties={
+                    "x_opencti_definition_type": "TLP",
+                    "x_opencti_definition": "TLP:CLEAR",
+                },
+            ),
             "green": stix2.TLP_GREEN,
             "amber": stix2.TLP_AMBER,
             "amber+strict": stix2.MarkingDefinition(
@@ -288,7 +298,10 @@ class ConverterToStix:
         if not created_date:
             self.helper.connector_logger.error(
                 "Notification is missing created_date, skipping alert",
-                {"item_type": item_type, "notification_id": notification.get("id")},
+                meta={
+                    "item_type": item_type,
+                    "notification_id": notification.get("id"),
+                },
             )
             return []
 
@@ -407,7 +420,7 @@ class ConverterToStix:
         else:
             self.helper.connector_logger.error(
                 "Unsupported notification type, skipping alert",
-                {
+                meta={
                     "item_type": item_type,
                     "notification_id": notification.get("id"),
                 },
