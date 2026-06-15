@@ -111,8 +111,12 @@ class VectraClient:
         except ValueError:
             return None
         for feed in feeds:
-            if isinstance(feed, dict) and feed.get("name") == name:
-                return str(feed.get("id"))
+            if (
+                isinstance(feed, dict)
+                and feed.get("name") == name
+                and feed.get("id") is not None
+            ):
+                return str(feed["id"])
         return None
 
     def _create_feed(self) -> Optional[str]:
@@ -146,7 +150,13 @@ class VectraClient:
         return response is not None
 
     def _request(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
-        """Perform an HTTP request with retry/backoff on rate limiting and transient errors."""
+        """Perform an HTTP request with retry/backoff on rate limiting and transient errors.
+
+        Retries are applied to 429 responses and to transient network/5xx errors.
+        Non-retriable client errors (4xx other than 429, e.g. 401/403 bad token or
+        400 invalid payload) are logged once at error level and return ``None``
+        immediately instead of being retried with backoff.
+        """
         for attempt in range(self.REQUEST_ATTEMPTS):
             try:
                 response = self.session.request(
@@ -162,6 +172,26 @@ class VectraClient:
                     continue
                 response.raise_for_status()
                 return response
+            except requests.HTTPError as err:
+                status_code = (
+                    err.response.status_code if err.response is not None else None
+                )
+                if (
+                    status_code is not None
+                    and 400 <= status_code < 500
+                    and status_code != 429
+                ):
+                    self.helper.connector_logger.error(
+                        "[API] Client error, not retrying",
+                        {"url": url, "status_code": status_code, "error": str(err)},
+                    )
+                    return None
+                self.helper.connector_logger.warning(
+                    "[API] Request failed",
+                    {"url": url, "error": str(err)},
+                )
+                if attempt < self.REQUEST_ATTEMPTS - 1:
+                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
             except requests.RequestException as err:
                 self.helper.connector_logger.warning(
                     "[API] Request failed",

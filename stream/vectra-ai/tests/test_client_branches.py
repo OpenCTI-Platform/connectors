@@ -92,3 +92,51 @@ def test_add_indicator_returns_false_when_feed_unresolved():
 def test_build_stix_package_rejects_unknown_type():
     with pytest.raises(ValueError):
         build_stix_package([("mutex", "evil")])
+
+
+def test_find_feed_id_returns_none_when_match_missing_id():
+    # A feed that matches by name but carries no id must not resolve to the
+    # literal string "None" (which would build a "/threatFeeds/None" endpoint).
+    client = _make_client()
+    client.session.request.return_value = _response(
+        200, {"threatFeeds": [{"name": "OpenCTI"}]}
+    )
+
+    assert client._find_feed_id("OpenCTI") is None
+
+
+def _http_error_response(status: int) -> MagicMock:
+    response = _response(status)
+    error = requests.HTTPError(f"{status} error")
+    error.response = response
+    response.raise_for_status.side_effect = error
+    return response
+
+
+def test_request_does_not_retry_on_client_error():
+    # Non-429 4xx responses are not retriable: fail fast without backoff.
+    client = _make_client()
+    client.session.request.return_value = _http_error_response(401)
+
+    with patch("vectra_client.api_client.time.sleep") as sleep:
+        result = client._request(
+            "get", "https://vectra.example.com/api/v2.5/threatFeeds"
+        )
+
+    assert result is None
+    assert client.session.request.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_request_retries_on_server_error():
+    # 5xx responses are transient and must be retried up to REQUEST_ATTEMPTS.
+    client = _make_client()
+    client.session.request.return_value = _http_error_response(500)
+
+    with patch("vectra_client.api_client.time.sleep"):
+        result = client._request(
+            "get", "https://vectra.example.com/api/v2.5/threatFeeds"
+        )
+
+    assert result is None
+    assert client.session.request.call_count == VectraClient.REQUEST_ATTEMPTS
