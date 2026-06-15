@@ -6,7 +6,7 @@ connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
   name: 'CTM360 ThreatCover' # optional (default: 'CTM360 ThreatCover')
-  scope: 'ctm360-threatcover' # optional
+  scope: 'ctm360-threatcover' # mandatory
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 

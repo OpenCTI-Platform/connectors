@@ -15,7 +15,7 @@ provides a preset, branded ThreatCover integration.
 
 Table of Contents
 
-- [OpenCTI CTM360 ThreatCover Connector](#opencti-external-ingestion-connector-ctm360-threatcover)
+- [OpenCTI CTM360 ThreatCover Connector](#opencti-ctm360-threatcover-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -42,7 +42,7 @@ This connector consumes the TAXII "Observables" collection and imports it into O
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.13
+- OpenCTI Platform >= 6.8.12
 - A CTM360 ThreatCover TAXII 2.1 endpoint, API token and collection id
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
@@ -172,8 +172,7 @@ OpenCTI deduplicates STIX objects by their deterministic ids across runs.
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 

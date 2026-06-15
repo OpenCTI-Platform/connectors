@@ -58,6 +58,7 @@ class Ctm360ThreatcoverConnector:
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting CTM360 ThreatCover connector..."
         )
+        work_id = None
         try:
             current_state = self.helper.get_state() or {}
             added_after = current_state.get("added_after")
@@ -85,8 +86,18 @@ class Ctm360ThreatcoverConnector:
             sys.exit(0)
         except Ctm360ThreatcoverAPIError as err:
             self.helper.connector_logger.error(str(err))
+            self._finalize_failed_work(work_id, err)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            self._finalize_failed_work(work_id, err)
+
+    def _finalize_failed_work(self, work_id, err) -> None:
+        # Close the work item as failed so OpenCTI does not keep a "running" entry.
+        # State is intentionally not advanced on error, so the next run retries.
+        if work_id:
+            self.helper.api.work.to_processed(
+                work_id, f"CTM360 ThreatCover run failed: {err}", in_error=True
+            )
 
     def run(self) -> None:
         self.helper.schedule_process(

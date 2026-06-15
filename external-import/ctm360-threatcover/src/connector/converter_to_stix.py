@@ -3,8 +3,8 @@
 import stix2
 from pycti import Identity, MarkingDefinition
 
+# Standard STIX TLP markings whose ids OpenCTI recognizes as-is.
 _TLP_MAPPING = {
-    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -22,16 +22,26 @@ _PASSTHROUGH_TYPES = {
 }
 
 
-def _amber_strict() -> stix2.MarkingDefinition:
+def _statement_marking(definition: str) -> stix2.MarkingDefinition:
+    # OpenCTI models TLP:CLEAR and TLP:AMBER+STRICT as custom statement markings with
+    # their own deterministic ids (not the legacy STIX TLP:WHITE/AMBER). This matches
+    # connectors-sdk TLPMarking and the platform's canonical marking shape.
     return stix2.MarkingDefinition(
-        id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        id=MarkingDefinition.generate_id("TLP", definition),
         definition_type="statement",
         definition={"statement": "custom"},
-        custom_properties={
-            "x_opencti_definition_type": "TLP",
-            "x_opencti_definition": "TLP:AMBER+STRICT",
-        },
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
     )
+
+
+def _resolve_tlp_marking(tlp_level: str) -> stix2.MarkingDefinition:
+    if tlp_level == "clear":
+        return _statement_marking("TLP:CLEAR")
+    if tlp_level == "amber+strict":
+        return _statement_marking("TLP:AMBER+STRICT")
+    return _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
 
 
 class ConverterToStix:
@@ -40,10 +50,7 @@ class ConverterToStix:
     def __init__(self, helper, tlp_level: str):
         self.helper = helper
         self.author = self._create_author()
-        if tlp_level == "amber+strict":
-            self.tlp_marking = _amber_strict()
-        else:
-            self.tlp_marking = _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
+        self.tlp_marking = _resolve_tlp_marking(tlp_level)
 
     @staticmethod
     def _create_author() -> stix2.Identity:

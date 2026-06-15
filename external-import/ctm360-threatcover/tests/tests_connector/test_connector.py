@@ -103,6 +103,13 @@ def test_process_message_handles_api_error(connector):
 
     connector.helper.connector_logger.error.assert_called()
     connector.helper.send_stix2_bundle.assert_not_called()
+    # State must NOT advance on error (so the next run retries instead of skipping).
+    connector.helper.set_state.assert_not_called()
+    # The work item must be closed as failed, not left running.
+    connector.helper.api.work.to_processed.assert_called_once()
+    assert (
+        connector.helper.api.work.to_processed.call_args.kwargs.get("in_error") is True
+    )
 
 
 def test_run_schedules_process(connector):
