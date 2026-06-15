@@ -13,8 +13,10 @@ For each observable, the connector queries the FortiSandbox JSON-RPC API by hash
 - attaches a STIX Malware Analysis object carrying the FortiSandbox result and an external
   reference (the FortiSandbox detail URL when available).
 
-Optionally (`submit_unknown`), files carried by the observable can be submitted for
-on-demand analysis and polled for a verdict. The connector is playbook compatible and
+When no verdict exists yet, the connector submits the file carried by the observable for
+on-demand analysis and polls for a verdict (enabled by default via `submit_unknown`; file
+downloads enforce `max_file_size` and reject empty files). This is the primary path for
+`Artifact` observables uploaded to OpenCTI. The connector is playbook compatible and
 always returns the (enriched) bundle.
 
 Table of Contents
@@ -90,7 +92,9 @@ Below are the parameters you'll need to set for the connector:
 | Password       | password       | `FORTISANDBOX_PASSWORD`         |           | Yes       | FortiSandbox API password.                                                           |
 | API version    | api_version    | `FORTISANDBOX_API_VERSION`      | `4.2.4`   | No        | JSON-RPC API version sent with each request.                                         |
 | SSL verify     | ssl_verify     | `FORTISANDBOX_SSL_VERIFY`       | `true`    | No        | Whether to verify the FortiSandbox TLS certificate.                                  |
-| Submit unknown | submit_unknown | `FORTISANDBOX_SUBMIT_UNKNOWN`   | `false`   | No        | Submit unknown files (carried by the observable) for on-demand analysis.             |
+| Submit unknown | submit_unknown | `FORTISANDBOX_SUBMIT_UNKNOWN`   | `true`    | No        | Submit unknown files (carried by the observable) for on-demand analysis.             |
+| Max file size  | max_file_size  | `FORTISANDBOX_MAX_FILE_SIZE`    | `33554432` | No       | Max size (bytes) of a file the connector downloads from OpenCTI and submits (32 MiB).|
+| Submission timeout | submission_timeout | `FORTISANDBOX_SUBMISSION_TIMEOUT` | `600` | No   | Max time (seconds) to wait for a submitted file's verdict.                           |
 | Max TLP        | max_tlp        | `FORTISANDBOX_MAX_TLP`          | `TLP:AMBER` | No      | Maximum TLP of the observable the connector is allowed to enrich.                    |
 
 ## Deployment
@@ -157,9 +161,12 @@ On each enrichment request the connector:
 2. Authenticates against the FortiSandbox JSON-RPC API (`/sys/login/user`) and queries
    `/scan/result/filerating`. If FortiSandbox has no rating (or `Unknown`) and
    `submit_unknown` is disabled, the original bundle is returned unchanged.
-3. When `submit_unknown` is enabled and the observable carries an uploaded file, the file
-   is submitted (`/alert/ondemand/submit-file`) and the submission is polled
-   (`/scan/result/get-jobs-of-submission`, `/scan/result/job`) for a verdict.
+3. When `submit_unknown` is enabled (default) and the observable carries an uploaded file,
+   the connector downloads the file from OpenCTI storage (enforcing `max_file_size` and
+   rejecting empty files), submits it (`/alert/ondemand/submit-file`) and polls the
+   submission (`/scan/result/get-jobs-of-submission`, `/scan/result/job`) for a verdict
+   (bounded by `submission_timeout`). This is the primary path for `Artifact` observables
+   uploaded to OpenCTI.
 4. Enriches the observable with an `x_opencti_score`, a `fortisandbox:<rating>` label, a
    `malware:<name>` label (when available), and the resolved hashes.
 5. Creates a STIX Malware Analysis object (`product = FortiSandbox`) referencing the
@@ -177,7 +184,7 @@ FortiSandbox rating mapping:
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
+The connector can be debugged by setting the appropriate log level.
 Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
 e., `self.helper.connector_logger.error("An error message")`.
 

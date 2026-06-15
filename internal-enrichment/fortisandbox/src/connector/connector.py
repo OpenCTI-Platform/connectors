@@ -1,6 +1,5 @@
 from copy import deepcopy
 from datetime import datetime, timezone
-from urllib.parse import urljoin
 
 import stix2
 from connector.settings import ConnectorSettings
@@ -47,6 +46,7 @@ class FortisandboxConnector:
             ssl_verify=self.config.fortisandbox.ssl_verify,
         )
         self.max_tlp = self.config.fortisandbox.max_tlp
+        self.max_file_size = self.config.fortisandbox.max_file_size
 
         self.identity = stix2.Identity(
             id=Identity.generate_id(name="FortiSandbox", identity_class="organization"),
@@ -85,21 +85,59 @@ class FortisandboxConnector:
             return None
         return data
 
-    def _submit(self, opencti_entity: dict):
+    def _download_file(self, opencti_entity: dict):
+        """
+        Download the file attached to an observable from OpenCTI storage.
+
+        Returns a ``(filename, content, error)`` tuple. On success ``error`` is
+        ``None``; on failure ``content`` is ``None`` and ``error`` is a
+        human-readable reason (enforces ``max_file_size`` and rejects empty files).
+        """
         import_files = opencti_entity.get("importFiles") or []
         if not import_files:
+            return None, None, "No file attached to the observable."
+        file_entry = import_files[0]
+        file_id = file_entry.get("id")
+        if not file_id:
+            return None, None, "Attached file has no id."
+
+        file_name = file_entry.get("name", "artifact")
+        max_mb = round(self.max_file_size / (1024 * 1024), 1)
+
+        declared_size = file_entry.get("size")
+        if declared_size is not None and int(declared_size) > self.max_file_size:
+            return None, None, f"File '{file_name}' exceeds the {max_mb} MB limit."
+
+        api_url = self.helper.api.api_url.replace("/graphql", "")
+        file_uri = f"{api_url}/storage/get/{file_id}"
+        content = self.helper.api.fetch_opencti_file(file_uri, True)
+        if content is None:
+            return None, None, f"Failed to download file '{file_name}' from OpenCTI."
+        if len(content) == 0:
+            return None, None, f"File '{file_name}' is empty (0 bytes)."
+        if len(content) > self.max_file_size:
+            return None, None, f"File '{file_name}' exceeds the {max_mb} MB limit."
+        return file_name, content, None
+
+    def _submit(self, opencti_entity: dict):
+        file_name, content, error = self._download_file(opencti_entity)
+        if error:
+            self.helper.connector_logger.info(
+                "Skipping FortiSandbox submission.", {"reason": error}
+            )
             return None
-        file_uri = import_files[0]["id"]
-        file_name = import_files[0].get("name", "artifact")
-        file_url = urljoin(str(self.config.opencti.url), f"storage/get/{file_uri}")
-        content = self.helper.api.fetch_opencti_file(file_url, True)
         sid = self.client.submit_file(file_name, content)
         if not sid:
+            self.helper.connector_logger.warning(
+                "FortiSandbox did not return a submission id."
+            )
             return None
         self.helper.connector_logger.info(
             "Submitted file to FortiSandbox, waiting for verdict.", {"sid": sid}
         )
-        return self.client.get_submission_verdict(sid)
+        return self.client.get_submission_verdict(
+            sid, max_wait=self.config.fortisandbox.submission_timeout
+        )
 
     def _create_knowledge(
         self, stix_entity: dict, opencti_entity: dict, data: dict

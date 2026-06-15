@@ -18,6 +18,8 @@ services:
       - FORTISANDBOX_PASSWORD=CHANGEME
       - FORTISANDBOX_API_VERSION=4.2.4 # optional (default: '4.2.4')
       - FORTISANDBOX_SSL_VERIFY=true # optional (default: true)
-      - FORTISANDBOX_SUBMIT_UNKNOWN=false # optional, submit unknown files for analysis (default: false)
+      - FORTISANDBOX_SUBMIT_UNKNOWN=true # optional, submit unknown files for analysis (default: true)
+      - FORTISANDBOX_MAX_FILE_SIZE=33554432 # optional, max bytes to download/submit (default: 33554432 = 32 MiB)
+      - FORTISANDBOX_SUBMISSION_TIMEOUT=600 # optional, max seconds to wait for a submitted file verdict (default: 600)
       - FORTISANDBOX_MAX_TLP=TLP:AMBER # optional, available values: 'TLP:CLEAR', 'TLP:WHITE', 'TLP:GREEN', 'TLP:AMBER', 'TLP:AMBER+STRICT', 'TLP:RED' (default: 'TLP:AMBER')
     restart: always

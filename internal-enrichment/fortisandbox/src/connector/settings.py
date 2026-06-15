@@ -51,9 +51,24 @@ class FortisandboxConfig(BaseConfigModel):
     submit_unknown: bool = Field(
         description=(
             "Submit unknown files for on-demand analysis when no verdict exists yet "
-            "(requires the observable to carry an uploaded file)."
+            "(requires the observable to carry an uploaded file). Enabled by default so "
+            "Artifacts uploaded to OpenCTI are detonated in FortiSandbox."
         ),
-        default=False,
+        default=True,
+    )
+    max_file_size: int = Field(
+        description=(
+            "Maximum size (in bytes) of a file the connector will download from OpenCTI "
+            "and submit to FortiSandbox."
+        ),
+        default=33554432,
+    )
+    submission_timeout: int = Field(
+        description=(
+            "Maximum time (in seconds) to wait for a submitted file's verdict before "
+            "giving up."
+        ),
+        default=600,
     )
     max_tlp: Literal[
         "TLP:CLEAR",

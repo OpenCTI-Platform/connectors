@@ -154,7 +154,7 @@ class FortisandboxClient:
     def get_submission_verdict(
         self, sid: str, max_wait: int = 300, interval: int = 30
     ) -> Optional[dict]:
-        """Poll a submission until its first job has a rating (bounded by max_wait)."""
+        """Poll a submission until any of its jobs has a rating (bounded by max_wait)."""
         self._ensure_session()
         waited = 0
         while waited <= max_wait:
@@ -162,20 +162,19 @@ class FortisandboxClient:
                 "get",
                 [{"url": "/scan/result/get-jobs-of-submission", "sid": sid}],
             )
-            jobs = self._extract_jobs(data)
-            if jobs:
-                job = jobs[0]
-                jid = (
-                    job.get("jid") or job.get("job_id")
-                    if isinstance(job, dict)
-                    else job
-                )
-                rating = self._get_job(jid)
+            for job in self._extract_jobs(data):
+                rating = self._get_job(self._job_id(job))
                 if rating is not None:
                     return rating
             time.sleep(interval)
             waited += interval
         return None
+
+    @staticmethod
+    def _job_id(job):
+        if isinstance(job, dict):
+            return job.get("jid") or job.get("job_id")
+        return job
 
     def _get_job(self, jid) -> Optional[dict]:
         data = self._call("get", [{"url": "/scan/result/job", "jid": jid}])
