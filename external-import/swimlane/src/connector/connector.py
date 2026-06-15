@@ -36,6 +36,7 @@ class SwimlaneConnector:
     def process_message(self) -> None:
         self.helper.connector_logger.info("[CONNECTOR] Starting Swimlane connector...")
         work_id = None
+        error_message = None
         try:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
@@ -57,13 +58,17 @@ class SwimlaneConnector:
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            error_message = str(err)
+            self.helper.connector_logger.error(error_message)
         finally:
-            # Always close the work so a failed run does not leave an
-            # "in progress" work item hanging in OpenCTI.
+            # Always close the work so a failed run does not leave an "in progress"
+            # work item hanging in OpenCTI, and report the failure (in_error) with
+            # its message when one occurred.
             if work_id is not None:
                 self.helper.api.work.to_processed(
-                    work_id, "Swimlane connector run completed"
+                    work_id,
+                    error_message or "Swimlane connector successfully run",
+                    in_error=error_message is not None,
                 )
 
     def run(self) -> None:

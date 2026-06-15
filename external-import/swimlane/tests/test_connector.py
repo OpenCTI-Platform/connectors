@@ -52,6 +52,9 @@ def test_process_message_handles_errors():
     connector.process_message()  # must not raise
 
     helper.connector_logger.error.assert_called()
+    # the work must be finalized in error rather than reported as a success
+    helper.api.work.to_processed.assert_called_once()
+    assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 
 
 def test_run_schedules_process():
