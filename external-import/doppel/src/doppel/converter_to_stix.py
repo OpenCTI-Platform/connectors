@@ -1031,10 +1031,14 @@ class ConverterToStix:
                     labels_to_remove = self._get_labels_to_remove(
                         target_obj_type, target_object
                     )
+                    # When the alert is no longer in takedown state the entity is
+                    # revoked as a false positive, so it should gain the
+                    # "revoked-false-positive" label; an actioned/taken-down
+                    # entity should have it removed.
                     if not in_takedown_state(alert.get("queue_state")):
-                        labels_to_remove.append("revoked-false-positive")
-                    else:
                         new_labels.append("revoked-false-positive")
+                    else:
+                        labels_to_remove.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(
@@ -1068,10 +1072,14 @@ class ConverterToStix:
                         target_obj_type, target_object
                     )
 
+                    # When the alert is no longer in takedown state the entity is
+                    # revoked as a false positive, so it should gain the
+                    # "revoked-false-positive" label; an actioned/taken-down
+                    # entity should have it removed.
                     if not in_takedown_state(alert.get("queue_state")):
-                        labels_to_remove.append("revoked-false-positive")
-                    else:
                         new_labels.append("revoked-false-positive")
+                    else:
+                        labels_to_remove.append("revoked-false-positive")
 
                     for label_name in labels_to_remove or []:
                         self.helper.api.stix_domain_object.remove_label(

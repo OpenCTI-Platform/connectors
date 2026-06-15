@@ -437,6 +437,45 @@ def test_existing_rft_case_creates_related_to_relationship(converter):
     )
 
 
+def test_reverted_indicator_gains_revoked_false_positive_label(converter):
+    """Reverting (not-takedown) must ADD the revoked-false-positive label."""
+    alert = _domains_alert(alert_id="alert_rfp_add", queue_state="resolved")
+    existing_indicator = {
+        "id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+
+    converter.convert_alerts_to_stix([alert])
+
+    add_calls = converter.helper.api.stix_domain_object.add_label.call_args_list
+    assert any(
+        call.kwargs.get("label_name") == "revoked-false-positive" for call in add_calls
+    )
+
+
+def test_takedown_indicator_removes_revoked_false_positive_label(converter):
+    """An actioned/taken-down indicator must REMOVE the revoked-false-positive label."""
+    alert = _domains_alert(alert_id="alert_rfp_rm", queue_state="actioned")
+    existing_indicator = {
+        "id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "objectLabel": [{"value": "revoked-false-positive"}],
+    }
+    converter.helper.api.indicator.list.return_value = [existing_indicator]
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+
+    converter.convert_alerts_to_stix([alert])
+
+    remove_calls = converter.helper.api.stix_domain_object.remove_label.call_args_list
+    assert any(
+        call.kwargs.get("label_name") == "revoked-false-positive"
+        for call in remove_calls
+    )
+
+
 def test_create_case_rft_exposes_workflow_id_top_level(converter):
     """The RFT case dict must carry x_opencti_* at top level (not nested) so it is queryable."""
     converter.enable_rft_case = True
