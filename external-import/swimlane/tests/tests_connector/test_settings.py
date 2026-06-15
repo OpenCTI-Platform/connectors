@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Self
 
 import pytest
 from connector import ConnectorSettings
@@ -26,7 +26,7 @@ def _valid_settings() -> dict[str, Any]:
 def test_settings_should_accept_valid_input():
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(_valid_settings())
 
     settings = FakeConnectorSettings()
@@ -60,9 +60,9 @@ def test_settings_should_accept_valid_input():
 def test_settings_should_raise_when_invalid_input(settings_dict):
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
-        def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+        def _load_config_dict(cls, _, handler) -> Self:
             return handler(settings_dict)
 
     with pytest.raises(ConfigValidationError) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    assert "Error validating configuration" in str(err.value)

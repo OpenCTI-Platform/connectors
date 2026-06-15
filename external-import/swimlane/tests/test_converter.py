@@ -19,6 +19,30 @@ def test_amber_strict_marking():
     assert converter.tlp_marking["definition_type"] == "statement"
 
 
+def test_clear_marking_is_distinct_from_white():
+    # TLP:CLEAR must be its own OpenCTI statement marking, not the STIX TLP:WHITE.
+    clear = _converter("clear").tlp_marking
+    white = _converter("white").tlp_marking
+    assert clear["definition_type"] == "statement"
+    assert clear["x_opencti_definition"] == "TLP:CLEAR"
+    assert white.get("x_opencti_definition") != "TLP:CLEAR"
+
+
+def test_to_iso_uses_deterministic_fallback():
+    # Missing / invalid timestamps must yield a stable anchor so the generated
+    # Case-Incident id does not change across runs (avoids duplicates).
+    assert ConverterToStix._to_iso(None) == ConverterToStix._to_iso("")
+    assert ConverterToStix._to_iso("not-a-date") == ConverterToStix._to_iso(None)
+    assert ConverterToStix._to_iso(None).startswith("1970-01-01")
+
+
+def test_case_incident_id_is_stable_without_timestamp():
+    converter = _converter()
+    first = converter.create_case_incident({"trackingId": "INC-1"})
+    second = converter.create_case_incident({"trackingId": "INC-1"})
+    assert first["id"] == second["id"]
+
+
 @pytest.mark.parametrize(
     "value, expected_year",
     [

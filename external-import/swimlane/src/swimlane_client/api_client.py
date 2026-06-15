@@ -73,23 +73,52 @@ class SwimlaneClient:
         return []
 
     def _request(self, method: str, path: str, **kwargs) -> Optional[requests.Response]:
-        """Perform an HTTP request with retry/backoff on rate limiting and transient errors."""
+        """
+        Perform an HTTP request with retry/backoff.
+
+        Connection/timeout errors, rate limiting (429) and server-side errors
+        (5xx) are retried; other 4xx responses (e.g. 401/403/404) fail fast
+        without retrying, since retrying them only adds delay and log noise.
+        Structured context is passed via ``meta={...}``.
+        """
         url = f"{self._base_url}{path}"
         for attempt in range(self.REQUEST_ATTEMPTS):
+            last_attempt = attempt == self.REQUEST_ATTEMPTS - 1
             try:
                 response = self.session.request(
                     method, url, timeout=self.TIMEOUT, **kwargs
                 )
-                if response.status_code == 429 and attempt < self.REQUEST_ATTEMPTS - 1:
-                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
-                    continue
-                response.raise_for_status()
-                return response
             except requests.RequestException as err:
                 self.helper.connector_logger.warning(
                     "[API] Swimlane request failed",
-                    {"url": url, "error": str(err)},
+                    meta={"url": url, "error_type": type(err).__name__},
                 )
-                if attempt < self.REQUEST_ATTEMPTS - 1:
-                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                if last_attempt:
+                    return None
+                time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                continue
+
+            if response.status_code == 429 or response.status_code >= 500:
+                if last_attempt:
+                    self.helper.connector_logger.warning(
+                        "[API] Swimlane request failed",
+                        meta={"url": url, "status_code": response.status_code},
+                    )
+                    return None
+                time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                continue
+
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as err:
+                self.helper.connector_logger.warning(
+                    "[API] Swimlane request failed",
+                    meta={
+                        "url": url,
+                        "status_code": response.status_code,
+                        "error_type": type(err).__name__,
+                    },
+                )
+                return None
+            return response
         return None
