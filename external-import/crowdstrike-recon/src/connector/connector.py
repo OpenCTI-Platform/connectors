@@ -72,7 +72,7 @@ class CrowdstrikeReconConnector:
         :return: Tuple of (list of STIX objects, most recent alert date or None)
         """
         stix_objects = []
-        most_recent_incident_date = None
+        most_recent_alert_date = None
         # Get notifications
         notification_ids = self.client.query_notifications(from_date)
 
@@ -81,14 +81,19 @@ class CrowdstrikeReconConnector:
             {"notifications": len(notification_ids)},
         )
 
-        # get notification details
-        for notification_id in notification_ids:
-            notification_detail = self.client.get_notification_detail(
-                notification_id=notification_id
-            )
-            most_recent_incident_date = notification_detail.get("notification", {}).get(
+        # Fetch notification details in batches (avoids one HTTP call per id)
+        notification_details = self.client.get_notifications_details(notification_ids)
+
+        for notification_detail in notification_details:
+            created_date = (notification_detail.get("notification") or {}).get(
                 "created_date"
             )
+            # Track the maximum created_date explicitly so the saved state never
+            # regresses, regardless of the order the details are returned in.
+            if created_date and (
+                most_recent_alert_date is None or created_date > most_recent_alert_date
+            ):
+                most_recent_alert_date = created_date
 
             # convert notification into an OpenCTI Incident
             stix_entities = self.converter_to_stix.create_incident(
@@ -101,7 +106,7 @@ class CrowdstrikeReconConnector:
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
 
-        return stix_objects, most_recent_incident_date
+        return stix_objects, most_recent_alert_date
 
     def process_message(self) -> None:
         """
@@ -113,6 +118,10 @@ class CrowdstrikeReconConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id = None
+        in_error = False
+        # Fallback message; overwritten by the success / error / interrupt paths
+        message = "Connector run interrupted"
         try:
             # Get the current state
             now = datetime.now(tz=timezone.utc)
@@ -141,9 +150,12 @@ class CrowdstrikeReconConnector:
             # Friendly name will be displayed on OpenCTI platform
             friendly_name = f"CrowdStrike Recon Connector run @ {now_utc_str}"
 
-            # Initiate a new work
+            # Initiate a new work. is_multipart=True so the work only completes on
+            # the to_processed call in the finally block: send_stix2_bundle may
+            # split a large bundle into several expectations, which would
+            # otherwise let the work complete before every bundle is processed.
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name, is_multipart=True
             )
 
             self.helper.connector_logger.info(
@@ -166,7 +178,7 @@ class CrowdstrikeReconConnector:
 
                 self.helper.connector_logger.info(
                     "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
+                    {"bundles_sent": str(len(bundles_sent))},
                 )
 
             current_state = self.helper.get_state()
@@ -184,17 +196,26 @@ class CrowdstrikeReconConnector:
                 + str(most_recent_alert_date)
             )
 
-            self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
+            in_error = True
+            message = "Connector stopped..."
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            in_error = True
+            message = str(err)
+            self.helper.connector_logger.error(message)
+        finally:
+            # Always close the work so a multipart work is never left stuck
+            # "in-progress" when the run fails or is interrupted before
+            # to_processed would otherwise be reached.
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 
     def run(self) -> None:
         """
