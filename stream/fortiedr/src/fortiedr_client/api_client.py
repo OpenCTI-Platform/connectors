@@ -15,9 +15,16 @@ if TYPE_CHECKING:
 # FortiEDR IP Sets only handle IP addresses. Other observable types (file hashes,
 # domains, URLs) are best ingested through FortiEDR's native STIX/TAXII Threat
 # Intelligence Feed pointed at OpenCTI's TAXII server (see README).
+# The value may be single- or double-quoted: STIX 2.1 string literals use single
+# quotes, but double quotes are accepted defensively so valid IP indicators are
+# not silently skipped.
 SUPPORTED_STIX_PATTERNS = {
-    "ipv4-addr": re.compile(r"^\s*\[ipv4-addr:value\s*=\s*'([^']+)'\s*\]\s*$"),
-    "ipv6-addr": re.compile(r"^\s*\[ipv6-addr:value\s*=\s*'([^']+)'\s*\]\s*$"),
+    "ipv4-addr": re.compile(
+        r"""^\s*\[ipv4-addr:value\s*=\s*(['"])(?P<value>[^'"]+)\1\s*\]\s*$"""
+    ),
+    "ipv6-addr": re.compile(
+        r"""^\s*\[ipv6-addr:value\s*=\s*(['"])(?P<value>[^'"]+)\1\s*\]\s*$"""
+    ),
 }
 
 IP_SETS_PATH = "/management-rest/ip-sets"
@@ -30,7 +37,7 @@ def extract_ip(pattern: str) -> Optional[str]:
     for regex in SUPPORTED_STIX_PATTERNS.values():
         match = regex.match(pattern)
         if match:
-            return match.group(1)
+            return match.group("value")
     return None
 
 
@@ -151,23 +158,47 @@ class FortiEDRClient:
         return response is not None
 
     def _request(self, method: str, path: str, **kwargs) -> Optional[requests.Response]:
-        """Perform an HTTP request with retry/backoff on rate limiting and transient errors."""
+        """
+        Perform an HTTP request with retry/backoff.
+
+        Connection/timeout errors, rate limiting (429) and server-side errors
+        (5xx) are retried; other 4xx responses (e.g. 401/403/404) fail fast
+        without retrying, since retrying them only adds delay and log noise.
+        """
         url = f"{self._base_url}{path}"
         for attempt in range(self.REQUEST_ATTEMPTS):
+            last_attempt = attempt == self.REQUEST_ATTEMPTS - 1
             try:
                 response = self.session.request(
                     method, url, timeout=self.TIMEOUT, **kwargs
                 )
-                if response.status_code == 429 and attempt < self.REQUEST_ATTEMPTS - 1:
-                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
-                    continue
-                response.raise_for_status()
-                return response
             except requests.RequestException as err:
                 self.helper.connector_logger.warning(
                     "[API] FortiEDR request failed",
-                    {"url": url, "error": str(err)},
+                    meta={"url": url, "error": str(err)},
                 )
-                if attempt < self.REQUEST_ATTEMPTS - 1:
-                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                if last_attempt:
+                    return None
+                time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                continue
+
+            if response.status_code == 429 or response.status_code >= 500:
+                if last_attempt:
+                    self.helper.connector_logger.warning(
+                        "[API] FortiEDR request failed",
+                        meta={"url": url, "status_code": response.status_code},
+                    )
+                    return None
+                time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                continue
+
+            try:
+                response.raise_for_status()
+            except requests.HTTPError as err:
+                self.helper.connector_logger.warning(
+                    "[API] FortiEDR request failed",
+                    meta={"url": url, "error": str(err)},
+                )
+                return None
+            return response
         return None

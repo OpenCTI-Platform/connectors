@@ -34,6 +34,8 @@ def _response(status: int = 200, payload=None) -> MagicMock:
     [
         ("[ipv4-addr:value = '198.51.100.1']", "198.51.100.1"),
         ("[ipv6-addr:value = '2001:db8::1']", "2001:db8::1"),
+        ('[ipv4-addr:value = "198.51.100.1"]', "198.51.100.1"),
+        ('[ipv6-addr:value = "2001:db8::1"]', "2001:db8::1"),
         ("[domain-name:value = 'evil.example.com']", None),
         ("[file:hashes.SHA-256 = 'aa']", None),
         ("garbage", None),
@@ -161,3 +163,28 @@ def test_request_returns_none_on_error():
 
     with patch("fortiedr_client.api_client.time.sleep"):
         assert client._request("get", "/x") is None
+
+
+def test_request_fails_fast_on_4xx_without_retry():
+    client = _make_client()
+    forbidden = _response(403)
+    forbidden.raise_for_status.side_effect = requests.HTTPError("403")
+    client.session.request.return_value = forbidden
+
+    with patch("fortiedr_client.api_client.time.sleep") as sleep:
+        assert client._request("get", "/x") is None
+
+    # No retry on a non-retriable 4xx: a single call and no backoff sleep.
+    assert client.session.request.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_request_retries_on_server_error():
+    client = _make_client()
+    client.session.request.side_effect = [_response(503), _response(200)]
+
+    with patch("fortiedr_client.api_client.time.sleep") as sleep:
+        assert client._request("get", "/x") is not None
+
+    assert client.session.request.call_count == 2
+    sleep.assert_called_once()
