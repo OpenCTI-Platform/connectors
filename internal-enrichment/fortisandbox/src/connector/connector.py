@@ -32,18 +32,31 @@ _RATING_RESULTS = {
 }
 
 
-def _tlp_clear() -> stix2.MarkingDefinition:
-    # OpenCTI models TLP:CLEAR as a custom statement marking, not as the legacy STIX
-    # TLP:WHITE; using TLP_WHITE would emit the wrong marking in the bundle.
+def _custom_tlp(definition: str) -> stix2.MarkingDefinition:
+    # OpenCTI models TLP:CLEAR and TLP:AMBER+STRICT as custom statement markings,
+    # not as the legacy STIX markings. The x_opencti_* fields require
+    # allow_custom=True (matching connectors-sdk's TLPMarking.to_stix2_object).
     return stix2.MarkingDefinition(
-        id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+        id=MarkingDefinition.generate_id("TLP", definition),
         definition_type="statement",
         definition={"statement": "custom"},
-        custom_properties={
-            "x_opencti_definition_type": "TLP",
-            "x_opencti_definition": "TLP:CLEAR",
-        },
+        allow_custom=True,
+        x_opencti_definition_type="TLP",
+        x_opencti_definition=definition,
     )
+
+
+def _tlp_clear() -> stix2.MarkingDefinition:
+    return _custom_tlp("TLP:CLEAR")
+
+
+# Plain STIX markings cover these levels; CLEAR / AMBER+STRICT are custom (above).
+_STIX_TLP_MARKINGS = {
+    "TLP:WHITE": stix2.TLP_WHITE,
+    "TLP:GREEN": stix2.TLP_GREEN,
+    "TLP:AMBER": stix2.TLP_AMBER,
+    "TLP:RED": stix2.TLP_RED,
+}
 
 
 class FortisandboxConnector:
@@ -75,6 +88,28 @@ class FortisandboxConnector:
         )
         self.tlp = _tlp_clear()
         self.stix_objects: list = []
+
+    def _marking_for(self, definition: str) -> stix2.MarkingDefinition:
+        """Resolve a TLP definition string to its STIX marking object."""
+        if definition == "TLP:CLEAR":
+            return self.tlp
+        if definition == "TLP:AMBER+STRICT":
+            return _custom_tlp("TLP:AMBER+STRICT")
+        return _STIX_TLP_MARKINGS.get(definition, self.tlp)
+
+    def _observable_markings(self, opencti_entity: dict) -> list:
+        """
+        Return the source observable's markings so the enrichment inherits them
+        instead of downgrading to the connector default. OpenCTI enrichment
+        payloads expose markings on ``objectMarking`` (not always on the STIX
+        ``object_marking_refs``); fall back to the connector default when none.
+        """
+        markings = [
+            self._marking_for(md["definition"])
+            for md in opencti_entity.get("objectMarking") or []
+            if md.get("definition_type") == "TLP" and md.get("definition")
+        ]
+        return markings or [self.tlp]
 
     @staticmethod
     def _extract_hash(opencti_entity: dict):
@@ -217,9 +252,9 @@ class FortisandboxConnector:
             )
 
         # Inherit the source observable's markings so the enrichment never produces
-        # an unmarked (TLP-downgraded) Malware Analysis object; fall back to the
+        # an unmarked / TLP-downgraded Malware Analysis object; fall back to the
         # connector default marking when the observable carries none.
-        markings = enriched_entity.get("object_marking_refs") or [self.tlp]
+        markings = self._observable_markings(opencti_entity)
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name, "FortiSandbox"),
             product="FortiSandbox",
@@ -234,7 +269,8 @@ class FortisandboxConnector:
         )
         enriched_objects.append(malware_analysis)
 
-        return [self.identity, self.tlp] + enriched_objects
+        # Include the marking objects themselves so the refs resolve in the bundle.
+        return [self.identity] + markings + enriched_objects
 
     def _process_observable(self, stix_entity: dict, opencti_entity: dict):
         self.helper.connector_logger.info(

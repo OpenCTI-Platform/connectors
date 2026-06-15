@@ -173,9 +173,10 @@ class FortisandboxClient:
                 rating = self._get_job(self._job_id(job))
                 if rating is not None:
                     return rating
-            # Stop once the budget is spent; do not sleep one extra interval past it.
+            # Stop once the budget is spent (>=, not >): when the accumulated wait
+            # reaches max_wait we must return without sleeping one more interval.
             waited += interval
-            if waited > max_wait:
+            if waited >= max_wait:
                 return None
             time.sleep(interval)
 

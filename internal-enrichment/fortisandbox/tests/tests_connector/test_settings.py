@@ -63,9 +63,10 @@ def test_settings_should_accept_valid_input(settings_dict):
 
 
 @pytest.mark.parametrize(
-    "settings_dict, field_name",
+    "settings_dict, expected_loc",
     [
-        pytest.param({}, "settings", id="empty_settings_dict"),
+        # No specific field: the whole config is empty, so just assert it is rejected.
+        pytest.param({}, None, id="empty_settings_dict"),
         pytest.param(
             {
                 "opencti": {"url": "http://localhost:8080", "token": "test-token"},
@@ -79,7 +80,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "password": "api-pass",
                 },
             },
-            "fortisandbox.api_base_url",
+            "api_base_url",
             id="missing_api_base_url",
         ),
         pytest.param(
@@ -95,17 +96,23 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "password": "api-pass",
                 },
             },
-            "connector.id",
+            "id",
             id="missing_connector_id",
         ),
     ],
 )
-def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
+def test_settings_should_raise_when_invalid_input(settings_dict, expected_loc):
     class FakeConnectorSettings(ConnectorSettings):
         @classmethod
         def _load_config_dict(cls, _, handler) -> dict[str, Any]:
             return handler(settings_dict)
 
-    with pytest.raises(ConfigValidationError) as err:
+    # match= asserts on the real exception message (not the pytest ExceptionInfo repr).
+    with pytest.raises(
+        ConfigValidationError, match="Error validating configuration"
+    ) as err:
         FakeConnectorSettings()
-    assert str("Error validating configuration") in str(err)
+    # For field-specific cases, assert the offending field is named in the wrapped
+    # pydantic validation error so the test verifies the *right* field is rejected.
+    if expected_loc is not None:
+        assert expected_loc in str(err.value.__cause__)
