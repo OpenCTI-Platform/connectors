@@ -167,3 +167,47 @@ def test_request_retries_on_server_error():
     assert result is not None
     assert client.session.request.call_count == 2
     sleep.assert_called_once()
+
+
+def test_request_error_logging_excludes_exception_string():
+    # A requests exception string typically embeds the full request URL, which for
+    # the login call carries the password as a query parameter. _request must log
+    # only the path / status code / exception type, never str(err).
+    client = _make_client()
+    secret = "S3CR3T-P4SSWORD-MARKER"
+    client.session.request.side_effect = requests.ConnectionError(
+        f"Failed for url: /LoginService/login?login=u&password={secret}"
+    )
+
+    with patch("arcsight_client.api_client.time.sleep"):
+        client._request(
+            "get",
+            "/www/core-service/rest/LoginService/login",
+            params={"login": "u", "password": secret},
+        )
+
+    logged = " ".join(
+        str(call) for call in client.helper.connector_logger.warning.call_args_list
+    )
+    assert secret not in logged
+    assert "ConnectionError" in logged
+
+
+def test_request_http_error_logs_status_without_exception_string():
+    client = _make_client()
+    forbidden = MagicMock()
+    forbidden.status_code = 403
+    secret = "TOKEN-IN-URL-12345"
+    forbidden.raise_for_status.side_effect = requests.HTTPError(
+        f"403 for url: /login?password={secret}"
+    )
+    client.session.request.return_value = forbidden
+
+    with patch("arcsight_client.api_client.time.sleep"):
+        assert client._request("get", "/x") is None
+
+    logged = " ".join(
+        str(call) for call in client.helper.connector_logger.warning.call_args_list
+    )
+    assert secret not in logged
+    assert "403" in logged
