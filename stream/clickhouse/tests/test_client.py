@@ -63,6 +63,20 @@ def test_insert_event_posts_row():
     assert call.kwargs["data"] is not None
 
 
+def test_insert_event_stores_explicit_event_date():
+    import json
+
+    client = _make_client()
+    client.session.post.return_value = _response(200)
+
+    assert (
+        client.insert_event("create", {"id": "x--1", "type": "indicator"}, 1700000000)
+        is True
+    )
+    row = json.loads(client.session.post.call_args.kwargs["data"].decode("utf-8"))
+    assert row["event_date"] == 1700000000
+
+
 def test_insert_event_returns_false_on_error():
     client = _make_client()
     client.session.post.side_effect = requests.RequestException("boom")

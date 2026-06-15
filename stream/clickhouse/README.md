@@ -124,4 +124,4 @@ CREATE TABLE IF NOT EXISTS <database>.<table> (
 - `entity_type`: the STIX type (for example `indicator`, `malware`).
 - `operation`: the stream operation (`create`, `update`, `delete`).
 - `data`: the full STIX payload as a JSON string.
-- `event_date`: insertion timestamp.
+- `event_date`: the OpenCTI event time, derived from the live-stream event id (it falls back to the connector receipt time when the id is unavailable).

@@ -1,4 +1,5 @@
 import json
+import time
 
 from clickhouse_client import ClickHouseClient
 from connector.settings import ConnectorSettings
@@ -33,6 +34,24 @@ class ClickHouseConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
+    @staticmethod
+    def _event_timestamp(msg) -> int:
+        """
+        Return the OpenCTI event time as a Unix timestamp (seconds).
+
+        OpenCTI live-stream event ids are Redis stream ids of the form
+        ``<milliseconds>-<sequence>``, so the event time is derived from the id
+        prefix. Falls back to the connector receipt time when the id is missing
+        or cannot be parsed.
+        """
+        event_id = getattr(msg, "id", None)
+        if event_id:
+            try:
+                return int(str(event_id).split("-")[0]) // 1000
+            except (ValueError, TypeError):
+                pass
+        return int(time.time())
+
     def process_message(self, msg) -> None:
         """
         Process a single message coming from the OpenCTI live stream.
@@ -43,15 +62,18 @@ class ClickHouseConnector:
 
         try:
             data = json.loads(msg.data)["data"]
-        except Exception as err:
-            raise ValueError(f"Cannot process the message: {err}")
+        except (json.JSONDecodeError, KeyError, TypeError) as err:
+            raise ValueError(f"Cannot process the message: {err}") from err
 
-        if self.client.insert_event(msg.event, data):
+        if self.client.insert_event(msg.event, data, self._event_timestamp(msg)):
             self.helper.connector_logger.info(
                 "[%s] Event written to ClickHouse" % msg.event.upper()
             )
 
     def run(self) -> None:
         """Ensure the ClickHouse schema exists then listen to the OpenCTI live stream."""
-        self.client.ensure_table()
+        if not self.client.ensure_table():
+            raise RuntimeError(
+                "Failed to ensure the ClickHouse schema exists; aborting startup."
+            )
         self.helper.listen_stream(message_callback=self.process_message)
