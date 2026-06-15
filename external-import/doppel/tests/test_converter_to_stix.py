@@ -495,3 +495,24 @@ def test_create_case_rft_exposes_workflow_id_top_level(converter):
     # The stix2 constructor-only keys must not leak into the raw STIX dict.
     assert "custom_properties" not in case
     assert "allow_custom" not in case
+
+
+def test_create_case_rft_id_is_deterministic_without_created_at(converter):
+    """A missing created_at must still yield a stable (deterministic) case id."""
+    converter.enable_rft_case = True
+    alert = _domains_alert(alert_id="alert_rft_det", queue_state="actioned")
+    alert.pop("created_at", None)
+    converter.helper.api.stix_cyber_observable.read.return_value = None
+    converter.helper.api.indicator.list.return_value = []
+    converter.helper.api.case_rft.list.return_value = []
+
+    def _case_id(result):
+        return next(
+            obj["id"]
+            for obj in result
+            if isinstance(obj, dict) and obj.get("type") == "case-rft"
+        )
+
+    first = _case_id(converter.convert_alerts_to_stix([alert]))
+    second = _case_id(converter.convert_alerts_to_stix([alert]))
+    assert first == second

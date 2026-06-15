@@ -115,7 +115,6 @@ class ConverterToStix:
         case_name = (
             f"Doppel Takedown - {alert.get('entity', 'Unknown')} ({alert.get('id')})"
         )
-        now = datetime.now(timezone.utc).isoformat()
         object_ids = [
             obj["id"] for obj in object_refs if isinstance(obj, dict) and "id" in obj
         ]
@@ -129,8 +128,11 @@ class ConverterToStix:
 
         return {
             "type": "case-rft",
+            # Keep the id deterministic: created_at when present, otherwise None
+            # (the name already embeds the alert id). A datetime.now() fallback
+            # would change the id every run and create duplicate RFT cases.
             "id": PyctiCaseRft.generate_id(
-                name=case_name, created=alert.get("created_at") or now
+                name=case_name, created=alert.get("created_at")
             ),
             "name": case_name,
             "description": build_description(alert),
