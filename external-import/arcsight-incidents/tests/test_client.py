@@ -45,6 +45,40 @@ def test_extract_case_variants():
     assert ArcSightClient._extract_case({"unexpected": 1}) is None
 
 
+def test_extract_event_ids_variants():
+    assert ArcSightClient._extract_event_ids({"eventIDs": ["a", "b"]}) == ["a", "b"]
+    assert ArcSightClient._extract_event_ids({"baseEventIds": "single"}) == ["single"]
+    assert ArcSightClient._extract_event_ids({"eventIDs": ["a", None, ""]}) == ["a"]
+    assert ArcSightClient._extract_event_ids({"unexpected": 1}) == []
+
+
+def test_extract_events_variants():
+    assert ArcSightClient._extract_events(
+        {"sev.getSecurityEventsResponse": {"sev.return": [{"name": "e"}]}}
+    ) == [{"name": "e"}]
+    assert ArcSightClient._extract_events(
+        {"sev.getSecurityEventsResponse": {"sev.return": {"name": "e"}}}
+    ) == [{"name": "e"}]
+    assert ArcSightClient._extract_events({"unexpected": 1}) == []
+
+
+def test_get_case_events_happy_path():
+    client = _make_client()
+    client._token = "TOKEN"
+    client.session.request.return_value = _json_response(
+        {"sev.getSecurityEventsResponse": {"sev.return": [{"name": "e1"}]}}
+    )
+
+    events = client.get_case_events({"eventIDs": ["e1"]})
+    assert events == [{"name": "e1"}]
+
+
+def test_get_case_events_no_ids_skips_request():
+    client = _make_client()
+    assert client.get_case_events({"name": "Case without events"}) == []
+    client.session.request.assert_not_called()
+
+
 def test_get_cases_happy_path():
     client = _make_client()
     client.session.request.side_effect = [

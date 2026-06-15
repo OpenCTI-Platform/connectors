@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 LOGIN_PATH = "/www/core-service/rest/LoginService/login"
 FIND_IDS_PATH = "/www/manager-service/rest/CaseService/findAllIds"
 GET_CASE_PATH = "/www/manager-service/rest/CaseService/getResourceById"
+GET_EVENTS_PATH = "/www/manager-service/rest/SecurityEventService/getSecurityEvents"
 
 
 class ArcSightClient:
@@ -63,6 +64,54 @@ class ArcSightClient:
             if case is not None:
                 cases.append(case)
         return cases
+
+    def get_case_events(self, case: dict) -> list:
+        """
+        Fetch the ArcSight security events referenced by a case.
+
+        Relies on the auth token cached by :meth:`get_cases` (re-authenticating
+        if needed). Returns an empty list when the case references no events.
+        """
+        event_ids = self._extract_event_ids(case)
+        if not event_ids:
+            return []
+        token = self._get_token()
+        if token is None:
+            return []
+        body = {"sev.getSecurityEvents": {"sev.authToken": token, "sev.ids": event_ids}}
+        response = self._request(
+            "post", GET_EVENTS_PATH, params={"alt": "json"}, json=body
+        )
+        if response is None:
+            return []
+        try:
+            return self._extract_events(response.json())
+        except ValueError:
+            return []
+
+    @staticmethod
+    def _extract_event_ids(case: dict) -> list:
+        for key in ("eventIDs", "eventIds", "events", "baseEventIds"):
+            value = case.get(key)
+            if isinstance(value, list):
+                return [item for item in value if item not in (None, "")]
+            if value not in (None, ""):
+                return [value]
+        return []
+
+    @staticmethod
+    def _extract_events(payload) -> list:
+        if isinstance(payload, dict):
+            nested = payload.get("sev.getSecurityEventsResponse", {})
+            if isinstance(nested, dict):
+                value = nested.get("sev.return")
+                if isinstance(value, list):
+                    return value
+                if value is not None:
+                    return [value]
+        if isinstance(payload, list):
+            return payload
+        return []
 
     def _get_token(self, force: bool = False) -> Optional[str]:
         if self._token is not None and not force:

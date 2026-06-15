@@ -4,7 +4,13 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import stix2
-from pycti import CaseIncident, CustomObjectCaseIncident, Identity, MarkingDefinition
+from pycti import (
+    CaseIncident,
+    CustomObjectCaseIncident,
+    Identity,
+    Incident,
+    MarkingDefinition,
+)
 
 _TLP_MAPPING = {
     "clear": stix2.TLP_WHITE,
@@ -99,12 +105,66 @@ class ConverterToStix:
                     return label
         return "low"
 
-    def create_case_incident(self, case: dict) -> Optional[CustomObjectCaseIncident]:
+    def create_incident(self, event: dict) -> Optional[stix2.Incident]:
+        """
+        Create a STIX Incident from an ArcSight security event.
+
+        ArcSight security events are detections/alerts, so they map to an OpenCTI
+        Incident (the case that groups them is modeled as a Case-Incident).
+        """
+        event_id = str(event.get("eventId") or event.get("id") or "").strip()
+        if not event_id:
+            base = event.get("baseEventIds")
+            if isinstance(base, list) and base:
+                event_id = str(base[0])
+            elif base:
+                event_id = str(base)
+
+        name = event.get("name") or (
+            f"ArcSight event {event_id}" if event_id else "ArcSight event"
+        )
+        created = self._to_iso(
+            event.get("endTime")
+            or event.get("startTime")
+            or event.get("managerReceiptTime")
+        )
+        severity = self._map_severity(event.get("priority", event.get("agentSeverity")))
+        description = (
+            event.get("message") or "Security event imported from ArcSight ESM."
+        )
+
+        external_references = None
+        if event_id:
+            external_references = [
+                {"source_name": "ArcSight ESM", "external_id": event_id}
+            ]
+
+        return stix2.Incident(
+            id=Incident.generate_id(name, created),
+            name=name,
+            description=description,
+            created=created,
+            modified=created,
+            created_by_ref=self.author["id"],
+            object_marking_refs=[self.tlp_marking],
+            external_references=external_references,
+            custom_properties={
+                "source": "ArcSight ESM",
+                "severity": severity,
+                "incident_type": "alert",
+            },
+        )
+
+    def create_case_incident(
+        self, case: dict, object_refs=None
+    ) -> Optional[CustomObjectCaseIncident]:
         """
         Create a STIX Case-Incident from an ArcSight case dictionary.
 
         ArcSight cases are case-management artifacts, so they map to an OpenCTI
         Case-Incident (not an Incident, which is reserved for alerts/detections).
+        The referenced security events are modeled as Incidents linked through
+        ``object_refs``.
         """
         name = case.get("name") or "ArcSight Case"
         external_id = str(
@@ -140,5 +200,5 @@ class ConverterToStix:
             created_by_ref=self.author["id"],
             object_marking_refs=[self.tlp_marking],
             external_references=external_references,
-            object_refs=[],
+            object_refs=object_refs or [],
         )

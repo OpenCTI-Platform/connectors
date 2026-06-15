@@ -1,12 +1,17 @@
 # OpenCTI ArcSight Incidents Connector
 
 The ArcSight Incidents connector is an **external-import** connector that pulls
-cases from ArcSight ESM into OpenCTI as STIX **Case-Incidents**. It is the import
+cases and their security events from ArcSight ESM into OpenCTI. It is the import
 side of a bidirectional integration: pair it with the `stream/arcsight` connector
 (which pushes IOCs to ESM Active Lists) to send IOCs out and bring cases in.
 
-ArcSight cases are case-management artifacts, so they are modeled as OpenCTI
-Case-Incidents (a STIX Incident is reserved for alerts/detections).
+ArcSight exposes two distinct concepts that map to two STIX entities:
+
+- **Security events** (detections/alerts) referenced by a case are modeled as
+  STIX **Incidents**.
+- The **case** itself (a case-management artifact) is modeled as a STIX
+  **Case-Incident** that references the event Incidents it groups through its
+  `object_refs`.
 
 Table of Contents
 
@@ -25,9 +30,10 @@ Table of Contents
 ## Introduction
 
 ArcSight ESM (OpenText) is a SIEM platform. This connector periodically queries
-the ESM Service Layer REST API (`CaseService`) for cases and imports them into
-OpenCTI as STIX 2.1 Incidents, attributed to an ArcSight author identity and
-marked with a configurable TLP.
+the ESM Service Layer REST API (`CaseService` and `SecurityEventService`) for
+cases and the events they reference, then imports them into OpenCTI as STIX 2.1
+Case-Incidents (the cases) and Incidents (the events), attributed to an ArcSight
+author identity and marked with a configurable TLP.
 
 ## Requirements
 
@@ -99,6 +105,9 @@ python main.py
 ## Behavior
 
 On each run the connector authenticates against the ESM `LoginService`, lists case
-ids via `CaseService` (capped at `max_cases`), fetches each case, converts it to a
-STIX Case-Incident and sends the bundle to OpenCTI. OpenCTI deduplicates
-case-incidents by their deterministic id across runs.
+ids via `CaseService` (capped at `max_cases`) and fetches each case. For every case
+it also resolves the referenced security events via `SecurityEventService`, converts
+each event to a STIX Incident, and converts the case to a STIX Case-Incident that
+references those Incidents through its `object_refs`. The resulting bundle is sent
+to OpenCTI, which deduplicates both entity types by their deterministic id across
+runs.

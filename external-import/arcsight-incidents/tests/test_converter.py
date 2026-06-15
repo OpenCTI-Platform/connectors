@@ -51,6 +51,37 @@ def test_map_severity(value, expected):
     assert ConverterToStix._map_severity(value) == expected
 
 
+def test_create_incident_from_event():
+    converter = _converter()
+    incident = converter.create_incident(
+        {
+            "name": "Suspicious login",
+            "eventId": "e1",
+            "priority": 9,
+            "endTime": 1700000000000,
+        }
+    )
+    assert incident["type"] == "incident"
+    assert incident["name"] == "Suspicious login"
+    assert incident["external_references"][0]["external_id"] == "e1"
+    assert incident["incident_type"] == "alert"
+
+
+def test_create_incident_base_event_ids():
+    converter = _converter()
+    incident = converter.create_incident({"baseEventIds": ["b9"], "priority": 3})
+    assert incident["external_references"][0]["external_id"] == "b9"
+
+
+def test_create_case_incident_with_object_refs():
+    converter = _converter()
+    incident = converter.create_incident({"eventId": "e1", "priority": 9})
+    case = converter.create_case_incident(
+        {"name": "Case A", "resourceid": "ABC"}, object_refs=[incident["id"]]
+    )
+    assert incident["id"] in case["object_refs"]
+
+
 def test_create_case_incident():
     converter = _converter()
     case = converter.create_case_incident(
