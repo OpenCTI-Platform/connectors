@@ -26,9 +26,9 @@ class StubConnectorSettings(ConnectorSettings):
                     "duration_period": "PT5M",
                 },
                 "ctm360_threatcover": {
-                    "api_root_url": "https://taxii.example.com/taxii2/api",
-                    "api_token": "test-api-token",
-                    "collection_id": "observables",
+                    "discovery_url": "https://taxii.example.com/taxii2/",
+                    "collection": "observables",
+                    "token": "test-api-token",
                     "tlp_level": "amber",
                 },
             }
