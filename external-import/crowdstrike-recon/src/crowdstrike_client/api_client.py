@@ -98,7 +98,7 @@ class CrowdstrikeReconClient:
             errors = (result.get("body") or {}).get("errors")
             self.helper.connector_logger.error(
                 "[API CLIENT] CrowdStrike Recon API request failed",
-                {
+                meta={
                     "operation": operation,
                     "status_code": status_code,
                     "errors": errors,
@@ -126,7 +126,7 @@ class CrowdstrikeReconClient:
         if fql_filter:
             self.helper.connector_logger.info(
                 "[API CLIENT] Querying notifications with FQL filter",
-                {"filter": fql_filter},
+                meta={"filter": fql_filter},
             )
 
         for _ in range(self._MAX_PAGES):
@@ -159,7 +159,7 @@ class CrowdstrikeReconClient:
             self.helper.connector_logger.warning(
                 "[API CLIENT] Reached pagination safety limit while querying "
                 "notifications; results may be truncated",
-                {"max_pages": self._MAX_PAGES},
+                meta={"max_pages": self._MAX_PAGES},
             )
 
         return notification_ids
