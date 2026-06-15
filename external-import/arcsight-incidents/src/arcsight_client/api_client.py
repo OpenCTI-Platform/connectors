@@ -1,0 +1,155 @@
+"""HTTP client for the ArcSight ESM Service Layer REST API (cases)."""
+
+from __future__ import annotations
+
+import time
+from typing import TYPE_CHECKING, Optional
+
+import requests
+from pycti import OpenCTIConnectorHelper
+
+if TYPE_CHECKING:
+    from connector.settings import ConnectorSettings
+
+LOGIN_PATH = "/www/core-service/rest/LoginService/login"
+FIND_IDS_PATH = "/www/manager-service/rest/CaseService/findAllIds"
+GET_CASE_PATH = "/www/manager-service/rest/CaseService/getResourceById"
+
+
+class ArcSightClient:
+    """Thin client around the ArcSight ESM CaseService API."""
+
+    REQUEST_ATTEMPTS = 3
+    BACKOFF_FACTOR = 5
+    TIMEOUT = 60
+
+    def __init__(
+        self, config: ConnectorSettings, helper: OpenCTIConnectorHelper
+    ) -> None:
+        """
+        Initialize the ArcSight client.
+
+        :param config: The connector settings.
+        :param helper: The OpenCTI connector helper (used for logging).
+        """
+        self.helper = helper
+        self.config = config.arcsight_incidents
+
+        self._base_url = str(self.config.api_base_url).rstrip("/")
+        self._token: Optional[str] = None
+
+        self.session = requests.Session()
+        self.session.verify = self.config.ssl_verify
+        self.session.headers.update({"Accept": "application/json"})
+
+    def get_cases(self) -> list:
+        """Fetch ESM cases, capped at the configured maximum."""
+        ids: Optional[list] = None
+        token: Optional[str] = None
+        for attempt in range(2):  # allow one re-authentication
+            token = self._get_token(force=attempt > 0)
+            if token is None:
+                return []
+            ids = self._find_ids(token)
+            if ids is not None:
+                break
+            self._token = None
+        if ids is None or token is None:
+            return []
+
+        cases = []
+        for case_id in ids[: self.config.max_cases]:
+            case = self._get_case(token, case_id)
+            if case is not None:
+                cases.append(case)
+        return cases
+
+    def _get_token(self, force: bool = False) -> Optional[str]:
+        if self._token is not None and not force:
+            return self._token
+        params = {
+            "login": self.config.username,
+            "password": self.config.password.get_secret_value(),
+            "alt": "json",
+        }
+        response = self._request("get", LOGIN_PATH, params=params)
+        if response is None:
+            return None
+        try:
+            self._token = response.json()["log.loginResponse"]["log.return"]
+        except (ValueError, KeyError):
+            self.helper.connector_logger.error(
+                "[API] Unexpected ArcSight login response"
+            )
+            return None
+        return self._token
+
+    @staticmethod
+    def _extract_ids(payload) -> list:
+        if isinstance(payload, dict):
+            nested = payload.get("cas.findAllIdsResponse", {})
+            if isinstance(nested, dict):
+                value = nested.get("cas.return")
+                if isinstance(value, list):
+                    return value
+                if value is not None:
+                    return [value]
+        if isinstance(payload, list):
+            return payload
+        return []
+
+    @staticmethod
+    def _extract_case(payload):
+        if isinstance(payload, dict):
+            nested = payload.get("cas.getResourceByIdResponse", {})
+            if isinstance(nested, dict) and isinstance(nested.get("cas.return"), dict):
+                return nested["cas.return"]
+            if "name" in payload or "resourceid" in payload:
+                return payload
+        return None
+
+    def _find_ids(self, token: str) -> Optional[list]:
+        response = self._request(
+            "get", FIND_IDS_PATH, params={"authToken": token, "alt": "json"}
+        )
+        if response is None:
+            return None
+        try:
+            return self._extract_ids(response.json())
+        except ValueError:
+            return []
+
+    def _get_case(self, token: str, case_id) -> Optional[dict]:
+        response = self._request(
+            "get",
+            GET_CASE_PATH,
+            params={"authToken": token, "resourceId": case_id, "alt": "json"},
+        )
+        if response is None:
+            return None
+        try:
+            return self._extract_case(response.json())
+        except ValueError:
+            return None
+
+    def _request(self, method: str, path: str, **kwargs) -> Optional[requests.Response]:
+        """Perform an HTTP request with retry/backoff on rate limiting and transient errors."""
+        url = f"{self._base_url}{path}"
+        for attempt in range(self.REQUEST_ATTEMPTS):
+            try:
+                response = self.session.request(
+                    method, url, timeout=self.TIMEOUT, **kwargs
+                )
+                if response.status_code == 429 and attempt < self.REQUEST_ATTEMPTS - 1:
+                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+                    continue
+                response.raise_for_status()
+                return response
+            except requests.RequestException as err:
+                self.helper.connector_logger.warning(
+                    "[API] ArcSight request failed",
+                    {"url": url, "error": str(err)},
+                )
+                if attempt < self.REQUEST_ATTEMPTS - 1:
+                    time.sleep(self.BACKOFF_FACTOR * (2**attempt))
+        return None
