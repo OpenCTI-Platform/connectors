@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Self
 from unittest.mock import MagicMock
 
 import pytest
@@ -24,7 +24,7 @@ class StubConnectorSettings(ConnectorSettings):
     """Subclass of `ConnectorSettings` returning a fake but valid config dict."""
 
     @classmethod
-    def _load_config_dict(cls, _, handler) -> dict[str, Any]:
+    def _load_config_dict(cls, _, handler) -> Self:
         return handler(
             {
                 "opencti": {
