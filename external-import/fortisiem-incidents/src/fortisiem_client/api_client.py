@@ -55,16 +55,18 @@ class FortiSIEMClient:
         :param since: ISO-8601 timestamp used as the lower bound.
         :return: A list of incident dictionaries (possibly empty when there are
             genuinely no new incidents).
-        :raises FortiSIEMClientError: when the request fails (no response after
-            retries) or returns a non-JSON body. This is distinct from "no new
-            incidents" so the caller does not advance its state past a window it
-            never actually fetched (which would silently skip incidents).
+        :raises FortiSIEMClientError: when the request fails (a network error
+            after retries, or a non-retriable HTTP error) or returns a non-JSON
+            body. This is distinct from "no new incidents" so the caller does not
+            advance its state past a window it never actually fetched (which would
+            silently skip incidents).
         """
         response = self._request("get", INCIDENTS_PATH, params={"update_from": since})
         if response is None:
-            raise FortiSIEMClientError(
-                "Failed to fetch FortiSIEM incidents (no response after retries)"
-            )
+            # _request returns None both for network errors after retries and for
+            # a non-retriable 4xx (where a response did exist), so keep the message
+            # generic; the specifics (url, status_code, error) are logged there.
+            raise FortiSIEMClientError("Failed to fetch FortiSIEM incidents")
         try:
             return self._extract_incidents(response.json())
         except ValueError as err:
