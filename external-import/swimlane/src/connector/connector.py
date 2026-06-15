@@ -10,7 +10,7 @@ from swimlane_client import SwimlaneClient
 class SwimlaneConnector:
     """
     External-import connector that pulls Swimlane records into OpenCTI as STIX
-    Incidents.
+    Case-Incidents.
     """
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
@@ -35,6 +35,7 @@ class SwimlaneConnector:
 
     def process_message(self) -> None:
         self.helper.connector_logger.info("[CONNECTOR] Starting Swimlane connector...")
+        work_id = None
         try:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
@@ -52,14 +53,18 @@ class SwimlaneConnector:
 
             current_state["last_run"] = now.isoformat()
             self.helper.set_state(current_state)
-            self.helper.api.work.to_processed(
-                work_id, "Swimlane connector successfully run"
-            )
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+        finally:
+            # Always close the work so a failed run does not leave an
+            # "in progress" work item hanging in OpenCTI.
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id, "Swimlane connector run completed"
+                )
 
     def run(self) -> None:
         self.helper.schedule_process(
