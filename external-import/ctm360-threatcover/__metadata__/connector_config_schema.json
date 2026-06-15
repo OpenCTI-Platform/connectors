@@ -49,26 +49,76 @@
       "format": "duration",
       "type": "string"
     },
-    "CTM360_THREATCOVER_API_ROOT_URL": {
-      "description": "CTM360 ThreatCover TAXII 2.1 API root URL (tenant specific).",
+    "CTM360_THREATCOVER_DISCOVERY_URL": {
+      "description": "CTM360 ThreatCover TAXII discovery URL (e.g. https://<tenant>.ctm360.com/taxii2/).",
       "format": "uri",
       "maxLength": 2083,
       "minLength": 1,
       "type": "string"
     },
-    "CTM360_THREATCOVER_API_TOKEN": {
-      "description": "CTM360 ThreatCover API token (sent as the TAXII Authorization header).",
+    "CTM360_THREATCOVER_COLLECTION": {
+      "description": "TAXII collection to poll (the ThreatCover 'Observables' collection id or title).",
+      "type": "string"
+    },
+    "CTM360_THREATCOVER_V21": {
+      "default": true,
+      "description": "Use TAXII 2.1 (set to false for a TAXII 2.0 server).",
+      "type": "boolean"
+    },
+    "CTM360_THREATCOVER_USE_TOKEN": {
+      "default": true,
+      "description": "Authenticate with a token (Authorization header). Default for CTM360 ThreatCover.",
+      "type": "boolean"
+    },
+    "CTM360_THREATCOVER_TOKEN": {
+      "default": null,
+      "description": "CTM360 ThreatCover API token (used when use_token is true).",
       "format": "password",
       "type": "string",
       "writeOnly": true
     },
-    "CTM360_THREATCOVER_COLLECTION_ID": {
-      "description": "TAXII collection id to poll (the ThreatCover 'Observables' collection).",
+    "CTM360_THREATCOVER_USE_APIKEY": {
+      "default": false,
+      "description": "Authenticate with a custom API-key header instead of a token.",
+      "type": "boolean"
+    },
+    "CTM360_THREATCOVER_APIKEY_KEY": {
+      "default": null,
+      "description": "Header name to use when use_apikey is true.",
       "type": "string"
+    },
+    "CTM360_THREATCOVER_APIKEY_VALUE": {
+      "default": null,
+      "description": "Header value to use when use_apikey is true.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CTM360_THREATCOVER_USERNAME": {
+      "default": null,
+      "description": "Username for HTTP basic authentication (when neither token nor apikey is used).",
+      "type": "string"
+    },
+    "CTM360_THREATCOVER_PASSWORD": {
+      "default": null,
+      "description": "Password for HTTP basic authentication.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CTM360_THREATCOVER_CERT_PATH": {
+      "default": null,
+      "description": "Optional path to a client certificate for mutual TLS.",
+      "type": "string"
+    },
+    "CTM360_THREATCOVER_VERIFY_SSL": {
+      "default": true,
+      "description": "Whether to verify the TAXII server TLS certificate.",
+      "type": "boolean"
     },
     "CTM360_THREATCOVER_TLP_LEVEL": {
       "default": "amber",
-      "description": "Default TLP level applied to the imported entities.",
+      "description": "Default TLP marking applied to the imported entities.",
       "enum": [
         "clear",
         "white",
@@ -78,20 +128,14 @@
         "red"
       ],
       "type": "string"
-    },
-    "CTM360_THREATCOVER_VERIFY_SSL": {
-      "default": true,
-      "description": "Whether to verify the TAXII server TLS certificate.",
-      "type": "boolean"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
     "CONNECTOR_SCOPE",
-    "CTM360_THREATCOVER_API_ROOT_URL",
-    "CTM360_THREATCOVER_API_TOKEN",
-    "CTM360_THREATCOVER_COLLECTION_ID"
+    "CTM360_THREATCOVER_DISCOVERY_URL",
+    "CTM360_THREATCOVER_COLLECTION"
   ],
   "additionalProperties": true
 }

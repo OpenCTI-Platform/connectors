@@ -77,13 +77,24 @@ Below are the parameters you'll need to set for running the connector properly:
 
 Below are the parameters you'll need to set for the connector:
 
-| Parameter       | config.yml      | Docker environment variable          | Default     | Mandatory | Description                                                                 |
+This connector follows the same TAXII model as the generic OpenCTI `taxii2` connector
+(server discovery + token / API-key / basic authentication).
+
+| Parameter       | config.yml      | Docker environment variable          | Default     | Mandatory | Description                                                                  |
 | --------------- | --------------- | ------------------------------------ | ----------- | --------- | --------------------------------------------------------------------------- |
-| API root URL    | api_root_url    | `CTM360_THREATCOVER_API_ROOT_URL`    |             | Yes       | CTM360 ThreatCover TAXII 2.1 API root URL (tenant specific).                |
-| API token       | api_token       | `CTM360_THREATCOVER_API_TOKEN`       |             | Yes       | CTM360 ThreatCover API token (sent as the TAXII Authorization header).      |
-| Collection id   | collection_id   | `CTM360_THREATCOVER_COLLECTION_ID`   |             | Yes       | TAXII collection id to poll (the ThreatCover "Observables" collection).     |
-| TLP level       | tlp_level       | `CTM360_THREATCOVER_TLP_LEVEL`       | `amber`     | No        | Default TLP marking applied to imported entities.                           |
-| Verify SSL      | verify_ssl      | `CTM360_THREATCOVER_VERIFY_SSL`      | `true`      | No        | Whether to verify the TAXII server TLS certificate.                         |
+| Discovery URL   | discovery_url   | `CTM360_THREATCOVER_DISCOVERY_URL`   |             | Yes       | CTM360 ThreatCover TAXII discovery URL (tenant specific).                   |
+| Collection      | collection      | `CTM360_THREATCOVER_COLLECTION`      |             | Yes       | TAXII collection to poll (the ThreatCover "Observables" collection id/title).|
+| TAXII 2.1       | v21             | `CTM360_THREATCOVER_V21`             | `true`      | No        | Use TAXII 2.1 (set false for a TAXII 2.0 server).                           |
+| Use token       | use_token       | `CTM360_THREATCOVER_USE_TOKEN`       | `true`      | No        | Authenticate with a token (Authorization header).                          |
+| Token           | token           | `CTM360_THREATCOVER_TOKEN`           |             | No        | CTM360 ThreatCover API token (used when `use_token` is true).              |
+| Use API key     | use_apikey      | `CTM360_THREATCOVER_USE_APIKEY`      | `false`     | No        | Authenticate with a custom API-key header instead of a token.              |
+| API-key header  | apikey_key      | `CTM360_THREATCOVER_APIKEY_KEY`      |             | No        | Header name to use when `use_apikey` is true.                              |
+| API-key value   | apikey_value    | `CTM360_THREATCOVER_APIKEY_VALUE`    |             | No        | Header value to use when `use_apikey` is true.                            |
+| Username        | username        | `CTM360_THREATCOVER_USERNAME`        |             | No        | Username for HTTP basic auth (when neither token nor API key is used).      |
+| Password        | password        | `CTM360_THREATCOVER_PASSWORD`        |             | No        | Password for HTTP basic auth.                                              |
+| Cert path       | cert_path       | `CTM360_THREATCOVER_CERT_PATH`       |             | No        | Optional client certificate path for mutual TLS.                          |
+| Verify SSL      | verify_ssl      | `CTM360_THREATCOVER_VERIFY_SSL`      | `true`      | No        | Whether to verify the TAXII server TLS certificate.                        |
+| TLP level       | tlp_level       | `CTM360_THREATCOVER_TLP_LEVEL`       | `amber`     | No        | Default TLP marking applied to imported entities.                          |
 | Duration period | duration_period | `CONNECTOR_DURATION_PERIOD`          | `PT1H`      | No        | ISO-8601 interval between two polls.                                        |
 
 ## Deployment
@@ -146,9 +157,10 @@ download of data by re-running the connector.
 On each run the connector:
 
 1. Reads the last `added_after` timestamp from its state (empty on the first run).
-2. Polls the configured TAXII 2.1 collection (`GET {api_root}/collections/{id}/objects/`)
-   with the `added_after` filter, following TAXII pagination (`more` / `next`) until all
-   pages are retrieved.
+2. Discovers the TAXII server from `discovery_url` (using the configured token / API-key /
+   basic authentication), resolves the configured `collection` (by id or title), and polls
+   it with the `added_after` filter, following TAXII pagination (`more` / `next`) until all
+   pages are retrieved - the same TAXII handling as the generic OpenCTI `taxii2` connector.
 3. Passes the returned STIX 2.1 objects through, applying the configured TLP marking and
    attributing SDOs to the CTM360 ThreatCover author identity (SCOs keep their native
    form; marking-definition / identity / relationship objects are passed untouched).

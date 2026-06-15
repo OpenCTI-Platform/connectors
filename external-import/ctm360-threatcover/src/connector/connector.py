@@ -19,16 +19,25 @@ class Ctm360ThreatcoverConnector:
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         self.config = config
         self.helper = helper
+        cfg = self.config.ctm360_threatcover
         self.client = Ctm360ThreatcoverClient(
             helper,
-            api_root_url=self.config.ctm360_threatcover.api_root_url,
-            api_token=self.config.ctm360_threatcover.api_token.get_secret_value(),
-            collection_id=self.config.ctm360_threatcover.collection_id,
-            verify_ssl=self.config.ctm360_threatcover.verify_ssl,
+            discovery_url=cfg.discovery_url,
+            collection=cfg.collection,
+            v21=cfg.v21,
+            use_token=cfg.use_token,
+            token=cfg.token.get_secret_value() if cfg.token else None,
+            use_apikey=cfg.use_apikey,
+            apikey_key=cfg.apikey_key,
+            apikey_value=(
+                cfg.apikey_value.get_secret_value() if cfg.apikey_value else None
+            ),
+            username=cfg.username,
+            password=cfg.password.get_secret_value() if cfg.password else None,
+            cert_path=cfg.cert_path,
+            verify_ssl=cfg.verify_ssl,
         )
-        self.converter = ConverterToStix(
-            helper, tlp_level=self.config.ctm360_threatcover.tlp_level
-        )
+        self.converter = ConverterToStix(helper, tlp_level=cfg.tlp_level)
 
     def _collect_intelligence(self, added_after) -> list:
         raw_objects = self.client.get_objects(added_after=added_after)
