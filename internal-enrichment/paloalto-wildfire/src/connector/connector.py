@@ -4,7 +4,12 @@ from datetime import datetime, timezone
 import stix2
 from connector.settings import ConnectorSettings
 from paloalto_wildfire_client import PaloaltoWildfireClient, WildfireAPIError
-from pycti import Identity, MalwareAnalysis, OpenCTIConnectorHelper
+from pycti import (
+    Identity,
+    MalwareAnalysis,
+    MarkingDefinition,
+    OpenCTIConnectorHelper,
+)
 
 # WildFire verdict code -> human readable label.
 _VERDICT_LABELS = {
@@ -37,6 +42,20 @@ _VERDICT_RESULTS = {
 _HASH_PRIORITY = {"SHA-256": 3, "SHA-1": 2, "MD5": 1}
 
 
+def _tlp_clear() -> stix2.MarkingDefinition:
+    # OpenCTI models TLP:CLEAR as a custom statement marking, not as the legacy STIX
+    # TLP:WHITE; using TLP_WHITE would emit the wrong marking in the bundle.
+    return stix2.MarkingDefinition(
+        id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+        definition_type="statement",
+        definition={"statement": "custom"},
+        custom_properties={
+            "x_opencti_definition_type": "TLP",
+            "x_opencti_definition": "TLP:CLEAR",
+        },
+    )
+
+
 class PaloaltoWildfireConnector:
     """
     Internal-enrichment connector that enriches file observables with Palo Alto
@@ -63,7 +82,7 @@ class PaloaltoWildfireConnector:
             identity_class="organization",
             description="File verdicts from Palo Alto Networks WildFire.",
         )
-        self.tlp = stix2.TLP_WHITE
+        self.tlp = _tlp_clear()
         self.stix_objects: list = []
 
     @staticmethod
@@ -86,7 +105,7 @@ class PaloaltoWildfireConnector:
         verdict = self.client.get_verdict(file_hash)
         if verdict is None:
             self.helper.connector_logger.info(
-                "Hash unknown to WildFire.", {"hash": file_hash}
+                "Hash unknown to WildFire.", meta={"hash": file_hash}
             )
             return None
         report = self.client.get_report(file_hash) or {}
@@ -131,7 +150,7 @@ class PaloaltoWildfireConnector:
         file_name, content, error = self._download_file(opencti_entity)
         if error:
             self.helper.connector_logger.info(
-                "Skipping WildFire submission.", {"reason": error}
+                "Skipping WildFire submission.", meta={"reason": error}
             )
             return None
         sha256 = self.client.submit_file(file_name, content)
@@ -141,7 +160,7 @@ class PaloaltoWildfireConnector:
             )
             return None
         self.helper.connector_logger.info(
-            "Submitted file to WildFire, waiting for verdict.", {"sha256": sha256}
+            "Submitted file to WildFire, waiting for verdict.", meta={"sha256": sha256}
         )
         verdict = self.client.poll_verdict(
             sha256, max_wait=self.config.paloalto_wildfire.submission_timeout
@@ -184,6 +203,15 @@ class PaloaltoWildfireConnector:
             except (TypeError, ValueError):
                 pass
 
+        if (
+            opencti_entity["entity_type"] == "StixFile"
+            and report.get("filetype")
+            and not enriched_entity.get("mime_type")
+        ):
+            # Complete the file type from the WildFire report (mapped onto the STIX
+            # File mime_type field) when the observable does not already carry one.
+            enriched_entity["mime_type"] = report["filetype"]
+
         if score is not None:
             enriched_entity["x_opencti_score"] = score
 
@@ -202,6 +230,10 @@ class PaloaltoWildfireConnector:
             external_id=report.get("sha256") or result.get("hash"),
             description=f"WildFire verdict: {label}",
         )
+        # Inherit the source observable's markings so the enrichment never produces
+        # an unmarked (TLP-downgraded) Malware Analysis object; fall back to the
+        # connector default marking when the observable carries none.
+        markings = enriched_entity.get("object_marking_refs") or [self.tlp]
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name, "WildFire"),
             product="WildFire",
@@ -211,6 +243,7 @@ class PaloaltoWildfireConnector:
             result=_VERDICT_RESULTS.get(verdict, "unknown"),
             sample_ref=enriched_entity["id"],
             created_by_ref=self.identity.id,
+            object_marking_refs=markings,
             external_references=[external_reference],
         )
         enriched_objects.append(malware_analysis)
@@ -220,7 +253,7 @@ class PaloaltoWildfireConnector:
     def _process_observable(self, stix_entity: dict, opencti_entity: dict):
         self.helper.connector_logger.info(
             "Processing the observable",
-            {
+            meta={
                 "observable_type": opencti_entity["entity_type"],
                 "observable_value": opencti_entity.get("observable_value"),
             },
@@ -280,7 +313,7 @@ class PaloaltoWildfireConnector:
             raise
         except Exception as err:
             self.helper.connector_logger.error(
-                "[CONNECTOR] An unexpected error occurred", {"error": str(err)}
+                "[CONNECTOR] An unexpected error occurred", meta={"error": str(err)}
             )
             self._send_bundle(original_stix_objects)
             raise
