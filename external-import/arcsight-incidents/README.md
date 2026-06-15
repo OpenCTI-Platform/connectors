@@ -1,9 +1,12 @@
 # OpenCTI ArcSight Incidents Connector
 
 The ArcSight Incidents connector is an **external-import** connector that pulls
-cases from ArcSight ESM into OpenCTI as STIX Incidents. It is the import side of a
-bidirectional integration: pair it with the `stream/arcsight` connector (which
-pushes IOCs to ESM Active Lists) to send IOCs out and bring cases in.
+cases from ArcSight ESM into OpenCTI as STIX **Case-Incidents**. It is the import
+side of a bidirectional integration: pair it with the `stream/arcsight` connector
+(which pushes IOCs to ESM Active Lists) to send IOCs out and bring cases in.
+
+ArcSight cases are case-management artifacts, so they are modeled as OpenCTI
+Case-Incidents (a STIX Incident is reserved for alerts/detections).
 
 Table of Contents
 
@@ -97,5 +100,5 @@ python main.py
 
 On each run the connector authenticates against the ESM `LoginService`, lists case
 ids via `CaseService` (capped at `max_cases`), fetches each case, converts it to a
-STIX Incident and sends the bundle to OpenCTI. OpenCTI deduplicates incidents by
-their deterministic id across runs.
+STIX Case-Incident and sends the bundle to OpenCTI. OpenCTI deduplicates
+case-incidents by their deterministic id across runs.
