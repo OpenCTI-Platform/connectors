@@ -58,7 +58,7 @@ Each Incident also includes an attached Markdown file (`alert.md`) with the full
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.13
+- OpenCTI Platform >= 6.9.5
 - [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
 - [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
 - CrowdStrike Falcon subscription with **Recon / Exposure Monitoring** module
@@ -224,7 +224,7 @@ Each Incident created in OpenCTI includes:
 - **Description**: Alert metadata summary (Markdown)
 - **Attached file**: `alert.md` — Full Markdown report with detailed information per notification type
 - **Severity**: Mapped from CrowdStrike `rule_priority`
-- **Incident type**: Derived from `item_type` (e.g. `Typosquatting`, `alert`)
+- **Incident type**: The CrowdStrike notification `item_type` (e.g. `typosquatting_domain`, `exposed_data`, `post`)
 
 ## Debugging
 

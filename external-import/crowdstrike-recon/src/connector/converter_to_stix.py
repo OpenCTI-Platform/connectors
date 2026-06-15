@@ -156,9 +156,9 @@ class ConverterToStix:
         """
         Generate a Markdown description for exposed data notifications.
         """
-        notification = notification_detail.get("notification")
-        breach_details = notification_detail.get("breach_details", {})
-        breach = notification.get("breach_summary", {})
+        notification = notification_detail.get("notification") or {}
+        breach_details = notification_detail.get("breach_details") or {}
+        breach = notification.get("breach_summary") or {}
         breach_files = breach.get("files", [])
         markdown_content = (
             f"{self.generate_common_description(notification)}\n"
@@ -208,8 +208,8 @@ class ConverterToStix:
         """
         Generate a Markdown description for post type notifications.
         """
-        notification = notification_detail.get("notification")
-        post_details = notification_detail.get("details", {})
+        notification = notification_detail.get("notification") or {}
+        post_details = notification_detail.get("details") or {}
         markdown_content = (
             f"{self.generate_common_description(notification)}\n"
             "### Post Summary\n"
@@ -232,8 +232,8 @@ class ConverterToStix:
         """
         Generate a Markdown description for reply type notifications.
         """
-        notification = notification_detail.get("notification")
-        reply_details = notification_detail.get("details", {})
+        notification = notification_detail.get("notification") or {}
+        reply_details = notification_detail.get("details") or {}
         markdown_content = (
             f"{self.generate_common_description(notification)}\n"
             "### Reply Summary\n"
@@ -252,50 +252,84 @@ class ConverterToStix:
         )
         return markdown_content
 
+    def generate_file_content(self, notification_detail: dict) -> str:
+        """
+        Generate a Markdown description for file leak notifications.
+
+        File notifications share the dark-web ``details`` structure with posts,
+        so the post formatter is reused here. A dedicated method is kept so the
+        intent is explicit and a file-specific layout can be added later without
+        touching ``create_incident``.
+        """
+        return self.generate_post_content(notification_detail)
+
+    @staticmethod
+    def _extract_highlight_title(notification: dict) -> str:
+        """
+        Build a short incident title from a notification's ``highlights``.
+
+        ``highlights`` may be missing, ``None`` or an empty list, so guard
+        before indexing to avoid ``TypeError`` / ``IndexError``.
+        """
+        highlights = notification.get("highlights") or []
+        raw_title = highlights[0] if highlights else ""
+        if len(raw_title) > 50:
+            return raw_title[:50] + "..."
+        return raw_title
+
     def create_incident(self, notification_detail: dict) -> list:
         """
         :param notification_detail:
         :return:
         """
-        notification = notification_detail.get("notification", {})
+        notification = notification_detail.get("notification") or {}
+        item_type = notification.get("item_type")
+        created_date = notification.get("created_date")
+        if not created_date:
+            self.helper.connector_logger.error(
+                "Notification is missing created_date, skipping alert",
+                {"item_type": item_type, "notification_id": notification.get("id")},
+            )
+            return []
+
         stix_objects = []
-        incident_date = parse(notification.get("created_date"))
-        incident_type = "alert"
+        incident_date = parse(created_date)
+        # incident_type is derived from the CrowdStrike notification item_type
+        incident_type = item_type or "alert"
         incident_labels = []
         inc_sco_sdo_refs = []
         attachment_files = []
+        title = None
 
-        if notification.get("item_type") == "typosquatting_domain":
-            title = notification.get("typosquatting", {}).get("unicode_format")
+        if item_type == "typosquatting_domain":
+            typosquatting = notification.get("typosquatting") or {}
+            title = typosquatting.get("unicode_format")
             inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_typosquatting_content(notification)
-            domain_name_uni = stix2.DomainName(
-                value=notification.get("typosquatting", {}).get("unicode_format"),
-                allow_custom=True,
-                object_marking_refs=[self.tlp_marking.id],
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author.id,
-                },
-            )
-            stix_objects.append(domain_name_uni)
-            inc_sco_sdo_refs.append(domain_name_uni.id)
+            for domain_value in (
+                typosquatting.get("unicode_format"),
+                typosquatting.get("punycode_format"),
+            ):
+                if not domain_value:
+                    continue
+                domain_name = stix2.DomainName(
+                    value=domain_value,
+                    allow_custom=True,
+                    object_marking_refs=[self.tlp_marking.id],
+                    custom_properties={
+                        "x_opencti_created_by_ref": self.author.id,
+                    },
+                )
+                stix_objects.append(domain_name)
+                inc_sco_sdo_refs.append(domain_name.id)
 
-            domain_name_puny = stix2.DomainName(
-                value=notification.get("typosquatting", {}).get("punycode_format"),
-                allow_custom=True,
-                object_marking_refs=[self.tlp_marking.id],
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author.id,
-                },
-            )
-            stix_objects.append(domain_name_puny)
-            inc_sco_sdo_refs.append(domain_name_puny.id)
-
-        elif notification.get("item_type") == "exposed_data":
-            title = notification.get("breach_summary", {}).get("name")
+        elif item_type == "exposed_data":
+            title = (notification.get("breach_summary") or {}).get("name")
             inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_exposed_data_content(notification_detail)
-            for item in notification_detail.get("breach_details", {}).get("items", []):
+            for item in (notification_detail.get("breach_details") or {}).get(
+                "items", []
+            ):
                 if (
                     item.get("malware_family")
                     and item.get("malware_family") != "unknown"
@@ -356,41 +390,41 @@ class ConverterToStix:
                     inc_sco_sdo_refs.append(domain_name.id)
                     stix_objects.append(domain_name)
 
-        elif notification.get("item_type") == "reply":
-            raw_title = notification.get("highlights")[0]
-            title = raw_title[:50] + "..." if len(raw_title) > 50 else raw_title
+        elif item_type == "reply":
+            title = self._extract_highlight_title(notification)
             inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_reply_content(notification_detail)
 
-        elif notification.get("item_type") == "post":
-            raw_title = notification.get("highlights")[0]
-            title = raw_title[:50] + "..." if len(raw_title) > 50 else raw_title
+        elif item_type == "post":
+            title = self._extract_highlight_title(notification)
             inc_description = self.generate_common_description(notification)
             alert_detail = self.generate_post_content(notification_detail)
 
-        elif notification.get("item_type") == "file":
-            raw_title = notification.get("highlights")[0]
-            title = raw_title[:50] + "..." if len(raw_title) > 50 else raw_title
+        elif item_type == "file":
+            title = self._extract_highlight_title(notification)
             inc_description = self.generate_common_description(notification)
-            alert_detail = self.generate_post_content(notification_detail)
+            alert_detail = self.generate_file_content(notification_detail)
         else:
             self.helper.connector_logger.error(
                 "Unsupported notification type, skipping alert",
                 {
-                    "item_type": notification.get("item_type"),
+                    "item_type": item_type,
                     "notification_id": notification.get("id"),
                 },
             )
             return []
 
         # Create the incident
-        incident_name = notification.get("rule_name") + " : " + title
+        rule_name = notification.get("rule_name") or "CrowdStrike Recon"
+        incident_name = f"{rule_name} : {title or '--'}"
         alert_detail_bytes = alert_detail.encode("utf-8")
-        base64_bytes = base64.b64encode(alert_detail_bytes)
+        # x_opencti_files.data expects a base64-encoded *string*, so decode the
+        # bytes returned by b64encode before assigning it to the attachment.
+        base64_data = base64.b64encode(alert_detail_bytes).decode("utf-8")
         attachment_files.append(
             {
                 "name": "alert.md",
-                "data": base64_bytes,
+                "data": base64_data,
                 "mime_type": "text/markdown",
                 "no_trigger_import": False,
             }
