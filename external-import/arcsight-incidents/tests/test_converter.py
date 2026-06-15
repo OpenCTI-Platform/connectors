@@ -112,3 +112,38 @@ def test_create_case_incident_minimal():
     converter = _converter()
     case = converter.create_case_incident({})
     assert case["name"] == "ArcSight Case"
+
+
+def test_incident_id_stable_without_timestamp():
+    # No source timestamp: the id must not depend on "now", so re-importing the same
+    # event keeps the same Incident id instead of creating duplicates each run.
+    converter = _converter()
+    event = {"name": "Suspicious login", "eventId": "e1", "priority": 9}
+    assert (
+        converter.create_incident(event)["id"] == converter.create_incident(event)["id"]
+    )
+
+
+def test_case_incident_id_stable_without_timestamp():
+    converter = _converter()
+    case = {"name": "Investigation 42", "resourceid": "ABC123"}
+    assert (
+        converter.create_case_incident(case)["id"]
+        == converter.create_case_incident(case)["id"]
+    )
+
+
+def test_incident_id_stable_with_unparseable_timestamp():
+    # An unparseable timestamp must not leak "now" into the id either: _parse_timestamp
+    # returns None, so the id seed is None and stays stable across runs.
+    converter = _converter()
+    event = {"name": "x", "eventId": "e1", "endTime": "not-a-timestamp"}
+    assert (
+        converter.create_incident(event)["id"] == converter.create_incident(event)["id"]
+    )
+
+
+def test_create_incident_scalar_base_event_id():
+    converter = _converter()
+    incident = converter.create_incident({"baseEventIds": "b42", "priority": 3})
+    assert incident["external_references"][0]["external_id"] == "b42"
