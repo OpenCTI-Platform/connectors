@@ -205,7 +205,11 @@ class ConverterToStix:
         note = Note(
             id=PyctiNote.generate_id(
                 content=note_body,
-                created=note_timestamp,
+                # Deterministic id: derive it from the content only (which already
+                # embeds the alert id and queue state) so re-runs do not create
+                # duplicate notes. The created/modified fields below still carry
+                # the real timestamp.
+                created=None,
             ),
             abstract=note_content,
             content=note_body,
@@ -747,9 +751,6 @@ class ConverterToStix:
                 alert, pattern, name, created_at, modified_at
             )
 
-            if hasattr(phone_number_indicator, "serialize"):
-                phone_number_indicator = json.loads(phone_number_indicator.serialize())
-
             stix_objects.append(phone_number_indicator)
             indicators.append(phone_number_indicator)
         elif product_type == "domains":
@@ -903,7 +904,7 @@ class ConverterToStix:
                 "[DoppelConverter] Updating RFT case revoke status",
                 meta={
                     "alert_id": alert_id,
-                    "case_standard_id": rft_case["id"],
+                    "case_ref": rft_case.get("standard_id") or rft_case.get("id"),
                     "setting revoked to": revoke_rft_case,
                 },
             )
