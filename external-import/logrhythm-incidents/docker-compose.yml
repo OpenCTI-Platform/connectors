@@ -5,16 +5,16 @@ services:
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type EXTERNAL_IMPORT
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=LogRhythm Incidents # optional (default: 'LogRhythm Incidents')
-      - CONNECTOR_SCOPE=logrhythm # optional
+      - CONNECTOR_SCOPE=logrhythm # required
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=PT15M # optional (default: 'PT15M')
       # LogRhythm parameters
-      - LOGRHYTHM_INCIDENTS_API_BASE_URL=CHANGEME # e.g. https://logrhythm.example.com:8501
-      - LOGRHYTHM_INCIDENTS_API_TOKEN=CHANGEME
+      - LOGRHYTHM_INCIDENTS_API_BASE_URL=ChangeMe # e.g. https://logrhythm.example.com:8501
+      - LOGRHYTHM_INCIDENTS_API_TOKEN=ChangeMe
       - LOGRHYTHM_INCIDENTS_MAX_CASES=200 # optional (default: 200)
       - LOGRHYTHM_INCIDENTS_TLP_LEVEL=amber # optional (default: 'amber')
       - LOGRHYTHM_INCIDENTS_SSL_VERIFY=true # optional (default: true)

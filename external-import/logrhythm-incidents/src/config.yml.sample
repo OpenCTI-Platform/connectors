@@ -6,7 +6,7 @@ connector:
   id: 'ChangeMe'
   type: 'EXTERNAL_IMPORT'
   name: 'LogRhythm Incidents' # optional (default: 'LogRhythm Incidents')
-  scope: 'logrhythm' # optional
+  scope: 'logrhythm' # required
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT15M' # optional (default: 'PT15M')
 
@@ -14,5 +14,5 @@ logrhythm_incidents:
   api_base_url: 'ChangeMe' # Base URL of the LogRhythm API gateway, e.g. https://logrhythm.example.com:8501
   api_token: 'ChangeMe' # LogRhythm API token (Bearer)
   max_cases: 200 # optional (default: 200)
-  tlp_level: 'amber' # optional, one of clear/green/amber/amber+strict/red (default: 'amber')
+  tlp_level: 'amber' # optional, one of clear/white/green/amber/amber+strict/red (default: 'amber')
   ssl_verify: true # optional (default: true)
