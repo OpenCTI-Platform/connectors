@@ -66,7 +66,9 @@ class ClickHouseConnector:
             raise ValueError(f"Cannot process the message: {err}") from err
 
         if self.client.insert_event(msg.event, data, self._event_timestamp(msg)):
-            self.helper.connector_logger.info(
+            # Per-event write logged at DEBUG: live streams are high-volume, so
+            # an INFO line per event would flood logs and add IO overhead.
+            self.helper.connector_logger.debug(
                 "[%s] Event written to ClickHouse" % msg.event.upper()
             )
 
