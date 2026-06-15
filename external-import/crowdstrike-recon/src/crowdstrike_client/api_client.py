@@ -148,10 +148,15 @@ class CrowdstrikeReconClient:
 
             notification_ids.extend(resources)
 
-            total = ((body.get("meta") or {}).get("pagination") or {}).get("total", 0)
-            # Stop once everything has been collected or the API returns a short
-            # page (fewer than ``limit`` results means there is no next page).
-            if len(notification_ids) >= total or len(resources) < limit:
+            # A short page (fewer than ``limit`` results) means there is no next
+            # page. ``total`` is only used as an optimization when the API
+            # actually reports it: a missing/zero ``total`` must not be treated
+            # as "done", otherwise a full first page would truncate the results.
+            if len(resources) < limit:
+                break
+
+            total = ((body.get("meta") or {}).get("pagination") or {}).get("total")
+            if total and len(notification_ids) >= total:
                 break
 
             offset += limit
