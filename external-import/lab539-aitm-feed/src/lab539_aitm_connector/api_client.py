@@ -15,17 +15,21 @@ class AiTMFeedClient:
         )
 
     def get_last_event(self) -> str | None:
-        """Lightweight check for new data. No auth required."""
+        """
+        Lightweight pre-check for new data via the last-event endpoint.
+
+        Uses the shared session (connection reuse, proxies) and only swallows
+        request-level errors, returning None so the caller fails open and pulls
+        the full dataset rather than masking unexpected errors.
+        """
         try:
-            response = requests.get(f"{self.base_url}/last-event", timeout=10)
+            response = self.session.get(f"{self.base_url}/last-event", timeout=10)
             response.raise_for_status()
             return response.json().get("eventid")
-        except Exception:  # pylint: disable=broad-exception-caught
+        except requests.exceptions.RequestException:
             return None
 
-    def get_records(
-        self, after: int | None = None, before: int | None = None
-    ) -> list:
+    def get_records(self, after: int | None = None, before: int | None = None) -> list:
         """
         Fetch records from the AiTM feed.
         If no parameters passed, returns full 7 day dataset.

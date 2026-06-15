@@ -18,6 +18,6 @@
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/lab539-aitm-feed",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "lab539/opencti-aitm-feed-connector",
+  "container_image": "opencti/connector-lab539-aitm-feed",
   "container_type": "EXTERNAL_IMPORT"
 }

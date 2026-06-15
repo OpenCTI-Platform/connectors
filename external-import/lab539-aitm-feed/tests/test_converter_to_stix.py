@@ -1,7 +1,6 @@
 """Unit tests for ConverterToStix."""
 
 import stix2
-
 from lab539_aitm_connector.converter_to_stix import ConverterToStix
 
 

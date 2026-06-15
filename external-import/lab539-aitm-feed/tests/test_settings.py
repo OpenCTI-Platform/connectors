@@ -1,9 +1,8 @@
 """Unit tests for ConnectorSettings."""
 
 import pytest
-from pydantic import SecretStr, ValidationError
-
 from lab539_aitm_connector.settings import AiTMFeedConfig
+from pydantic import SecretStr, ValidationError
 
 
 class TestAiTMFeedConfig:

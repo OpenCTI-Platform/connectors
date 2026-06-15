@@ -1,7 +1,7 @@
 """Lab539 AiTM Feed OpenCTI connector."""
 
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from pycti import OpenCTIConnectorHelper
 
@@ -41,11 +41,10 @@ class Lab539AiTMConnector:
         state["last_run"] = now.isoformat(timespec="seconds")
         self.helper.set_state(state)
 
-    def _is_new_data_available(self) -> bool:
-        """Lightweight check via last-event endpoint before pulling full dataset."""
+    def _is_new_data_available(self, current_event_id: str | None) -> bool:
+        """Decide whether to pull the full dataset based on the latest eventid."""
         state = self.helper.get_state()
         last_event_id = state.get("last_event_id") if state else None
-        current_event_id = self.client.get_last_event()
 
         if current_event_id is None:
             return True
@@ -53,9 +52,8 @@ class Lab539AiTMConnector:
             return True
         return current_event_id != last_event_id
 
-    def _update_last_event_id(self) -> None:
+    def _update_last_event_id(self, current_event_id: str | None) -> None:
         """Store the current latest eventid in connector state."""
-        current_event_id = self.client.get_last_event()
         if current_event_id:
             state = self.helper.get_state() or {}
             state["last_event_id"] = current_event_id
@@ -63,11 +61,13 @@ class Lab539AiTMConnector:
 
     def process_message(self) -> None:
         """Execute a single connector run."""
-        self.helper.connector_logger.info(
-            f"{self.config.connector.name}: Starting run"
-        )
+        self.helper.connector_logger.info(f"{self.config.connector.name}: Starting run")
 
-        if not self._is_new_data_available():
+        # Fetch the latest eventid once and reuse it both for the pre-check and
+        # for the state update after a successful import, to avoid a second
+        # last-event API call per run.
+        current_event_id = self.client.get_last_event()
+        if not self._is_new_data_available(current_event_id):
             self.helper.connector_logger.info(
                 f"{self.config.connector.name}: No new data available, skipping run"
             )
@@ -79,11 +79,13 @@ class Lab539AiTMConnector:
 
         try:
             if last_run is None:
+                lookback_days = self.config.aitm_feed.first_run_lookback_days
+                lookback_after = int((now - timedelta(days=lookback_days)).timestamp())
                 self.helper.connector_logger.info(
                     f"{self.config.connector.name}: First run, pulling "
-                    f"{self.config.aitm_feed.first_run_lookback_days} days of data"
+                    f"{lookback_days} days of data"
                 )
-                records = self.client.get_records()
+                records = self.client.get_records(after=lookback_after)
             else:
                 self.helper.connector_logger.info(
                     f"{self.config.connector.name}: Pulling records since "
@@ -157,7 +159,7 @@ class Lab539AiTMConnector:
             return
 
         self._set_last_run(now)
-        self._update_last_event_id()
+        self._update_last_event_id(current_event_id)
 
     def run(self) -> None:
         """Start the connector scheduler."""

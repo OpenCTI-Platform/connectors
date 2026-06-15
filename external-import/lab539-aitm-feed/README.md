@@ -52,7 +52,7 @@ The following Lab539-specific properties are included on each indicator:
 | Run Interval | `CONNECTOR_DURATION_PERIOD` | `PT15M` | ISO 8601 duration between runs |
 | AiTM API Key | `AITM_FEED_API_KEY` | | Your Lab539 AiTM Feed API key |
 | AiTM API URL | `AITM_FEED_API_BASE_URL` | `https://aitm.lab539.io/v1.0` | AiTM Feed API base URL |
-| TLP Level | `AITM_FEED_TLP_LEVEL` | `amber` | TLP marking (`white`, `green`, `amber`, `red`) |
+| TLP Level | `AITM_FEED_TLP_LEVEL` | `amber` | TLP marking (`white`, `green`, `amber`, `amber+strict`, `red`) |
 | Lookback Days | `AITM_FEED_FIRST_RUN_LOOKBACK_DAYS` | `7` | Days of history to import on first run |
 
 ## Deployment

@@ -3,10 +3,9 @@
 import sys
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-
 from lab539_aitm_connector.connector import Lab539AiTMConnector
 from lab539_aitm_connector.settings import ConnectorSettings
+from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
     try:
