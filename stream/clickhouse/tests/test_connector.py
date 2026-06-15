@@ -42,6 +42,20 @@ def test_delete_event_is_inserted():
     assert client.insert_event.call_args.args[0] == "delete"
 
 
+def test_event_write_is_logged_at_debug_not_info():
+    # Per-event writes are logged at DEBUG: live streams are high-volume, so an
+    # INFO line per event would flood logs. INFO is reserved for startup/summary.
+    connector, helper, client = _make_connector()
+    client.insert_event.return_value = True
+
+    connector.process_message(
+        _message("create", {"id": "indicator--1", "type": "indicator"})
+    )
+
+    helper.connector_logger.debug.assert_called_once()
+    helper.connector_logger.info.assert_not_called()
+
+
 @pytest.mark.parametrize(
     "live_stream_id",
     [None, "ChangeMe", "CHANGEME", "changeme", "  ChangeMe  ", "", "   "],
