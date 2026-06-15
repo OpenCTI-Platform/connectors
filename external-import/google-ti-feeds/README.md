@@ -573,10 +573,6 @@ These relationships are **only produced when the Reports collection is enabled**
 
 | GTI Concept         | STIX Source Object | STIX Relationship | STIX Target Object |
 |---------------------|--------------------|-------------------|--------------------|
-| `domains`           | Domain-Name        | `object_refs`     | Report             |
-| `files`             | File               | `object_refs`     | Report             |
-| `urls`              | URL                | `object_refs`     | Report             |
-| `ip_addresses`      | IPv4-Addr          | `object_refs`     | Report             |
 | `malware_families`  | Malware            | `object_refs`     | Report             |
 | `campaigns`         | Campaign           | `object_refs`     | Report             |
 | `software_toolkits` | Tool               | `object_refs`     | Report             |
