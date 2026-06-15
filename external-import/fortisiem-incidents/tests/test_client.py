@@ -78,3 +78,28 @@ def test_request_retries_on_rate_limit():
     assert result is not None
     assert client.session.request.call_count == 2
     sleep.assert_called_once()
+
+
+def test_request_fails_fast_on_4xx_without_retry():
+    client = _make_client()
+    response = _response({}, status=404)
+    response.raise_for_status.side_effect = requests.HTTPError("404")
+    client.session.request.return_value = response
+    with patch("fortisiem_client.api_client.time.sleep") as sleep:
+        result = client._request("get", "/phoenix/rest/pub/incident")
+    assert result is None
+    assert client.session.request.call_count == 1
+    sleep.assert_not_called()
+
+
+def test_request_retries_on_server_error():
+    client = _make_client()
+    client.session.request.side_effect = [
+        _response({}, status=500),
+        _response([], status=200),
+    ]
+    with patch("fortisiem_client.api_client.time.sleep") as sleep:
+        result = client._request("get", "/phoenix/rest/pub/incident")
+    assert result is not None
+    assert client.session.request.call_count == 2
+    sleep.assert_called_once()
