@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'FortiEDR' # optional (default: 'FortiEDR')
+  scope: 'fortiedr' # optional (default: 'fortiedr')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+fortiedr:
+  api_base_url: 'ChangeMe' # Base URL of the FortiEDR Central Manager, e.g. https://console.fortiedr.example.com
+  organization: '' # optional, required on multi-tenant consoles
+  username: 'ChangeMe' # FortiEDR REST API user
+  password: 'ChangeMe'
+  ip_set_name: 'OpenCTI' # optional (default: 'OpenCTI')
+  ssl_verify: true # optional (default: true)
