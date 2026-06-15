@@ -1,0 +1,21 @@
+{
+  "title": "Swimlane",
+  "slug": "swimlane",
+  "description": "The OpenCTI Swimlane connector imports records from a Swimlane application into OpenCTI as STIX Incidents. It periodically fetches records through the Swimlane REST API and converts them to STIX 2.1 Incidents (with timestamps and an external reference), so SOC cases managed in Swimlane can be correlated and enriched with the threat intelligence curated in OpenCTI.",
+  "short_description": "Import Swimlane application records into OpenCTI as STIX Incidents.",
+  "logo": null,
+  "use_cases": [
+    "SIEM & Analytics"
+  ],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": false,
+  "max_confidence_level": 50,
+  "support_version": ">=7.260609.0",
+  "subscription_link": "https://swimlane.com",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/swimlane",
+  "manager_supported": true,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-swimlane",
+  "container_type": "EXTERNAL_IMPORT"
+}
