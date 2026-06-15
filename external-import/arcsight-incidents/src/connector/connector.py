@@ -50,6 +50,7 @@ class ArcSightIncidentsConnector:
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting ArcSight Incidents connector..."
         )
+        work_id = None
         try:
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
@@ -75,6 +76,8 @@ class ArcSightIncidentsConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            if work_id:
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
         self.helper.schedule_process(

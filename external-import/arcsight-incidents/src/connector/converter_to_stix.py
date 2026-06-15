@@ -80,31 +80,45 @@ class ConverterToStix:
         )
 
     @staticmethod
-    def _to_iso(value) -> str:
+    def _parse_timestamp(value) -> Optional[datetime]:
         """
-        Best-effort conversion of an ArcSight timestamp to a STIX-compatible UTC
-        timestamp string (millisecond precision, ``Z`` suffix).
+        Parse an ArcSight timestamp into an aware UTC datetime, or ``None`` when the
+        value is missing or cannot be parsed, so callers can tell a real source
+        timestamp apart from a "now" fallback.
         """
         if value is None or value == "":
-            dt = datetime.now(timezone.utc)
-        elif isinstance(value, (int, float)) or (
-            isinstance(value, str) and value.isdigit()
+            return None
+        if isinstance(value, (int, float)) or (
+            isinstance(value, str) and value.strip().isdigit()
         ):
             epoch = float(value)
             if epoch > 1e12:  # milliseconds
                 epoch /= 1000.0
-            dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
-        else:
-            try:
-                dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-                dt = (
-                    dt.replace(tzinfo=timezone.utc)
-                    if dt.tzinfo is None
-                    else dt.astimezone(timezone.utc)
-                )
-            except ValueError:
-                dt = datetime.now(timezone.utc)
+            return datetime.fromtimestamp(epoch, tz=timezone.utc)
+        try:
+            dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        return (
+            dt.replace(tzinfo=timezone.utc)
+            if dt.tzinfo is None
+            else dt.astimezone(timezone.utc)
+        )
+
+    @staticmethod
+    def _format_iso(dt: datetime) -> str:
         return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+    @staticmethod
+    def _to_iso(value) -> str:
+        """
+        Best-effort conversion of an ArcSight timestamp to a STIX-compatible UTC
+        timestamp string (millisecond precision, ``Z`` suffix); falls back to "now"
+        for missing or unparseable input.
+        """
+        return ConverterToStix._format_iso(
+            ConverterToStix._parse_timestamp(value) or datetime.now(timezone.utc)
+        )
 
     @staticmethod
     def _map_severity(value) -> str:
@@ -138,11 +152,16 @@ class ConverterToStix:
         name = event.get("name") or (
             f"ArcSight event {event_id}" if event_id else "ArcSight event"
         )
-        created = self._to_iso(
+        source_dt = self._parse_timestamp(
             event.get("endTime")
             or event.get("startTime")
             or event.get("managerReceiptTime")
         )
+        # Seed generate_id with the source timestamp only. With no usable timestamp,
+        # created falls back to "now" for display but the id seed is None, so a
+        # re-imported event keeps a stable id instead of duplicating each run.
+        created = self._format_iso(source_dt or datetime.now(timezone.utc))
+        id_seed = self._format_iso(source_dt) if source_dt is not None else None
         severity = self._map_severity(event.get("priority", event.get("agentSeverity")))
         description = (
             event.get("message") or "Security event imported from ArcSight ESM."
@@ -155,7 +174,7 @@ class ConverterToStix:
             ]
 
         return stix2.Incident(
-            id=Incident.generate_id(name, created),
+            id=Incident.generate_id(name, id_seed),
             name=name,
             description=description,
             created=created,
@@ -185,10 +204,16 @@ class ConverterToStix:
         external_id = str(
             case.get("resourceid") or case.get("id") or case.get("uri") or ""
         ).strip()
-        created = self._to_iso(case.get("createdTimestamp") or case.get("createTime"))
+        source_dt = self._parse_timestamp(
+            case.get("createdTimestamp") or case.get("createTime")
+        )
+        created = self._format_iso(source_dt or datetime.now(timezone.utc))
         modified = self._to_iso(
             case.get("modifiedTimestamp") or case.get("modifiedTime") or created
         )
+        # See create_incident: seed the id with the source timestamp only so a
+        # re-imported case keeps a stable Case-Incident id.
+        id_seed = self._format_iso(source_dt) if source_dt is not None else None
         severity = self._map_severity(
             case.get("consequenceSeverity", case.get("severity"))
         )
@@ -205,7 +230,7 @@ class ConverterToStix:
             ]
 
         return CustomObjectCaseIncident(
-            id=CaseIncident.generate_id(name, created),
+            id=CaseIncident.generate_id(name, id_seed),
             name=name,
             description=description,
             severity=severity,
