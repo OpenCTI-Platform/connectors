@@ -12,8 +12,11 @@ from pycti import (
     MarkingDefinition,
 )
 
+# TLP:CLEAR and TLP:AMBER+STRICT are distinct OpenCTI markings (custom statement
+# markings carrying x_opencti_definition), not aliases of the STIX markings, so
+# they are built explicitly in _custom_tlp(). The plain STIX markings cover the
+# rest.
 _TLP_MAPPING = {
-    "clear": stix2.TLP_WHITE,
     "white": stix2.TLP_WHITE,
     "green": stix2.TLP_GREEN,
     "amber": stix2.TLP_AMBER,
@@ -26,15 +29,22 @@ _PRIORITY_MAPPING = {5: "critical", 4: "high", 3: "medium", 2: "low", 1: "low"}
 # OpenCTI case priority derived from the severity.
 _CASE_PRIORITY_MAPPING = {"critical": "P1", "high": "P2", "medium": "P3", "low": "P4"}
 
+# Deterministic fallback for missing/invalid timestamps. Incident.generate_id and
+# CaseIncident.generate_id derive the STIX id from (name, created), so a
+# datetime.now() fallback would mint a new id - and a duplicate object - on every
+# run for records that carry no usable timestamp. A fixed epoch anchor keeps the
+# id stable.
+_FALLBACK_DT = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
-def _amber_strict() -> stix2.MarkingDefinition:
+
+def _custom_tlp(definition: str) -> stix2.MarkingDefinition:
     return stix2.MarkingDefinition(
-        id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
+        id=MarkingDefinition.generate_id("TLP", definition),
         definition_type="statement",
         definition={"statement": "custom"},
         custom_properties={
             "x_opencti_definition_type": "TLP",
-            "x_opencti_definition": "TLP:AMBER+STRICT",
+            "x_opencti_definition": definition,
         },
     )
 
@@ -46,7 +56,9 @@ class ConverterToStix:
         self.helper = helper
         self.author = self._create_author()
         if tlp_level == "amber+strict":
-            self.tlp_marking = _amber_strict()
+            self.tlp_marking = _custom_tlp("TLP:AMBER+STRICT")
+        elif tlp_level == "clear":
+            self.tlp_marking = _custom_tlp("TLP:CLEAR")
         else:
             self.tlp_marking = _TLP_MAPPING.get(tlp_level, stix2.TLP_AMBER)
 
@@ -66,7 +78,7 @@ class ConverterToStix:
         timestamp string (millisecond precision, ``Z`` suffix).
         """
         if value is None or value == "":
-            dt = datetime.now(timezone.utc)
+            dt = _FALLBACK_DT
         elif isinstance(value, (int, float)) or (
             isinstance(value, str) and value.isdigit()
         ):
@@ -83,7 +95,7 @@ class ConverterToStix:
                     else dt.astimezone(timezone.utc)
                 )
             except ValueError:
-                dt = datetime.now(timezone.utc)
+                dt = _FALLBACK_DT
         return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
     @staticmethod
