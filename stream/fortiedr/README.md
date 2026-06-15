@@ -55,7 +55,7 @@ environment variables.
 | Connector ID    | `id`                        | `CONNECTOR_ID`                        | /          | Yes       | A unique `UUIDv4` identifier for this connector instance. |
 | Connector Name  | `name`                      | `CONNECTOR_NAME`                      | `FortiEDR` | No        | Name of the connector.                                   |
 | Connector Scope | `scope`                     | `CONNECTOR_SCOPE`                     | `fortiedr` | No        | The scope of the connector.                              |
-| Log Level       | `log_level`                 | `CONNECTOR_LOG_LEVEL`                 | `error`    | No        | Logs verbosity (`debug`, `info`, `warn`, `error`).       |
+| Log Level       | `log_level`                 | `CONNECTOR_LOG_LEVEL`                 | `error`    | No        | Logs verbosity (`debug`, `info`, `warn`, `warning`, `error`). |
 | Live Stream ID  | `live_stream_id`            | `CONNECTOR_LIVE_STREAM_ID`            | /          | Yes       | ID of the live stream created in the OpenCTI UI.         |
 | Listen Delete   | `live_stream_listen_delete` | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE` | `true`     | No        | Whether to listen to delete events on the live stream.  |
 | No Dependencies | `live_stream_no_dependencies` | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | `true` | No        | Whether to ignore dependencies when processing events.  |
