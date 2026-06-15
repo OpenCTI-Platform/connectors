@@ -82,6 +82,24 @@ def test_incident_id_is_stable_without_timestamp():
     )
 
 
+def test_incidents_with_same_name_different_id_have_distinct_ids():
+    # Distinct alerts that happen to share a name must not collapse into one
+    # Incident: the alert id is part of the id seed.
+    converter = _converter()
+    a = converter.create_incident({"alert_id": "a-1", "name": "Same"})
+    b = converter.create_incident({"alert_id": "a-2", "name": "Same"})
+    assert a["id"] != b["id"]
+
+
+def test_incident_timestamps_use_stable_fallback_without_timestamp():
+    # With no source timestamp, created/modified must be a fixed sentinel (not
+    # "now"), so the same Incident is not re-sent with drifting timestamps.
+    converter = _converter()
+    incident = converter.create_incident({"alert_id": "x", "EventType": "Alert"})
+    assert incident["created"] == incident["modified"]
+    assert str(incident["created"]).startswith("1970-01-01")
+
+
 def test_incident_uses_source_timestamp():
     # The STIX created/modified must reflect the source timestamp, not "now".
     converter = _converter()
