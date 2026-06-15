@@ -24,7 +24,21 @@ class LogRhythmIncidentsConnector:
     def _collect_intelligence(self) -> list:
         stix_objects: list = []
         for case in self.client.get_cases():
-            case_incident = self.converter.create_case_incident(case)
+            case_id = case.get("id") or case.get("number")
+
+            # LogRhythm alarms attached to the case are detections -> Incidents.
+            incident_ids = []
+            for alarm in self.client.get_case_alarms(case_id):
+                incident = self.converter.create_incident(alarm)
+                if incident is not None:
+                    stix_objects.append(incident)
+                    incident_ids.append(incident["id"])
+
+            # The LogRhythm case itself is a case-management artifact -> Case-Incident,
+            # referencing the alarm Incidents it groups.
+            case_incident = self.converter.create_case_incident(
+                case, object_refs=incident_ids
+            )
             if case_incident is not None:
                 stix_objects.append(case_incident)
 

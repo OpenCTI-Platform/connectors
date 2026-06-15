@@ -36,6 +36,39 @@ def test_map_severity(value, expected):
     assert ConverterToStix._map_severity(value) == expected
 
 
+@pytest.mark.parametrize(
+    "value, expected",
+    [(85, "critical"), (65, "high"), (45, "medium"), (10, "low"), (None, "low")],
+)
+def test_map_risk(value, expected):
+    assert ConverterToStix._map_risk(value) == expected
+
+
+def test_create_incident_from_alarm():
+    converter = _converter()
+    incident = converter.create_incident(
+        {
+            "alarmRuleName": "Brute force",
+            "alarmId": "a1",
+            "riskScore": 85,
+            "alarmDate": "2024-05-01T00:00:00Z",
+        }
+    )
+    assert incident["type"] == "incident"
+    assert incident["name"] == "Brute force"
+    assert incident["external_references"][0]["external_id"] == "a1"
+    assert incident["incident_type"] == "alert"
+
+
+def test_create_case_incident_with_object_refs():
+    converter = _converter()
+    incident = converter.create_incident({"alarmId": "a1", "riskScore": 85})
+    case = converter.create_case_incident(
+        {"name": "Case A", "number": "42"}, object_refs=[incident["id"]]
+    )
+    assert incident["id"] in case["object_refs"]
+
+
 def test_create_case_incident():
     converter = _converter()
     case = converter.create_case_incident(

@@ -13,13 +13,21 @@ def _make_connector():
 
 def test_collect_intelligence_builds_objects():
     connector, _, client = _make_connector()
-    client.get_cases.return_value = [{"name": "Case A", "number": "1"}]
+    client.get_cases.return_value = [{"name": "Case A", "number": "1", "id": "c1"}]
+    client.get_case_alarms.return_value = [
+        {"alarmId": "a1", "alarmRuleName": "Brute force", "riskScore": 85}
+    ]
 
     objects = connector._collect_intelligence()
     types = [o["type"] for o in objects]
 
-    assert "case-incident" in types
+    assert "incident" in types  # alarm -> Incident
+    assert "case-incident" in types  # case -> Case-Incident
     assert "identity" in types  # author appended
+
+    case = next(o for o in objects if o["type"] == "case-incident")
+    incident = next(o for o in objects if o["type"] == "incident")
+    assert incident["id"] in case["object_refs"]
 
 
 def test_collect_intelligence_empty():
@@ -35,6 +43,7 @@ def test_process_message_sends_bundle():
     helper.api.work.initiate_work.return_value = "work-1"
     helper.stix2_create_bundle.return_value = "bundle"
     client.get_cases.return_value = [{"name": "Case A", "number": "1"}]
+    client.get_case_alarms.return_value = []
 
     connector.process_message()
 

@@ -27,10 +27,25 @@ def _response(payload) -> MagicMock:
     return response
 
 
-def test_extract_cases_variants():
-    assert LogRhythmClient._extract_cases([{"id": 1}]) == [{"id": 1}]
-    assert LogRhythmClient._extract_cases({"cases": [{"id": 2}]}) == [{"id": 2}]
-    assert LogRhythmClient._extract_cases({"unexpected": 1}) == []
+def test_extract_list_variants():
+    assert LogRhythmClient._extract_list([{"id": 1}], ("cases",)) == [{"id": 1}]
+    assert LogRhythmClient._extract_list({"cases": [{"id": 2}]}, ("cases",)) == [
+        {"id": 2}
+    ]
+    assert LogRhythmClient._extract_list({"alarms": [{"id": 3}]}, ("alarms",)) == [
+        {"id": 3}
+    ]
+    assert LogRhythmClient._extract_list({"unexpected": 1}, ("cases",)) == []
+
+
+def test_get_case_alarms():
+    client = _make_client()
+    client.session.request.return_value = _response([{"alarmId": "a1"}])
+
+    alarms = client.get_case_alarms("c1")
+    assert alarms == [{"alarmId": "a1"}]
+    call = client.session.request.call_args
+    assert call.args[1].endswith("/lr-case-api/cases/c1/evidence/alarms")
 
 
 def test_get_cases_happy_path():
