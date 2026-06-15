@@ -98,6 +98,44 @@ def test_query_notifications_stops_on_short_page():
     assert client.cs.query_notifications.call_count == 1
 
 
+def test_query_notifications_empty_first_page():
+    client = _client()
+    client.cs.query_notifications.return_value = {
+        "status_code": 200,
+        "body": {"resources": [], "meta": {"pagination": {"total": 0}}},
+    }
+
+    ids = client.query_notifications(from_date="2026-05-01T00:00:00Z")
+
+    assert ids == []
+    assert client.cs.query_notifications.call_count == 1
+
+
+def test_query_notifications_stops_on_total_with_full_pages():
+    client = _client()
+    page1 = {
+        "status_code": 200,
+        "body": {
+            "resources": [f"id-{i}" for i in range(100)],
+            "meta": {"pagination": {"total": 200}},
+        },
+    }
+    page2 = {
+        "status_code": 200,
+        "body": {
+            "resources": [f"id-{i}" for i in range(100, 200)],
+            "meta": {"pagination": {"total": 200}},
+        },
+    }
+    client.cs.query_notifications.side_effect = [page1, page2]
+
+    ids = client.query_notifications(from_date="2026-05-01T00:00:00Z")
+
+    # Both pages are full (== limit), so the loop stops on the reported total.
+    assert len(ids) == 200
+    assert client.cs.query_notifications.call_count == 2
+
+
 def test_query_notifications_missing_total_continues_until_short_page():
     client = _client()
     full = {
