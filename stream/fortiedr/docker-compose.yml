@@ -1,0 +1,24 @@
+version: '3'
+services:
+  connector-fortiedr:
+    image: opencti/connector-fortiedr:rolling
+    environment:
+      # Generic parameters (connection with OpenCTI)
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=CHANGEME
+      # Common parameters for connectors of type STREAM
+      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_NAME=FortiEDR # optional (default: 'FortiEDR')
+      - CONNECTOR_SCOPE=fortiedr # optional (default: 'fortiedr')
+      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      - CONNECTOR_LIVE_STREAM_ID=CHANGEME # ID of the live stream created in the OpenCTI UI
+      - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true # optional (default: true)
+      - CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES=true # optional (default: true)
+      # FortiEDR parameters
+      - FORTIEDR_API_BASE_URL=CHANGEME # e.g. https://console.fortiedr.example.com
+      - FORTIEDR_ORGANIZATION= # optional, required on multi-tenant consoles
+      - FORTIEDR_USERNAME=CHANGEME
+      - FORTIEDR_PASSWORD=CHANGEME
+      - FORTIEDR_IP_SET_NAME=OpenCTI # optional (default: 'OpenCTI')
+      - FORTIEDR_SSL_VERIFY=true # optional (default: true)
+    restart: always
