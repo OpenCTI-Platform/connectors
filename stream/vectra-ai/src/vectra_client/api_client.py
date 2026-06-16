@@ -54,7 +54,7 @@ class VectraClient:
         if extracted is None:
             self.helper.connector_logger.debug(
                 "[API] Skipping indicator with unsupported pattern",
-                {"pattern": pattern},
+                meta={"pattern": pattern},
             )
             return False
 
@@ -143,7 +143,7 @@ class VectraClient:
         if feed_id is not None:
             self.helper.connector_logger.info(
                 "[API] Created Vectra threat feed",
-                {"name": self.config.feed_name, "feed_id": feed_id},
+                meta={"name": self.config.feed_name, "feed_id": feed_id},
             )
         return feed_id
 
@@ -152,7 +152,12 @@ class VectraClient:
         response = self._request(
             "post", self._endpoint("threatFeeds", feed_id), files=files
         )
-        return response is not None
+        if response is None:
+            return False
+        # The upload response body is not used; release the connection back to the
+        # Session pool instead of leaving it checked out until garbage collection.
+        response.close()
+        return True
 
     def _request(self, method: str, url: str, **kwargs) -> Optional[requests.Response]:
         """Perform an HTTP request with retry/backoff on rate limiting and transient errors.
@@ -171,8 +176,11 @@ class VectraClient:
                     delay = self.BACKOFF_FACTOR * (2**attempt)
                     self.helper.connector_logger.warning(
                         "[API] Rate limited, retrying",
-                        {"url": url, "delay": delay},
+                        meta={"url": url, "delay": delay},
                     )
+                    # Release the connection before sleeping/retrying: the body is
+                    # not consumed on this path.
+                    response.close()
                     time.sleep(delay)
                     continue
                 response.raise_for_status()
@@ -181,6 +189,10 @@ class VectraClient:
                 status_code = (
                     err.response.status_code if err.response is not None else None
                 )
+                # The error response body is not consumed; close it so the
+                # connection returns to the Session pool instead of being held.
+                if err.response is not None:
+                    err.response.close()
                 if (
                     status_code is not None
                     and 400 <= status_code < 500
@@ -188,19 +200,23 @@ class VectraClient:
                 ):
                     self.helper.connector_logger.error(
                         "[API] Client error, not retrying",
-                        {"url": url, "status_code": status_code, "error": str(err)},
+                        meta={
+                            "url": url,
+                            "status_code": status_code,
+                            "error": str(err),
+                        },
                     )
                     return None
                 self.helper.connector_logger.warning(
                     "[API] Request failed",
-                    {"url": url, "error": str(err)},
+                    meta={"url": url, "error": str(err)},
                 )
                 if attempt < self.REQUEST_ATTEMPTS - 1:
                     time.sleep(self.BACKOFF_FACTOR * (2**attempt))
             except requests.RequestException as err:
                 self.helper.connector_logger.warning(
                     "[API] Request failed",
-                    {"url": url, "error": str(err)},
+                    meta={"url": url, "error": str(err)},
                 )
                 if attempt < self.REQUEST_ATTEMPTS - 1:
                     time.sleep(self.BACKOFF_FACTOR * (2**attempt))
