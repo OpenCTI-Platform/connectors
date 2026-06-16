@@ -1,13 +1,12 @@
-import datetime
 import os
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import freezegun
 import pycti
 import pytest
 import stix2
 from pydantic_settings import SettingsConfigDict
-from shadowserver.connector import CustomConnector
+from shadowserver.dataprocessor import ShadowserverProcessor
 from shadowserver.settings import ConnectorSettings
 
 
@@ -15,23 +14,35 @@ class _ConnectorSettings(ConnectorSettings):
     model_config = SettingsConfigDict(env_file="", yaml_file="")
 
 
+def _create_processor(settings, helper, state=None):
+    """Helper to create a ShadowserverProcessor with injected dependencies."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    processor = ShadowserverProcessor()
+    st = state if state is not None else ExternalImportConnectorState()
+    processor.inject_dependencies(settings=settings, helper=helper, state=st)
+    processor.post_init()
+    return processor
+
+
 @pytest.mark.usefixtures("mock_config")
 def test_connector_initialization(mocked_helper) -> None:
-    connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
+    settings = _ConnectorSettings()
+    processor = _create_processor(settings, mocked_helper)
 
-    assert connector.config.shadowserver.api_key.get_secret_value() == "CHANGEME"
-    assert connector.config.shadowserver.api_secret.get_secret_value() == "CHANGEME"
-    assert connector.config.shadowserver.marking == "TLP:CLEAR"
-    assert connector.config.shadowserver.create_incident == True
-    assert connector.config.shadowserver.incident_priority == "P1"
-    assert connector.config.shadowserver.incident_severity == "high"
-    assert connector.config.shadowserver.report_types == [
+    assert processor._config.api_key.get_secret_value() == "CHANGEME"
+    assert processor._config.api_secret.get_secret_value() == "CHANGEME"
+    assert processor._config.marking == "TLP:CLEAR"
+    assert processor._config.create_incident == True
+    assert processor._config.incident_priority == "P1"
+    assert processor._config.incident_severity == "high"
+    assert processor._config.report_types == [
         "scan_http",
         "open_dns_resolvers",
     ]
-    assert connector.config.shadowserver.report_names == ["company"]
-    assert connector.config.shadowserver.initial_lookback == 45
-    assert connector.config.shadowserver.lookback == 7
+    assert processor._config.report_names == ["company"]
+    assert processor._config.initial_lookback == 45
+    assert processor._config.lookback == 7
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -43,11 +54,12 @@ def test_connector_initialization_create_incident(
 ) -> None:
     os.environ["SHADOWSERVER_CREATE_INCIDENT"] = create_incident
 
-    connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
+    settings = _ConnectorSettings()
+    processor = _create_processor(settings, mocked_helper)
 
-    assert connector.config.shadowserver.create_incident == expected
-    assert connector.config.shadowserver.incident_priority == "P1"
-    assert connector.config.shadowserver.incident_severity == "high"
+    assert processor._config.create_incident == expected
+    assert processor._config.incident_priority == "P1"
+    assert processor._config.incident_severity == "high"
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -56,127 +68,12 @@ def test_connector_initialization_default_incident(mocked_helper) -> None:
     os.environ.pop("SHADOWSERVER_INCIDENT_SEVERITY")
     os.environ.pop("SHADOWSERVER_INCIDENT_PRIORITY")
 
-    connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
+    settings = _ConnectorSettings()
+    processor = _create_processor(settings, mocked_helper)
 
-    assert connector.config.shadowserver.create_incident == False
-    assert connector.config.shadowserver.incident_priority == "P4"
-    assert connector.config.shadowserver.incident_severity == "low"
-
-
-@pytest.mark.usefixtures("mock_config")
-@freezegun.freeze_time("2025-07-01T12:00:00Z")
-@pytest.mark.parametrize(
-    "state,is_first_run,lookback_days,last_run_log,collected_data,expected_data_log,expect_send_bundle,date_str",
-    [
-        (
-            {},  # No state
-            True,
-            45,
-            "Test Connector connector has never run",
-            [([], "2025-07-01")],
-            "No data to send to OpenCTI for 2025-07-01.",
-            False,
-            "2025-07-01",
-        ),
-        (
-            {
-                "last_run": datetime.datetime(
-                    2025, 6, 18, 12, 0, 0, tzinfo=datetime.timezone.utc
-                ).timestamp()
-            },
-            False,
-            20,
-            "Test Connector connector last run @ 2025-06-18T12:00:00+00:00",
-            [([], "2025-07-01")],
-            "No data to send to OpenCTI for 2025-07-01.",
-            False,
-            "2025-07-01",
-        ),
-        (
-            {},  # No state with data
-            True,
-            45,
-            "Test Connector connector has never run",
-            [
-                (
-                    [
-                        stix2.Identity(
-                            id=pycti.Identity.generate_id(
-                                name="shadowserver", identity_class="organization"
-                            ),
-                            name="shadowserver",
-                        )
-                    ],
-                    "2025-07-01",
-                )
-            ],
-            "Sending 1 STIX objects to OpenCTI for 2025-07-01...",
-            True,
-            "2025-07-01",
-        ),
-    ],
-)
-def test_connector_run(
-    mocked_helper,
-    state,
-    is_first_run,
-    lookback_days,
-    last_run_log,
-    collected_data,
-    expected_data_log,
-    expect_send_bundle,
-    date_str,
-) -> None:
-    mocked_helper.get_state.return_value = state
-    connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
-    connector._collect_intelligence = MagicMock(return_value=collected_data)
-
-    connector.run()
-
-    # Logs
-    assert mocked_helper.connector_logger.info.call_args_list == [
-        call(
-            f"Connector initialized. Lookback: {lookback_days} days. First run: {str(is_first_run)}"
-        ),
-        call("Starting Test Connector connector..."),
-        call("Running connector...", meta={"connector_name": "Test Connector"}),
-        call(last_run_log),
-        call("Test Connector will run!"),
-        call(expected_data_log),
-        call(
-            "Test Connector connector successfully run, storing last_run as 2025-07-01T12:00:00+00:00"
-        ),
-        call("Last_run stored, next run in: 2 days, 0:00:00"),
-        call("Test Connector connector ended"),
-    ]
-
-    # State
-    assert mocked_helper.get_state.call_count == 3
-    mocked_helper.set_state.assert_called_once_with(
-        state={"last_run": "2025-07-01T12:00:00+00:00"}
-    )
-
-    # send_stix2_bundle conditional
-    if expect_send_bundle:
-        assert mocked_helper.send_stix2_bundle.call_args.kwargs == {
-            "work_id": "work-id",
-            "cleanup_inconsistent_bundle": True,
-        }
-    else:
-        mocked_helper.send_stix2_bundle.assert_not_called()
-
-    # Work
-    if expect_send_bundle:
-        mocked_helper.api.work.initiate_work.assert_called_once_with(
-            connector_id=mocked_helper.connect_id,
-            friendly_name=f"Test Connector run @ 2025-07-01T12:00:00 for {date_str}",
-        )
-        mocked_helper.api.work.to_processed.assert_called_once_with(
-            "work-id", f"Connector successfully run for {date_str}"
-        )
-    else:
-        mocked_helper.api.work.initiate_work.assert_not_called()
-        mocked_helper.api.work.to_processed.assert_not_called()
+    assert processor._config.create_incident == False
+    assert processor._config.incident_priority == "P4"
+    assert processor._config.incident_severity == "low"
 
 
 @pytest.mark.usefixtures("mock_config")
@@ -184,26 +81,37 @@ def test_connector_run(
 def test_collect_intelligence_passes_report_names_and_types(
     mocked_helper, mocker
 ) -> None:
-    """Test _collect_intelligence passes report_names and report_types to the API."""
-    connector = CustomConnector(helper=mocked_helper, config=_ConnectorSettings())
-    connector.lookback = 0  # Single iteration
+    """Test transform passes report_names and report_types to the API."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    # Override initial_lookback to 0 so only a single day is processed
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    state = ExternalImportConnectorState()
+    processor = _create_processor(settings, mocked_helper, state=state)
+
+    expected_stix = stix2.Identity(
+        id=pycti.Identity.generate_id(name="test", identity_class="organization"),
+        name="test",
+    )
 
     mock_api_instance = MagicMock()
     mock_api_instance.get_report_list.return_value = [
         {"id": "report-1", "report": "scan_http"}
     ]
-    mock_api_instance.get_stix_report.return_value = [
-        stix2.Identity(
-            id=pycti.Identity.generate_id(name="test", identity_class="organization"),
-            name="test",
-        )
-    ]
+    mock_api_instance.get_report_data.return_value = [{"ip": "1.2.3.4"}]
     mocker.patch(
-        "shadowserver.connector.ShadowserverAPI",
-        return_value=mock_api_instance,
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
     )
 
-    results = list(connector._collect_intelligence())
+    mock_transform = MagicMock()
+    mock_transform.return_value.get_stix_objects.return_value = [expected_stix]
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverStixTransformation", mock_transform
+    )
+
+    data = processor.collect()
+    results = list(processor.transform(data))
 
     # Verify report_names and report_types are passed to get_report_list
     mock_api_instance.get_report_list.assert_called_once_with(
@@ -212,16 +120,213 @@ def test_collect_intelligence_passes_report_names_and_types(
         type=["scan_http", "open_dns_resolvers"],
     )
 
-    # Verify log messages for both report_names and report_types
-    log_calls = [c.args[0] for c in mocked_helper.connector_logger.info.call_args_list]
-    assert any("Report names to retrieve: company." in msg for msg in log_calls)
-    assert any(
-        "Report types to retrieve: scan_http, open_dns_resolvers." in msg
-        for msg in log_calls
-    )
-
     # Verify results are yielded
     assert len(results) == 1
-    stix_objects, date_str = results[0]
-    assert date_str == "2025-07-01"
-    assert len(stix_objects) == 1
+    assert len(results[0]) == 1
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_transform_yields_per_report(mocked_helper, mocker) -> None:
+    """Test that transform yields one list per report (not accumulated per day)."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    # Override initial_lookback to 0 so only a single day is processed
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    state = ExternalImportConnectorState()
+    processor = _create_processor(settings, mocked_helper, state=state)
+
+    identity1 = stix2.Identity(
+        id=pycti.Identity.generate_id(name="test1", identity_class="organization"),
+        name="test1",
+    )
+    identity2 = stix2.Identity(
+        id=pycti.Identity.generate_id(name="test2", identity_class="organization"),
+        name="test2",
+    )
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = [
+        {"id": "report-1", "report": "scan_http"},
+        {"id": "report-2", "report": "open_dns_resolvers"},
+    ]
+    mock_api_instance.get_report_data.side_effect = [
+        [{"ip": "1.2.3.4"}],
+        [{"ip": "5.6.7.8"}],
+    ]
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
+    )
+
+    mock_transform = MagicMock()
+    mock_transform.side_effect = [
+        MagicMock(**{"get_stix_objects.return_value": [identity1]}),
+        MagicMock(**{"get_stix_objects.return_value": [identity2]}),
+    ]
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverStixTransformation", mock_transform
+    )
+
+    data = processor.collect()
+    results = list(processor.transform(data))
+
+    # Should yield 2 separate lists (one per report), not one combined list
+    assert len(results) == 2
+    all_stix = [item for bundle in results for item in bundle]
+    assert sorted(all_stix, key=lambda x: x.name) == sorted(
+        [identity1, identity2], key=lambda x: x.name
+    )
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_collect_skips_day_with_no_reports(mocked_helper, mocker) -> None:
+    """Test that collect skips days with no reports."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    processor = _create_processor(
+        settings, mocked_helper, state=ExternalImportConnectorState()
+    )
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = []
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
+    )
+
+    results = list(processor.collect())
+
+    assert results == []
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_collect_skips_report_with_empty_rows(mocked_helper, mocker) -> None:
+    """Test that collect skips reports whose download returns no rows."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    processor = _create_processor(
+        settings, mocked_helper, state=ExternalImportConnectorState()
+    )
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = [{"id": "report-1"}]
+    mock_api_instance.get_report_data.return_value = []
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
+    )
+
+    results = list(processor.collect())
+
+    assert results == []
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_collect_handles_download_exception(mocked_helper, mocker) -> None:
+    """Test that collect logs and skips a report when the download raises."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    processor = _create_processor(
+        settings, mocked_helper, state=ExternalImportConnectorState()
+    )
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = [{"id": "report-1"}]
+    mock_api_instance.get_report_data.side_effect = RuntimeError("network error")
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
+    )
+
+    results = list(processor.collect())
+
+    assert results == []
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_transform_skips_empty_stix_bundle(mocked_helper, mocker) -> None:
+    """Test that transform skips a report when ShadowserverStixTransformation returns no objects."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    processor = _create_processor(
+        settings, mocked_helper, state=ExternalImportConnectorState()
+    )
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = [{"id": "report-1"}]
+    mock_api_instance.get_report_data.return_value = [{"ip": "1.2.3.4"}]
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
+    )
+
+    mock_transform = MagicMock()
+    mock_transform.return_value.get_stix_objects.return_value = []
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverStixTransformation", mock_transform
+    )
+
+    data = processor.collect()
+    results = list(processor.transform(data))
+
+    assert results == []
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_transform_handles_exception(mocked_helper, mocker) -> None:
+    """Test that transform logs and skips a report when ShadowserverStixTransformation raises."""
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "0"
+    settings = _ConnectorSettings()
+    processor = _create_processor(
+        settings, mocked_helper, state=ExternalImportConnectorState()
+    )
+
+    mock_api_instance = MagicMock()
+    mock_api_instance.get_report_list.return_value = [{"id": "report-1"}]
+    mock_api_instance.get_report_data.return_value = [{"ip": "1.2.3.4"}]
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverAPI", return_value=mock_api_instance
+    )
+
+    mock_transform = MagicMock()
+    mock_transform.side_effect = RuntimeError("transform error")
+    mocker.patch(
+        "shadowserver.dataprocessor.ShadowserverStixTransformation", mock_transform
+    )
+
+    data = processor.collect()
+    results = list(processor.transform(data))
+
+    assert results == []
+
+
+@pytest.mark.usefixtures("mock_config")
+@freezegun.freeze_time("2025-07-01T12:00:00Z")
+def test_get_lookback_uses_last_run(mocked_helper) -> None:
+    """Test that _get_lookback computes from state.last_run when available."""
+    import datetime as dt
+
+    from connectors_sdk.states.states import ExternalImportConnectorState
+
+    os.environ["SHADOWSERVER_INITIAL_LOOKBACK"] = "45"
+    settings = _ConnectorSettings()
+    state = ExternalImportConnectorState()
+    state.last_run = dt.datetime(
+        2025, 6, 24, 12, 0, 0, tzinfo=dt.timezone.utc
+    )  # 7 days ago
+    processor = _create_processor(settings, mocked_helper, state=state)
+
+    # lookback config = 7, days since last_run = 7 → result = 14
+    assert processor._get_lookback() == 14
