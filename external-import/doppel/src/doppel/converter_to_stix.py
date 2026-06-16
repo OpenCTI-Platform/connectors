@@ -869,7 +869,9 @@ class ConverterToStix:
                     "enable_rft_case": self.enable_rft_case,
                 },
             )
-            return
+            # Always return a list so the caller's contract is consistent
+            # (it iterates the result); an empty list means "no RFT cases".
+            return []
 
         # Check if RFT case is already present or not with given alert_id
         alert_id = alert.get("id")
@@ -1121,7 +1123,7 @@ class ConverterToStix:
                             )
         except Exception as e:
             self.helper.connector_logger.warning(
-                "[DoppelConverter] Failed to update tags",
+                "[DoppelConverter] Failed to update labels",
                 meta={"alert_id": alert.get("id"), "error": str(e)},
             )
 
