@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/cofense-threathq_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The OpenCTI platform URL.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The token of the user who represents the connector in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Cofense ThreatHQ",
+      "description": "Name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "Cofense ThreatHQ"
+      ],
+      "description": "The scope or type of data the connector is importing, either a MIME type or Stix Object (for information only).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT5H",
+      "description": "Duration between two scheduled runs of the connector (ISO 8601 format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_TOKEN_USER": {
+      "description": "Token User associated with the user to access the Cofense ThreatHQ API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COFENSE_THREATHQ_TOKEN_PASSWORD": {
+      "description": "Token Password associated with the user to access the Cofense ThreatHQ API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "COFENSE_THREATHQ_IMPORT_START_DATE": {
+      "default": "P30D",
+      "description": "Start date of first import (ISO date format or ISO 8601 duration).",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_API_BASE_URL": {
+      "default": "https://www.threathq.com/apiv1/",
+      "description": "Base URL of the Cofense ThreatHQ API.",
+      "format": "uri",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_API_LEAKY_BUCKET_RATE": {
+      "default": 10,
+      "description": "Api leaky bucket rate.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_API_LEAKY_BUCKET_CAPACITY": {
+      "default": 10,
+      "description": "Api leaky bucket capacity.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_API_RETRY": {
+      "default": 5,
+      "description": "Maximum number of retry attempts in case of API failure.",
+      "type": "integer"
+    },
+    "COFENSE_THREATHQ_API_BACKOFF": {
+      "default": "PT30S",
+      "description": "Exponential backoff duration between API retries (ISO 8601 duration format).",
+      "format": "duration",
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_IMPACT_TO_EXCLUDE": {
+      "default": null,
+      "description": "List of impact types to exclude: none, moderate, major.",
+      "items": {
+        "enum": [
+          "none",
+          "moderate",
+          "major"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "COFENSE_THREATHQ_IMPORT_REPORT_PDF": {
+      "default": true,
+      "description": "Import Cofense ThreatHQ reports in pdf format.",
+      "type": "boolean"
+    },
+    "COFENSE_THREATHQ_TLP_LEVEL": {
+      "default": "amber+strict",
+      "description": "Traffic Light Protocol (TLP) level to apply on objects imported into OpenCTI.",
+      "enum": [
+        "clear",
+        "green",
+        "amber",
+        "amber+strict",
+        "red"
+      ],
+      "type": "string"
+    },
+    "COFENSE_THREATHQ_PROMOTE_OBSERVABLES_AS_INDICATORS": {
+      "default": true,
+      "description": "Boolean to promote observables into indicators.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "COFENSE_THREATHQ_TOKEN_USER",
+    "COFENSE_THREATHQ_TOKEN_PASSWORD"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/import-document-ai_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The URL of the OpenCTI platform.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The default admin token set in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ImportDocumentAI",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/pdf",
+        "text/plain",
+        "text/html",
+        "text/markdown"
+      ],
+      "description": "Comma-separated list of supported MIME types.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "Determines the verbosity of the logs. Options are debug, info, warn, or error.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_IMPORT_FILE",
+      "default": "INTERNAL_IMPORT_FILE",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enable/disable automatic import of files matching the scope.",
+      "type": "boolean"
+    },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": false,
+      "description": "If enabled, bundles are sent for validation before import.",
+      "type": "boolean"
+    },
+    "CONNECTOR_XTM_ONE_INTENT": {
+      "default": "cti.stix_harvester",
+      "description": "Intent used by XTM One to bind this connector to specific AI agents.",
+      "type": "string"
+    },
+    "IMPORT_DOCUMENT_AI_API_BASE_URL": {
+      "default": "https://importdoc.ariane.filigran.io",
+      "description": "[DEPRECATED] The URL of the Ariane extraction service running the AI model.",
+      "type": "string"
+    },
+    "IMPORT_DOCUMENT_AI_API_KEY": {
+      "default": null,
+      "description": "[DEPRECATED] The Enterprise Edition license certificate in PEM format.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "IMPORT_DOCUMENT_AI_CREATE_INDICATOR": {
+      "default": false,
+      "description": "If true, creates an Indicator for each extracted observable.",
+      "type": "boolean"
+    },
+    "IMPORT_DOCUMENT_AI_INCLUDE_RELATIONSHIPS": {
+      "default": true,
+      "description": "If false, removes all ML-predicted relationships from the imported bundle.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

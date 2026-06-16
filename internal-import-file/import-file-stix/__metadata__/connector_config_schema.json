@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/import-file-stix_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The URL of the OpenCTI platform.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The default admin token set in the OpenCTI platform.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ImportFileStix",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/json",
+        "text/xml"
+      ],
+      "description": "Supported MIME types (JSON for STIX 2.1, XML for STIX 1.2).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_IMPORT_FILE",
+      "default": "INTERNAL_IMPORT_FILE",
+      "type": "string"
+    },
+    "CONNECTOR_VALIDATE_BEFORE_IMPORT": {
+      "default": true,
+      "description": "Validate STIX bundles before importing.",
+      "type": "boolean"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Enable automatic import of uploaded STIX files.",
+      "type": "boolean"
+    },
+    "CONNECTOR_CONFIDENCE_LEVEL": {
+      "default": 15,
+      "description": "Default confidence level for imported entities (from 0 to 100).",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

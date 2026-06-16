@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/tweetfeed_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Tweetfeed",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "TWEETFEED_CONFIDENCE_LEVEL": {
+      "default": 25,
+      "description": "Confidence of the ingested data from 0-100.",
+      "type": "integer"
+    },
+    "TWEETFEED_CREATE_INDICATORS": {
+      "default": true,
+      "description": "True or False, enable the creation of indicators.",
+      "type": "boolean"
+    },
+    "TWEETFEED_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "True or False, enable the creation of observables.",
+      "type": "boolean"
+    },
+    "TWEETFEED_INTERVAL": {
+      "description": "In day when the connector will run.",
+      "type": "integer"
+    },
+    "TWEETFEED_ORG_DESCRIPTION": {
+      "description": "Organization description, which will be referred to data injected.",
+      "type": "string"
+    },
+    "TWEETFEED_ORG_NAME": {
+      "description": "Organization name, which will be referred to data injected.",
+      "type": "string"
+    },
+    "TWEETFEED_DAYS_BACK_IN_TIME": {
+      "default": 30,
+      "description": "Number of days to retrieve data back in time.",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "TWEETFEED_INTERVAL",
+    "TWEETFEED_ORG_DESCRIPTION",
+    "TWEETFEED_ORG_NAME"
+  ],
+  "additionalProperties": true
+}

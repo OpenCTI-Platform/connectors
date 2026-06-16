@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/vulncheck_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "VulnCheck Connector",
+      "description": "The name of the connector as it will appear in OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "vulnerability",
+        "malware",
+        "threat-actor",
+        "infrastructure",
+        "location",
+        "ip-addr",
+        "indicator",
+        "external-reference",
+        "software",
+        "report"
+      ],
+      "description": "The scope of data to import, a list of STIX object types.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_VULNCHECK_API_KEY": {
+      "description": "The API key for authenticating with VulnCheck's API.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "CONNECTOR_VULNCHECK_API_BASE_URL": {
+      "default": "https://api.vulncheck.com/v3",
+      "description": "The base URL for the VulnCheck API.",
+      "type": "string"
+    },
+    "CONNECTOR_VULNCHECK_DATA_SOURCES": {
+      "default": [
+        "vulncheck-kev",
+        "nist-nvd2"
+      ],
+      "description": "List of data sources to collect intelligence from.",
+      "items": {
+        "enum": [
+          "botnets",
+          "epss",
+          "exploits",
+          "initial-access",
+          "ipintel",
+          "nist-nvd2",
+          "ransomware",
+          "snort",
+          "suricata",
+          "threat-actors",
+          "vulncheck-kev",
+          "vulncheck-nvd2"
+        ],
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_VULNCHECK_API_KEY"
+  ],
+  "additionalProperties": true
+}

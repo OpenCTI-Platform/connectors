@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/export-report-pdf_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ExportReportPdf",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/pdf"
+      ],
+      "description": "The MIME type scope for PDF file exports.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_EXPORT_FILE",
+      "default": "INTERNAL_EXPORT_FILE",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_PRIMARY_COLOR": {
+      "default": null,
+      "description": "Primary color for the PDF output (hex format, e.g., #ff8c00).",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_SECONDARY_COLOR": {
+      "default": null,
+      "description": "Secondary color for the PDF output (hex format, e.g., #000000).",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_1": {
+      "default": null,
+      "description": "First line of company address (e.g., company name).",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_2": {
+      "default": null,
+      "description": "Second line of company address (e.g., street address).",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_COMPANY_ADDRESS_LINE_3": {
+      "default": null,
+      "description": "Third line of company address (e.g., city, state, country).",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_COMPANY_PHONE_NUMBER": {
+      "default": null,
+      "description": "Company phone number for the PDF footer.",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_COMPANY_EMAIL": {
+      "default": null,
+      "description": "Company email for the PDF footer.",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_COMPANY_WEBSITE": {
+      "default": null,
+      "description": "Company website URL for the PDF footer.",
+      "type": "string"
+    },
+    "EXPORT_REPORT_PDF_INDICATORS_ONLY": {
+      "default": false,
+      "description": "If true, only include observables that have indicator status in the report.",
+      "type": "boolean"
+    },
+    "EXPORT_REPORT_PDF_DEFANG_URLS": {
+      "default": true,
+      "description": "If true, replace http with hxxp in URL observables for safe sharing.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

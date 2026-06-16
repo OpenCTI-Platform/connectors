@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/import-file-misp_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "ImportFileMISP",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "application/json"
+      ],
+      "description": "Supported MIME type (JSON for MISP exports).",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_IMPORT_FILE",
+      "default": "INTERNAL_IMPORT_FILE",
+      "type": "string"
+    },
+    "MISP_IMPORT_FILE_IMPORT_FROM_DATE": {
+      "default": null,
+      "description": "Only import MISP events from this date onwards.",
+      "type": "string"
+    },
+    "MISP_IMPORT_FILE_CREATE_REPORTS": {
+      "default": true,
+      "description": "Create a Report entity for each MISP event.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_REPORT_TYPE": {
+      "default": "misp-event",
+      "description": "Report type to use for imported events.",
+      "type": "string"
+    },
+    "MISP_IMPORT_FILE_CREATE_INDICATORS": {
+      "default": true,
+      "description": "Create Indicator entities from MISP attributes.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_CREATE_OBSERVABLES": {
+      "default": true,
+      "description": "Create Observable entities from MISP attributes.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_CREATE_OBJECT_OBSERVABLES": {
+      "default": true,
+      "description": "Create observables from MISP objects.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_CREATE_TAGS_AS_LABELS": {
+      "default": true,
+      "description": "Convert MISP tags to OpenCTI labels.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_GUESS_THREAT_FROM_TAGS": {
+      "default": false,
+      "description": "Attempt to identify threats (malware, intrusion sets, etc.) from MISP tags when they are present in OpenCTI.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_AUTHOR_FROM_TAGS": {
+      "default": false,
+      "description": "Map creator:XX=YY tags to set report author.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_MARKINGS_FROM_TAGS": {
+      "default": false,
+      "description": "Extract TLP/PAP markings from MISP tags.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_IMPORT_TO_IDS_NO_SCORE": {
+      "default": 40,
+      "description": "Score to assign to indicators/observables when the attribute to_ids is false.",
+      "type": "integer"
+    },
+    "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT": {
+      "default": false,
+      "description": "Import unsupported observable types as Text observables.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_IMPORT_UNSUPPORTED_OBSERVABLES_AS_TEXT_TRANSPARENT": {
+      "default": true,
+      "description": "Use only the value for unsupported observables imported as text.",
+      "type": "boolean"
+    },
+    "MISP_IMPORT_FILE_IMPORT_WITH_ATTACHMENTS": {
+      "default": false,
+      "description": "Import PDF attachments from MISP attributes.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN"
+  ],
+  "additionalProperties": true
+}

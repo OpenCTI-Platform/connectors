@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/microsoft-graph-security-intel_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The URL of the OpenCTI platform.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "Microsoft Graph Security Intel",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "indicator"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "STREAM",
+      "default": "STREAM",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_ID": {
+      "description": "The Live Stream ID of the stream created in the OpenCTI interface.",
+      "type": "string"
+    },
+    "CONNECTOR_LIVE_STREAM_LISTEN_DELETE": {
+      "default": true,
+      "description": "Whether to listen to delete events from the live stream.",
+      "type": "boolean"
+    },
+    "CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES": {
+      "default": true,
+      "description": "Set to true unless synchronizing between OpenCTI platforms.",
+      "type": "boolean"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_TENANT_ID": {
+      "description": "Azure AD Tenant ID.",
+      "type": "string"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_ID": {
+      "description": "Azure AD Application Client ID.",
+      "type": "string"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_SECRET": {
+      "description": "Azure AD Application Client Secret.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_LOGIN_URL": {
+      "default": "https://login.microsoft.com",
+      "description": "Microsoft login URL.",
+      "type": "string"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_BASE_URL": {
+      "default": "https://graph.microsoft.com",
+      "description": "Microsoft Graph API base URL.",
+      "type": "string"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_RESOURCE_PATH": {
+      "default": "/beta/security/tiIndicators",
+      "description": "API endpoint path for tiIndicators.",
+      "type": "string"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_EXPIRE_TIME": {
+      "default": 30,
+      "description": "Days before indicators expire (when no valid_until is set).",
+      "type": "integer"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_TARGET_PRODUCT": {
+      "default": "Azure Sentinel",
+      "description": "Target Microsoft product for indicator submission.",
+      "enum": [
+        "Azure Sentinel",
+        "Microsoft Defender ATP"
+      ],
+      "type": "string"
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_ACTION": {
+      "default": null,
+      "description": "Action to apply to indicators. If not set, action is determined based on score.",
+      "enum": [
+        "unknown",
+        "allow",
+        "block",
+        "alert",
+        null
+      ]
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_TLP_LEVEL": {
+      "default": null,
+      "description": "Override TLP level for indicators.",
+      "enum": [
+        "unknown",
+        "white",
+        "green",
+        "amber",
+        "red",
+        null
+      ]
+    },
+    "MICROSOFT_GRAPH_SECURITY_INTEL_PASSIVE_ONLY": {
+      "default": false,
+      "description": "Silent/audit mode without user notification.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_LIVE_STREAM_ID",
+    "MICROSOFT_GRAPH_SECURITY_INTEL_TENANT_ID",
+    "MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_ID",
+    "MICROSOFT_GRAPH_SECURITY_INTEL_CLIENT_SECRET"
+  ],
+  "additionalProperties": true
+}
