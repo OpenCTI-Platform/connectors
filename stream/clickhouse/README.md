@@ -32,7 +32,7 @@ bus).
 
 ## Requirements
 
-- OpenCTI Platform >= 7.260609.0
+- OpenCTI Platform >= 7.260615.0
 - A reachable ClickHouse server with its HTTP interface enabled (default port 8123)
 - A ClickHouse user allowed to create databases/tables and insert rows
 
@@ -67,7 +67,7 @@ environment variables.
 | ------------ | -------------- | --------------------------- | ---------------- | --------- | ---------------------------------------------------------------- |
 | Base URL     | `base_url`     | `CLICKHOUSE_BASE_URL`       | /                | Yes       | Base URL of the ClickHouse HTTP interface.                       |
 | Username     | `username`     | `CLICKHOUSE_USERNAME`       | `default`        | No        | ClickHouse user name.                                            |
-| Password     | `password`     | `CLICKHOUSE_PASSWORD`       | /                | No        | ClickHouse user password.                                        |
+| Password     | `password`     | `CLICKHOUSE_PASSWORD`       | `""`             | No        | ClickHouse user password.                                        |
 | Database     | `database`     | `CLICKHOUSE_DATABASE`       | `default`        | No        | ClickHouse database to write to.                                 |
 | Table        | `table`        | `CLICKHOUSE_TABLE`          | `opencti_stream` | No        | Destination table for the stream events.                        |
 | Create table | `create_table` | `CLICKHOUSE_CREATE_TABLE`   | `true`           | No        | Create the database and table automatically on startup.         |
