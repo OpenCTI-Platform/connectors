@@ -1,3 +1,4 @@
+import sys
 import traceback
 
 from connector import ConnectorSettings, SwimlaneConnector
@@ -9,7 +10,7 @@ if __name__ == "__main__":
 
     - traceback.print_exc(): prints the traceback of the exception to stderr,
       which is very useful for debugging purposes.
-    - exit(1): terminates the program signalling that it did not complete
+    - sys.exit(1): terminates the program signalling that it did not complete
       successfully.
     """
     try:
@@ -20,4 +21,4 @@ if __name__ == "__main__":
         connector.run()
     except Exception:
         traceback.print_exc()
-        exit(1)
+        sys.exit(1)
