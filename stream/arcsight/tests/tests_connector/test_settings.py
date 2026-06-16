@@ -35,7 +35,7 @@ def test_settings_should_accept_valid_input():
 
     settings = FakeConnectorSettings()
 
-    assert isinstance(settings.arcsight, BaseConfigModel) is True
+    assert isinstance(settings.arcsight, BaseConfigModel)
     assert settings.arcsight.value_column == "value"
     assert settings.arcsight.ssl_verify is True
 
