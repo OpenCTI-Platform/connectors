@@ -42,20 +42,43 @@
             "Control Systems and Applications",
             "Equipment Under Control"
           ],
-          "intended_effects": ["Disruption", "Interference with ICS"],
-          "targeted_informations": ["Credentials", "IT Information"],
+          "intended_effects": [
+            "Disruption",
+            "Interference with ICS"
+          ],
+          "targeted_informations": [
+            "Credentials",
+            "IT Information"
+          ],
           "threat_categories": null,
-          "threat_scape": ["Cyber Physical"],
+          "threat_scape": [
+            "Cyber Physical"
+          ],
           "top_icon_md5": [],
           "recent_activity_relative_change": null,
-          "recent_activity_summary": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          "recent_activity_summary": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
           "counters": {
-            "domains": 0,
-            "files": 0,
-            "iocs": 0,
-            "ip_addresses": 0,
+            "domains": 1,
+            "files": 1,
+            "iocs": 4,
+            "ip_addresses": 1,
             "subscribers": 0,
-            "urls": 0
+            "urls": 1
           },
           "aggregations": {
             "domains": null,
