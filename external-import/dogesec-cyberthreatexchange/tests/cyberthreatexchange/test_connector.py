@@ -315,7 +315,9 @@ def test_retrieve_with_next_cursor(
     # Verify second call used the next URL
     mock_session.get.assert_has_calls(
         [
-            call("https://test-ctx-url/v1/test/?type=sometype", params={"page_size": 200}),
+            call(
+                "https://test-ctx-url/v1/test/?type=sometype", params={"page_size": 200}
+            ),
             call(
                 "https://test-ctx-url/v1/test/?type=sometype",
                 params={"page_size": 200, "cursor_key_x": "mycursor1"},
