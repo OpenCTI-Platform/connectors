@@ -75,9 +75,18 @@ class ArcSightIncidentsConnector:
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            # Do not log or forward str(err): the ESM auth flow passes the
+            # password/token as query parameters and a requests exception string
+            # usually embeds the full request URL, so it could leak credentials.
+            self.helper.connector_logger.error(
+                "[CONNECTOR] Run failed", meta={"error_type": type(err).__name__}
+            )
             if work_id:
-                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
+                self.helper.api.work.to_processed(
+                    work_id,
+                    f"ArcSight Incidents connector run failed: {type(err).__name__}",
+                    in_error=True,
+                )
 
     def run(self) -> None:
         self.helper.schedule_process(

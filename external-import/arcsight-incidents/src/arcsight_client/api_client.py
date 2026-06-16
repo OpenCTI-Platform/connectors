@@ -214,10 +214,14 @@ class ArcSightClient:
                 continue
 
             if response.status_code == 429 or response.status_code >= 500:
+                status_code = response.status_code
+                # Release the connection back to the Session pool: the body is
+                # never consumed on this retry/error path.
+                response.close()
                 if last_attempt:
                     self.helper.connector_logger.warning(
                         "[API] ArcSight request failed",
-                        meta={"path": path, "status_code": response.status_code},
+                        meta={"path": path, "status_code": status_code},
                     )
                     return None
                 time.sleep(self.BACKOFF_FACTOR * (2**attempt))
@@ -234,6 +238,7 @@ class ArcSightClient:
                         "error_type": type(err).__name__,
                     },
                 )
+                response.close()
                 return None
             return response
         return None

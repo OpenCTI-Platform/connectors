@@ -232,9 +232,13 @@ class ConverterToStix:
             if source_dt is not None
             else _FALLBACK_TIMESTAMP
         )
-        modified = self._to_iso(
-            case.get("modifiedTimestamp") or case.get("modifiedTime") or created
+        # Fall back to the already-stable created value (never "now") when the
+        # modified timestamp is missing or unparseable, so the deterministic
+        # Case-Incident id is not re-sent with a drifting modified each run.
+        modified_dt = self._parse_timestamp(
+            case.get("modifiedTimestamp") or case.get("modifiedTime")
         )
+        modified = self._format_iso(modified_dt) if modified_dt is not None else created
         severity = self._map_severity(
             case.get("consequenceSeverity", case.get("severity"))
         )

@@ -179,3 +179,19 @@ def test_case_incident_timestamps_use_stable_fallback_without_timestamp():
     case = converter.create_case_incident({"name": "x", "resourceid": "A"})
     assert str(case["created"]).startswith("1970-01-01")
     assert str(case["modified"]).startswith("1970-01-01")
+
+
+def test_case_incident_modified_falls_back_to_created_when_unparseable():
+    # A non-empty but unparseable modified timestamp must fall back to the stable
+    # created value (not "now"), so the deterministic id is not re-sent with a
+    # drifting modified each run.
+    converter = _converter()
+    case = converter.create_case_incident(
+        {
+            "name": "x",
+            "resourceid": "A",
+            "createdTimestamp": 1700000000000,
+            "modifiedTimestamp": "not-a-timestamp",
+        }
+    )
+    assert case["modified"] == case["created"]
