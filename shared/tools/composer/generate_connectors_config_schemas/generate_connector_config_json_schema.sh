@@ -256,6 +256,14 @@ else
     exit 1
 fi
 
+# Skip connectors with manually crafted JSON schema:
+# a schema already exists but CONNECTOR_CONFIG_DOC.md is absent → manual schema, skip update
+if [ -f "$metadata_path/connector_config_schema.json" ] && \
+   [ ! -f "$metadata_path/CONNECTOR_CONFIG_DOC.md" ]; then
+    echo -e "\033[33m⚠️  Warning: connector_config_schema.json exists but CONNECTOR_CONFIG_DOC.md is absent in $metadata_path. Schema was likely created manually, skipping update.\033[0m"
+    exit 0
+fi
+
 echo -e "\033[32mFound pydantic-settings and/or connectors-sdk in dependencies. Proceeding with schema generation...\033[0m"
 
 (

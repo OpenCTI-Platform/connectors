@@ -169,6 +169,15 @@ foreach ($connector_directory in $connector_directories) {
                 continue
             }
             
+            # Skip connectors with manually crafted JSON schema:
+            # a schema already exists but CONNECTOR_CONFIG_DOC.md is absent → manual schema, skip update
+            $schemaPath = Join-Path $connector_path "$CONNECTOR_METADATA_DIRECTORY\connector_config_schema.json"
+            $configDocPath = Join-Path $connector_path "$CONNECTOR_METADATA_DIRECTORY\CONNECTOR_CONFIG_DOC.md"
+            if ((Test-Path $schemaPath) -and (-not (Test-Path $configDocPath))) {
+                Write-Host "⚠️  Warning: connector_config_schema.json exists but CONNECTOR_CONFIG_DOC.md is absent in $connector_path\$CONNECTOR_METADATA_DIRECTORY. Schema was likely created manually, skipping update." -ForegroundColor Yellow
+                continue
+            }
+
             # Create a new PowerShell session to isolate the virtual environment
             $scriptBlock = {
                 param($ConnectorPath, $VENV_NAME)
