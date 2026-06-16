@@ -42,18 +42,34 @@ _VERDICT_RESULTS = {
 _HASH_PRIORITY = {"SHA-256": 3, "SHA-1": 2, "MD5": 1}
 
 
-def _tlp_clear() -> stix2.MarkingDefinition:
-    # OpenCTI models TLP:CLEAR as a custom statement marking, not as the legacy STIX
-    # TLP:WHITE; using TLP_WHITE would emit the wrong marking in the bundle.
+def _custom_tlp(definition: str) -> stix2.MarkingDefinition:
+    # OpenCTI models TLP:CLEAR and TLP:AMBER+STRICT as custom statement markings,
+    # not as the legacy STIX markings; using TLP_WHITE etc. would emit the wrong
+    # marking id in the bundle.
     return stix2.MarkingDefinition(
-        id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+        id=MarkingDefinition.generate_id("TLP", definition),
         definition_type="statement",
         definition={"statement": "custom"},
         custom_properties={
             "x_opencti_definition_type": "TLP",
-            "x_opencti_definition": "TLP:CLEAR",
+            "x_opencti_definition": definition,
         },
     )
+
+
+def _tlp_marking(definition: str):
+    """Return the stix2 MarkingDefinition for a TLP definition string, or None."""
+    standard = {
+        "TLP:WHITE": stix2.TLP_WHITE,
+        "TLP:GREEN": stix2.TLP_GREEN,
+        "TLP:AMBER": stix2.TLP_AMBER,
+        "TLP:RED": stix2.TLP_RED,
+    }
+    if definition in standard:
+        return standard[definition]
+    if definition in ("TLP:CLEAR", "TLP:AMBER+STRICT"):
+        return _custom_tlp(definition)
+    return None
 
 
 class PaloaltoWildfireConnector:
@@ -82,7 +98,7 @@ class PaloaltoWildfireConnector:
             identity_class="organization",
             description="File verdicts from Palo Alto Networks WildFire.",
         )
-        self.tlp = _tlp_clear()
+        self.tlp = _custom_tlp("TLP:CLEAR")
         self.stix_objects: list = []
 
     @staticmethod
@@ -230,10 +246,21 @@ class PaloaltoWildfireConnector:
             external_id=report.get("sha256") or result.get("hash"),
             description=f"WildFire verdict: {label}",
         )
-        # Inherit the source observable's markings so the enrichment never produces
-        # an unmarked (TLP-downgraded) Malware Analysis object; fall back to the
-        # connector default marking when the observable carries none.
-        markings = enriched_entity.get("object_marking_refs") or [self.tlp]
+        # Derive the marking from the source observable's OpenCTI markings.
+        # Enrichment messages carry them in opencti_entity["objectMarking"], not
+        # always as STIX object_marking_refs on the observable, so reading the STIX
+        # field would silently downgrade the Malware Analysis object to the default
+        # TLP. Include the resolved marking objects in the bundle so the SDO is
+        # correctly marked and self-contained (not stripped by
+        # cleanup_inconsistent_bundle). Fall back to TLP:CLEAR when none is present.
+        source_markings: list = []
+        for marking_definition in opencti_entity.get("objectMarking") or []:
+            if marking_definition.get("definition_type") == "TLP":
+                marking = _tlp_marking(marking_definition.get("definition"))
+                if marking is not None and marking not in source_markings:
+                    source_markings.append(marking)
+        if not source_markings:
+            source_markings = [self.tlp]
         malware_analysis = stix2.MalwareAnalysis(
             id=MalwareAnalysis.generate_id(result_name, "WildFire"),
             product="WildFire",
@@ -243,12 +270,12 @@ class PaloaltoWildfireConnector:
             result=_VERDICT_RESULTS.get(verdict, "unknown"),
             sample_ref=enriched_entity["id"],
             created_by_ref=self.identity.id,
-            object_marking_refs=markings,
+            object_marking_refs=[marking.id for marking in source_markings],
             external_references=[external_reference],
         )
         enriched_objects.append(malware_analysis)
 
-        return [self.identity, self.tlp] + enriched_objects
+        return [self.identity] + source_markings + enriched_objects
 
     def _process_observable(self, stix_entity: dict, opencti_entity: dict):
         self.helper.connector_logger.info(

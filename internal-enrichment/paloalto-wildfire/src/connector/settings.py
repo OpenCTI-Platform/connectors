@@ -41,10 +41,10 @@ class PaloaltoWildfireConfig(BaseConfigModel):
     submit_unknown: bool = Field(
         description=(
             "Submit unknown files (carried by the observable) to WildFire for analysis "
-            "when no verdict exists yet. Enabled by default so Artifacts uploaded to "
-            "OpenCTI are detonated."
+            "when no verdict exists yet. Disabled by default (opt-in): submission "
+            "uploads the sample to WildFire."
         ),
-        default=True,
+        default=False,
     )
     max_file_size: int = Field(
         description=(

@@ -67,8 +67,8 @@
       "type": "string"
     },
     "PALOALTO_WILDFIRE_SUBMIT_UNKNOWN": {
-      "default": true,
-      "description": "Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Enabled by default so Artifacts uploaded to OpenCTI are detonated.",
+      "default": false,
+      "description": "Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet. Disabled by default (opt-in): submission uploads the sample to WildFire.",
       "type": "boolean"
     },
     "PALOALTO_WILDFIRE_MAX_FILE_SIZE": {

@@ -6,7 +6,7 @@ enriches `StixFile` and `Artifact` observables with WildFire file verdicts.
 For each observable, the connector queries the WildFire public API by hash
 (MD5 / SHA-1 / SHA-256). When the hash is unknown and the observable carries an uploaded
 file, the connector submits it to WildFire for analysis and polls for the verdict
-(enabled by default via `submit_unknown`). When WildFire has a verdict, the connector:
+(opt-in via `submit_unknown`, disabled by default). When WildFire has a verdict, the connector:
 
 - maps the WildFire verdict (benign, grayware, phishing, malware, command-and-control)
   to an OpenCTI score and a `wildfire:<verdict>` label,
@@ -72,11 +72,11 @@ Below are the parameters you'll need to set for running the connector properly:
 | Parameter       | config.yml     | Docker environment variable | Default         | Mandatory | Description                                                                              |
 | --------------- | -------------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
 | Connector ID    | id             | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type           | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
-| Connector Name  | name           | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope          | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level      | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
-| Connector Auto  | connector_auto | `CONNECTOR_AUTO`            | True            | Yes       | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
+| Connector Type  | type           | `CONNECTOR_TYPE`            | INTERNAL_ENRICHMENT | Yes   | Should always be set to `INTERNAL_ENRICHMENT` for this connector.                        |
+| Connector Name  | name           | `CONNECTOR_NAME`            | Palo Alto Networks WildFire | No | Name of the connector.                                                          |
+| Connector Scope | scope          | `CONNECTOR_SCOPE`           | StixFile,Artifact | No      | The observable types the connector enriches.                                           |
+| Log Level       | log_level      | `CONNECTOR_LOG_LEVEL`       | error           | No        | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Connector Auto  | auto           | `CONNECTOR_AUTO`            | false           | No        | Must be `true` or `false` to enable or disable auto-enrichment of observables            |
 
 ### Connector extra parameters environment variables
 
@@ -86,7 +86,7 @@ Below are the parameters you'll need to set for the connector:
 | ------------ | ------------ | ---------------------------------- | ------------------------------------------------ | --------- | ---------------------------------------------------------------------------------------------------------- |
 | API key      | api_key      | `PALOALTO_WILDFIRE_API_KEY`        |                                                  | Yes       | The Palo Alto Networks WildFire API key.                                                                   |
 | API base URL | api_base_url | `PALOALTO_WILDFIRE_API_BASE_URL`   | `https://wildfire.paloaltonetworks.com/publicapi` | No        | The WildFire API base URL (use the appropriate cloud region or a WildFire appliance URL).                  |
-| Submit unknown | submit_unknown | `PALOALTO_WILDFIRE_SUBMIT_UNKNOWN` | `true`                                         | No        | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet.      |
+| Submit unknown | submit_unknown | `PALOALTO_WILDFIRE_SUBMIT_UNKNOWN` | `false`                                        | No        | Submit unknown files (carried by the observable) to WildFire for analysis when no verdict exists yet (opt-in). |
 | Max file size | max_file_size | `PALOALTO_WILDFIRE_MAX_FILE_SIZE` | `33554432`                                       | No        | Max size (bytes) of a file the connector downloads from OpenCTI and submits (32 MiB).                      |
 | Submission timeout | submission_timeout | `PALOALTO_WILDFIRE_SUBMISSION_TIMEOUT` | `600`                                 | No        | Max time (seconds) to wait for a submitted file's verdict.                                                 |
 | Max TLP      | max_tlp      | `PALOALTO_WILDFIRE_MAX_TLP`        | `TLP:AMBER`                                       | No        | Maximum TLP of the observable the connector is allowed to enrich.                                          |
@@ -137,14 +137,11 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+This is an internal-enrichment connector: it runs on demand rather than on a schedule. Once deployed it enriches a `StixFile` or `Artifact` observable when:
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+- a user triggers enrichment from the observable's **Enrichment** panel in the OpenCTI platform,
+- it is called from a playbook, or
+- `CONNECTOR_AUTO=true`, in which case it runs automatically whenever an in-scope observable is created or updated.
 
 ## Behavior
 
@@ -152,7 +149,7 @@ On each enrichment request the connector:
 
 1. Selects the strongest available hash on the observable (SHA-256 > SHA-1 > MD5).
 2. Calls `POST /get/verdict` on the WildFire API.
-3. If the hash is unknown and `submit_unknown` is enabled (default) and the observable
+3. If the hash is unknown and `submit_unknown` is enabled (opt-in; disabled by default) and the observable
    carries an uploaded file, the connector downloads the file from OpenCTI storage
    (enforcing `max_file_size` and rejecting empty files), submits it (`POST /submit/file`),
    and polls `POST /get/verdict` until the verdict is final (bounded by
