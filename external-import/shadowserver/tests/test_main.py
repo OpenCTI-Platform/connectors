@@ -2,8 +2,9 @@ from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from connectors_sdk import ExternalImportConnector
 from pycti import OpenCTIConnectorHelper
-from shadowserver import ConnectorSettings, CustomConnector
+from shadowserver import ConnectorSettings, ShadowserverProcessor
 
 
 @pytest.fixture
@@ -87,16 +88,19 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):
     """
-    Test that the connector's main class can be instantiated successfully:
-        - the connector's main class MUST be able to access env/config vars through `self.config`
-        - the connector's main class MUST be able to access `pycti` API through `self.helper`
+    Test that the connector can be instantiated with the SDK pattern:
+        - ExternalImportConnector MUST accept settings and a ShadowserverProcessor
+        - the connector MUST have a ShadowserverProcessor in its data_processors
 
     :param mock_opencti_connector_helper: `OpenCTIConnectorHelper` is mocked during this test to avoid any external calls to OpenCTI API
     """
     settings = StubConnectorSettings()
-    helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+    processor = ShadowserverProcessor()
+    connector = ExternalImportConnector(
+        settings=settings,
+        data_processors=[processor],
+    )
 
-    connector = CustomConnector(config=settings, helper=helper)
-
-    assert connector.config == settings
-    assert connector.helper == helper
+    assert connector.settings == settings
+    assert len(connector.data_processors) == 1
+    assert isinstance(connector.data_processors[0], ShadowserverProcessor)
