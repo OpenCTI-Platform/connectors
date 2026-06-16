@@ -312,7 +312,7 @@ def test_retrieve_with_next_cursor(
 
     assert len(batches) == 3
     assert sum(map(len, batches)) == 5
-    # Verify second call used the next URL
+    # Verify subsequent calls used the next cursor token
     mock_session.get.assert_has_calls(
         [
             call(

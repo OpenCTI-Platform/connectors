@@ -107,16 +107,16 @@ class CyberThreatExchangeConnector:
             if to_yield:
                 yield to_yield
             objects_count += len(data[list_key])
-            if cursor := data.get("next"):
-                if cursor.startswith("http://") or cursor.startswith("https://"):
-                    url = data["next"]
+            if next_cursor := data.get("next"):
+                if next_cursor.startswith(("https://", "http://")):
+                    url = next_cursor
+                    params.clear()
                 else:
-                    params.update({cursor_key: cursor})
+                    params.update({cursor_key: next_cursor})
             elif objects_count < data.get("total_results_count", 0):
                 params.update(page=data["page_number"] + 1)
             else:
                 break
-        return []
 
     def retrieve(self, path, list_key, params: dict = None):
         all_objects = []
