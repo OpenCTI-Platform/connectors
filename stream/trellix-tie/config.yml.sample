@@ -6,7 +6,7 @@ connector:
   type: 'STREAM'
   id: 'ChangeMe'
   name: 'Trellix TIE' # optional (default: 'Trellix TIE')
-  scope: 'trellix-tie' # optional
+  scope: 'trellix-tie' # required
   log_level: 'error' # optional (default: 'error')
   live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
   live_stream_listen_delete: true # optional (default: true)

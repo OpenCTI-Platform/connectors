@@ -21,9 +21,12 @@ class TrellixTieConnector:
         self.comment = self.config.trellix_tie.comment
 
     def check_stream_id(self) -> None:
+        """Raise a ValueError if the live stream ID is missing or left as a placeholder."""
+        stream_id = self.helper.connect_live_stream_id
         if (
-            self.helper.connect_live_stream_id is None
-            or self.helper.connect_live_stream_id == "ChangeMe"
+            stream_id is None
+            or not str(stream_id).strip()
+            or str(stream_id).strip().lower() == "changeme"
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
@@ -42,15 +45,14 @@ class TrellixTieConnector:
         )
         self.helper.connector_logger.info(
             "[TIE] File reputation set in Trellix TIE",
-            {"name": name, "trust_level": self.trust_level},
+            meta={"name": name, "trust_level": self.trust_level},
         )
 
     def process_message(self, msg) -> None:
         try:
-            self.check_stream_id()
             data = json.loads(msg.data)["data"]
-        except Exception:
-            raise ValueError("Cannot process the message")
+        except (json.JSONDecodeError, KeyError, TypeError) as err:
+            raise ValueError(f"Cannot process the message: {err}") from err
 
         try:
             if msg.event in ("create", "update"):
@@ -61,8 +63,11 @@ class TrellixTieConnector:
                 )
         except TrellixTieAPIError as err:
             self.helper.connector_logger.error(
-                "[TIE] Failed to set reputation", {"error": str(err)}
+                "[TIE] Failed to set reputation", meta={"error": str(err)}
             )
 
     def run(self) -> None:
+        # Validate the live stream id up front so a placeholder/blank id fails fast
+        # at startup, before entering the blocking listen_stream loop.
+        self.check_stream_id()
         self.helper.listen_stream(message_callback=self.process_message)
