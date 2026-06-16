@@ -100,6 +100,10 @@ class ArcSightClient:
                 "post", path, json=self._build_body(operation, token, value)
             )
             if response is not None:
+                # The entry-management response body is not used; release the
+                # connection back to the Session pool instead of leaving it
+                # checked out until garbage collection.
+                response.close()
                 return True
             # token may have expired, force a re-login on the next attempt
             self._token = None
@@ -137,10 +141,14 @@ class ArcSightClient:
                 continue
 
             if response.status_code == 429 or response.status_code >= 500:
+                status_code = response.status_code
+                # Release the connection back to the Session pool before
+                # sleeping/returning: the body is never consumed on this path.
+                response.close()
                 if last_attempt:
                     self.helper.connector_logger.warning(
                         "[API] ArcSight request failed",
-                        meta={"path": path, "status_code": response.status_code},
+                        meta={"path": path, "status_code": status_code},
                     )
                     return None
                 time.sleep(self.BACKOFF_FACTOR * (2**attempt))
@@ -157,6 +165,7 @@ class ArcSightClient:
                         "error_type": type(err).__name__,
                     },
                 )
+                response.close()
                 return None
             return response
         return None
