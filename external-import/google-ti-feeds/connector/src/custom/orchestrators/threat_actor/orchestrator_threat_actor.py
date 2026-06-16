@@ -103,7 +103,9 @@ class OrchestratorThreatActor(BaseOrchestrator):
                     subentities = await self.client_api.fetch_subentities(
                         entity_name="entity_id",
                         entity_id=threat_actor.id,
-                        subentity_types=subentity_types,
+                        subentity_types=self._filter_subentity_types(
+                            subentity_types, threat_actor
+                        ),
                     )
 
                     rel_summary = ", ".join(
