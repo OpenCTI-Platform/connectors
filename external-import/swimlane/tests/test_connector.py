@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+import pytest
 from connector.connector import SwimlaneConnector
 
 
@@ -53,6 +54,21 @@ def test_process_message_handles_errors():
 
     helper.connector_logger.error.assert_called()
     # the work must be finalized in error rather than reported as a success
+    helper.api.work.to_processed.assert_called_once()
+    assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
+
+
+def test_process_message_interrupt_marks_work_in_error():
+    # An interrupted run (KeyboardInterrupt/SystemExit after the work is
+    # initiated) must finalize the work in error, not as a success.
+    connector, helper, client = _make_connector()
+    helper.get_state.return_value = {}
+    helper.api.work.initiate_work.return_value = "work-1"
+    client.get_records.side_effect = KeyboardInterrupt()
+
+    with pytest.raises(SystemExit):
+        connector.process_message()
+
     helper.api.work.to_processed.assert_called_once()
     assert helper.api.work.to_processed.call_args.kwargs["in_error"] is True
 

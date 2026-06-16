@@ -55,6 +55,10 @@ class SwimlaneConnector:
             current_state["last_run"] = now.isoformat()
             self.helper.set_state(current_state)
         except (KeyboardInterrupt, SystemExit):
+            # An interrupted run did not complete, so record it: otherwise the
+            # finally block would finalize the work as a successful run and hide
+            # the partial/aborted processing.
+            error_message = "Swimlane connector run interrupted"
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
         except Exception as err:
