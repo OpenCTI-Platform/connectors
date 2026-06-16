@@ -703,7 +703,7 @@ class ConverterToStix:
                 meta={
                     "alert_id": alert_id,
                     "indicator_standard_id": indicator["standard_id"],
-                    "setting revoked to": revoke_indicator,
+                    "revoked": revoke_indicator,
                 },
             )
 
@@ -866,7 +866,7 @@ class ConverterToStix:
             self.helper.connector_logger.info(
                 "[Handle RFT Case] RFT Case Creation is not enabled by User.",
                 meta={
-                    "RFT Case Creation enable": self.enable_rft_case,
+                    "enable_rft_case": self.enable_rft_case,
                 },
             )
             return
@@ -919,7 +919,7 @@ class ConverterToStix:
                 meta={
                     "alert_id": alert_id,
                     "case_ref": rft_case.get("standard_id") or rft_case.get("id"),
-                    "setting revoked to": revoke_rft_case,
+                    "revoked": revoke_rft_case,
                 },
             )
 

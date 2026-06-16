@@ -63,7 +63,7 @@ def test_convert_alerts_to_stix_telco_product(converter):
         "product": "telco",
         "entity": "+1234567890",
         "queue_state": "actioned",
-        "score": 90,
+        "score": 0.9,
         "created_at": "2026-06-11T09:00:00Z",
     }
 
@@ -98,7 +98,7 @@ def test_convert_alerts_to_stix_domains_product_with_ip(converter):
         "product": "domains",
         "entity": "malicious-domain.com",
         "queue_state": "taken_down",
-        "score": 95,
+        "score": 0.95,
         "entity_content": {
             "root_domain": {"domain": "malicious-domain.com", "ip_address": "1.2.3.4"}
         },
@@ -133,7 +133,7 @@ def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
         "product": "domains",
         "entity": "reverted-domain.com",
         "queue_state": "resolved",  # Not a takedown state -> triggers reversion
-        "score": 40,
+        "score": 0.4,
         "created_at": "2026-06-11T09:00:00Z",
     }
 
@@ -178,7 +178,7 @@ def test_convert_alerts_to_stix_with_optional_cases_enabled(converter):
         "product": "domains",
         "entity": "case-handling-domain.com",
         "queue_state": "actioned",
-        "score": 85,
+        "score": 0.85,
         "created_at": "2026-06-11T09:00:00Z",
     }
 
@@ -206,7 +206,7 @@ def _domains_alert(alert_id="alert_x", queue_state="actioned", **extra):
         "product": "domains",
         "entity": "example-domain.com",
         "queue_state": queue_state,
-        "score": 80,
+        "score": 0.8,
         "created_at": "2026-06-11T09:00:00Z",
     }
     alert.update(extra)
