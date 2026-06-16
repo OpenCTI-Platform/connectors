@@ -51,13 +51,11 @@ class MicrosoftDefenderIncidentsConfig(BaseConfigModel):
     import_start_date: DatetimeFromIsoString = Field(
         description=(
             "Start date for importing incidents in ISO 8601 format "
-            "(e.g. '2025-01-01T00:00:00Z' or a timedelta ie: 'P30D'). "
+            "(e.g. '2025-01-01T00:00:00Z'). "
             "Used only on the first run; subsequent runs use the stored state."
         ),
         # `default_factory` is used to set a dynamic default value (datetime) at runtime
-        default_factory=lambda: parse_iso_string("P30D"),  # 30 days ago
-        # but a fixed default value (ISO string) must be used in the schema for documentation purposes
-        json_schema_extra={"default": "P30D"},
+        default=parse_iso_string("2025-01-01T00:00:00Z"),
     )
     api_base_url: str = Field(
         description="Microsoft Graph API base URL.",
