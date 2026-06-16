@@ -200,14 +200,20 @@ def test_create_knowledge_file(stub_connector, file_message):
     # The WildFire report file type is mapped onto the STIX File mime_type.
     assert enriched["mime_type"] == WILDFIRE_RESULT["report"]["filetype"]
 
-    # The Malware Analysis object must carry markings (inherited or default) so the
-    # enrichment never produces an unmarked object.
+    # The Malware Analysis object must carry the SOURCE observable's marking
+    # (TLP:AMBER from the message's objectMarking), and that marking object must be
+    # included in the bundle so the SDO is correctly marked and self-contained -
+    # not silently downgraded to the connector default.
     malware_analysis = next(
         o
         for o in result
         if not isinstance(o, dict) and getattr(o, "type", None) == "malware-analysis"
     )
-    assert malware_analysis["object_marking_refs"]
+    assert stix2.TLP_AMBER.id in malware_analysis["object_marking_refs"]
+    marking_ids = {
+        o.id for o in result if getattr(o, "type", None) == "marking-definition"
+    }
+    assert stix2.TLP_AMBER.id in marking_ids
 
 
 def test_create_knowledge_artifact(stub_connector, artifact_message):
@@ -320,7 +326,10 @@ def test_submit_skips_on_download_error(stub_connector):
     stub_connector.client.submit_file.assert_not_called()
 
 
-def test_submit_unknown_defaults_to_true():
+def test_submit_unknown_defaults_to_false():
+    # File submission/detonation uploads the sample to WildFire, so it is opt-in:
+    # it must stay disabled unless explicitly enabled (issue #6730 scopes the first
+    # version to verdict-by-hash only).
     class _Settings(ConnectorSettings):
         @classmethod
         def _load_config_dict(cls, _, handler):
@@ -332,4 +341,4 @@ def test_submit_unknown_defaults_to_true():
                 }
             )
 
-    assert _Settings().paloalto_wildfire.submit_unknown is True
+    assert _Settings().paloalto_wildfire.submit_unknown is False
