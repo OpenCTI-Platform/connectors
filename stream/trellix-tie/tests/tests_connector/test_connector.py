@@ -1,6 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
 from connector.connector import TrellixTieConnector
 from trellix_tie_client import TrellixTieAPIError
 
@@ -78,16 +79,27 @@ def test_reputation_error_is_logged():
     helper.connector_logger.error.assert_called()
 
 
-def test_missing_stream_id_raises():
+@pytest.mark.parametrize(
+    "live_stream_id",
+    [None, "ChangeMe", "CHANGEME", "changeme", "  ChangeMe  ", "", "   "],
+)
+def test_check_stream_id_raises_when_missing(live_stream_id):
+    connector, helper, _ = _make_connector()
+    helper.connect_live_stream_id = live_stream_id
+
+    with pytest.raises(ValueError):
+        connector.check_stream_id()
+
+
+def test_run_aborts_when_stream_id_missing():
+    # A placeholder/blank stream id must fail fast at startup, before listen_stream.
     connector, helper, _ = _make_connector()
     helper.connect_live_stream_id = "ChangeMe"
 
-    try:
-        connector.process_message(_msg("create", _INDICATOR))
-        raised = False
-    except ValueError:
-        raised = True
-    assert raised
+    with pytest.raises(ValueError):
+        connector.run()
+
+    helper.listen_stream.assert_not_called()
 
 
 def test_run_listens_stream():

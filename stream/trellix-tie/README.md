@@ -15,7 +15,7 @@ threat intelligence platforms.
 
 Table of Contents
 
-- [OpenCTI Trellix TIE Connector](#opencti-stream-connector-trellix-tie)
+- [OpenCTI Trellix TIE Connector](#opencti-trellix-tie-connector)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -43,7 +43,7 @@ the OpenDXL TIE client.
 ### Requirements
 
 - Python >= 3.11
-- OpenCTI Platform >= 6.8.13
+- OpenCTI Platform >= 6.8.12
 - A DXL broker and an ePO-provisioned OpenDXL client configuration (`dxlclient.config`
   with the broker list and client certificate), authorized to publish to the
   `TIE Server Set Enterprise Reputation` topic
@@ -71,7 +71,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Parameter                             | config.yml                  | Docker environment variable             | Default         | Mandatory | Description                                                                                                                                            |
 | ------------------------------------- | --------------------------- | --------------------------------------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Connector ID                          | id                          | `CONNECTOR_ID`                          | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                                                                              |
-| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | EXTERNAL_IMPORT | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
+| Connector Type                        | type                        | `CONNECTOR_TYPE`                        | STREAM          | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
 | Connector Name                        | name                        | `CONNECTOR_NAME`                        |                 | Yes       | Name of the connector.                                                                                                                                 |
 | Connector Scope                       | scope                       | `CONNECTOR_SCOPE`                       |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
 | Log Level                             | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
@@ -135,15 +135,9 @@ python3 main.py
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a
-regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+This is a stream connector: once deployed it continuously listens to the configured OpenCTI live stream and pushes file-hash indicator events to Trellix TIE in real time, so it requires no scheduled run or manual interaction.
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
-
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+The live stream it consumes is set by `CONNECTOR_LIVE_STREAM_ID` (the id of a live stream created under `Data management` -> `Data sharing` -> `Live streams` in the OpenCTI platform). Make sure that stream is started and that its filters include the indicators you want to publish to TIE.
 
 ## Behavior
 
@@ -166,8 +160,7 @@ Notes:
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger.{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
 
 <!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
 

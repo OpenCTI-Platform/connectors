@@ -9,7 +9,7 @@ services:
       # Common parameters for connectors of type STREAM
       - CONNECTOR_ID=CHANGEME
       - CONNECTOR_NAME=Trellix TIE # optional (default: 'Trellix TIE')
-      - CONNECTOR_SCOPE=trellix-tie # optional
+      - CONNECTOR_SCOPE=trellix-tie # required
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_LIVE_STREAM_ID=CHANGEME # ID of the live stream created in the OpenCTI UI
       - CONNECTOR_LIVE_STREAM_LISTEN_DELETE=true  # optional (default: true)
