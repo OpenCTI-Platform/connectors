@@ -274,7 +274,7 @@ def test_retrieve_with_next_url(
     mock_session.get.assert_has_calls(
         [
             call("https://test-ctx-url/v1/test/", params={"page_size": 200}),
-            call("https://test-ctx-url/v1/test/?page=2", params={"page_size": 200}),
+            call("https://test-ctx-url/v1/test/?page=2", params={}),
         ]
     )
 
