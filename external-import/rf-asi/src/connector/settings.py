@@ -47,6 +47,10 @@ class RfAsiConfig(BaseConfigModel):
         description="API base URL.",
         default="https://api.securitytrails.com/v2",
     )
+    api_v1_base_url: HttpUrl = Field(
+        description="v1 API base URL for exposure history activity.",
+        default="https://api.securitytrails.com/v1",
+    )
     api_key: SecretStr = Field(description="API key for authentication.")
     project_id: str = Field(description="ASI project ID to fetch exposures from.")
     tlp_level: Literal[

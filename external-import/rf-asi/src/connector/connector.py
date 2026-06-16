@@ -1,11 +1,12 @@
 import sys
+import time
 from datetime import datetime, timezone
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from rf_asi_client import RfAsiClient
-from rf_asi_client.api_client import HttpRetrySettings
+from rf_asi_client.api_client import HttpRetrySettings, RfAsiClientConfig
 
 
 class RfAsiConnector:
@@ -55,12 +56,15 @@ class RfAsiConnector:
 
         self.client = RfAsiClient(
             self.helper,
-            base_url=self.config.rf_asi.api_base_url,
-            api_key=self.config.rf_asi.api_key.get_secret_value(),
-            retry=HttpRetrySettings(
-                max_attempts=self.config.rf_asi.retry_max_attempts,
-                initial_seconds=self.config.rf_asi.retry_initial_seconds,
-                max_seconds=self.config.rf_asi.retry_max_seconds,
+            RfAsiClientConfig(
+                base_url=self.config.rf_asi.api_base_url,
+                api_key=self.config.rf_asi.api_key.get_secret_value(),
+                api_v1_base_url=self.config.rf_asi.api_v1_base_url,
+                retry=HttpRetrySettings(
+                    max_attempts=self.config.rf_asi.retry_max_attempts,
+                    initial_seconds=self.config.rf_asi.retry_initial_seconds,
+                    max_seconds=self.config.rf_asi.retry_max_seconds,
+                ),
             ),
         )
         self.converter_to_stix = ConverterToStix(
@@ -70,6 +74,11 @@ class RfAsiConnector:
             portal_base_url=self.config.rf_asi.portal_base_url,
         )
 
+    @staticmethod
+    def _is_initial_sync(state: dict | None) -> bool:
+        """Return True until the first full v2 exposure list cycle completes."""
+        return state is None or "last_fetch_time" not in state
+
     def _exposure_filters(self) -> dict[str, str]:
         rf = self.config.rf_asi
         if rf.filter_severity_min is not None:
@@ -78,11 +87,12 @@ class RfAsiConnector:
             return {"filter_severity_exact": rf.filter_severity_exact}
         return {}
 
-    def _collect_intelligence(
-        self, exposures_cursor: str | None = None
+    def _collect_initial_intelligence(
+        self,
+        exposures_cursor: str | None = None,
     ) -> tuple[list, str | None]:
         """
-        Collect intelligence from the source and convert into STIX object.
+        Collect intelligence from the v2 exposures list during initial sync.
 
         :param exposures_cursor: Optional pagination cursor when run_limit is set.
         :return: Tuple of STIX objects and optional next cursor for the next batch.
@@ -121,7 +131,9 @@ class RfAsiConnector:
         )
 
         for exposure in exposures:
-            signature_id = exposure["signature"]["id"]
+            signature = exposure["signature"]
+            signature_id = signature["id"]
+
             assets_data = self.client.get_exposure_assets(
                 project_id=self.config.rf_asi.project_id,
                 signature_id=signature_id,
@@ -146,7 +158,119 @@ class RfAsiConnector:
             stix_objects.append(self.converter_to_stix.author)
             stix_objects.append(self.converter_to_stix.tlp_marking)
 
-        return stix_objects, next_cursor if self.config.rf_asi.run_limit else None
+        return (
+            stix_objects,
+            next_cursor if self.config.rf_asi.run_limit else None,
+        )
+
+    def _collect_incremental_intelligence(
+        self,
+        state: dict,
+    ) -> list:
+        """
+        Collect exposure deltas from v1 history activity during incremental sync.
+
+        Added rules are enriched via v2 get_exposure_assets. Removed rules emit an
+        incident-only cleared update without asset re-fetch.
+        """
+        stix_objects: list = []
+
+        added_rules, removed_rules = self.client.get_exposure_history(
+            project_id=self.config.rf_asi.project_id,
+            start=state["last_fetch_time"],
+        )
+
+        self.helper.connector_logger.info(
+            "[CONNECTOR] Fetched exposure history from ASI API",
+            {
+                "added_count": len(added_rules),
+                "removed_count": len(removed_rules),
+            },
+        )
+
+        for rule in added_rules:
+            exposure_summary = ConverterToStix.history_rule_to_exposure_summary(rule)
+            signature = exposure_summary["signature"]
+            signature_id = signature["id"]
+
+            assets_data = self.client.get_exposure_assets(
+                project_id=self.config.rf_asi.project_id,
+                signature_id=signature_id,
+                limit=self.config.rf_asi.page_limit,
+            )
+
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Fetched exposure assets for added history rule",
+                {
+                    "signature_id": signature_id,
+                    "asset_count": len(assets_data.get("asset_exposures") or []),
+                },
+            )
+
+            sdk_objects = self.converter_to_stix.build_exposure_objects(
+                exposure_summary,
+                assets_data,
+            )
+            stix_objects.extend(obj.to_stix2_object() for obj in sdk_objects)
+
+        for rule in removed_rules:
+            rule_id = rule.get("id")
+            if not rule_id:
+                continue
+
+            cleared_incident = self.converter_to_stix.build_cleared_incident(rule)
+            stix_objects.append(cleared_incident.to_stix2_object())
+
+        if stix_objects:
+            stix_objects.append(self.converter_to_stix.author)
+            stix_objects.append(self.converter_to_stix.tlp_marking)
+
+        return stix_objects
+
+    def _collect_intelligence(
+        self, exposures_cursor: str | None = None
+    ) -> tuple[list, str | None]:
+        """
+        Backward-compatible wrapper for initial sync collection.
+
+        :param exposures_cursor: Optional pagination cursor when run_limit is set.
+        :return: Tuple of STIX objects and optional next cursor for the next batch.
+        """
+        stix_objects, next_cursor = self._collect_initial_intelligence(exposures_cursor)
+        return stix_objects, next_cursor
+
+    def _persist_sync_state(
+        self,
+        now: datetime,
+        *,
+        advance_fetch_time: bool,
+        exposures_cursor: str | None | bool,
+    ) -> str:
+        """Update connector state after a successful run."""
+        current_timestamp = int(datetime.timestamp(now))
+        self.helper.connector_logger.debug(
+            "Getting current state and update it with last run of the connector",
+            {"current_timestamp": current_timestamp},
+        )
+        current_state = self.helper.get_state() or {}
+        current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
+        last_run_datetime = datetime.fromtimestamp(
+            current_timestamp, tz=timezone.utc
+        ).strftime("%Y-%m-%d %H:%M:%S")
+        current_state["last_run"] = current_state_datetime
+        current_state.pop("known_exposures", None)
+
+        if advance_fetch_time:
+            current_state["last_fetch_time"] = int(time.time())
+
+        if exposures_cursor is not False:
+            if exposures_cursor:
+                current_state["exposures_cursor"] = exposures_cursor
+            else:
+                current_state.pop("exposures_cursor", None)
+
+        self.helper.set_state(current_state)
+        return last_run_datetime
 
     def process_message(self) -> None:
         """
@@ -161,15 +285,12 @@ class RfAsiConnector:
         try:
             # Get the current state
             now = datetime.now(timezone.utc)
-            current_timestamp = int(datetime.timestamp(now))
-            current_state = self.helper.get_state()
+            current_state = self.helper.get_state() or {}
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
-
+            if "last_run" in current_state:
                 self.helper.connector_logger.info(
                     "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": last_run},
+                    {"last_run_datetime": current_state["last_run"]},
                 )
             else:
                 self.helper.connector_logger.info(
@@ -189,16 +310,23 @@ class RfAsiConnector:
                 {"connector_name": self.helper.connect_name},
             )
 
-            # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-            exposures_cursor = None
-            if self.config.rf_asi.run_limit is not None:
-                if current_state is not None:
+            initial_sync = self._is_initial_sync(current_state)
+            next_cursor: str | None = None
+
+            if initial_sync:
+                exposures_cursor = None
+                if self.config.rf_asi.run_limit is not None:
                     exposures_cursor = current_state.get("exposures_cursor")
 
-            stix_objects, next_cursor = self._collect_intelligence(exposures_cursor)
+                stix_objects, next_cursor = self._collect_initial_intelligence(
+                    exposures_cursor,
+                )
+                initial_cycle_complete = (
+                    next_cursor is None or self.config.rf_asi.run_limit is None
+                )
+            else:
+                stix_objects = self._collect_incremental_intelligence(current_state)
+                initial_cycle_complete = False
 
             if stix_objects:
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
@@ -212,32 +340,17 @@ class RfAsiConnector:
                     "Sending STIX objects to OpenCTI...",
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            # Store the current timestamp as a last run of the connector
-            self.helper.connector_logger.debug(
-                "Getting current state and update it with last run of the connector",
-                {"current_timestamp": current_timestamp},
-            )
-            current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.fromtimestamp(
-                current_timestamp, tz=timezone.utc
-            ).strftime("%Y-%m-%d %H:%M:%S")
-            if current_state:
-                current_state["last_run"] = current_state_datetime
+            # Persist state only after a successful collection/send cycle.
+            if self.config.rf_asi.run_limit is not None and initial_sync:
+                exposures_cursor_to_store: str | None | bool = next_cursor
             else:
-                current_state = {"last_run": current_state_datetime}
+                exposures_cursor_to_store = False
 
-            if self.config.rf_asi.run_limit is not None:
-                if next_cursor:
-                    current_state["exposures_cursor"] = next_cursor
-                else:
-                    current_state.pop("exposures_cursor", None)
-
-            self.helper.set_state(current_state)
+            last_run_datetime = self._persist_sync_state(
+                now,
+                advance_fetch_time=not initial_sync or initial_cycle_complete,
+                exposures_cursor=exposures_cursor_to_store,
+            )
 
             message = (
                 f"{self.helper.connect_name} connector successfully run, storing last_run as "

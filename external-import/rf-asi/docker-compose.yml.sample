@@ -14,6 +14,7 @@ services:
       - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-rf-asi
       - RF_ASI_API_BASE_URL=https://api.securitytrails.com/v2 # optional (default: 'https://api.securitytrails.com/v2')
+      #- RF_HISTORY_API_BASE_URL=https://api.securitytrails.com/v1 #optional (default: 'https://api.securitytrails.com/v1')
       - RF_ASI_API_KEY=CHANGEME
       - RF_ASI_PROJECT_ID=CHANGEME
       - RF_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')

@@ -16,23 +16,53 @@ from connectors_sdk.models import (
 from connectors_sdk.models.base_identified_entity import BaseIdentifiedEntity
 from connectors_sdk.models.base_observable_entity import BaseObservableEntity
 from connectors_sdk.models.enums import RelationshipType
+from pycti import Incident as PyctiIncident
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
+from pydantic import Field, HttpUrl
 from stix2.v21 import Incident as Stix2Incident
 
 AUTHOR_NAME = "Recorded Future ASI"
 SOURCE_NAME = "Recorded Future ASI"
 INCIDENT_TYPE = "Attack Surface Monitoring"
 LABEL_ADDED = "rf-asi:added"
+LABEL_CLEARED = "rf-asi:cleared"
+EXPOSURE_INCIDENT_ID_ANCHOR = "recorded-future-asi-exposure"
 
 SEVERITY_MAP = {
     "critical": "critical",
+    "high": "critical",
     "moderate": "medium",
     "informational": "low",
     "unknown": "low",
 }
 
 ObservableType = Literal["ipv4", "ipv6", "domain"]
+
+
+class ExposureIncident(Incident):
+    """Incident whose STIX ID is keyed on RF exposure id for stable added/cleared updates."""
+
+    exposure_id: str = Field(default="", exclude=True)
+
+    def to_stix2_object(self) -> Stix2Incident:
+        """Make stix object with a deterministic exposure-id-based identifier."""
+        return Stix2Incident(
+            id=PyctiIncident.generate_id(
+                self.exposure_id,
+                EXPOSURE_INCIDENT_ID_ANCHOR,
+            ),
+            name=self.name,
+            description=self.description,
+            labels=self.labels,
+            allow_custom=True,
+            source=self.source,
+            severity=self.severity,
+            incident_type=self.incident_type,
+            first_seen=self.first_seen,
+            last_seen=self.last_seen,
+            objective=self.objective,
+            **self._common_stix2_properties(),
+        )
 
 
 class ConverterToStix:
@@ -111,16 +141,64 @@ class ConverterToStix:
         )
         return datetime.now(timezone.utc)
 
-    def _build_incident(self, signature: dict, asset_count: int | None) -> Incident:
+    @staticmethod
+    def history_rule_to_exposure_summary(rule: dict) -> dict:
+        """Map a v1 history rule to a v2-like exposure summary."""
+        metadata = rule.get("rule_metadata") or {}
+        entity_counts = metadata.get("entity_counts") or {}
+        domains = entity_counts.get("domains") or 0
+        ips = entity_counts.get("ips") or 0
+        return {
+            "signature": {
+                "id": rule.get("id"),
+                "name": rule.get("name"),
+                "description": rule.get("description"),
+                "severity": rule.get("classification"),
+            },
+            "asset_count": domains + ips,
+        }
+
+    def _build_incident(
+        self,
+        signature: dict,
+        asset_count: int | None,
+        *,
+        label: str = LABEL_ADDED,
+    ) -> ExposureIncident:
         """Build an SDK Incident from an RF ASI exposure signature."""
-        return Incident(
+        exposure_id = signature.get("id") or ""
+        return ExposureIncident(
+            exposure_id=exposure_id,
             name=signature.get("name") or "Unknown exposure",
             description=self._build_description(signature, asset_count),
             created=self._resolve_created(signature),
             incident_type=INCIDENT_TYPE,
             severity=self.map_severity(signature.get("severity")),
             source=SOURCE_NAME,
-            labels=[LABEL_ADDED],
+            labels=[label],
+            author=self._author,
+            markings=[self._tlp_marking],
+            external_references=[self.build_external_reference(signature)],
+        )
+
+    def build_cleared_incident(self, rule: dict) -> ExposureIncident:
+        """
+        Build an incident-only STIX entity for a cleared exposure.
+
+        Uses the v1 history removed rule payload and the same exposure-id-based
+        incident ID as the prior ``rf-asi:added`` update.
+        """
+        exposure_id = rule.get("id") or ""
+        name = rule.get("name") or "Unknown exposure"
+        signature = {"id": exposure_id, "name": name}
+        return ExposureIncident(
+            exposure_id=exposure_id,
+            name=name,
+            created=datetime.now(timezone.utc),
+            incident_type=INCIDENT_TYPE,
+            severity=self.map_severity(rule.get("classification")),
+            source=SOURCE_NAME,
+            labels=[LABEL_CLEARED],
             author=self._author,
             markings=[self._tlp_marking],
             external_references=[self.build_external_reference(signature)],
@@ -245,6 +323,8 @@ class ConverterToStix:
         self,
         exposure_summary: dict,
         exposure_assets_response: dict,
+        *,
+        label: str = LABEL_ADDED,
     ) -> list[BaseIdentifiedEntity]:
         """
         Build SDK entities for one exposure, including related observables and CVEs.
@@ -260,7 +340,7 @@ class ConverterToStix:
         """
         list_signature = exposure_summary.get("signature") or {}
         asset_count = exposure_summary.get("asset_count")
-        incident = self._build_incident(list_signature, asset_count)
+        incident = self._build_incident(list_signature, asset_count, label=label)
 
         objects: list[BaseIdentifiedEntity] = [incident]
         relationships: list[Relationship] = []

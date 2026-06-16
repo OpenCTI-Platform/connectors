@@ -40,6 +40,7 @@ def make_stub_connector_settings():
     def _make(**rf_asi_overrides: Any) -> ConnectorSettings:
         rf_asi_config = {
             "api_base_url": "https://api.securitytrails.com/v2",
+            "api_v1_base_url": "https://api.securitytrails.com/v1",
             "api_key": "test-api-key",
             "project_id": "test-project-id",
             "tlp_level": "amber+strict",
@@ -129,3 +130,9 @@ def all_exposure_assets(
             + exposure_assets_page_last["data"]["asset_exposures"]
         ),
     }
+
+
+@pytest.fixture
+def risk_history_activity() -> dict[str, Any]:
+    """Exposure history activity API response with added and removed rules."""
+    return load_fixture("risk_history_activity.json")

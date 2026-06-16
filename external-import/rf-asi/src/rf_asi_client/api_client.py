@@ -21,6 +21,16 @@ class HttpRetrySettings:
     max_seconds: float = 60
 
 
+@dataclass(frozen=True)
+class RfAsiClientConfig:
+    """Connection settings for the Recorded Future ASI API client."""
+
+    base_url: HttpUrl
+    api_key: str
+    api_v1_base_url: HttpUrl = "https://api.securitytrails.com/v1"
+    retry: HttpRetrySettings | None = None
+
+
 def _retry_after_or_exponential_wait(
     exponential_wait: wait_base,
     max_seconds: float,
@@ -48,28 +58,25 @@ class RfAsiClient:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        base_url: HttpUrl,
-        api_key: str,
-        retry: HttpRetrySettings | None = None,
+        config: RfAsiClientConfig,
     ):
         """
         Initialize the client with necessary configuration.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            base_url (HttpUrl): The external API base URL.
-            api_key (str): The API key to authenticate the connector to the external API.
-            retry (HttpRetrySettings | None): HTTP retry/backoff settings.
+            config (RfAsiClientConfig): API connection and retry settings.
         """
-        retry_settings = retry or HttpRetrySettings()
+        retry_settings = config.retry or HttpRetrySettings()
         self.helper = helper
-        self.base_url = str(base_url).rstrip("/")
+        self.base_url = str(config.base_url).rstrip("/")
+        self.api_v1_base_url = str(config.api_v1_base_url).rstrip("/")
         self.retry_max_attempts = retry_settings.max_attempts
         self.retry_initial_seconds = retry_settings.initial_seconds
         self.retry_max_seconds = retry_settings.max_seconds
         headers = {
             "accept": "application/json",
-            "apikey": api_key,
+            "apikey": config.api_key,
         }
         self.session = requests.Session()
         self.session.headers.update(headers)
@@ -170,6 +177,58 @@ class RfAsiClient:
         pagination = (payload.get("meta") or {}).get("pagination") or {}
         next_cursor = pagination.get("next_cursor")
         return signature, asset_exposures, next_cursor
+
+    @staticmethod
+    def _parse_history_response(payload: dict) -> tuple[list[dict], list[dict]]:
+        """
+        Extract added and removed rules from a history activity response.
+
+        Iterates all snapshots in ``data[]`` and deduplicates by rule ``id`` within
+        each list (last wins) to handle overlapping snapshot windows.
+
+        :param payload: JSON body from the exposure history activity endpoint.
+        :return: Tuple of added rule dicts and removed rule dicts.
+        """
+        added_by_id: dict[str, dict] = {}
+        removed_by_id: dict[str, dict] = {}
+
+        for snapshot in payload.get("data") or []:
+            if not isinstance(snapshot, dict):
+                continue
+            for rule in snapshot.get("added_rules") or []:
+                if isinstance(rule, dict):
+                    rule_id = rule.get("id")
+                    if rule_id:
+                        added_by_id[rule_id] = rule
+            for rule in snapshot.get("removed_rules") or []:
+                if isinstance(rule, dict):
+                    rule_id = rule.get("id")
+                    if rule_id:
+                        removed_by_id[rule_id] = rule
+
+        return list(added_by_id.values()), list(removed_by_id.values())
+
+    def get_exposure_history(
+        self,
+        project_id: str,
+        *,
+        start: int | None = None,
+    ) -> tuple[list[dict], list[dict]]:
+        """
+        Fetch exposure rule changes from the v1 history activity endpoint.
+
+        :param project_id: ASI project identifier.
+        :param start: Optional Unix timestamp (seconds) for incremental sync.
+        :return: Tuple of added rule dicts and removed rule dicts.
+        :raises requests.RequestException: On non-2xx responses or transport errors.
+        """
+        url = f"{self.api_v1_base_url}/asi/rules/history/{project_id}/activity"
+        params: dict | None = None
+        if start is not None:
+            params = {"start": start}
+
+        response = self._request_data(url, params=params)
+        return self._parse_history_response(response.json())
 
     def list_exposures_page(
         self,

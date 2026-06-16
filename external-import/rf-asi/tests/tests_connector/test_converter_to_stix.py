@@ -3,8 +3,10 @@ from unittest.mock import MagicMock
 
 import pytest
 from connector.converter_to_stix import (
+    EXPOSURE_INCIDENT_ID_ANCHOR,
     INCIDENT_TYPE,
     LABEL_ADDED,
+    LABEL_CLEARED,
     SOURCE_NAME,
     ConverterToStix,
 )
@@ -48,6 +50,72 @@ def test_map_severity(rf_severity, expected_severity):
     assert ConverterToStix.map_severity(rf_severity) == expected_severity
 
 
+def test_map_severity_maps_v1_high_to_critical():
+    assert ConverterToStix.map_severity("high") == "critical"
+
+
+def test_history_rule_to_exposure_summary_maps_fields(risk_history_activity):
+    rule = risk_history_activity["data"][0]["added_rules"][0]
+
+    summary = ConverterToStix.history_rule_to_exposure_summary(rule)
+
+    assert summary["signature"]["id"] == "sig-001"
+    assert summary["signature"]["name"] == "Exposed admin panel"
+    assert summary["signature"]["description"] == (
+        "An administrative interface is publicly accessible."
+    )
+    assert summary["signature"]["severity"] == "high"
+    assert summary["asset_count"] == 3
+
+
+def test_build_cleared_incident_uses_cleared_label_and_rule_fields(
+    converter, risk_history_activity
+):
+    rule = risk_history_activity["data"][0]["removed_rules"][0]
+
+    incident = converter.build_cleared_incident(rule).to_stix2_object()
+
+    assert incident.labels == [LABEL_CLEARED]
+    assert incident.name == "Open port 22"
+    assert incident.external_references[0]["external_id"] == "sig-002"
+    assert incident.severity == "medium"
+
+
+def test_build_cleared_incident_id_matches_prior_added_incident(
+    converter, exposures_list_page
+):
+    exposure = exposures_list_page["data"][1]
+    removed_rule = {
+        "id": exposure["signature"]["id"],
+        "name": exposure["signature"]["name"],
+        "classification": exposure["signature"]["severity"],
+    }
+
+    added_incident = converter.exposure_to_incident(exposure)
+    cleared_incident = converter.build_cleared_incident(removed_rule).to_stix2_object()
+
+    assert cleared_incident.id == added_incident.id
+
+
+def test_build_exposure_objects_accepts_custom_label(
+    converter, exposures_list_page, all_exposure_assets
+):
+    exposure = exposures_list_page["data"][0]
+    assets_without_vulns = {
+        "signature": {"vulnerabilities": []},
+        "asset_exposures": [],
+    }
+
+    sdk_objects = converter.build_exposure_objects(
+        exposure,
+        assets_without_vulns,
+        label=LABEL_CLEARED,
+    )
+
+    incident = next(obj for obj in sdk_objects if isinstance(obj, Incident))
+    assert incident.labels == [LABEL_CLEARED]
+
+
 def test_exposure_to_incident_maps_fields(converter, exposures_list_page):
     exposure = exposures_list_page["data"][0]
     signature = exposure["signature"]
@@ -65,8 +133,8 @@ def test_exposure_to_incident_maps_fields(converter, exposures_list_page):
     assert incident.created is not None
     assert "2024-06-01" in str(incident.created)
     assert incident.id == PyctiIncident.generate_id(
-        name=signature["name"],
-        created=incident.created,
+        signature["id"],
+        EXPOSURE_INCIDENT_ID_ANCHOR,
     )
 
 

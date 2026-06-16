@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from rf_asi_client.api_client import HttpRetrySettings, RfAsiClient
+from rf_asi_client.api_client import HttpRetrySettings, RfAsiClient, RfAsiClientConfig
 
 
 def _mock_response(payload: dict) -> MagicMock:
@@ -27,18 +27,21 @@ def _error_response(status_code: int, headers: dict | None = None) -> MagicMock:
 def _client(opencti_helper, **kwargs) -> RfAsiClient:
     defaults = {
         "base_url": "https://api.securitytrails.com/v2",
+        "api_v1_base_url": "https://api.securitytrails.com/v1",
         "api_key": "test-api-key",
         "retry": HttpRetrySettings(max_attempts=3),
     }
     defaults.update(kwargs)
-    return RfAsiClient(opencti_helper, **defaults)
+    return RfAsiClient(opencti_helper, RfAsiClientConfig(**defaults))
 
 
 def test_client_sets_apikey_header(opencti_helper):
     client = RfAsiClient(
         opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="secret-api-key",
+        RfAsiClientConfig(
+            base_url="https://api.securitytrails.com/v2",
+            api_key="secret-api-key",
+        ),
     )
 
     assert client.session.headers["apikey"] == "secret-api-key"
@@ -48,11 +51,7 @@ def test_client_sets_apikey_header(opencti_helper):
 def test_list_exposures_page_returns_items_and_cursor(
     opencti_helper, exposures_list_page
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -73,11 +72,7 @@ def test_list_exposures_page_returns_items_and_cursor(
 def test_list_exposures_follows_cursor_pagination(
     opencti_helper, exposures_list_page, exposures_list_page_last, all_exposure_items
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -106,11 +101,7 @@ def test_list_exposures_follows_cursor_pagination(
 
 
 def test_list_exposures_passes_filters(opencti_helper, exposures_list_page_last):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -132,11 +123,7 @@ def test_list_exposures_passes_filters(opencti_helper, exposures_list_page_last)
 def test_list_exposures_returns_partial_results_on_mid_pagination_failure(
     opencti_helper, exposures_list_page
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     failing_response = MagicMock()
     failing_response.raise_for_status.side_effect = requests.HTTPError(
@@ -157,11 +144,7 @@ def test_list_exposures_returns_partial_results_on_mid_pagination_failure(
 
 
 def test_list_exposures_raises_on_first_page_failure(opencti_helper):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     failing_response = MagicMock()
     failing_response.raise_for_status.side_effect = requests.HTTPError(
@@ -183,11 +166,7 @@ def test_parse_list_response_handles_missing_fields():
 def test_get_exposure_assets_page_returns_signature_assets_and_cursor(
     opencti_helper, exposure_assets_page
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -216,11 +195,7 @@ def test_get_exposure_assets_follows_cursor_pagination(
     exposure_assets_page_last,
     all_exposure_assets,
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -252,11 +227,7 @@ def test_get_exposure_assets_follows_cursor_pagination(
 def test_get_exposure_assets_returns_partial_results_on_mid_pagination_failure(
     opencti_helper, exposure_assets_page
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     failing_response = MagicMock()
     failing_response.raise_for_status.side_effect = requests.HTTPError(
@@ -294,11 +265,7 @@ def test_parse_assets_response_handles_missing_fields():
 def test_list_exposures_batch_run_limit_one_preserves_cursor(
     opencti_helper, exposures_list_page
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -321,11 +288,7 @@ def test_list_exposures_batch_run_limit_one_preserves_cursor(
 def test_list_exposures_batch_run_limit_two_from_cursor_completes_cycle(
     opencti_helper, exposures_list_page_last
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -354,11 +317,7 @@ def test_list_exposures_batch_run_limit_three_spans_both_pages(
     exposures_list_page_last,
     all_exposure_items,
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -453,11 +412,7 @@ def test_request_data_does_not_retry_401(opencti_helper):
 def test_list_exposures_batch_stops_at_first_page_when_run_limit_reached(
     opencti_helper, exposures_list_page
 ):
-    client = RfAsiClient(
-        opencti_helper,
-        base_url="https://api.securitytrails.com/v2",
-        api_key="test-api-key",
-    )
+    client = _client(opencti_helper)
 
     with patch.object(
         client.session,
@@ -475,3 +430,94 @@ def test_list_exposures_batch_stops_at_first_page_when_run_limit_reached(
     assert next_cursor == "cursor-page-2"
     assert mock_get.call_count == 1
     assert mock_get.call_args.kwargs["params"] == {"limit": 2}
+
+
+def test_get_exposure_history_parses_added_and_removed(
+    opencti_helper, risk_history_activity
+):
+    client = _client(opencti_helper)
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(risk_history_activity),
+    ) as mock_get:
+        added_rules, removed_rules = client.get_exposure_history("test-project-id")
+
+    snapshot = risk_history_activity["data"][0]
+    assert added_rules == snapshot["added_rules"]
+    assert removed_rules == snapshot["removed_rules"]
+    assert mock_get.call_count == 1
+    assert mock_get.call_args.args[0] == (
+        "https://api.securitytrails.com/v1/asi/rules/history/test-project-id/activity"
+    )
+    assert mock_get.call_args.kwargs["params"] is None
+
+
+def test_get_exposure_history_passes_start_unix_param(
+    opencti_helper, risk_history_activity
+):
+    client = _client(opencti_helper)
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(risk_history_activity),
+    ) as mock_get:
+        client.get_exposure_history("test-project-id", start=1717200000)
+
+    assert mock_get.call_args.kwargs["params"] == {"start": 1717200000}
+
+
+def test_get_exposure_history_uses_configured_api_v1_base_url(
+    opencti_helper, risk_history_activity
+):
+    client = _client(
+        opencti_helper,
+        api_v1_base_url="https://custom.example.com/v1",
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        return_value=_mock_response(risk_history_activity),
+    ) as mock_get:
+        client.get_exposure_history("test-project-id")
+
+    assert mock_get.call_args.args[0] == (
+        "https://custom.example.com/v1/asi/rules/history/test-project-id/activity"
+    )
+
+
+def test_parse_history_response_deduplicates_by_id_last_wins():
+    payload = {
+        "data": [
+            {
+                "added_rules": [
+                    {"id": "sig-001", "name": "first version"},
+                ],
+                "removed_rules": [],
+            },
+            {
+                "added_rules": [
+                    {"id": "sig-001", "name": "second version"},
+                ],
+                "removed_rules": [
+                    {"id": "sig-002", "name": "removed once"},
+                    {"id": "sig-002", "name": "removed twice"},
+                ],
+            },
+        ]
+    }
+
+    added_rules, removed_rules = RfAsiClient._parse_history_response(payload)
+
+    assert added_rules == [{"id": "sig-001", "name": "second version"}]
+    assert removed_rules == [{"id": "sig-002", "name": "removed twice"}]
+
+
+def test_parse_history_response_handles_missing_fields():
+    added_rules, removed_rules = RfAsiClient._parse_history_response({})
+
+    assert added_rules == []
+    assert removed_rules == []
