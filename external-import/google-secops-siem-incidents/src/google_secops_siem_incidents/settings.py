@@ -9,7 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from google_secops_siem_incidents.utils.enums import Severity
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 from pydantic import Field, field_validator
 
 
@@ -81,7 +81,17 @@ class GoogleSecOpsConfig(BaseConfigModel):
         description=(
             "Minimum severity level to import. All alerts at or above this "
             "level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). "
-            "When not set, all severities are imported."
+            "When not set, all severities are imported. "
+            "Alerts with unknown severity are always imported."
+        ),
+    )
+    priority_filter: Priority | None = Field(
+        None,
+        description=(
+            "Minimum priority level to import. All alerts at or above this "
+            "level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). "
+            "When not set, all priorities are imported. "
+            "Alerts with unknown priority are always imported."
         ),
     )
 

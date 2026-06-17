@@ -11,7 +11,9 @@ from google_secops_siem_incidents.mappers.email_address_mapper import (
 )
 from google_secops_siem_incidents.mappers.file_mapper import map_files
 from google_secops_siem_incidents.mappers.hostname_mapper import map_hostname
-from google_secops_siem_incidents.mappers.incident_mapper import Severity, map_incident
+from google_secops_siem_incidents.mappers.incident_mapper import (
+    map_incident,
+)
 from google_secops_siem_incidents.mappers.ip_mapper import map_ip_addresses
 from google_secops_siem_incidents.mappers.relationship_mapper import map_relationships
 from google_secops_siem_incidents.mappers.url_mapper import map_urls
@@ -29,6 +31,7 @@ class ConverterToStix:
         tlp_level: str,
         secops_base_url: str | None = None,
         severity_filter: Severity | None = None,
+        priority_filter: Priority | None = None,
     ) -> None:
         """Initialise the converter with the OpenCTI helper and TLP level.
 
@@ -37,12 +40,14 @@ class ConverterToStix:
             tlp_level: TLP level string (e.g. 'amber').
             secops_base_url: Optional base URL for Google SecOps UI external references.
             severity_filter: Minimum Severity threshold, or None to accept all.
+            priority_filter: Minimum Priority threshold, or None to accept all.
         """
         self.helper = helper
         self.author = OrganizationAuthor(name="Google SecOps").to_stix2_object()
         self.tlp_marking = TLPMarking(level=TLPLevel(tlp_level)).to_stix2_object()
         self.secops_base_url = secops_base_url
         self.severity_filter = severity_filter
+        self.priority_filter = priority_filter
 
     def convert_rule_alert(self, alert: Alert, rule_metadata: RuleMetadata) -> list:
         """Convert a single alert into a flat list of STIX objects.
@@ -62,6 +67,7 @@ class ConverterToStix:
             tlp_marking=self.tlp_marking,
             secops_base_url=self.secops_base_url,
             severity_filter=self.severity_filter,
+            priority_filter=self.priority_filter,
         )
 
         if incident is None:

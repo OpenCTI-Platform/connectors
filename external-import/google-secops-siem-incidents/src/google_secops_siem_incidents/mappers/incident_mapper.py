@@ -8,7 +8,7 @@ from connectors_sdk.models.enums import IncidentType
 from connectors_sdk.models.external_reference import ExternalReference
 from google_secops_siem_incidents.mappers._utils import find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
-from google_secops_siem_incidents.utils.enums import Severity
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 
 
 def _build_external_reference(secops_base_url: str, alert_id: str) -> ExternalReference:
@@ -50,6 +50,26 @@ def _meets_severity_threshold(raw_severity: str, threshold: Severity) -> bool:
     return alert_level >= threshold
 
 
+def _meets_priority_threshold(raw_priority: str, threshold: Priority) -> bool:
+    """Check whether raw_priority meets or exceeds the configured threshold.
+
+    Args:
+        raw_priority: Priority string from the rule metadata.
+        threshold: Minimum Priority level to accept.
+
+    Returns:
+        True if the alert should be imported.
+    """
+    if not raw_priority:
+        return True
+
+    try:
+        alert_level = Priority(raw_priority.upper())
+    except ValueError:
+        return True
+    return alert_level >= threshold
+
+
 def map_incident(
     alert: Alert,
     rule_metadata: RuleMetadata,
@@ -58,6 +78,7 @@ def map_incident(
     tlp_marking: Any,
     secops_base_url: str | None = None,
     severity_filter: Severity | None = None,
+    priority_filter: Priority | None = None,
 ) -> Incident | None:
     """Map a alert and rule metadata to a connectors_sdk Incident.
 
@@ -68,9 +89,10 @@ def map_incident(
         tlp_marking: TLP marking definition object.
         secops_base_url: Optional base URL for Google SecOps UI to build an external reference.
         severity_filter: Minimum Severity threshold, or None to accept all.
+        priority_filter: Minimum Priority threshold, or None to accept all.
 
     Returns:
-        Populated Incident model instance, or None if filtered out by severity.
+        Populated Incident model instance, or None if filtered out by severity or priority.
     """
     name_prefix = f"rule_name:{rule_metadata.properties.name} - "
 
@@ -86,7 +108,15 @@ def map_incident(
         and severity is not None
         and not _meets_severity_threshold(severity, severity_filter)
     ):
-        # TODO: log that the alert is filtered out by severity when logging is added to the connectors-sdk
+        return None
+
+    raw_priority = rule_metadata.properties.metadata.get("priority", "")
+
+    if (
+        priority_filter is not None
+        and raw_priority
+        and not _meets_priority_threshold(raw_priority, priority_filter)
+    ):
         return None
 
     incident_type = IncidentType(alert.rule_type.lower().replace("_", "-"))
