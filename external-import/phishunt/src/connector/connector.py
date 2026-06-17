@@ -124,7 +124,7 @@ class Phishunt:
                     bundle_objects.append(stix_organization)
                     stix_relationship_organization_url = stix2.Relationship(
                         id=StixCoreRelationship.generate_id(
-                            "related-to", stix_url.id, stix_domain.id
+                            "related-to", stix_url.id, stix_organization.id
                         ),
                         source_ref=stix_url.id,
                         target_ref=stix_organization.id,
