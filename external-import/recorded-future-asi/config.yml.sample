@@ -10,7 +10,7 @@ connector:
   log_level: 'error' # optional (default: 'error')
   duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
-rf_asi:
+recorded-future-asi:
   api_base_url: 'https://api.securitytrails.com/v2' # optional (default: 'https://api.securitytrails.com/v2')
   api_v1_base_url: 'https://api.securitytrails.com/v1' # optional, v1 history API base URL (default: 'https://api.securitytrails.com/v1')
   api_key: 'ChangeMe'

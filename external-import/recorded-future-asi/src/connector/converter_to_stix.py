@@ -24,8 +24,8 @@ from stix2.v21 import Incident as Stix2Incident
 AUTHOR_NAME = "Recorded Future ASI"
 SOURCE_NAME = "Recorded Future ASI"
 INCIDENT_TYPE = "Attack Surface Monitoring"
-LABEL_ADDED = "rf-asi:added"
-LABEL_CLEARED = "rf-asi:cleared"
+LABEL_ADDED = "recorded-future-asi:added"
+LABEL_CLEARED = "recorded-future-asi:cleared"
 EXPOSURE_INCIDENT_ID_ANCHOR = "recorded-future-asi-exposure"
 
 SEVERITY_MAP = {
@@ -186,7 +186,7 @@ class ConverterToStix:
         Build an incident-only STIX entity for a cleared exposure.
 
         Uses the v1 history removed rule payload and the same exposure-id-based
-        incident ID as the prior ``rf-asi:added`` update.
+        incident ID as the prior ``recorded-future-asi:added`` update.
         """
         exposure_id = rule.get("id") or ""
         name = rule.get("name") or "Unknown exposure"

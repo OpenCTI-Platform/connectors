@@ -35,10 +35,10 @@ def mock_opencti_connector_helper(monkeypatch):
 
 @pytest.fixture
 def make_stub_connector_settings():
-    """Factory to create connector settings with optional rf_asi overrides."""
+    """Factory to create connector settings with optional recorded_future_asi overrides."""
 
-    def _make(**rf_asi_overrides: Any) -> ConnectorSettings:
-        rf_asi_config = {
+    def _make(**recorded_future_asi_overrides: Any) -> ConnectorSettings:
+        recorded_future_asi_config = {
             "api_base_url": "https://api.securitytrails.com/v2",
             "api_v1_base_url": "https://api.securitytrails.com/v1",
             "api_key": "test-api-key",
@@ -47,7 +47,7 @@ def make_stub_connector_settings():
             "portal_base_url": "https://portal.example.com",
             "page_limit": 100,
         }
-        rf_asi_config.update(rf_asi_overrides)
+        recorded_future_asi_config.update(recorded_future_asi_overrides)
 
         class StubConnectorSettings(ConnectorSettings):
             @classmethod
@@ -65,7 +65,7 @@ def make_stub_connector_settings():
                             "log_level": "error",
                             "duration_period": "PT5M",
                         },
-                        "rf_asi": rf_asi_config,
+                        "recorded_future_asi": recorded_future_asi_config,
                     }
                 )
 

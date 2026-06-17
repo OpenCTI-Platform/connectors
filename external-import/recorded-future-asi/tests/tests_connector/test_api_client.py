@@ -2,7 +2,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
-from rf_asi_client.api_client import HttpRetrySettings, RfAsiClient, RfAsiClientConfig
+from recorded_future_asi_client.api_client import (
+    HttpRetrySettings,
+    RecordedFutureAsiClient,
+    RecordedFutureAsiClientConfig,
+)
 
 
 def _mock_response(payload: dict) -> MagicMock:
@@ -24,7 +28,7 @@ def _error_response(status_code: int, headers: dict | None = None) -> MagicMock:
     return response
 
 
-def _client(opencti_helper, **kwargs) -> RfAsiClient:
+def _client(opencti_helper, **kwargs) -> RecordedFutureAsiClient:
     defaults = {
         "base_url": "https://api.securitytrails.com/v2",
         "api_v1_base_url": "https://api.securitytrails.com/v1",
@@ -32,13 +36,15 @@ def _client(opencti_helper, **kwargs) -> RfAsiClient:
         "retry": HttpRetrySettings(max_attempts=3),
     }
     defaults.update(kwargs)
-    return RfAsiClient(opencti_helper, RfAsiClientConfig(**defaults))
+    return RecordedFutureAsiClient(
+        opencti_helper, RecordedFutureAsiClientConfig(**defaults)
+    )
 
 
 def test_client_sets_apikey_header(opencti_helper):
-    client = RfAsiClient(
+    client = RecordedFutureAsiClient(
         opencti_helper,
-        RfAsiClientConfig(
+        RecordedFutureAsiClientConfig(
             base_url="https://api.securitytrails.com/v2",
             api_key="secret-api-key",
         ),
@@ -157,7 +163,7 @@ def test_list_exposures_raises_on_first_page_failure(opencti_helper):
 
 
 def test_parse_list_response_handles_missing_fields():
-    data, next_cursor = RfAsiClient._parse_list_response({})
+    data, next_cursor = RecordedFutureAsiClient._parse_list_response({})
 
     assert data == []
     assert next_cursor is None
@@ -255,7 +261,9 @@ def test_get_exposure_assets_returns_partial_results_on_mid_pagination_failure(
 
 
 def test_parse_assets_response_handles_missing_fields():
-    signature, asset_exposures, next_cursor = RfAsiClient._parse_assets_response({})
+    signature, asset_exposures, next_cursor = (
+        RecordedFutureAsiClient._parse_assets_response({})
+    )
 
     assert signature == {}
     assert asset_exposures == []
@@ -510,14 +518,16 @@ def test_parse_history_response_deduplicates_by_id_last_wins():
         ]
     }
 
-    added_rules, removed_rules = RfAsiClient._parse_history_response(payload)
+    added_rules, removed_rules = RecordedFutureAsiClient._parse_history_response(
+        payload
+    )
 
     assert added_rules == [{"id": "sig-001", "name": "second version"}]
     assert removed_rules == [{"id": "sig-002", "name": "removed twice"}]
 
 
 def test_parse_history_response_handles_missing_fields():
-    added_rules, removed_rules = RfAsiClient._parse_history_response({})
+    added_rules, removed_rules = RecordedFutureAsiClient._parse_history_response({})
 
     assert added_rules == []
     assert removed_rules == []

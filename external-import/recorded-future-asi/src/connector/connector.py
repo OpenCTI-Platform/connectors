@@ -5,11 +5,14 @@ from datetime import datetime, timezone
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-from rf_asi_client import RfAsiClient
-from rf_asi_client.api_client import HttpRetrySettings, RfAsiClientConfig
+from recorded_future_asi_client import RecordedFutureAsiClient
+from recorded_future_asi_client.api_client import (
+    HttpRetrySettings,
+    RecordedFutureAsiClientConfig,
+)
 
 
-class RfAsiConnector:
+class RecordedFutureAsiConnector:
     """
     Specifications of the external import connector:
 
@@ -26,7 +29,7 @@ class RfAsiConnector:
         helper (OpenCTIConnectorHelper):
             Handle the connection and the requests between the connector, OpenCTI and the workers.
             _All connectors MUST use the connector helper with connector's configuration._
-        client (RfAsiClient):
+        client (RecordedFutureAsiClient):
             Provide methods to request the external API.
         converter_to_stix (ConnectorConverter):
             Provide methods for converting various types of input data into STIX 2.1 objects.
@@ -45,7 +48,7 @@ class RfAsiConnector:
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize `RfAsiConnector` with its configuration.
+        Initialize `RecordedFutureAsiConnector` with its configuration.
 
         Args:
             config (ConnectorSettings): Configuration of the connector
@@ -54,24 +57,24 @@ class RfAsiConnector:
         self.config = config
         self.helper = helper
 
-        self.client = RfAsiClient(
+        self.client = RecordedFutureAsiClient(
             self.helper,
-            RfAsiClientConfig(
-                base_url=self.config.rf_asi.api_base_url,
-                api_key=self.config.rf_asi.api_key.get_secret_value(),
-                api_v1_base_url=self.config.rf_asi.api_v1_base_url,
+            RecordedFutureAsiClientConfig(
+                base_url=self.config.recorded_future_asi.api_base_url,
+                api_key=self.config.recorded_future_asi.api_key.get_secret_value(),
+                api_v1_base_url=self.config.recorded_future_asi.api_v1_base_url,
                 retry=HttpRetrySettings(
-                    max_attempts=self.config.rf_asi.retry_max_attempts,
-                    initial_seconds=self.config.rf_asi.retry_initial_seconds,
-                    max_seconds=self.config.rf_asi.retry_max_seconds,
+                    max_attempts=self.config.recorded_future_asi.retry_max_attempts,
+                    initial_seconds=self.config.recorded_future_asi.retry_initial_seconds,
+                    max_seconds=self.config.recorded_future_asi.retry_max_seconds,
                 ),
             ),
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
-            tlp_level=self.config.rf_asi.tlp_level,
-            project_id=self.config.rf_asi.project_id,
-            portal_base_url=self.config.rf_asi.portal_base_url,
+            tlp_level=self.config.recorded_future_asi.tlp_level,
+            project_id=self.config.recorded_future_asi.project_id,
+            portal_base_url=self.config.recorded_future_asi.portal_base_url,
         )
 
     @staticmethod
@@ -80,11 +83,11 @@ class RfAsiConnector:
         return state is None or "last_fetch_time" not in state
 
     def _exposure_filters(self) -> dict[str, str]:
-        rf = self.config.rf_asi
-        if rf.filter_severity_min is not None:
-            return {"filter_severity_min": rf.filter_severity_min}
-        if rf.filter_severity_exact is not None:
-            return {"filter_severity_exact": rf.filter_severity_exact}
+        recorded_future_asi = self.config.recorded_future_asi
+        if recorded_future_asi.filter_severity_min is not None:
+            return {"filter_severity_min": recorded_future_asi.filter_severity_min}
+        if recorded_future_asi.filter_severity_exact is not None:
+            return {"filter_severity_exact": recorded_future_asi.filter_severity_exact}
         return {}
 
     def _collect_initial_intelligence(
@@ -102,24 +105,24 @@ class RfAsiConnector:
 
         filters = self._exposure_filters()
 
-        if self.config.rf_asi.run_limit is None:
+        if self.config.recorded_future_asi.run_limit is None:
             exposures = self.client.list_exposures(
-                project_id=self.config.rf_asi.project_id,
-                limit=self.config.rf_asi.page_limit,
+                project_id=self.config.recorded_future_asi.project_id,
+                limit=self.config.recorded_future_asi.page_limit,
                 **filters,
             )
         else:
             exposures, next_cursor = self.client.list_exposures_batch(
-                project_id=self.config.rf_asi.project_id,
-                page_limit=self.config.rf_asi.page_limit,
-                run_limit=self.config.rf_asi.run_limit,
+                project_id=self.config.recorded_future_asi.project_id,
+                page_limit=self.config.recorded_future_asi.page_limit,
+                run_limit=self.config.recorded_future_asi.run_limit,
                 cursor=exposures_cursor,
                 **filters,
             )
             self.helper.connector_logger.info(
                 "[CONNECTOR] Fetched exposure batch from ASI API",
                 {
-                    "run_limit": self.config.rf_asi.run_limit,
+                    "run_limit": self.config.recorded_future_asi.run_limit,
                     "imported_count": len(exposures),
                     "has_next_cursor": next_cursor is not None,
                 },
@@ -135,9 +138,9 @@ class RfAsiConnector:
             signature_id = signature["id"]
 
             assets_data = self.client.get_exposure_assets(
-                project_id=self.config.rf_asi.project_id,
+                project_id=self.config.recorded_future_asi.project_id,
                 signature_id=signature_id,
-                limit=self.config.rf_asi.page_limit,
+                limit=self.config.recorded_future_asi.page_limit,
             )
 
             self.helper.connector_logger.info(
@@ -160,7 +163,7 @@ class RfAsiConnector:
 
         return (
             stix_objects,
-            next_cursor if self.config.rf_asi.run_limit else None,
+            next_cursor if self.config.recorded_future_asi.run_limit else None,
         )
 
     def _collect_incremental_intelligence(
@@ -176,7 +179,7 @@ class RfAsiConnector:
         stix_objects: list = []
 
         added_rules, removed_rules = self.client.get_exposure_history(
-            project_id=self.config.rf_asi.project_id,
+            project_id=self.config.recorded_future_asi.project_id,
             start=state["last_fetch_time"],
         )
 
@@ -194,9 +197,9 @@ class RfAsiConnector:
             signature_id = signature["id"]
 
             assets_data = self.client.get_exposure_assets(
-                project_id=self.config.rf_asi.project_id,
+                project_id=self.config.recorded_future_asi.project_id,
                 signature_id=signature_id,
-                limit=self.config.rf_asi.page_limit,
+                limit=self.config.recorded_future_asi.page_limit,
             )
 
             self.helper.connector_logger.info(
@@ -315,14 +318,15 @@ class RfAsiConnector:
 
             if initial_sync:
                 exposures_cursor = None
-                if self.config.rf_asi.run_limit is not None:
+                if self.config.recorded_future_asi.run_limit is not None:
                     exposures_cursor = current_state.get("exposures_cursor")
 
                 stix_objects, next_cursor = self._collect_initial_intelligence(
                     exposures_cursor,
                 )
                 initial_cycle_complete = (
-                    next_cursor is None or self.config.rf_asi.run_limit is None
+                    next_cursor is None
+                    or self.config.recorded_future_asi.run_limit is None
                 )
             else:
                 stix_objects = self._collect_incremental_intelligence(current_state)
@@ -341,7 +345,7 @@ class RfAsiConnector:
                     {"bundles_sent": {str(len(bundles_sent))}},
                 )
             # Persist state only after a successful collection/send cycle.
-            if self.config.rf_asi.run_limit is not None and initial_sync:
+            if self.config.recorded_future_asi.run_limit is not None and initial_sync:
                 exposures_cursor_to_store: str | None | bool = next_cursor
             else:
                 exposures_cursor_to_store = False

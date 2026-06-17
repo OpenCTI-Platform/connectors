@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 
 ExposureSeverity = Literal["unknown", "informational", "moderate", "critical"]
 
@@ -38,9 +38,9 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class RfAsiConfig(BaseConfigModel):
+class RecordedFutureAsiConfig(BaseConfigModel):
     """
-    Define parameters and/or defaults for the configuration specific to the `RfAsiConnector`.
+    Define parameters and/or defaults for the configuration specific to the `RecordedFutureAsiConnector`.
     """
 
     api_base_url: HttpUrl = Field(
@@ -107,7 +107,7 @@ class RfAsiConfig(BaseConfigModel):
     )
 
     @model_validator(mode="after")
-    def validate_severity_filters(self) -> "RfAsiConfig":
+    def validate_severity_filters(self) -> "RecordedFutureAsiConfig":
         if self.filter_severity_min and self.filter_severity_exact:
             raise ValueError(
                 "Only one of filter_severity_min or filter_severity_exact may be set."
@@ -117,10 +117,13 @@ class RfAsiConfig(BaseConfigModel):
 
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `RfAsiConfig`.
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `RecordedFutureAsiConfig`.
     """
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    rf_asi: RfAsiConfig = Field(default_factory=RfAsiConfig)
+    recorded_future_asi: RecordedFutureAsiConfig = Field(
+        default_factory=RecordedFutureAsiConfig,
+        validation_alias=AliasChoices("recorded_future_asi", "recorded-future-asi"),
+    )

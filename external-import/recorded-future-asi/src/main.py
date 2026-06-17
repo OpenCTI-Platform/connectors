@@ -7,7 +7,7 @@ On failure, traceback is printed to stderr and the process exits with status 1.
 import sys
 import traceback
 
-from connector import ConnectorSettings, RfAsiConnector
+from connector import ConnectorSettings, RecordedFutureAsiConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        connector = RfAsiConnector(config=settings, helper=helper)
+        connector = RecordedFutureAsiConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()

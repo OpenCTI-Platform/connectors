@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
-from connector.connector import RfAsiConnector
+from connector.connector import RecordedFutureAsiConnector
 from connector.converter_to_stix import (
     EXPOSURE_INCIDENT_ID_ANCHOR,
     LABEL_ADDED,
@@ -16,7 +16,9 @@ def test_collect_intelligence_returns_incidents_author_and_marking(
     stub_connector_settings: ConnectorSettings,
     all_exposure_items,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.list_exposures = MagicMock(return_value=all_exposure_items)
     connector.client.get_exposure_assets = MagicMock(
         return_value={"signature": {}, "asset_exposures": []}
@@ -57,7 +59,9 @@ def test_collect_intelligence_returns_empty_list_when_no_exposures(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
@@ -73,7 +77,9 @@ def test_collect_intelligence_bundle_includes_related_entities(
     all_exposure_items,
     all_exposure_assets,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.list_exposures = MagicMock(return_value=all_exposure_items[:1])
     connector.client.get_exposure_assets = MagicMock(return_value=all_exposure_assets)
 
@@ -129,7 +135,7 @@ def test_collect_intelligence_with_run_limit_uses_batch(
     all_exposure_items,
 ):
     settings = make_stub_connector_settings(run_limit=1)
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     batch_items = all_exposure_items[:1]
     connector.client.list_exposures_batch = MagicMock(
         return_value=(batch_items, "cursor-page-2")
@@ -159,7 +165,7 @@ def test_collect_intelligence_with_run_limit_passes_exposures_cursor(
     make_stub_connector_settings,
 ):
     settings = make_stub_connector_settings(run_limit=1)
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures_batch = MagicMock(return_value=([], None))
     connector.client.get_exposure_assets = MagicMock()
 
@@ -192,7 +198,7 @@ def test_process_message_persists_exposures_cursor_when_batch_has_more_pages(
     all_exposure_items,
 ):
     settings = make_stub_connector_settings(run_limit=1)
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures_batch = MagicMock(
         return_value=(all_exposure_items[:1], "cursor-page-2")
     )
@@ -218,7 +224,7 @@ def test_process_message_clears_exposures_cursor_when_cycle_complete(
     all_exposure_items,
 ):
     settings = make_stub_connector_settings(run_limit=1)
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures_batch = MagicMock(
         return_value=(all_exposure_items[:1], None)
     )
@@ -245,7 +251,7 @@ def test_process_message_resumes_from_stored_exposures_cursor(
     make_stub_connector_settings,
 ):
     settings = make_stub_connector_settings(run_limit=1)
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures_batch = MagicMock(return_value=([], None))
     connector.client.get_exposure_assets = MagicMock()
     _mock_process_message_dependencies(
@@ -269,7 +275,7 @@ def test_collect_intelligence_passes_filter_severity_min(
     all_exposure_items,
 ):
     settings = make_stub_connector_settings(filter_severity_min="critical")
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
@@ -287,7 +293,7 @@ def test_collect_intelligence_passes_filter_severity_exact(
     make_stub_connector_settings,
 ):
     settings = make_stub_connector_settings(filter_severity_exact="moderate")
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
@@ -308,7 +314,7 @@ def test_collect_intelligence_with_run_limit_passes_filter_severity_min(
         run_limit=1,
         filter_severity_min="moderate",
     )
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures_batch = MagicMock(return_value=([], None))
     connector.client.get_exposure_assets = MagicMock()
 
@@ -328,7 +334,9 @@ def test_incremental_sync_calls_history_with_last_fetch_time(
     stub_connector_settings: ConnectorSettings,
     risk_history_activity,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.get_exposure_history = MagicMock(return_value=([], []))
     connector.client.get_exposure_assets = MagicMock()
     state = {"last_fetch_time": 1717200000}
@@ -347,7 +355,9 @@ def test_incremental_sync_processes_added_with_v2_enrichment(
     risk_history_activity,
     all_exposure_assets,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     added_rules = risk_history_activity["data"][0]["added_rules"]
     connector.client.get_exposure_history = MagicMock(return_value=(added_rules, []))
     connector.client.get_exposure_assets = MagicMock(return_value=all_exposure_assets)
@@ -371,7 +381,9 @@ def test_incremental_sync_processes_removed_incident_only_no_get_exposure_assets
     stub_connector_settings: ConnectorSettings,
     risk_history_activity,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     removed_rules = risk_history_activity["data"][0]["removed_rules"]
     connector.client.get_exposure_history = MagicMock(return_value=([], removed_rules))
     connector.client.get_exposure_assets = MagicMock()
@@ -391,7 +403,9 @@ def test_process_message_incremental_sends_cleared_incident(
     stub_connector_settings: ConnectorSettings,
     risk_history_activity,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     removed_rules = risk_history_activity["data"][0]["removed_rules"]
     connector.client.get_exposure_history = MagicMock(return_value=([], removed_rules))
     connector.client.get_exposure_assets = MagicMock()
@@ -415,7 +429,9 @@ def test_process_message_does_not_persist_state_on_send_failure(
     stub_connector_settings: ConnectorSettings,
     risk_history_activity,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     removed_rules = risk_history_activity["data"][0]["removed_rules"]
     connector.client.get_exposure_history = MagicMock(return_value=([], removed_rules))
     connector.client.get_exposure_assets = MagicMock()
@@ -436,7 +452,9 @@ def test_incremental_sync_updates_last_fetch_time_on_success(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.get_exposure_history = MagicMock(return_value=([], []))
     connector.client.get_exposure_assets = MagicMock()
     _mock_process_message_dependencies(
@@ -457,7 +475,9 @@ def test_initial_sync_sets_last_fetch_time_when_cycle_complete(
     stub_connector_settings: ConnectorSettings,
     all_exposure_items,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.list_exposures = MagicMock(return_value=all_exposure_items)
     connector.client.get_exposure_assets = MagicMock(
         return_value={"signature": {}, "asset_exposures": []}
@@ -478,7 +498,7 @@ def test_initial_sync_does_not_set_last_fetch_time_mid_batch_with_run_limit(
     all_exposure_items,
 ):
     settings = make_stub_connector_settings(run_limit=1)
-    connector = RfAsiConnector(config=settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
     connector.client.list_exposures_batch = MagicMock(
         return_value=(all_exposure_items[:1], "cursor-page-2")
     )
@@ -499,7 +519,9 @@ def test_persist_sync_state_removes_legacy_known_exposures(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     _mock_process_message_dependencies(
         opencti_helper,
         initial_state={
@@ -524,7 +546,9 @@ def test_incremental_sync_skips_removed_rule_without_id(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
 ):
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
     connector.client.get_exposure_history = MagicMock(
         return_value=([], [{"name": "Missing id"}])
     )

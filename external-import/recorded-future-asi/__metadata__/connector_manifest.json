@@ -1,6 +1,6 @@
 {
   "title": "Template Connector",
-  "slug": "rf-asi",
+  "slug": "recorded-future-asi",
   "description": "Template description of the connector",
   "short_description": "Template short description (summary) of the connector",
   "logo": null,
@@ -11,9 +11,9 @@
   "max_confidence_level": 50,
   "support_version": ">=6.8.12",
   "subscription_link": null,
-  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/rf-asi",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/recorded-future-asi",
   "manager_supported": false,
   "container_version": "rolling",
-  "container_image": "opencti/connector-rf-asi",
+  "container_image": "opencti/connector-recorded-future-asi",
   "container_type": "EXTERNAL_IMPORT"
 }

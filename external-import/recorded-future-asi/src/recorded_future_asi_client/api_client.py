@@ -22,7 +22,7 @@ class HttpRetrySettings:
 
 
 @dataclass(frozen=True)
-class RfAsiClientConfig:
+class RecordedFutureAsiClientConfig:
     """Connection settings for the Recorded Future ASI API client."""
 
     base_url: HttpUrl
@@ -52,20 +52,20 @@ def _retry_after_or_exponential_wait(
     return wait
 
 
-class RfAsiClient:
+class RecordedFutureAsiClient:
     _RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
 
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        config: RfAsiClientConfig,
+        config: RecordedFutureAsiClientConfig,
     ):
         """
         Initialize the client with necessary configuration.
 
         Args:
             helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            config (RfAsiClientConfig): API connection and retry settings.
+            config (RecordedFutureAsiClientConfig): API connection and retry settings.
         """
         retry_settings = config.retry or HttpRetrySettings()
         self.helper = helper

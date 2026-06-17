@@ -21,7 +21,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "rf_asi": {
+                "recorded_future_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "project_id": "test-project-id",
@@ -40,7 +40,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "id": "connector-id",
                     "scope": "test, connector",
                 },
-                "rf_asi": {
+                "recorded_future_asi": {
                     "api_key": "test-api-key",
                     "project_id": "test-project-id",
                 },
@@ -72,7 +72,7 @@ def test_settings_should_accept_valid_input(settings_dict):
 
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.rf_asi, BaseConfigModel) is True
+    assert isinstance(settings.recorded_future_asi, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -96,7 +96,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "rf_asi": {
+                "recorded_future_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "project_id": "test-project-id",
@@ -118,7 +118,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "rf_asi": {
+                "recorded_future_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "project_id": "test-project-id",
@@ -141,13 +141,13 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "rf_asi": {
+                "recorded_future_asi": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
             },
-            "rf_asi.project_id",
+            "recorded_future_asi.project_id",
             id="missing_project_id",
         ),
     ],
@@ -176,7 +176,7 @@ def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     assert str("Error validating configuration") in str(err)
 
 
-def test_rf_asi_retry_settings_defaults():
+def test_recorded_future_asi_retry_settings_defaults():
     settings_dict = {
         "opencti": {
             "url": "http://localhost:8080",
@@ -186,7 +186,7 @@ def test_rf_asi_retry_settings_defaults():
             "id": "connector-id",
             "scope": "test, connector",
         },
-        "rf_asi": {
+        "recorded_future_asi": {
             "api_key": "test-api-key",
             "project_id": "test-project-id",
         },
@@ -199,9 +199,9 @@ def test_rf_asi_retry_settings_defaults():
 
     settings = FakeConnectorSettings()
 
-    assert settings.rf_asi.retry_max_attempts == 3
-    assert settings.rf_asi.retry_initial_seconds == 1
-    assert settings.rf_asi.retry_max_seconds == 60
+    assert settings.recorded_future_asi.retry_max_attempts == 3
+    assert settings.recorded_future_asi.retry_initial_seconds == 1
+    assert settings.recorded_future_asi.retry_max_seconds == 60
 
 
 def _make_fake_connector_settings(settings_dict: dict[str, Any]) -> ConnectorSettings:
@@ -213,12 +213,12 @@ def _make_fake_connector_settings(settings_dict: dict[str, Any]) -> ConnectorSet
     return FakeConnectorSettings()
 
 
-def _base_valid_settings_dict(**rf_asi_overrides: Any) -> dict[str, Any]:
-    rf_asi = {
+def _base_valid_settings_dict(**recorded_future_asi_overrides: Any) -> dict[str, Any]:
+    recorded_future_asi = {
         "api_key": "test-api-key",
         "project_id": "test-project-id",
     }
-    rf_asi.update(rf_asi_overrides)
+    recorded_future_asi.update(recorded_future_asi_overrides)
     return {
         "opencti": {
             "url": "http://localhost:8080",
@@ -228,24 +228,24 @@ def _base_valid_settings_dict(**rf_asi_overrides: Any) -> dict[str, Any]:
             "id": "connector-id",
             "scope": "test, connector",
         },
-        "rf_asi": rf_asi,
+        "recorded_future_asi": recorded_future_asi,
     }
 
 
 @pytest.mark.parametrize(
-    "rf_asi_overrides",
+    "recorded_future_asi_overrides",
     [
         pytest.param({"filter_severity_min": "critical"}, id="filter_severity_min"),
         pytest.param({"filter_severity_exact": "moderate"}, id="filter_severity_exact"),
     ],
 )
-def test_settings_should_accept_valid_severity_filters(rf_asi_overrides):
+def test_settings_should_accept_valid_severity_filters(recorded_future_asi_overrides):
     settings = _make_fake_connector_settings(
-        _base_valid_settings_dict(**rf_asi_overrides)
+        _base_valid_settings_dict(**recorded_future_asi_overrides)
     )
 
-    for key, value in rf_asi_overrides.items():
-        assert getattr(settings.rf_asi, key) == value
+    for key, value in recorded_future_asi_overrides.items():
+        assert getattr(settings.recorded_future_asi, key) == value
 
 
 def test_settings_should_reject_both_severity_filters():

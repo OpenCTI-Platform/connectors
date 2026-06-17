@@ -1,4 +1,4 @@
-from connector import ConnectorSettings, RfAsiConnector
+from connector import ConnectorSettings, RecordedFutureAsiConnector
 
 
 def test_connector_settings_is_instantiated(stub_connector_settings):
@@ -32,7 +32,9 @@ def test_connector_is_instantiated(opencti_helper, stub_connector_settings):
         - the connector's main class MUST be able to access env/config vars through `self.config`
         - the connector's main class MUST be able to access `pycti` API through `self.helper`
     """
-    connector = RfAsiConnector(config=stub_connector_settings, helper=opencti_helper)
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
 
     assert connector.config == stub_connector_settings
     assert connector.helper == opencti_helper

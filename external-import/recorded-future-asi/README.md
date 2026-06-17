@@ -11,7 +11,7 @@ General description of the connector
 
 Table of Contents
 
-- [OpenCTI External Ingestion Template Connector](#opencti-external-ingestion-connector-rf-asi)
+- [OpenCTI External Ingestion Template Connector](#opencti-external-ingestion-connector-recorded-future-asi)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
