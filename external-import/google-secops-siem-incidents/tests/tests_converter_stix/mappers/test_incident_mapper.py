@@ -798,3 +798,40 @@ class TestTagsFilter:
 
         # _then_
         assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — edge cases
+# ---------------------------------------------------------------------------
+class TestIncidentEdgeCases:
+    def test_then_non_numeric_risk_score_passes_filter(self):
+        """Given a non-numeric risk_score and a threshold → incident returned (ValueError caught)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("not_a_number")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_description_includes_mitre_url(self):
+        """Given metadata with mitre_attach_url → row appears in description table."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="HIGH")
+        meta.properties.metadata["mitre_attach_url"] = "https://attack.mitre.org/T1234"
+
+        # _when_
+        incident = _when_map_incident(alert, meta)
+
+        # _then_
+        desc = incident.description or ""
+        assert "| Title | https://attack.mitre.org/T1234 |" in desc
