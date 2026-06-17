@@ -146,6 +146,12 @@
       ],
       "type": "string",
       "default": null
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_RISK_SCORE_FILTER": {
+      "default": null,
+      "description": "Minimum risk score to import. All alerts with a risk score greater than or equal to this value are imported. Alerts without a risk score always pass. When not set, all alerts are imported regardless of risk score.",
+      "minimum": 0,
+      "type": "integer"
     }
   },
   "required": [
