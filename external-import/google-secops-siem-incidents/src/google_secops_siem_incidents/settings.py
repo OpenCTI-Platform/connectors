@@ -104,6 +104,28 @@ class GoogleSecOpsConfig(BaseConfigModel):
             "When not set, all alerts are imported regardless of risk score."
         ),
     )
+    tags_include: ListFromString = Field(
+        default=[],
+        description=(
+            "Comma-separated list of tags to include. Only alerts that have "
+            "at least one of these tags are imported. "
+            "When empty, no inclusion filter is applied."
+        ),
+    )
+    tags_exclude: ListFromString = Field(
+        default=[],
+        description=(
+            "Comma-separated list of tags to exclude. Alerts that have "
+            "any of these tags are excluded. "
+            "When empty, no exclusion filter is applied."
+        ),
+    )
+
+    @field_validator("tags_include", "tags_exclude", mode="after")
+    @classmethod
+    def _normalize_tags(cls, v: list[str]) -> list[str]:
+        """Normalize tag values to lowercase for case-insensitive matching."""
+        return [t.strip().lower() for t in v if t.strip()]
 
     @field_validator("private_key", mode="before")
     @classmethod

@@ -80,6 +80,8 @@ def map_incident(
     severity_filter: Severity | None = None,
     priority_filter: Priority | None = None,
     risk_score_filter: int | None = None,
+    tags_include: list[str] | None = None,
+    tags_exclude: list[str] | None = None,
 ) -> Incident | None:
     """Map a alert and rule metadata to a connectors_sdk Incident.
 
@@ -92,6 +94,8 @@ def map_incident(
         severity_filter: Minimum Severity threshold, or None to accept all.
         priority_filter: Minimum Priority threshold, or None to accept all.
         risk_score_filter: Minimum risk score threshold, or None to accept all.
+        tags_include: List of tags to include (at least one must match). Empty/None = no filter.
+        tags_exclude: List of tags to exclude (any match rejects). Empty/None = no filter.
 
     Returns:
         Populated Incident model instance, or None if filtered out.
@@ -152,6 +156,15 @@ def map_incident(
 
     raw_tags = rule_metadata.properties.metadata.get("tags", "")
     labels = [t.strip() for t in raw_tags.split(",") if t.strip()] or None
+
+    if tags_include or tags_exclude:
+        alert_tags = {t.lower() for t in labels} if labels else set()
+
+        if tags_include and not alert_tags.intersection(tags_include):
+            return None
+
+        if tags_exclude and alert_tags.intersection(tags_exclude):
+            return None
 
     last_seen = datetime.fromisoformat(
         alert.time_window.end_time.replace("Z", "+00:00")
