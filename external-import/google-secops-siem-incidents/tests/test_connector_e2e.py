@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from google_secops_siem_incidents.connector import GoogleSecOpsConnector
-from google_secops_siem_incidents.mappers.incident_mapper import Severity
 from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 from pycti import OpenCTIConnectorHelper
 from tests_converter_stix.factories import (
     AlertFactory,
@@ -265,6 +265,7 @@ def _make_mock_config() -> MagicMock:
     config.google_secops_siem_incidents.tlp_level = "amber"
     config.google_secops_siem_incidents.first_start_time = timedelta(hours=1)
     config.google_secops_siem_incidents.severity_filter = None
+    config.google_secops_siem_incidents.priority_filter = None
     return config
 
 
@@ -273,7 +274,11 @@ def _make_mock_config() -> MagicMock:
 # =====================
 
 
-def _build_batch(detection_ts: str) -> RuleAlertResponse:
+def _build_batch(
+    detection_ts: str,
+    severity: str = "MEDIUM",
+    priority: str = "MEDIUM",
+) -> RuleAlertResponse:
     """Build a RuleAlertResponse with 2 alerts sharing the same detection_timestamp."""
     alert1 = AlertFactory.build(
         fields=[AlertFieldFactory.build(name="ip", string_val="10.0.0.1")],
@@ -290,7 +295,11 @@ def _build_batch(detection_ts: str) -> RuleAlertResponse:
         alerts=[alert1, alert2],
         rule_metadata=RuleMetadataFactory.build(
             properties=RulePropertiesFactory.build(
-                metadata={"severity": "MEDIUM", "tags": "test"},
+                metadata={
+                    "severity": severity,
+                    "priority": priority,
+                    "tags": "test",
+                },
             ),
         ),
     )
@@ -313,7 +322,11 @@ def _build_paginated_batch(detection_ts: str) -> RuleAlertResponse:
         alerts=[alert1, alert2],
         rule_metadata=RuleMetadataFactory.build(
             properties=RulePropertiesFactory.build(
-                metadata={"severity": "MEDIUM", "tags": "test"},
+                metadata={
+                    "severity": "MEDIUM",
+                    "priority": "MEDIUM",
+                    "tags": "test",
+                },
             ),
         ),
     )
@@ -528,4 +541,89 @@ def test_severity_filter_none_imports_all(
     all_messages = [rec.getMessage() for rec in caplog.records]
     assert any("Bundle sent" in m for m in all_messages), (
         "Expected bundles to be sent when severity filter is None (all pass)"
+    )
+
+
+# =====================
+# Scenarios — priority filter
+# =====================
+
+
+def test_priority_filter_excludes_below_threshold(
+    caplog: Any,
+) -> None:
+    """Verify that alerts below the priority threshold are excluded."""
+    # _given_ a batch with priority "MEDIUM" and a threshold of HIGH
+    batches = [_build_batch("2024-03-01T10:00:00Z")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.priority_filter = Priority.HIGH
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ no bundle should be sent (medium < high threshold)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert not any("Bundle sent" in m for m in all_messages), (
+        "Expected no bundle to be sent when priority is below threshold"
+    )
+
+
+def test_priority_filter_includes_at_threshold(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that alerts at the priority threshold are imported."""
+    # _given_ a threshold of MEDIUM (matching the test batch priority)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.priority_filter = Priority.MEDIUM
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent normally
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when priority meets threshold"
+    )
+
+
+def test_priority_filter_includes_above_threshold(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that alerts above the priority threshold are imported."""
+    # _given_ a threshold of LOW (medium > low)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.priority_filter = Priority.LOW
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when priority is above threshold"
+    )
+
+
+def test_priority_filter_none_imports_all(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that None priority filter imports all alerts regardless of priority."""
+    # _given_ no priority filter (default behavior)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.priority_filter = None
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent (all alerts imported)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when priority filter is None (all pass)"
     )

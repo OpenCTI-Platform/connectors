@@ -12,6 +12,7 @@ from connectors_sdk.models.enums import IncidentSeverity
 
 # --- import under test (will cause ImportError → RED) ---
 from google_secops_siem_incidents.mappers.incident_mapper import (  # noqa: E402
+    Priority,
     Severity,
     map_incident,
 )
@@ -30,7 +31,13 @@ from tests_converter_stix.factories import (
 # Helpers
 # ---------------------------------------------------------------------------
 def _given_alert_with_fields_and_metadata(
-    fields, *, severity="HIGH", rule_type="MULTI_EVENT", tags="", outcomes=None
+    fields,
+    *,
+    severity="HIGH",
+    priority="",
+    rule_type="MULTI_EVENT",
+    tags="",
+    outcomes=None,
 ):
     """Build an Alert + RuleMetadata pair from explicit field/metadata values."""
     alert = AlertFactory.build(
@@ -38,10 +45,13 @@ def _given_alert_with_fields_and_metadata(
         outcomes=outcomes or [],
         rule_type=rule_type,
     )
+    metadata = {"severity": severity, "tags": tags}
+    if priority:
+        metadata["priority"] = priority
     rule_metadata = RuleMetadataFactory.build(
         properties=RulePropertiesFactory.build(
             name="rule_name",
-            metadata={"severity": severity, "tags": tags},
+            metadata=metadata,
         ),
     )
     return alert, rule_metadata
@@ -455,6 +465,113 @@ class TestSeverityFilter:
             author=make_author(),
             tlp_marking=make_tlp_marking(),
             severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — priority filter (threshold-based)
+# ---------------------------------------------------------------------------
+class TestPriorityFilter:
+    def test_then_returns_none_when_below_threshold(self):
+        """Given priority 'LOW' and threshold HIGH → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="LOW")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_at_threshold(self):
+        """Given priority 'HIGH' and threshold HIGH → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="HIGH")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_above_threshold(self):
+        """Given priority 'CRITICAL' and threshold HIGH → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="CRITICAL")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_threshold(self):
+        """Given any priority and None threshold → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="INFO")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=None,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_unknown_priority(self):
+        """Given unknown priority and a threshold → incident returned (unknown passes)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="P1")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_empty_priority(self):
+        """Given empty priority and a threshold → incident returned (no priority = pass)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], priority="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            priority_filter=Priority.HIGH,
         )
 
         # _then_
