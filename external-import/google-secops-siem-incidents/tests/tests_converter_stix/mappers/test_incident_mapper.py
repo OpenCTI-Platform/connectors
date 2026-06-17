@@ -9,13 +9,8 @@ BDD helpers: _given_ / _when_ / _then_ pattern (plain pytest, no pytest-bdd).
 
 import pytest
 from connectors_sdk.models.enums import IncidentSeverity
-
-# --- import under test (will cause ImportError → RED) ---
-from google_secops_siem_incidents.mappers.incident_mapper import (  # noqa: E402
-    Priority,
-    Severity,
-    map_incident,
-)
+from google_secops_siem_incidents.mappers.incident_mapper import map_incident
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 from tests_converter_stix.factories import (
     AlertFactory,
     AlertFieldFactory,

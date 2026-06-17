@@ -138,9 +138,9 @@ def test_state_persisted_with_correct_timestamp(
         for c in all_state_calls
         if "last_alert_timestamp" in c
     ]
-    assert any("2024-03-01T11:00:01" in ts for ts in checkpoint_timestamps), (
-        f"Expected checkpoint with 11:00:01 (+1s offset), got: {checkpoint_timestamps}"
-    )
+    assert any(
+        "2024-03-01T11:00:01" in ts for ts in checkpoint_timestamps
+    ), f"Expected checkpoint with 11:00:01 (+1s offset), got: {checkpoint_timestamps}"
 
     # _then_ — final state carries max detection_ts + 1s from the run
     final_state = all_state_calls[-1]
@@ -149,9 +149,9 @@ def test_state_persisted_with_correct_timestamp(
         f"Final state should be max detection_ts + 1s from run data,"
         f" got: {final_state['last_alert_timestamp']}"
     )
-    assert final_state.get("pagination_checkpoint") is None, (
-        "pagination_checkpoint must be cleared after a clean run"
-    )
+    assert (
+        final_state.get("pagination_checkpoint") is None
+    ), "pagination_checkpoint must be cleared after a clean run"
 
 
 # =====================
@@ -372,9 +372,9 @@ def test_pagination_checkpoint_written_and_cleared(
 
     # checkpoint written after batch 1
     checkpoint_calls = [c for c in all_state_calls if "pagination_checkpoint" in c]
-    assert len(checkpoint_calls) >= 1, (
-        "Expected at least one pagination_checkpoint write"
-    )
+    assert (
+        len(checkpoint_calls) >= 1
+    ), "Expected at least one pagination_checkpoint write"
     cp = checkpoint_calls[0]["pagination_checkpoint"]
     assert "window_start" in cp
     assert cp["window_end"] == "2024-03-01T10:00:00+00:00"
@@ -382,9 +382,9 @@ def test_pagination_checkpoint_written_and_cleared(
 
     # final state: checkpoint cleared, last_alert_timestamp set to batch 1 max (10:00 > 09:00)
     final_state = all_state_calls[-1]
-    assert final_state.get("pagination_checkpoint") is None, (
-        "pagination_checkpoint must be cleared after a clean run"
-    )
+    assert (
+        final_state.get("pagination_checkpoint") is None
+    ), "pagination_checkpoint must be cleared after a clean run"
     assert "2024-03-01T10:00:01" in final_state["last_alert_timestamp"]
 
 
@@ -483,9 +483,9 @@ def test_severity_filter_excludes_below_threshold(
 
     # _then_ no bundle should be sent (medium < high threshold)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert not any("Bundle sent" in m for m in all_messages), (
-        "Expected no bundle to be sent when severity is below threshold"
-    )
+    assert not any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected no bundle to be sent when severity is below threshold"
 
 
 def test_severity_filter_includes_at_threshold(
@@ -503,9 +503,9 @@ def test_severity_filter_includes_at_threshold(
 
     # _then_ bundles are sent normally
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when severity meets threshold"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when severity meets threshold"
 
 
 def test_severity_filter_includes_above_threshold(
@@ -523,9 +523,9 @@ def test_severity_filter_includes_above_threshold(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when severity is above threshold"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when severity is above threshold"
 
 
 def test_severity_filter_none_imports_all(
@@ -543,9 +543,9 @@ def test_severity_filter_none_imports_all(
 
     # _then_ bundles are sent (all alerts imported)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when severity filter is None (all pass)"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when severity filter is None (all pass)"
 
 
 # =====================
@@ -568,9 +568,9 @@ def test_priority_filter_excludes_below_threshold(
 
     # _then_ no bundle should be sent (medium < high threshold)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert not any("Bundle sent" in m for m in all_messages), (
-        "Expected no bundle to be sent when priority is below threshold"
-    )
+    assert not any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected no bundle to be sent when priority is below threshold"
 
 
 def test_priority_filter_includes_at_threshold(
@@ -588,9 +588,9 @@ def test_priority_filter_includes_at_threshold(
 
     # _then_ bundles are sent normally
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when priority meets threshold"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when priority meets threshold"
 
 
 def test_priority_filter_includes_above_threshold(
@@ -608,9 +608,9 @@ def test_priority_filter_includes_above_threshold(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when priority is above threshold"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when priority is above threshold"
 
 
 def test_priority_filter_none_imports_all(
@@ -628,9 +628,9 @@ def test_priority_filter_none_imports_all(
 
     # _then_ bundles are sent (all alerts imported)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when priority filter is None (all pass)"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when priority filter is None (all pass)"
 
 
 # =====================
@@ -691,9 +691,9 @@ def test_risk_score_filter_excludes_below_threshold(
 
     # _then_ no bundle should be sent (75 < 80)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert not any("Bundle sent" in m for m in all_messages), (
-        "Expected no bundle to be sent when risk score is below threshold"
-    )
+    assert not any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected no bundle to be sent when risk score is below threshold"
 
 
 def test_risk_score_filter_includes_at_threshold(
@@ -711,9 +711,9 @@ def test_risk_score_filter_includes_at_threshold(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when risk score meets threshold"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when risk score meets threshold"
 
 
 def test_risk_score_filter_includes_above_threshold(
@@ -731,9 +731,9 @@ def test_risk_score_filter_includes_above_threshold(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when risk score is above threshold"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when risk score is above threshold"
 
 
 def test_risk_score_filter_none_imports_all(
@@ -751,9 +751,9 @@ def test_risk_score_filter_none_imports_all(
 
     # _then_ bundles are sent (all alerts imported)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when risk score filter is None (all pass)"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when risk score filter is None (all pass)"
 
 
 def test_risk_score_filter_passes_alerts_without_risk_score(
@@ -771,9 +771,9 @@ def test_risk_score_filter_passes_alerts_without_risk_score(
 
     # _then_ bundles are sent (no risk score = pass)
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when alerts have no risk score"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when alerts have no risk score"
 
 
 # =====================
@@ -796,9 +796,9 @@ def test_tags_include_accepts_matching_tag(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when alert tag matches include filter"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when alert tag matches include filter"
 
 
 def test_tags_include_rejects_non_matching_tag(
@@ -816,9 +816,9 @@ def test_tags_include_rejects_non_matching_tag(
 
     # _then_ no bundle sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert not any("Bundle sent" in m for m in all_messages), (
-        "Expected no bundle when alert tags don't match include filter"
-    )
+    assert not any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected no bundle when alert tags don't match include filter"
 
 
 def test_tags_exclude_rejects_matching_tag(
@@ -836,9 +836,9 @@ def test_tags_exclude_rejects_matching_tag(
 
     # _then_ no bundle sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert not any("Bundle sent" in m for m in all_messages), (
-        "Expected no bundle when alert tag matches exclude filter"
-    )
+    assert not any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected no bundle when alert tag matches exclude filter"
 
 
 def test_tags_exclude_accepts_non_matching_tag(
@@ -856,9 +856,9 @@ def test_tags_exclude_accepts_non_matching_tag(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when alert tags don't match exclude filter"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when alert tags don't match exclude filter"
 
 
 def test_tags_filter_none_imports_all(
@@ -877,6 +877,6 @@ def test_tags_filter_none_imports_all(
 
     # _then_ bundles are sent
     all_messages = [rec.getMessage() for rec in caplog.records]
-    assert any("Bundle sent" in m for m in all_messages), (
-        "Expected bundles to be sent when no tag filters are set"
-    )
+    assert any(
+        "Bundle sent" in m for m in all_messages
+    ), "Expected bundles to be sent when no tag filters are set"

@@ -19,6 +19,7 @@ from google_secops_siem_incidents.mappers.relationship_mapper import map_relatio
 from google_secops_siem_incidents.mappers.url_mapper import map_urls
 from google_secops_siem_incidents.mappers.user_account_mapper import map_user_accounts
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
+from google_secops_siem_incidents.utils.enums import Priority, Severity
 from pycti import OpenCTIConnectorHelper
 
 

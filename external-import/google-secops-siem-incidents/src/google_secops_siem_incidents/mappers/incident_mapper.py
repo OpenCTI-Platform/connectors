@@ -44,7 +44,9 @@ def _meets_severity_threshold(raw_severity: str, threshold: Severity) -> bool:
         return True
 
     try:
-        alert_level = Severity(raw_severity.upper())  # pylint: disable=no-value-for-parameter
+        alert_level = Severity(
+            raw_severity.upper()
+        )  # pylint: disable=no-value-for-parameter
     except ValueError:
         return True
     return alert_level >= threshold
@@ -64,7 +66,9 @@ def _meets_priority_threshold(raw_priority: str, threshold: Priority) -> bool:
         return True
 
     try:
-        alert_level = Priority(raw_priority.upper())  # pylint: disable=no-value-for-parameter
+        alert_level = Priority(
+            raw_priority.upper()
+        )  # pylint: disable=no-value-for-parameter
     except ValueError:
         return True
     return alert_level >= threshold
