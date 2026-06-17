@@ -14,8 +14,15 @@ from pycti import (
     Identity,
     Indicator,
     Location,
+    MarkingDefinition,
     OpenCTIConnectorHelper,
     StixCoreRelationship,
+)
+
+TLP_CLEAR = stix2.MarkingDefinition(
+    id=MarkingDefinition.generate_id("TLP", "TLP:CLEAR"),
+    definition_type="statement",
+    definition=stix2.StatementMarking(statement="TLP:CLEAR"),
 )
 
 
@@ -67,7 +74,7 @@ class Phishunt:
                         continue
                     stix_observable = stix2.URL(
                         value=line,
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         custom_properties={
                             "x_opencti_description": "Phishunt malicious URL",
                             "x_opencti_score": self.x_opencti_score_url
@@ -87,7 +94,7 @@ class Phishunt:
                             created_by_ref=self.stix_created_by["id"],
                             pattern=pattern,
                             labels=["osint", "phishing"],
-                            object_marking_refs=[stix2.TLP_WHITE],
+                            object_marking_refs=[TLP_CLEAR],
                             custom_properties={"x_opencti_main_observable_type": "Url"},
                         )
                         bundle_objects.append(stix_indicator)
@@ -133,7 +140,7 @@ class Phishunt:
             for url in data.get("results", data) if isinstance(data, dict) else data:
                 stix_url = stix2.URL(
                     value=url["url"],
-                    object_marking_refs=[stix2.TLP_WHITE],
+                    object_marking_refs=[TLP_CLEAR],
                     custom_properties={
                         "x_opencti_description": "Phishunt malicious URL",
                         "x_opencti_score": self.x_opencti_score_url
@@ -153,7 +160,7 @@ class Phishunt:
                         created_by_ref=self.stix_created_by["id"],
                         pattern=pattern,
                         labels=["osint", "phishing"],
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         custom_properties={"x_opencti_main_observable_type": "Url"},
                     )
                     bundle_objects.append(stix_indicator)
@@ -169,7 +176,7 @@ class Phishunt:
                     bundle_objects.append(stix_relationship)
                     stix_domain = stix2.DomainName(
                         value=url["domain"],
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
                             "x_opencti_score": self.x_opencti_score_domain
@@ -186,7 +193,7 @@ class Phishunt:
                         source_ref=stix_url.id,
                         target_ref=stix_domain.id,
                         relationship_type="related-to",
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_url_domain)
@@ -196,7 +203,7 @@ class Phishunt:
                         ),
                         name=url["company"].capitalize(),
                         identity_class="organization",
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         created_by_ref=self.stix_created_by["id"],
                     )
                     bundle_objects.append(stix_organization)
@@ -207,13 +214,13 @@ class Phishunt:
                         source_ref=stix_url.id,
                         target_ref=stix_organization.id,
                         relationship_type="related-to",
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_organization_url)
                     stix_ip = stix2.IPv4Address(
                         value=url["ip"],
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
                             "x_opencti_score": self.x_opencti_score_ip
@@ -230,7 +237,7 @@ class Phishunt:
                         source_ref=stix_domain.id,
                         target_ref=stix_ip.id,
                         relationship_type="resolves-to",
-                        object_marking_refs=[stix2.TLP_WHITE],
+                        object_marking_refs=[TLP_CLEAR],
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_domain_ip)
@@ -251,7 +258,7 @@ class Phishunt:
                             source_ref=stix_ip.id,
                             target_ref=stix_location.id,
                             relationship_type="located-at",
-                            object_marking_refs=[stix2.TLP_WHITE],
+                            object_marking_refs=[TLP_CLEAR],
                             allow_custom=True,
                         )
                         bundle_objects.append(stix_relationship_ip_location)
