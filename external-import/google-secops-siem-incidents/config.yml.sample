@@ -25,3 +25,4 @@ google_secops_siem_incidents:
   client_cert_url: 'ChangeMe'
   tlp_level: 'amber'    # optional: clear/white/green/amber/amber+strict/red (default: 'amber')
   first_start_time: 'P1D' # optional, ISO-8601 duration to look back on first run (default: 'P1D')
+  severity_filter:       # optional: minimum severity to import (CRITICAL/HIGH/MEDIUM/LOW/INFO). Empty means all.

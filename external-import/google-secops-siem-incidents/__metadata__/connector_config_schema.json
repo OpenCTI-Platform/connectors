@@ -122,6 +122,18 @@
       "description": "How far back to fetch alerts on the very first run (ISO-8601 duration, e.g. P1D). Used only when no prior state exists.",
       "format": "duration",
       "type": "string"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_SEVERITY_FILTER": {
+      "description": "Minimum severity level to import. All alerts at or above this level are imported (critical > high > medium > low > info). When not set, all severities are imported.",
+      "enum": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO"
+      ],
+      "type": "string",
+      "default": null
     }
   },
   "required": [
