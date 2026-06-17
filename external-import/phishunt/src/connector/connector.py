@@ -66,7 +66,8 @@ class Phishunt:
                 )
                 bundle_objects.append(stix_url)
                 if self.create_indicators:
-                    pattern = "[url:value = '" + url_value + "']"
+                    safe_url = url_value.replace("\\", "\\\\").replace("'", "\\'")
+                    pattern = f"[url:value = '{safe_url}']"
                     stix_indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
                         name=url_value,
