@@ -15,7 +15,7 @@ class Severity(StrEnum):
     LOW = "LOW", 2
     INFO = "INFO", 1
 
-    def __new__(cls, value: str, rank: int) -> "Severity":
+    def __new__(cls, value: str, rank: int = 0) -> "Severity":
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj.rank = rank
@@ -74,7 +74,7 @@ class Priority(StrEnum):
     LOW = "LOW", 2
     INFO = "INFO", 1
 
-    def __new__(cls, value: str, rank: int) -> "Priority":
+    def __new__(cls, value: str, rank: int = 0) -> "Priority":
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj.rank = rank

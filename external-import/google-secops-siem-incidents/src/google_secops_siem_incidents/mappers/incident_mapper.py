@@ -70,6 +70,51 @@ def _meets_priority_threshold(raw_priority: str, threshold: Priority) -> bool:
     return alert_level >= threshold
 
 
+def _filter_incident(
+    severity: str | None = None,
+    raw_priority: str | None = None,
+    risk_score: str | None = None,
+    labels: list[str] | None = None,
+    severity_filter: Severity | None = None,
+    priority_filter: Priority | None = None,
+    risk_score_filter: int | None = None,
+    tags_include: list[str] | None = None,
+    tags_exclude: list[str] | None = None,
+) -> bool:
+
+    if (
+        severity_filter is not None
+        and severity is not None
+        and not _meets_severity_threshold(severity, severity_filter)
+    ):
+        return False
+
+    if (
+        priority_filter is not None
+        and raw_priority
+        and not _meets_priority_threshold(raw_priority, priority_filter)
+    ):
+        return False
+
+    if risk_score_filter is not None and risk_score is not None:
+        try:
+            if int(risk_score) < risk_score_filter:
+                return False
+        except ValueError:
+            pass
+
+    if tags_include or tags_exclude:
+        alert_tags = {t.lower() for t in labels} if labels else set()
+
+        if tags_include and not alert_tags.intersection(tags_include):
+            return False
+
+        if tags_exclude and alert_tags.intersection(tags_exclude):
+            return False
+
+    return True
+
+
 def map_incident(
     alert: Alert,
     rule_metadata: RuleMetadata,
@@ -108,22 +153,7 @@ def map_incident(
 
     raw_severity = rule_metadata.properties.metadata.get("severity", "")
     severity = raw_severity.lower() or None
-
-    if (
-        severity_filter is not None
-        and severity is not None
-        and not _meets_severity_threshold(severity, severity_filter)
-    ):
-        return None
-
-    raw_priority = rule_metadata.properties.metadata.get("priority", "")
-
-    if (
-        priority_filter is not None
-        and raw_priority
-        and not _meets_priority_threshold(raw_priority, priority_filter)
-    ):
-        return None
+    raw_priority = rule_metadata.properties.metadata.get("priority")
 
     incident_type = IncidentType(alert.rule_type.lower().replace("_", "-"))
 
@@ -137,18 +167,13 @@ def map_incident(
         rows.append(f"| Category | {meta['description']} |")
     if meta.get("mitre_attach_url"):
         rows.append(f"| Title | {meta['mitre_attach_url']} |")
-    if meta.get("priority"):
-        rows.append(f"| Priority | {meta['priority']} |")
+    if raw_priority:
+        rows.append(f"| Priority | {raw_priority} |")
 
     risk_outcome = find_outcome(alert.outcomes, "risk_score")
-    if risk_outcome and risk_outcome.int64_val is not None:
-        if risk_score_filter is not None:
-            try:
-                if int(risk_outcome.int64_val) < risk_score_filter:
-                    return None
-            except ValueError:
-                pass
-        rows.append(f"| Risk | {risk_outcome.int64_val} |")
+    risk_score = risk_outcome.int64_val if risk_outcome else None
+    if risk_score is not None:
+        rows.append(f"| Risk | {risk_score} |")
 
     description = (
         "| Attribute | Value |\n| --- | --- |\n" + "\n".join(rows) if rows else None
@@ -157,14 +182,18 @@ def map_incident(
     raw_tags = rule_metadata.properties.metadata.get("tags", "")
     labels = [t.strip() for t in raw_tags.split(",") if t.strip()] or None
 
-    if tags_include or tags_exclude:
-        alert_tags = {t.lower() for t in labels} if labels else set()
-
-        if tags_include and not alert_tags.intersection(tags_include):
-            return None
-
-        if tags_exclude and alert_tags.intersection(tags_exclude):
-            return None
+    if not _filter_incident(
+        severity=severity,
+        raw_priority=raw_priority,
+        risk_score=risk_score,
+        labels=labels,
+        severity_filter=severity_filter,
+        priority_filter=priority_filter,
+        risk_score_filter=risk_score_filter,
+        tags_include=tags_include,
+        tags_exclude=tags_exclude,
+    ):
+        return None
 
     last_seen = datetime.fromisoformat(
         alert.time_window.end_time.replace("Z", "+00:00")
