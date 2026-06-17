@@ -1,3 +1,4 @@
+import ipaddress
 import sys
 from datetime import UTC, datetime
 from typing import Any
@@ -134,50 +135,63 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_organization_url)
-                    stix_ip = stix2.IPv4Address(
-                        value=entry["ip"],
-                        object_marking_refs=[TLP_CLEAR],
-                        custom_properties={
-                            "x_opencti_description": "Phishunt IP resolving malicious domain",
-                            "x_opencti_score": self.x_opencti_score_ip
-                            or self.default_x_opencti_score,
-                            "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": self.stix_created_by["id"],
-                        },
-                    )
-                    bundle_objects.append(stix_ip)
-                    stix_relationship_domain_ip = stix2.Relationship(
-                        id=StixCoreRelationship.generate_id(
-                            "resolves-to", stix_domain.id, stix_ip.id
-                        ),
-                        source_ref=stix_domain.id,
-                        target_ref=stix_ip.id,
-                        relationship_type="resolves-to",
-                        object_marking_refs=[TLP_CLEAR],
-                        allow_custom=True,
-                    )
-                    bundle_objects.append(stix_relationship_domain_ip)
-                    if entry.get("country") and entry["country"] != "-":
-                        stix_location = stix2.Location(
-                            id=Location.generate_id(entry["country"], "Country"),
-                            name=entry["country"],
-                            country=entry["country"],
-                            created_by_ref=self.stix_created_by["id"],
-                            allow_custom=True,
-                            custom_properties={"x_opencti_location_type": "Country"},
+                    ip_value = entry.get("ip", "")
+                    try:
+                        ipaddress.IPv4Address(ip_value)
+                        ip_is_valid = True
+                    except ValueError:
+                        ip_is_valid = False
+                        self.helper.connector_logger.warning(
+                            "[Phishunt] Skipping invalid IP value.",
+                            {"ip": ip_value, "url": url_value},
                         )
-                        bundle_objects.append(stix_location)
-                        stix_relationship_ip_location = stix2.Relationship(
+                    if ip_is_valid:
+                        stix_ip = stix2.IPv4Address(
+                            value=ip_value,
+                            object_marking_refs=[TLP_CLEAR],
+                            custom_properties={
+                                "x_opencti_description": "Phishunt IP resolving malicious domain",
+                                "x_opencti_score": self.x_opencti_score_ip
+                                or self.default_x_opencti_score,
+                                "x_opencti_labels": ["osint", "phishing"],
+                                "x_opencti_created_by_ref": self.stix_created_by["id"],
+                            },
+                        )
+                        bundle_objects.append(stix_ip)
+                        stix_relationship_domain_ip = stix2.Relationship(
                             id=StixCoreRelationship.generate_id(
-                                "located-at", stix_ip.id, stix_location.id
+                                "resolves-to", stix_domain.id, stix_ip.id
                             ),
-                            source_ref=stix_ip.id,
-                            target_ref=stix_location.id,
-                            relationship_type="located-at",
+                            source_ref=stix_domain.id,
+                            target_ref=stix_ip.id,
+                            relationship_type="resolves-to",
                             object_marking_refs=[TLP_CLEAR],
                             allow_custom=True,
                         )
-                        bundle_objects.append(stix_relationship_ip_location)
+                        bundle_objects.append(stix_relationship_domain_ip)
+                        if entry.get("country") and entry["country"] != "-":
+                            stix_location = stix2.Location(
+                                id=Location.generate_id(entry["country"], "Country"),
+                                name=entry["country"],
+                                country=entry["country"],
+                                created_by_ref=self.stix_created_by["id"],
+                                allow_custom=True,
+                                custom_properties={
+                                    "x_opencti_location_type": "Country"
+                                },
+                            )
+                            bundle_objects.append(stix_location)
+                            stix_relationship_ip_location = stix2.Relationship(
+                                id=StixCoreRelationship.generate_id(
+                                    "located-at", stix_ip.id, stix_location.id
+                                ),
+                                source_ref=stix_ip.id,
+                                target_ref=stix_location.id,
+                                relationship_type="located-at",
+                                object_marking_refs=[TLP_CLEAR],
+                                allow_custom=True,
+                            )
+                            bundle_objects.append(stix_relationship_ip_location)
             if bundle_objects:
                 bundle = self.helper.stix2_create_bundle(
                     [self.stix_created_by] + bundle_objects
