@@ -98,3 +98,14 @@ def test_run_listens_to_stream():
     helper.listen_stream.assert_called_once_with(
         message_callback=connector.process_message
     )
+
+
+def test_run_aborts_when_stream_id_missing():
+    # A placeholder/blank stream id must fail fast at startup, before the stream
+    # is listened to (mirrors the sibling stream/clickhouse connector).
+    connector, helper, _ = _make_connector(live_stream_id="ChangeMe")
+
+    with pytest.raises(ValueError):
+        connector.run()
+
+    helper.listen_stream.assert_not_called()
