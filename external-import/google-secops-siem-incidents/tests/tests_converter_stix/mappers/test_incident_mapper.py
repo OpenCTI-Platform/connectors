@@ -674,3 +674,127 @@ class TestRiskScoreFilter:
 
         # _then_
         assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — tags filter (include/exclude)
+# ---------------------------------------------------------------------------
+class TestTagsFilter:
+    def test_then_returns_incident_when_tag_in_include_list(self):
+        """Given tags 'phishing,malware' and include=['phishing'] → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="phishing,malware")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_none_when_no_tag_in_include_list(self):
+        """Given tags 'test' and include=['phishing'] → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="test")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_none_when_tag_in_exclude_list(self):
+        """Given tags 'phishing,malware' and exclude=['malware'] → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="phishing,malware")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_exclude=["malware"],
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_no_tag_in_exclude_list(self):
+        """Given tags 'test' and exclude=['malware'] → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="test")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_exclude=["malware"],
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_none_when_no_tags_and_include_set(self):
+        """Given empty tags and include=['phishing'] → None (no tags to match)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_no_tags_and_exclude_set(self):
+        """Given empty tags and exclude=['malware'] → incident returned (nothing to exclude)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_exclude=["malware"],
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_case_insensitive_matching(self):
+        """Given tags 'Phishing' and include=['phishing'] → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], tags="Phishing")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            tags_include=["phishing"],
+        )
+
+        # _then_
+        assert result is not None

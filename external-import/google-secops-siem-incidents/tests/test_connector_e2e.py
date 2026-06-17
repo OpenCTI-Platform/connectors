@@ -268,6 +268,8 @@ def _make_mock_config() -> MagicMock:
     config.google_secops_siem_incidents.severity_filter = None
     config.google_secops_siem_incidents.priority_filter = None
     config.google_secops_siem_incidents.risk_score_filter = None
+    config.google_secops_siem_incidents.tags_include = None
+    config.google_secops_siem_incidents.tags_exclude = None
     return config
 
 
@@ -771,4 +773,110 @@ def test_risk_score_filter_passes_alerts_without_risk_score(
     all_messages = [rec.getMessage() for rec in caplog.records]
     assert any("Bundle sent" in m for m in all_messages), (
         "Expected bundles to be sent when alerts have no risk score"
+    )
+
+
+# =====================
+# Scenarios — tags filter
+# =====================
+
+
+def test_tags_include_accepts_matching_tag(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that alerts with a matching include tag are imported."""
+    # _given_ batches with tag "test" and include filter ["test"]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.tags_include = ["test"]
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when alert tag matches include filter"
+    )
+
+
+def test_tags_include_rejects_non_matching_tag(
+    caplog: Any,
+) -> None:
+    """Verify that alerts without a matching include tag are filtered out."""
+    # _given_ batches with tag "test" and include filter ["phishing"]
+    batches = [_build_batch("2024-03-01T10:00:00Z")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.tags_include = ["phishing"]
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ no bundle sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert not any("Bundle sent" in m for m in all_messages), (
+        "Expected no bundle when alert tags don't match include filter"
+    )
+
+
+def test_tags_exclude_rejects_matching_tag(
+    caplog: Any,
+) -> None:
+    """Verify that alerts with an excluded tag are filtered out."""
+    # _given_ batches with tag "test" and exclude filter ["test"]
+    batches = [_build_batch("2024-03-01T10:00:00Z")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.tags_exclude = ["test"]
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ no bundle sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert not any("Bundle sent" in m for m in all_messages), (
+        "Expected no bundle when alert tag matches exclude filter"
+    )
+
+
+def test_tags_exclude_accepts_non_matching_tag(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that alerts without excluded tags are imported."""
+    # _given_ batches with tag "test" and exclude filter ["malware"]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.tags_exclude = ["malware"]
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when alert tags don't match exclude filter"
+    )
+
+
+def test_tags_filter_none_imports_all(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that no tag filter imports all alerts."""
+    # _given_ no tag filters (default)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.tags_include = None
+    config.google_secops_siem_incidents.tags_exclude = None
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when no tag filters are set"
     )
