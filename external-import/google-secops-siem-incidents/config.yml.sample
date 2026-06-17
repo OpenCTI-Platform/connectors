@@ -28,3 +28,5 @@ google_secops_siem_incidents:
   severity_filter:       # optional: minimum severity to import (CRITICAL/HIGH/MEDIUM/LOW/INFO). Empty means all.
   priority_filter:       # optional: minimum priority to import (CRITICAL/HIGH/MEDIUM/LOW/INFO). Empty means all.
   risk_score_filter:     # optional: minimum risk score to import (integer >= 0). Alerts without a risk score always pass. Empty means all.
+  tags_include: ''       # optional: comma-separated tags to include. Only alerts with at least one matching tag are imported. Empty means all.
+  tags_exclude: ''       # optional: comma-separated tags to exclude. Alerts with any matching tag are rejected. Empty means none excluded.

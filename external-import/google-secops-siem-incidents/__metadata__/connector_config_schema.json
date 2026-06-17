@@ -152,6 +152,22 @@
       "description": "Minimum risk score to import. All alerts with a risk score greater than or equal to this value are imported. Alerts without a risk score always pass. When not set, all alerts are imported regardless of risk score.",
       "minimum": 0,
       "type": "integer"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_TAGS_INCLUDE": {
+      "default": [],
+      "description": "Comma-separated list of tags to include. Only alerts that have at least one of these tags are imported. When empty, no inclusion filter is applied.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_TAGS_EXCLUDE": {
+      "default": [],
+      "description": "Comma-separated list of tags to exclude. Alerts that have any of these tags are excluded. When empty, no exclusion filter is applied.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     }
   },
   "required": [
