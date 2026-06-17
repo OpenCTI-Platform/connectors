@@ -1,4 +1,3 @@
-version: '3'
 services:
   connector-recorded-future-asi:
     image: opencti/connector-recorded-future-asi:latest # 'recorded-future-asi' being the name of connector's directory
@@ -13,8 +12,8 @@ services:
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-recorded-future-asi
-      - RECORDED_FUTURE_ASI_API_BASE_URL=https://api.securitytrails.com/v2 # optional (default: 'https://api.securitytrails.com/v2')
-      #- RF_HISTORY_API_BASE_URL=https://api.securitytrails.com/v1 #optional (default: 'https://api.securitytrails.com/v1')
+      - RECORDED_FUTURE_ASI_API_BASE_URL=https://api.securitytrails.com/v2 # optional, v2 base URL for initial sync (exposures list and assets) (default: 'https://api.securitytrails.com/v2')
+      - RECORDED_FUTURE_ASI_API_V1_BASE_URL=https://api.securitytrails.com/v1 # optional, v1 base URL for incremental sync (exposure history activity) (default: 'https://api.securitytrails.com/v1')
       - RECORDED_FUTURE_ASI_API_KEY=CHANGEME
       - RECORDED_FUTURE_ASI_PROJECT_ID=CHANGEME
       - RECORDED_FUTURE_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')

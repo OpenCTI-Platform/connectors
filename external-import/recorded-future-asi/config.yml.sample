@@ -11,8 +11,8 @@ connector:
   duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
 recorded-future-asi:
-  api_base_url: 'https://api.securitytrails.com/v2' # optional (default: 'https://api.securitytrails.com/v2')
-  api_v1_base_url: 'https://api.securitytrails.com/v1' # optional, v1 history API base URL (default: 'https://api.securitytrails.com/v1')
+  api_base_url: 'https://api.securitytrails.com/v2' # optional, v2 base URL for initial sync (exposures list and assets) (default: 'https://api.securitytrails.com/v2')
+  api_v1_base_url: 'https://api.securitytrails.com/v1' # optional, v1 base URL for incremental sync (exposure history activity) (default: 'https://api.securitytrails.com/v1')
   api_key: 'ChangeMe'
   project_id: 'ChangeMe'
   tlp_level: 'amber+strict' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')

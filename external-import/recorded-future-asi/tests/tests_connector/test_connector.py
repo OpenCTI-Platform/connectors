@@ -192,6 +192,33 @@ def _mock_process_message_dependencies(
     opencti_helper.send_stix2_bundle = MagicMock(return_value=["bundle-id"])
 
 
+def test_process_message_logs_effective_sync_mode(
+    opencti_helper,
+    make_stub_connector_settings,
+):
+    settings = make_stub_connector_settings(
+        run_limit=50,
+        filter_severity_min="moderate",
+    )
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
+    connector.client.list_exposures_batch = MagicMock(return_value=([], None))
+    connector.client.get_exposure_assets = MagicMock()
+    _mock_process_message_dependencies(opencti_helper, initial_state={})
+
+    connector.process_message()
+
+    sync_mode_log = next(
+        call
+        for call in opencti_helper.connector_logger.info.call_args_list
+        if call.args[0] == "[CONNECTOR] Effective sync mode"
+    )
+    assert sync_mode_log.args[1] == {
+        "initial_sync": True,
+        "run_limit": 50,
+        "severity_filter": "min:moderate",
+    }
+
+
 def test_process_message_persists_exposures_cursor_when_batch_has_more_pages(
     opencti_helper,
     make_stub_connector_settings,

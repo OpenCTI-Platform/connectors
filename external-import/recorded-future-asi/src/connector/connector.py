@@ -90,6 +90,23 @@ class RecordedFutureAsiConnector:
             return {"filter_severity_exact": recorded_future_asi.filter_severity_exact}
         return {}
 
+    def _effective_sync_mode(self, initial_sync: bool) -> dict[str, bool | int | str]:
+        """Return configured sync mode fields for observability logging."""
+        recorded_future_asi = self.config.recorded_future_asi
+        if recorded_future_asi.filter_severity_min is not None:
+            severity_filter = f"min:{recorded_future_asi.filter_severity_min}"
+        elif recorded_future_asi.filter_severity_exact is not None:
+            severity_filter = f"exact:{recorded_future_asi.filter_severity_exact}"
+        else:
+            severity_filter = "none"
+
+        run_limit = recorded_future_asi.run_limit
+        return {
+            "initial_sync": initial_sync,
+            "run_limit": run_limit if run_limit is not None else "unlimited",
+            "severity_filter": severity_filter,
+        }
+
     def _collect_initial_intelligence(
         self,
         exposures_cursor: str | None = None,
@@ -314,6 +331,10 @@ class RecordedFutureAsiConnector:
             )
 
             initial_sync = self._is_initial_sync(current_state)
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Effective sync mode",
+                self._effective_sync_mode(initial_sync),
+            )
             next_cursor: str | None = None
 
             if initial_sync:
