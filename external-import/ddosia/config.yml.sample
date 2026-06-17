@@ -5,12 +5,12 @@ opencti:
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
-  name: 'Template Connector' # optional (default: 'Template Connector')
-  scope: 'ChangeMe'
-  log_level: 'error' # optional (default: 'error')
-  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+  name: 'DDoSIA' # optional (default: 'DDoSIA')
+  scope: 'ddosia'
+  log_level: 'info' # optional (default: 'info')
+  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
 
-template:
-  api_base_url: 'ChangeMe'
-  api_key: 'ChangeMe'
-  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+ddosia:
+  api_base_url: 'ChangeMe' # e.g. https://witha.name
+  tlp_level: 'green' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'green')
+  import_start_timestamp: null # optional, float. null = latest only on first run, 0 = complete history, >0 = specific timestamp retrofeed

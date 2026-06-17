@@ -1,19 +1,19 @@
 version: '3'
 services:
-  connector-template:
-    image: opencti/connector-template:latest # 'template' being the name of connector's directory
+  connector-ddosia:
+    image: opencti/connector-ddosia:latest
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=CHANGEME
       # Common parameters for connectors of type EXTERNAL_IMPORT
       - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=CHANGEME # optional (default: 'Template Connector')
-      - CONNECTOR_SCOPE=CHANGEME
-      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_DURATION_PERIOD=CHANGEME # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
-      # Custom parameters for connector-template
-      - TEMPLATE_API_BASE_URL=CHANGEME
-      - TEMPLATE_API_KEY=CHANGEME
-      - TEMPLATE_TLP_LEVEL=clear # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
+      - CONNECTOR_NAME=DDoSIA # optional (default: 'DDoSIA')
+      - CONNECTOR_SCOPE=ddosia
+      - CONNECTOR_LOG_LEVEL=info # optional (default: 'info')
+      - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      # Custom parameters for connector ddosia
+      - DDOSIA_API_BASE_URL=CHANGEME
+      - DDOSIA_TLP_LEVEL=green # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'green')
+      - DDOSIA_IMPORT_START_TIMESTAMP= # optional, float. unset/empty = latest only on first run, 0 = complete history, >0 = specific timestamp retrofeed
     restart: always

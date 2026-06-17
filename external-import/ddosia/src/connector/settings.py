@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import Literal
+from typing import Literal, Optional
 
 from connectors_sdk import (
     BaseConfigModel,
@@ -17,7 +17,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
     name: str = Field(
         description="The name of the connector.",
-        default="TemplateConnector",
+        default="DDoSIA",
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs of the connector.",
@@ -25,13 +25,12 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
 
 
-class TemplateConfig(BaseConfigModel):
+class DdosiaConfig(BaseConfigModel):
     """
-    Define parameters and/or defaults for the configuration specific to the `TemplateConnector`.
+    Define parameters and/or defaults for the configuration specific to the `DdosiaConnector`.
     """
 
     api_base_url: HttpUrl = Field(description="API base URL.")
-    api_key: str = Field(description="API key for authentication.")
     tlp_level: Literal[
         "clear",
         "white",
@@ -41,16 +40,20 @@ class TemplateConfig(BaseConfigModel):
         "red",
     ] = Field(
         description="Default TLP level of the imported entities.",
-        default="clear",
+        default="green",
+    )
+    import_start_timestamp: Optional[float] = Field(
+        description="Optional timestamp from which to retrieve targets on the first run (0 for all history, null for only the latest).",
+        default=None,
     )
 
 
 class ConnectorSettings(BaseConnectorSettings):
     """
-    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `TemplateConfig`.
+    Override `BaseConnectorSettings` to include `ExternalImportConnectorConfig` and `DdosiaConfig`.
     """
 
     connector: ExternalImportConnectorConfig = Field(
         default_factory=ExternalImportConnectorConfig
     )
-    template: TemplateConfig = Field(default_factory=TemplateConfig)
+    ddosia: DdosiaConfig = Field(default_factory=DdosiaConfig)
