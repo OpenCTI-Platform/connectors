@@ -50,6 +50,43 @@ class TaxiiPostConnector:
         ):
             raise ValueError("Missing stream ID, please check your configurations.")
 
+    def _prepare_object(self, data):
+        """
+        Apply the configured transformations to a single STIX object before it
+        is posted to the TAXII server.
+
+        Returns the transformed object, or ``None`` when the object must not be
+        posted at all. When ``delete_created_by_ref`` is enabled the author
+        identity referenced by ``created_by_ref`` is stripped from every object;
+        the identity object itself would otherwise still reach the server as its
+        own stream event, so it is dropped here to honor the configuration.
+        """
+        data_object = data
+        if self.config.delete_created_by_ref and data_object.get("type") == "identity":
+            return None
+        data_object["spec_version"] = self.config.stix_version
+        if (
+            self.config.delete_marking_definition
+            and "object_marking_refs" in data_object
+        ):
+            del data_object["object_marking_refs"]
+        if self.config.delete_created_by_ref and "created_by_ref" in data_object:
+            del data_object["created_by_ref"]
+        if self.config.stix_version != "2.1":
+            del data_object["extensions"]
+            for key in (
+                "spec_version",
+                "revoked",
+                "confidence",
+                "lang",
+                "pattern_type",
+                "pattern_version",
+                "is_family",
+            ):
+                if key in data_object:
+                    del data_object[key]
+        return data_object
+
     def _process_message(self, msg):
         try:
             data = json.loads(msg.data)["data"]
@@ -70,28 +107,14 @@ class TaxiiPostConnector:
             "Accept": accept_header_by_taxii_version(self.config.version),
         }
         try:
-            data_object = data
-            data_object["spec_version"] = self.config.stix_version
-            if (
-                self.config.delete_marking_definition
-                and "object_marking_refs" in data_object
-            ):
-                del data_object["object_marking_refs"]
-            if self.config.delete_created_by_ref and "created_by_ref" in data_object:
-                del data_object["created_by_ref"]
-            if self.config.stix_version != "2.1":
-                del data_object["extensions"]
-                for key in (
-                    "spec_version",
-                    "revoked",
-                    "confidence",
-                    "lang",
-                    "pattern_type",
-                    "pattern_version",
-                    "is_family",
-                ):
-                    if key in data_object:
-                        del data_object[key]
+            data_object = self._prepare_object(data)
+            if data_object is None:
+                self.helper.log_info(
+                    "Skipping identity object "
+                    + data["id"]
+                    + " (delete_created_by_ref is enabled)"
+                )
+                return
             bundle = {
                 "type": "bundle",
                 "spec_version": self.config.stix_version,
