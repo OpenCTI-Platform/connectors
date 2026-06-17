@@ -576,3 +576,101 @@ class TestPriorityFilter:
 
         # _then_
         assert result is not None
+
+
+# ---------------------------------------------------------------------------
+# Tests — risk score filter (threshold-based)
+# ---------------------------------------------------------------------------
+class TestRiskScoreFilter:
+    def test_then_returns_none_when_below_threshold(self):
+        """Given risk_score=50 and threshold 80 → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("50")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_at_threshold(self):
+        """Given risk_score=80 and threshold 80 → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("80")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_above_threshold(self):
+        """Given risk_score=95 and threshold 80 → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("95")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_threshold(self):
+        """Given any risk_score and None threshold → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata(
+            [], outcomes=[make_risk_score_outcome("10")]
+        )
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=None,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_risk_score_outcome(self):
+        """Given no risk_score outcome and a threshold → incident returned (no score = pass)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], outcomes=[])
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            risk_score_filter=80,
+        )
+
+        # _then_
+        assert result is not None

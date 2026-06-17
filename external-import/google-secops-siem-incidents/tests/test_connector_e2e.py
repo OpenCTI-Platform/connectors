@@ -20,6 +20,7 @@ from tests_converter_stix.factories import (
     make_hostname_outcomes,
     make_ip_outcomes,
     make_multi_hostname_outcomes,
+    make_risk_score_outcome,
 )
 
 # =====================
@@ -266,6 +267,7 @@ def _make_mock_config() -> MagicMock:
     config.google_secops_siem_incidents.first_start_time = timedelta(hours=1)
     config.google_secops_siem_incidents.severity_filter = None
     config.google_secops_siem_incidents.priority_filter = None
+    config.google_secops_siem_incidents.risk_score_filter = None
     return config
 
 
@@ -626,4 +628,147 @@ def test_priority_filter_none_imports_all(
     all_messages = [rec.getMessage() for rec in caplog.records]
     assert any("Bundle sent" in m for m in all_messages), (
         "Expected bundles to be sent when priority filter is None (all pass)"
+    )
+
+
+# =====================
+# Stub builders — risk score
+# =====================
+
+
+def _build_batch_with_risk(
+    detection_ts: str, risk_score: str = "75"
+) -> RuleAlertResponse:
+    """Build a RuleAlertResponse with risk_score outcomes on each alert."""
+    alert1 = AlertFactory.build(
+        fields=[AlertFieldFactory.build(name="ip", string_val="10.0.0.1")],
+        outcomes=make_multi_hostname_outcomes(["host1a.local", "host1b.local"])
+        + make_ip_outcomes(["10.0.0.1", "10.0.0.2"])
+        + [make_risk_score_outcome(risk_score)],
+        detection_timestamp=detection_ts,
+    )
+    alert2 = AlertFactory.build(
+        fields=[AlertFieldFactory.build(name="ip", string_val="10.0.0.3")],
+        outcomes=make_hostname_outcomes("host2.local")
+        + make_ip_outcomes(["10.0.0.3"])
+        + [make_risk_score_outcome(risk_score)],
+        detection_timestamp=detection_ts,
+    )
+    rule_alert = RuleAlertFactory.build(
+        alerts=[alert1, alert2],
+        rule_metadata=RuleMetadataFactory.build(
+            properties=RulePropertiesFactory.build(
+                metadata={
+                    "severity": "MEDIUM",
+                    "priority": "MEDIUM",
+                    "tags": "test",
+                },
+            ),
+        ),
+    )
+    return RuleAlertResponseFactory.build(rule_alerts=[rule_alert])
+
+
+# =====================
+# Scenarios — risk score filter
+# =====================
+
+
+def test_risk_score_filter_excludes_below_threshold(
+    caplog: Any,
+) -> None:
+    """Verify that alerts with risk score below the threshold are excluded."""
+    # _given_ a batch with risk_score=75 and a threshold of 80
+    batches = [_build_batch_with_risk("2024-03-01T10:00:00Z", risk_score="75")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.risk_score_filter = 80
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ no bundle should be sent (75 < 80)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert not any("Bundle sent" in m for m in all_messages), (
+        "Expected no bundle to be sent when risk score is below threshold"
+    )
+
+
+def test_risk_score_filter_includes_at_threshold(
+    caplog: Any,
+) -> None:
+    """Verify that alerts with risk score equal to the threshold are imported."""
+    # _given_ a batch with risk_score=75 and a threshold of 75
+    batches = [_build_batch_with_risk("2024-03-01T10:00:00Z", risk_score="75")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.risk_score_filter = 75
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when risk score meets threshold"
+    )
+
+
+def test_risk_score_filter_includes_above_threshold(
+    caplog: Any,
+) -> None:
+    """Verify that alerts with risk score above the threshold are imported."""
+    # _given_ a batch with risk_score=90 and a threshold of 50
+    batches = [_build_batch_with_risk("2024-03-01T10:00:00Z", risk_score="90")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.risk_score_filter = 50
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when risk score is above threshold"
+    )
+
+
+def test_risk_score_filter_none_imports_all(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that None risk score filter imports all alerts."""
+    # _given_ no risk score filter (default behavior)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.risk_score_filter = None
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent (all alerts imported)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when risk score filter is None (all pass)"
+    )
+
+
+def test_risk_score_filter_passes_alerts_without_risk_score(
+    caplog: Any,
+) -> None:
+    """Verify that alerts without a risk_score outcome pass through the filter."""
+    # _given_ a batch without risk_score outcomes and a threshold of 50
+    batches = [_build_batch("2024-03-01T10:00:00Z")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.risk_score_filter = 50
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent (no risk score = pass)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when alerts have no risk score"
     )
