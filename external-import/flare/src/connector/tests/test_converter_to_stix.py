@@ -11,6 +11,7 @@ from connector.events import (
     RansomleakEvent,
     StealerLogEvent,
 )
+from pycti import Identity as PyctiIdentity
 
 _APPROX_NOW = object()  # sentinel: assert result is approximately datetime.now(utc)
 
@@ -51,7 +52,11 @@ def mock_config() -> MagicMock:
 
 @pytest.fixture
 def author() -> stix2.Identity:
-    return stix2.Identity(name="Flare", identity_class="organization")
+    return stix2.Identity(
+        id=PyctiIdentity.generate_id("Flare", "organization"),
+        name="Flare",
+        identity_class="organization",
+    )
 
 
 @pytest.fixture
