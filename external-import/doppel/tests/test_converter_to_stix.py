@@ -137,9 +137,11 @@ def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
         "created_at": "2026-06-11T09:00:00Z",
     }
 
-    # Mocking that the indicator already exists in OpenCTI using valid UUID sub-strings
+    # Mocking that the indicator already exists in OpenCTI.
+    # Real pycti API responses return "id" as an internal OpenCTI UUID (no "--"),
+    # not a STIX identifier — only "standard_id" is the valid STIX id.
     mock_indicator = {
-        "id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
         "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
         "objectLabel": [
             {"value": "queue_state:taken_down"},
@@ -157,7 +159,7 @@ def test_convert_alerts_to_stix_existing_indicator_reversion(converter):
 
     # Then verify that the update_field API was called to revoke the indicator
     converter.helper.api.indicator.update_field.assert_called_with(
-        id="indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        id="e5a6f272-3595-4673-9097-f5be0df2a926",
         input={"key": "revoked", "value": True},
     )
 
@@ -453,7 +455,7 @@ def test_reverted_indicator_gains_revoked_false_positive_label(converter):
     """Reverting (not-takedown) must ADD the revoked-false-positive label."""
     alert = _domains_alert(alert_id="alert_rfp_add", queue_state="resolved")
     existing_indicator = {
-        "id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
         "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
         "objectLabel": [],
     }
@@ -472,7 +474,7 @@ def test_takedown_indicator_removes_revoked_false_positive_label(converter):
     """An actioned/taken-down indicator must REMOVE the revoked-false-positive label."""
     alert = _domains_alert(alert_id="alert_rfp_rm", queue_state="actioned")
     existing_indicator = {
-        "id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
+        "id": "e5a6f272-3595-4673-9097-f5be0df2a926",
         "standard_id": "indicator--e5a6f272-3595-4673-9097-f5be0df2a926",
         "objectLabel": [{"value": "revoked-false-positive"}],
     }

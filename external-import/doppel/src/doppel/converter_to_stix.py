@@ -1012,12 +1012,23 @@ class ConverterToStix:
         observable_id = observables[0].get("id")
         note_content = f"Doppel alert queue state updated to {alert.get('queue_state')}. Setting revoked to {not in_takedown_state(queue_state)}."
 
+        # API-returned objects expose their STIX id as "standard_id"; newly-created
+        # serialized dicts expose it as "id". Prefer standard_id so the ref is always
+        # a valid STIX identifier, then fall back to id only if it already looks like
+        # one (contains "--"). Drop None refs so the Note constructor never receives
+        # an invalid value.
         obj_id = obj.get("id")
-        filter_obj_id = (
-            obj_id if (obj_id and "--" in str(obj_id)) else obj.get("standard_id")
+        obj_stix_id = obj.get("standard_id") or (
+            obj_id if (obj_id and "--" in str(obj_id)) else None
         )
+        if not obj_stix_id:
+            self.helper.connector_logger.warning(
+                "[DoppelConverter] Could not resolve a STIX identifier for the object; "
+                "note will reference the observable only",
+                meta={"obj_id": obj_id},
+            )
 
-        note_refs = [filter_obj_id, observable_id]
+        note_refs = [ref for ref in [obj_stix_id, observable_id] if ref]
 
         note_body = f"Alert {alert_id} has been {queue_state}"
         created_at = parse_iso_datetime(alert.get("created_at"))
