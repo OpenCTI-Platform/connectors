@@ -124,7 +124,19 @@
       "type": "string"
     },
     "GOOGLE_SECOPS_SIEM_INCIDENTS_SEVERITY_FILTER": {
-      "description": "Minimum severity level to import. All alerts at or above this level are imported (critical > high > medium > low > info). When not set, all severities are imported.",
+      "description": "Minimum severity level to import. All alerts at or above this level are imported (critical > high > medium > low > info). When not set, all severities are imported. Alerts with unknown severity are always imported.",
+      "enum": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO"
+      ],
+      "type": "string",
+      "default": null
+    },
+    "GOOGLE_SECOPS_SIEM_INCIDENTS_PRIORITY_FILTER": {
+      "description": "Minimum priority level to import. All alerts at or above this level are imported (critical > high > medium > low > info). When not set, all priorities are imported. Alerts with unknown priority are always imported.",
       "enum": [
         "CRITICAL",
         "HIGH",
