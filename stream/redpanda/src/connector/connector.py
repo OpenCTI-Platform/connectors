@@ -41,18 +41,19 @@ class RedpandaConnector:
 
         :param msg: Message event from the stream.
         """
-        self.check_stream_id()
-
         try:
             data = json.loads(msg.data)["data"]
         except (json.JSONDecodeError, KeyError, TypeError) as err:
             raise ValueError(f"Cannot process the message: {err}") from err
 
         if self.client.produce_event(msg.event, data):
-            self.helper.connector_logger.info(
+            # Per-event write logged at DEBUG: live streams are high-volume, so
+            # an INFO line per event would flood logs and add IO overhead.
+            self.helper.connector_logger.debug(
                 "[%s] Event produced to Redpanda topic" % msg.event.upper()
             )
 
     def run(self) -> None:
-        """Start listening to the OpenCTI live stream."""
+        """Validate the live stream id, then listen to the OpenCTI live stream."""
+        self.check_stream_id()
         self.helper.listen_stream(message_callback=self.process_message)
