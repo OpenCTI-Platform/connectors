@@ -16,6 +16,7 @@ class Severity(StrEnum):
     INFO = "INFO", 1
 
     def __new__(cls, value: str, rank: int = 0) -> "Severity":
+        """Create a new Severity enum member with a rank attribute."""
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj.rank = rank
@@ -31,7 +32,7 @@ class Severity(StrEnum):
             return value
         if isinstance(value, str):
             try:
-                return Severity(value.upper())
+                return Severity(value.upper())  # pylint: disable=no-value-for-parameter
             except ValueError:
                 return None
         return None
@@ -44,18 +45,21 @@ class Severity(StrEnum):
         return self._rank(self) >= self._rank(other)
 
     def __gt__(self, value: object) -> bool:
+        """Return True when this severity is greater than ``value``."""
         other = self._coerce(value)
         if other is None:
             return NotImplemented
         return self._rank(self) > self._rank(other)
 
     def __le__(self, value: object) -> bool:
+        """Return True when this severity is less than or equal to ``value``."""
         other = self._coerce(value)
         if other is None:
             return NotImplemented
         return self._rank(self) <= self._rank(other)
 
     def __lt__(self, value: object) -> bool:
+        """Return True when this severity is less than ``value``."""
         other = self._coerce(value)
         if other is None:
             return NotImplemented
@@ -75,6 +79,7 @@ class Priority(StrEnum):
     INFO = "INFO", 1
 
     def __new__(cls, value: str, rank: int = 0) -> "Priority":
+        """Create a new Priority enum member with a rank attribute."""
         obj = str.__new__(cls, value)
         obj._value_ = value
         obj.rank = rank
@@ -90,7 +95,7 @@ class Priority(StrEnum):
             return value
         if isinstance(value, str):
             try:
-                return Priority(value.upper())
+                return Priority(value.upper())  # pylint: disable=no-value-for-parameter
             except ValueError:
                 return None
         return None
@@ -103,18 +108,21 @@ class Priority(StrEnum):
         return self._rank(self) >= self._rank(other)
 
     def __gt__(self, value: object) -> bool:
+        """Return True when this priority is greater than ``value``."""
         other = self._coerce(value)
         if other is None:
             return NotImplemented
         return self._rank(self) > self._rank(other)
 
     def __le__(self, value: object) -> bool:
+        """Return True when this priority is less than or equal to ``value``."""
         other = self._coerce(value)
         if other is None:
             return NotImplemented
         return self._rank(self) <= self._rank(other)
 
     def __lt__(self, value: object) -> bool:
+        """Return True when this priority is less than ``value``."""
         other = self._coerce(value)
         if other is None:
             return NotImplemented
