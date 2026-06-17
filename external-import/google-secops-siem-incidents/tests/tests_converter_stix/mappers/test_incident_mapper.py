@@ -12,6 +12,7 @@ from connectors_sdk.models.enums import IncidentSeverity
 
 # --- import under test (will cause ImportError → RED) ---
 from google_secops_siem_incidents.mappers.incident_mapper import (  # noqa: E402
+    Severity,
     map_incident,
 )
 from tests_converter_stix.factories import (
@@ -351,3 +352,110 @@ class TestIncidentExternalReference:
         assert (
             stix_obj.external_references[0]["url"] == f"{secops_url}/alerts/{alert.id}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Tests — severity filter (threshold-based)
+# ---------------------------------------------------------------------------
+class TestSeverityFilter:
+    def test_then_returns_none_when_below_threshold(self):
+        """Given severity 'LOW' and threshold 'high' → None (filtered out)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="LOW")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is None
+
+    def test_then_returns_incident_when_at_threshold(self):
+        """Given severity 'HIGH' and threshold 'high' → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="HIGH")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_above_threshold(self):
+        """Given severity 'CRITICAL' and threshold 'high' → incident returned."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="CRITICAL")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_no_threshold(self):
+        """Given any severity and empty threshold → incident returned (no filter)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="INFO")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=None,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_unknown_severity(self):
+        """Given unknown severity and a threshold → incident returned (unknown passes)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="CUSTOM_LEVEL")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None
+
+    def test_then_returns_incident_when_empty_severity(self):
+        """Given empty severity and a threshold → incident returned (no severity = pass)."""
+        # _given_
+        alert, meta = _given_alert_with_fields_and_metadata([], severity="")
+
+        # _when_
+        result = map_incident(
+            alert,
+            meta,
+            author=make_author(),
+            tlp_marking=make_tlp_marking(),
+            severity_filter=Severity.HIGH,
+        )
+
+        # _then_
+        assert result is not None

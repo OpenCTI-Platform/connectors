@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from google_secops_siem_incidents.connector import GoogleSecOpsConnector
+from google_secops_siem_incidents.mappers.incident_mapper import Severity
 from google_secops_siem_incidents.models.rule_alert_response import RuleAlertResponse
 from pycti import OpenCTIConnectorHelper
 from tests_converter_stix.factories import (
@@ -136,9 +137,9 @@ def test_state_persisted_with_correct_timestamp(
         for c in all_state_calls
         if "last_alert_timestamp" in c
     ]
-    assert any(
-        "2024-03-01T11:00:01" in ts for ts in checkpoint_timestamps
-    ), f"Expected checkpoint with 11:00:01 (+1s offset), got: {checkpoint_timestamps}"
+    assert any("2024-03-01T11:00:01" in ts for ts in checkpoint_timestamps), (
+        f"Expected checkpoint with 11:00:01 (+1s offset), got: {checkpoint_timestamps}"
+    )
 
     # _then_ — final state carries max detection_ts + 1s from the run
     final_state = all_state_calls[-1]
@@ -147,9 +148,9 @@ def test_state_persisted_with_correct_timestamp(
         f"Final state should be max detection_ts + 1s from run data,"
         f" got: {final_state['last_alert_timestamp']}"
     )
-    assert (
-        final_state.get("pagination_checkpoint") is None
-    ), "pagination_checkpoint must be cleared after a clean run"
+    assert final_state.get("pagination_checkpoint") is None, (
+        "pagination_checkpoint must be cleared after a clean run"
+    )
 
 
 # =====================
@@ -162,12 +163,14 @@ def _given_connector_with_stubs(
     *,
     helper: Any = None,
     saved_state: dict | None = None,
+    config: Any = None,
 ) -> GoogleSecOpsConnector:
     """Set up a GoogleSecOpsConnector with a stubbed Chronicle client."""
     if helper is None:
         helper = _make_mock_helper(initial_state=saved_state)
 
-    config = _make_mock_config()
+    if config is None:
+        config = _make_mock_config()
     connector = GoogleSecOpsConnector(config=config, helper=helper)
 
     async def _stub_fetch(*args: Any, **kwargs: Any):
@@ -261,6 +264,7 @@ def _make_mock_config() -> MagicMock:
     config = MagicMock()
     config.google_secops_siem_incidents.tlp_level = "amber"
     config.google_secops_siem_incidents.first_start_time = timedelta(hours=1)
+    config.google_secops_siem_incidents.severity_filter = None
     return config
 
 
@@ -351,9 +355,9 @@ def test_pagination_checkpoint_written_and_cleared(
 
     # checkpoint written after batch 1
     checkpoint_calls = [c for c in all_state_calls if "pagination_checkpoint" in c]
-    assert (
-        len(checkpoint_calls) >= 1
-    ), "Expected at least one pagination_checkpoint write"
+    assert len(checkpoint_calls) >= 1, (
+        "Expected at least one pagination_checkpoint write"
+    )
     cp = checkpoint_calls[0]["pagination_checkpoint"]
     assert "window_start" in cp
     assert cp["window_end"] == "2024-03-01T10:00:00+00:00"
@@ -361,9 +365,9 @@ def test_pagination_checkpoint_written_and_cleared(
 
     # final state: checkpoint cleared, last_alert_timestamp set to batch 1 max (10:00 > 09:00)
     final_state = all_state_calls[-1]
-    assert (
-        final_state.get("pagination_checkpoint") is None
-    ), "pagination_checkpoint must be cleared after a clean run"
+    assert final_state.get("pagination_checkpoint") is None, (
+        "pagination_checkpoint must be cleared after a clean run"
+    )
     assert "2024-03-01T10:00:01" in final_state["last_alert_timestamp"]
 
 
@@ -439,4 +443,89 @@ def test_first_run_calls_force_ping_via_state_save(
     assert helper.force_ping.called, (  # noqa: S101
         "Expected helper.force_ping() to be called via state.save(), "
         "but it was never called — connector likely uses raw set_state()"
+    )
+
+
+# =====================
+# Scenarios — severity filter
+# =====================
+
+
+def test_severity_filter_excludes_below_threshold(
+    caplog: Any,
+) -> None:
+    """Verify that alerts below the severity threshold are excluded from STIX conversion."""
+    # _given_ a batch with severity "MEDIUM" and a threshold of HIGH
+    batches = [_build_batch("2024-03-01T10:00:00Z")]
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.severity_filter = Severity.HIGH
+    connector = _given_connector_with_stubs(batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ no bundle should be sent (medium < high threshold)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert not any("Bundle sent" in m for m in all_messages), (
+        "Expected no bundle to be sent when severity is below threshold"
+    )
+
+
+def test_severity_filter_includes_at_threshold(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that alerts at the severity threshold are imported."""
+    # _given_ a threshold of MEDIUM (matching the test batch severity)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.severity_filter = Severity.MEDIUM
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent normally
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when severity meets threshold"
+    )
+
+
+def test_severity_filter_includes_above_threshold(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that alerts above the severity threshold are imported."""
+    # _given_ a threshold of LOW (medium > low)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.severity_filter = Severity.LOW
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when severity is above threshold"
+    )
+
+
+def test_severity_filter_none_imports_all(
+    two_batches: list[RuleAlertResponse],
+    caplog: Any,
+) -> None:
+    """Verify that None severity filter imports all alerts regardless of severity."""
+    # _given_ no severity filter (default behavior)
+    config = _make_mock_config()
+    config.google_secops_siem_incidents.severity_filter = None
+    connector = _given_connector_with_stubs(two_batches, config=config)
+
+    # _when_ process_message() is called
+    _when_process_message_runs(connector, caplog)
+
+    # _then_ bundles are sent (all alerts imported)
+    all_messages = [rec.getMessage() for rec in caplog.records]
+    assert any("Bundle sent" in m for m in all_messages), (
+        "Expected bundles to be sent when severity filter is None (all pass)"
     )
