@@ -32,6 +32,7 @@ class ConverterToStix:
         secops_base_url: str | None = None,
         severity_filter: Severity | None = None,
         priority_filter: Priority | None = None,
+        risk_score_filter: int | None = None,
     ) -> None:
         """Initialise the converter with the OpenCTI helper and TLP level.
 
@@ -41,6 +42,7 @@ class ConverterToStix:
             secops_base_url: Optional base URL for Google SecOps UI external references.
             severity_filter: Minimum Severity threshold, or None to accept all.
             priority_filter: Minimum Priority threshold, or None to accept all.
+            risk_score_filter: Minimum risk score threshold, or None to accept all.
         """
         self.helper = helper
         self.author = OrganizationAuthor(name="Google SecOps").to_stix2_object()
@@ -48,6 +50,7 @@ class ConverterToStix:
         self.secops_base_url = secops_base_url
         self.severity_filter = severity_filter
         self.priority_filter = priority_filter
+        self.risk_score_filter = risk_score_filter
 
     def convert_rule_alert(self, alert: Alert, rule_metadata: RuleMetadata) -> list:
         """Convert a single alert into a flat list of STIX objects.
@@ -68,6 +71,9 @@ class ConverterToStix:
             secops_base_url=self.secops_base_url,
             severity_filter=self.severity_filter,
             priority_filter=self.priority_filter,
+            risk_score_filter=self.risk_score_filter,
+            tags_include=self.tags_include,
+            tags_exclude=self.tags_exclude,
         )
 
         if incident is None:

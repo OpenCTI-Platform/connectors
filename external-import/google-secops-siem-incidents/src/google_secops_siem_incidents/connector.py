@@ -84,6 +84,7 @@ class GoogleSecOpsConnector:
             tlp_level=self.config.google_secops_siem_incidents.tlp_level,
             severity_filter=self.config.google_secops_siem_incidents.severity_filter,
             priority_filter=self.config.google_secops_siem_incidents.priority_filter,
+            risk_score_filter=self.config.google_secops_siem_incidents.risk_score_filter,
         )
 
     @property

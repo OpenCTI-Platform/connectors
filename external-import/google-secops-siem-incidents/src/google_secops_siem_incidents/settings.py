@@ -94,6 +94,16 @@ class GoogleSecOpsConfig(BaseConfigModel):
             "Alerts with unknown priority are always imported."
         ),
     )
+    risk_score_filter: int | None = Field(
+        None,
+        ge=0,
+        description=(
+            "Minimum risk score to import. All alerts with a risk score "
+            "greater than or equal to this value are imported. "
+            "Alerts without a risk score always pass. "
+            "When not set, all alerts are imported regardless of risk score."
+        ),
+    )
 
     @field_validator("private_key", mode="before")
     @classmethod

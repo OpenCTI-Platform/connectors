@@ -79,6 +79,7 @@ def map_incident(
     secops_base_url: str | None = None,
     severity_filter: Severity | None = None,
     priority_filter: Priority | None = None,
+    risk_score_filter: int | None = None,
 ) -> Incident | None:
     """Map a alert and rule metadata to a connectors_sdk Incident.
 
@@ -90,9 +91,10 @@ def map_incident(
         secops_base_url: Optional base URL for Google SecOps UI to build an external reference.
         severity_filter: Minimum Severity threshold, or None to accept all.
         priority_filter: Minimum Priority threshold, or None to accept all.
+        risk_score_filter: Minimum risk score threshold, or None to accept all.
 
     Returns:
-        Populated Incident model instance, or None if filtered out by severity or priority.
+        Populated Incident model instance, or None if filtered out.
     """
     name_prefix = f"rule_name:{rule_metadata.properties.name} - "
 
@@ -136,6 +138,12 @@ def map_incident(
 
     risk_outcome = find_outcome(alert.outcomes, "risk_score")
     if risk_outcome and risk_outcome.int64_val is not None:
+        if risk_score_filter is not None:
+            try:
+                if int(risk_outcome.int64_val) < risk_score_filter:
+                    return None
+            except ValueError:
+                pass
         rows.append(f"| Risk | {risk_outcome.int64_val} |")
 
     description = (
