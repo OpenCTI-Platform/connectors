@@ -1,9 +1,4 @@
-import importlib.metadata
-import re
-import ssl
 import sys
-import urllib.error
-import urllib.request
 from datetime import UTC, datetime
 from typing import Any
 
@@ -32,7 +27,6 @@ class Phishunt:
         self.config = config
         self.helper = helper
         self.connector_duration_period = self.config.connector.duration_period
-        self.phishunt_api_key = self.config.phishunt.api_key
         self.create_indicators = self.config.phishunt.create_indicators
         self.default_x_opencti_score = self.config.phishunt.default_x_opencti_score
         self.x_opencti_score_domain = self.config.phishunt.x_opencti_score_domain
@@ -48,98 +42,19 @@ class Phishunt:
             custom_properties={"x_opencti_organization_type": "vendor"},
         )
 
-    def _process_public_feed(self, work_id):
-        url = "https://phishunt.io/feed.txt"
+    def _process_feed(self, work_id):
+        feed_url = "https://phishunt.io/feed.json"
         try:
-            bundle_objects = []
-            req = urllib.request.Request(
-                url=url,
-                headers={
-                    "User-Agent": f"OpenCTI-Phishunt-Connector/{importlib.metadata.version('pycti')}"
-                },
-            )
-            with urllib.request.urlopen(
-                req, context=ssl.create_default_context()
-            ) as fp:
-                for count, line in enumerate(fp, 1):
-                    count += 1
-                    if count <= 3:
-                        continue
-                    line = line.decode("utf-8").strip()
-                    match_html_tag = re.search("^<\\/?\\w+>", line)
-                    if match_html_tag:
-                        continue
-                    match_blank_line = re.search("^\\s*$", line)
-                    if match_blank_line:
-                        continue
-                    stix_observable = stix2.URL(
-                        value=line,
-                        object_marking_refs=[TLP_CLEAR],
-                        custom_properties={
-                            "x_opencti_description": "Phishunt malicious URL",
-                            "x_opencti_score": self.x_opencti_score_url
-                            or self.default_x_opencti_score,
-                            "x_opencti_labels": ["osint", "phishing"],
-                            "x_opencti_created_by_ref": self.stix_created_by["id"],
-                        },
-                    )
-                    bundle_objects.append(stix_observable)
-                    if self.create_indicators:
-                        pattern = "[url:value = '" + line + "']"
-                        stix_indicator = stix2.Indicator(
-                            id=Indicator.generate_id(pattern),
-                            name=line,
-                            description="Phishunt malicious URL",
-                            pattern_type="stix",
-                            created_by_ref=self.stix_created_by["id"],
-                            pattern=pattern,
-                            labels=["osint", "phishing"],
-                            object_marking_refs=[TLP_CLEAR],
-                            custom_properties={"x_opencti_main_observable_type": "Url"},
-                        )
-                        bundle_objects.append(stix_indicator)
-                        stix_relationship = stix2.Relationship(
-                            id=StixCoreRelationship.generate_id(
-                                "based-on", stix_indicator.id, stix_observable.id
-                            ),
-                            source_ref=stix_indicator.id,
-                            target_ref=stix_observable.id,
-                            relationship_type="based-on",
-                            allow_custom=True,
-                        )
-                        bundle_objects.append(stix_relationship)
-            if bundle_objects:
-                bundle = self.helper.stix2_create_bundle(
-                    [self.stix_created_by] + bundle_objects
-                )
-                self.helper.send_stix2_bundle(bundle, work_id=work_id)
-                self.last_run_datetime_with_ingested_data = datetime.now(
-                    tz=UTC
-                ).isoformat(timespec="seconds")
-        except urllib.error.URLError as urllib_error:
-            self.helper.connector_logger.error(
-                "Error retrieving url", {"url": url, "error": urllib_error}
-            )
-
-    def _process_private_feed(self, work_id):
-        try:
-            resp = requests.request(
-                "GET",
-                "https://api.phishunt.io/suspicious/feed_json",
-                headers={
-                    "x-api-key": (
-                        self.phishunt_api_key.get_secret_value()
-                        if self.phishunt_api_key
-                        else None
-                    )
-                },
-            )
+            resp = requests.get(feed_url)
             resp.raise_for_status()
             data = resp.json()
             bundle_objects = []
-            for url in data.get("results", data) if isinstance(data, dict) else data:
+            for entry in data:
+                url_value = entry.get("url", "")
+                if not url_value:
+                    continue
                 stix_url = stix2.URL(
-                    value=url["url"],
+                    value=url_value,
                     object_marking_refs=[TLP_CLEAR],
                     custom_properties={
                         "x_opencti_description": "Phishunt malicious URL",
@@ -151,10 +66,10 @@ class Phishunt:
                 )
                 bundle_objects.append(stix_url)
                 if self.create_indicators:
-                    pattern = "[url:value = '" + url["url"] + "']"
+                    pattern = "[url:value = '" + url_value + "']"
                     stix_indicator = stix2.Indicator(
                         id=Indicator.generate_id(pattern),
-                        name=url["url"],
+                        name=url_value,
                         description="Phishunt malicious URL",
                         pattern_type="stix",
                         created_by_ref=self.stix_created_by["id"],
@@ -175,7 +90,7 @@ class Phishunt:
                     )
                     bundle_objects.append(stix_relationship)
                     stix_domain = stix2.DomainName(
-                        value=url["domain"],
+                        value=entry["domain"],
                         object_marking_refs=[TLP_CLEAR],
                         custom_properties={
                             "x_opencti_description": "Phishunt domain based on malicious URL",
@@ -199,9 +114,9 @@ class Phishunt:
                     bundle_objects.append(stix_relationship_url_domain)
                     stix_organization = stix2.Identity(
                         id=Identity.generate_id(
-                            url["company"].capitalize(), "organization"
+                            entry["company"].capitalize(), "organization"
                         ),
-                        name=url["company"].capitalize(),
+                        name=entry["company"].capitalize(),
                         identity_class="organization",
                         object_marking_refs=[TLP_CLEAR],
                         created_by_ref=self.stix_created_by["id"],
@@ -219,10 +134,10 @@ class Phishunt:
                     )
                     bundle_objects.append(stix_relationship_organization_url)
                     stix_ip = stix2.IPv4Address(
-                        value=url["ip"],
+                        value=entry["ip"],
                         object_marking_refs=[TLP_CLEAR],
                         custom_properties={
-                            "x_opencti_description": "Phishunt domain based on malicious URL",
+                            "x_opencti_description": "Phishunt IP resolving malicious domain",
                             "x_opencti_score": self.x_opencti_score_ip
                             or self.default_x_opencti_score,
                             "x_opencti_labels": ["osint", "phishing"],
@@ -241,11 +156,11 @@ class Phishunt:
                         allow_custom=True,
                     )
                     bundle_objects.append(stix_relationship_domain_ip)
-                    if url.get("country") and url["country"] != "-":
+                    if entry.get("country") and entry["country"] != "-":
                         stix_location = stix2.Location(
-                            id=Location.generate_id(url["country"], "Country"),
-                            name=url["country"],
-                            country=url["country"],
+                            id=Location.generate_id(entry["country"], "Country"),
+                            name=entry["country"],
+                            country=entry["country"],
                             created_by_ref=self.stix_created_by["id"],
                             allow_custom=True,
                             custom_properties={"x_opencti_location_type": "Country"},
@@ -272,7 +187,8 @@ class Phishunt:
                 ).isoformat(timespec="seconds")
         except requests.exceptions.HTTPError as err:
             self.helper.connector_logger.error(
-                "[Phishunt] Http error during private feed process.", {"error": err}
+                "[Phishunt] HTTP error while fetching feed.",
+                {"url": feed_url, "error": str(err)},
             )
 
     def _load_state(self) -> dict[str, Any]:
@@ -316,10 +232,7 @@ class Phishunt:
             work_id = self.helper.api.work.initiate_work(
                 self.helper.connect_id, friendly_name
             )
-            if self.phishunt_api_key:
-                self._process_private_feed(work_id)
-            else:
-                self._process_public_feed(work_id)
+            self._process_feed(work_id)
             self.helper.connector_logger.info(
                 "[CONNECTOR] Getting current state and update it with last run of the connector.",
                 {
