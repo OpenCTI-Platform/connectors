@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Template Connector' # optional (default: 'Template Connector')
+  scope: 'Incident,Observable,Indicator'
+  log_level: 'info' # optional (default: 'error')
+  duration_period: 'PT1H' #  # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+
+flare:
+  api_base_url: 'api.flare.io'
+  api_key: 'ChangeMe'
+  tenant_id: ''
+  event_types: 'stealer_log,domain,ransomleak,leak'
+  event_actions: ''
+  lookback_days: 30
+  tlp_level: 'white'
+  tlp_level: 'clear' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'clear')
