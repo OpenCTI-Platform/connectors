@@ -75,7 +75,7 @@
       "type": "boolean"
     },
     "CONNECTOR_CREATE_INTRUSION_SET": {
-      "default": false,
+      "default": true,
       "description": "Whether to create an Intrusion Set object.",
       "type": "boolean"
     },
@@ -85,7 +85,7 @@
       "type": "boolean"
     },
     "CONNECTOR_CREATE_REPORT": {
-      "default": false,
+      "default": true,
       "description": "Whether to create a Report object.",
       "type": "boolean"
     },
