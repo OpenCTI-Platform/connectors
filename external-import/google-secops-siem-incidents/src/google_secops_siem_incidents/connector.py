@@ -82,6 +82,7 @@ class GoogleSecOpsConnector:
         self.converter_to_stix = ConverterToStix(
             helper=self.helper,
             tlp_level=self.config.google_secops_siem_incidents.tlp_level,
+            severity_filter=self.config.google_secops_siem_incidents.severity_filter,
         )
 
     @property

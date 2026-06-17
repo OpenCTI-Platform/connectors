@@ -8,6 +8,7 @@ from connectors_sdk.models.enums import IncidentType
 from connectors_sdk.models.external_reference import ExternalReference
 from google_secops_siem_incidents.mappers._utils import find_outcome
 from google_secops_siem_incidents.models.rule_alert_response import Alert, RuleMetadata
+from google_secops_siem_incidents.utils.enums import Severity
 
 
 def _build_external_reference(secops_base_url: str, alert_id: str) -> ExternalReference:
@@ -29,6 +30,26 @@ def _build_external_reference(secops_base_url: str, alert_id: str) -> ExternalRe
     )
 
 
+def _meets_severity_threshold(raw_severity: str, threshold: Severity) -> bool:
+    """Check whether raw_severity meets or exceeds the configured threshold.
+
+    Args:
+        raw_severity: Severity string from the rule metadata (lowercased).
+        threshold: Minimum Severity level to accept.
+
+    Returns:
+        True if the alert should be imported.
+    """
+    if not raw_severity:
+        return True
+
+    try:
+        alert_level = Severity(raw_severity.upper())
+    except ValueError:
+        return True
+    return alert_level >= threshold
+
+
 def map_incident(
     alert: Alert,
     rule_metadata: RuleMetadata,
@@ -36,7 +57,8 @@ def map_incident(
     author: Any,
     tlp_marking: Any,
     secops_base_url: str | None = None,
-) -> Incident:
+    severity_filter: Severity | None = None,
+) -> Incident | None:
     """Map a alert and rule metadata to a connectors_sdk Incident.
 
     Args:
@@ -45,9 +67,10 @@ def map_incident(
         author: STIX author identity object.
         tlp_marking: TLP marking definition object.
         secops_base_url: Optional base URL for Google SecOps UI to build an external reference.
+        severity_filter: Minimum Severity threshold, or None to accept all.
 
     Returns:
-        Populated Incident model instance.
+        Populated Incident model instance, or None if filtered out by severity.
     """
     name_prefix = f"rule_name:{rule_metadata.properties.name} - "
 
@@ -57,6 +80,14 @@ def map_incident(
 
     raw_severity = rule_metadata.properties.metadata.get("severity", "")
     severity = raw_severity.lower() or None
+
+    if (
+        severity_filter is not None
+        and severity is not None
+        and not _meets_severity_threshold(severity, severity_filter)
+    ):
+        # TODO: log that the alert is filtered out by severity when logging is added to the connectors-sdk
+        return None
 
     incident_type = IncidentType(alert.rule_type.lower().replace("_", "-"))
 

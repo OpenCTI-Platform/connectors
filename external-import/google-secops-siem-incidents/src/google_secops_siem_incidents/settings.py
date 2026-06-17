@@ -9,6 +9,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
+from google_secops_siem_incidents.utils.enums import Severity
 from pydantic import Field, field_validator
 
 
@@ -75,11 +76,19 @@ class GoogleSecOpsConfig(BaseConfigModel):
             "(ISO-8601 duration, e.g. P1D). Used only when no prior state exists."
         ),
     )
+    severity_filter: Severity | None = Field(
+        None,
+        description=(
+            "Minimum severity level to import. All alerts at or above this "
+            "level are imported (CRITICAL > HIGH > MEDIUM > LOW > INFO). "
+            "When not set, all severities are imported."
+        ),
+    )
 
     @field_validator("private_key", mode="before")
     @classmethod
     def _normalize_pem_newlines(cls, v: str) -> str:
-        """Replace literal '\\n' with real newlines so PEM parsing succeeds."""
+        r"""Replace literal '\\n' with real newlines so PEM parsing succeeds."""
         if isinstance(v, str) and "\\n" in v:
             return v.replace("\\n", "\n")
         return v
