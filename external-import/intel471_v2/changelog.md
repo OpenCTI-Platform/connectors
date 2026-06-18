@@ -1,3 +1,7 @@
+# v2.2.2
+
+  + Skip report types the account is not entitled to with a one-time warning instead of a recurring error traceback, and keep ingesting the other report types
+
 # v2.2.1
 
   + Upgrade `verity471` to version [1.1.7](https://github.com/intel471/verity471-python/releases/tag/v1.1.7)

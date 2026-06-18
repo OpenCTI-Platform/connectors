@@ -68,6 +68,32 @@ paging/cursor management, OpenCTI state, and sending bundles.
   just declare class vars; some override `_get_api_kwargs` / `_get_cursor_value`
   / `_get_offsets`.
 
+## Reports-API auth / authorization errors
+
+The reports API returns four distinct auth/authorization responses. They are **not**
+distinguishable by HTTP status alone (1a and 3 are both 401; the backend even remaps
+1a's status internally), so `Intel471Stream.get_bundles()` (`streams/core/base.py`)
+discriminates on the **response body**:
+
+| # | HTTP | Body | Cause | Scope | Handling |
+|---|------|------|-------|-------|----------|
+| 1a | 401 | `<type> not in users access claims.` | Holds ≥1 report claim but not **this** type | one report type | **softened** |
+| 1b | 403 | `User does not have any report related claims.` | Zero report claims | all report types | raised |
+| 2  | 403 | `You cannot consume this service` *(Kong ACL)* | Reports API not added to the App | entire Reports API | raised |
+| 3  | 401 | `Unauthorized` *(Kong gateway)* | Bad/missing credentials | everything | raised |
+
+Only **case 1a** is softened: it is an expected, per-report-type entitlement gap, and
+each report type runs as its own scheduler job, so the others are unaffected. It is
+matched by the substring `ACCESS_CLAIMS_SIGNATURE = "access claims"` (which uniquely
+identifies 1a) and reported via a one-time `WARNING` (then `DEBUG`) instead of a
+recurring `ERROR` traceback, after which the stream's run ends cleanly.
+
+Everything else — 1b, 2, 3, and any unrecognised auth error — is **re-raised** on
+purpose: each means a whole stream/category cannot run, which is a real problem the
+operator should see. The exception classes caught per backend
+(`UnauthorizedException`, `ForbiddenException`) are supplied via
+`ClientWrapper.auth_exceptions` in `backend.py`, alongside `empty_bundle_exception`.
+
 ## Adding or changing a stream
 
 1. Subclass `TitanStream` or `Verity471Stream` in the matching `streams/<backend>/`
