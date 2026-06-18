@@ -341,7 +341,7 @@ class ConverterToStix:
         )
 
         # Labels from top-level tags
-        for tag in data.get("tags", []):
+        for tag in data.get("tags") or []:
             self._add_label(stix_entity, tag)
 
         # DNS A records → IPv4Address observables + resolves-to relationships
@@ -410,7 +410,7 @@ class ConverterToStix:
 
         # High-risk → Indicator
         if score is not None and score >= HIGH_RISK_SCORE_THRESHOLD:
-            tags = data.get("tags", [])
+            tags = data.get("tags") or []
             pattern = f"[domain-name:value = '{domain}']"
             indicator = self._create_indicator(
                 pattern=pattern,

@@ -72,7 +72,7 @@ Below are the VisionHeight-specific parameters:
 | ------------------ | ---------------- | ------------------------------- | -------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------- |
 | API Base URL       | `api_base_url`   | `VISIONHEIGHT_API_BASE_URL`     | `https://api.visionheight.com`   | No        | VisionHeight API base URL. Override for staging or white-label endpoints.                                         |
 | API Key            | `api_key`        | `VISIONHEIGHT_API_KEY`          | /                                | Yes       | VisionHeight API key, sent as the `x-api-key` header on every request.                                            |
-| Max TLP Level      | `max_tlp_level`  | `VISIONHEIGHT_MAX_TLP_LEVEL`    | `amber+strict`                   | No        | Maximum TLP level the connector will enrich. Observables with a marking above this are skipped. One of `clear`, `green`, `amber`, `amber+strict`, `red`. |
+| Max TLP Level      | `max_tlp_level`  | `VISIONHEIGHT_MAX_TLP_LEVEL`    | `amber+strict`                   | No        | Maximum TLP level the connector will enrich. Observables with a marking above this cause the enrichment to abort with an error logged. One of `clear`, `green`, `amber`, `amber+strict`, `red`. |
 
 ## Deployment
 
@@ -165,4 +165,4 @@ Internally, all log messages use structured logging via `self.helper.connector_l
 
 - The VisionHeight API returns HTTP 400 for invalid input (bogons, malformed IPs/domains). Be aware that, depending on the customer's plan, these requests may count against API quota.
 - On non-2xx API responses, the connector logs the error and returns the original bundle unchanged so playbook chains are preserved.
-- The `max_tlp_level` setting hard-limits which observables the connector will process; observables with a marking above this level are silently skipped.
+- The `max_tlp_level` setting hard-limits which observables the connector will process; observables with a marking above this level cause the enrichment to abort with an error logged.

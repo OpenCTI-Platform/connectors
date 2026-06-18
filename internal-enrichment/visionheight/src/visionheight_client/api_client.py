@@ -70,9 +70,16 @@ class VisionHeightClient:
             response.raise_for_status()
             return response.json()
         except requests.RequestException as err:
+            status_code = err.response.status_code if err.response is not None else None
+            body_snippet = err.response.text[:500] if err.response is not None else None
             self.helper.connector_logger.error(
                 "[API] Error while fetching data",
-                {"url_path": url, "error": str(err)},
+                {
+                    "url_path": url,
+                    "error": str(err),
+                    "status_code": status_code,
+                    "response_body": body_snippet,
+                },
             )
             return None
 

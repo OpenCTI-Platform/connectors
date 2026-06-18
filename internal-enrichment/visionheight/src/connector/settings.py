@@ -5,7 +5,7 @@ from connectors_sdk import (
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
@@ -33,7 +33,7 @@ class VisionHeightConfig(BaseConfigModel):
         description="VisionHeight API base URL. Override for white-label or staging endpoints.",
         default="https://api.visionheight.com",
     )
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="VisionHeight API key used to authenticate requests (sent as the x-api-key header).",
     )
     max_tlp_level: Literal[
@@ -43,7 +43,7 @@ class VisionHeightConfig(BaseConfigModel):
         "amber+strict",
         "red",
     ] = Field(
-        description="Maximum TLP level of observables this connector will enrich. Observables marked above this level are skipped.",
+        description="Maximum TLP level of observables this connector will enrich. Observables marked above this level cause the enrichment to abort with an error logged.",
         default="amber+strict",
     )
 

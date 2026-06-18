@@ -24,7 +24,7 @@ class VisionHeightConnector:
         self.client = VisionHeightClient(
             self.helper,
             base_url=str(self.config.visionheight.api_base_url),
-            api_key=self.config.visionheight.api_key,
+            api_key=self.config.visionheight.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(
             self.helper,
@@ -70,7 +70,7 @@ class VisionHeightConnector:
                 "[CONNECTOR] Unsupported entity type",
                 {"type": obs_type},
             )
-            return []
+            return f"[CONNECTOR] Unsupported entity type: {obs_type}"
 
         # Always include the VisionHeight Identity (created_by_ref target).
         if self.converter_to_stix.author is not None:
@@ -152,7 +152,7 @@ class VisionHeightConnector:
                 "[CONNECTOR] Unexpected error",
                 {"error_message": str(err)},
             )
-            return self.stix_objects_list
+            return f"[CONNECTOR] Error: {err}"
 
     # ------------------------------------------------------------------ #
     # Bundle dispatch and main loop
