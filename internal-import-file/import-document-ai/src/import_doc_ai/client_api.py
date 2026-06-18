@@ -143,19 +143,22 @@ class ImportDocumentAIClient:
             result = response.json()
         except ValueError as err:
             raise ValueError(
-                "XTM One agent returned a non-JSON response "
+                f"XTM One agent '{agent_slug}' returned a non-JSON response "
                 f"(HTTP {response.status_code}): {response.text[:500]!r}"
             ) from err
 
+        # Fail fast on a non-object JSON payload (e.g. a bare list or string).
+        # Everything below assumes a JSON object; without this guard such a
+        # response would misleadingly surface as an "empty response" error.
+        if not isinstance(result, dict):
+            raise ValueError(
+                f"XTM One agent '{agent_slug}' returned an unexpected response "
+                f"type: {type(result).__name__} (expected a JSON object)"
+            )
+
         self.helper.connector_logger.info(
             "[API] Chatbot agent response received",
-            {
-                "keys": (
-                    list(result.keys())
-                    if isinstance(result, dict)
-                    else type(result).__name__
-                )
-            },
+            {"keys": list(result.keys())},
         )
 
         # The OpenCTI ``/chatbot/agent`` proxy answers HTTP 200 even when the
@@ -166,7 +169,7 @@ class ImportDocumentAIClient:
         # ...) instead of the misleading generic "unexpected response format",
         # so the failure is actionable in the OpenCTI work status and the
         # connector logs.
-        if isinstance(result, dict) and result.get("status") == "error":
+        if result.get("status") == "error":
             upstream_error = result.get("error") or "unknown error"
             upstream_code = result.get("code")
             self.helper.connector_logger.error(
@@ -186,20 +189,18 @@ class ImportDocumentAIClient:
         # One SendMessageResponse ({"assistant_message": {"content": ...}});
         # text-mode calls return {"content": ...} directly.
         assistant_content = None
-        if isinstance(result, dict):
-            assistant_message = result.get("assistant_message")
-            if isinstance(assistant_message, dict):
-                assistant_content = assistant_message.get("content")
-            elif "content" in result:
-                assistant_content = result.get("content")
+        assistant_message = result.get("assistant_message")
+        if isinstance(assistant_message, dict):
+            assistant_content = assistant_message.get("content")
+        elif "content" in result:
+            assistant_content = result.get("content")
 
         if assistant_content is None or (
             isinstance(assistant_content, str) and not assistant_content.strip()
         ):
             raise ValueError(
                 f"XTM One agent '{agent_slug}' returned an empty response "
-                f"(keys: "
-                f"{list(result.keys()) if isinstance(result, dict) else type(result).__name__})"
+                f"(keys: {list(result.keys())})"
             )
 
         bundle_data = self._parse_agent_bundle_content(assistant_content, agent_slug)

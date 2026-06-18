@@ -15,6 +15,8 @@ from unittest.mock import Mock
 
 import pytest
 import requests
+import stix2
+import stix2.exceptions
 
 sys.path.append(str((Path(__file__).resolve().parent.parent / "src")))
 
@@ -108,7 +110,9 @@ def test_success_assistant_message_bare_bundle(monkeypatch, xtm_client):
     assert result["objects"][0]["type"] == "identity"
 
 
-def test_success_content_wrapped_in_code_fence_and_response_key(monkeypatch, xtm_client):
+def test_success_content_wrapped_in_code_fence_and_response_key(
+    monkeypatch, xtm_client
+):
     # Given an LLM agent that fenced its JSON and nested it under "response"
     bundle = _bundle_dict()
     fenced = "```json\n" + json.dumps({"response": bundle}) + "\n```"
@@ -169,7 +173,9 @@ def test_non_json_content_raises_clear_error(monkeypatch, xtm_client):
     # Given an assistant message that is not valid JSON
     _patch_post(
         monkeypatch,
-        FakeResponse({"assistant_message": {"content": "I could not extract anything"}}),
+        FakeResponse(
+            {"assistant_message": {"content": "I could not extract anything"}}
+        ),
     )
 
     # When fetching the bundle, then the JSON decode failure is reported clearly
@@ -192,3 +198,119 @@ def test_non_json_http_body_raises_clear_error(monkeypatch, xtm_client):
         _call(xtm_client)
 
     assert "non-JSON response" in str(exc_info.value)
+
+
+def test_non_dict_json_response_raises_clear_error(monkeypatch, xtm_client):
+    # Given the proxy relays a non-object JSON payload (e.g. a bare list)
+    _patch_post(monkeypatch, FakeResponse([1, 2, 3]))
+
+    # When fetching the bundle, then the unexpected type is reported clearly
+    with pytest.raises(ValueError) as exc_info:
+        _call(xtm_client)
+
+    message = str(exc_info.value)
+    assert "unexpected response type" in message
+    assert "list" in message
+
+
+def test_success_text_mode_content(monkeypatch, xtm_client):
+    # Given a text-mode reply returning the bundle under a top-level "content"
+    bundle = _bundle_dict()
+    _patch_post(
+        monkeypatch,
+        FakeResponse({"content": json.dumps(bundle), "status": "success"}),
+    )
+
+    # When fetching the bundle
+    result = _call(xtm_client)
+
+    # Then the top-level content is parsed into the bundle
+    assert result["type"] == "bundle"
+    assert len(result["objects"]) == 1
+
+
+def test_success_assistant_content_already_dict(monkeypatch, xtm_client):
+    # Given an assistant message whose content is an already-decoded bundle dict
+    bundle = _bundle_dict()
+    _patch_post(
+        monkeypatch,
+        FakeResponse({"assistant_message": {"content": bundle}}),
+    )
+
+    # When fetching the bundle
+    result = _call(xtm_client)
+
+    # Then the dict content is used directly
+    assert result["type"] == "bundle"
+    assert len(result["objects"]) == 1
+
+
+def test_json_array_content_raises_clear_error(monkeypatch, xtm_client):
+    # Given assistant content that is valid JSON but not an object (a list)
+    _patch_post(
+        monkeypatch,
+        FakeResponse({"assistant_message": {"content": "[1, 2, 3]"}}),
+    )
+
+    # When fetching the bundle, then the non-object payload is reported clearly
+    with pytest.raises(ValueError) as exc_info:
+        _call(xtm_client)
+
+    assert "expected a STIX bundle object" in str(exc_info.value)
+
+
+def test_non_string_non_dict_content_raises_clear_error(monkeypatch, xtm_client):
+    # Given assistant content that is neither a string nor a dict (e.g. a number)
+    _patch_post(monkeypatch, FakeResponse({"assistant_message": {"content": 123}}))
+
+    # When fetching the bundle, then the unexpected content type is reported
+    with pytest.raises(ValueError) as exc_info:
+        _call(xtm_client)
+
+    assert "unexpected content type" in str(exc_info.value)
+
+
+def test_connection_error_is_reraised(monkeypatch, xtm_client):
+    # Given the chatbot proxy is unreachable
+    def _raise(*args, **kwargs):
+        raise requests.ConnectionError("boom")
+
+    monkeypatch.setattr("import_doc_ai.client_api.requests.post", _raise)
+
+    # When fetching the bundle, then a friendly ConnectionError is raised
+    with pytest.raises(requests.ConnectionError) as exc_info:
+        _call(xtm_client)
+
+    assert "unreachable" in str(exc_info.value).lower()
+
+
+def test_http_error_status_is_reraised(monkeypatch, xtm_client):
+    # Given the proxy answers with a hard HTTP error status
+    _patch_post(monkeypatch, FakeResponse({"detail": "boom"}, status_code=500))
+
+    # When fetching the bundle, then the HTTP error propagates
+    with pytest.raises(requests.RequestException):
+        _call(xtm_client)
+
+
+def test_invalid_stix_bundle_raises_stixerror(monkeypatch, xtm_client):
+    # Given valid JSON that is not a valid STIX bundle (malware missing fields)
+    invalid_bundle = {
+        "type": "bundle",
+        "id": f"bundle--{uuid.uuid4()}",
+        "objects": [
+            {
+                "type": "malware",
+                "spec_version": "2.1",
+                "id": f"malware--{uuid.uuid4()}",
+            }
+        ],
+    }
+    _patch_post(
+        monkeypatch,
+        FakeResponse({"assistant_message": {"content": json.dumps(invalid_bundle)}}),
+    )
+
+    # When fetching the bundle, then the STIX validation error surfaces
+    with pytest.raises(stix2.exceptions.STIXError):
+        _call(xtm_client)
