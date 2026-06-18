@@ -64,7 +64,7 @@ class VisionHeightClient:
             params: Optional query-string parameters.
         """
         url = f"{self.base_url}{path}"
-        self.helper.connector_logger.info("[API] GET request", {"url_path": url})
+        self.helper.connector_logger.info("[API] GET request", meta={"url_path": url})
         try:
             response = self.session.get(url, params=params, timeout=30)
             response.raise_for_status()
@@ -72,7 +72,7 @@ class VisionHeightClient:
         except requests.RequestException as err:
             self.helper.connector_logger.error(
                 "[API] Error while fetching data",
-                {"url_path": url, "error": str(err)},
+                meta={"url_path": url, "error": str(err)},
             )
             return None
 
