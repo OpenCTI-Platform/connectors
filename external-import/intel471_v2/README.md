@@ -11,6 +11,8 @@
 ### 🌐 The Evolution: Verity471
 The connector now supports both the legacy **Titan** platform and the new **Verity471** platform. Verity471 acts as a **superset** of Titan: it maintains full functional parity with all existing Titan features while introducing expanded data coverage and streamlined stream logic.
 
+> **Note:** The Verity471 backend is available from release [`7.260317.0`](https://github.com/OpenCTI-Platform/connectors/releases/tag/7.260317.0) onwards.
+
 ## Data Streams & Platform Comparison
 
 The following table outlines the data availability across both platforms.
@@ -40,6 +42,20 @@ Stop your current connector and modify your `docker-compose.yml` or `config.yml`
 
 ### Step 3: Restart
 Launch the connector. It will immediately begin ingesting the enriched Verity471 data (including new observables and Geopol reports) into your OpenCTI environment.
+
+## 🧩 OpenCTI Platform Compatibility
+
+The connector's own logic is compatible with **both OpenCTI 6.x and 7.x**. The only platform-specific part is the underlying client library (`pycti`), which must match the OpenCTI version of your instance.
+
+* The **official, pre-built connector image** published by Filigran is locked to the **OpenCTI 7.x** platform (`pycti` is pinned to a 7.x release). It will **not** work out-of-the-box against OpenCTI 6.x.
+* The legacy **Titan-only** releases of this connector are fully compatible with **OpenCTI 6.x**.
+
+If you run **OpenCTI 6.x** and want the Verity471-enabled connector, you can build a compatible image yourself — the connector source code stays exactly the same, you only need to align the platform libraries in [`src/requirements.txt`](src/requirements.txt) to your instance:
+
+1. Set `pycti` to the version matching your OpenCTI release (e.g. `pycti==6.9.x`).
+2. Pin `connectors-sdk` to the matching platform tag (e.g. `...connectors.git@6.9.x#subdirectory=connectors-sdk`), since it also depends on `pycti`.
+
+Then build the image as described in the [Docker](#docker) section below.
 
 ## Prerequisites
 
