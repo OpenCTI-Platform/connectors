@@ -16,7 +16,7 @@ recorded-future-asi:
   api_key: 'ChangeMe'
   project_id: 'ChangeMe'
   tlp_level: 'amber+strict' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
-  portal_base_url: # optional, portal base URL for external reference deep links
+  portal_base_url: https://app.recordedfuture.com/portal/attack-surface/project/ # optional, portal base URL for external reference deep links
   page_limit: 100 # optional, API page size (HTTP request chunk), min 1, max 1000 (default: 100)
   run_limit: # optional, max exposures processed per connector run, min 1 (default: no limit)
   retry_max_attempts: 3 # optional, max HTTP attempts per request, min 1, max 10 (default: 3)

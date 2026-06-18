@@ -124,7 +124,7 @@ def all_exposure_assets(
 ) -> dict[str, Any]:
     """Aggregated exposure assets from all fixture pages."""
     return {
-        "signature": exposure_assets_page["data"]["signature"],
+        "signature": exposure_assets_page_last["data"]["signature"],
         "asset_exposures": (
             exposure_assets_page["data"]["asset_exposures"]
             + exposure_assets_page_last["data"]["asset_exposures"]

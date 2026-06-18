@@ -3,6 +3,9 @@
     "signature": {
       "id": "sig-001",
       "name": "Exposed admin panel",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/79.html"
+      ],
       "vulnerabilities": [
         {
           "cve_id": "CVE-2024-1234",

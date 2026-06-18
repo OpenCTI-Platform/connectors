@@ -107,20 +107,39 @@ class ConverterToStix:
             return SEVERITY_MAP["unknown"]
         return SEVERITY_MAP.get(rf_severity.lower(), SEVERITY_MAP["unknown"])
 
-    def build_external_reference(self, signature: dict) -> ExternalReference:
-        """Build an external reference for an exposure signature."""
+    @staticmethod
+    def _merge_signature_references(*signatures: dict) -> list[str]:
+        """Merge signature reference URLs, deduplicating while preserving order."""
+        merged: list[str] = []
+        seen: set[str] = set()
+        for signature in signatures:
+            for reference in signature.get("references") or []:
+                if reference and reference not in seen:
+                    seen.add(reference)
+                    merged.append(reference)
+        return merged
+
+    def build_external_references(self, signature: dict) -> list[ExternalReference]:
+        """Build external references for an exposure signature."""
         signature_id = signature.get("id") or ""
-        url = None
-        if self.portal_base_url and signature_id:
-            url = (
-                f"{self.portal_base_url}/projects/{self.project_id}"
-                f"/exposures/{signature_id}"
+        references: list[ExternalReference] = []
+
+        if self.portal_base_url:
+            references.append(
+                ExternalReference(
+                    source_name=SOURCE_NAME,
+                    external_id=signature_id or None,
+                    url=f"{self.portal_base_url}/{self.project_id}/overview",
+                )
             )
-        return ExternalReference(
-            source_name=SOURCE_NAME,
-            external_id=signature_id or None,
-            url=url,
-        )
+
+        for reference in signature.get("references") or []:
+            if reference:
+                references.append(
+                    ExternalReference(source_name=SOURCE_NAME, url=reference)
+                )
+
+        return references
 
     @staticmethod
     def _build_description(signature: dict, asset_count: int | None) -> str | None:
@@ -178,7 +197,7 @@ class ConverterToStix:
             labels=[label],
             author=self._author,
             markings=[self._tlp_marking],
-            external_references=[self.build_external_reference(signature)],
+            external_references=self.build_external_references(signature),
         )
 
     def build_cleared_incident(self, rule: dict) -> ExposureIncident:
@@ -201,7 +220,7 @@ class ConverterToStix:
             labels=[LABEL_CLEARED],
             author=self._author,
             markings=[self._tlp_marking],
-            external_references=[self.build_external_reference(signature)],
+            external_references=self.build_external_references(signature),
         )
 
     def exposure_to_incident(self, exposure_summary: dict) -> Stix2Incident:
@@ -340,12 +359,18 @@ class ConverterToStix:
         """
         list_signature = exposure_summary.get("signature") or {}
         asset_count = exposure_summary.get("asset_count")
-        incident = self._build_incident(list_signature, asset_count, label=label)
+        assets_signature = exposure_assets_response.get("signature") or {}
+        references = self._merge_signature_references(list_signature, assets_signature)
+        signature_for_incident = {**list_signature, "references": references}
+        incident = self._build_incident(
+            signature_for_incident,
+            asset_count,
+            label=label,
+        )
 
         objects: list[BaseIdentifiedEntity] = [incident]
         relationships: list[Relationship] = []
 
-        assets_signature = exposure_assets_response.get("signature") or {}
         for vuln_dict in assets_signature.get("vulnerabilities") or []:
             vulnerability, is_new = self._get_or_create_vulnerability(vuln_dict)
             if vulnerability is None:

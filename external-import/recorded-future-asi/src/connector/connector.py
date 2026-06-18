@@ -405,6 +405,9 @@ class RecordedFutureAsiConnector:
 
         Example:
             - If `CONNECTOR_DURATION_PERIOD=PT5M`, then the connector is running every 5 minutes.
+            - If `CONNECTOR_RUN_LIMIT=50`, then the connector will process a maximum of 50 exposures per run.
+            - If `CONNECTOR_DURATION_PERIOD=PT1H`, then the connector is running every hour.
+
         """
         self.helper.schedule_process(
             message_callback=self.process_message,

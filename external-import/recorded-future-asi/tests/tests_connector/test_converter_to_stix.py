@@ -144,12 +144,16 @@ def test_exposure_to_incident_builds_external_reference(converter, exposures_lis
 
     incident = converter.exposure_to_incident(exposure)
 
-    external_ref = incident.external_references[0]
-    assert external_ref["source_name"] == SOURCE_NAME
-    assert external_ref["external_id"] == signature["id"]
-    assert external_ref["url"] == (
-        f"https://portal.example.com/projects/test-project-id/exposures/{signature['id']}"
-    )
+    assert len(incident.external_references) == 3
+    portal_ref = incident.external_references[0]
+    assert portal_ref["source_name"] == SOURCE_NAME
+    assert portal_ref["external_id"] == signature["id"]
+    assert portal_ref["url"] == "https://portal.example.com/test-project-id/overview"
+    api_ref_urls = {ref["url"] for ref in incident.external_references[1:]}
+    assert api_ref_urls == set(signature["references"])
+    for ref in incident.external_references[1:]:
+        assert ref["source_name"] == SOURCE_NAME
+        assert "external_id" not in ref
 
 
 def test_exposure_to_incident_omits_url_without_portal_base_url(
@@ -165,9 +169,11 @@ def test_exposure_to_incident_omits_url_without_portal_base_url(
 
     incident = converter.exposure_to_incident(exposure)
 
-    external_ref = incident.external_references[0]
-    assert external_ref["external_id"] == exposure["signature"]["id"]
-    assert "url" not in external_ref
+    assert len(incident.external_references) == len(exposure["signature"]["references"])
+    for external_ref in incident.external_references:
+        assert external_ref["source_name"] == SOURCE_NAME
+        assert external_ref["url"] in exposure["signature"]["references"]
+        assert "external_id" not in external_ref
 
 
 def test_exposure_to_incident_id_is_stable(converter, exposures_list_page):
@@ -245,6 +251,52 @@ def test_build_asset_description_includes_target_and_evidence():
     assert "Evidence:" in description
     assert "tls1.0" in description
     assert "443" in description
+
+
+def test_build_exposure_objects_merges_assets_signature_references(
+    converter, exposures_list_page, all_exposure_assets
+):
+    """Get-assets signature.references are merged when list signature has none."""
+    exposure = {
+        "signature": {
+            "id": "sig-001",
+            "name": "Exposed admin panel",
+            "description": "An administrative interface is publicly accessible.",
+            "severity": "critical",
+            "added_at": "2024-06-01T12:00:00Z",
+        },
+        "asset_count": 3,
+    }
+
+    sdk_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+    incident = next(obj for obj in sdk_objects if isinstance(obj, Incident))
+    stix_incident = incident.to_stix2_object()
+
+    ref_urls = [ref["url"] for ref in stix_incident.external_references if "url" in ref]
+    assert "https://portal.example.com/test-project-id/overview" in ref_urls
+    assert "https://cwe.mitre.org/data/definitions/79.html" in ref_urls
+
+
+def test_build_exposure_objects_deduplicates_merged_references(
+    converter, exposures_list_page, all_exposure_assets
+):
+    exposure = exposures_list_page["data"][0]
+
+    sdk_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+    incident = next(obj for obj in sdk_objects if isinstance(obj, Incident))
+    stix_incident = incident.to_stix2_object()
+
+    api_ref_urls = [
+        ref["url"]
+        for ref in stix_incident.external_references
+        if ref.get("url")
+        and ref["url"] != "https://portal.example.com/test-project-id/overview"
+    ]
+    assert api_ref_urls == [
+        "https://cwe.mitre.org/data/definitions/200.html",
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-1234",
+        "https://cwe.mitre.org/data/definitions/79.html",
+    ]
 
 
 def test_build_exposure_objects_maps_assets_vulnerabilities_and_relationships(
