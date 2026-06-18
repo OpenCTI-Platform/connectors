@@ -42,7 +42,7 @@ class TestConnectorSettings:  # pylint: disable=redefined-outer-name,unused-argu
         assert settings.opencti.url == HttpUrl("http://opencti:8080")
         assert settings.connector.name == "Flare"
         assert settings.connector.scope == ["Incident", "Observable", "Indicator"]
-        assert settings.connector.log_level == "info"
+        assert settings.connector.log_level == "error"
         assert settings.connector.duration_period == timedelta(hours=1)
         assert settings.flare.api_base_url == "api.flare.io"
         assert settings.flare.event_types == [

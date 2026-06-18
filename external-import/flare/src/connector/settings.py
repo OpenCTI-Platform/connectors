@@ -19,10 +19,6 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The scope of the connector.",
         default=["Incident", "Observable", "Indicator"],
     )
-    log_level: Literal["debug", "info", "warn", "warning", "error"] = Field(
-        description="The minimum level of logs to display.",
-        default="info",
-    )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs.",
         default=timedelta(hours=1),

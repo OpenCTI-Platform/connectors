@@ -51,35 +51,45 @@ class FlareConnector:
                     {"from_date": from_date.isoformat()},
                 )
 
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, "Flare sync"
-            )
-            self.helper.connector_logger.info(
-                "Work initiated",
-                {"work_id": work_id},
-            )
-
             events = self.flare_client.get_events(
                 from_date,
                 event_types=self.config.flare.event_types,
                 event_actions=self.config.flare.event_actions,
             )
-            imported_count = self.process_events(events, work_id)
-            self.helper.set_state({"last_run": datetime.now(timezone.utc).isoformat()})
 
-            message = f"Sync completed. Imported {imported_count} events."
-            self.helper.connector_logger.info(
-                "Sync completed",
-                {"imported_count": imported_count},
-            )
-            self.helper.api.work.to_processed(work_id, message)
+            if events:
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, "Flare sync"
+                )
+                if work_id is None:
+                    raise RuntimeError("Failed to initiate work")
+
+                self.helper.connector_logger.info(
+                    "Work initiated",
+                    {"work_id": work_id},
+                )
+
+                imported_count = self.process_events(events, work_id)
+                self.helper.set_state(
+                    {"last_run": datetime.now(timezone.utc).isoformat()}
+                )
+
+                message = f"Sync completed. Imported {imported_count} events."
+                self.helper.connector_logger.info(
+                    "Sync completed",
+                    {"imported_count": imported_count},
+                )
+                self.helper.api.work.to_processed(work_id, message)
 
         except Exception as e:
             self.helper.connector_logger.error(
                 "Import failed",
                 {"error": str(e), "type": type(e).__name__},
             )
-            # Work will remain in "In Progress" or be marked as failed
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id, "Import failed", in_error=True
+                )
             raise
 
     def process_events(
