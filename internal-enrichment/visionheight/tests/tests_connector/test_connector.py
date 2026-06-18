@@ -24,7 +24,7 @@ def test_collect_intelligence_returns_original_bundle_on_api_failure():
     stix_entity = {"id": original_ip.id, "type": "IPv4-Addr", "value": "1.2.3.4"}
     result = connector._collect_intelligence(stix_entity)
 
-    assert result is original_bundle, (
-        "expected the original bundle to be returned unchanged on API failure"
-    )
+    assert (
+        result is original_bundle
+    ), "expected the original bundle to be returned unchanged on API failure"
     assert result == [original_ip]

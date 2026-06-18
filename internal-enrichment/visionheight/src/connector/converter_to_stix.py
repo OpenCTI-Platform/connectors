@@ -13,7 +13,6 @@ from pycti import (
     Vulnerability,
 )
 
-
 # OpenCTI score above which we create a STIX Indicator alongside the observable.
 HIGH_RISK_SCORE_THRESHOLD = 75
 

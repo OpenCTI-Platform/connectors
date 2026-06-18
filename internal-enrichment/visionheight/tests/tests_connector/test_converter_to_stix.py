@@ -123,9 +123,9 @@ def test_enrich_domain_emits_relationship_for_each_cert():
     ]
 
     assert len(certs) == 2, "expected one X509Certificate per ssl_certs entry"
-    assert len(cert_relationships) == 2, (
-        "expected a related-to relationship from the domain to each X509Certificate"
-    )
+    assert (
+        len(cert_relationships) == 2
+    ), "expected a related-to relationship from the domain to each X509Certificate"
 
     # Every cert must be the target of exactly one of those relationships.
     targeted = {rel.target_ref for rel in cert_relationships}
