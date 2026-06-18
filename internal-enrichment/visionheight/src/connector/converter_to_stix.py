@@ -210,6 +210,7 @@ class ConverterToStix:
             asn = stix2.AutonomousSystem(
                 number=infra["asn"],
                 name=infra.get("isp"),
+                custom_properties={"x_opencti_created_by_ref": self.author["id"]},
             )
             new_objects.append(asn)
             new_objects.append(
@@ -369,6 +370,7 @@ class ConverterToStix:
                 subject=cert.get("cert_subject_dn") or cert.get("cert_subject_cn"),
                 validity_not_before=cert.get("cert_not_before_timestamp"),
                 validity_not_after=cert.get("cert_not_after_timestamp"),
+                custom_properties={"x_opencti_created_by_ref": self.author["id"]},
             )
             new_objects.append(cert_obj)
             new_objects.append(

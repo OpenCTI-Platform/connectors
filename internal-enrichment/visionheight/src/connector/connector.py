@@ -117,12 +117,13 @@ class VisionHeightConnector:
         Sees: https://docs.opencti.io/latest/development/connectors/#additional-implementations
         """
         try:
+            # When invoked via a playbook, ``stix_objects`` is the bundle being
+            # passed through. Initialize it before the TLP check so the inbound
+            # bundle is preserved even if enrichment is refused.
+            self.stix_objects_list = data.get("stix_objects") or []
             opencti_entity = data["enrichment_entity"]
             self.extract_and_check_markings(opencti_entity)
 
-            # When invoked via a playbook, ``stix_objects`` is the bundle being
-            # passed through. We must include it in our response.
-            self.stix_objects_list = data["stix_objects"]
             stix_entity = data["stix_entity"]
 
             self.helper.connector_logger.info(
@@ -151,7 +152,7 @@ class VisionHeightConnector:
                 "[CONNECTOR] Unexpected error",
                 {"error_message": str(err)},
             )
-            return f"[CONNECTOR] Error: {err}"
+            return self.stix_objects_list
 
     # ------------------------------------------------------------------ #
     # Bundle dispatch and main loop

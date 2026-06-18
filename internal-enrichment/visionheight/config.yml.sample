@@ -13,4 +13,4 @@ connector:
 visionheight:
   api_base_url: 'https://api.visionheight.com'
   api_key: 'ChangeMe'
-  max_tlp_level: 'amber+strict'  # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+  max_tlp_level: 'amber+strict'  # optional, available values: 'clear', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
