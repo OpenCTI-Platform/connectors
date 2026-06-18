@@ -588,13 +588,11 @@ class MWDB:
 
     def start_up(self):
         while True:
+            self.workid = None
+            in_error = False
+            message = ""
             try:
                 timestamp = int(time.time())
-                now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
-                friendly_name = "MWDB DEV run @ " + now.strftime("%Y-%m-%d %H:%M:%S")
-                self.workid = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
                 current_state = self.helper.get_state()
                 if current_state is not None and "last_run" in current_state:
                     last_run = current_state["last_run"]
@@ -615,6 +613,19 @@ class MWDB:
                     (timestamp - last_run) > ((int(self.mwdb_interval)) * 60 * 60 * 24)
                 ):
                     self.helper.log_info("MWDB importing")
+                    now = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                    friendly_name = "MWDB DEV run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    # is_multipart=True: process_virus sends one bundle per sample
+                    # (and send_stix2_bundle can split a bundle), so the work must
+                    # only complete on the to_processed call in the finally block.
+                    # The work is only initiated when there is data to import, so
+                    # idle interval checks no longer create empty works that would
+                    # be closed with an uninformative message.
+                    self.workid = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name, is_multipart=True
+                    )
                     if not last_run or last_run < conf_startdate:
                         current_date = conf_startdate
                     else:
@@ -635,15 +646,33 @@ class MWDB:
                         utc_time = calendar.timegm(date.utctimetuple())
                         state = {"last_run": utc_time}
                         self.helper.set_state(state)
+                        message = "Done"
                     except Exception as e:
-                        self.helper.log_error(str(e))
+                        # Flag the run as failed so the finally block closes the
+                        # work with in_error=True instead of silently marking a
+                        # failed search/processing run as successfully processed.
+                        in_error = True
+                        message = str(e)
+                        self.helper.log_error(message)
             except (KeyboardInterrupt, SystemExit):
-                self.helper.log_info("Connector stop")
+                message = "Connector stop"
+                in_error = True
+                self.helper.log_info(message)
                 sys.exit(0)
             except Exception as e:
-                self.helper.log_error(str(e))
+                message = str(e)
+                in_error = True
+                self.helper.log_error(message)
+            finally:
+                if self.workid is not None:
+                    self.helper.api.work.to_processed(
+                        self.workid, message, in_error=in_error
+                    )
+                    self.workid = None
 
             if self.helper.connect_run_and_terminate:
+                # The work was already closed in the finally block above; just
+                # log, flush the ping and terminate.
                 self.helper.log_info("Connector stop")
                 self.helper.force_ping()
                 sys.exit(0)

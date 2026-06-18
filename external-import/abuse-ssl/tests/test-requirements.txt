@@ -1,0 +1,6 @@
+beautifulsoup4==4.14.2
+pycti==7.260609.0
+pytest==8.4.2
+requests
+stix2
+PyYAML

@@ -138,17 +138,53 @@ class LastInfoSec:
         req = requests.get(url, proxies=proxy_dic)
         if req.status_code == 200:
             lastinfosec_data = req.json()
-            if isinstance(lastinfosec_data, list) and len(lastinfosec_data) > 0:
-                friendly_name = "LastInfoSec CTI run @ " + now.strftime(
-                    "%Y-%m-%d %H:%M:%S"
-                )
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
-                self.push_data(lastinfosec_data, timestamp, work_id)
-            stop = time.perf_counter()
-            process_time_seconds = stop - start
-            time_to_sleep = run_interval - process_time_seconds
+            work_id = None
+            in_error = False
+            error_message = None
+            # Close the work in a finally block so an initiated work is never
+            # left stuck "in-progress" if push_data raises (queue publish /
+            # network error) before to_processed is reached.
+            try:
+                if isinstance(lastinfosec_data, list) and len(lastinfosec_data) > 0:
+                    friendly_name = "LastInfoSec CTI run @ " + now.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+                    # is_multipart=True: push_data may send several bundles and
+                    # send_stix2_bundle can itself split a bundle, so the work
+                    # must only complete on the to_processed call below.
+                    work_id = self.helper.api.work.initiate_work(
+                        self.helper.connect_id, friendly_name, is_multipart=True
+                    )
+                    self.push_data(lastinfosec_data, timestamp, work_id)
+            except (KeyboardInterrupt, SystemExit):
+                # The work is closed in the finally block, so flag the
+                # interrupted run as in_error before re-raising instead of
+                # closing it with a misleading "Done in ... seconds" message.
+                in_error = True
+                error_message = "connector stopped"
+                raise
+            except Exception as ex:
+                in_error = True
+                error_message = str(ex)
+                raise
+            finally:
+                process_time_seconds = time.perf_counter() - start
+                if work_id is not None:
+                    # Report a failure message (with the exception) on error so
+                    # the Work status in OpenCTI is not misleadingly shown as a
+                    # successful "Done in ... seconds" run.
+                    if in_error:
+                        message = "Failed after {0} seconds: {1}".format(
+                            process_time_seconds, error_message
+                        )
+                    else:
+                        message = "Done in {0} seconds".format(process_time_seconds)
+                    self.helper.api.work.to_processed(
+                        work_id, message, in_error=in_error
+                    )
+            # Clamp to 0: a run slower than run_interval would otherwise yield a
+            # negative value and crash the caller's time.sleep(time_to_sleep).
+            time_to_sleep = max(0, run_interval - process_time_seconds)
         else:
             message = "Connector error run, storing last_run as {0}".format(timestamp)
             self.helper.set_state({"last_run": timestamp})
@@ -166,7 +202,6 @@ class LastInfoSec:
                 timestamp
             )
             self.helper.set_state({"last_run": timestamp})
-            self.helper.api.work.to_processed(work_id, message)
             self.helper.log_info(message)
 
 

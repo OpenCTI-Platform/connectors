@@ -39,14 +39,20 @@ class RedFlagDomainImportConnector:
         """
         Process the data
         """
+        work_id = None
+        in_error = False
+        message = ""
         try:
             current_state = self.helper.get_state()
             now = datetime.now(tz=timezone.utc)
             friendly_name = "Red Flag Domains run @ " + now.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
+            # is_multipart=True: send_stix2_bundle can split the bundle into
+            # several expectations, so the work must only complete on the
+            # to_processed call in the finally block.
             work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
+                self.helper.connect_id, friendly_name, is_multipart=True
             )
             if current_state is not None and "last_run" in current_state:
                 last_seen = datetime.fromtimestamp(current_state["last_run"])
@@ -67,10 +73,17 @@ class RedFlagDomainImportConnector:
             self.helper.log_info(message)
             self.helper.set_state({"last_run": now.timestamp()})
         except (KeyboardInterrupt, SystemExit):
-            self.helper.log_info("Connector stop")
+            message = "Connector stop"
+            in_error = True
+            self.helper.log_info(message)
             exit(0)
         except Exception as exception:
-            self.helper.log_error(str(exception))
+            message = "Failed: {0}".format(str(exception))
+            in_error = True
+            self.helper.log_error(message)
+        finally:
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message, in_error=in_error)
 
     def get_domains(self, url):
         self.helper.log_info("Enumerating domains")
