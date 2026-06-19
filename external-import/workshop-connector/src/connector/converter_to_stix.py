@@ -3,15 +3,17 @@ from typing import Literal
 
 import stix2
 import validators
-from connectors_sdk.models import DomainName  # noqa: F401
-from connectors_sdk.models import IPV4Address  # noqa: F401
-from connectors_sdk.models import Relationship  # noqa: F401
-from connectors_sdk.models import Software  # noqa: F401
-from connectors_sdk.models import TLPMarking  # noqa: F401
+
+# from connectors_sdk.models import DomainName  # noqa: F401
+# from connectors_sdk.models import IPV4Address  # noqa: F401
+# from connectors_sdk.models import Relationship  # noqa: F401
+# from connectors_sdk.models import Software  # noqa: F401
+# from connectors_sdk.models import TLPMarking  # noqa: F401
 from connectors_sdk.models import (
     OrganizationAuthor,
 )
-from connectors_sdk.models import Vulnerability as SDKVulnerability  # noqa: F401
+
+# from connectors_sdk.models import Vulnerability as SDKVulnerability  # noqa: F401
 from pycti import (
     Identity,
     MarkingDefinition,
