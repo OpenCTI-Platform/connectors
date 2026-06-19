@@ -8,9 +8,9 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | -------- | ---- | -------- | --------------- | ------- | ----------- |
 | OPENCTI_URL | `string` | ✅ | Format: [`uri`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The base URL of the OpenCTI instance. |
 | OPENCTI_TOKEN | `string` | ✅ | string |  | The API token to connect to OpenCTI. |
-| CONNECTOR_SCOPE | `array` | ✅ | string |  | The scope of the connector, e.g. 'flashpoint'. |
 | JOE_SANDBOX_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | The API key for Joe Sandbox |
 | CONNECTOR_NAME | `string` |  | string | `"Joe Sandbox"` | The name of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string | `["joe-sandbox"]` | The scope of the connector, e.g. 'flashpoint'. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `INTERNAL_ENRICHMENT` | `"INTERNAL_ENRICHMENT"` |  |
 | CONNECTOR_AUTO | `boolean` |  | boolean | `false` | Whether the connector should run automatically when an entity is created or updated. |
