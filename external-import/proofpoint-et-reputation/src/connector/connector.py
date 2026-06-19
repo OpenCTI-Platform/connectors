@@ -5,13 +5,9 @@ from enum import Enum
 from typing import Any, Generator
 
 from connector.models import DomainReputationModel, IPReputationModel
-from connector.services import (
-    ConverterToStix,
-    DateTimeFormat,
-    ProofpointEtReputationClient,
-    ProofpointEtReputationConfig,
-    Utils,
-)
+from connector.services import ConverterToStix, DateTimeFormat, Utils
+from connector.services.client_api import ProofpointEtReputationClient
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
 
@@ -22,18 +18,23 @@ class ReputationEntity(Enum):
 
 
 class ProofpointEtReputationConnector:
-
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
         Initialize the connector with the required configurations.
         """
+        self.config = config
+        self.helper = helper
 
-        # Load configuration file and connection helper
-        self.config = ProofpointEtReputationConfig()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ProofpointEtReputationClient(self.helper, self.config)
+        # Create a config-compatible object for the legacy client
+        self._api_token = config.proofpoint_et_reputation.api_token.get_secret_value()
+        self.client = ProofpointEtReputationClient(self.helper, self)
         self.converter_to_stix = ConverterToStix(self.helper)
         self.utils = Utils()
+
+    @property
+    def extra_api_token(self) -> str:
+        """Provide backward-compatible access for the legacy API client."""
+        return self._api_token
 
     def _process_initiate_work(self, collection: str, now_isoformat: str) -> str:
         """
@@ -62,8 +63,6 @@ class ProofpointEtReputationConnector:
     ) -> None:
         """
         This method prepares and sends unique STIX objects to OpenCTI.
-        This method takes a list of objects prepared by the models, extracts their STIX representations, creates a serialized STIX bundle and It then sends this bundle to OpenCTI.
-        If prepared objects exist, the method ensures that only unique objects with an 'id' attribute are included. After sending the STIX objects, it keeps inform of the number of bundles sent.
 
         Args:
             work_id (str): The unique identifier for the work process associated with the STIX objects.
@@ -97,8 +96,6 @@ class ProofpointEtReputationConnector:
     def _process_complete_work(self, collection: str, work_id: str) -> None:
         """
         Marks the work collection process as complete.
-        This method logs the completion of the work collection for a specific work ID.
-        Sends a request to the API with the to_processed method to complete the work.
 
         Args:
             collection (str): The type of collection being processed ("IPv4-Addr" or "Domain-Name").
@@ -130,7 +127,6 @@ class ProofpointEtReputationConnector:
             None
         """
         with ThreadPoolExecutor(max_workers=2) as executor:
-
             tasks = {
                 executor.submit(
                     self.client.proofpoint_get_ips_reputation, ReputationEntity.IP.value
@@ -172,13 +168,8 @@ class ProofpointEtReputationConnector:
         """
         Generates reputation models from a list of data.
 
-        This method iterates through a dictionary of entities and their scores (including categories and their
-        associated scores), generating `IPReputationModel` or `DomainReputationModel` objects depending on the
-        type of collection. If a model cannot be validated by pydantic, or some other error occurs, the error
-        is reported and the entity is ignored.
-
         Args:
-            data_list (dict[str, dict[str, str]]): A dictionary where the keys are entities ("IPv4-Addr", "Domain-Name")
+            data_list (dict[str, dict[str, str]]): A dictionary where the keys are entities
              and the values are dictionaries of categories and their associated scores.
             collection (str): The type of collection being processed ("IPv4-Addr" or "Domain-Name").
 
@@ -254,6 +245,9 @@ class ProofpointEtReputationConnector:
         )
         stix_objects.append(marking_definition)
 
+        min_score = self.config.proofpoint_et_reputation.min_score
+        create_indicator = self.config.proofpoint_et_reputation.create_indicator
+
         for model in self._generate_reputation_model(data_list, collection):
             # Recovery of the highest value in the scores
             highest_score = max(model.score_by_category.values())
@@ -265,12 +259,12 @@ class ProofpointEtReputationConnector:
             # All categories will be used to generate labels
             list_categories = list(model.score_by_category.keys())
 
-            if self.config.extra_min_score > highest_score_converted:
+            if min_score > highest_score_converted:
                 self.helper.connector_logger.debug(
                     "[CONNECTOR] The creation of the entity was ignored due to your configuration of the min_score variable.",
                     {
                         "collection": collection,
-                        "min_score_config": self.config.extra_min_score,
+                        "min_score_config": min_score,
                         "entity": model.value,
                         "entity_score": highest_score_converted,
                     },
@@ -292,7 +286,7 @@ class ProofpointEtReputationConnector:
             )
             stix_objects.append(observable)
 
-            if self.config.extra_create_indicator:
+            if create_indicator:
                 # Make indicator object
                 indicator = self.converter_to_stix.make_indicator(
                     model.value,
@@ -329,7 +323,7 @@ class ProofpointEtReputationConnector:
             {
                 "collection": collection,
                 "generated_entities": len(stix_objects),
-                "config_min_score": self.config.extra_min_score,
+                "config_min_score": min_score,
             },
         )
         return stix_objects
@@ -422,5 +416,5 @@ class ProofpointEtReputationConnector:
         """
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=self.config.connector_duration_period,
+            duration_period=self.config.connector.duration_period,
         )
