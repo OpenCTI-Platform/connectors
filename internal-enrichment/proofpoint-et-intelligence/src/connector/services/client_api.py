@@ -50,7 +50,10 @@ class ProofpointEtIntelligenceClient:
         wait=wait_exponential_jitter(initial=1, max=30, exp_base=2, jitter=1),
     )
     async def _fetch_data(
-        self, entity_value: str, source_entity_type: str, target_entity_type: str = None
+        self,
+        entity_value: str,
+        source_entity_type: str,
+        target_entity_type: str | None = None,
     ) -> dict:
         """
         Fetch intelligence data for a specific collection from the ProofPoint ET Intelligence API.
@@ -58,7 +61,7 @@ class ProofpointEtIntelligenceClient:
         It handles various error scenarios, including retries, timeouts, and connection issues.
         Args:
             source_entity_type (str):
-            target_entity_type (str):
+            target_entity_type (str | None):
         Returns:
             dict: The reputation data as a dictionary if the request is successful, or an error dictionary with
             details about the failure.
