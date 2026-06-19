@@ -5,7 +5,6 @@ from typing import Any
 
 import pycti
 import stix2
-
 from config import NOTE_MAX_CONTENT
 from support.note_markdown import MarkdownNote
 

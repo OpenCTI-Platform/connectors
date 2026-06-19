@@ -4,12 +4,10 @@ import ipaddress
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import models as ds
 import pycti
 import stix2
 from ciaops.collections_meta.ti import TICollections
-from stix2.patterns import HashConstant
-
-import models as ds
 from config import (
     COLLECTION_DISPLAY_LABEL,
     DEFAULT_TTL_DAYS,
@@ -21,6 +19,7 @@ from config import (
     TI_NOTE_ID_ANCHOR,
     ConfigConnector,
 )
+from stix2.patterns import HashConstant
 from support.portal_external_refs import portal_external_ref_rows
 from support.text_normalize import normalize_description as _normalize_description_impl
 

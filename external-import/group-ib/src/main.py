@@ -4,7 +4,6 @@ import traceback
 from typing import Any
 
 import dotenv
-
 from config import ConfigConnector
 from external_import import ExternalImportConnector
 from pipeline import collect_intelligence

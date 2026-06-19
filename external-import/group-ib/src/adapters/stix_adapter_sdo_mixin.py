@@ -3,9 +3,8 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-import stix2
-
 import models as ds
+import stix2
 from config import ACTOR_PROFILE_COLLECTIONS as _ACTOR_PROFILE_COLLECTIONS
 from config import MALWARE_DESC_PLACEHOLDER
 from config import REPORT_NOTE_COLLECTIONS as _REPORT_NOTE_COLLECTIONS

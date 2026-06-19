@@ -6,19 +6,18 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
 from ciaops.utils import FileHandler
 from dotenv import load_dotenv
-from pycti import get_config_variable
-from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
-from stix2.v21.vocab import MALWARE_TYPE
-
-from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
 from logging_config import (
     _DEFAULT_LOG_BACKUP_COUNT,
     _DEFAULT_LOG_DIR,
     _DEFAULT_LOG_MAX_BYTES,
     FileLoggingConfig,
 )
+from pycti import get_config_variable
+from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
+from stix2.v21.vocab import MALWARE_TYPE
 
 # ============================================================================
 # Connector-wide constants
