@@ -67,5 +67,8 @@ def test_connector_is_instantiated(mock_opencti_connector_helper):
     )
     connector = ProofpointEtIntelligenceConnector(config=settings, helper=helper)
     assert connector.helper is helper
-    assert connector.config.extra_api_key == "test-api-key"
-    assert connector.config.extra_max_tlp == "TLP:AMBER+STRICT"
+    assert (
+        connector.config.proofpoint_et_intelligence.api_key.get_secret_value()
+        == "test-api-key"
+    )
+    assert connector.config.proofpoint_et_intelligence.max_tlp == "TLP:AMBER+STRICT"

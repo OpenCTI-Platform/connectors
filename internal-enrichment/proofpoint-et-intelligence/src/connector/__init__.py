@@ -1,4 +1,4 @@
-from connector.new_connector import ProofpointEtIntelligenceConnector
+from connector.connector import ProofpointEtIntelligenceConnector
 from connector.settings import ConnectorSettings
 
 __all__ = [
