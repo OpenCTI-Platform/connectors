@@ -3,11 +3,11 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+sys.path.append(str(Path(__file__).parent.parent / "src"))
+
 import pytest
 from connector.services.client_api import ProofpointEtReputationClient
 from pydantic import SecretStr
-
-sys.path.append(str(Path(__file__).parent.parent / "src"))
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 

@@ -59,6 +59,8 @@ class ProofpointEtReputationConnector:
     ) -> None:
         """
         This method prepares and sends unique STIX objects to OpenCTI.
+        This method takes a list of objects prepared by the models, extracts their STIX representations, creates a serialized STIX bundle and It then sends this bundle to OpenCTI.
+        If prepared objects exist, the method ensures that only unique objects with an 'id' attribute are included. After sending the STIX objects, it keeps inform of the number of bundles sent.
 
         Args:
             work_id (str): The unique identifier for the work process associated with the STIX objects.
@@ -92,6 +94,8 @@ class ProofpointEtReputationConnector:
     def _process_complete_work(self, collection: str, work_id: str) -> None:
         """
         Marks the work collection process as complete.
+        This method logs the completion of the work collection for a specific work ID.
+        Sends a request to the API with the to_processed method to complete the work.
 
         Args:
             collection (str): The type of collection being processed ("IPv4-Addr" or "Domain-Name").
@@ -163,6 +167,11 @@ class ProofpointEtReputationConnector:
     ) -> Generator[IPReputationModel | DomainReputationModel | None, None, None]:
         """
         Generates reputation models from a list of data.
+
+        This method iterates through a dictionary of entities and their scores (including categories and their
+        associated scores), generating `IPReputationModel` or `DomainReputationModel` objects depending on the
+        type of collection. If a model cannot be validated by pydantic, or some other error occurs, the error
+        is reported and the entity is ignored.
 
         Args:
             data_list (dict[str, dict[str, str]]): A dictionary where the keys are entities
