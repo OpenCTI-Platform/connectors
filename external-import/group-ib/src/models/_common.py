@@ -8,7 +8,12 @@ from urllib.parse import urlparse
 import pycti
 import stix2
 
-from config import CTRL_CHAR_RE, HTML_TAG_RE, PORTAL_LINK_DEFAULT_LABEL, ConfigConnector
+from config import (
+    CTRL_CHAR_RE,
+    HTML_TAG_RE,
+    PORTAL_LINK_DEFAULT_LABEL,
+    ConfigConnector,
+)
 
 
 class ConversionError(Exception):

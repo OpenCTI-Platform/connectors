@@ -9,7 +9,11 @@ from typing import Any
 from ciaops.adapters.opencti_adapter import TIAdapter
 from pycti import OpenCTIConnectorHelper
 
-from config import INITIATE_WORK_DELAY_SEC, MAX_ERROR_TRUNCATE_LEN, ConfigConnector
+from config import (
+    INITIATE_WORK_DELAY_SEC,
+    MAX_ERROR_TRUNCATE_LEN,
+    ConfigConnector,
+)
 from logging_config import setup_file_logging
 from support.mitre_mapper import get_mitre_mapper
 from utils import ExternalImportHelper

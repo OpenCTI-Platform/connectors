@@ -22,7 +22,9 @@ from config import (
     ConfigConnector,
 )
 from support.portal_external_refs import portal_external_ref_rows
-from support.text_normalize import normalize_description as _normalize_description_impl
+from support.text_normalize import (
+    normalize_description as _normalize_description_impl,
+)
 
 
 class AdapterCoreMixin:
