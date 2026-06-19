@@ -100,6 +100,11 @@ class ConverterToStix:
         ] = {}
         self._vulnerability_cache: dict[str, Vulnerability] = {}
 
+    def reset_entity_caches(self) -> None:
+        """Clear observable and vulnerability caches between scheduled runs."""
+        self._observable_cache.clear()
+        self._vulnerability_cache.clear()
+
     @staticmethod
     def map_severity(rf_severity: str | None) -> str:
         """Map RF ASI severity values to OpenCTI incident severity."""

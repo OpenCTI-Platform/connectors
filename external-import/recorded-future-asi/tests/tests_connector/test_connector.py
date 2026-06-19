@@ -473,6 +473,54 @@ def test_process_message_does_not_persist_state_on_send_failure(
     connector.process_message()
 
     opencti_helper.set_state.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_called_once_with(
+        "work-id", "send failed", True
+    )
+
+
+def test_process_message_does_not_persist_state_on_collection_failure(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    connector.client.get_exposure_history = MagicMock(
+        side_effect=RuntimeError("history failed")
+    )
+    connector.client.get_exposure_assets = MagicMock()
+    _mock_process_message_dependencies(
+        opencti_helper,
+        initial_state={"last_fetch_time": 1717100000},
+    )
+
+    connector.process_message()
+
+    opencti_helper.set_state.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_called_once_with(
+        "work-id", "history failed", True
+    )
+
+
+def test_process_message_does_not_persist_state_on_initial_list_exposures_failure(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    connector.client.list_exposures = MagicMock(
+        side_effect=RuntimeError("list exposures failed")
+    )
+    connector.client.get_exposure_assets = MagicMock()
+    _mock_process_message_dependencies(opencti_helper, initial_state={})
+
+    connector.process_message()
+
+    opencti_helper.set_state.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_called_once_with(
+        "work-id", "list exposures failed", True
+    )
 
 
 def test_incremental_sync_updates_last_fetch_time_on_success(
@@ -489,7 +537,10 @@ def test_incremental_sync_updates_last_fetch_time_on_success(
         initial_state={"last_fetch_time": 1717100000},
     )
 
-    with patch("connector.connector.time.time", return_value=1717200000):
+    with patch("connector.connector.datetime", wraps=datetime) as mock_datetime:
+        mock_datetime.now.return_value = datetime.fromtimestamp(
+            1717200000, tz=timezone.utc
+        )
         connector.process_message()
 
     saved_state = opencti_helper.set_state.call_args.args[0]
@@ -511,7 +562,10 @@ def test_initial_sync_sets_last_fetch_time_when_cycle_complete(
     )
     _mock_process_message_dependencies(opencti_helper, initial_state={})
 
-    with patch("connector.connector.time.time", return_value=1717200000):
+    with patch("connector.connector.datetime", wraps=datetime) as mock_datetime:
+        mock_datetime.now.return_value = datetime.fromtimestamp(
+            1717200000, tz=timezone.utc
+        )
         connector.process_message()
 
     saved_state = opencti_helper.set_state.call_args.args[0]
@@ -534,7 +588,10 @@ def test_initial_sync_does_not_set_last_fetch_time_mid_batch_with_run_limit(
     )
     _mock_process_message_dependencies(opencti_helper, initial_state={})
 
-    with patch("connector.connector.time.time", return_value=1717200000):
+    with patch("connector.connector.datetime", wraps=datetime) as mock_datetime:
+        mock_datetime.now.return_value = datetime.fromtimestamp(
+            1717200000, tz=timezone.utc
+        )
         connector.process_message()
 
     saved_state = opencti_helper.set_state.call_args.args[0]
@@ -587,3 +644,75 @@ def test_incremental_sync_skips_removed_rule_without_id(
 
     incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
     assert incidents == []
+
+
+def test_incremental_sync_skips_added_rule_without_id(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    connector.client.get_exposure_history = MagicMock(
+        return_value=([{"name": "Missing id"}], [])
+    )
+    connector.client.get_exposure_assets = MagicMock()
+
+    stix_objects = connector._collect_incremental_intelligence(
+        {"last_fetch_time": 1717200000}
+    )
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert incidents == []
+    connector.client.get_exposure_assets.assert_not_called()
+
+
+def test_incremental_sync_skips_added_when_also_in_removed(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+    risk_history_activity,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    added_rules = risk_history_activity["data"][0]["added_rules"]
+    removed_rules = [
+        {
+            "id": "sig-001",
+            "name": "Exposed admin panel",
+            "description": "Cleared duplicate.",
+            "classification": "high",
+        }
+    ]
+    connector.client.get_exposure_history = MagicMock(
+        return_value=(added_rules, removed_rules)
+    )
+    connector.client.get_exposure_assets = MagicMock()
+
+    stix_objects = connector._collect_incremental_intelligence(
+        {"last_fetch_time": 1717200000}
+    )
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert len(incidents) == 1
+    assert incidents[0]["labels"] == [LABEL_CLEARED]
+    connector.client.get_exposure_assets.assert_not_called()
+
+
+def test_process_message_resets_converter_caches(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    connector.converter_to_stix._observable_cache[("ipv4", "1.2.3.4")] = MagicMock()
+    connector.converter_to_stix._vulnerability_cache["CVE-2024-0001"] = MagicMock()
+    connector.client.list_exposures = MagicMock(return_value=[])
+    connector.client.get_exposure_assets = MagicMock()
+    _mock_process_message_dependencies(opencti_helper, initial_state={})
+
+    connector.process_message()
+
+    assert connector.converter_to_stix._observable_cache == {}
+    assert connector.converter_to_stix._vulnerability_cache == {}

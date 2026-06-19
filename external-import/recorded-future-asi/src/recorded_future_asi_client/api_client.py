@@ -290,12 +290,6 @@ class RecordedFutureAsiClient:
                     "[API] Error while fetching exposures",
                     {"url_path": url, "error": str(err)},
                 )
-                if exposures:
-                    self.helper.connector_logger.warning(
-                        "[API] Returning partial exposure results after pagination failure",
-                        {"collected_count": len(exposures)},
-                    )
-                    return exposures
                 raise
 
             if not next_cursor:

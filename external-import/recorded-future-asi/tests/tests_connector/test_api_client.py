@@ -126,7 +126,7 @@ def test_list_exposures_passes_filters(opencti_helper, exposures_list_page_last)
     }
 
 
-def test_list_exposures_returns_partial_results_on_mid_pagination_failure(
+def test_list_exposures_raises_on_mid_pagination_failure(
     opencti_helper, exposures_list_page
 ):
     client = _client(opencti_helper)
@@ -144,9 +144,8 @@ def test_list_exposures_returns_partial_results_on_mid_pagination_failure(
             failing_response,
         ],
     ):
-        exposures = client.list_exposures("test-project-id", limit=100)
-
-    assert exposures == exposures_list_page["data"]
+        with pytest.raises(requests.HTTPError):
+            client.list_exposures("test-project-id", limit=100)
 
 
 def test_list_exposures_raises_on_first_page_failure(opencti_helper):

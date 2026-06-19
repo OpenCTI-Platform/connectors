@@ -221,6 +221,16 @@ def test_converter_exposes_author_and_tlp_marking(converter):
     assert converter.tlp_marking["x_opencti_definition"] == "TLP:AMBER+STRICT"
 
 
+def test_reset_entity_caches_clears_observable_and_vulnerability_caches(converter):
+    converter._observable_cache[("ipv4", "1.2.3.4")] = MagicMock()
+    converter._vulnerability_cache["CVE-2024-0001"] = MagicMock()
+
+    converter.reset_entity_caches()
+
+    assert converter._observable_cache == {}
+    assert converter._vulnerability_cache == {}
+
+
 @pytest.mark.parametrize(
     "asset_id, expected_type",
     [

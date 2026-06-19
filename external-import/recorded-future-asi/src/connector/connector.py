@@ -1,5 +1,4 @@
 import sys
-import time
 from datetime import datetime, timezone
 
 from connector.converter_to_stix import ConverterToStix
@@ -208,7 +207,23 @@ class RecordedFutureAsiConnector:
             },
         )
 
+        removed_ids = {rule_id for rule in removed_rules if (rule_id := rule.get("id"))}
+
         for rule in added_rules:
+            rule_id = rule.get("id")
+            if not rule_id:
+                self.helper.connector_logger.warning(
+                    "[CONNECTOR] Skipping added history rule without id",
+                    {"rule_name": rule.get("name")},
+                )
+                continue
+            if rule_id in removed_ids:
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Skipping added history rule also present in removed_rules",
+                    {"signature_id": rule_id},
+                )
+                continue
+
             exposure_summary = ConverterToStix.history_rule_to_exposure_summary(rule)
             signature = exposure_summary["signature"]
             signature_id = signature["id"]
@@ -281,7 +296,7 @@ class RecordedFutureAsiConnector:
         current_state.pop("known_exposures", None)
 
         if advance_fetch_time:
-            current_state["last_fetch_time"] = int(time.time())
+            current_state["last_fetch_time"] = current_timestamp
 
         if exposures_cursor is not False:
             if exposures_cursor:
@@ -302,7 +317,10 @@ class RecordedFutureAsiConnector:
             {"connector_name": self.helper.connect_name},
         )
 
+        work_id: str | None = None
         try:
+            self.converter_to_stix.reset_entity_caches()
+
             # Get the current state
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
@@ -345,10 +363,7 @@ class RecordedFutureAsiConnector:
                 stix_objects, next_cursor = self._collect_initial_intelligence(
                     exposures_cursor,
                 )
-                initial_cycle_complete = (
-                    next_cursor is None
-                    or self.config.recorded_future_asi.run_limit is None
-                )
+                initial_cycle_complete = next_cursor is None
             else:
                 stix_objects = self._collect_incremental_intelligence(current_state)
                 initial_cycle_complete = False
@@ -393,6 +408,8 @@ class RecordedFutureAsiConnector:
             sys.exit(0)
         except Exception as err:
             self.helper.connector_logger.error(str(err))
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, str(err), True)
 
     def run(self) -> None:
         """
