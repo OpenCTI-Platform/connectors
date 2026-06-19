@@ -20,7 +20,7 @@ class WorkshopConnectorClient:
 
         self.sample_file_path = sample_file_path
         self.domain_path = "/domains_sample.json"
-        self.ip_adresses_path = "/ip_adresses_sample.json"
+        self.ip_addresses_path = "/ip_addresses_sample.json"
         self.vulnerabilities_path = "/vulnerabilities_sample.json"
 
     def _from_json(self, sample_file_path: str) -> dict:
@@ -77,7 +77,9 @@ class WorkshopConnectorClient:
             # === Add your code below ===
             # ===========================
 
-            response = self._request_data(self.sample_file_path + self.ip_adresses_path)
+            response = self._request_data(
+                self.sample_file_path + self.ip_addresses_path
+            )
 
             return response
             # ===========================
