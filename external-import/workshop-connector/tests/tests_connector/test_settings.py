@@ -22,8 +22,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "duration_period": "PT5M",
                 },
                 "workshop_connector": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "sample_file_path": "/tmp/samples",
                     "tlp_level": "clear",
                 },
             },
@@ -40,8 +39,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "scope": "test, connector",
                 },
                 "workshop_connector": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "sample_file_path": "/tmp/samples",
                 },
             },
             id="minimal_valid_settings_dict",
@@ -96,8 +94,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "workshop_connector": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "sample_file_path": "/tmp/samples",
                     "tlp_level": "clear",
                 },
             },
@@ -117,8 +114,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "duration_period": "PT5M",
                 },
                 "workshop_connector": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "sample_file_path": "/tmp/samples",
                     "tlp_level": "clear",
                 },
             },

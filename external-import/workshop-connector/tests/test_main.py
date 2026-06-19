@@ -42,8 +42,7 @@ class StubConnectorSettings(ConnectorSettings):
                     "duration_period": "PT5M",
                 },
                 "workshop_connector": {
-                    "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
+                    "sample_file_path": "/tmp/samples",
                     "tlp_level": "clear",
                 },
             }
