@@ -26,9 +26,7 @@ class StixAdapterSpecialMixin:
         related_objects: list[Any] | None = None,
         yara_is_ioc: bool = True,
     ) -> Any | None:
-        self.helper.connector_logger.info(
-            "Starting generation of STIX YARA object"
-        )
+        self.helper.connector_logger.info("Starting generation of STIX YARA object")
         if not obj:
             self.helper.connector_logger.warning(
                 "No object provided for YARA generation"
@@ -68,18 +66,12 @@ class StixAdapterSpecialMixin:
             is_ioc=yara_is_ioc,
             helper=self.helper,
         )
-        self.helper.connector_logger.debug(
-            "Generated relations for YARA object"
-        )
+        self.helper.connector_logger.debug("Generated relations for YARA object")
 
         yara.add_relationships_to_stix_objects()
-        self.helper.connector_logger.debug(
-            "Added relationships to STIX YARA object"
-        )
+        self.helper.connector_logger.debug("Added relationships to STIX YARA object")
 
-        self.helper.connector_logger.info(
-            "Completed generation of STIX YARA object"
-        )
+        self.helper.connector_logger.info("Completed generation of STIX YARA object")
         return yara
 
     def generate_stix_suricata(
@@ -89,9 +81,7 @@ class StixAdapterSpecialMixin:
         related_objects: list[Any] | None = None,
         suricata_is_ioc: bool = True,
     ) -> Any | None:
-        self.helper.connector_logger.info(
-            "Starting generation of STIX Suricata object"
-        )
+        self.helper.connector_logger.info("Starting generation of STIX Suricata object")
         if not obj:
             self.helper.connector_logger.warning(
                 "No object provided for Suricata generation"
@@ -131,9 +121,7 @@ class StixAdapterSpecialMixin:
             is_ioc=suricata_is_ioc,
             helper=self.helper,
         )
-        self.helper.connector_logger.debug(
-            "Generated relations for Suricata object"
-        )
+        self.helper.connector_logger.debug("Generated relations for Suricata object")
 
         suricata.add_relationships_to_stix_objects()
         self.helper.connector_logger.debug(
@@ -249,11 +237,7 @@ class StixAdapterSpecialMixin:
         )
         ipv4_rows = self._normalize_list(payload.get("ipv4_list"))
         ipv6_rows = self._normalize_list(payload.get("ipv6_list"))
-        file_obj = (
-            payload.get("file")
-            if isinstance(payload.get("file"), dict)
-            else {}
-        )
+        file_obj = payload.get("file") if isinstance(payload.get("file"), dict) else {}
         date_first = (json_date_obj or {}).get("date-first-seen")
         date_last = (json_date_obj or {}).get("date-last-seen")
         date_detected = (json_date_obj or {}).get("date-detected")
@@ -263,9 +247,7 @@ class StixAdapterSpecialMixin:
             or datetime.now(timezone.utc)
         )
         valid_until_explicit = self._parse_iso_utc(date_last)
-        ttl_days = self._resolve_ttl_days(
-            "malware_cnc", json_date_obj, default=90
-        )
+        ttl_days = self._resolve_ttl_days("malware_cnc", json_date_obj, default=90)
         valid_until = (
             valid_until_explicit
             if valid_until_explicit and valid_until_explicit > valid_from
@@ -299,9 +281,7 @@ class StixAdapterSpecialMixin:
         entity_labels, _ = self._resolve_entity_labels(
             collection_label=self.collection,
             malware_names=malware_names if include_malware else [],
-            threat_actor_names=(
-                threat_actor_names if include_threat_actor else []
-            ),
+            threat_actor_names=(threat_actor_names if include_threat_actor else []),
         )
 
         related_objects: list[Any] = []
@@ -383,9 +363,7 @@ class StixAdapterSpecialMixin:
             primary.generate_stix_objects()
             self._generate_relations(
                 main_obj=primary,
-                related_objects=secondaries
-                + malware_objects
-                + threat_actor_objects,
+                related_objects=secondaries + malware_objects + threat_actor_objects,
                 helper=self.helper,
                 is_ioc=True,
             )
@@ -401,9 +379,7 @@ class StixAdapterSpecialMixin:
                 for sec in secondaries:
                     self._generate_relations(
                         main_obj=sec,
-                        related_objects=(
-                            malware_objects + threat_actor_objects
-                        ),
+                        related_objects=(malware_objects + threat_actor_objects),
                         helper=self.helper,
                         is_ioc=True,
                     )
@@ -432,8 +408,7 @@ class StixAdapterSpecialMixin:
             note_refs.append(primary.stix_main_object.id)
         note_refs += [o.stix_main_object.id for o in secondaries]
         note_refs += [
-            o.stix_main_object.id
-            for o in (malware_objects + threat_actor_objects)
+            o.stix_main_object.id for o in (malware_objects + threat_actor_objects)
         ]
         if note_refs:
             cnc_note = self._finalize_stix_note(
@@ -466,14 +441,10 @@ class StixAdapterSpecialMixin:
             stix_objects.append(self.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)
 
@@ -543,9 +514,7 @@ class StixAdapterSpecialMixin:
             elif self.is_ipv6(value):
                 ctype = "ipv6-addr"
             else:
-                self._log_skipped(
-                    "CnC ip", value, "not a valid IPv4/IPv6 address"
-                )
+                self._log_skipped("CnC ip", value, "not a valid IPv4/IPv6 address")
                 return None
             seen_values.add(value)
             obj = ds.IPAddress(
@@ -557,9 +526,7 @@ class StixAdapterSpecialMixin:
             _setup_ioc_state(obj, is_primary)
             return obj
 
-        def _make_file(
-            file_dict: dict[str, Any], is_primary: bool
-        ) -> Any | None:
+        def _make_file(file_dict: dict[str, Any], is_primary: bool) -> Any | None:
             if not isinstance(file_dict, dict):
                 return None
             hashes = []
@@ -602,9 +569,7 @@ class StixAdapterSpecialMixin:
         primary = _make_file(file_obj, is_primary=True)
 
         if primary is None:
-            chosen_domain = domain_value or (
-                cnc_value if not cnc_is_ip else ""
-            )
+            chosen_domain = domain_value or (cnc_value if not cnc_is_ip else "")
             primary = _make_domain(chosen_domain, is_primary=True)
 
         if primary is None:
@@ -713,9 +678,7 @@ class StixAdapterSpecialMixin:
                     f"emitting as IP observable: {cnc_domain!r}"
                 )
                 seen.add(cnc_domain)
-                ip_ctype = (
-                    "ipv4-addr" if self.is_ipv4(cnc_domain) else "ipv6-addr"
-                )
+                ip_ctype = "ipv4-addr" if self.is_ipv4(cnc_domain) else "ipv6-addr"
                 if ioc_on_red:
                     dom_ip = _ioc_obs(ds.IPAddress, cnc_domain, ip_ctype)
                     dom_ip.generate_stix_objects()
@@ -761,9 +724,7 @@ class StixAdapterSpecialMixin:
             if ioc_on_red:
                 ipobj = _ioc_obs(ds.IPAddress, cnc_ip, "ipv4-addr")
                 if cnc_country_code:
-                    ipobj.set_description(
-                        f"CnC IP, country: {cnc_country_code}"
-                    )
+                    ipobj.set_description(f"CnC IP, country: {cnc_country_code}")
                 ipobj.generate_stix_objects()
                 out.append(ipobj)
             else:
@@ -771,9 +732,7 @@ class StixAdapterSpecialMixin:
                     ds.IPAddress, cnc_ip, "ipv4-addr", entity_labels
                 )
                 if cnc_country_code:
-                    ipobj.set_description(
-                        f"CnC IP, country: {cnc_country_code}"
-                    )
+                    ipobj.set_description(f"CnC IP, country: {cnc_country_code}")
                 out.append(ipobj)
 
         if cnc_ipv6 and cnc_ipv6 not in seen and not self.is_ipv6(cnc_ipv6):
@@ -783,9 +742,7 @@ class StixAdapterSpecialMixin:
             if ioc_on_red:
                 ip6obj = _ioc_obs(ds.IPAddress, cnc_ipv6, "ipv6-addr")
                 if cnc_country_code:
-                    ip6obj.set_description(
-                        f"CnC IPv6, country: {cnc_country_code}"
-                    )
+                    ip6obj.set_description(f"CnC IPv6, country: {cnc_country_code}")
                 ip6obj.generate_stix_objects()
                 out.append(ip6obj)
             else:
@@ -796,9 +753,7 @@ class StixAdapterSpecialMixin:
                 )
 
         if client_ip and client_ip not in seen and not self.is_ipv4(client_ip):
-            self._log_skipped(
-                "client ip", client_ip, "not a valid IPv4 address"
-            )
+            self._log_skipped("client ip", client_ip, "not a valid IPv4 address")
         if client_ip and client_ip not in seen and self.is_ipv4(client_ip):
             seen.add(client_ip)
             out.append(
@@ -869,9 +824,7 @@ class StixAdapterSpecialMixin:
             return []
 
         card_info = masked_card.get("cardInfo") or {}
-        card_number = (
-            card_info.get("number") or masked_card.get("name") or "Unknown"
-        )
+        card_number = card_info.get("number") or masked_card.get("name") or "Unknown"
         card_system = card_info.get("system") or ""
         card_type = card_info.get("type") or ""
         card_issuer = card_info.get("issuer") or ""
@@ -907,9 +860,7 @@ class StixAdapterSpecialMixin:
             single_ta = masked_card.get("threat_actor")
             if isinstance(single_ta, list):
                 threat_actor_rows = [
-                    t
-                    for t in single_ta
-                    if isinstance(t, dict) and t.get("name")
+                    t for t in single_ta if isinstance(t, dict) and t.get("name")
                 ]
             elif isinstance(single_ta, dict) and single_ta.get("name"):
                 threat_actor_rows = [single_ta]
@@ -921,12 +872,12 @@ class StixAdapterSpecialMixin:
 
         date_detected = (json_date_obj or {}).get("date-detected")
         date_compromised = (json_date_obj or {}).get("date-compromised")
-        first_seen_dt = self._parse_iso_utc(
-            date_compromised
-        ) or self._parse_iso_utc(date_detected)
-        last_seen_dt = self._parse_iso_utc(
+        first_seen_dt = self._parse_iso_utc(date_compromised) or self._parse_iso_utc(
             date_detected
-        ) or self._parse_iso_utc(date_compromised)
+        )
+        last_seen_dt = self._parse_iso_utc(date_detected) or self._parse_iso_utc(
+            date_compromised
+        )
         created_time = first_seen_dt or last_seen_dt
         if not created_time:
             self.helper.connector_logger.error(
@@ -936,11 +887,7 @@ class StixAdapterSpecialMixin:
             return []
 
         portal_links = self._retrieve_link(masked_card)
-        if (
-            source_link
-            and isinstance(source_link, str)
-            and source_link.strip()
-        ):
+        if source_link and isinstance(source_link, str) and source_link.strip():
             portal_links.append(
                 (source_link, source_link, "Compromised masked card source")
             )
@@ -998,9 +945,7 @@ class StixAdapterSpecialMixin:
         incident.generate_external_references(portal_links)
         incident.generate_stix_objects()
 
-        eval_tlp = str(
-            (json_eval_obj or {}).get("tlp") or self.tlp_color or ""
-        ).lower()
+        eval_tlp = str((json_eval_obj or {}).get("tlp") or self.tlp_color or "").lower()
         ioc_on_red = "red" in eval_tlp
         ttl_days = self._resolve_ttl_days(
             "compromised_masked_card", json_date_obj, default=90
@@ -1041,8 +986,7 @@ class StixAdapterSpecialMixin:
                 tlp_color=self._resolve_tlp_color("payment-card"),
                 labels=entity_labels,
                 expiration_date=(
-                    card_info.get("validThruDate")
-                    or card_info.get("validThru")
+                    card_info.get("validThruDate") or card_info.get("validThru")
                 ),
                 cvv=card_cvv,
                 holder_name=owner_obj.get("name"),
@@ -1079,9 +1023,7 @@ class StixAdapterSpecialMixin:
             cnc_country_code=cnc_country_code,
             ioc_domain_on_red=bool(cnc_domain) and ioc_on_red,
             ioc_url_on_red=bool(cnc_url) and ioc_on_red,
-            ioc_ipv4_on_red=bool(cnc_ip)
-            and ioc_on_red
-            and self.is_ipv4(cnc_ip),
+            ioc_ipv4_on_red=bool(cnc_ip) and ioc_on_red and self.is_ipv4(cnc_ip),
             eval_tlp=eval_tlp,
             mal_name=mal_name,
             malware_obj=malware_obj if isinstance(malware_obj, dict) else {},
@@ -1157,38 +1099,24 @@ class StixAdapterSpecialMixin:
 
         chan_id = channel_obj.get("id") if channel_obj else None
         chan_name = channel_obj.get("name") if channel_obj else None
-        chan_title = (
-            channel_obj.get("title") if channel_obj else None
-        )  # telegram only
-        chan_type = (
-            (channel_obj.get("type") or "").lower() if channel_obj else ""
-        )
-        chan_server = (
-            channel_obj.get("server") if channel_obj else None
-        )  # discord only
+        chan_title = channel_obj.get("title") if channel_obj else None  # telegram only
+        chan_type = (channel_obj.get("type") or "").lower() if channel_obj else ""
+        chan_server = channel_obj.get("server") if channel_obj else None  # discord only
 
         chan_display = (
             chan_title
             or chan_name
             or (f"{chan_server} / {chan_id}" if chan_server else None)
-            or (
-                str(chan_id)
-                if chan_id is not None
-                else f"unknown-{platform}-channel"
-            )
+            or (str(chan_id) if chan_id is not None else f"unknown-{platform}-channel")
         )
 
         a_id = author_obj.get("id") if author_obj else None
         a_username = (
-            author_obj.get("username") or author_obj.get("name")
-            if author_obj
-            else None
+            author_obj.get("username") or author_obj.get("name") if author_obj else None
         )  # telegram=userName, discord=name
         a_first = author_obj.get("first_name") if author_obj else None
         a_last = author_obj.get("last_name") if author_obj else None
-        a_disc = (
-            author_obj.get("discriminator") if author_obj else None
-        )  # discord only
+        a_disc = author_obj.get("discriminator") if author_obj else None  # discord only
 
         if a_id is None and not a_username:
             self.helper.connector_logger.warning(
@@ -1268,14 +1196,10 @@ class StixAdapterSpecialMixin:
                 ", ".join(str(r) for r in rules_list) if rules_list else None,
             )
         if redact:
-            nb.gap().raw(
-                "> Message body redacted by `redact_message_text=true`."
-            )
+            nb.gap().raw("> Message body redacted by `redact_message_text=true`.")
         else:
             if msg_text:
-                nb.h2("Body").raw(
-                    self._get_text_preview(preview_key, msg_text)
-                )
+                nb.h2("Body").raw(self._get_text_preview(preview_key, msg_text))
             if include_translation and msg_translation:
                 nb.h2("Translation").raw(
                     self._get_text_preview(preview_key, msg_translation)
@@ -1329,14 +1253,10 @@ class StixAdapterSpecialMixin:
             stix_objects.append(self.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)
 
@@ -1373,9 +1293,7 @@ class StixAdapterSpecialMixin:
 
         portal_links = self._retrieve_link(post)
         if forum_url and isinstance(forum_url, str) and forum_url.strip():
-            portal_links.append(
-                (None, forum_url.strip(), "Original forum post")
-            )
+            portal_links.append((None, forum_url.strip(), "Original forum post"))
 
         related: list[Any] = []
         author_account = None
@@ -1403,9 +1321,7 @@ class StixAdapterSpecialMixin:
             forum_url=forum_url,
         )
         note_refs = (
-            [author_account.stix_main_object.id]
-            if author_account
-            else [self.author.id]
+            [author_account.stix_main_object.id] if author_account else [self.author.id]
         )
         note = self._finalize_stix_note(
             name=f"Darkweb post: {topic or post_id or 'unknown'}",
@@ -1440,14 +1356,10 @@ class StixAdapterSpecialMixin:
             stix_objects.append(self.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)
 
@@ -1538,20 +1450,14 @@ class StixAdapterSpecialMixin:
             stix_objects.append(self.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)
 
-    def _attack_actor_sdo(
-        self, ta: dict[str, Any], labels: list[str]
-    ) -> Any | None:
+    def _attack_actor_sdo(self, ta: dict[str, Any], labels: list[str]) -> Any | None:
         name = (ta or {}).get("name")
         if not name:
             return None
@@ -1590,9 +1496,7 @@ class StixAdapterSpecialMixin:
         deface_id = payload.get("id") or ""
         target = payload.get("target_ip") or {}
         ta = payload.get("threat_actor") or {}
-        labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        labels, _ = self._resolve_entity_labels(collection_label=self.collection)
         portal_links = self._retrieve_link(payload)
 
         seen: set[str] = set()
@@ -1645,12 +1549,8 @@ class StixAdapterSpecialMixin:
             self.collection, "create_incident", default=True
         ):
             detected = (
-                self._parse_iso_utc(
-                    (json_date_obj or {}).get("detection-date")
-                )
-                or self._parse_iso_utc(
-                    (json_date_obj or {}).get("date-created")
-                )
+                self._parse_iso_utc((json_date_obj or {}).get("detection-date"))
+                or self._parse_iso_utc((json_date_obj or {}).get("date-created"))
                 or datetime.now(timezone.utc)
             )
             incident = ds.Incident(
@@ -1662,9 +1562,7 @@ class StixAdapterSpecialMixin:
                 c_type="incident",
                 tlp_color=self._resolve_tlp_color("incident"),
                 labels=labels,
-                severity=self._map_severity(
-                    (json_eval_obj or {}).get("severity")
-                ),
+                severity=self._map_severity((json_eval_obj or {}).get("severity")),
                 incident_type="defacement",
                 reliability=(json_eval_obj or {}).get("reliability"),
                 credibility=(json_eval_obj or {}).get("credibility"),
@@ -1734,9 +1632,7 @@ class StixAdapterSpecialMixin:
         ttl_days = self._resolve_ttl_days(
             "attacks_phishing_group", json_date_obj, default=30
         )
-        valid_until = self._parse_iso_utc(
-            (json_date_obj or {}).get("takedown-time")
-        )
+        valid_until = self._parse_iso_utc((json_date_obj or {}).get("takedown-time"))
         if not valid_until or valid_until <= valid_from:
             valid_until = valid_from + timedelta(days=ttl_days)
 
@@ -1812,9 +1708,7 @@ class StixAdapterSpecialMixin:
                 tlp_color=self._resolve_tlp_color("identity"),
                 labels=labels,
             )
-            brand_ident.set_description(
-                "Brand impersonated in phishing (Group-IB TI)."
-            )
+            brand_ident.set_description("Brand impersonated in phishing (Group-IB TI).")
             brand_ident.generate_external_references(portal_links)
             brand_ident.generate_stix_objects()
             for obs in observable_objs:
@@ -1903,9 +1797,7 @@ class StixAdapterSpecialMixin:
         ttl_days = self._resolve_ttl_days(
             "attacks_phishing_kit", json_date_obj, default=30
         )
-        valid_until = self._parse_iso_utc(
-            (json_date_obj or {}).get("last-seen")
-        )
+        valid_until = self._parse_iso_utc((json_date_obj or {}).get("last-seen"))
         if not valid_until or valid_until <= valid_from:
             valid_until = valid_from + timedelta(days=ttl_days)
 
@@ -2054,9 +1946,7 @@ class StixAdapterSpecialMixin:
         malware = payload.get("malware") or {}
         ta = payload.get("threat_actor") or {}
 
-        labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        labels, _ = self._resolve_entity_labels(collection_label=self.collection)
 
         portal_links = self._retrieve_link(payload)
 
@@ -2068,12 +1958,8 @@ class StixAdapterSpecialMixin:
             or self._parse_iso_utc((json_date_obj or {}).get("detection-date"))
             or datetime.now(timezone.utc)
         )
-        ttl_days = self._resolve_ttl_days(
-            "attacks_ddos", json_date_obj, default=30
-        )
-        valid_until = self._parse_iso_utc(
-            (json_date_obj or {}).get("date-last-seen")
-        )
+        ttl_days = self._resolve_ttl_days("attacks_ddos", json_date_obj, default=30)
+        valid_until = self._parse_iso_utc((json_date_obj or {}).get("date-last-seen"))
         if not valid_until or valid_until <= valid_from:
             valid_until = valid_from + timedelta(days=ttl_days)
 
@@ -2136,15 +2022,11 @@ class StixAdapterSpecialMixin:
             sdo_objects.append(tao)
 
         country_codes = [
-            c
-            for c in (target.get("country_code"), cnc.get("country_code"))
-            if c
+            c for c in (target.get("country_code"), cnc.get("country_code")) if c
         ]
         country_codes = list(dict.fromkeys(country_codes))
         location_objects = (
-            list(self.generate_locations(country_codes))
-            if country_codes
-            else []
+            list(self.generate_locations(country_codes)) if country_codes else []
         )
 
         related_all = observables + sdo_objects + location_objects
@@ -2188,18 +2070,14 @@ class StixAdapterSpecialMixin:
                 c_type="incident",
                 tlp_color=self._resolve_tlp_color("incident"),
                 labels=labels,
-                severity=self._map_severity(
-                    (json_eval_obj or {}).get("severity")
-                ),
+                severity=self._map_severity((json_eval_obj or {}).get("severity")),
                 incident_type="ddos",
                 reliability=(json_eval_obj or {}).get("reliability"),
                 credibility=(json_eval_obj or {}).get("credibility"),
                 admiralty_code=(json_eval_obj or {}).get("admiraltyCode"),
                 first_seen=valid_from,
                 last_seen=(
-                    self._parse_iso_utc(
-                        (json_date_obj or {}).get("date-last-seen")
-                    )
+                    self._parse_iso_utc((json_date_obj or {}).get("date-last-seen"))
                     or valid_from
                 ),
             )
@@ -2248,14 +2126,10 @@ class StixAdapterSpecialMixin:
             stix_objects.append(self.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)
 

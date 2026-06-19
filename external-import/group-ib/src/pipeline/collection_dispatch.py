@@ -15,9 +15,7 @@ class ObservableIocFlags:
     email: bool = False
 
 
-_IOC_INDICATOR_PRESET = ObservableIocFlags(
-    file=True, domain=True, url=True, ip=True
-)
+_IOC_INDICATOR_PRESET = ObservableIocFlags(file=True, domain=True, url=True, ip=True)
 _NETWORK_NON_IOC_PRESET = ObservableIocFlags(domain=False, url=False, ip=False)
 
 
@@ -82,9 +80,7 @@ SPECIAL_COLLECTIONS: Mapping[str, SpecialCollection] = {
     "malware/cnc": SpecialCollection(
         "generate_malware_cnc", is_ioc=True, tlp_fallback="amber"
     ),
-    "malware/config": SpecialCollection(
-        "generate_malware_config", is_ioc=False
-    ),
+    "malware/config": SpecialCollection("generate_malware_config", is_ioc=False),
     "ioc/primary": SpecialCollection(
         "generate_ioc_primary", is_ioc=True, tlp_strict="amber"
     ),
@@ -112,9 +108,7 @@ SPECIAL_COLLECTIONS: Mapping[str, SpecialCollection] = {
 }
 
 
-def resolve_special_tlp(
-    spec: SpecialCollection, event_tlp: str | None
-) -> str | None:
+def resolve_special_tlp(spec: SpecialCollection, event_tlp: str | None) -> str | None:
     if spec.tlp_strict is not None:
         return spec.tlp_strict
     if spec.tlp_fallback is not None:

@@ -19,12 +19,8 @@ class CompromisedMixin:
     ) -> tuple[list[str], list[str]]:
         """Return (sorted malware names, sorted threat-actor names) from the payload."""
         events_table = self._normalize_list(account_group.get("events_table"))
-        malware_names = self._extract_name_list(
-            account_group.get("malware_list")
-        )
-        ta_names = self._extract_name_list(
-            account_group.get("threat_actor_list")
-        )
+        malware_names = self._extract_name_list(account_group.get("malware_list"))
+        ta_names = self._extract_name_list(account_group.get("threat_actor_list"))
         for row in events_table:
             if not isinstance(row, dict):
                 continue
@@ -54,11 +50,7 @@ class CompromisedMixin:
             if not v:
                 return None
             try:
-                return (
-                    None
-                    if str(v).startswith("00")
-                    else datetime.fromisoformat(v)
-                )
+                return None if str(v).startswith("00") else datetime.fromisoformat(v)
             except Exception:
                 return None
 
@@ -215,9 +207,7 @@ class CompromisedMixin:
                 (sid, sid, f"{stype} ({sid_type}) - external reference")
             )
 
-        malware_names, threat_actor_names = self._ag_derive_names(
-            account_group
-        )
+        malware_names, threat_actor_names = self._ag_derive_names(account_group)
         fs, ls, fc, lc, created_time = self._ag_derive_created_time(
             json_date_obj, events_table
         )
@@ -326,9 +316,7 @@ class CompromisedMixin:
             return []
 
         card_info = card_group.get("cardInfo") or {}
-        card_number = (
-            card_info.get("number") or card_group.get("name") or "Unknown"
-        )
+        card_number = card_info.get("number") or card_group.get("name") or "Unknown"
         card_type = card_info.get("type") or ""
         card_system = card_info.get("system") or ""
         card_issuer = card_info.get("issuer") or ""
@@ -371,9 +359,7 @@ class CompromisedMixin:
             {n for n in threat_actor_names if n and len(str(n).strip()) >= 2}
         )
 
-        entity_labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        entity_labels, _ = self._resolve_entity_labels(collection_label=self.collection)
 
         date_first_seen = json_date_obj.get("date-first-seen")
         date_last_seen = json_date_obj.get("date-last-seen")
@@ -429,12 +415,8 @@ class CompromisedMixin:
             reliability=json_eval_obj.get("reliability"),
             credibility=json_eval_obj.get("credibility"),
             admiralty_code=json_eval_obj.get("admiraltyCode"),
-            first_seen=date_first_compromised_dt
-            or date_first_seen_dt
-            or created_time,
-            last_seen=date_last_compromised_dt
-            or date_last_seen_dt
-            or created_time,
+            first_seen=date_first_compromised_dt or date_first_seen_dt or created_time,
+            last_seen=date_last_compromised_dt or date_last_seen_dt or created_time,
         )
         incident.set_description("")
         incident.generate_external_references(portal_links)
@@ -453,9 +435,7 @@ class CompromisedMixin:
                 if val and val not in seen_values:
                     seen_values.add(val)
                     cnc_observables.append(
-                        self._build_non_ioc_observable(
-                            cls, val, c_type, entity_labels
-                        )
+                        self._build_non_ioc_observable(cls, val, c_type, entity_labels)
                     )
             cnc_ip = row.get("cnc_ipv4_ip")
             if cnc_ip and cnc_ip not in seen_values:
@@ -491,9 +471,7 @@ class CompromisedMixin:
             ta.generate_stix_objects()
             threat_actor_objects.append(ta)
 
-        related_objects = (
-            cnc_observables + malware_objects + threat_actor_objects
-        )
+        related_objects = cnc_observables + malware_objects + threat_actor_objects
         # Emit the (full) card number as a native Payment-Card observable
         # linked to the Incident.
         if card_number and card_number != "Unknown":
@@ -563,15 +541,15 @@ class CompromisedMixin:
             return []
 
         access_id = payload.get("id")
-        date_detected = payload.get("dateDetected") or (
-            json_date_obj or {}
-        ).get("date-detected")
-        date_compromised = payload.get("dateCompromised") or (
-            json_date_obj or {}
-        ).get("date-compromised")
-        created_time = self._parse_iso_utc(
-            date_compromised
-        ) or self._parse_iso_utc(date_detected)
+        date_detected = payload.get("dateDetected") or (json_date_obj or {}).get(
+            "date-detected"
+        )
+        date_compromised = payload.get("dateCompromised") or (json_date_obj or {}).get(
+            "date-compromised"
+        )
+        created_time = self._parse_iso_utc(date_compromised) or self._parse_iso_utc(
+            date_detected
+        )
         if not created_time:
             created_time = datetime.now(timezone.utc)
 
@@ -581,20 +559,11 @@ class CompromisedMixin:
         malware_obj = payload.get("malware") or {}
         source_info = payload.get("sourceInfo") or {}
         price = payload.get("price") or {}
-        labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        labels, _ = self._resolve_entity_labels(collection_label=self.collection)
         severity = self._map_severity((json_eval_obj or {}).get("severity"))
 
-        name_part = (
-            target.get("host")
-            or target.get("domain")
-            or access_id
-            or "Unknown"
-        )
-        incident_name = (
-            f"Compromised access: {name_part} [{access_id or 'unknown'}]"
-        )
+        name_part = target.get("host") or target.get("domain") or access_id or "Unknown"
+        incident_name = f"Compromised access: {name_part} [{access_id or 'unknown'}]"
         incident = ds.Incident(
             name=incident_name,
             c_type="incident",
@@ -634,19 +603,13 @@ class CompromisedMixin:
         for ip_val in (cnc.get("ip"),):
             if ip_val and isinstance(ip_val, str) and ip_val.strip():
                 if not self.is_ipv4(ip_val):
-                    self._log_skipped(
-                        "CnC ip", ip_val, "not a valid IPv4 address"
-                    )
+                    self._log_skipped("CnC ip", ip_val, "not a valid IPv4 address")
                 elif ip_val not in cnc_ip_values:
                     cnc_ip_values.append(ip_val)
 
         cnc_domain_obs = None
         for domain_val in (cnc.get("domain"),):
-            if (
-                domain_val
-                and isinstance(domain_val, str)
-                and domain_val.strip()
-            ):
+            if domain_val and isinstance(domain_val, str) and domain_val.strip():
                 dv = domain_val.strip()
                 if self.is_ipv4(dv):
                     self.helper.connector_logger.info(
@@ -679,9 +642,7 @@ class CompromisedMixin:
                 related_objects.append(dom)
                 cnc_observables.append(dom)
         if cnc.get("url"):
-            url_val = (
-                cnc.get("url") if isinstance(cnc.get("url"), str) else None
-            )
+            url_val = cnc.get("url") if isinstance(cnc.get("url"), str) else None
             if url_val and url_val.strip():
                 u = ds.URL(
                     name=url_val.strip(),
@@ -709,9 +670,7 @@ class CompromisedMixin:
                 ip_obs.set_valid_from(ioc_valid_from)
                 ip_obs.set_valid_until(ioc_valid_until)
             if darkweb_domain_for_ip:
-                ip_obs.set_description(
-                    f"darkweb marketplace: {darkweb_domain_for_ip}"
-                )
+                ip_obs.set_description(f"darkweb marketplace: {darkweb_domain_for_ip}")
             ip_obs.generate_stix_objects()
             if cnc_domain_obs:
                 ip_obs.generate_relationship(
@@ -728,17 +687,9 @@ class CompromisedMixin:
             seen_target: set[str] = set()
             for raw_val in (target.get("domain"), target.get("host")):
                 val = raw_val.strip() if isinstance(raw_val, str) else ""
-                if (
-                    val
-                    and val not in seen_target
-                    and not self.is_valid_domain(val)
-                ):
+                if val and val not in seen_target and not self.is_valid_domain(val):
                     self._log_skipped("target host/domain", val)
-                if (
-                    val
-                    and val not in seen_target
-                    and self.is_valid_domain(val)
-                ):
+                if val and val not in seen_target and self.is_valid_domain(val):
                     seen_target.add(val)
                     t_dom = ds.Domain(
                         name=val,
@@ -747,17 +698,13 @@ class CompromisedMixin:
                         labels=labels,
                     )
                     t_dom.is_ioc = False
-                    t_dom.set_description(
-                        "Compromised target host (Group-IB TI)."
-                    )
+                    t_dom.set_description("Compromised target host (Group-IB TI).")
                     t_dom.generate_stix_objects()
                     related_objects.append(t_dom)
             t_ip_raw = target.get("ip")
             t_ip = t_ip_raw.strip() if isinstance(t_ip_raw, str) else ""
             if t_ip and t_ip not in seen_target and not self.is_ipv4(t_ip):
-                self._log_skipped(
-                    "target ip", t_ip, "not a valid IPv4 address"
-                )
+                self._log_skipped("target ip", t_ip, "not a valid IPv4 address")
             if t_ip and t_ip not in seen_target and self.is_ipv4(t_ip):
                 seen_target.add(t_ip)
                 t_ip_obs = ds.IPAddress(
@@ -767,9 +714,7 @@ class CompromisedMixin:
                     labels=labels,
                 )
                 t_ip_obs.is_ioc = False
-                t_ip_obs.set_description(
-                    "Compromised target IP (Group-IB TI)."
-                )
+                t_ip_obs.set_description("Compromised target IP (Group-IB TI).")
                 t_ip_obs.generate_stix_objects()
                 related_objects.append(t_ip_obs)
 
@@ -791,9 +736,7 @@ class CompromisedMixin:
             for obs in cnc_observables:
                 self._generate_relations(
                     main_obj=obs,
-                    related_objects=(
-                        [malware_entity] if malware_entity else []
-                    ),
+                    related_objects=([malware_entity] if malware_entity else []),
                     helper=self.helper,
                     is_ioc=True,
                 )
@@ -813,9 +756,7 @@ class CompromisedMixin:
         if raw_preview:
             _coll = "compromised_access"
             use_full = self.config.get_collection_settings(_coll, "full_data")
-            max_len = self.config.get_collection_settings(
-                _coll, "data_preview_max_len"
-            )
+            max_len = self.config.get_collection_settings(_coll, "data_preview_max_len")
             if max_len is not None and not isinstance(max_len, int):
                 try:
                     max_len = int(max_len)
@@ -854,14 +795,10 @@ class CompromisedMixin:
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             stix_objects += [self.statement_marking]
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)
 
@@ -910,9 +847,7 @@ class CompromisedMixin:
         severity = self._map_severity((json_eval_obj or {}).get("severity"))
 
         ptype = payload.get("type") or "Payment data"
-        incident_name = (
-            f"Suspicious payment details: {ptype} [{spd_id or 'unknown'}]"
-        )
+        incident_name = f"Suspicious payment details: {ptype} [{spd_id or 'unknown'}]"
         incident = ds.Incident(
             name=incident_name,
             c_type="incident",
@@ -932,9 +867,7 @@ class CompromisedMixin:
         incident.generate_stix_objects()
 
         value_obj = (
-            payload.get("value")
-            if isinstance(payload.get("value"), dict)
-            else {}
+            payload.get("value") if isinstance(payload.get("value"), dict) else {}
         )
         events_list = self._normalize_list(payload.get("events"))
         malware_list = self._normalize_list(payload.get("malware_list"))
@@ -959,11 +892,7 @@ class CompromisedMixin:
             )
 
         bank_card_val = value_obj.get("bankCard")
-        if (
-            bank_card_val
-            and isinstance(bank_card_val, str)
-            and bank_card_val.strip()
-        ):
+        if bank_card_val and isinstance(bank_card_val, str) and bank_card_val.strip():
             card_obs = ds.PaymentCard(
                 name=bank_card_val.strip(),
                 tlp_color=self._resolve_tlp_color("payment-card"),
@@ -1019,9 +948,7 @@ class CompromisedMixin:
             related_objects.append(value_account)
 
         # Country of the compromised value -> Location SDO.
-        country_codes = [
-            c for c in self._normalize_list(payload.get("country")) if c
-        ]
+        country_codes = [c for c in self._normalize_list(payload.get("country")) if c]
         if country_codes:
             related_objects += list(self.generate_locations(country_codes))
 
@@ -1061,13 +988,9 @@ class CompromisedMixin:
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             stix_objects += [self.statement_marking]
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return list(entities) + list(relationships)

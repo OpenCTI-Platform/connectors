@@ -87,9 +87,7 @@ class ThreatActor(_BaseSDO):
             goals=self.goals,
             roles=self.roles,
             created_by_ref=self.author.id,
-            threat_actor_types=(
-                [self.global_label] if self.global_label else []
-            ),
+            threat_actor_types=([self.global_label] if self.global_label else []),
             object_marking_refs=self.get_markings(),
             custom_properties={
                 "x_opencti_score": self.risk_score or None,
@@ -206,16 +204,10 @@ class Vulnerability(_BaseSDO):
             if 0 <= self.cvss_score <= CVSS_SEVERITY_LOW_MAX:
                 self.cvss_severity = "LOW"
             elif (
-                CVSS_SEVERITY_MEDIUM_MIN
-                <= self.cvss_score
-                <= CVSS_SEVERITY_MEDIUM_MAX
+                CVSS_SEVERITY_MEDIUM_MIN <= self.cvss_score <= CVSS_SEVERITY_MEDIUM_MAX
             ):
                 self.cvss_severity = "MEDIUM"
-            elif (
-                CVSS_SEVERITY_HIGH_MIN
-                < self.cvss_score
-                <= CVSS_SEVERITY_HIGH_MAX
-            ):
+            elif CVSS_SEVERITY_HIGH_MIN < self.cvss_score <= CVSS_SEVERITY_HIGH_MAX:
                 self.cvss_severity = "HIGH"
             elif CVSS_SEVERITY_CRITICAL_MIN < self.cvss_score <= 10.0:
                 self.cvss_severity = "CRITICAL"
@@ -296,9 +288,7 @@ class Vulnerability(_BaseSDO):
                     "x_opencti_cvss_vector_string": vector,
                     "x_opencti_cvss_base_score": self.cvss_score,
                     "x_opencti_cvss_base_severity": self.cvss_severity,
-                    "x_opencti_cvss_attack_vector": av_map.get(
-                        kv.get("AV", ""), None
-                    ),
+                    "x_opencti_cvss_attack_vector": av_map.get(kv.get("AV", ""), None),
                     "x_opencti_cvss_attack_complexity": ac_map.get(
                         kv.get("AC", ""), None
                     ),
@@ -308,9 +298,7 @@ class Vulnerability(_BaseSDO):
                     "x_opencti_cvss_user_interaction": ui_map.get(
                         kv.get("UI", ""), None
                     ),
-                    "x_opencti_cvss_scope": scope_map.get(
-                        kv.get("S", ""), None
-                    ),
+                    "x_opencti_cvss_scope": scope_map.get(kv.get("S", ""), None),
                     "x_opencti_cvss_confidentiality_impact": imp_map.get(
                         kv.get("C", ""), None
                     ),

@@ -38,9 +38,7 @@ def get_stdlib_logger(
     underlying logger so OpenCTI-helper messages and stdlib calls share the file.
     """
     wrapper = getattr(helper, "connector_logger", None)
-    underlying = (
-        getattr(wrapper, "logger", None) if wrapper is not None else None
-    )
+    underlying = getattr(wrapper, "logger", None) if wrapper is not None else None
     if isinstance(underlying, logging.Logger):
         return underlying
     return logging.getLogger(fallback_name)
@@ -78,13 +76,9 @@ def setup_file_logging(
         backupCount=log_cfg.backup_count,
         encoding="utf-8",
     )
-    handler.setFormatter(
-        logging.Formatter(log_cfg.format, datefmt=log_cfg.date_format)
-    )
+    handler.setFormatter(logging.Formatter(log_cfg.format, datefmt=log_cfg.date_format))
     effective_level = (
-        stdlib_logger.level
-        if stdlib_logger.level != logging.NOTSET
-        else logging.DEBUG
+        stdlib_logger.level if stdlib_logger.level != logging.NOTSET else logging.DEBUG
     )
     handler.setLevel(effective_level)
     stdlib_logger.addHandler(handler)

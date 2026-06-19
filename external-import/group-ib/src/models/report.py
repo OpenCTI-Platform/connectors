@@ -56,9 +56,7 @@ class Report(_BaseSDO):
             note_content = self._labels_note_markdown(labels_norm)
             # Stable ID: "OpenCTI report labels" + report_id — independent of content.
             anchor = datetime(2020, 1, 1, tzinfo=timezone.utc)
-            note_id = pycti.Note.generate_id(
-                anchor, f"report-labels:{report_id}"
-            )
+            note_id = pycti.Note.generate_id(anchor, f"report-labels:{report_id}")
             return stix2.Note(
                 id=note_id,
                 content=note_content[:NOTE_MAX_CONTENT],
@@ -68,9 +66,7 @@ class Report(_BaseSDO):
                 allow_custom=True,
             )
         except (TypeError, ValueError) as e:
-            log.warning(
-                "Report labels Note skipped (Report was still created): %s", e
-            )
+            log.warning("Report labels Note skipped (Report was still created): %s", e)
             return None
 
     def _generate_sdo(self) -> Any:
@@ -133,9 +129,7 @@ class Incident(_BaseSDO):
     def _generate_sdo(self) -> Any:
         created = self.first_seen or self.last_seen
         if not created:
-            raise ValueError(
-                "Incident requires created/first_seen/last_seen timestamp"
-            )
+            raise ValueError("Incident requires created/first_seen/last_seen timestamp")
         if getattr(created, "tzinfo", None) is None:
             created = created.replace(tzinfo=timezone.utc)
 

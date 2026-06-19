@@ -23,9 +23,7 @@ class ExternalImportConnector:
         self.cfg = ConfigConnector()
         self.helper = OpenCTIConnectorHelper({})
         self._setup_file_logging()
-        self.helper.connector_logger.info(
-            "Initializing ExternalImportConnector"
-        )
+        self.helper.connector_logger.info("Initializing ExternalImportConnector")
 
         current_state = self.helper.get_state()
 
@@ -104,9 +102,7 @@ class ExternalImportConnector:
 
     def check_enable(self, enable: Any, collection: str) -> bool:
         if not enable:
-            self.helper.connector_logger.warning(
-                f"Collection disabled: {collection}"
-            )
+            self.helper.connector_logger.warning(f"Collection disabled: {collection}")
             return False
         return True
 
@@ -178,9 +174,7 @@ class ExternalImportConnector:
             or "%Y-%m-%d %H:%M:%S"
         )
         try:
-            return datetime.fromtimestamp(date, tz=timezone.utc).strftime(
-                str(fmt)
-            )
+            return datetime.fromtimestamp(date, tz=timezone.utc).strftime(str(fmt))
         except Exception:
             return datetime.fromtimestamp(date, tz=timezone.utc).strftime(
                 "%Y-%m-%d %H:%M:%S"
@@ -206,9 +200,7 @@ class ExternalImportConnector:
                 f"{self.get_formatted_utcfromtimestamp(last_run)}"
             )
             return last_run
-        self.helper.connector_logger.info(
-            f"{self.helper.connect_name} has never run"
-        )
+        self.helper.connector_logger.info(f"{self.helper.connect_name} has never run")
         return None
 
     def _process(self) -> None:
@@ -218,13 +210,9 @@ class ExternalImportConnector:
         try:
             current_state = self.helper.get_state()
             self.get_last_run(current_state=current_state)
-            self.helper.connector_logger.info(
-                f"{self.helper.connect_name} will run!"
-            )
+            self.helper.connector_logger.info(f"{self.helper.connect_name} will run!")
             try:
-                self._run_once(
-                    current_state=current_state, timestamp=timestamp
-                )
+                self._run_once(current_state=current_state, timestamp=timestamp)
             except Exception:
                 self.helper.connector_logger.error(format_exc())
             self.set_or_update_state(timestamp=timestamp)
@@ -244,13 +232,9 @@ class ExternalImportConnector:
             duration_period=self.interval,
         )
 
-    def _run_once(
-        self, current_state: dict[str, Any] | None, timestamp: int
-    ) -> None:
+    def _run_once(self, current_state: dict[str, Any] | None, timestamp: int) -> None:
         # TIAdapter keeps the state dict by reference; refresh each run or cursors stall.
-        self.ti_adapter._collections_last_sequence_updates = (
-            current_state or {}
-        )
+        self.ti_adapter._collections_last_sequence_updates = current_state or {}
         data = self.ti_adapter.create_generators(sleep_amount=1)
 
         self.MITRE_MAPPER = get_mitre_mapper(self.ti_adapter, self.helper)
@@ -273,9 +257,7 @@ class ExternalImportConnector:
         # We do all skip-checks BEFORE initiate_work and only commit the Work
         # once we know there's something to ship.
 
-        if not self.check_generator(
-            generator=generator, collection=collection
-        ):
+        if not self.check_generator(generator=generator, collection=collection):
             return
 
         enable = self.cfg.get_collection_settings(collection_key, "enable")
@@ -338,18 +320,14 @@ class ExternalImportConnector:
                     "intrusion_set_instead_of_threat_actor"
                 )
             )
-            self.IGNORE_NON_INDICATOR_THREAT_REPORTS = (
-                self.cfg.get_extra_settings_bool(
-                    "ignore_non_indicator_threat_reports"
-                )
+            self.IGNORE_NON_INDICATOR_THREAT_REPORTS = self.cfg.get_extra_settings_bool(
+                "ignore_non_indicator_threat_reports"
             )
             self.IGNORE_NON_MALWARE_DDOS = self.cfg.get_extra_settings_bool(
                 "ignore_non_malware_ddos"
             )
-            self.IGNORE_NON_INDICATOR_THREATS = (
-                self.cfg.get_extra_settings_bool(
-                    "ignore_non_indicator_threats"
-                )
+            self.IGNORE_NON_INDICATOR_THREATS = self.cfg.get_extra_settings_bool(
+                "ignore_non_indicator_threats"
             )
 
             for portion in generator:
@@ -372,9 +350,7 @@ class ExternalImportConnector:
         except Exception as exc:
             err_text = format_exc()
             if len(err_text) > MAX_ERROR_TRUNCATE_LEN:
-                err_text = (
-                    err_text[:MAX_ERROR_TRUNCATE_LEN] + "\n... (truncated)"
-                )
+                err_text = err_text[:MAX_ERROR_TRUNCATE_LEN] + "\n... (truncated)"
             if self._is_transient_network_error(exc):
                 # Transient upstream drop (RemoteDisconnected / reset / read
                 # timeout). The sequpdate cursor is persisted per-portion, so
@@ -403,11 +379,11 @@ class ExternalImportConnector:
                 "Collection import failed (other collections will still run)",
                 {"collection": collection, "work_id": work_id},
             )
-            fail_message = f"{self.helper.connect_name} - {collection} failed:\n{err_text}"
+            fail_message = (
+                f"{self.helper.connect_name} - {collection} failed:\n{err_text}"
+            )
             try:
-                self.helper.api.work.to_processed(
-                    work_id, fail_message, in_error=True
-                )
+                self.helper.api.work.to_processed(work_id, fail_message, in_error=True)
             except Exception:
                 self.helper.connector_logger.error(
                     "Could not report failed work to OpenCTI API",
@@ -467,12 +443,9 @@ class ExternalImportConnector:
                     bundle_objects = list(bundle_objects)
 
                 if bundle_objects:
-                    bundle = OpenCTIConnectorHelper.stix2_create_bundle(
-                        bundle_objects
-                    )
+                    bundle = OpenCTIConnectorHelper.stix2_create_bundle(bundle_objects)
                     self.helper.connector_logger.info(
-                        f"Sending {len(bundle_objects)} STIX objects "
-                        f"to OpenCTI..."
+                        f"Sending {len(bundle_objects)} STIX objects " f"to OpenCTI..."
                     )
                     self.helper.send_stix2_bundle(
                         bundle,

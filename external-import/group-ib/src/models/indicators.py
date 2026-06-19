@@ -113,9 +113,7 @@ class FileHash(_BaseIndicator):
 
 
 class IPAddress(_BaseIndicator):
-    def __init__(
-        self, name, c_type, tlp_color="white", labels=None, risk_score=None
-    ):
+    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _create_pattern(self, pattern_name: str) -> Any:
@@ -124,9 +122,7 @@ class IPAddress(_BaseIndicator):
         elif self.is_ipv6(pattern_name):
             return f"[ipv6-addr:value = '{pattern_name}']"
         else:
-            msg = (
-                f"This pattern value {pattern_name} is not a valid IP address."
-            )
+            msg = f"This pattern value {pattern_name} is not a valid IP address."
             raise ValueError(msg)
 
     def _generate_observable(self) -> Any:
@@ -138,11 +134,7 @@ class IPAddress(_BaseIndicator):
         }
         if getattr(self, "description", None):
             custom["x_opencti_description"] = self.description
-        ip_cls = (
-            stix2.IPv6Address
-            if self.c_type == "ipv6-addr"
-            else stix2.IPv4Address
-        )
+        ip_cls = stix2.IPv6Address if self.c_type == "ipv6-addr" else stix2.IPv4Address
         self.stix_main_object = ip_cls(
             value=self.name,
             object_marking_refs=self.get_markings(),
@@ -152,9 +144,7 @@ class IPAddress(_BaseIndicator):
 
 
 class URL(_BaseIndicator):
-    def __init__(
-        self, name, c_type, tlp_color="white", labels=None, risk_score=None
-    ):
+    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _create_pattern(self, pattern_name: str) -> Any:
@@ -176,9 +166,7 @@ class URL(_BaseIndicator):
 
 
 class Domain(_BaseIndicator):
-    def __init__(
-        self, name, c_type, tlp_color="white", labels=None, risk_score=None
-    ):
+    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _create_pattern(self, pattern_name: str) -> Any:
@@ -202,9 +190,7 @@ class Domain(_BaseIndicator):
 
 
 class Email(_BaseIndicator):
-    def __init__(
-        self, name, c_type, tlp_color="white", labels=None, risk_score=None
-    ):
+    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _create_pattern(self, pattern_name: str) -> Any:

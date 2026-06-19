@@ -17,9 +17,7 @@ class ExternalImportHelper:
         try:
             duration = parse_duration(interval)
             if not isinstance(duration, timedelta):
-                raise ValueError(
-                    "Parsed duration is not a valid timedelta object."
-                )
+                raise ValueError("Parsed duration is not a valid timedelta object.")
             return interval
         except Exception as ex:
             msg = (

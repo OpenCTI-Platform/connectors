@@ -16,9 +16,7 @@ def display(value: Any, *, empty: str = MISSING) -> str:
         if len(value) == 1:
             s = str(value[0]).strip()
             return s if s else empty
-        return (
-            ", ".join(str(v).strip() for v in value if str(v).strip()) or empty
-        )
+        return ", ".join(str(v).strip() for v in value if str(v).strip()) or empty
     s = str(value).strip()
     return s if s else empty
 

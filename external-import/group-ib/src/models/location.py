@@ -27,9 +27,7 @@ class Location(_BaseCommon):
     def _generate_common(self) -> Any:
         if self.location_type == "Region":
             display = str(self.name)
-            region_slug = (
-                str(self.region_value or display).lower().replace(" ", "-")
-            )
+            region_slug = str(self.region_value or display).lower().replace(" ", "-")
             self.stix_main_object = stix2.Location(
                 id=pycti.Location.generate_id(display, "Region"),
                 name=display,
@@ -44,9 +42,7 @@ class Location(_BaseCommon):
                 },
             )
             return self.stix_main_object
-        country_name = self._generate_country_by_cc(self.name) or str(
-            self.name
-        )
+        country_name = self._generate_country_by_cc(self.name) or str(self.name)
         self.stix_main_object = stix2.Location(
             id=pycti.Location.generate_id(country_name, self.location_type),
             name=country_name,
@@ -64,9 +60,7 @@ class Location(_BaseCommon):
 
 
 class KillChainPhase(_BaseCommon):
-    def __init__(
-        self, name, c_type, tlp_color="white", labels=None, risk_score=None
-    ):
+    def __init__(self, name, c_type, tlp_color="white", labels=None, risk_score=None):
         super().__init__(name, c_type, tlp_color, labels, risk_score)
 
     def _generate_common(self) -> Any:

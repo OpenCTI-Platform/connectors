@@ -208,9 +208,7 @@ class ConfigConnector:
             for key, value in data.items():
                 new_keys = parent_keys + [key]
                 if isinstance(value, dict):
-                    keys_list.extend(
-                        self._extract_config_keys(value, new_keys)
-                    )
+                    keys_list.extend(self._extract_config_keys(value, new_keys))
                 else:
                     keys_list.append(new_keys)
         return keys_list
@@ -227,9 +225,7 @@ class ConfigConnector:
         if key[0] == "TI_API":
             if len(key) > 1 and key[1] == "COLLECTIONS":
                 modified_key = key[2:]
-                modified_key = [
-                    part.replace("/", "_") for part in modified_key
-                ]
+                modified_key = [part.replace("/", "_") for part in modified_key]
                 return (
                     f"{key[0]}__{key[1]}__{'__'.join(modified_key)}"
                     if modified_key
@@ -279,21 +275,15 @@ class ConfigConnector:
         except (TypeError, ValueError):
             return default
 
-    def get_collection_settings(
-        self, collection: str, setting_name: str
-    ) -> Any:
-        collection_attr_name = (
-            f"ti_api_collections_{collection}_{setting_name}"
-        )
+    def get_collection_settings(self, collection: str, setting_name: str) -> Any:
+        collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
         return getattr(self, collection_attr_name, None)
 
     def get_extra_settings_by_name(self, setting_name: str) -> Any:
         extra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
         return getattr(self, extra_setting_attr_name, None)
 
-    def get_setting(
-        self, collection: str, key: str, default: Any = None
-    ) -> Any:
+    def get_setting(self, collection: str, key: str, default: Any = None) -> Any:
         coll_key = collection.replace("/", "_") if collection else ""
         val = self.get_collection_settings(coll_key, key)
         if val is not None:
@@ -303,14 +293,10 @@ class ConfigConnector:
             return val
         return default
 
-    def get_setting_bool(
-        self, collection: str, key: str, default: bool = True
-    ) -> bool:
+    def get_setting_bool(self, collection: str, key: str, default: bool = True) -> bool:
         return self._to_bool(self.get_setting(collection, key), default)
 
-    def get_extra_settings_bool(
-        self, name: str, default: bool = False
-    ) -> bool:
+    def get_extra_settings_bool(self, name: str, default: bool = False) -> bool:
         return self._to_bool(self.get_extra_settings_by_name(name), default)
 
     def get_file_logging_config(self) -> FileLoggingConfig:
@@ -319,8 +305,7 @@ class ConfigConnector:
                 self.get_extra_settings_by_name("enable_file_logging"),
             ),
             directory=(
-                self.get_extra_settings_by_name("log_file_dir")
-                or _DEFAULT_LOG_DIR
+                self.get_extra_settings_by_name("log_file_dir") or _DEFAULT_LOG_DIR
             ),
             max_bytes=self._to_int(
                 self.get_extra_settings_by_name("log_file_max_bytes"),

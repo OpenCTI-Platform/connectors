@@ -12,9 +12,7 @@ PortalExternalRefRow = tuple[str | None, str, str]
 @functools.lru_cache(maxsize=1)
 def _string_prefix_index() -> tuple[tuple[str, str], ...]:
     pairs = [
-        (n, t)
-        for n, t in TICollections.PORTAL_LINKS.items()
-        if isinstance(t, str)
+        (n, t) for n, t in TICollections.PORTAL_LINKS.items() if isinstance(t, str)
     ]
     return tuple(sorted(pairs, key=lambda x: len(x[1]), reverse=True))
 
@@ -48,9 +46,7 @@ def portal_link_tuple(
     for coll, prefix in _string_prefix_index():
         if raw.startswith(prefix):
             collection = coll
-            record_id = (
-                raw[len(prefix) :].split("&", 1)[0].split("#", 1)[0] or None
-            )
+            record_id = raw[len(prefix) :].split("&", 1)[0].split("#", 1)[0] or None
             break
     canonical = (
         generate_portal_link(collection, record_id=record_id)

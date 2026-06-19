@@ -102,9 +102,7 @@ def _run_special(
         adapter.tlp_color = resolved_tlp
 
     method = getattr(adapter, spec.method_name)
-    raw = method(
-        event=event, json_date_obj=json_date_obj, json_eval_obj=json_eval_obj
-    )
+    raw = method(event=event, json_date_obj=json_date_obj, json_eval_obj=json_eval_obj)
     result = list(raw) if raw is not None else []
     helper.connector_logger.info(
         f"Collected {len(result)} STIX objects for {collection}"
@@ -270,9 +268,7 @@ def _run_default_flow(
             stix_threat_actor.tlp
             if stix_threat_actor
             else (
-                stix_intrusion_set.tlp
-                if stix_intrusion_set
-                else adapter.tlp_fallback
+                stix_intrusion_set.tlp if stix_intrusion_set else adapter.tlp_fallback
             )
         )
         bundle += [_marker]

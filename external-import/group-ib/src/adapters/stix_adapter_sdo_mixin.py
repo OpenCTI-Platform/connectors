@@ -30,9 +30,7 @@ class SdoMixin:
             tlp_color=self.tlp_color,
             labels=entity_labels,
         )
-        self.helper.connector_logger.info(
-            f"STIX domain object generated for: {name}"
-        )
+        self.helper.connector_logger.info(f"STIX domain object generated for: {name}")
         return domain
 
     def generate_stix_url(self, name: str) -> Any:
@@ -48,9 +46,7 @@ class SdoMixin:
             tlp_color=self.tlp_color,
             labels=entity_labels,
         )
-        self.helper.connector_logger.info(
-            f"STIX URL object generated for: {name}"
-        )
+        self.helper.connector_logger.info(f"STIX URL object generated for: {name}")
         return url
 
     def generate_stix_ipv4(self, name: str) -> Any:
@@ -66,9 +62,7 @@ class SdoMixin:
             tlp_color=self.tlp_color,
             labels=entity_labels,
         )
-        self.helper.connector_logger.info(
-            f"STIX IPv4 object generated for: {name}"
-        )
+        self.helper.connector_logger.info(f"STIX IPv4 object generated for: {name}")
         return ip
 
     def generate_locations(
@@ -213,9 +207,7 @@ class SdoMixin:
     def generate_stix_malware(
         self, obj: dict[str, Any], json_date_obj: dict[str, Any] | None = None
     ) -> list[Any]:
-        self.helper.connector_logger.info(
-            "Starting generation of STIX malware objects"
-        )
+        self.helper.connector_logger.info("Starting generation of STIX malware objects")
         if not obj:
             self.helper.connector_logger.warning(
                 "No object provided for malware generation"
@@ -278,9 +270,7 @@ class SdoMixin:
         _malware_types = obj.get("category")
         _malware_aliases = obj.get("aliases") or []
         _description = self.normalize_description(obj.get("description"))
-        _short_description = self.normalize_description(
-            obj.get("short_description")
-        )
+        _short_description = self.normalize_description(obj.get("short_description"))
 
         def _is_unusable(text: str | None) -> bool:
             return not text or text.strip() == MALWARE_DESC_PLACEHOLDER
@@ -334,9 +324,7 @@ class SdoMixin:
         # Travels with the Malware wrapper's stix_objects.
         mal_note = self._finalize_stix_note(
             name=f"Malware profile: {_name}",
-            content=markdown_malware(
-                obj=obj, json_date_obj=json_date_obj or {}
-            ),
+            content=markdown_malware(obj=obj, json_date_obj=json_date_obj or {}),
             object_refs=[malware.stix_main_object.id]
             + [o.stix_main_object.id for o in related_sdos],
             labels=entity_labels,
@@ -375,9 +363,7 @@ class SdoMixin:
 
         # Related threat actors (uses).
         actors: list[Any] = []
-        for raw in (obj.get("ta_list") or []) + (
-            obj.get("threat_actor_list") or []
-        ):
+        for raw in (obj.get("ta_list") or []) + (obj.get("threat_actor_list") or []):
             ta_name = raw.get("name") if isinstance(raw, dict) else raw
             if not ta_name:
                 continue
@@ -524,9 +510,7 @@ class SdoMixin:
                 if isinstance(_e, str):
                     _e = {"object_id": _e}
                 _name = _e.get("object_id")
-                _description = self.normalize_description(
-                    _e.get("description")
-                )
+                _description = self.normalize_description(_e.get("description"))
 
                 if _name:
                     if isinstance(_name, list):
@@ -642,9 +626,7 @@ class SdoMixin:
 
         for k, v in event_mitre_matrix.items():
 
-            kill_chain_phases = self.generate_kill_chain_phases(
-                v["kill_chain_phases"]
-            )
+            kill_chain_phases = self.generate_kill_chain_phases(v["kill_chain_phases"])
 
             if k:
                 attack_pattern = ds.AttackPattern(
@@ -685,14 +667,12 @@ class SdoMixin:
 
         _type = "threat-actor"
         _global_label = self.ta_global_label
-        if (
-            _global_label == "nation_state"
-            and not self._should_include_label_type("nation_state")
+        if _global_label == "nation_state" and not self._should_include_label_type(
+            "nation_state"
         ):
             _global_label = None
-        elif (
-            _global_label == "cybercriminal"
-            and not self._should_include_label_type("cybercriminal")
+        elif _global_label == "cybercriminal" and not self._should_include_label_type(
+            "cybercriminal"
         ):
             _global_label = None
         entity_labels, _ = self._resolve_entity_labels(
@@ -705,9 +685,7 @@ class SdoMixin:
         _threat_actor_country = obj.get("country")
         _threat_actor_targeted_countries = obj.get("targeted_countries")
         _threat_actor_aliases = obj.get("aliases")
-        _threat_actor_description = self.normalize_description(
-            obj.get("description")
-        )
+        _threat_actor_description = self.normalize_description(obj.get("description"))
         _threat_actor_goals = obj.get("goals")
         _threat_actor_roles = obj.get("roles")
         _first_seen, _last_seen = self._extract_first_last_seen(json_date_obj)
@@ -855,14 +833,12 @@ class SdoMixin:
 
         _type = "intrusion-set"
         _global_label = self.ta_global_label
-        if (
-            _global_label == "nation_state"
-            and not self._should_include_label_type("nation_state")
+        if _global_label == "nation_state" and not self._should_include_label_type(
+            "nation_state"
         ):
             _global_label = None
-        elif (
-            _global_label == "cybercriminal"
-            and not self._should_include_label_type("cybercriminal")
+        elif _global_label == "cybercriminal" and not self._should_include_label_type(
+            "cybercriminal"
         ):
             _global_label = None
         entity_labels, _ = self._resolve_entity_labels(
@@ -875,9 +851,7 @@ class SdoMixin:
         _intrusion_set_country = obj.get("country")
         _intrusion_set_targeted_countries = obj.get("targeted_countries")
         _intrusion_set_aliases = obj.get("aliases")
-        _intrusion_set_description = self.normalize_description(
-            obj.get("description")
-        )
+        _intrusion_set_description = self.normalize_description(obj.get("description"))
         _intrusion_set_goals = obj.get("goals")
         _first_seen, _last_seen = self._extract_first_last_seen(json_date_obj)
 
@@ -1012,9 +986,7 @@ class SdoMixin:
         related_objects: list[Any] | None = None,
         file_is_ioc: bool = True,
     ) -> list[Any]:
-        self.helper.connector_logger.info(
-            "Starting generation of STIX file objects"
-        )
+        self.helper.connector_logger.info("Starting generation of STIX file objects")
         if not obj:
             self.helper.connector_logger.warning(
                 "No object provided for file generation"
@@ -1031,9 +1003,7 @@ class SdoMixin:
 
         if _events:
             entity_labels, _ = self._compose_observable_labels()
-            self.helper.connector_logger.debug(
-                f"Processing {len(_events)} file events"
-            )
+            self.helper.connector_logger.debug(f"Processing {len(_events)} file events")
             for _e in _events:
                 _md5 = _e.get("md5", None)
                 _sha1 = _e.get("sha1", None)
@@ -1073,9 +1043,7 @@ class SdoMixin:
                     file.set_valid_from(valid_from)
                     file.set_valid_until(valid_until)
                     file.generate_stix_objects()
-                    self.helper.connector_logger.debug(
-                        "Generated STIX file object"
-                    )
+                    self.helper.connector_logger.debug("Generated STIX file object")
 
                     self._generate_relations(
                         main_obj=file,
@@ -1134,9 +1102,7 @@ class SdoMixin:
                 file.set_valid_from(valid_from)
                 file.set_valid_until(valid_until)
                 file.generate_stix_objects()
-                self.helper.connector_logger.debug(
-                    "Generated STIX file object"
-                )
+                self.helper.connector_logger.debug("Generated STIX file object")
 
                 self._generate_relations(
                     main_obj=file,
@@ -1181,9 +1147,7 @@ class SdoMixin:
 
         def compose_desc(base: Any) -> Any:
             if ddos_geo_suffix:
-                return (
-                    f"{base}\n\n{ddos_geo_suffix}" if base else ddos_geo_suffix
-                )
+                return f"{base}\n\n{ddos_geo_suffix}" if base else ddos_geo_suffix
             return base
 
         domain_val = entry.get("domain")
@@ -1393,9 +1357,7 @@ class SdoMixin:
             country_name = obj.get("ip-country-name")
             country_code = obj.get("ip-country-code")
             if country_name and country_code:
-                ddos_geo_suffix = (
-                    f"Target country: {country_name} ({country_code})"
-                )
+                ddos_geo_suffix = f"Target country: {country_name} ({country_code})"
             elif country_name:
                 ddos_geo_suffix = f"Target country: {country_name}"
             elif country_code:
@@ -1454,9 +1416,7 @@ class SdoMixin:
         json_threat_actor_obj: dict[str, Any],
         json_evaluation_obj: dict[str, Any] | None = None,
     ) -> Any | None:
-        self.helper.connector_logger.info(
-            "Starting generation of STIX report object"
-        )
+        self.helper.connector_logger.info("Starting generation of STIX report object")
         if not obj:
             self.helper.connector_logger.warning(
                 "No object provided for report generation"
@@ -1464,12 +1424,8 @@ class SdoMixin:
             return None
 
         _title = obj.get("title")
-        _description = (
-            self.normalize_description(obj.get("description")) or _title
-        )
-        _short_description = self.normalize_description(
-            obj.get("short_description")
-        )
+        _description = self.normalize_description(obj.get("description")) or _title
+        _short_description = self.normalize_description(obj.get("short_description"))
         _type = "threat_report"
         _label = "threat_report"
         _id = obj.get("id")
@@ -1490,9 +1446,7 @@ class SdoMixin:
 
         if _date_published:
             try:
-                _published_time = datetime.strptime(
-                    _date_published, "%Y-%m-%d"
-                )
+                _published_time = datetime.strptime(_date_published, "%Y-%m-%d")
             except (TypeError, ValueError):
                 _published_time = None
         else:
@@ -1504,9 +1458,7 @@ class SdoMixin:
             json_malware_report_obj.get("malware_report_list")
         )
         report_links = (
-            _report_portal_links
-            + _threat_actor_portal_links
-            + _malware_portal_links
+            _report_portal_links + _threat_actor_portal_links + _malware_portal_links
         )
         self.helper.connector_logger.debug(
             f"Retrieved {len(report_links)} portal links for report"
@@ -1554,9 +1506,7 @@ class SdoMixin:
             include_nation_state=(
                 self.collection in ["apt/threat", "apt/threat_actor"]
             ),
-            include_cybercriminal=(
-                self.collection in ["hi/threat", "hi/threat_actor"]
-            ),
+            include_cybercriminal=(self.collection in ["hi/threat", "hi/threat_actor"]),
         )
         # When store_report_labels_in_note: labels go only into a linked Note, not on the Report.
         store_labels_in_note = self._store_report_labels_in_note()
@@ -1573,9 +1523,7 @@ class SdoMixin:
         # title only when description is missing entirely.
         report_desc_body = _description if _description != _title else _title
         report_desc = (
-            f"Report {_id}: {report_desc_body}"
-            if _id
-            else (report_desc_body or "")
+            f"Report {_id}: {report_desc_body}" if _id else (report_desc_body or "")
         )
         desc_in_ext = self.config.get_setting_bool(
             self.collection,
@@ -1640,9 +1588,7 @@ class SdoMixin:
                     identity_class=author.identity_class,
                     created=author.created,
                     modified=author.modified,
-                    custom_properties={
-                        "x_opencti_reliability": str(reliability)
-                    },
+                    custom_properties={"x_opencti_reliability": str(reliability)},
                     allow_custom=True,
                 )
 
@@ -1665,7 +1611,5 @@ class SdoMixin:
             f"Generated STIX report object for ID: {_id}"
         )
 
-        self.helper.connector_logger.info(
-            "Completed generation of STIX report object"
-        )
+        self.helper.connector_logger.info("Completed generation of STIX report object")
         return report

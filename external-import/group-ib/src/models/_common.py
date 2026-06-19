@@ -135,9 +135,7 @@ class BaseEntity(StixPayloadUtils):
     @staticmethod
     def _generate_author() -> Any:
         return stix2.Identity(
-            id=pycti.Identity.generate_id(
-                ConfigConnector.AUTHOR, "organization"
-            ),
+            id=pycti.Identity.generate_id(ConfigConnector.AUTHOR, "organization"),
             name=ConfigConnector.AUTHOR,
             identity_class="organization",
         )
@@ -163,9 +161,7 @@ class BaseEntity(StixPayloadUtils):
 
     def _labels_kv(self) -> dict[str, Any]:
         # preserve_manual_labels: omit x_opencti_labels so OpenCTI does not overwrite analyst labels on update.
-        if self.config.get_extra_settings_bool(
-            "preserve_manual_labels", default=False
-        ):
+        if self.config.get_extra_settings_bool("preserve_manual_labels", default=False):
             return {}
         return {"x_opencti_labels": getattr(self, "labels", None)}
 
@@ -241,9 +237,7 @@ class BaseEntity(StixPayloadUtils):
         else:
             name_str = self.name if isinstance(self.name, str) else None
             if not name_str and isinstance(self.name, list) and self.name:
-                name_str = next(
-                    (n for n in self.name if isinstance(n, str)), None
-                )
+                name_str = next((n for n in self.name if isinstance(n, str)), None)
             source_name = (
                 f"{PORTAL_LINK_DEFAULT_LABEL}: {name_str}"
                 if name_str

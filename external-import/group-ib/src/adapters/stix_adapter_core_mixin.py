@@ -129,9 +129,7 @@ class AdapterCoreMixin:
     def _get_text_preview(
         self, collection_key: str, text: str, default_max_len: int = 2000
     ) -> str:
-        use_full = self.config.get_collection_settings(
-            collection_key, "full_data"
-        )
+        use_full = self.config.get_collection_settings(collection_key, "full_data")
         if use_full and str(use_full).lower() in ("true", "1", "yes"):
             return text
         max_len = self.config.get_collection_settings(
@@ -154,8 +152,7 @@ class AdapterCoreMixin:
         data never reached OpenCTI and why.
         """
         self.helper.connector_logger.info(
-            f"{self.collection}: skipped {kind} ({reason}): "
-            f"{str(value)[:256]!r}"
+            f"{self.collection}: skipped {kind} ({reason}): " f"{str(value)[:256]!r}"
         )
 
     def _build_non_ioc_observable(
@@ -198,14 +195,10 @@ class AdapterCoreMixin:
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             stix_objects.append(self.statement_marking)
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return entities + relationships
 
@@ -451,14 +444,10 @@ class AdapterCoreMixin:
             f"Setting global label for collection: {collection}"
         )
         if collection in ["apt/threat", "apt/threat_actor"]:
-            self.helper.connector_logger.debug(
-                "Collection identified as nation_state"
-            )
+            self.helper.connector_logger.debug("Collection identified as nation_state")
             return "nation_state"
         elif collection in ["hi/threat", "hi/threat_actor", "hi/open_threats"]:
-            self.helper.connector_logger.debug(
-                "Collection identified as criminal"
-            )
+            self.helper.connector_logger.debug("Collection identified as criminal")
             return "cybercriminal"
         self.helper.connector_logger.warning(
             f"No global label set for collection: {collection}"
@@ -505,11 +494,7 @@ class AdapterCoreMixin:
             if s and s.lower() not in ("null", "none"):
                 out.append(s)
         if collection_label:
-            out.append(
-                COLLECTION_DISPLAY_LABEL.get(
-                    collection_label, collection_label
-                )
-            )
+            out.append(COLLECTION_DISPLAY_LABEL.get(collection_label, collection_label))
         if self._should_include_label_type("threat_actor_name"):
             for n in threat_actor_names or []:
                 lb = self._format_threat_actor_label(n)
@@ -524,13 +509,9 @@ class AdapterCoreMixin:
             for s in source_types or []:
                 if s:
                     out.append(str(s))
-        if include_nation_state and self._should_include_label_type(
-            "nation_state"
-        ):
+        if include_nation_state and self._should_include_label_type("nation_state"):
             out.append("nation_state")
-        if include_cybercriminal and self._should_include_label_type(
-            "cybercriminal"
-        ):
+        if include_cybercriminal and self._should_include_label_type("cybercriminal"):
             out.append("cybercriminal")
         if self._should_include_label_type("context"):
             for c in context_labels or []:
@@ -558,16 +539,12 @@ class AdapterCoreMixin:
             return datetime.now(timezone.utc)
 
         if date_raw.startswith("00"):
-            self.helper.connector_logger.warning(
-                f"Wrong format of date: {date_raw}"
-            )
+            self.helper.connector_logger.warning(f"Wrong format of date: {date_raw}")
             return datetime.now(timezone.utc)
 
         try:
             _datetime = datetime.fromisoformat(date_raw)
-            self.helper.connector_logger.debug(
-                f"Successfully parsed date: {date_raw}"
-            )
+            self.helper.connector_logger.debug(f"Successfully parsed date: {date_raw}")
         except (Exception,):
             self.helper.connector_logger.warning(
                 f"Failed to format date: {date_raw!r}. Using default."
@@ -878,9 +855,7 @@ class AdapterCoreMixin:
                     helper.connector_logger.debug(
                         f"Generating relationship: {_ind.type} -> {_main_object_c_type}"
                     )
-                    _gen_rel(
-                        _ind, _ind.type, _main_object, _main_object_c_type
-                    )
+                    _gen_rel(_ind, _ind.type, _main_object, _main_object_c_type)
             else:
                 helper.connector_logger.debug(
                     f"Generating relationship: {_indicator.type} -> {_main_object_c_type}"
@@ -1003,9 +978,9 @@ class AdapterCoreMixin:
         }
         for _e in obj_events:
             if _e.get("attack_pattern"):
-                mitre_matrix[_e.get("attack_pattern")][
-                    "kill_chain_phases"
-                ].append(_e.get("kill_chain_phase"))
+                mitre_matrix[_e.get("attack_pattern")]["kill_chain_phases"].append(
+                    _e.get("kill_chain_phase")
+                )
                 mitre_matrix[_e.get("attack_pattern")]["portal_links"] = (
                     self._retrieve_link(_e)
                 )
@@ -1068,12 +1043,8 @@ class AdapterCoreMixin:
         """Read first-seen / last-seen from the mapped date object."""
         if not json_date_obj:
             return None, None
-        first_raw = json_date_obj.get("first-seen") or json_date_obj.get(
-            "date-created"
-        )
-        last_raw = json_date_obj.get("last-seen") or json_date_obj.get(
-            "date-modified"
-        )
+        first_raw = json_date_obj.get("first-seen") or json_date_obj.get("date-created")
+        last_raw = json_date_obj.get("last-seen") or json_date_obj.get("date-modified")
         return self._parse_iso_utc(first_raw), self._parse_iso_utc(last_raw)
 
     def _build_actor_extra_labels(self, obj: dict[str, Any]) -> list[str]:

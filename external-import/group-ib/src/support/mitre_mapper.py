@@ -21,7 +21,5 @@ def get_mitre_mapper(adapter: TIAdapter, helper: Any) -> dict[str, str]:
         mitre_mapper = poller.get_mitre_attack_pattern_map()
     finally:
         poller.close_session()
-    helper.connector_logger.info(
-        "MITRE mapper: %s attack patterns", len(mitre_mapper)
-    )
+    helper.connector_logger.info("MITRE mapper: %s attack patterns", len(mitre_mapper))
     return mitre_mapper

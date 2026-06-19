@@ -35,9 +35,7 @@ class OsiHiMixin:
             try:
                 if str(raw_value).startswith("00"):
                     return None
-                return datetime.fromisoformat(
-                    str(raw_value).replace("Z", "+00:00")
-                )
+                return datetime.fromisoformat(str(raw_value).replace("Z", "+00:00"))
             except Exception:
                 return None
 
@@ -52,13 +50,13 @@ class OsiHiMixin:
         elif getattr(created_time, "tzinfo", None) is None:
             created_time = created_time.replace(tzinfo=timezone.utc)
         portal_links = self._retrieve_link(payload)
-        labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        labels, _ = self._resolve_entity_labels(collection_label=self.collection)
 
         severity = self._map_severity((json_eval_obj or {}).get("severity"))
 
-        incident_name = f"Public leak: {leak_hash or leak_id or 'Unknown'} [{leak_id or 'unknown'}]"
+        incident_name = (
+            f"Public leak: {leak_hash or leak_id or 'Unknown'} [{leak_id or 'unknown'}]"
+        )
         incident = ds.Incident(
             name=incident_name,
             c_type="incident",
@@ -125,9 +123,7 @@ class OsiHiMixin:
             full_data = str(payload.get("data"))
             _coll = "osi_public_leak"
             use_full = self.config.get_collection_settings(_coll, "full_data")
-            max_len = self.config.get_collection_settings(
-                _coll, "data_preview_max_len"
-            )
+            max_len = self.config.get_collection_settings(_coll, "data_preview_max_len")
             if max_len is not None and not isinstance(max_len, int):
                 try:
                     max_len = int(max_len)
@@ -191,14 +187,10 @@ class OsiHiMixin:
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             stix_objects += [self.statement_marking]
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         result = list(entities) + list(relationships)
         if not result:
@@ -232,12 +224,8 @@ class OsiHiMixin:
         cpe_table = event.get("cpe_table") or {}
         cpe_list = self._normalize_list(cpe_table.get("cpe_table_list"))
 
-        created = self._parse_iso_utc(
-            (json_date_obj or {}).get("date-published")
-        )
-        labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        created = self._parse_iso_utc((json_date_obj or {}).get("date-published"))
+        labels, _ = self._resolve_entity_labels(collection_label=self.collection)
 
         # External references: TI-portal + advisory link (href) + upstream
         # references (the API ships them comma-joined inside list elements).
@@ -263,9 +251,7 @@ class OsiHiMixin:
             return f if f > 0 else None
 
         cvss_score = _num(cvss.get("score")) or _num(vuln.get("cvss_base"))
-        cvss_vector = (
-            cvss.get("vector") or vuln.get("cvss_base_vector") or None
-        )
+        cvss_vector = cvss.get("vector") or vuln.get("cvss_base_vector") or None
 
         # Description: advisory title + description (raw description is often a
         # low-value placeholder, so the title leads).
@@ -363,9 +349,7 @@ class OsiHiMixin:
             try:
                 if str(raw_value).startswith("00"):
                     return None
-                return datetime.fromisoformat(
-                    str(raw_value).replace("Z", "+00:00")
-                )
+                return datetime.fromisoformat(str(raw_value).replace("Z", "+00:00"))
             except Exception:
                 return None
 
@@ -375,9 +359,9 @@ class OsiHiMixin:
             or payload.get("leaked_file_name")
             or payload.get("source")
         )
-        date_detected = payload.get("dateDetected") or (
-            json_date_obj or {}
-        ).get("date-detected")
+        date_detected = payload.get("dateDetected") or (json_date_obj or {}).get(
+            "date-detected"
+        )
         date_created = payload.get("dateCreated") or (json_date_obj or {}).get(
             "date-created"
         )
@@ -394,7 +378,9 @@ class OsiHiMixin:
 
         severity = self._map_severity((json_eval_obj or {}).get("severity"))
 
-        incident_name = f"Git repository leak: {name or 'Unknown'} [{repo_id or 'unknown'}]"
+        incident_name = (
+            f"Git repository leak: {name or 'Unknown'} [{repo_id or 'unknown'}]"
+        )
         incident = ds.Incident(
             name=incident_name,
             c_type="incident",
@@ -473,9 +459,7 @@ class OsiHiMixin:
                 url_obs.generate_stix_objects()
                 related_objects.append(url_obs)
             if author_email_observables:
-                for email_raw in self._normalize_list(
-                    file_row.get("authorEmail")
-                ):
+                for email_raw in self._normalize_list(file_row.get("authorEmail")):
                     email_val = self.normalize_email(email_raw)
                     if email_val is None and email_raw:
                         self._log_skipped("author email", email_raw)
@@ -546,14 +530,10 @@ class OsiHiMixin:
         if self.config.get_extra_settings_by_name("enable_statement_marking"):
             stix_objects += [self.statement_marking]
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         result = list(entities) + list(relationships)
         if not result:
@@ -562,9 +542,7 @@ class OsiHiMixin:
             )
         return result
 
-    def _collect_hashes(
-        self, raw_files: list[Any], raw_hashes: list[Any]
-    ) -> list[str]:
+    def _collect_hashes(self, raw_files: list[Any], raw_hashes: list[Any]) -> list[str]:
         candidates = []
         for item in raw_files:
             if isinstance(item, dict):
@@ -587,9 +565,7 @@ class OsiHiMixin:
             ):
                 valid.append(h)
             else:
-                self._log_skipped(
-                    "file hash", h, "not a valid MD5/SHA-1/SHA-256 hash"
-                )
+                self._log_skipped("file hash", h, "not a valid MD5/SHA-1/SHA-256 hash")
         return valid
 
     def generate_hi_open_threats(
@@ -614,8 +590,7 @@ class OsiHiMixin:
         source_type = open_threat.get("sourceType") or ""
 
         created_time = self._parse_iso_utc(
-            json_date_obj.get("date-created")
-            or json_date_obj.get("date-detected")
+            json_date_obj.get("date-created") or json_date_obj.get("date-detected")
         ) or datetime.now(timezone.utc)
 
         eval_obj = json_eval_obj or {}
@@ -623,9 +598,7 @@ class OsiHiMixin:
 
         portal_links = self._retrieve_link(open_threat)
 
-        raw_threat_actors = self._normalize_list(
-            open_threat.get("threat_actor_list")
-        )
+        raw_threat_actors = self._normalize_list(open_threat.get("threat_actor_list"))
         raw_malware = self._normalize_list(open_threat.get("malware"))
         raw_cve = self._normalize_list(open_threat.get("cve"))
         raw_domains = self._normalize_list(open_threat.get("domains"))
@@ -647,14 +620,10 @@ class OsiHiMixin:
             context_labels=tag_labels[:10],
         )
 
-        report_name = (
-            f"{title} [{open_threat_id}]" if open_threat_id else title
-        )
+        report_name = f"{title} [{open_threat_id}]" if open_threat_id else title
         _coll = "hi_open_threats"
 
-        report_description = TICollections.DESCRIPTIONS.get(
-            "hi/open_threats", ""
-        )
+        report_description = TICollections.DESCRIPTIONS.get("hi/open_threats", "")
 
         observables_as_indicators = self.config.get_setting_bool(
             _coll, "observables_as_indicators", default=True
@@ -681,14 +650,10 @@ class OsiHiMixin:
                 elif self.is_ipv6(val):
                     ctype = "ipv6-addr"
                 else:
-                    self._log_skipped(
-                        "ip", val, "not a valid IPv4/IPv6 address"
-                    )
+                    self._log_skipped("ip", val, "not a valid IPv4/IPv6 address")
                     return None
             if not observables_as_indicators:
-                return self._build_non_ioc_observable(
-                    cls, val, ctype, entity_labels
-                )
+                return self._build_non_ioc_observable(cls, val, ctype, entity_labels)
             obs = cls(
                 name=val,
                 c_type=ctype,
@@ -798,21 +763,13 @@ class OsiHiMixin:
             for c in raw_countries
             if isinstance(c, dict) and c.get("countryCode")
         ]
-        locations = (
-            self.generate_locations(country_codes) if country_codes else []
-        )
+        locations = self.generate_locations(country_codes) if country_codes else []
 
-        cve_ids = [
-            c.get("id") for c in raw_cve if isinstance(c, dict) and c.get("id")
-        ]
+        cve_ids = [c.get("id") for c in raw_cve if isinstance(c, dict) and c.get("id")]
 
-        domain_vals = [
-            v for d in raw_domains if (v := self._extract_string_value(d))
-        ]
+        domain_vals = [v for d in raw_domains if (v := self._extract_string_value(d))]
         ip_vals = [v for i in raw_ips if (v := self._extract_string_value(i))]
-        url_vals = [
-            v for u in raw_urls if (v := self._extract_string_value(u))
-        ]
+        url_vals = [v for u in raw_urls if (v := self._extract_string_value(u))]
 
         include_text = self.config.get_setting_bool(
             _coll, "include_text_in_note", default=True
@@ -907,14 +864,10 @@ class OsiHiMixin:
             stix_objects.append(report.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return entities + relationships
 
@@ -948,9 +901,7 @@ class OsiHiMixin:
             else:
                 valid_until = None
 
-        entity_labels, _ = self._resolve_entity_labels(
-            collection_label=self.collection
-        )
+        entity_labels, _ = self._resolve_entity_labels(collection_label=self.collection)
 
         malware_names = sorted(
             {
@@ -1025,15 +976,11 @@ class OsiHiMixin:
             ioc_obj.generate_stix_objects()
             if ioc_obj.stix_observable and ioc_obj.stix_objects:
                 ioc_obj.stix_objects = [
-                    o
-                    for o in ioc_obj.stix_objects
-                    if o is not ioc_obj.stix_observable
+                    o for o in ioc_obj.stix_objects if o is not ioc_obj.stix_observable
                 ]
             indicator = ioc_obj.stix_indicator
             if indicator:
-                indicators = (
-                    indicator if isinstance(indicator, list) else [indicator]
-                )
+                indicators = indicator if isinstance(indicator, list) else [indicator]
                 for ind in indicators:
                     for target in attribution_targets:
                         ioc_obj.generate_relationship(
@@ -1060,9 +1007,7 @@ class OsiHiMixin:
                 elif isinstance(entry, dict):
                     v = entry.get(field_key)
                     if isinstance(v, str) and v.strip():
-                        out.append(
-                            (v.strip(), _coerce_score(entry.get("riskScore")))
-                        )
+                        out.append((v.strip(), _coerce_score(entry.get("riskScore"))))
             return out
 
         ioc_objects = []
@@ -1072,9 +1017,7 @@ class OsiHiMixin:
                 ("domain", ds.Domain, "domain-name"),
                 ("url", ds.URL, "url"),
             ]:
-                for val, score in _iter_scored(
-                    ioc_primary.get(field_key), field_key
-                ):
+                for val, score in _iter_scored(ioc_primary.get(field_key), field_key):
                     obj_cls, obj_ctype = cls, c_type
                     if c_type == "domain-name":
                         if self.is_ipv4(val) or self.is_ipv6(val):
@@ -1084,9 +1027,7 @@ class OsiHiMixin:
                             )
                             obj_cls = ds.IPAddress
                             obj_ctype = (
-                                "ipv4-addr"
-                                if self.is_ipv4(val)
-                                else "ipv6-addr"
+                                "ipv4-addr" if self.is_ipv4(val) else "ipv6-addr"
                             )
                         elif not self.is_valid_domain(val):
                             self._log_skipped("ioc domain", val)
@@ -1107,9 +1048,7 @@ class OsiHiMixin:
                 elif self.is_ipv6(ip_val):
                     ip_ctype = "ipv6-addr"
                 else:
-                    self._log_skipped(
-                        "ioc ip", ip_val, "not a valid IPv4/IPv6 address"
-                    )
+                    self._log_skipped("ioc ip", ip_val, "not a valid IPv4/IPv6 address")
                     continue
                 obj = ds.IPAddress(
                     name=ip_val,
@@ -1160,18 +1099,13 @@ class OsiHiMixin:
             sample_vals = []
             for field_key in ("domain", "url", "ip"):
                 sample_vals.extend(
-                    v
-                    for v, _ in _iter_scored(
-                        ioc_primary.get(field_key), field_key
-                    )
+                    v for v, _ in _iter_scored(ioc_primary.get(field_key), field_key)
                 )
             ioc_value = ", ".join(sample_vals)
         else:
             raw_h = ioc_primary.get("hash") or []
             ioc_value = ", ".join(
-                str(h)
-                for h in (raw_h if isinstance(raw_h, list) else [raw_h])
-                if h
+                str(h) for h in (raw_h if isinstance(raw_h, list) else [raw_h]) if h
             )
 
         ioc_md = markdown_ioc_note(
@@ -1209,13 +1143,9 @@ class OsiHiMixin:
             stix_objects.append(self.statement_marking)
 
         entities = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) != "relationship"
+            o for o in stix_objects if getattr(o, "type", None) != "relationship"
         ]
         relationships = [
-            o
-            for o in stix_objects
-            if getattr(o, "type", None) == "relationship"
+            o for o in stix_objects if getattr(o, "type", None) == "relationship"
         ]
         return entities + relationships

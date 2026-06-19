@@ -45,9 +45,7 @@ def matches_struct_to_markdown_lines(
     lines = ["| " + " | ".join(headers) + " |", sep]
     for path, value_cell in rows:
         padded = (path + [""] * depth)[:depth]
-        escaped = [
-            str(c).replace("|", "\\|").replace("\n", " ") for c in padded
-        ]
+        escaped = [str(c).replace("|", "\\|").replace("\n", " ") for c in padded]
         lines.append(
             "| "
             + " | ".join(escaped)
@@ -85,9 +83,9 @@ def markdown_compromised_account_group(
         "Domain", service.get("domain") or unk
     ).kv("Host", service.get("host") or unk).kv("IP", service.get("ip") or unk)
     if parsed_login.get("domain") or parsed_login.get("ip"):
-        nb.h2("Parsed login").kv(
-            "Domain", parsed_login.get("domain") or unk
-        ).kv("IP", parsed_login.get("ip") or unk)
+        nb.h2("Parsed login").kv("Domain", parsed_login.get("domain") or unk).kv(
+            "IP", parsed_login.get("ip") or unk
+        )
     nb.h2("Dates").kv("First seen", date_first_seen or unk).kv(
         "Last seen", date_last_seen or unk
     ).kv("First compromised", date_first_compromised or unk).kv(
@@ -158,11 +156,9 @@ def markdown_compromised_bank_card_group(
     ).kv(
         "Issuer country", card_issuer_country
     )
-    nb.h2("Dates").kv("First seen", date_first_seen).kv(
-        "Last seen", date_last_seen
-    ).kv("First compromised", date_first_compromised).kv(
-        "Last compromised", date_last_compromised
-    )
+    nb.h2("Dates").kv("First seen", date_first_seen).kv("Last seen", date_last_seen).kv(
+        "First compromised", date_first_compromised
+    ).kv("Last compromised", date_last_compromised)
     if raw_ta_list:
         nb.h2("Threat actors")
         for ta in raw_ta_list:
@@ -249,16 +245,14 @@ def markdown_compromised_access(
     ).kv("Description", _safe_str_trunc(payload.get("description"), 500))
     acc_nb.h2("Target").kv("Host", target.get("host")).kv(
         "Domain", target.get("domain")
-    ).kv("Provider", target.get("provider")).kv(
-        "Country", target.get("country")
-    ).kv(
+    ).kv("Provider", target.get("provider")).kv("Country", target.get("country")).kv(
         "Device OS", target.get("device_os")
     ).kv(
         "Browser", target.get("device_browser")
     )
-    acc_nb.h2("C2").kv("CNC", cnc.get("cnc")).kv(
-        "Domain", cnc.get("domain")
-    ).kv("URL", cnc.get("url")).kv("Port", cnc.get("port"))
+    acc_nb.h2("C2").kv("CNC", cnc.get("cnc")).kv("Domain", cnc.get("domain")).kv(
+        "URL", cnc.get("url")
+    ).kv("Port", cnc.get("port"))
     acc_nb.h2("Malware").kv("Name", malware_obj.get("name")).kv(
         "ID", malware_obj.get("id")
     )
@@ -337,14 +331,10 @@ def markdown_compromised_spd(
     sources = payload.get("sources")
     if isinstance(sources, list) and sources:
         src_rows = [
-            [s.get("name"), s.get("type")]
-            for s in sources
-            if isinstance(s, dict)
+            [s.get("name"), s.get("type")] for s in sources if isinstance(s, dict)
         ]
         if src_rows:
-            spd_nb.h2("Sources").table(
-                ["name", "type"], src_rows, cell=_table_cell
-            )
+            spd_nb.h2("Sources").table(["name", "type"], src_rows, cell=_table_cell)
 
     if malware_list:
         spd_nb.h2("Malware")
@@ -370,19 +360,11 @@ def markdown_malware_config(
     file_list: Sequence[Any],
 ) -> str:
     nb = MarkdownNote()
-    nb.raw("## Malware config").kv("ID", config_id).kv(
-        "Hash", payload.get("hash")
-    )
-    nb.h2("Malware").kv("Name", malware_obj.get("name")).kv(
-        "ID", malware_obj.get("id")
-    )
-    nb.h2("Dates").kv("Date first seen", date_first).kv(
-        "Date last seen", date_last
-    )
+    nb.raw("## Malware config").kv("ID", config_id).kv("Hash", payload.get("hash"))
+    nb.h2("Malware").kv("Name", malware_obj.get("name")).kv("ID", malware_obj.get("id"))
+    nb.h2("Dates").kv("Date first seen", date_first).kv("Date last seen", date_last)
     if payload.get("configSummary"):
-        nb.h2("Config summary").paragraph(
-            str(payload.get("configSummary"))[:1000]
-        )
+        nb.h2("Config summary").paragraph(str(payload.get("configSummary"))[:1000])
     if content_preview:
         nb.h2("Content (preview)").paragraph(content_preview)
     if file_list:
@@ -535,9 +517,7 @@ def markdown_threat_report(
     if obj.get("sources"):
         nb.h2("Sources")
         for s in (
-            obj["sources"]
-            if isinstance(obj["sources"], list)
-            else [obj["sources"]]
+            obj["sources"] if isinstance(obj["sources"], list) else [obj["sources"]]
         ):
             if s:
                 nb.bullet(str(s))
@@ -754,14 +734,10 @@ def markdown_malware_cnc(
                     ]
                 )
     if ip_rows:
-        nb.h2("Resolved IPs").table(
-            ["ip", "asn", "country"], ip_rows, cell=_table_cell
-        )
+        nb.h2("Resolved IPs").table(["ip", "asn", "country"], ip_rows, cell=_table_cell)
 
     f = payload.get("file") or {}
-    if isinstance(f, dict) and any(
-        f.get(k) for k in ("md5", "sha1", "sha256", "name")
-    ):
+    if isinstance(f, dict) and any(f.get(k) for k in ("md5", "sha1", "sha256", "name")):
         nb.h2("Associated file")
         nb.kv("Name", f.get("name"))
         nb.kv("MD5", f.get("md5"))
@@ -898,9 +874,7 @@ def markdown_attacks_phishing_kit(
         if isinstance(v, dict) and (v.get("type") or v.get("file_path"))
     ]
     if var_rows:
-        nb.h2("Kit variables").table(
-            ["type", "file path"], var_rows, cell=_table_cell
-        )
+        nb.h2("Kit variables").table(["type", "file path"], var_rows, cell=_table_cell)
         nb.gap().raw("_Captured credential values are intentionally omitted._")
     return nb.build()
 
@@ -915,9 +889,7 @@ def markdown_osi_vulnerability(
 ) -> str:
     unk = "<unknown>"
     nb = MarkdownNote()
-    nb.raw(
-        f"## Vulnerability {vuln.get('object_id') or vuln.get('id') or unk}"
-    )
+    nb.raw(f"## Vulnerability {vuln.get('object_id') or vuln.get('id') or unk}")
     nb.kv("ID", vuln.get("id") or vuln.get("object_id") or unk)
     nb.kv("Title", vuln.get("title"))
     nb.kv("CVSS score", (cvss or {}).get("score"))
@@ -946,9 +918,7 @@ def markdown_osi_vulnerability(
     for raw_ref in vuln.get("references") or []:
         if isinstance(raw_ref, str):
             refs += [
-                r.strip()
-                for r in raw_ref.split(",")
-                if r.strip().startswith("http")
+                r.strip() for r in raw_ref.split(",") if r.strip().startswith("http")
             ]
     if refs:
         nb.h2("References")
@@ -988,9 +958,7 @@ def markdown_osi_vulnerability(
             cell=_table_cell,
         )
         if len(rows) > cpe_rows_max:
-            nb.gap().raw(
-                f"_… {len(rows) - cpe_rows_max} more CPE entries omitted._"
-            )
+            nb.gap().raw(f"_… {len(rows) - cpe_rows_max} more CPE entries omitted._")
     return nb.build()
 
 
@@ -1045,9 +1013,7 @@ def markdown_osi_git_repository(
                 ],
                 frows,
                 cell=lambda x: (
-                    x
-                    if isinstance(x, str)
-                    else str(x) if x is not None else ""
+                    x if isinstance(x, str) else str(x) if x is not None else ""
                 ),
             )
     return git_nb.build()
@@ -1165,9 +1131,7 @@ def markdown_compromised_masked_card(
     )
     mnb.h2("Card").kv("Number", card_number).kv(
         "BIN", ", ".join(str(b) for b in card_bins) if card_bins else None
-    ).kv("System", card_system).kv("Type", card_type).kv(
-        "Issuer", card_issuer
-    ).kv(
+    ).kv("System", card_system).kv("Type", card_type).kv("Issuer", card_issuer).kv(
         "Issuer country", card_issuer_country_name or card_issuer_country_code
     ).kv(
         "Valid thru",
@@ -1204,9 +1168,7 @@ def markdown_compromised_masked_card(
     )
     mnb.h2("Owner (as reported)").kv("Name", owner_obj.get("name")).kv(
         "Phone", owner_obj.get("phone")
-    ).kv("Address", owner_obj.get("address")).kv(
-        "State", owner_obj.get("state")
-    ).kv(
+    ).kv("Address", owner_obj.get("address")).kv("State", owner_obj.get("state")).kv(
         "ZIP", owner_obj.get("zip")
     ).kv(
         "Country", owner_obj.get("country_code")
@@ -1214,9 +1176,7 @@ def markdown_compromised_masked_card(
     mnb.h2("Price").kv("Value", masked_card.get("price_value")).kv(
         "Currency", masked_card.get("price_currency")
     )
-    mnb.h2("Dates").kv("Detected", date_detected).kv(
-        "Compromised", date_compromised
-    )
+    mnb.h2("Dates").kv("Detected", date_detected).kv("Compromised", date_compromised)
     return mnb.build()
 
 
@@ -1239,9 +1199,9 @@ def markdown_ioc_note(
     # skipped.
     if risk_score is not None:
         ioc_nb.kv("Risk score", risk_score)
-    ioc_nb.h2("Dates").kv(
-        "First seen", json_date_obj.get("date-first-seen")
-    ).kv("Last seen", json_date_obj.get("date-last-seen"))
+    ioc_nb.h2("Dates").kv("First seen", json_date_obj.get("date-first-seen")).kv(
+        "Last seen", json_date_obj.get("date-last-seen")
+    )
     if malware_names:
         ioc_nb.h2("Malware")
         for m in malware_names:
