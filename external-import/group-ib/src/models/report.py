@@ -209,7 +209,18 @@ class Note(_BaseSDO):
         # derived — any body change produced a new ID → duplicate Notes in OpenCTI.
         _anchor = datetime(2020, 1, 1, tzinfo=timezone.utc)
         _first_ref = self.object_refs[0] if self.object_refs else "unknown"
-        note_kwargs = dict(
+        extra_kwargs: dict[str, Any] = {}
+        if self.created is not None:
+            extra_kwargs["created"] = self.created
+        if self.modified is not None:
+            extra_kwargs["modified"] = self.modified
+        elif self.created is not None:
+            extra_kwargs["modified"] = self.created
+        # ``id=`` must stay an explicit keyword argument here so the
+        # ``linter_stix_id_generator`` pylint plugin can prove every
+        # ``stix2.Note`` call goes through ``pycti.Note.generate_id`` —
+        # hiding it inside ``**kwargs`` trips the linter at this call site.
+        self.stix_main_object = stix2.Note(
             id=pycti.Note.generate_id(_anchor, f"{self.name}:{_first_ref}"),
             content=(self.content or "")[:NOTE_MAX_CONTENT],
             object_refs=self.object_refs,
@@ -219,12 +230,6 @@ class Note(_BaseSDO):
                 **self._labels_kv(),
                 "x_opencti_external_references": self.external_references,
             },
+            **extra_kwargs,
         )
-        if self.created is not None:
-            note_kwargs["created"] = self.created
-        if self.modified is not None:
-            note_kwargs["modified"] = self.modified
-        elif self.created is not None:
-            note_kwargs["modified"] = self.created
-        self.stix_main_object = stix2.Note(**note_kwargs)
         return self.stix_main_object

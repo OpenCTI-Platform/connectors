@@ -289,9 +289,6 @@ class SdoMixin:
         if _is_unusable(_description) and not _is_unusable(_short_description):
             _description = _short_description
         _threat_level = obj.get("threat_level")
-        _platforms = obj.get("platform") or []
-        _langs = obj.get("langs") or []
-        _is_published = obj.get("is_published")
         _portal_links = self._retrieve_link(obj)
         _last_seen = (
             self._parse_iso_utc((json_date_obj or {}).get("date-updated"))
