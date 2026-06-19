@@ -15,7 +15,12 @@ def mock_opencti_connector_helper(monkeypatch):
     monkeypatch.setattr(f"{module_import_path}.sched.scheduler", MagicMock())
     monkeypatch.setattr(f"{module_import_path}.ConnectorInfo", MagicMock())
     monkeypatch.setattr(f"{module_import_path}.OpenCTIApiClient", MagicMock())
-    monkeypatch.setattr(f"{module_import_path}.OpenCTIConnector", MagicMock())
+
+    mock_connector = MagicMock()
+    mock_connector.name = "Test Connector"
+    monkeypatch.setattr(
+        f"{module_import_path}.OpenCTIConnector", MagicMock(return_value=mock_connector)
+    )
     monkeypatch.setattr(f"{module_import_path}.OpenCTIMetricHandler", MagicMock())
     monkeypatch.setattr(f"{module_import_path}.PingAlive", MagicMock())
 
@@ -73,7 +78,7 @@ def test_opencti_connector_helper_is_instantiated(mock_opencti_connector_helper)
     assert helper.connect_name == "Test Connector"
     assert helper.connect_scope == "IPv4-Addr,Domain-Name"
     assert helper.log_level == "ERROR"
-    assert helper.connect_duration_period == "PT24H"
+    assert helper.connect_duration_period == "P1D"
 
 
 def test_connector_is_instantiated(mock_opencti_connector_helper):

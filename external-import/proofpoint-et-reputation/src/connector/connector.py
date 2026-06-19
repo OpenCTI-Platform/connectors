@@ -26,15 +26,11 @@ class ProofpointEtReputationConnector:
         self.helper = helper
 
         # Create a config-compatible object for the legacy client
-        self._api_token = config.proofpoint_et_reputation.api_token.get_secret_value()
-        self.client = ProofpointEtReputationClient(self.helper, self)
+        self.client = ProofpointEtReputationClient(
+            self.helper, config.proofpoint_et_reputation.api_token
+        )
         self.converter_to_stix = ConverterToStix(self.helper)
         self.utils = Utils()
-
-    @property
-    def extra_api_token(self) -> str:
-        """Provide backward-compatible access for the legacy API client."""
-        return self._api_token
 
     def _process_initiate_work(self, collection: str, now_isoformat: str) -> str:
         """
