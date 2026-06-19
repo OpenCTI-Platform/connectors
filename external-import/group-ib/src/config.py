@@ -1,22 +1,183 @@
+import logging
 import os
+import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-import pycti
 import yaml
-from cyberintegrations.utils import FileHandler
+from ciaops.utils import FileHandler
 from dotenv import load_dotenv
 from pycti import get_config_variable
 from stix2 import TLP_AMBER, TLP_GREEN, TLP_RED, TLP_WHITE, MarkingDefinition
 from stix2.v21.vocab import MALWARE_TYPE
 
+from _data.iso3166 import COUNTRIES as _ISO3166_COUNTRIES
+from logging_config import (
+    _DEFAULT_LOG_BACKUP_COUNT,
+    _DEFAULT_LOG_DIR,
+    _DEFAULT_LOG_MAX_BYTES,
+    FileLoggingConfig,
+)
+
+# ============================================================================
+# Connector-wide constants
+# Every magic number / lookup / regex used across modules lives here.
+# ============================================================================
+
+# Anchor date for deterministic STIX Note ID generation.
+TI_NOTE_ID_ANCHOR = datetime(2020, 1, 1, tzinfo=timezone.utc)
+
+# Hard cap on OpenCTI Note content (characters).
+NOTE_MAX_CONTENT = 50_000
+
+# Fallback Indicator lifetime when neither the upstream event nor the
+# per-collection .env override carries a TTL.
+DEFAULT_TTL_DAYS = 365
+
+# ----- Regex patterns (cached at import time, used in hot paths) -----
+
+# Control characters stripped from descriptions before stix2 serialization
+# (keeps \n, \r, \t).
+CTRL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f]")
+
+# Generic HTML tag stripper for description sanitization.
+HTML_TAG_RE = re.compile("<.*?>")
+
+# Email address validator. Single source of truth used by every handler
+# that emits ``ds.Email`` (compromised/spd, attacks/phishing_kit,
+# osi/git_repository, etc.). Mirrors the syntax OpenCTI itself accepts for
+# Email-Addr observables (checkObservableSyntax): RFC-5322 local-part
+# characters and ASCII letter/digit/hyphen domain labels — anything looser
+# is rejected by the platform with "Observable is not correctly formatted".
+EMAIL_RE = re.compile(
+    r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+"
+    r"@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+    r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$"
+)
+
+# Domain-name validator. Mirrors the syntax OpenCTI accepts for
+# Domain-Name observables: hyphen-safe ASCII labels plus a final label
+# that is alphabetic (or punycode ``xn--``) — anything looser, e.g. an
+# IPv4 address or a numeric TLD, is rejected by the platform with
+# "Observable is not correctly formatted". IP addresses that arrive in
+# domain fields are re-emitted as IP observables by the adapters.
+DOMAIN_RE = re.compile(
+    r"^(?:(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+"
+    r"(?:[A-Za-z]{2,63}|xn--[A-Za-z0-9-]{2,59})$"
+)
+
+# Description-sanitation regexes (used by ``support.text_normalize``).
+DESC_BR_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
+DESC_CLOSE_P_RE = re.compile(r"</p\s*>", re.IGNORECASE)
+DESC_OPEN_P_RE = re.compile(r"<p[^>]*>", re.IGNORECASE)
+DESC_CLOSE_LI_RE = re.compile(r"</li\s*>", re.IGNORECASE)
+DESC_OPEN_LI_RE = re.compile(r"<li[^>]*>", re.IGNORECASE)
+DESC_TAG_RE = re.compile(r"<[^>]+>")
+DESC_HSPACE_RE = re.compile(r"[ \t\xa0]+")
+DESC_PARA_RE = re.compile(r"(?:\s*\n){2,}\s*")
+
+
+# ----- Scoring tables -----
+
+# Group-IB ``threatLevel`` -> (x_opencti_score, severity label).
+#
+# NOTE: There is no industry standard mapping from Group-IB's threat-level
+# buckets to OpenCTI's 0-100 score. These values are connector-defined and
+# intentionally bias toward "trustworthy enough to alert on": Medium=50
+# stays visible without driving automation; Critical=90 leaves room for
+# manual analyst override at 100.
+THREAT_LEVEL_TO_SCORE: dict[str, tuple[int, str]] = {
+    "low": (25, "severity:low"),
+    "medium": (50, "severity:medium"),
+    "medium-high": (65, "severity:medium-high"),
+    "high": (75, "severity:high"),
+    "critical": (90, "severity:critical"),
+}
+
+# Group-IB ``evaluation.severity`` colour -> OpenCTI Incident severity label.
+SEVERITY_COLOR_MAP: dict[str, str] = {
+    "red": "critical",
+    "orange": "high",
+    "amber": "high",
+    "yellow": "medium",
+    "green": "low",
+}
+
+# CVSS v3 base-score -> qualitative severity bands.
+# Source: FIRST.org CVSS v3.1 specification, section 5
+# https://www.first.org/cvss/v3.1/specification-document
+CVSS_SEVERITY_LOW_MAX = 3.9  # 0.1 - 3.9   -> LOW
+CVSS_SEVERITY_MEDIUM_MIN = 4.0
+CVSS_SEVERITY_MEDIUM_MAX = 6.9  # 4.0 - 6.9   -> MEDIUM
+CVSS_SEVERITY_HIGH_MIN = 7.0
+CVSS_SEVERITY_HIGH_MAX = 8.9  # 7.0 - 8.9   -> HIGH
+CVSS_SEVERITY_CRITICAL_MIN = 9.0  # 9.0 - 10.0  -> CRITICAL
+
+
+# Group-IB collection slug -> collection label for OpenCTI.
+COLLECTION_DISPLAY_LABEL: dict[str, str] = {
+    "apt/threat": "collection:Nation-State Threat Report",
+    "apt/threat_actor": "collection:Nation-State Threat Actor",
+    "attacks/ddos": "collection:Attacks DDoS",
+    "attacks/deface": "collection:Attacks Deface",
+    "attacks/phishing_group": "collection:Attacks Phishing Group",
+    "attacks/phishing_kit": "collection:Attacks Phishing Kit",
+    "compromised/access": "collection:Compromised Shops",
+    "compromised/account_group": "collection:Compromised Account",
+    "compromised/bank_card_group": "collection:Compromised Group Card",
+    "compromised/discord": "collection:Compromised Discord",
+    "compromised/masked_card": "collection:Compromised Masked Card",
+    "compromised/messenger": "collection:Compromised Telegram",
+    "compromised/spd": "collection:Compromised SPD",
+    "darkweb/forums": "collection:Compromised Darkweb",
+    "hi/threat": "collection:Cybercriminals Threat Report",
+    "hi/threat_actor": "collection:Cybercriminals Threat Actor",
+    "hi/open_threats": "collection:Open Threats",
+    "ioc/primary": "collection:IOC Primary",
+    "malware/cnc": "collection:Malware C&C",
+    "malware/config": "collection:Malware Config",
+    "malware/malware": "collection:Malware Report",
+    "malware/signature": "collection:Malware Signature",
+    "malware/yara": "collection:Malware YARA",
+    "osi/git_repository": "collection:OSI Git repository",
+    "osi/public_leak": "collection:OSI Public Leak",
+    "osi/vulnerability": "collection:OSI Vulnerability",
+    "suspicious_ip/open_proxy": "collection:Suspicious IP Open Proxy",
+    "suspicious_ip/scanner": "collection:Suspicious IP Scanner",
+    "suspicious_ip/socks_proxy": "collection:Suspicious IP Socks Proxy",
+    "suspicious_ip/tor_node": "collection:Suspicious IP Tor Node",
+    "suspicious_ip/vpn": "collection:Suspicious IP VPN",
+}
+
+# Brief pause after ``api.work.initiate_work`` so OpenCTI registers the
+# work id before the connector streams bundles into it.
+INITIATE_WORK_DELAY_SEC = 3
+
+# OpenCTI rejects work.report_expectation payloads above this size.
+MAX_ERROR_TRUNCATE_LEN = 3500
+
+# Default ``source_name`` for the Group-IB TI portal external reference
+# attached to every emitted SDO (overridable when the mapping provides
+# its own portal-link label).
+PORTAL_LINK_DEFAULT_LABEL = "Group-IB TI portal"
+
+# Actor-profile collections carry the rich ``stat.*`` block worth a Note.
+# The threat actors embedded in report collections (apt/threat, hi/threat)
+# only carry name/country, so they get no profile Note.
+ACTOR_PROFILE_COLLECTIONS = frozenset({"apt/threat_actor", "hi/threat_actor"})
+
+# Upstream malware/malware emits this literal when no real description exists;
+# the adapter substitutes ``shortDescription`` when seen.
+MALWARE_DESC_PLACEHOLDER = "Sorry, no description yet."
+
+# Collections that emit a report-level Note (apt/threat, hi/threat).
+REPORT_NOTE_COLLECTIONS = frozenset({"apt/threat", "hi/threat"})
+
 
 class ConfigConnector:
 
     def __init__(self):
-        """
-        Initialize the connector with necessary configurations
-        """
         self.load = self._load_config()
         self.env_keys = self._load_env_keys()
         self._initialize_configurations()
@@ -25,11 +186,7 @@ class ConfigConnector:
         )
 
     def _load_config(self) -> dict:
-        """
-        Loads the configuration from `config.yml`. If `config.yml` does not exist, returns an empty dictionary.
-        """
-        config_dir = Path(__file__).parents[1].joinpath("src")
-        config_file_path = config_dir.joinpath("config.yml")
+        config_file_path = Path(__file__).resolve().parent / "config.yml"
 
         if config_file_path.is_file():
             with open(config_file_path, "r", encoding="utf-8") as file:
@@ -41,7 +198,9 @@ class ConfigConnector:
         load_dotenv()
         return os.environ.keys()
 
-    def _extract_config_keys(self, data, parent_keys=None):
+    def _extract_config_keys(
+        self, data: Any, parent_keys: list[Any] | None = None
+    ) -> list[list[Any]]:
         if parent_keys is None:
             parent_keys = []
 
@@ -50,12 +209,14 @@ class ConfigConnector:
             for key, value in data.items():
                 new_keys = parent_keys + [key]
                 if isinstance(value, dict):
-                    keys_list.extend(self._extract_config_keys(value, new_keys))
+                    keys_list.extend(
+                        self._extract_config_keys(value, new_keys)
+                    )
                 else:
                     keys_list.append(new_keys)
         return keys_list
 
-    def _converting_keys_to_environment_keys(self, key):
+    def _converting_keys_to_environment_keys(self, key: Any) -> str | None:
         if not key or not isinstance(key, list):
             return None
 
@@ -67,7 +228,9 @@ class ConfigConnector:
         if key[0] == "TI_API":
             if len(key) > 1 and key[1] == "COLLECTIONS":
                 modified_key = key[2:]
-                modified_key = [part.replace("/", "_") for part in modified_key]
+                modified_key = [
+                    part.replace("/", "_") for part in modified_key
+                ]
                 return (
                     f"{key[0]}__{key[1]}__{'__'.join(modified_key)}"
                     if modified_key
@@ -78,10 +241,6 @@ class ConfigConnector:
         return "_".join(key)
 
     def _initialize_configurations(self) -> None:
-        """
-        Connector configuration variables
-        :return: None
-        """
         if self.load:
             for key in self._extract_config_keys(self.load):
                 if len(key) > 2 and key[1] == "collections":
@@ -104,61 +263,116 @@ class ConfigConnector:
                 )
                 setattr(self, attr_name, attr_value)
 
-    def get_collection_settings(self, collection, setting_name) -> Any:
-        collection_attr_name = f"ti_api_collections_{collection}_{setting_name}"
+    @staticmethod
+    def _to_bool(value: Any, default: bool = False) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        return str(value).lower() in ("true", "1", "yes")
+
+    @staticmethod
+    def _to_int(value: Any, default: int = 0) -> int:
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def get_collection_settings(
+        self, collection: str, setting_name: str
+    ) -> Any:
+        collection_attr_name = (
+            f"ti_api_collections_{collection}_{setting_name}"
+        )
         return getattr(self, collection_attr_name, None)
 
-    def get_extra_settings_by_name(self, setting_name):
+    def get_extra_settings_by_name(self, setting_name: str) -> Any:
         extra_setting_attr_name = f"ti_api_extra_settings_{setting_name}"
         return getattr(self, extra_setting_attr_name, None)
 
-    # Set up product metadata
+    def get_setting(
+        self, collection: str, key: str, default: Any = None
+    ) -> Any:
+        coll_key = collection.replace("/", "_") if collection else ""
+        val = self.get_collection_settings(coll_key, key)
+        if val is not None:
+            return val
+        val = self.get_extra_settings_by_name(key)
+        if val is not None:
+            return val
+        return default
+
+    def get_setting_bool(
+        self, collection: str, key: str, default: bool = True
+    ) -> bool:
+        return self._to_bool(self.get_setting(collection, key), default)
+
+    def get_extra_settings_bool(
+        self, name: str, default: bool = False
+    ) -> bool:
+        return self._to_bool(self.get_extra_settings_by_name(name), default)
+
+    def get_file_logging_config(self) -> FileLoggingConfig:
+        return FileLoggingConfig(
+            enabled=self._to_bool(
+                self.get_extra_settings_by_name("enable_file_logging"),
+            ),
+            directory=(
+                self.get_extra_settings_by_name("log_file_dir")
+                or _DEFAULT_LOG_DIR
+            ),
+            max_bytes=self._to_int(
+                self.get_extra_settings_by_name("log_file_max_bytes"),
+                _DEFAULT_LOG_MAX_BYTES,
+            ),
+            backup_count=self._to_int(
+                self.get_extra_settings_by_name("log_file_backup_count"),
+                _DEFAULT_LOG_BACKUP_COUNT,
+            ),
+        )
+
     PRODUCT_TYPE = "SCRIPT"
     PRODUCT_NAME = "OpenCTI"
     PRODUCT_VERSION = "unknown"
     INTEGRATION = "GroupIB_TI_OpenCTI_Connector"
-    INTEGRATION_VERSION = "1.1.0"
+    INTEGRATION_VERSION = "2.0.0"
 
-    # Author
     AUTHOR = "Group-IB"
 
-    # Set project root dir
-    ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
+    ROOT_DIR = str(Path(__file__).resolve().parent)
+    DOCS_DIR = os.path.join(ROOT_DIR, "docs")
 
-    # Set basedirs
-    DOCS_DIR = os.path.join(os.path.dirname(__file__), "docs")
-    LOGS_DIR = os.path.join(ROOT_DIR, "log")
-
-    # Set up logging
-    ROOT_LOGGING_LEVEL = "DEBUG"
-    LOGGING_FORMAT = (
-        "%(asctime)s [%(name)s: %(filename)s.%(lineno)s] [%(levelname)s] %(message)s"
-    )
-
-    # Set up logs files
-    LOGS_SESSION_FILENAME = "session_ti.log"
-    LOGS_INFO_FILENAME = "info_ti.log"
-    LOGS_WARNING_FILENAME = "warning_ti.log"
-
-    # Set up config filename
     _config_name_json = "mapping.json"
 
-    # Set up configs
     CONFIG_JSON = os.path.join(DOCS_DIR, "configs", _config_name_json)
 
-    # Set up MITRE Matrix
     MITRE_CACHE_FILENAME = "mitre_cache.json"
     MITRE_CACHE_FOLDER = os.path.join(DOCS_DIR, "cache")
 
-    # Set common mapping variables
+    # TLP:AMBER+STRICT is an OpenCTI-specific marking, not part of the STIX 2.1
+    # TLP vocabulary (stix2 rejects definition_type="TLP" for anything other
+    # than white/green/amber/red). We therefore emit it the way OpenCTI itself
+    # does: a statement-type MarkingDefinition with the platform's canonical
+    # fixed id and x_opencti_* hints so the platform resolves it to the real
+    # TLP:AMBER+STRICT marking instead of creating a duplicate.
     try:
         TLP_AMBER_STRICT = MarkingDefinition(
-            id=pycti.MarkingDefinition.generate_id("TLP", "AMBER+STRICT"),
-            definition_type="TLP",
-            definition={"tlp": "AMBER+STRICT"},
+            id="marking-definition--826578e1-40ad-459f-bc73-ede076f81f37",
+            definition_type="statement",
+            definition={"statement": "custom"},
+            allow_custom=True,
+            custom_properties={
+                "x_opencti_definition_type": "TLP",
+                "x_opencti_definition": "TLP:AMBER+STRICT",
+            },
         )
-    except Exception:
-        # fallback if custom TLP cannot be created by stix2 in this runtime
+    except Exception as _exc:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "TLP_AMBER_STRICT marking unavailable, falling back to TLP_AMBER (%s)",
+            _exc,
+        )
         TLP_AMBER_STRICT = TLP_AMBER
 
     STIX_TLP_MAP = {
@@ -169,11 +383,11 @@ class ConfigConnector:
         "red": TLP_RED,
     }
 
-    # Default TLPs by SDO type when upstream API did not provide a valid TLP
     DEFAULT_TLP_BY_SDO = {
         "malware": "amber+strict",
         "threat-actor": "amber+strict",
         "intrusion-set": "amber+strict",
+        "incident": "amber+strict",
     }
     STIX_MAIN_OBSERVABLE_TYPE_MAP = {
         "domain": "Domain-Name",
@@ -186,272 +400,11 @@ class ConfigConnector:
         "url": "Url",
         "yara": "StixFile",
         "suricata": "Network-Traffic",
+        "user-account": "User-Account",
     }
     STIX_MALWARE_TYPE_MAP = {*MALWARE_TYPE}
-    # ISO3166-1 https://www.iso.org/standard/72482.html
-    COUNTRIES = {
-        "AF": "Afghanistan",
-        "AX": "Åland Islands",
-        "AL": "Albania",
-        "DZ": "Algeria",
-        "AS": "American Samoa",
-        "AD": "Andorra",
-        "AO": "Angola",
-        "AI": "Anguilla",
-        "AQ": "Antarctica",
-        "AG": "Antigua And Barbuda",
-        "AR": "Argentina",
-        "AM": "Armenia",
-        "AW": "Aruba",
-        "AU": "Australia",
-        "AT": "Austria",
-        "AZ": "Azerbaijan",
-        "BS": "Bahamas",
-        "BH": "Bahrain",
-        "BD": "Bangladesh",
-        "BB": "Barbados",
-        "BY": "Belarus",
-        "BE": "Belgium",
-        "BZ": "Belize",
-        "BJ": "Benin",
-        "BM": "Bermuda",
-        "BT": "Bhutan",
-        "BO": "Bolivia",
-        ## "BQ": "Bonaire, Sint Eustatius and Saba",
-        "BA": "Bosnia and Herzegovina",
-        "BW": "Botswana",
-        "BV": "Bouvet Island",
-        "BR": "Brazil",
-        "IO": "British Indian Ocean Territory",
-        "BN": "Brunei Darussalam",
-        "BG": "Bulgaria",
-        "BF": "Burkina Faso",
-        "BI": "Burundi",
-        "KH": "Cambodia",
-        "CM": "Cameroon",
-        "CA": "Canada",
-        "CV": "Cape Verde",
-        "KY": "Cayman Islands",
-        "CF": "Central African Republic",
-        "TD": "Chad",
-        "CL": "Chile",
-        "CN": "China",
-        "CX": "Christmas Island",
-        "CC": "Cocos (Keeling) Islands",
-        "CO": "Colombia",
-        "KM": "Comoros",
-        "CG": "Congo",
-        "CD": "Congo, The Democratic Republic Of The",
-        "CK": "Cook Islands",
-        "CR": "Costa Rica",
-        "CI": "Cote D'ivoire",
-        "HR": "Croatia",
-        "CU": "Cuba",
-        "CW": "Country of Curaçao",
-        "CY": "Cyprus",
-        "CZ": "Czech Republic",
-        "DK": "Denmark",
-        "DJ": "Djibouti",
-        "DM": "Dominica",
-        "DO": "Dominican Republic",
-        "EC": "Ecuador",
-        "EG": "Egypt",
-        "SV": "El Salvador",
-        "GQ": "Equatorial Guinea",
-        "ER": "Eritrea",
-        "EE": "Estonia",
-        "ET": "Ethiopia",
-        "FK": "Falkland Islands (Malvinas)",
-        "FO": "Faroe Islands",
-        "FJ": "Fiji",
-        "FI": "Finland",
-        "FR": "France",
-        "GF": "French Guiana",
-        "PF": "French Polynesia",
-        "TF": "French Southern Territories",
-        "GA": "Gabon",
-        "GM": "Gambia",
-        "GE": "Georgia",
-        "DE": "Germany",
-        "GH": "Ghana",
-        "GI": "Gibraltar",
-        "GR": "Greece",
-        "GL": "Greenland",
-        "GD": "Grenada",
-        "GP": "Guadeloupe",
-        "GU": "Guam",
-        "GT": "Guatemala",
-        "GG": "Guernsey",
-        "GN": "Guinea",
-        "GW": "Guinea-bissau",
-        "GY": "Guyana",
-        "HT": "Haiti",
-        "HM": "Heard Island And Mcdonald Islands",
-        "VA": "Holy See (Vatican City State)",
-        "HN": "Honduras",
-        "HK": "Hong Kong",
-        "HU": "Hungary",
-        "IS": "Iceland",
-        "IN": "India",
-        "ID": "Indonesia",
-        "IR": "Iran, Islamic Republic Of",
-        "IQ": "Iraq",
-        "IE": "Ireland",
-        "IM": "Isle Of Man",
-        "IL": "Israel",
-        "IT": "Italy",
-        "JM": "Jamaica",
-        "JP": "Japan",
-        "JE": "Jersey",
-        "JO": "Jordan",
-        "KZ": "Kazakhstan",
-        "KE": "Kenya",
-        "KI": "Kiribati",
-        "KP": "Korea, Democratic People's Republic Of",
-        "KR": "Korea, Republic Of",
-        "KW": "Kuwait",
-        "KG": "Kyrgyzstan",
-        "LA": "Lao People's Democratic Republic",
-        "LV": "Latvia",
-        "LB": "Lebanon",
-        "LS": "Lesotho",
-        "LR": "Liberia",
-        "LY": "Libyan Arab Jamahiriya",
-        "LI": "Liechtenstein",
-        "LT": "Lithuania",
-        "LU": "Luxembourg",
-        "MO": "Macao",
-        "MK": "Macedonia, The Former Yugoslav Republic Of",
-        "MG": "Madagascar",
-        "MW": "Malawi",
-        "MY": "Malaysia",
-        "MV": "Maldives",
-        "ML": "Mali",
-        "MT": "Malta",
-        "MH": "Marshall Islands",
-        "MQ": "Martinique",
-        "MR": "Mauritania",
-        "MU": "Mauritius",
-        "YT": "Mayotte",
-        "MX": "Mexico",
-        "FM": "Micronesia, Federated States Of",
-        "MD": "Moldova, Republic Of",
-        "MC": "Monaco",
-        "MN": "Mongolia",
-        "ME": "Montenegro",
-        "MS": "Montserrat",
-        "MA": "Morocco",
-        "MZ": "Mozambique",
-        "MM": "Myanmar",
-        "NA": "Namibia",
-        "NR": "Nauru",
-        "NP": "Nepal",
-        "NL": "Netherlands",
-        "NC": "New Caledonia",
-        "NZ": "New Zealand",
-        "NI": "Nicaragua",
-        "NE": "Niger",
-        "NG": "Nigeria",
-        "NU": "Niue",
-        "NF": "Norfolk Island",
-        "MP": "Northern Mariana Islands",
-        "NO": "Norway",
-        "OM": "Oman",
-        "PK": "Pakistan",
-        "PW": "Palau",
-        "PS": "Palestinian Territory, Occupied",
-        "PA": "Panama",
-        "PG": "Papua New Guinea",
-        "PY": "Paraguay",
-        "PE": "Peru",
-        "PH": "Philippines",
-        "PN": "Pitcairn",
-        "PL": "Poland",
-        "PT": "Portugal",
-        "PR": "Puerto Rico",
-        "QA": "Qatar",
-        "RE": "Reunion",
-        "RO": "Romania",
-        "RU": "Russian Federation",
-        "RW": "Rwanda",
-        ## "BL": "Saint Barthelemy",
-        "SH": "Saint Helena",
-        "KN": "Saint Kitts And Nevis",
-        "LC": "Saint Lucia",
-        ## "MF": "Saint Martin (French part)",
-        "PM": "Saint Pierre And Miquelon",
-        "VC": "Saint Vincent And The Grenadines",
-        "WS": "Samoa",
-        "SM": "San Marino",
-        "ST": "Sao Tome And Principe",
-        "SA": "Saudi Arabia",
-        "SN": "Senegal",
-        "RS": "Serbia",
-        "SC": "Seychelles",
-        "SL": "Sierra Leone",
-        "SG": "Singapore",
-        ## "SX": "Sint Maarten (Dutch part)",
-        "SK": "Slovakia",
-        "SI": "Slovenia",
-        "SB": "Solomon Islands",
-        "SO": "Somalia",
-        "ZA": "South Africa",
-        "GS": "South Georgia And The South Sandwich Islands",
-        ## "SS": "South Sudan",
-        "ES": "Spain",
-        "LK": "Sri Lanka",
-        "SD": "Sudan",
-        "SR": "Suriname",
-        "SJ": "Svalbard And Jan Mayen",
-        "SZ": "Swaziland",
-        "SE": "Sweden",
-        "CH": "Switzerland",
-        "SY": "Syrian Arab Republic",
-        "TW": "Taiwan, Province Of China",
-        "TJ": "Tajikistan",
-        "TZ": "Tanzania, United Republic Of",
-        "TH": "Thailand",
-        "TL": "Timor-leste",
-        "TG": "Togo",
-        "TK": "Tokelau",
-        "TO": "Tonga",
-        "TT": "Trinidad And Tobago",
-        "TN": "Tunisia",
-        "TR": "Turkey",
-        "TM": "Turkmenistan",
-        "TC": "Turks And Caicos Islands",
-        "TV": "Tuvalu",
-        "UG": "Uganda",
-        "UA": "Ukraine",
-        "AE": "United Arab Emirates",
-        "GB": "United Kingdom",
-        "US": "United States",
-        "UM": "United States Minor Outlying Islands",
-        "UY": "Uruguay",
-        "UZ": "Uzbekistan",
-        "VU": "Vanuatu",
-        "VE": "Venezuela",
-        "VN": "Viet Nam",
-        "VG": "Virgin Islands, British",
-        "VI": "Virgin Islands, U.S.",
-        "WF": "Wallis And Futuna",
-        "EH": "Western Sahara",
-        "YE": "Yemen",
-        "ZM": "Zambia",
-        "ZW": "Zimbabwe",
-    }
-    STIX_COUNTRY_TYPE_MAP = {
-        "country": "Country",
-        "city": "City",
-        "state": "Administrative-Area",
-    }
+    COUNTRIES = _ISO3166_COUNTRIES
     STIX_REPORT_TYPE_MAP = {"threat_report": "Threat-Report"}
-    STIX_RELATION_TYPE_MAP = {
-        "indicator": "based-on",
-        "attack_pattern": "indicates",
-        "malware": "indicates",
-        "threat_actor": "indicates",
-    }
     COLLECTION_MAP = {
         "apt_threat": "apt/threat",
         "apt_threat_actor": "apt/threat_actor",
@@ -463,14 +416,14 @@ class ConfigConnector:
         "compromised_account_group": "compromised/account_group",
         "compromised_bank_card_group": "compromised/bank_card_group",
         "compromised_discord": "compromised/discord",
-        "compromised_imei": "compromised/imei",
         "compromised_masked_card": "compromised/masked_card",
         "compromised_messenger": "compromised/messenger",
-        "compromised_mule": "compromised/mule",
+        "compromised_spd": "compromised/spd",
+        "darkweb_forums": "darkweb/forums",
         "hi_open_threats": "hi/open_threats",
         "hi_threat": "hi/threat",
         "hi_threat_actor": "hi/threat_actor",
-        "ioc_common": "ioc/common",
+        "ioc_primary": "ioc/primary",
         "malware_cnc": "malware/cnc",
         "malware_config": "malware/config",
         "malware_malware": "malware/malware",
