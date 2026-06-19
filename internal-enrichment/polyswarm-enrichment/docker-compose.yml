@@ -1,6 +1,6 @@
 services:
   connector-polyswarm-enrichment:
-    image: opencti/connector-polyswarm-enrichment:rolling
+    image: opencti/connector-polyswarm-enrichment:7.260619.0
     environment:
       # ========== OpenCTI Configuration ==========
       - OPENCTI_URL=http://opencti:8080
