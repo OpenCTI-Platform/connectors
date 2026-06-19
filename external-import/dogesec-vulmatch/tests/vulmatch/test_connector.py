@@ -197,10 +197,10 @@ def test_get_vulnerabilities(
     assert len(vulns) == 2
 
 
-def test_get_vulnerability__not_ok(
+def test_get_vulnerabilities_not_ok(
     mock_session: MagicMock, connector: VulmatchConnector
 ) -> None:
-    """Test get_vulnerabilities method"""
+    """Test get_vulnerabilities raises on non-OK HTTP responses."""
     connector.helper.get_state.return_value = {
         "last_vulnerability_modified": "2026-02-17T15:24:00Z"
     }
