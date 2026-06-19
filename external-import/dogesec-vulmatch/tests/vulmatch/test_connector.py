@@ -196,6 +196,7 @@ def test_get_vulnerabilities(
 
     assert len(vulns) == 2
 
+
 def test_get_vulnerability__not_ok(
     mock_session: MagicMock, connector: VulmatchConnector
 ) -> None:
@@ -212,8 +213,8 @@ def test_get_vulnerability__not_ok(
     with pytest.raises(VulmatchException) as exc_info:
         connector.get_vulnerabilities(["cpe:2.3:a:vendor:product"])
 
-    assert '401' in str(exc_info)
-    assert 'Failed because of reasons' in str(exc_info)
+    assert "401" in str(exc_info)
+    assert "Failed because of reasons" in str(exc_info)
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")

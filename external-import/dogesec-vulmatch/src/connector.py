@@ -107,7 +107,9 @@ class VulmatchConnector:
             url = urljoin(self.base_url, path)
             resp = self.session.get(url, params=params)
             if not resp.ok:
-                raise VulmatchException(f"Unexpected response for url `{resp.url}`: [{resp.status_code}] {resp.content}")
+                raise VulmatchException(
+                    f"Unexpected response for url `{resp.url}`: [{resp.status_code}] {resp.content}"
+                )
             params.update(page=params["page"] + 1)
             data = resp.json()
             total_results_count = data["total_results_count"]
