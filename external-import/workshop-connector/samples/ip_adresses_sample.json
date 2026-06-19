@@ -1,0 +1,88 @@
+{
+  "response": [
+    {
+      "id": "185.220.101.47",
+      "type": "ip_address",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/ip_addresses/185.220.101.47"
+      },
+      "attributes": {
+        "creation_date": 1701432000,
+        "last_analysis_date": 1748901234,
+        "last_analysis_stats": {
+          "harmless": 38,
+          "malicious": 26,
+          "suspicious": 3,
+          "timeout": 0,
+          "undetected": 27
+        },
+        "last_modification_date": 1749120456,
+        "description": "IPv4 address acting as a Tor exit node frequently observed in scanning and brute-force activity. Flagged as malicious by 26 vendors.",
+        "tags": ["tor", "scanner"]
+      }
+    },
+    {
+      "id": "45.142.212.61",
+      "type": "ip_address",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/ip_addresses/45.142.212.61"
+      },
+      "attributes": {
+        "creation_date": 1715040000,
+        "last_analysis_date": 1748965432,
+        "last_analysis_stats": {
+          "harmless": 14,
+          "malicious": 51,
+          "suspicious": 4,
+          "timeout": 0,
+          "undetected": 23
+        },
+        "last_modification_date": 1749150000,
+        "description": "Command-and-control server hosting payloads for a known malware family. High malicious consensus across vendors.",
+        "tags": ["c2", "malware", "botnet"]
+      }
+    },
+    {
+      "id": "91.108.56.130",
+      "type": "ip_address",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/ip_addresses/91.108.56.130"
+      },
+      "attributes": {
+        "creation_date": 1688212800,
+        "last_analysis_date": 1748823456,
+        "last_analysis_stats": {
+          "harmless": 60,
+          "malicious": 3,
+          "suspicious": 1,
+          "timeout": 0,
+          "undetected": 30
+        },
+        "last_modification_date": 1749001234,
+        "description": "Shared hosting address with occasional abuse reports. Low malicious detections; likely abused legitimate infrastructure.",
+        "tags": ["spam"]
+      }
+    },
+    {
+      "id": "8.8.8.8",
+      "type": "ip_address",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/ip_addresses/8.8.8.8"
+      },
+      "attributes": {
+        "creation_date": 1640995200,
+        "last_analysis_date": 1748700000,
+        "last_analysis_stats": {
+          "harmless": 74,
+          "malicious": 0,
+          "suspicious": 0,
+          "timeout": 0,
+          "undetected": 20
+        },
+        "last_modification_date": 1748800000,
+        "description": "Well-known public DNS resolver with no malicious detections. Included as a clean control sample for testing the harmless mapping path.",
+        "tags": []
+      }
+    }
+  ]
+}

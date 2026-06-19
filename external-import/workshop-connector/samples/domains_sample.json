@@ -1,0 +1,88 @@
+{
+  "response": [
+    {
+      "id": "dolor-sitamet.org",
+      "type": "domain",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/domains/dolor-sitamet.org"
+      },
+      "attributes": {
+        "creation_date": 1701432000,
+        "last_analysis_date": 1748901234,
+        "last_analysis_stats": {
+          "harmless": 41,
+          "malicious": 93,
+          "suspicious": 2,
+          "timeout": 1,
+          "undetected": 27
+        },
+        "last_modification_date": 1749120456,
+        "description": "Domain associated with a phishing campaign distributing credential-harvesting pages impersonating banking portals. Flagged as malicious by 23 vendors.",
+        "tags": ["malware", "phishing"]
+      }
+    },
+    {
+      "id": "consectetur-adipiscing.net",
+      "type": "domain",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/domains/consectetur-adipiscing.net"
+      },
+      "attributes": {
+        "creation_date": 1688212800,
+        "last_analysis_date": 1748823456,
+        "last_analysis_stats": {
+          "harmless": 58,
+          "malicious": 4,
+          "suspicious": 1,
+          "timeout": 0,
+          "undetected": 31
+        },
+        "last_modification_date": 1749001234,
+        "description": "Low-reputation domain occasionally observed in spam relays. Minimal malicious detections; likely abused legitimate infrastructure.",
+        "tags": ["spam"]
+      }
+    },
+    {
+      "id": "tempor-incididunt.com",
+      "type": "domain",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/domains/tempor-incididunt.com"
+      },
+      "attributes": {
+        "creation_date": 1715040000,
+        "last_analysis_date": 1748965432,
+        "last_analysis_stats": {
+          "harmless": 19,
+          "malicious": 47,
+          "suspicious": 5,
+          "timeout": 0,
+          "undetected": 21
+        },
+        "last_modification_date": 1749150000,
+        "description": "Command-and-control domain linked to a known botnet family. High malicious consensus across vendors; recently registered.",
+        "tags": ["c2", "botnet", "malware"]
+      }
+    },
+    {
+      "id": "utlabore-magna.io",
+      "type": "domain",
+      "links": {
+        "self": "https://www.lorem.com/api/v3/domains/utlabore-magna.io"
+      },
+      "attributes": {
+        "creation_date": 1640995200,
+        "last_analysis_date": 1748700000,
+        "last_analysis_stats": {
+          "harmless": 72,
+          "malicious": 0,
+          "suspicious": 0,
+          "timeout": 0,
+          "undetected": 20
+        },
+        "last_modification_date": 1748800000,
+        "description": "Established benign domain with no malicious detections. Included as a clean control sample for testing the harmless mapping path.",
+        "tags": []
+      }
+    }
+  ]
+}

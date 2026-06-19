@@ -1,0 +1,164 @@
+{
+  "response": [
+      {
+        "id": "vulnerability--cve-2022-13579",
+        "type": "vulnerability",
+        "links": {
+          "self": "https://www.lorem.com/api/v3/collections/vulnerability--cve-2022-13579"
+        },
+        "attributes": {
+          "name": "CVE-2022-13579",
+          "cve_id": "CVE-2022-13579",
+          "cvss": {
+            "cvssv3_x": {
+              "temporal_score": 9.8,
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+              "base_score": 9.8
+            },
+            "cvssv4_0": {
+              "temporal_score": 7.8,
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N",
+              "base_score": 9.4
+            }
+          },
+          "cpes": [
+            {
+              "vendor": "Lorem Corp",
+              "uri": "cpe:2.3:a:lorem:messaging_server:2019:cumulative_update_8:*:*:*:*:*:*",
+              "version": "2019 Cumulativeupdate8",
+              "product": "Messaging Server"
+            },
+            {
+              "vendor": "Lorem Corp",
+              "uri": "cpe:2.3:a:lorem:messaging_server:2016:cumulative_update_18:*:*:*:*:*:*",
+              "version": "2016 Cumulativeupdate18",
+              "product": "Messaging Server"
+            }
+          ],
+          "cwe": {
+            "title": "Server-Side Request Forgery (SSRF)",
+            "id": "CWE-918"
+          },
+          "epss": {
+            "score": 0.94346,
+            "percentile": 0.99951
+          },
+          "risk_rating": "CRITICAL",
+          "exploitation_consequence": "Code Execution",
+          "exploit_availability": "Publicly Available",
+          "date_of_disclosure": 1615752311,
+          "creation_date": 1615832219,
+          "last_modification_date": 1750839775,
+          "tags": [
+            "was_zero_day",
+            "has_exploits",
+            "observed_in_the_wild",
+            "media_attention"
+          ],
+          "description": "A remote code execution vulnerability exists in Lorem Messaging Server 2019 Cumulative Update 8. An attacker who successfully exploited the vulnerability could run arbitrary code on the affected system."
+        }
+      },
+      {
+        "id": "vulnerability--cve-2023-44821",
+        "type": "vulnerability",
+        "links": {
+          "self": "https://www.lorem.com/api/v3/collections/vulnerability--cve-2023-44821"
+        },
+        "attributes": {
+          "name": "CVE-2023-44821",
+          "cve_id": "CVE-2023-44821",
+          "cvss": {
+            "cvssv3_x": {
+              "temporal_score": 7.5,
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H",
+              "base_score": 7.5
+            },
+            "cvssv4_0": {
+              "temporal_score": 5.0,
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:N",
+              "base_score": 5.0
+            }
+          },
+          "cpes": [
+            {
+              "vendor": "Ipsum Software",
+              "uri": "cpe:2.3:a:ipsum:web_gateway:4.2.0:*:*:*:*:*:*:*",
+              "version": "4.2.0",
+              "product": "Web Gateway"
+              },
+            {
+              "vendor": "Ipsum Software",
+              "uri": "cpe:2.3:a:ipsum:web_gateway:3.0.0:*:*:*:*:*:*:*",
+              "version": "3.0.0",
+              "product": "Web Gateway"
+            }
+          ],
+          "cwe": {
+            "title": "Improper Restriction of Operations within the Bounds of a Memory Buffer",
+            "id": "CWE-119"
+          },
+          "epss": {
+            "score": 0.12047,
+            "percentile": 0.84512
+          },
+          "risk_rating": "HIGH",
+          "exploitation_consequence": "Denial of Service",
+          "exploit_availability": "Proof of Concept",
+          "date_of_disclosure": 1696939200,
+          "creation_date": 1697011200,
+          "last_modification_date": 1748901234,
+          "tags": [
+            "has_exploits"
+          ],
+          "description": "A buffer overflow vulnerability in Ipsum Web Gateway versions 3.0.0 through 4.1.x allows an unauthenticated remote attacker to cause a denial of service via a crafted request."
+        }
+      },
+      {
+        "id": "vulnerability--cve-2024-10293",
+        "type": "vulnerability",
+        "links": {
+          "self": "https://www.lorem.com/api/v3/collections/vulnerability--cve-2024-10293"
+        },
+        "attributes": {
+          "name": "CVE-2024-10293",
+          "cve_id": "CVE-2024-10293",
+          "cvss": {
+            "cvssv3_x": {
+              "temporal_score": 4.3,
+              "vector": "CVSS:3.1/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N",
+              "base_score": 4.3
+            },
+            "cvssv4_0": {
+              "temporal_score": 4.0,
+              "vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N",
+              "base_score": 4.0
+            }
+          },
+          "cpes": [
+            {
+              "vendor": "Dolor Systems",
+              "uri": "cpe:2.3:a:dolor:dashboard:7.1.3:*:*:*:*:*:*:*",
+              "version": "7.1.3",
+              "product": "Dashboard"
+            }
+          ],
+          "cwe": {
+            "title": "Exposure of Sensitive Information to an Unauthorized Actor",
+            "id": "CWE-200"
+          },
+          "epss": {
+            "score": 0.00421,
+            "percentile": 0.21034
+          },
+          "risk_rating": "MEDIUM",
+          "exploitation_consequence": "Information Disclosure",
+          "exploit_availability": "None",
+          "date_of_disclosure": 1729382400,
+          "creation_date": 1729468800,
+          "last_modification_date": 1748700000,
+          "tags": [],
+          "description": "An information disclosure vulnerability in Dolor Systems Dashboard 7.1.3 allows an authenticated low-privileged user to read sensitive configuration values via an exposed API endpoint."
+        }
+      }
+    ]
+}
