@@ -93,7 +93,14 @@ class Intel471Stream(ABC):
                         f"{self.__class__.__name__} calls {self.client_wrapper.backend_name} API "
                         f"with arguments: {str(kwargs)}."
                     )
-                    api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                    try:
+                        api_response = getattr(api_instance, self.api_method_name)(**kwargs)
+                    except self.client_wrapper.unauthorized_exception:
+                        self.helper.log_warning(
+                            f"{self.__class__.__name__} is not entitled to {self.label} on "
+                            f"{self.client_wrapper.backend_name}. Skipping."
+                        )
+                        break
                     api_payload_objects = (
                         getattr(api_response, self.api_payload_objects_key) or []
                     )
