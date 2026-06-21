@@ -1,0 +1,168 @@
+{
+  "activity": {
+    "data": {
+      "es_id": "stealer_logs/123456789",
+      "es_score": 1,
+      "highlights": {},
+      "id": "123456789",
+      "index": "stealer_log",
+      "metadata": {
+        "estimated_created_at": "2025-11-04T23:40:00+00:00",
+        "event_id": null,
+        "first_crawled_at": "2025-11-03T01:32:37.457878+00:00",
+        "last_crawled_at": "2025-11-05T00:07:31.667497+00:00",
+        "payload_digest": "adbdd1490ab5366fcaed6b6f9521aab51db7f0ea",
+        "scraped_at": "2025-11-05T00:07:32.080095+00:00",
+        "source": "stealer_logs",
+        "crawled_by": null,
+        "flare_url": "https://app.flare.io/#/stealer_log/stealer_logs/123456789"
+      },
+      "uid": "stealer_log/stealer_logs/123456789",
+      "url": null,
+      "browser_url": null,
+      "name": null,
+      "installed_at": "2025-11-04T23:40:00+00:00",
+      "updated_at": null,
+      "seller_id": null,
+      "isp": null,
+      "information": null,
+      "credentials": [
+        {
+          "url": "https://accounts.example.com/login",
+          "username": "user@example.com",
+          "password": "ninja",
+          "application": ""
+        }
+      ],
+      "cookies": null,
+      "user_information": {
+        "ip_address": "127.0.0.1",
+        "ip_network": null,
+        "username": "",
+        "country_code": "",
+        "zip_code": "",
+        "location": "",
+        "hwid": "",
+        "current_language": "",
+        "screensize_width": null,
+        "screensize_height": null,
+        "timezone": "",
+        "os": "",
+        "uac": "",
+        "process_elevation": null,
+        "available_keyboards": null,
+        "hardware": [
+          "HOSTNAME: DESKTOP-41"
+        ],
+        "anti_viruses": null
+      },
+      "malware_information": {
+        "malware_family": "Badboi",
+        "build_id": "Windows 11 Home Single Language",
+        "file_location": "C:\\WINDOWS\\system32",
+        "infection_date": "2025-11-04T23:40:00+00:00"
+      },
+      "files": [
+        "All_Passwords.txt",
+        "Information.txt"
+      ],
+      "price": null,
+      "currency": null,
+      "features": {
+        "domains": [
+          "an.example.com"
+        ],
+        "emails": [
+          "user@example.com"
+        ],
+        "ip_addresses": [
+          "127.0.0.1"
+        ],
+        "ip_addresses_cidr": [
+          "127.0.0.1"
+        ],
+        "reversed_domains": [
+          "com.example.an"
+        ],
+        "urls": [
+          "example.com"
+        ],
+        "usernames": [
+          "12345"
+        ],
+        "vulnerabilities": null
+      },
+      "sources": [
+        "stealer_logs_live",
+        "stealer_logs_private"
+      ]
+    },
+    "duplicates": [],
+    "header": {
+      "actor": null,
+      "actor_id": null,
+      "bank": null,
+      "bin": null,
+      "brand": null,
+      "credential_count": 31,
+      "category_name": "Infected Device",
+      "content_hash": "adbdd1490ab5366fcaed6b6f9521aab51db7f0ea",
+      "content_preview": "1 credentials",
+      "country": null,
+      "duplicates": [],
+      "es_score": 1,
+      "expiration": null,
+      "highlights": {},
+      "host": null,
+      "id": "123456789",
+      "infection_date": "2025-11-04T23:40:00+00:00",
+      "parent_id": null,
+      "parent_title": null,
+      "parent_title_en": null,
+      "parent_uid": null,
+      "parent_uids": [
+        "chat_message/telegram/-1/1"
+      ],
+      "risk": {
+        "score": 3
+      },
+      "similar_items_count": 0,
+      "source": "stealer_logs",
+      "source_name": "Stealer Logs",
+      "target_name": "Stealer Logs",
+      "tags": [],
+      "notes": null,
+      "state_code": null,
+      "timestamp": "2025-11-04T23:40:00+00:00",
+      "title": "",
+      "type": "stealer_log",
+      "uid": "stealer_log/stealer_logs/123456789",
+      "user_risk_score": null,
+      "user_notes": null,
+      "ignored_at": null,
+      "remediated_at": null,
+      "verb": "sold",
+      "external_url": "s3://sl/-1/d689b6e477436f493172b7ceae287ea9944bfc7f",
+      "external_netloc": "sl",
+      "can_have_duplicates": true,
+      "priority_action_uuid_related": false,
+      "analyzers_items_uids": [],
+      "victim_name": null,
+      "contains_secrets": null,
+      "secrets_metadata": null
+    },
+    "history_logs": null,
+    "metadata": {
+      "estimated_created_at": "2025-11-04T23:40:00+00:00",
+      "event_id": null,
+      "first_crawled_at": "2025-11-03T01:32:37.457878+00:00",
+      "last_crawled_at": "2025-11-05T00:07:31.667497+00:00",
+      "payload_digest": "adbdd1490ab5366fcaed6b6f9521aab51db7f0ea",
+      "scraped_at": "2025-11-05T00:07:32.080095+00:00",
+      "source": "stealer_logs",
+      "crawled_by": null,
+      "flare_url": "https://app.flare.io/#/stealer_log/stealer_logs/123456789"
+    },
+    "similar_items": []
+  }
+}

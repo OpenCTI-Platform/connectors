@@ -1,0 +1,28 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  name: 'Microsoft Defender Incidents'
+  scope: 'defender'
+  log_level: 'error'
+  duration_period: 'PT1H'
+  #============================================#
+  # Optional connector's definition parameters #
+  #============================================#
+  #queue_threshold: 500
+  #run_and_terminate: false
+  #send_to_queue: true
+  #send_to_directory: false
+  #send_to_directory_path: 'ChangeMe'
+  #send_to_directory_retention: 7
+
+microsoft_defender_incidents:
+  tenant_id: 'ChangeMe'
+  client_id: 'ChangeMe'
+  client_secret: 'ChangeMe'
+  import_start_date: '2025-01-01T00:00:00Z'
+  #api_base_url: 'https://graph.microsoft.com/v1.0'
+  #incident_path: '/security/incidents'
