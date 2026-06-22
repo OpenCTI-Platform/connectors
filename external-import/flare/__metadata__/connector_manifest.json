@@ -6,7 +6,7 @@
   "logo": "external-import/flare/__metadata__/logo.png",
   "use_cases" : [],
   "verified": true,
-  "last_verified_date": "18-06-2026",
+  "last_verified_date": "2026-06-18",
   "playbook_supported": false,
   "max_confidence_level": 50,
   "support_version": ">=6.8.12",
