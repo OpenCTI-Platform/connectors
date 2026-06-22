@@ -1,7 +1,7 @@
 version: '3.2'
 services:
-  connector-lastinfosec:
-    image: opencti/connector-lastinfosec:latest
+  connector-lastinfosec-feed:
+    image: opencti/connector-lastinfosec-feed:latest
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
