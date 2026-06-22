@@ -674,6 +674,17 @@ Find all the configuration variables available here: [Connector Configurations](
 _The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
 For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
+#### Detached opencti-ng mode (optional)
+
+Set `opencti-ng.url` + `opencti-ng.jwt` (config.yml), or `OPENCTI_NG_URL` + `OPENCTI_NG_JWT` (env), to ingest **directly into opencti-ng** over a JWT — no OpenCTI worker/queue. The write tenant and connector id are read from the JWT, and run state is stored server-side (resettable from the opencti-ng UI). Mint the JWT in the opencti-ng repo:
+
+```bash
+OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- \
+  --tenant <tenant-uuid> --name "Google Threat Intel Feeds"
+```
+
+`OPENCTI_URL`/`OPENCTI_TOKEN` are still required for config validation but unused in this mode (leave them as placeholders).
+
 ### Development
 
 #### Contributing

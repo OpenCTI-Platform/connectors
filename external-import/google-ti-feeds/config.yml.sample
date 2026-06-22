@@ -2,6 +2,18 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+# Detached opencti-ng mode (optional): set both keys to ingest directly into
+# opencti-ng over a JWT (no OpenCTI worker/queue). The write tenant and connector
+# id are read from the JWT; run state lives server-side. The `opencti` block above
+# is still required for config validation but is unused in this mode.
+# Generate the JWT in the opencti-ng repo:
+#   OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- \
+#     --tenant <tenant-uuid> --name "Google Threat Intel Feeds"
+# (env equivalents: OPENCTI_NG_URL / OPENCTI_NG_JWT)
+# opencti-ng:
+#   url: 'http://localhost:4100'
+#   jwt: 'ChangeMe'
+
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'

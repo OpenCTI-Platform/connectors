@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, HttpUrl, SecretStr, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -162,6 +162,27 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     alienvault: AlienvaultConfig = Field(default_factory=AlienvaultConfig)
+
+    # Detached opencti-ng mode (optional). When both are set, the connector
+    # ingests directly into opencti-ng over a JWT (no OpenCTI worker/queue); the
+    # write tenant and connector id are read from the JWT, run state lives
+    # server-side. Top-level fields with an explicit alias because the SDK routes
+    # any `OPENCTI_*` env var into the `opencti` model (env_nested_max_split=1).
+    opencti_ng_url: HttpUrl | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_url", "OPENCTI_NG_URL"),
+        description="opencti-ng base URL for detached mode (set with opencti_ng_jwt).",
+    )
+    opencti_ng_jwt: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_jwt", "OPENCTI_NG_JWT"),
+        description="Long-lived connector JWT for opencti-ng detached mode.",
+    )
+
+    @property
+    def opencti_ng_enabled(self) -> bool:
+        """Whether detached opencti-ng mode is configured."""
+        return self.opencti_ng_url is not None and self.opencti_ng_jwt is not None
 
     @model_validator(mode="before")
     @classmethod

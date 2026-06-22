@@ -15,6 +15,7 @@ from src.models.configs import (
     _ConfigLoaderConnector,
     _ConfigLoaderMitre,
     _ConfigLoaderOCTI,
+    _ConfigLoaderOCTING,
 )
 
 
@@ -52,9 +53,18 @@ class ConfigLoaderConnector(_ConfigLoaderConnector):
 class ConfigLoader(ConfigBaseSettings):
     """Interface for loading global configuration settings."""
 
-    opencti: _ConfigLoaderOCTI = Field(
-        default_factory=_ConfigLoaderOCTI,
-        description="OpenCTI configurations.",
+    # Optional: legacy OpenCTI (worker/queue) mode. Unset in detached opencti-ng
+    # mode. Optional so the connector starts with only an `opencti-ng` block.
+    opencti: _ConfigLoaderOCTI | None = Field(
+        default=None,
+        description="OpenCTI configurations (legacy worker mode).",
+    )
+    # Optional: detached opencti-ng mode. When set, the connector ingests
+    # directly into opencti-ng with a JWT and keeps state in a local file.
+    opencti_ng: _ConfigLoaderOCTING | None = Field(
+        default=None,
+        alias="opencti-ng",
+        description="opencti-ng configurations (detached, JWT-authenticated).",
     )
     connector: ConfigLoaderConnector = Field(
         default_factory=ConfigLoaderConnector,

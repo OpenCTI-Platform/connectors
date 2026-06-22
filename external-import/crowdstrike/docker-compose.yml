@@ -5,6 +5,16 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      # ── Detached opencti-ng mode (optional) ──────────────────────────────
+      # Set both to ingest directly into opencti-ng over a JWT (no OpenCTI
+      # worker/queue). The write tenant + connector id are read from the JWT;
+      # run state lives server-side. Generate the JWT in the opencti-ng repo:
+      #   OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- \
+      #     --tenant <tenant-uuid> --name CrowdStrike
+      # OPENCTI_URL/OPENCTI_TOKEN above are still required to validate config
+      # but are unused in this mode (leave them as placeholders).
+      # - OPENCTI_NG_URL=http://localhost:4100
+      # - OPENCTI_NG_JWT=ChangeMe
       - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=CrowdStrike
       - CONNECTOR_SCOPE=crowdstrike
@@ -42,6 +52,7 @@ services:
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE=80
       - CROWDSTRIKE_INDICATOR_HIGH_SCORE_LABELS=MaliciousConfidence/High
       - CROWDSTRIKE_INDICATOR_UNWANTED_LABELS= # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
+      - CROWDSTRIKE_BUNDLE_BATCH_SIZE=5000 # STIX objects per bundle sent to OpenCTI across all importers (batched, not one bundle per entity). Higher = fewer/bigger requests.
       - CROWDSTRIKE_NO_FILE_TRIGGER_IMPORT=true
       - CROWDSTRIKE_ATTACK_VERSION=17.1
       # Optional override for air-gapped or mirrored environments

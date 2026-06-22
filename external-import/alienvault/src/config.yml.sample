@@ -2,6 +2,17 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+# Detached opencti-ng mode (optional): set both keys to ingest directly into
+# opencti-ng over a JWT (no OpenCTI worker/queue). The write tenant and connector
+# id are read from the JWT; run state lives server-side. The `opencti` block above
+# is still required for config validation but is unused in this mode.
+# Generate the JWT in the opencti-ng repo:
+#   OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- \
+#     --tenant <tenant-uuid> --name AlienVault
+# (env equivalents: OPENCTI_NG_URL / OPENCTI_NG_JWT)
+# opencti_ng_url: 'http://localhost:4100'
+# opencti_ng_jwt: 'ChangeMe'
+
 connector:
   type: 'EXTERNAL_IMPORT'
   id: '8bbae241-6289-4faf-b7d6-7503bed50bbc'  # Optional (default: 8bbae241-6289-4faf-b7d6-7503bed50bbc)

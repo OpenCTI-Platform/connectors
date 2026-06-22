@@ -494,8 +494,9 @@ class IndicatorImporter(BaseImporter):
         self._info("Processing {0} indicators...", indicator_count)
 
         latest_updated_datetime = None
-
         failed = 0
+        # Objects are buffered by the shared batcher and flushed as larger
+        # bundles instead of one bundle per indicator.
         for indicator in indicators:
             result = self._process_indicator(indicator)
             if not result:
@@ -507,6 +508,8 @@ class IndicatorImporter(BaseImporter):
                 or updated_date > latest_updated_datetime
             ):
                 latest_updated_datetime = updated_date
+
+        self._flush_bundle()  # emit the tail before state advances
 
         imported = indicator_count - failed
         total = imported + failed
@@ -522,7 +525,7 @@ class IndicatorImporter(BaseImporter):
         return latest_updated_datetime
 
     def _process_indicator(self, indicator: dict) -> bool:
-        self._info("Processing indicator {0}...", indicator["id"])
+        self._debug("Processing indicator {0}...", indicator["id"])
 
         if self._is_indicator_too_old(indicator):
             return True
@@ -532,11 +535,7 @@ class IndicatorImporter(BaseImporter):
             self._warning("Discarding indicator {0} bundle", indicator["id"])
             return False
 
-        # with open(f"indicator_bundle_{indicator_bundle['id']}.json", "w") as f:
-        #     f.write(indicator_bundle.serialize(pretty=True))
-
-        self._send_bundle(indicator_bundle)
-
+        self._batch_bundle(indicator_bundle)
         return True
 
     def _is_indicator_too_old(self, indicator: dict) -> bool:

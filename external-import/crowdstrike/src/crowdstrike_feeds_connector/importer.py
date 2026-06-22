@@ -29,6 +29,26 @@ class BaseImporter(ABC):
         self.tlp_marking = tlp_marking
         self.work_id: Optional[str] = None
 
+        # Bundle batching: importers build a small bundle per entity but, rather
+        # than POSTing each one (one ingestion request/job per entity), buffer
+        # the objects and flush them as one larger bundle every ~batch_size
+        # objects. Flush at natural boundaries (end of a processed page) so state
+        # only advances once the buffered objects have actually been sent.
+        try:
+            self._bundle_batch_size = int(config.crowdstrike.bundle_batch_size)
+        except Exception:  # noqa: BLE001 — be permissive about config shape
+            self._bundle_batch_size = 5000
+        if self._bundle_batch_size < 1:
+            self._bundle_batch_size = 5000
+        self._bundle_buffer: list = []
+        self._bundle_seen_ids: set = set()
+        # Also cap a bundle by serialized byte size: object count alone doesn't
+        # bound the request body (a report embeds its PDF as base64, so a few
+        # hundred objects can be hundreds of MB and trip the server's body
+        # limit). Stays well under opencti-ng's 512 MiB request limit.
+        self._bundle_bytes = 0
+        self._bundle_max_bytes = 64 * 1024 * 1024
+
     def start(self, work_id: str, state: Dict[str, Any]) -> Dict[str, Any]:
         """
         Start import.
@@ -88,6 +108,41 @@ class BaseImporter(ABC):
             work_id=self.work_id,
             bypass_split=True,
         )
+
+    # ── bundle batching ──────────────────────────────────────────────────
+    def _batch_bundle(self, bundle: stix2.Bundle) -> None:
+        """Buffer a per-entity bundle's objects; flush when the buffer is full.
+
+        De-dups by STIX id within the current buffer (shared objects like the
+        author identity or TLP marking repeat across entities). Call
+        :meth:`_flush_bundle` at the end of a processing run to emit the tail.
+        """
+        for obj in bundle.objects:
+            oid = getattr(obj, "id", None)
+            if oid is not None and oid in self._bundle_seen_ids:
+                continue
+            if oid is not None:
+                self._bundle_seen_ids.add(oid)
+            self._bundle_buffer.append(obj)
+            try:
+                self._bundle_bytes += len(obj.serialize())
+            except Exception:  # noqa: BLE001 — sizing is best-effort
+                self._bundle_bytes += 1024
+            # Flush on either limit — a single large object (PDF) flushes at once.
+            if (
+                len(self._bundle_buffer) >= self._bundle_batch_size
+                or self._bundle_bytes >= self._bundle_max_bytes
+            ):
+                self._flush_bundle()
+
+    def _flush_bundle(self) -> None:
+        """Send any buffered objects as a single bundle and reset the buffer."""
+        if not self._bundle_buffer:
+            return
+        self._send_bundle(stix2.Bundle(objects=self._bundle_buffer, allow_custom=True))
+        self._bundle_buffer = []
+        self._bundle_seen_ids = set()
+        self._bundle_bytes = 0
 
     @property
     def name(self):

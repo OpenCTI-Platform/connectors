@@ -3,7 +3,7 @@
 import traceback
 
 from crowdstrike_feeds_connector import ConnectorSettings, CrowdStrike
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, OpenCTINGConnectorHelper
 
 if __name__ == "__main__":
     """
@@ -11,7 +11,28 @@ if __name__ == "__main__":
     """
     try:
         settings = ConnectorSettings()
-        helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
+
+        # Detached opencti-ng mode: when `opencti_ng_url` + `opencti_ng_jwt` are
+        # configured (config.yml or OPENCTI_NG_* env), ingest directly into
+        # opencti-ng over a JWT (no OpenCTI worker/queue). The write tenant and
+        # connector id are read from the JWT; run state lives server-side.
+        if settings.opencti_ng_enabled:
+            helper = OpenCTINGConnectorHelper(
+                config={
+                    "opencti-ng": {
+                        "url": str(settings.opencti_ng_url),
+                        "jwt": settings.opencti_ng_jwt.get_secret_value(),
+                    },
+                    "connector": {
+                        "name": settings.connector.name,
+                        "type": "EXTERNAL_IMPORT",
+                        "scope": settings.connector.scope,
+                        "duration_period": settings.connector.duration_period,
+                    },
+                }
+            )
+        else:
+            helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
         connector = CrowdStrike(config=settings, helper=helper)
         connector.run()

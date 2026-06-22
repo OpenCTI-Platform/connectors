@@ -2,6 +2,17 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+# Detached opencti-ng mode (optional): set both keys below to ingest directly
+# into opencti-ng over a JWT (no OpenCTI worker/queue). The write tenant and
+# connector id are read from the JWT; run state lives server-side. The `opencti`
+# block above is still required for config validation but is unused in this mode.
+# Generate the JWT in the opencti-ng repo:
+#   OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- \
+#     --tenant <tenant-uuid> --name CrowdStrike
+# (env equivalents: OPENCTI_NG_URL / OPENCTI_NG_JWT)
+# opencti_ng_url: 'http://localhost:4100'
+# opencti_ng_jwt: 'ChangeMe'
+
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'
@@ -46,5 +57,6 @@ crowdstrike:
   indicator_high_score_labels: 'MaliciousConfidence/High'
   indicator_unwanted_labels: '' # Can be used to filter low confidence indicators: "MaliciousConfidence/Low", "MaliciousConfidence/Medium"
   indicator_max_records_per_run: 20000 # Max indicators ingested per run (CrowdStrike can return up to ~1.5M IoCs over 30 days). Set to 0 (or any negative number) to disable the cap.
+  bundle_batch_size: 5000 # STIX objects accumulated per bundle sent to OpenCTI across all importers (instead of one bundle per entity). Higher = fewer/bigger ingestion requests.
   no_file_trigger_import: true
   attack_version: "17.1"

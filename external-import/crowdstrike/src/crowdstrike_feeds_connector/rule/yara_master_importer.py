@@ -285,7 +285,9 @@ class YaraMasterImporter(BaseImporter):
             # with open(f"yara_rule_bundle_{yara_rule.name}.json", "w") as f:
             #     f.write(yara_rule_bundle.serialize(pretty=True))
 
-            self._send_bundle(yara_rule_bundle)
+            self._batch_bundle(yara_rule_bundle)
+
+        self._flush_bundle()  # emit buffered YARA rules for this group
 
         success_count = total_count - failed_count
 

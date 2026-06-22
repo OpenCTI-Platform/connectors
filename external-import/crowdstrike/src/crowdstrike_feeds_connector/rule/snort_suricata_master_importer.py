@@ -294,7 +294,9 @@ class SnortMasterImporter(BaseImporter):
             # with open(f"snort_rule_bundle_{snort_rule.name}.json", "w") as f:
             #     f.write(snort_rule_bundle.serialize(pretty=True))
 
-            self._send_bundle(snort_rule_bundle)
+            self._batch_bundle(snort_rule_bundle)
+
+        self._flush_bundle()  # emit buffered Snort rules for this group
 
         success_count = total_count - failed_count
 

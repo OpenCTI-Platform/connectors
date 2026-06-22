@@ -1,6 +1,19 @@
-opencti:
-  url: 'http://localhost'
-  token: 'ChangeMe'
+# ── Detached opencti-ng mode (recommended) ──────────────────────────────
+# When this block is present, the connector ingests directly into opencti-ng
+# using a JWT — no OpenCTI worker. Run state lives on the server (connectors
+# table), so it survives restarts and an operator can reset it from the UI.
+# Generate the JWT in the opencti-ng repo:
+#   OPENCTI_ENCRYPTION_KEY=<server key> \
+#     cargo run --bin connector_jwt -- --tenant <tenant-uuid> --name mitre
+opencti-ng:
+  url: 'http://localhost:4100'
+  jwt: 'ChangeMe'
+
+# ── Legacy OpenCTI (worker) mode ────────────────────────────────────────
+# Use this block INSTEAD of `opencti-ng` to run against a classic OpenCTI.
+# opencti:
+#   url: 'http://localhost'
+#   token: 'ChangeMe'
 
 connector:
   type: 'EXTERNAL_IMPORT'

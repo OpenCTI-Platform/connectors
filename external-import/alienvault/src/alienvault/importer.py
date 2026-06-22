@@ -53,6 +53,10 @@ class PulseImporter:
 
     _STATE_UPDATE_INTERVAL_COUNT = 20
 
+    # How often to log a running count while the (potentially very long)
+    # subscribed-pulse fetch paginates the OTX feed.
+    _FETCH_PROGRESS_INTERVAL = 200
+
     def __init__(
         self,
         config: PulseImporterConfig,
@@ -210,7 +214,34 @@ class PulseImporter:
         self.helper.log_error(fmt_msg)
 
     def _fetch_subscribed_pulses(self, modified_since: datetime) -> List[Pulse]:
-        pulses = self.client.get_pulses_subscribed(modified_since)
+        # Stream the feed so we can report progress: the OTX `getsince` walk can
+        # take a long time on a first run (a far-back PULSE_START_TIMESTAMP pulls
+        # the whole backlog), and no bundle is sent until the fetch completes.
+        # A cheap count probe gives the total upfront for an "X/total" bar.
+        total = self.client.count_pulses_subscribed(modified_since)
+        if total is not None:
+            self._info(
+                "Fetching {0} subscribed pulse(s) since {1}...", total, modified_since
+            )
+
+        pulses: List[Pulse] = []
+        for pulse in self.client.iter_pulses_subscribed(modified_since):
+            pulses.append(pulse)
+            if len(pulses) % self._FETCH_PROGRESS_INTERVAL == 0:
+                if total:
+                    self._info(
+                        "Fetching subscribed pulses... {0}/{1} ({2}%)",
+                        len(pulses),
+                        total,
+                        round(len(pulses) * 100 / total),
+                    )
+                else:
+                    self._info(
+                        "Fetching subscribed pulses... {0} fetched so far (since {1})",
+                        len(pulses),
+                        modified_since,
+                    )
+        self._info("Fetched {0} subscribed pulse(s) total", len(pulses))
         return self._sort_pulses(pulses)
 
     @staticmethod

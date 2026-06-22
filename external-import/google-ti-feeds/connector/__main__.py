@@ -9,7 +9,7 @@ from connector.src.custom.exceptions import GTIConfigurationError
 from connector.src.octi.connector import Connector
 from connector.src.octi.global_config import GlobalConfig
 from dotenv import load_dotenv
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, OpenCTINGConnectorHelper
 
 logger = logging.getLogger(__name__)
 
@@ -48,11 +48,32 @@ def _add_gticonf(global_config: "GlobalConfig") -> None:
         logger.error("Failed to load GTI configuration", {"error": str(config_err)})
 
 
-def load_helper(global_config: "GlobalConfig") -> "OpenCTIConnectorHelper | None":
-    """Load OCTIHelper."""
+def load_helper(global_config: "GlobalConfig"):
+    """Load the OpenCTI helper.
+
+    In detached opencti-ng mode (`opencti_ng.url` + `opencti_ng.jwt` configured)
+    return an `OpenCTINGConnectorHelper` that ingests directly into opencti-ng
+    over a JWT; otherwise the classic `OpenCTIConnectorHelper`.
+    """
     try:
-        octi_helper = OpenCTIConnectorHelper(config=global_config.to_dict())
-        return octi_helper
+        ng = global_config.octi_ng_config
+        if ng.enabled:
+            cc = global_config.connector_config
+            scope = cc.scope
+            if isinstance(scope, str):
+                scope = [s.strip() for s in scope.split(",") if s.strip()]
+            return OpenCTINGConnectorHelper(
+                config={
+                    "opencti-ng": {"url": str(ng.url), "jwt": ng.jwt},
+                    "connector": {
+                        "name": cc.name,
+                        "type": "EXTERNAL_IMPORT",
+                        "scope": scope,
+                        "duration_period": cc.duration_period,
+                    },
+                }
+            )
+        return OpenCTIConnectorHelper(config=global_config.to_dict())
     except Exception as helper_err:
         logger.error("Failed to initialize OpenCTI helper", {"error": str(helper_err)})
         raise

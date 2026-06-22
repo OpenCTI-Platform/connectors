@@ -156,6 +156,8 @@ class ActorImporter(BaseImporter):
             ):
                 latest_modified_timestamp = modified_ts
 
+        self._flush_bundle()  # emit buffered actors before state advances
+
         RelatedActorImporter._resolved_actor_entity_cache.update(
             {
                 a.get("id"): a.get("name")
@@ -188,7 +190,7 @@ class ActorImporter(BaseImporter):
 
         actor_bundle = self._create_actor_bundle(actor)
 
-        self._send_bundle(actor_bundle)
+        self._batch_bundle(actor_bundle)
 
     def _create_actor_bundle(self, actor) -> Bundle:
         author = self.author

@@ -31,6 +31,24 @@ class _ConfigLoaderOCTI(ConfigBaseSettings):
     )
 
 
+class _ConfigLoaderOCTING(ConfigBaseSettings):
+    """Interface for loading **opencti-ng** dedicated configuration.
+
+    Detached mode: the connector ingests directly into opencti-ng using a JWT
+    (no OpenCTI registration / worker). The write tenant is read from the JWT,
+    so only ``url`` + ``jwt`` are required.
+    """
+
+    url: HttpUrlToString = Field(
+        alias="OPENCTI_NG_URL",
+        description="The opencti-ng platform URL.",
+    )
+    jwt: str = Field(
+        alias="OPENCTI_NG_JWT",
+        description="Long-lived connector JWT (generate with opencti-ng's `connector-jwt` tool).",
+    )
+
+
 class _ConfigLoaderConnector(ConfigBaseSettings):
     """Interface for loading Connector dedicated configuration."""
 

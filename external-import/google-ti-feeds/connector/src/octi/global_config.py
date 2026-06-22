@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any
 
 from connector.src.octi.configs.connector_config import ConnectorConfig
 from connector.src.octi.configs.octi_config import OctiConfig
+from connector.src.octi.configs.octi_ng_config import OctiNgConfig
 from connector.src.octi.exceptions.configuration_error import ConfigurationError
 from pydantic_core import ValidationError
 
@@ -28,6 +29,14 @@ class GlobalConfig:
         except ValidationError as e:
             raise ConfigurationError(
                 "Error loading the connector configuration", errors=e.errors
+            ) from e
+        # Optional detached opencti-ng connection. Kept off the legacy helper
+        # config dict (`to_dict`); read directly via `octi_ng_config` at startup.
+        try:
+            self.octi_ng_config = OctiNgConfig()
+        except ValidationError as e:
+            raise ConfigurationError(
+                "Error loading the opencti-ng configuration", errors=e.errors
             ) from e
 
         self.instanciate_configs.update(

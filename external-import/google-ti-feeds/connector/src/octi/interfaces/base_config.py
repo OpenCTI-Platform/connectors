@@ -47,8 +47,10 @@ class BaseConfig(ABC, BaseSettings):
         """
         path = Path("config.yml")
         try:
-            raw = yaml.safe_load(path.read_text())
-            data = raw.get(cls.yaml_section)
+            raw = yaml.safe_load(path.read_text()) or {}
+            # A missing section yields {} (not None) so optional configs like
+            # `opencti_ng` don't break pydantic-settings' source merge.
+            data = raw.get(cls.yaml_section) or {}
         except Exception:
             data = {}
 

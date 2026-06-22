@@ -6,7 +6,7 @@ import urllib
 from datetime import datetime, timezone
 from typing import Optional
 
-from pycti import OpenCTIConnectorHelper
+from pycti import OpenCTIConnectorHelper, OpenCTINGConnectorHelper
 from src import ConfigLoader
 
 from .constants import (
@@ -59,7 +59,17 @@ class Mitre:
         # Load configuration file and connection helper
         # Instantiate the connector helper from config
         self.config = ConfigLoader()
-        self.helper = OpenCTIConnectorHelper(config=self.config.model_dump_pycti())
+        # Detached mode: when an `opencti-ng` block is configured, ingest
+        # directly into opencti-ng (JWT auth, file-based state) instead of going
+        # through the legacy OpenCTI worker/queue.
+        if self.config.opencti_ng is not None:
+            self.helper = OpenCTINGConnectorHelper(
+                config=self.config.model_dump_pycti()
+            )
+        else:
+            self.helper = OpenCTIConnectorHelper(
+                config=self.config.model_dump_pycti()
+            )
 
         self.mitre_remove_statement_marking = self.config.mitre.remove_statement_marking
 

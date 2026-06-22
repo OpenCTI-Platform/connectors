@@ -224,6 +224,8 @@ class ReportImporter(BaseImporter):
             ):
                 latest_modified_timestamp = last_modified_ts
 
+        self._flush_bundle()  # emit buffered reports before state advances
+
         latest_modified_datetime = (
             timestamp_to_datetime(latest_modified_timestamp)
             if latest_modified_timestamp is not None
@@ -254,7 +256,7 @@ class ReportImporter(BaseImporter):
 
         # with open(f"report_bundle_{report.id}.json", "w") as f:
         #     f.write(report_bundle.serialize(pretty=True))
-        self._send_bundle(report_bundle)
+        self._batch_bundle(report_bundle)
 
     def _get_report_pdf(
         self, report_id: int, report_name: str

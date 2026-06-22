@@ -10,6 +10,7 @@ from connectors_sdk import (
 )
 from crowdstrike_feeds_services.utils import is_timestamp_in_future
 from pydantic import (
+    AliasChoices,
     Field,
     HttpUrl,
     PositiveInt,
@@ -275,6 +276,18 @@ class CrowdstrikeConfig(BaseConfigModel):
             "indicator."
         ),
     )
+    bundle_batch_size: int = Field(
+        default=5000,
+        ge=1,
+        description=(
+            "Number of STIX objects to accumulate before sending a bundle to "
+            "OpenCTI. All importers (indicators, reports, actors, malware, "
+            "vulnerabilities, rules) batch entities into larger bundles instead "
+            "of one bundle per entity, which drastically cuts the number of "
+            "ingestion requests/jobs. A bundle may slightly exceed this size "
+            "(one entity's objects are never split across bundles)."
+        ),
+    )
 
     # Trigger import configuration
     no_file_trigger_import: bool = Field(
@@ -343,3 +356,25 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     crowdstrike: CrowdstrikeConfig = Field(default_factory=CrowdstrikeConfig)
+
+    # Detached opencti-ng mode (optional). When both are set, the connector
+    # ingests directly into opencti-ng over a JWT (no OpenCTI worker/queue); the
+    # write tenant and connector id are read from the JWT and run state lives
+    # server-side. Top-level fields (rather than a nested `opencti_ng` block)
+    # because the SDK routes any `OPENCTI_*` env var into the `opencti` model
+    # (env_nested_max_split=1); an explicit alias keeps `OPENCTI_NG_*` here.
+    opencti_ng_url: HttpUrl | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_url", "OPENCTI_NG_URL"),
+        description="opencti-ng base URL for detached mode (set with opencti_ng_jwt).",
+    )
+    opencti_ng_jwt: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_jwt", "OPENCTI_NG_JWT"),
+        description="Long-lived connector JWT for opencti-ng detached mode.",
+    )
+
+    @property
+    def opencti_ng_enabled(self) -> bool:
+        """Whether detached opencti-ng mode is configured."""
+        return self.opencti_ng_url is not None and self.opencti_ng_jwt is not None

@@ -60,6 +60,23 @@ There are a number of configuration options, which are set either in `docker-com
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
+#### Detached opencti-ng mode (optional)
+
+Set both variables below to ingest **directly into opencti-ng** over a JWT — no
+OpenCTI worker/queue. The write tenant and connector id are read from the JWT, and
+run state is stored server-side (resettable from the opencti-ng UI).
+
+| Parameter | config.yml | Docker environment variable | Description |
+|---|---|---|---|
+| opencti-ng URL | `opencti_ng_url` | `OPENCTI_NG_URL` | opencti-ng base URL, e.g. `http://localhost:4100`. |
+| opencti-ng JWT | `opencti_ng_jwt` | `OPENCTI_NG_JWT` | Long-lived connector JWT. Generate it in the opencti-ng repo: `OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- --tenant <tenant-uuid> --name CrowdStrike`. |
+
+`OPENCTI_URL`/`OPENCTI_TOKEN` are still required for config validation but are
+unused in this mode (leave them as placeholders). Note: opencti-ng ingests via
+STIX bundles, so the connector's opportunistic GraphQL lookups (YARA/Snort
+in-place pattern updates, report malware-guessing) are skipped — those objects
+are instead created/upserted through the normal bundle path.
+
 ### Base connector environment variables
 
 | Parameter         | config.yml      | Docker environment variable   | Default      | Mandatory | Description                                                                 |
