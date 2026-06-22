@@ -1,0 +1,38 @@
+name: Connector Identity Uniqueness
+
+on:
+  push:
+    paths:
+      - 'external-import/**/__metadata__/connector_manifest.json'
+      - 'internal-enrichment/**/__metadata__/connector_manifest.json'
+      - 'internal-export-file/**/__metadata__/connector_manifest.json'
+      - 'internal-import-file/**/__metadata__/connector_manifest.json'
+      - 'stream/**/__metadata__/connector_manifest.json'
+      - '.github/workflows/check-connector-identity-uniqueness.yml'
+  pull_request:
+    paths:
+      - 'external-import/**/__metadata__/connector_manifest.json'
+      - 'internal-enrichment/**/__metadata__/connector_manifest.json'
+      - 'internal-export-file/**/__metadata__/connector_manifest.json'
+      - 'internal-import-file/**/__metadata__/connector_manifest.json'
+      - 'stream/**/__metadata__/connector_manifest.json'
+      - '.github/workflows/check-connector-identity-uniqueness.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: check-connector-identity-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-connector-identity:
+    name: Check connector identity uniqueness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Validate connector manifest identity uniqueness
+        run: python3 .github/scripts/check_connector_identity_uniqueness.py
