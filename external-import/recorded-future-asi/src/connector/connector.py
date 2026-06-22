@@ -367,14 +367,6 @@ class RecordedFutureAsiConnector:
                     "[CONNECTOR] Connector has never run..."
                 )
 
-            # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Recorded Future ASI Exposures Import"
-
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
-
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
                 {"connector_name": self.helper.connect_name},
@@ -401,6 +393,12 @@ class RecordedFutureAsiConnector:
                 initial_cycle_complete = False
 
             if stix_objects:
+                # Friendly name will be displayed on OpenCTI platform
+                friendly_name = "Recorded Future ASI Exposures Import"
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
+
                 stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
                 bundles_sent = self.helper.send_stix2_bundle(
                     stix_objects_bundle,
@@ -429,10 +427,17 @@ class RecordedFutureAsiConnector:
                 + str(last_run_datetime)
             )
 
-            self.helper.api.work.to_processed(work_id, message)
+            if work_id is not None:
+                self.helper.api.work.to_processed(work_id, message)
             self.helper.connector_logger.info(message)
 
         except (KeyboardInterrupt, SystemExit):
+            if work_id is not None:
+                self.helper.api.work.to_processed(
+                    work_id,
+                    "[CONNECTOR] Connector stopped",
+                    in_error=True,
+                )
             self.helper.connector_logger.info(
                 "[CONNECTOR] Connector stopped...",
                 {"connector_name": self.helper.connect_name},
@@ -441,7 +446,7 @@ class RecordedFutureAsiConnector:
         except Exception as err:
             self.helper.connector_logger.error(str(err))
             if work_id is not None:
-                self.helper.api.work.to_processed(work_id, str(err), True)
+                self.helper.api.work.to_processed(work_id, str(err), in_error=True)
 
     def run(self) -> None:
         """

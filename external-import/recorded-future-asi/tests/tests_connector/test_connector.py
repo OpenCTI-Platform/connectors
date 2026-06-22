@@ -474,7 +474,7 @@ def test_process_message_does_not_persist_state_on_send_failure(
 
     opencti_helper.set_state.assert_not_called()
     opencti_helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "send failed", True
+        "work-id", "send failed", in_error=True
     )
 
 
@@ -497,9 +497,8 @@ def test_process_message_does_not_persist_state_on_collection_failure(
     connector.process_message()
 
     opencti_helper.set_state.assert_not_called()
-    opencti_helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "history failed", True
-    )
+    opencti_helper.api.work.initiate_work.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_not_called()
 
 
 def test_process_message_does_not_persist_state_on_initial_list_exposures_failure(
@@ -518,9 +517,8 @@ def test_process_message_does_not_persist_state_on_initial_list_exposures_failur
     connector.process_message()
 
     opencti_helper.set_state.assert_not_called()
-    opencti_helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "list exposures failed", True
-    )
+    opencti_helper.api.work.initiate_work.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_not_called()
 
 
 def test_process_message_does_not_persist_state_on_get_exposure_assets_failure(
@@ -540,9 +538,8 @@ def test_process_message_does_not_persist_state_on_get_exposure_assets_failure(
     connector.process_message()
 
     opencti_helper.set_state.assert_not_called()
-    opencti_helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "get exposure assets failed", True
-    )
+    opencti_helper.api.work.initiate_work.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_not_called()
 
 
 def test_process_message_does_not_persist_state_on_incremental_get_exposure_assets_failure(
@@ -565,9 +562,8 @@ def test_process_message_does_not_persist_state_on_incremental_get_exposure_asse
     connector.process_message()
 
     opencti_helper.set_state.assert_not_called()
-    opencti_helper.api.work.to_processed.assert_called_once_with(
-        "work-id", "get exposure assets failed", True
-    )
+    opencti_helper.api.work.initiate_work.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_not_called()
 
 
 def test_initial_sync_sets_last_fetch_time_when_zero_exposures(
