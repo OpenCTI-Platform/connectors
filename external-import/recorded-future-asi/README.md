@@ -1,17 +1,10 @@
-# OpenCTI External Ingestion Template Connector
+# OpenCTI External Ingestion Connector Recorded Future ASI
 
-<!--
-General description of the connector
-* What it does
-* How it works
-* Special requirements
-* Use case description
-* ...
--->
+Import [Recorded Future Attack Surface Intelligence (ASI)](https://www.recordedfuture.com/platform/attack-surface-intelligence) exposure findings into OpenCTI as STIX 2.1 incidents, observables, vulnerabilities, and relationships.
 
 Table of Contents
 
-- [OpenCTI External Ingestion Template Connector](#opencti-external-ingestion-connector-recorded-future-asi)
+- [OpenCTI External Ingestion Connector Recorded Future ASI](#opencti-external-ingestion-connector-recorded-future-asi)
   - [Introduction](#introduction)
   - [Installation](#installation)
     - [Requirements](#requirements)
@@ -29,127 +22,227 @@ Table of Contents
 
 ## Introduction
 
+Recorded Future Attack Surface Intelligence (ASI) continuously discovers and prioritizes exposure risks across an organization's internet-facing assets. The platform identifies misconfigurations, vulnerable services, and other attack-surface findings with severity scoring, CVE linkage, and remediation guidance.
+
+This connector imports ASI exposure data from a configured project via the ASI API. Findings are converted to STIX 2.1 and sent to OpenCTI as incidents with linked observables (IPv4/IPv6 addresses, domain names), vulnerabilities (CVEs), and relationships.
+
+
 ## Installation
 
 ### Requirements
 
-- Python >= 3.11
-- OpenCTI Platform >= 6.8.13
-- [`pycti`](https://pypi.org/project/pycti/) library matching your OpenCTI version
-- [`connectors-sdk`](https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk) library matching your OpenCTI version
+- OpenCTI Platform >= 6.8.12
+- An active Recorded Future ASI subscription with API access
+- An ASI API key and the project ID of the attack-surface project to import
 
+To obtain API credentials or a subscription, see [Recorded Future — Get Started](https://www.recordedfuture.com/get-started).
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or
-in `config.yml` (for manual deployment).
+Configuration is set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment). See `config.yml.sample` for an annotated example.
 
 ### OpenCTI environment variables
 
-Below are the parameters you'll need to set for OpenCTI:
 
 | Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
 | ------------- | ---------- | --------------------------- | --------- | ---------------------------------------------------- |
 | OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
 | OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
 
+
 ### Base connector environment variables
 
-Below are the parameters you'll need to set for running the connector properly:
 
-| Parameter       | config.yml | Docker environment variable | Default         | Mandatory | Description                                                                              |
-| --------------- | ---------- | --------------------------- | --------------- | --------- | ---------------------------------------------------------------------------------------- |
-| Connector ID    | id         | `CONNECTOR_ID`              | /               | Yes       | A unique `UUIDv4` identifier for this connector instance.                                |
-| Connector Type  | type       | `CONNECTOR_TYPE`            | EXTERNAL_IMPORT | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                            |
-| Connector Name  | name       | `CONNECTOR_NAME`            |                 | Yes       | Name of the connector.                                                                   |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           |                 | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object. |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | info            | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.   |
+| Parameter       | config.yml      | Docker environment variable | Default                                                  | Mandatory | Description                                                                                      |
+| --------------- | --------------- | --------------------------- | -------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------ |
+| Connector ID    | id              | `CONNECTOR_ID`              | —                                                        | Yes       | A unique `UUIDv4` identifier for this connector instance.                                        |
+| Connector Type  | type            | `CONNECTOR_TYPE`            | `EXTERNAL_IMPORT`                                        | Yes       | Should always be set to `EXTERNAL_IMPORT` for this connector.                                    |
+| Connector Name  | name            | `CONNECTOR_NAME`            | `Recorded Future ASI Exposures`                          | No        | Display name of the connector in OpenCTI.                                                        |
+| Connector Scope | scope           | `CONNECTOR_SCOPE`           | `incident,vulnerability,ipv4-addr,ipv6-addr,domain-name` | No        | STIX object types imported by the connector.                                                     |
+| Log Level       | log_level       | `CONNECTOR_LOG_LEVEL`       | `error`                                                  | No        | Log verbosity. Options: `debug`, `info`, `warn`, `warning`, `error`.                             |
+| Duration Period | duration_period | `CONNECTOR_DURATION_PERIOD` | `PT1H`                                                   | No        | ISO-8601 interval between connector runs. Use `PT0S` for a one-shot run that exits after import. |
+
 
 ### Connector extra parameters environment variables
 
-Below are the parameters you'll need to set for the connector:
+All connector-specific settings live under the `recorded-future-asi` key in `config.yml` or use the `RECORDED_FUTURE_ASI_`* prefix in Docker.
 
-| Parameter    | config.yml   | Docker environment variable | Default | Mandatory | Description |
-| ------------ | ------------ | --------------------------- | ------- | --------- | ----------- |
-| API base URL | api_base_url |                             |         | Yes       |             |
-| API key      | api_key      |                             |         | Yes       |             |
+
+| Parameter             | config.yml            | Docker environment variable                 | Default                             | Mandatory | Description                                                                                                                                                                 |
+| --------------------- | --------------------- | ------------------------------------------- | ----------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API base URL (v2)     | api_base_url          | `RECORDED_FUTURE_ASI_API_BASE_URL`          | `https://api.securitytrails.com/v2` | No        | v2 API base URL for initial sync (exposures list and assets).                                                                                                               |
+| API base URL (v1)     | api_v1_base_url       | `RECORDED_FUTURE_ASI_API_V1_BASE_URL`       | `https://api.securitytrails.com/v1` | No        | v1 API base URL for incremental sync (exposure history activity).                                                                                                           |
+| API key               | api_key               | `RECORDED_FUTURE_ASI_API_KEY`               | —                                   | Yes       | ASI API key for authentication.                                                                                                                                             |
+| Project ID            | project_id            | `RECORDED_FUTURE_ASI_PROJECT_ID`            | —                                   | Yes       | ASI project ID to fetch exposures from.                                                                                                                                     |
+| TLP level             | tlp_level             | `RECORDED_FUTURE_ASI_TLP_LEVEL`             | `amber+strict`                      | No        | Default TLP marking applied to imported entities. Values: `clear`, `white`, `green`, `amber`, `amber+strict`, `red`.                                                        |
+| Portal base URL       | portal_base_url       | `RECORDED_FUTURE_ASI_PORTAL_BASE_URL`       | —                                   | No        | Optional Recorded Future portal base URL for external-reference deep links to the ASI project overview.                                                                     |
+| Page limit            | page_limit            | `RECORDED_FUTURE_ASI_PAGE_LIMIT`            | `100`                               | No        | Number of exposures (or assets) fetched per API page. Range: 1–1000.                                                                                                        |
+| Run limit             | run_limit             | `RECORDED_FUTURE_ASI_RUN_LIMIT`             | — (no limit)                        | No        | Maximum exposures processed per connector run during initial sync. When set, the connector resumes from a stored cursor on subsequent runs until the full list is imported. |
+| Retry max attempts    | retry_max_attempts    | `RECORDED_FUTURE_ASI_RETRY_MAX_ATTEMPTS`    | `3`                                 | No        | Maximum HTTP request attempts (including the first) before giving up. Range: 1–10.                                                                                          |
+| Retry initial seconds | retry_initial_seconds | `RECORDED_FUTURE_ASI_RETRY_INITIAL_SECONDS` | `1`                                 | No        | Initial exponential backoff delay in seconds for retried requests. Range: 0.1–30.                                                                                           |
+| Retry max seconds     | retry_max_seconds     | `RECORDED_FUTURE_ASI_RETRY_MAX_SECONDS`     | `60`                                | No        | Maximum backoff delay in seconds between retry attempts. Range: 1–300.                                                                                                      |
+| Filter severity min   | filter_severity_min   | `RECORDED_FUTURE_ASI_FILTER_SEVERITY_MIN`   | —                                   | No        | Only import exposures at or above this severity. Values: `unknown`, `informational`, `moderate`, `critical`. Mutually exclusive with `filter_severity_exact`.               |
+| Filter severity exact | filter_severity_exact | `RECORDED_FUTURE_ASI_FILTER_SEVERITY_EXACT` | —                                   | No        | Only import exposures matching this severity exactly. Same values as above. Mutually exclusive with `filter_severity_min`.                                                  |
+
 
 ## Deployment
 
 ### Docker Deployment
 
-Before building the Docker container, you need to set the version of pycti in `requirements.txt` equal to whatever
-version of OpenCTI you're running. Example, `pycti==5.12.20`. If you don't, it will take the latest version, but
-sometimes the OpenCTI SDK fails to initialize.
+Build the Docker image:
 
-Build a Docker Image using the provided `Dockerfile`.
-
-Example:
-
-```shell
-# Replace the IMAGE NAME with the appropriate value
-docker build . -t [IMAGE NAME]:latest
+```bash
+docker build -t opencti/connector-recorded-future-asi:latest .
 ```
 
-Make sure to replace the environment variables in `docker-compose.yml` with the appropriate configurations for your
-environment. Then, start the docker container with the provided docker-compose.yml
+Configure the connector in `docker-compose.yml`:
 
-```shell
+```yaml
+  connector-recorded-future-asi:
+    image: opencti/connector-recorded-future-asi:latest
+    environment:
+      - OPENCTI_URL=http://localhost
+      - OPENCTI_TOKEN=ChangeMe
+      - CONNECTOR_ID=ChangeMe
+      - CONNECTOR_NAME=Recorded Future ASI Exposures
+      - CONNECTOR_SCOPE=incident,vulnerability,ipv4-addr,ipv6-addr,domain-name
+      - CONNECTOR_LOG_LEVEL=error
+      - CONNECTOR_DURATION_PERIOD=PT1H
+      - RECORDED_FUTURE_ASI_API_BASE_URL=https://api.securitytrails.com/v2
+      - RECORDED_FUTURE_ASI_API_V1_BASE_URL=https://api.securitytrails.com/v1
+      - RECORDED_FUTURE_ASI_API_KEY=ChangeMe
+      - RECORDED_FUTURE_ASI_PROJECT_ID=ChangeMe
+      - RECORDED_FUTURE_ASI_TLP_LEVEL=amber+strict
+      - RECORDED_FUTURE_ASI_PAGE_LIMIT=100
+      - RECORDED_FUTURE_ASI_RETRY_MAX_ATTEMPTS=3
+      - RECORDED_FUTURE_ASI_RETRY_INITIAL_SECONDS=1
+      - RECORDED_FUTURE_ASI_RETRY_MAX_SECONDS=60
+    restart: always
+```
+
+Start the connector:
+
+```bash
 docker compose up -d
-# -d for detached
 ```
 
 ### Manual Deployment
 
-Create a file `config.yml` based on the provided `config.yml.sample`.
+1. Create `config.yml` based on `config.yml.sample`.
+2. Install dependencies:
 
-Replace the configuration variables (especially the "**ChangeMe**" variables) with the appropriate configurations for
-you environment.
-
-Install the required python dependencies (preferably in a virtual environment):
-
-```shell
-pip3 install -r requirements.txt
+```bash
+pip3 install -r src/requirements.txt
 ```
 
-Then, start the connector from `src` directory:
+1. Start the connector from the `src` directory:
 
-```shell
+```bash
 python3 main.py
 ```
 
 ## Usage
 
-After Installation, the connector should require minimal interaction to use, and should update automatically at a regular interval specified in your `docker-compose.yml` or `config.yml` in `duration_period`.
+After installation, the connector runs automatically at the interval defined by `duration_period` / `CONNECTOR_DURATION_PERIOD` (default: every hour).
 
-However, if you would like to force an immediate download of a new batch of entities, navigate to:
+To force an immediate re-run without waiting for the scheduler, go to **Data management → Ingestion → Connectors** in OpenCTI, find the connector, and click the refresh button. This resets the connector state and triggers a new import from scratch (initial sync).
 
-`Data management` -> `Ingestion` -> `Connectors` in the OpenCTI platform.
-
-Find the connector, and click on the refresh button to reset the connector's state and force a new
-download of data by re-running the connector.
+To run the connector once and exit (useful for cron-based scheduling), set `CONNECTOR_DURATION_PERIOD=PT0S`.
 
 ## Behavior
 
-<!--
-Describe how the connector functions:
-* What data is ingested, updated, or modified
-* Important considerations for users when utilizing this connector
-* Additional relevant details
--->
+### Sync modes
+
+The connector operates in two phases:
+
+1. **Initial sync** — Until `last_fetch_time` is stored in connector state, the connector paginates the v2 exposures list (`GET /projects/{project_id}/exposures`) for the configured project. For each exposure, it fetches associated assets (`GET /projects/{project_id}/exposures/{signature_id}`) and builds a STIX bundle.
+2. **Incremental sync** — After the initial cycle completes, subsequent runs query v1 exposure history activity (`GET /asi/rules/history/{project_id}/activity`) starting from `last_fetch_time`. Added rules are enriched with v2 asset data; removed rules emit a cleared incident update without re-fetching assets.
+
+### Connector state
+
+State is persisted only after a successful collection and send cycle:
+
+
+| State key          | Description                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `last_fetch_time`  | Unix timestamp marking the incremental sync watermark. Set when the initial v2 list cycle completes, then updated after each incremental run. |
+| `exposures_cursor` | Pagination cursor for resuming initial sync when `run_limit` is configured. Cleared when the initial cycle completes.                         |
+| `last_run`         | Human-readable UTC timestamp of the last successful run.                                                                                      |
+
+
+If a run fails, state is not advanced, so the next run retries from the last successful position.
+
+### STIX objects produced
+
+For each **added** exposure, the connector creates:
+
+- **Incident** — Type `Attack Surface Monitoring`, label `recorded-future-asi:added`, deterministic ID keyed on the RF exposure ID
+- **Observables** — IPv4 addresses, IPv6 addresses, and domain names derived from affected assets
+- **Vulnerabilities** — CVEs linked from exposure signatures (with CVSS, EPSS, and CWE labels when available)
+- **Relationships** — `related-to` from incident to observables and vulnerabilities; `has` from observables to vulnerabilities
+- **Author and TLP marking** — Organization author `Recorded Future ASI` and the configured TLP marking
+
+For **cleared** exposures (removed in incremental history), the connector sends an incident-only update with label `recorded-future-asi:cleared` and the same deterministic incident ID, allowing OpenCTI to update the existing incident.
+
+Optional `portal_base_url` adds an external reference deep link to the ASI project overview in the Recorded Future portal.
+
+### Severity mapping
+
+RF ASI severities are mapped to OpenCTI incident severity as follows:
+
+
+| RF ASI severity    | OpenCTI severity |
+| ------------------ | ---------------- |
+| `critical`, `high` | `critical`       |
+| `moderate`         | `medium`         |
+| `informational`    | `low`            |
+| `unknown`          | `low`            |
+
+
+Optional `filter_severity_min` and `filter_severity_exact` settings apply during both initial list fetch (via API query parameters) and incremental history processing (client-side filtering). Only one filter may be configured at a time.
+
+### Batching and rate limiting
+
+When `run_limit` is set, the connector imports at most that many exposures per run during initial sync, stores `exposures_cursor`, and resumes on the next scheduled run until the full list is processed. Only then is `last_fetch_time` set and incremental sync begins.
+
+HTTP requests retry automatically on `429` (honoring `Retry-After` when present) and `5xx` responses, with configurable exponential backoff (`retry_max_attempts`, `retry_initial_seconds`, `retry_max_seconds`).
+
+Bundles are sent with `cleanup_inconsistent_bundle=True` so OpenCTI workers can reconcile duplicate references within a bundle.
 
 ## Debugging
 
-The connector can be debugged by setting the appropiate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.
-e., `self.helper.connector_logger.error("An error message")`.
+Set `CONNECTOR_LOG_LEVEL=debug` (or `log_level: debug` in `config.yml`) for verbose connector and API client logs, including sync mode, exposure counts, and retry attempts.
 
-<!-- Any additional information to help future users debug and report detailed issues concerning this connector -->
+Logging messages use the connector helper logger, for example:
+
+```python
+self.helper.connector_logger.error("An error message")
+```
+
+Common issues:
+
+- **401 Unauthorized** — Verify `RECORDED_FUTURE_ASI_API_KEY` and that the key has access to the configured project.
+- **No data imported** — Confirm `RECORDED_FUTURE_ASI_PROJECT_ID` matches an active ASI project with exposures. Check severity filters are not excluding all findings.
+- **Initial sync never completes** — When using `run_limit`, multiple runs are expected before incremental sync starts. Monitor `exposures_cursor` in connector state.
 
 ## Additional information
 
-<!--
-Any additional information about this connector
-* What information is ingested/updated/changed
-* What should the user take into account when using this connector
-* ...
--->
+### API endpoints
+
+
+| Phase        | Method | Endpoint                                                        |
+| ------------ | ------ | --------------------------------------------------------------- |
+| Initial sync | GET    | `{api_base_url}/projects/{project_id}/exposures`                |
+| Asset detail | GET    | `{api_base_url}/projects/{project_id}/exposures/{signature_id}` |
+| Incremental  | GET    | `{api_v1_base_url}/asi/rules/history/{project_id}/activity`     |
+
+
+Default base URLs point to the Recorded Future ASI API (`api.securitytrails.com`).
+
+### Rate limits
+
+The API client retries transient failures (HTTP 429 and 5xx) with exponential backoff. On HTTP 429, the client honors the `Retry-After` response header when present. Tune retry settings if you operate in a rate-limited environment.
+
+### Related Documentation
+
+- [Connector configuration reference](__metadata__/CONNECTOR_CONFIG_DOC.md)
+

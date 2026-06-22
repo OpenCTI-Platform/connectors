@@ -4,21 +4,21 @@ services:
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type EXTERNAL_IMPORT
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=Recorded Future ASI Exposures # optional (default: 'Recorded Future ASI Exposures')
-      - CONNECTOR_SCOPE=incident,vulnerability,ipv4-addr,ipv6-addr,domain-name # optional (default: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name')
-      - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
-      - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+      - CONNECTOR_ID=ChangeMe
+      # - CONNECTOR_NAME=Recorded Future ASI Exposures # optional (default: 'Recorded Future ASI Exposures')
+      # - CONNECTOR_SCOPE=incident,vulnerability,ipv4-addr,ipv6-addr,domain-name # optional (default: 'incident,vulnerability,ipv4-addr,ipv6-addr,domain-name')
+      # - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
+      # - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
       # Custom parameters for connector-recorded-future-asi
-      - RECORDED_FUTURE_ASI_API_BASE_URL=https://api.securitytrails.com/v2 # optional, v2 base URL for initial sync (exposures list and assets) (default: 'https://api.securitytrails.com/v2')
-      - RECORDED_FUTURE_ASI_API_V1_BASE_URL=https://api.securitytrails.com/v1 # optional, v1 base URL for incremental sync (exposure history activity) (default: 'https://api.securitytrails.com/v1')
-      - RECORDED_FUTURE_ASI_PORTAL_BASE_URL=https://app.recordedfuture.com/portal/attack-surface/project/ # optional, portal base URL
-      - RECORDED_FUTURE_ASI_API_KEY=CHANGEME
-      - RECORDED_FUTURE_ASI_PROJECT_ID=CHANGEME
-      - RECORDED_FUTURE_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
-      - RECORDED_FUTURE_ASI_PAGE_LIMIT=100 # optional, API page size (HTTP request chunk), min 1, max 1000 (default: 100)
+      # - RECORDED_FUTURE_ASI_API_BASE_URL=https://api.securitytrails.com/v2 # optional, v2 base URL for initial sync (exposures list and assets) (default: 'https://api.securitytrails.com/v2')
+      # - RECORDED_FUTURE_ASI_API_V1_BASE_URL=https://api.securitytrails.com/v1 # optional, v1 base URL for incremental sync (exposure history activity) (default: 'https://api.securitytrails.com/v1')
+      # - RECORDED_FUTURE_ASI_PORTAL_BASE_URL=https://app.recordedfuture.com/portal/attack-surface/project/ # optional, portal base URL
+      - RECORDED_FUTURE_ASI_API_KEY=ChangeMe
+      - RECORDED_FUTURE_ASI_PROJECT_ID=ChangeMe
+      # - RECORDED_FUTURE_ASI_TLP_LEVEL=amber+strict # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'amber+strict')
+      # - RECORDED_FUTURE_ASI_PAGE_LIMIT=100 # optional, API page size (HTTP request chunk), min 1, max 1000 (default: 100)
       # - RECORDED_FUTURE_ASI_RUN_LIMIT=50 # optional, max exposures processed per connector run, min 1 (default: no limit)
       # - RECORDED_FUTURE_ASI_RETRY_MAX_ATTEMPTS=3 # optional, max HTTP attempts per request, min 1, max 10 (default: 3)
       # - RECORDED_FUTURE_ASI_RETRY_INITIAL_SECONDS=1 # optional, initial retry backoff in seconds, min 0.1, max 30 (default: 1)
