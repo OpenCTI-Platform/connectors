@@ -8,7 +8,7 @@ from connectors_sdk import (
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field
+from pydantic import Field, SecretStr
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -18,7 +18,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
     )
     scope: ListFromString = Field(
         description="The scope of the connector.",
-        default=["Incident", "Observable", "Indicator"],
+        default=["Flare"],
     )
     duration_period: timedelta = Field(
         description="The period of time to await between two runs.",
@@ -27,7 +27,7 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
 
 
 class FlareConfig(BaseConfigModel):
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="Flare API key.",
     )
 

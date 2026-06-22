@@ -5,19 +5,20 @@ from typing import Any
 
 from flareio import FlareApiClient  # pylint: disable=import-error
 from pycti import OpenCTIConnectorHelper
+from pydantic import SecretStr
 
 
 class FlareClient:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        api_key: str,
+        api_key: SecretStr,
         api_domain: str,
         tenant_id: int | None,
     ) -> None:
         self.helper = helper
         self._api = FlareApiClient(
-            api_key=api_key,
+            api_key=api_key.get_secret_value(),
             api_domain=api_domain,
             tenant_id=tenant_id,
         )
