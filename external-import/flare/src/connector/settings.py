@@ -16,6 +16,10 @@ class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
         description="The name of the connector.",
         default="Flare",
     )
+    id: str = Field(
+        description="A UUID v4 to identify the connector in OpenCTI.",
+        default="4ca16691-f5e3-46a2-828e-a29549a8b61f",
+    )
     scope: ListFromString = Field(
         description="The scope of the connector.",
         default=["Flare"],
