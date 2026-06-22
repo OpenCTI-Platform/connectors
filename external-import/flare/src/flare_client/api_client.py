@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from datetime import datetime
 from typing import Any
 
-from flareio import FlareApiClient  # pylint: disable=import-error
+from flareio import FlareApiClient
 from pycti import OpenCTIConnectorHelper
 from pydantic import SecretStr
 
