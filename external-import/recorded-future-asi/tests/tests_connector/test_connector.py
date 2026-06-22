@@ -523,6 +523,158 @@ def test_process_message_does_not_persist_state_on_initial_list_exposures_failur
     )
 
 
+def test_process_message_does_not_persist_state_on_get_exposure_assets_failure(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+    all_exposure_items,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    connector.client.list_exposures = MagicMock(return_value=all_exposure_items)
+    connector.client.get_exposure_assets = MagicMock(
+        side_effect=RuntimeError("get exposure assets failed")
+    )
+    _mock_process_message_dependencies(opencti_helper, initial_state={})
+
+    connector.process_message()
+
+    opencti_helper.set_state.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_called_once_with(
+        "work-id", "get exposure assets failed", True
+    )
+
+
+def test_process_message_does_not_persist_state_on_incremental_get_exposure_assets_failure(
+    opencti_helper,
+    make_stub_connector_settings,
+    risk_history_activity,
+):
+    settings = make_stub_connector_settings()
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
+    added_rules = risk_history_activity["data"][0]["added_rules"]
+    connector.client.get_exposure_history = MagicMock(return_value=(added_rules, []))
+    connector.client.get_exposure_assets = MagicMock(
+        side_effect=RuntimeError("get exposure assets failed")
+    )
+    _mock_process_message_dependencies(
+        opencti_helper,
+        initial_state={"last_fetch_time": 1717100000},
+    )
+
+    connector.process_message()
+
+    opencti_helper.set_state.assert_not_called()
+    opencti_helper.api.work.to_processed.assert_called_once_with(
+        "work-id", "get exposure assets failed", True
+    )
+
+
+def test_initial_sync_sets_last_fetch_time_when_zero_exposures(
+    opencti_helper,
+    stub_connector_settings: ConnectorSettings,
+):
+    connector = RecordedFutureAsiConnector(
+        config=stub_connector_settings, helper=opencti_helper
+    )
+    connector.client.list_exposures = MagicMock(return_value=[])
+    connector.client.get_exposure_assets = MagicMock()
+    _mock_process_message_dependencies(opencti_helper, initial_state={})
+
+    with patch("connector.connector.datetime", wraps=datetime) as mock_datetime:
+        mock_datetime.now.return_value = datetime.fromtimestamp(
+            1717200000, tz=timezone.utc
+        )
+        connector.process_message()
+
+    saved_state = opencti_helper.set_state.call_args.args[0]
+    assert saved_state["last_fetch_time"] == 1717200000
+    assert "exposures_cursor" not in saved_state
+    connector.client.get_exposure_assets.assert_not_called()
+
+
+def test_incremental_sync_applies_filter_severity_min_to_added_high_classification(
+    opencti_helper,
+    make_stub_connector_settings,
+    risk_history_activity,
+    all_exposure_assets,
+):
+    settings = make_stub_connector_settings(filter_severity_min="critical")
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
+    added_rules = risk_history_activity["data"][0]["added_rules"]
+    connector.client.get_exposure_history = MagicMock(return_value=(added_rules, []))
+    connector.client.get_exposure_assets = MagicMock(return_value=all_exposure_assets)
+    state = {"last_fetch_time": 1717200000}
+
+    stix_objects = connector._collect_incremental_intelligence(state)
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert len(incidents) == 1
+    connector.client.get_exposure_assets.assert_called_once()
+
+
+def test_incremental_sync_skips_added_rule_below_filter_severity_min(
+    opencti_helper,
+    make_stub_connector_settings,
+):
+    settings = make_stub_connector_settings(filter_severity_min="critical")
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
+    added_rules = [
+        {
+            "id": "sig-moderate",
+            "name": "Moderate exposure",
+            "description": "Below critical threshold.",
+            "classification": "moderate",
+        }
+    ]
+    connector.client.get_exposure_history = MagicMock(return_value=(added_rules, []))
+    connector.client.get_exposure_assets = MagicMock()
+    state = {"last_fetch_time": 1717200000}
+
+    stix_objects = connector._collect_incremental_intelligence(state)
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert incidents == []
+    connector.client.get_exposure_assets.assert_not_called()
+
+
+def test_incremental_sync_skips_added_rule_when_exact_filter_mismatch(
+    opencti_helper,
+    make_stub_connector_settings,
+    risk_history_activity,
+):
+    settings = make_stub_connector_settings(filter_severity_exact="moderate")
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
+    added_rules = risk_history_activity["data"][0]["added_rules"]
+    connector.client.get_exposure_history = MagicMock(return_value=(added_rules, []))
+    connector.client.get_exposure_assets = MagicMock()
+    state = {"last_fetch_time": 1717200000}
+
+    stix_objects = connector._collect_incremental_intelligence(state)
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert incidents == []
+    connector.client.get_exposure_assets.assert_not_called()
+
+
+def test_incremental_sync_skips_removed_rule_below_filter_severity_min(
+    opencti_helper,
+    make_stub_connector_settings,
+    risk_history_activity,
+):
+    settings = make_stub_connector_settings(filter_severity_min="critical")
+    connector = RecordedFutureAsiConnector(config=settings, helper=opencti_helper)
+    removed_rules = risk_history_activity["data"][0]["removed_rules"]
+    connector.client.get_exposure_history = MagicMock(return_value=([], removed_rules))
+    connector.client.get_exposure_assets = MagicMock()
+    state = {"last_fetch_time": 1717200000}
+
+    stix_objects = connector._collect_incremental_intelligence(state)
+
+    incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
+    assert incidents == []
+
+
 def test_incremental_sync_updates_last_fetch_time_on_success(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,

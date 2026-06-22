@@ -208,8 +208,27 @@ class RecordedFutureAsiConnector:
         )
 
         removed_ids = {rule_id for rule in removed_rules if (rule_id := rule.get("id"))}
+        severity_filters = {
+            "filter_severity_min": self.config.recorded_future_asi.filter_severity_min,
+            "filter_severity_exact": (
+                self.config.recorded_future_asi.filter_severity_exact
+            ),
+        }
 
         for rule in added_rules:
+            if not ConverterToStix.rule_matches_severity_filter(
+                rule,
+                **severity_filters,
+            ):
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Skipping added history rule outside severity filter",
+                    {
+                        "signature_id": rule.get("id"),
+                        "classification": rule.get("classification"),
+                    },
+                )
+                continue
+
             rule_id = rule.get("id")
             if not rule_id:
                 self.helper.connector_logger.warning(
@@ -249,6 +268,19 @@ class RecordedFutureAsiConnector:
             stix_objects.extend(obj.to_stix2_object() for obj in sdk_objects)
 
         for rule in removed_rules:
+            if not ConverterToStix.rule_matches_severity_filter(
+                rule,
+                **severity_filters,
+            ):
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] Skipping removed history rule outside severity filter",
+                    {
+                        "signature_id": rule.get("id"),
+                        "classification": rule.get("classification"),
+                    },
+                )
+                continue
+
             rule_id = rule.get("id")
             if not rule_id:
                 continue

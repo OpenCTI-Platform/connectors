@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Literal
 
+from connector.settings import ExposureSeverity
 from connector.utils import build_asset_description, detect_observable_type
 from connectors_sdk.models import (
     DomainName,
@@ -34,6 +35,21 @@ SEVERITY_MAP = {
     "moderate": "medium",
     "informational": "low",
     "unknown": "low",
+}
+
+CLASSIFICATION_TO_FILTER_SEVERITY: dict[str, ExposureSeverity] = {
+    "high": "critical",
+    "critical": "critical",
+    "moderate": "moderate",
+    "informational": "informational",
+    "unknown": "unknown",
+}
+
+SEVERITY_FILTER_RANK: dict[ExposureSeverity, int] = {
+    "unknown": 0,
+    "informational": 1,
+    "moderate": 2,
+    "critical": 3,
 }
 
 ObservableType = Literal["ipv4", "ipv6", "domain"]
@@ -111,6 +127,42 @@ class ConverterToStix:
         if not rf_severity:
             return SEVERITY_MAP["unknown"]
         return SEVERITY_MAP.get(rf_severity.lower(), SEVERITY_MAP["unknown"])
+
+    @staticmethod
+    def normalize_classification(classification: str | None) -> ExposureSeverity:
+        """Map v1 history rule classification to v2 severity filter vocabulary."""
+        if not classification:
+            return "unknown"
+        return CLASSIFICATION_TO_FILTER_SEVERITY.get(
+            classification.lower(),
+            "unknown",
+        )
+
+    @staticmethod
+    def rule_matches_severity_filter(
+        rule: dict,
+        *,
+        filter_severity_min: ExposureSeverity | None = None,
+        filter_severity_exact: ExposureSeverity | None = None,
+    ) -> bool:
+        """Return whether a v1 history rule passes configured severity filters."""
+        if filter_severity_min is None and filter_severity_exact is None:
+            return True
+
+        normalized = ConverterToStix.normalize_classification(
+            rule.get("classification")
+        )
+
+        if filter_severity_exact is not None:
+            return normalized == filter_severity_exact
+
+        if filter_severity_min is not None:
+            return (
+                SEVERITY_FILTER_RANK[normalized]
+                >= SEVERITY_FILTER_RANK[filter_severity_min]
+            )
+
+        return True
 
     @staticmethod
     def _merge_signature_references(*signatures: dict) -> list[str]:

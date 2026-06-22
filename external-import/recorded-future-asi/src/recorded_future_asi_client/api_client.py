@@ -425,18 +425,6 @@ class RecordedFutureAsiClient:
                         "error": str(err),
                     },
                 )
-                if signature or asset_exposures:
-                    self.helper.connector_logger.warning(
-                        "[API] Returning partial exposure asset results after pagination failure",
-                        {
-                            "signature_id": signature_id,
-                            "collected_count": len(asset_exposures),
-                        },
-                    )
-                    return {
-                        "signature": signature,
-                        "asset_exposures": asset_exposures,
-                    }
                 raise
 
             if not next_cursor:

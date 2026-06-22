@@ -54,6 +54,49 @@ def test_map_severity_maps_v1_high_to_critical():
     assert ConverterToStix.map_severity("high") == "critical"
 
 
+@pytest.mark.parametrize(
+    "classification, expected",
+    [
+        pytest.param("high", "critical", id="high_to_critical"),
+        pytest.param("critical", "critical", id="critical"),
+        pytest.param("moderate", "moderate", id="moderate"),
+        pytest.param("informational", "informational", id="informational"),
+        pytest.param("unknown", "unknown", id="unknown"),
+        pytest.param(None, "unknown", id="missing"),
+        pytest.param("HIGH", "critical", id="case_insensitive"),
+        pytest.param("unexpected", "unknown", id="unmapped"),
+    ],
+)
+def test_normalize_classification(classification, expected):
+    assert ConverterToStix.normalize_classification(classification) == expected
+
+
+@pytest.mark.parametrize(
+    "classification, filter_min, filter_exact, expected",
+    [
+        pytest.param("high", "critical", None, True, id="min_critical_high_passes"),
+        pytest.param(
+            "moderate", "critical", None, False, id="min_critical_moderate_fails"
+        ),
+        pytest.param("high", None, "moderate", False, id="exact_moderate_high_fails"),
+        pytest.param("moderate", None, "moderate", True, id="exact_moderate_match"),
+        pytest.param("moderate", None, None, True, id="no_filter_passes_all"),
+    ],
+)
+def test_rule_matches_severity_filter(
+    classification, filter_min, filter_exact, expected
+):
+    rule = {"classification": classification}
+    assert (
+        ConverterToStix.rule_matches_severity_filter(
+            rule,
+            filter_severity_min=filter_min,
+            filter_severity_exact=filter_exact,
+        )
+        is expected
+    )
+
+
 def test_history_rule_to_exposure_summary_maps_fields(risk_history_activity):
     rule = risk_history_activity["data"][0]["added_rules"][0]
 

@@ -229,7 +229,7 @@ def test_get_exposure_assets_follows_cursor_pagination(
     }
 
 
-def test_get_exposure_assets_returns_partial_results_on_mid_pagination_failure(
+def test_get_exposure_assets_raises_on_mid_pagination_failure(
     opencti_helper, exposure_assets_page
 ):
     client = _client(opencti_helper)
@@ -247,16 +247,40 @@ def test_get_exposure_assets_returns_partial_results_on_mid_pagination_failure(
             failing_response,
         ],
     ):
-        assets_data = client.get_exposure_assets(
+        with pytest.raises(requests.HTTPError):
+            client.get_exposure_assets(
+                "test-project-id",
+                "sig-001",
+                limit=100,
+            )
+
+
+def test_list_exposures_batch_returns_partial_results_on_mid_pagination_failure(
+    opencti_helper, exposures_list_page
+):
+    client = _client(opencti_helper)
+
+    failing_response = MagicMock()
+    failing_response.raise_for_status.side_effect = requests.HTTPError(
+        "502 Bad Gateway"
+    )
+
+    with patch.object(
+        client.session,
+        "get",
+        side_effect=[
+            _mock_response(exposures_list_page),
+            failing_response,
+        ],
+    ):
+        exposures, next_cursor = client.list_exposures_batch(
             "test-project-id",
-            "sig-001",
-            limit=100,
+            page_limit=100,
+            run_limit=10,
         )
 
-    assert assets_data == {
-        "signature": exposure_assets_page["data"]["signature"],
-        "asset_exposures": exposure_assets_page["data"]["asset_exposures"],
-    }
+    assert exposures == exposures_list_page["data"]
+    assert next_cursor == "cursor-page-2"
 
 
 def test_parse_assets_response_handles_missing_fields():
