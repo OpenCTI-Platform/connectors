@@ -5,7 +5,7 @@ services:
     environment:
       # Connector's generic execution parameters
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=ChangeMe(UUIDv4 token)
+      - OPENCTI_TOKEN=ChangeMe
 
       # Connector's definition parameters REQUIRED
       - CONNECTOR_ID=ChangeMe(UUIDv4 token)

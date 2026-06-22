@@ -195,7 +195,9 @@ class Phishunt:
                 bundle = self.helper.stix2_create_bundle(
                     [self.stix_created_by] + bundle_objects
                 )
-                self.helper.send_stix2_bundle(bundle, work_id=work_id)
+                self.helper.send_stix2_bundle(
+                    bundle, work_id=work_id, cleanup_inconsistent_bundle=True
+                )
                 self.last_run_datetime_with_ingested_data = datetime.now(
                     tz=UTC
                 ).isoformat(timespec="seconds")
