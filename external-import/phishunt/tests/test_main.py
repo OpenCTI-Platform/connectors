@@ -137,7 +137,13 @@ def _entry(
     ip="1.2.3.4",
     country="US",
 ) -> dict:
-    return {"url": url, "domain": domain, "company": company, "ip": ip, "country": country}
+    return {
+        "url": url,
+        "domain": domain,
+        "company": company,
+        "ip": ip,
+        "country": country,
+    }
 
 
 # ──────────────────────────────────────────────────────────────
@@ -147,14 +153,20 @@ class TestProcessFeed:
     def test_full_entry_sends_one_bundle(self, mock_opencti_connector_helper):
         """A complete entry triggers exactly one bundle send."""
         connector = _make_connector(mock_opencti_connector_helper)
-        with patch("connector.connector.requests.get", return_value=_mock_response([_entry()])):
+        with patch(
+            "connector.connector.requests.get", return_value=_mock_response([_entry()])
+        ):
             connector._process_feed("work-id")
         assert connector.helper.send_stix2_bundle.call_count == 1
 
-    def test_full_entry_bundle_contains_all_stix_types(self, mock_opencti_connector_helper):
+    def test_full_entry_bundle_contains_all_stix_types(
+        self, mock_opencti_connector_helper
+    ):
         """With create_indicators=True and a valid full entry, all expected STIX types are present."""
         connector = _make_connector(mock_opencti_connector_helper)
-        with patch("connector.connector.requests.get", return_value=_mock_response([_entry()])):
+        with patch(
+            "connector.connector.requests.get", return_value=_mock_response([_entry()])
+        ):
             connector._process_feed("work-id")
         objects = connector.helper.stix2_create_bundle.call_args[0][0]
         stix_types = {type(o).__name__ for o in objects}
@@ -167,14 +179,22 @@ class TestProcessFeed:
     def test_entry_without_url_is_skipped(self, mock_opencti_connector_helper):
         """An entry with an empty url field is silently ignored, no bundle sent."""
         connector = _make_connector(mock_opencti_connector_helper)
-        with patch("connector.connector.requests.get", return_value=_mock_response([_entry(url="")])):
+        with patch(
+            "connector.connector.requests.get",
+            return_value=_mock_response([_entry(url="")]),
+        ):
             connector._process_feed("work-id")
         connector.helper.send_stix2_bundle.assert_not_called()
 
-    def test_invalid_ip_logs_warning_and_skips_ipv4_observable(self, mock_opencti_connector_helper):
+    def test_invalid_ip_logs_warning_and_skips_ipv4_observable(
+        self, mock_opencti_connector_helper
+    ):
         """An invalid IP triggers a warning log and no IPv4Address is created."""
         connector = _make_connector(mock_opencti_connector_helper)
-        with patch("connector.connector.requests.get", return_value=_mock_response([_entry(ip="not-an-ip")])):
+        with patch(
+            "connector.connector.requests.get",
+            return_value=_mock_response([_entry(ip="not-an-ip")]),
+        ):
             connector._process_feed("work-id")
         connector.helper.connector_logger.warning.assert_called_once()
         objects = connector.helper.stix2_create_bundle.call_args[0][0]
@@ -183,7 +203,10 @@ class TestProcessFeed:
     def test_country_dash_skips_location(self, mock_opencti_connector_helper):
         """An entry with country='-' produces no Location object."""
         connector = _make_connector(mock_opencti_connector_helper)
-        with patch("connector.connector.requests.get", return_value=_mock_response([_entry(country="-")])):
+        with patch(
+            "connector.connector.requests.get",
+            return_value=_mock_response([_entry(country="-")]),
+        ):
             connector._process_feed("work-id")
         objects = connector.helper.stix2_create_bundle.call_args[0][0]
         assert not any(isinstance(o, stix2.Location) for o in objects)
@@ -192,17 +215,23 @@ class TestProcessFeed:
         """An HTTP error is caught, logged as error, and no bundle is sent."""
         connector = _make_connector(mock_opencti_connector_helper)
         resp = MagicMock()
-        resp.raise_for_status.side_effect = requests.exceptions.HTTPError("403 Forbidden")
+        resp.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "403 Forbidden"
+        )
         with patch("connector.connector.requests.get", return_value=resp):
             connector._process_feed("work-id")
         connector.helper.send_stix2_bundle.assert_not_called()
         connector.helper.connector_logger.error.assert_called_once()
 
-    def test_create_indicators_false_only_url_in_bundle(self, mock_opencti_connector_helper):
+    def test_create_indicators_false_only_url_in_bundle(
+        self, mock_opencti_connector_helper
+    ):
         """With create_indicators=False, only the URL observable is added, no Indicator or IP."""
         connector = _make_connector(mock_opencti_connector_helper)
         connector.create_indicators = False
-        with patch("connector.connector.requests.get", return_value=_mock_response([_entry()])):
+        with patch(
+            "connector.connector.requests.get", return_value=_mock_response([_entry()])
+        ):
             connector._process_feed("work-id")
         objects = connector.helper.stix2_create_bundle.call_args[0][0]
         assert any(isinstance(o, stix2.URL) for o in objects)
