@@ -16,7 +16,7 @@ def main() -> None:
     flare_client = FlareClient(
         helper=helper,
         api_key=settings.flare.api_key,
-        base_url=settings.flare.api_base_url,
+        api_domain=settings.flare.api_domain,
         tenant_id=settings.flare.tenant_id,
     )
 

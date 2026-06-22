@@ -5,7 +5,6 @@ from typing import Any
 
 from flareio import FlareApiClient  # pylint: disable=import-error
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
 
 
 class FlareClient:  # pylint: disable=too-few-public-methods
@@ -13,13 +12,13 @@ class FlareClient:  # pylint: disable=too-few-public-methods
         self,
         helper: OpenCTIConnectorHelper,
         api_key: str,
-        base_url: HttpUrl,
+        api_domain: str,
         tenant_id: int | None,
     ) -> None:
         self.helper = helper
         self._api = FlareApiClient(
             api_key=api_key,
-            api_domain=str(base_url),
+            api_domain=api_domain,
             tenant_id=tenant_id,
         )
 

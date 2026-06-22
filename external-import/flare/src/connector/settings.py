@@ -5,6 +5,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DeprecatedField,
     ListFromString,
 )
 from pydantic import Field
@@ -29,8 +30,15 @@ class FlareConfig(BaseConfigModel):
     api_key: str = Field(
         description="Flare API key.",
     )
-    api_base_url: str = Field(
-        description="API base URL.",
+
+    api_base_url: str = DeprecatedField(
+        deprecated="Use api_domain instead",
+        new_namespaced_var="api_domain",
+        removal_date="2027-06-30",  # Optional informative removal deadline
+    )
+
+    api_domain: str = Field(
+        description="API domain name.",
         default="api.flare.io",
     )
     tenant_id: int | None = Field(
