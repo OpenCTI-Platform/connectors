@@ -113,9 +113,7 @@ def test_collect_intelligence_bundle_includes_related_entities(
 
     assert len(related_to) == 7
 
-    incident_related_to = [
-        rel for rel in related_to if rel.source_ref == incident_id
-    ]
+    incident_related_to = [rel for rel in related_to if rel.source_ref == incident_id]
     assert len(incident_related_to) == 4
     assert {relationship.target_ref for relationship in incident_related_to} == (
         observable_and_vulnerability_ids

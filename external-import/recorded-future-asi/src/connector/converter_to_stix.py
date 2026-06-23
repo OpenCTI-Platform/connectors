@@ -427,6 +427,7 @@ class ConverterToStix:
 
         objects: list[BaseIdentifiedEntity] = [incident]
         relationships: list[Relationship] = []
+        resolved_vulnerabilities: list[Vulnerability] = []
 
         for vuln_dict in assets_signature.get("vulnerabilities") or []:
             vulnerability, is_new = self._get_or_create_vulnerability(vuln_dict)
@@ -434,6 +435,7 @@ class ConverterToStix:
                 continue
             if is_new:
                 objects.append(vulnerability)
+            resolved_vulnerabilities.append(vulnerability)
             relationships.append(
                 Relationship(
                     type=RelationshipType.RELATED_TO,
@@ -467,17 +469,7 @@ class ConverterToStix:
                 )
             )
 
-        for asset_exposure in exposure_assets_response.get("asset_exposures") or []:
-            asset_id = asset_exposure.get("asset_id")
-            if not asset_id:
-                continue
-            observable, _ = self._get_or_create_observable(asset_id, asset_exposure)
-            if observable is None:
-                continue
-            for vuln_dict in assets_signature.get("vulnerabilities") or []:
-                vulnerability, _ = self._get_or_create_vulnerability(vuln_dict)
-                if vulnerability is None:
-                    continue
+            for vulnerability in resolved_vulnerabilities:
                 relationships.append(
                     Relationship(
                         type=RelationshipType.RELATED_TO,
