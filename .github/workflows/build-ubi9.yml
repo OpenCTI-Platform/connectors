@@ -3,6 +3,12 @@ name: Build UBI9 Images
 on:
   workflow_call:
     inputs:
+      build_mode:
+        description: >
+          Build mode: "rolling" (master), "prerelease" (release/* branches),
+          or "release" (version tags like 7.260529.0).
+        required: true
+        type: string
       platforms:
         description: "Target platforms for docker buildx"
         required: false
@@ -32,11 +38,13 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      image-tag: ${{ steps.meta.outputs.tag }}
+      image_tags: ${{ steps.meta.outputs.image_tags }}
+      is_latest: ${{ steps.meta.outputs.is_latest }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          fetch-depth: 0
           sparse-checkout: .github/ubi9-connectors.json
 
       - name: Generate build matrix
@@ -51,18 +59,38 @@ jobs:
               f.write('matrix=' + json.dumps(matrix) + '\n')
           "
 
-      - name: Compute image tag
+      - name: Compute image tags
         id: meta
         run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            IMAGE_TAG="${{ github.ref_name }}"
-          elif [[ "${{ github.ref_name }}" == "master" ]]; then
-            IMAGE_TAG="latest"
-          else
-            # Sanitize branch name for Docker tag (e.g. release/6.9.x -> release-6.9.x)
-            IMAGE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-')
-          fi
-          echo "tag=${IMAGE_TAG}-ubi9" >> "$GITHUB_OUTPUT"
+          BUILD_MODE="${{ inputs.build_mode }}"
+          IS_LATEST="false"
+
+          case "$BUILD_MODE" in
+            rolling)
+              IMAGE_TAGS="rolling-ubi9"
+              ;;
+            prerelease)
+              IMAGE_TAGS="prerelease-ubi9"
+              ;;
+            release)
+              TAG_NAME="${{ github.ref_name }}"
+              LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+
+              IMAGE_TAGS="${TAG_NAME}-ubi9"
+              if [ "$TAG_NAME" = "$LATEST_TAG" ]; then
+                IMAGE_TAGS="${IMAGE_TAGS},latest-ubi9"
+                IS_LATEST="true"
+              fi
+              ;;
+            *)
+              echo "::error::Unknown build mode: $BUILD_MODE"
+              exit 1
+              ;;
+          esac
+
+          echo "image_tags=${IMAGE_TAGS}" >> "$GITHUB_OUTPUT"
+          echo "is_latest=$IS_LATEST" >> "$GITHUB_OUTPUT"
+          echo "🏷️ UBI9 image tags: $IMAGE_TAGS (is_latest: $IS_LATEST)"
 
   build:
     name: Build ${{ matrix.name }}-ubi9
@@ -131,6 +159,31 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Compute Docker tags
+        id: docker-tags
+        shell: bash
+        run: |
+          IMAGE_TAGS="${{ needs.build-matrix.outputs.image_tags }}"
+          CONNECTOR_NAME="${{ matrix.name }}"
+          REPO="opencti"
+
+          TAGS=""
+          IFS=',' read -ra TAG_ARRAY <<< "$IMAGE_TAGS"
+          for tag in "${TAG_ARRAY[@]}"; do
+            tag=$(echo "$tag" | xargs)
+            if [ -n "$TAGS" ]; then
+              TAGS="${TAGS}"$'\n'
+            fi
+            TAGS="${TAGS}${REPO}/connector-${CONNECTOR_NAME}:${tag}"$'\n'
+            TAGS="${TAGS}ghcr.io/opencti-platform/${REPO}/connector-${CONNECTOR_NAME}:${tag}"
+          done
+
+          {
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
@@ -140,6 +193,4 @@ jobs:
           push: ${{ inputs.push }}
           platforms: ${{ inputs.platforms }}
           build-args: ${{ steps.config.outputs.build_args }}
-          tags: |
-            opencti/connector-${{ matrix.name }}:${{ needs.build-matrix.outputs.image-tag }}
-            ghcr.io/opencti-platform/opencti/connector-${{ matrix.name }}:${{ needs.build-matrix.outputs.image-tag }}
+          tags: ${{ steps.docker-tags.outputs.tags }}

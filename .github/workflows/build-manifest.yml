@@ -14,10 +14,13 @@ name: Build Manifest
 
 on:
   push:
-    
+    branches:
+      - master
+      - 'release/*'
+      - 'lts/*'
 
 concurrency:
-  group: build-manifest-${{ github.event.workflow_run.head_branch || github.ref }}
+  group: build-manifest-${{ github.event.pull_request.head.ref || github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -38,9 +41,10 @@ jobs:
     #   PUSH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           fetch-depth: 0
           persist-credentials: false
 
