@@ -178,7 +178,7 @@ For each **added** exposure, the connector creates:
 - **Incident** — Type `Attack Surface Monitoring`, label `recorded-future-asi:added`, deterministic ID keyed on the RF exposure ID
 - **Observables** — IPv4 addresses, IPv6 addresses, and domain names derived from affected assets
 - **Vulnerabilities** — CVEs linked from exposure signatures (with CVSS, EPSS, and CWE labels when available)
-- **Relationships** — `related-to` from incident to observables and vulnerabilities; `has` from observables to vulnerabilities
+- **Relationships** — `related-to` from incident to observables and vulnerabilities and from observables to vulnerabilities
 - **Author and TLP marking** — Organization author `Recorded Future ASI` and the configured TLP marking
 
 For **cleared** exposures (removed in incremental history), the connector sends an incident-only update with label `recorded-future-asi:cleared` and the same deterministic incident ID, allowing OpenCTI to update the existing incident.

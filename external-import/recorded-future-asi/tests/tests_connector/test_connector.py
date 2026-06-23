@@ -106,27 +106,38 @@ def test_collect_intelligence_bundle_includes_related_entities(
     incident_id = incidents[0].id
     vulnerability_id = vulnerabilities[0].id
     related_to = [rel for rel in relationships if rel.relationship_type == "related-to"]
-    has_relationships = [rel for rel in relationships if rel.relationship_type == "has"]
-    observable_and_vulnerability_ids = {
-        obj.id
-        for obj in (ipv4_addresses + ipv6_addresses + domain_names + vulnerabilities)
+    observable_ids = {
+        obj.id for obj in (ipv4_addresses + ipv6_addresses + domain_names)
     }
+    observable_and_vulnerability_ids = observable_ids | {vulnerability_id}
 
-    assert len(related_to) == 4
-    assert {relationship.target_ref for relationship in related_to} == (
+    assert len(related_to) == 7
+
+    incident_related_to = [
+        rel for rel in related_to if rel.source_ref == incident_id
+    ]
+    assert len(incident_related_to) == 4
+    assert {relationship.target_ref for relationship in incident_related_to} == (
         observable_and_vulnerability_ids
     )
-    assert all(relationship.source_ref == incident_id for relationship in related_to)
 
-    assert len(has_relationships) == 3
+    observable_vulnerability_related_to = [
+        rel
+        for rel in related_to
+        if rel.source_ref in observable_ids and rel.target_ref == vulnerability_id
+    ]
+    assert len(observable_vulnerability_related_to) == 3
     assert all(
-        relationship.source_ref in observable_and_vulnerability_ids
-        for relationship in has_relationships
+        relationship.source_ref in observable_ids
+        for relationship in observable_vulnerability_related_to
     )
     assert all(
         relationship.target_ref == vulnerability_id
-        for relationship in has_relationships
+        for relationship in observable_vulnerability_related_to
     )
+    assert {
+        relationship.source_ref for relationship in observable_vulnerability_related_to
+    } == observable_ids
 
 
 def test_collect_intelligence_with_run_limit_uses_batch(
