@@ -206,7 +206,10 @@ def get_relationships_from(observable_id: str) -> list[dict]:
                 }
             }
         }
-    """ % (observable_id, observable_id)
+    """ % (
+        observable_id,
+        observable_id,
+    )
     result = graphql(query)
     return [e["node"] for e in result["stixCoreRelationships"]["edges"]]
 

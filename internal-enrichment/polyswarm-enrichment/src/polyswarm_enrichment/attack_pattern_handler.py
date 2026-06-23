@@ -122,7 +122,9 @@ class AttackPatternHandler:
             ttp_info = self._get_ttp_info(ttp_id)
 
             if not ttp_info or ttp_info.get("tactic") == "unknown":
-                self.helper.log_warning(f"[ATTACK_PATTERN] Unknown TTP: {ttp_id}")
+                self.helper.connector_logger.warning(
+                    f"[ATTACK_PATTERN] Unknown TTP: {ttp_id}"
+                )
                 return None
 
             # Generate deterministic ID
@@ -166,15 +168,17 @@ class AttackPatternHandler:
             }
 
             self._attack_pattern_cache[ttp_id] = attack_pattern
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[ATTACK_PATTERN] Created: {ttp_id} - {ttp_info['name']}"
             )
 
             return attack_pattern
 
         except (KeyError, TypeError, ValueError) as e:
-            self.helper.log_error(f"[ATTACK_PATTERN] Error creating {ttp_id}: {str(e)}")
-            self.helper.log_error(
+            self.helper.connector_logger.error(
+                f"[ATTACK_PATTERN] Error creating {ttp_id}: {str(e)}"
+            )
+            self.helper.connector_logger.error(
                 f"[ATTACK_PATTERN] Traceback: {traceback.format_exc()}"
             )
             return None
@@ -199,7 +203,7 @@ class AttackPatternHandler:
             Tuple of (attack_patterns, relationships)
         """
         if not self.has_ttp_data():
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 "[ATTACK_PATTERN] No TTP data available (polykg not loaded). Skipping."
             )
             return [], []
@@ -215,12 +219,12 @@ class AttackPatternHandler:
             ttp_ids = list(set(ttp_ids + explicit_ttps))
 
         if not ttp_ids:
-            self.helper.log_info(
+            self.helper.connector_logger.info(
                 f"[ATTACK_PATTERN] No TTPs mapped for malware types: {malware_types}"
             )
             return [], []
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ATTACK_PATTERN] Creating {len(ttp_ids)} attack patterns for {malware_name}"
         )
 
@@ -255,7 +259,7 @@ class AttackPatternHandler:
                 }
                 relationships.append(relationship)
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ATTACK_PATTERN] Created {len(attack_patterns)} patterns, "
             f"{len(relationships)} relationships for {malware_name}"
         )
@@ -288,7 +292,7 @@ class AttackPatternHandler:
         if not ttp_ids:
             return [], []
 
-        self.helper.log_info(
+        self.helper.connector_logger.info(
             f"[ATTACK_PATTERN] Creating {len(ttp_ids)} attack patterns for actor {actor_name}"
         )
 

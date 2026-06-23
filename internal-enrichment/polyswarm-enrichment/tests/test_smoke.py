@@ -123,9 +123,9 @@ class TestConverterOutput:
         helper = StubHelper()
         converter = ConverterToStix(helper)
         rel = converter.create_relationship(
-            source_id="indicator--test",
+            source_id="indicator--12345678-1234-4234-8234-123456789abc",
             relationship_type="indicates",
-            target_id="malware--test",
+            target_id="malware--87654321-4321-4321-8321-cba987654321",
             description="test relationship",
         )
         assert rel is not None
