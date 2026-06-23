@@ -184,7 +184,6 @@ class TestExtractConfigKeys:
 
     def test_mixed_leaves_and_branches(self):
         out = _extract({"a": 1, "b": {"c": 2, "d": 3}})
-        out_sorted = sorted([sorted(k) for k in out])
         # Three leaves total: ["a"], ["b","c"], ["b","d"].
         assert len(out) == 3
 

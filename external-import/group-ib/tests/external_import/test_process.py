@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from external_import import ExternalImportConnector
 
 
