@@ -1,0 +1,19 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'Swimlane' # optional (default: 'Swimlane')
+  scope: 'swimlane' # required
+  log_level: 'error' # optional (default: 'error')
+  duration_period: 'PT15M' # optional (default: 'PT15M')
+
+swimlane:
+  api_base_url: 'ChangeMe' # Base URL of the Swimlane instance, e.g. https://swimlane.example.com
+  api_token: 'ChangeMe' # Swimlane API token (Personal Access Token)
+  application_id: 'ChangeMe' # ID of the Swimlane application to import records from
+  max_records: 100 # optional (default: 100)
+  tlp_level: 'amber' # optional, one of clear/white/green/amber/amber+strict/red (default: 'amber')
+  ssl_verify: true # optional (default: true)
