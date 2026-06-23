@@ -9,11 +9,6 @@ on:
           or "release" (version tags like 7.260529.0).
         required: true
         type: string
-      platforms:
-        description: "Target platforms for docker buildx"
-        required: false
-        type: string
-        default: "linux/amd64,linux/arm64"
       push:
         description: "Whether to push images to registries"
         required: false
@@ -21,13 +16,13 @@ on:
         default: true
     secrets:
       DOCKERHUB_USERNAME:
-        required: true
+        required: false
       DOCKERHUB_PASSWORD:
-        required: true
+        required: false
       GHCR_USERNAME:
-        required: true
+        required: false
       GHCR_TOKEN:
-        required: true
+        required: false
 
 permissions:
   contents: read
@@ -48,13 +43,16 @@ jobs:
       is_latest: ${{ steps.tags.outputs.is_latest }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           fetch-tags: true
+          
 
       - name: Generate build matrix
         id: set-matrix
+        env:
+          BUILD_MODE: ${{ inputs.build_mode }}
         run: python3 .github/scripts/build_alpine_matrix.py
 
       - name: Compute image tags
@@ -91,151 +89,77 @@ jobs:
           echo "🏷️ Image tags: $IMAGE_TAGS (is_latest: $IS_LATEST)"
 
   build-external-import:
-    name: Build external-import/${{ matrix.name }}
     needs: build-matrix
     if: contains(fromJson(needs.build-matrix.outputs.active_types), 'external_import')
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix_external_import) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Build and push connector image
-        uses: ./.github/actions/build-connector-image
-        with:
-          connector_path: ${{ matrix.path }}
-          connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
-          image_tags: ${{ needs.build-matrix.outputs.image_tags }}
-          build_mode: ${{ inputs.build_mode }}
-          platforms: ${{ inputs.platforms }}
-          push: ${{ inputs.push }}
-          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          ghcr_username: ${{ secrets.GHCR_USERNAME }}
-          ghcr_token: ${{ secrets.GHCR_TOKEN }}
+    with:
+      type_name: external-import
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_external_import }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
 
   build-internal-enrichment:
-    name: Build internal-enrichment/${{ matrix.name }}
     needs: build-matrix
     if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_enrichment')
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix_internal_enrichment) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Build and push connector image
-        uses: ./.github/actions/build-connector-image
-        with:
-          connector_path: ${{ matrix.path }}
-          connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
-          image_tags: ${{ needs.build-matrix.outputs.image_tags }}
-          build_mode: ${{ inputs.build_mode }}
-          platforms: ${{ inputs.platforms }}
-          push: ${{ inputs.push }}
-          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          ghcr_username: ${{ secrets.GHCR_USERNAME }}
-          ghcr_token: ${{ secrets.GHCR_TOKEN }}
+    with:
+      type_name: internal-enrichment
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_enrichment }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
 
   build-internal-export-file:
-    name: Build internal-export-file/${{ matrix.name }}
     needs: build-matrix
     if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_export_file')
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix_internal_export_file) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Build and push connector image
-        uses: ./.github/actions/build-connector-image
-        with:
-          connector_path: ${{ matrix.path }}
-          connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
-          image_tags: ${{ needs.build-matrix.outputs.image_tags }}
-          build_mode: ${{ inputs.build_mode }}
-          platforms: ${{ inputs.platforms }}
-          push: ${{ inputs.push }}
-          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          ghcr_username: ${{ secrets.GHCR_USERNAME }}
-          ghcr_token: ${{ secrets.GHCR_TOKEN }}
+    with:
+      type_name: internal-export-file
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_export_file }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
 
   build-internal-import-file:
-    name: Build internal-import-file/${{ matrix.name }}
     needs: build-matrix
     if: contains(fromJson(needs.build-matrix.outputs.active_types), 'internal_import_file')
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix_internal_import_file) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Build and push connector image
-        uses: ./.github/actions/build-connector-image
-        with:
-          connector_path: ${{ matrix.path }}
-          connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
-          image_tags: ${{ needs.build-matrix.outputs.image_tags }}
-          build_mode: ${{ inputs.build_mode }}
-          platforms: ${{ inputs.platforms }}
-          push: ${{ inputs.push }}
-          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          ghcr_username: ${{ secrets.GHCR_USERNAME }}
-          ghcr_token: ${{ secrets.GHCR_TOKEN }}
+    with:
+      type_name: internal-import-file
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_internal_import_file }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
 
   build-stream:
-    name: Build stream/${{ matrix.name }}
     needs: build-matrix
     if: contains(fromJson(needs.build-matrix.outputs.active_types), 'stream')
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/build-connector-type.yml
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.build-matrix.outputs.matrix_stream) }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    with:
+      type_name: stream
+      matrix_json: ${{ needs.build-matrix.outputs.matrix_stream }}
+      image_tags: ${{ needs.build-matrix.outputs.image_tags }}
+      build_mode: ${{ inputs.build_mode }}
+      push: ${{ inputs.push }}
+    secrets: inherit
 
-      - name: Build and push connector image
-        uses: ./.github/actions/build-connector-image
-        with:
-          connector_path: ${{ matrix.path }}
-          connector_name: ${{ matrix.name }}
-          fips: ${{ matrix.fips }}
-          image_tags: ${{ needs.build-matrix.outputs.image_tags }}
-          build_mode: ${{ inputs.build_mode }}
-          platforms: ${{ inputs.platforms }}
-          push: ${{ inputs.push }}
-          dockerhub_username: ${{ secrets.DOCKERHUB_USERNAME }}
-          dockerhub_password: ${{ secrets.DOCKERHUB_PASSWORD }}
-          ghcr_username: ${{ secrets.GHCR_USERNAME }}
-          ghcr_token: ${{ secrets.GHCR_TOKEN }}
