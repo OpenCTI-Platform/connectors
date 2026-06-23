@@ -16,8 +16,6 @@ on:
       - 'shared/**'
       - 'templates/**'
       - 'run_test.sh'
-      - '.github/workflows/tests-connectors.yml'
-      - '.github/scripts/**'
   pull_request:
     paths:
       - 'connectors-sdk/**'
@@ -29,8 +27,6 @@ on:
       - 'shared/**'
       - 'templates/**'
       - 'run_test.sh'
-      - '.github/workflows/tests-connectors.yml'
-      - '.github/scripts/**'
   workflow_call:
 
 concurrency:

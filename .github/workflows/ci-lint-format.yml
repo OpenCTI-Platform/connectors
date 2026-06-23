@@ -1,14 +1,14 @@
 name: Lint & Format
 
 on:
-  push:
-    branches-ignore:
-      - master
-      - 'release/*'
-      - 'lts/*'
-    tags-ignore:
-      - '**'
   pull_request:
+    paths:
+      - 'connectors-sdk/**'
+      - 'external-import/**'
+      - 'internal-enrichment/**'
+      - 'internal-export-file/**'
+      - 'internal-import-file/**'
+      - 'stream/**'
   workflow_call:
 
 env:

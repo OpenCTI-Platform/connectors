@@ -1,11 +1,7 @@
 name: Connector Verified Linter
 
 on:
-  push:
-    branches-ignore:
-      - master
-      - 'release/*'
-      - 'lts/*'
+  pull_request:
     paths:
       - 'connectors-sdk/**'
       - 'external-import/**'
