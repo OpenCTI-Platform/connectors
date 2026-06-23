@@ -480,7 +480,7 @@ class ConverterToStix:
                     continue
                 relationships.append(
                     Relationship(
-                        type=RelationshipType.HAS,
+                        type=RelationshipType.RELATED_TO,
                         source=observable,
                         target=vulnerability,
                     )
