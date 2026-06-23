@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 import requests
+from connectors_sdk.models import OrganizationAuthor
 from pycti import (
     AttackPattern,
     Identity,
@@ -122,28 +123,17 @@ class StixBuilder:
         return default
 
     def _create_author(self) -> dict:
-        author_id = Identity.generate_id(
-            name="PolySwarm", identity_class="organization"
-        )
-        return {
-            "type": "identity",
-            "spec_version": "2.1",
-            "id": author_id,
-            "created": self._now,
-            "modified": self._now,
-            "name": "PolySwarm_Malware_Threat_Intelligence",
-            "identity_class": "organization",
-            "description": "PolySwarm is a next-generation Malware Intelligence Platform combining "
+        """Create Author (Organization Identity) as plain dict."""
+        sdk_author = OrganizationAuthor(
+            name="PolySwarm_Malware_Threat_Intelligence",
+            description="PolySwarm is a next-generation Malware Intelligence Platform combining "
             "the speed of crowdsourced detection with the rigor of enterprise security.",
-            "external_references": [
-                {
-                    "source_name": "PolySwarm_Malware_Threat_Intelligence",
-                    "url": "https://polyswarm.io/",
-                    "description": "PolySwarm next-generation Malware Intelligence Platform",
-                }
-            ],
-            "x_opencti_type": "Organization",
-        }
+        )
+        return json.loads(sdk_author.to_stix2_object().serialize())
+
+    def _author_props(self) -> dict:
+        """Return author reference dict for use in STIX object creation."""
+        return dict(created_by_ref=self.author_id)
 
     @staticmethod
     def _create_statement_marking() -> dict:
@@ -200,24 +190,24 @@ class StixBuilder:
                 self._profile_cache[cache_key] = profile
                 return profile
             if resp.status_code in (401, 403):
-                self.helper.log_warning(
+                self.helper.connector_logger.warning(
                     f"[STIX] polykg auth error {resp.status_code} for {family_name}"
                 )
                 return None
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[STIX] polykg returned {resp.status_code} for {family_name}"
             )
             return None
 
         except requests.ConnectionError as exc:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[STIX] polykg connection failed, opening circuit: {exc}"
             )
             StixBuilder._POLYKG_CIRCUIT_OPEN = True
             StixBuilder._POLYKG_CIRCUIT_OPENED_AT = _time.time()
             return None
         except requests.RequestException as exc:
-            self.helper.log_warning(
+            self.helper.connector_logger.warning(
                 f"[STIX] polykg profile fetch failed for {family_name}: {exc}"
             )
             return None
@@ -320,7 +310,7 @@ class StixBuilder:
         if family:
             profile = self._fetch_polykg_profile(family)
             if profile:
-                self.helper.log_info(f"[STIX] Loaded profile for {family}")
+                self.helper.connector_logger.info(f"[STIX] Loaded profile for {family}")
 
         # Build external refs
         external_refs = self._build_external_refs(
@@ -763,7 +753,7 @@ class StixBuilder:
             if existing is not None:
                 try:
                     if int(existing) > score:
-                        self.helper.log_info(
+                        self.helper.connector_logger.info(
                             f"[STIX] Keeping existing score {existing} > {score}"
                         )
                         replace = False

@@ -13,6 +13,16 @@ class StubHelper:
     connect_scope = "Artifact"
     connect_log_level = "info"
     config = {}
+    connector_logger = type(
+        "_L",
+        (),
+        {
+            "info": lambda s, *a, **k: None,
+            "warning": lambda s, *a, **k: None,
+            "error": lambda s, *a, **k: None,
+            "debug": lambda s, *a, **k: None,
+        },
+    )()
 
     class _API:
         class _Observable:

@@ -13,6 +13,4 @@ RUN apk --no-cache add git build-base libmagic libffi-dev && \
     apk del --no-network git build-base
 
 # Entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["python", "main.py"]
