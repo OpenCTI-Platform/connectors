@@ -1,5 +1,4 @@
 -r ../src/requirements.txt
 pytest>=7.4.0
-pytest-cov>=4.1.0
 vcrpy>=6.0.0
 stix2-validator>=3.0.0
