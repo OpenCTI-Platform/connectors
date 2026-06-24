@@ -10,8 +10,9 @@ from urllib3 import make_headers
 from urllib3.util import parse_url
 from verity471 import verity_stix
 from verity471.verity_stix.exceptions import EmptyBundle
+from verity471.exceptions import UnauthorizedException
 
-from .exceptions import UnknownBackendError
+from .exceptions import UnknownBackendError, _NoUnauthorized
 from .streams import titan as titan_streams
 from .streams import verity471 as verity471_streams
 from .streams.core.base import Intel471Stream
@@ -34,6 +35,7 @@ class ClientWrapper:
         type[titan_stix.STIXMapperSettings] | type[verity_stix.STIXMapperSettings]
     )
     empty_bundle_exception: type[Exception]
+    unauthorized_exception: type[Exception]
     streams: tuple[type[Intel471Stream], ...]
 
 
@@ -57,6 +59,7 @@ def get_client(
             titan_client.Configuration(**config_kwargs),
             titan_stix.STIXMapperSettings,
             titan_stix.exceptions.EmptyBundle,
+            _NoUnauthorized,
             (
                 titan_streams.Intel471IndicatorsStream,
                 titan_streams.Intel471YARAStream,
@@ -74,6 +77,7 @@ def get_client(
             verity471.Configuration(**config_kwargs),
             verity_stix.STIXMapperSettings,
             EmptyBundle,
+            UnauthorizedException,
             (
                 verity471_streams.Verity471IndicatorsStream,
                 verity471_streams.Verity471CVEsStream,
