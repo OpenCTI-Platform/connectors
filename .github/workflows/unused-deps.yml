@@ -8,7 +8,7 @@ on:
       - 'internal-export-file/**'
       - 'internal-import-file/**'
       - 'stream/**'
-      - 'pyproject.toml'
+      - '.github/deptry-package-map.txt'
       - '.github/workflows/unused-deps.yml'
 
 concurrency:
@@ -45,6 +45,28 @@ jobs:
         run: |
           base_sha="${{ github.event.pull_request.base.sha }}"
           warnings=""
+          config=".github/deptry-package-map.txt"
+
+          # Build deptry CLI args from the config file
+          # NOTE: deptry's --package-module-name-map replaces the whole dict on each
+          # invocation (Click MAPPING type), so ALL mappings must be in ONE argument
+          # as comma-separated key=value pairs: --package-module-name-map "k1=v1,k2=v2"
+          MAP_ENTRIES=""
+          IGNORE_PKGS=""
+          while IFS= read -r line || [ -n "$line" ]; do
+            # Strip inline comments and trim whitespace
+            line=$(echo "$line" | sed 's/#.*//' | xargs)
+            [ -z "$line" ] && continue
+            if echo "$line" | grep -q "^ignore="; then
+              pkg="${line#ignore=}"
+              # Accumulate as pipe-separated list under a single DEP002= key
+              IGNORE_PKGS="${IGNORE_PKGS:+$IGNORE_PKGS|}$pkg"
+            else
+              # Accumulate as comma-separated key=value pairs for a single --package-module-name-map arg
+              MAP_ENTRIES="${MAP_ENTRIES:+$MAP_ENTRIES,}$line"
+            fi
+          done < "$config"
+          MAP_ARGS="${MAP_ENTRIES:+--package-module-name-map $MAP_ENTRIES}"
 
           for dir in external-import internal-enrichment internal-import-file internal-export-file stream; do
             for req in $dir/*/src/requirements.txt; do
@@ -59,17 +81,20 @@ jobs:
                 # Extract package name from deptry output: DEP002 'pkg-name' defined ...
                 pkg=$(echo "$line" | sed "s/.*DEP002 '\([^']*\)'.*/\1/")
                 # Find the line number of the package in requirements.txt
-                escaped_pkg=$(printf '%s' "$pkg" | sed 's/[.[\/^$*+?(){}|]/\\&/g')
+                escaped_pkg=$(printf '%s' "$pkg" | sed 's/[.[\'\''/^$*+?(){}|]/\\&/g')
                 lineno=$(grep -n -iE "^${escaped_pkg}(\[[^\]]+\])?([[:space:]]|[=<>~!]|$)" "$req" | head -1 | cut -d: -f1 || true)
                 lineno=${lineno:-1}
                 echo "::warning file=$req,line=$lineno,title=Unused dependency::$pkg is listed in $req but not imported in $src"
                 warnings="${warnings}- \`${pkg}\` in \`${req}\`\n"
-              done < <(deptry "$src" --requirements-files "$req" --no-ansi 2>&1 | grep "DEP002" || true)
+              done < <(deptry "$src" --requirements-files "$req" --no-ansi \
+                $MAP_ARGS \
+                ${IGNORE_PKGS:+--per-rule-ignores "DEP002=$IGNORE_PKGS"} \
+                2>&1 | grep "DEP002" || true)
             done
           done
 
           if [ -n "$warnings" ]; then
-            echo "::notice title=How to fix unused dependency warnings::For each warning: (1) if the package IS used but under a different import name (e.g. 'PyYAML' -> 'yaml'), add it to the [tool.deptry.package_module_name_map] section in pyproject.toml at the repo root. (2) if the package is truly unused, remove it from the connector's requirements.txt."
+            echo "::notice title=How to fix unused dependency warnings::For each warning: (1) if the package IS used but under a different import name (e.g. 'PyYAML' -> 'yaml'), add a mapping line to .github/deptry-package-map.txt. (2) if the package is truly unused, remove it from the connector's requirements.txt."
           fi
 
           # Pass warnings to next step
@@ -85,7 +110,7 @@ jobs:
         with:
           script: |
             const marker = '<!-- unused-deps-bot -->';
-            const body = `${marker}\n⚠️ **Unused dependencies detected**\n\nThe following packages appear to be unused:\n\n${process.env.WARNINGS}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add it to \`[tool.deptry.package_module_name_map]\` in \`pyproject.toml\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`.`;
+            const body = `${marker}\n⚠️ **Unused dependencies detected**\n\nThe following packages appear to be unused:\n\n${process.env.WARNINGS}\n> **How to fix:** (1) if the package is used but under a different import name (e.g. \`PyYAML\` → \`yaml\`), add a mapping line to \`.github/deptry-package-map.txt\`. (2) if truly unused, remove it from the connector's \`requirements.txt\`.`;
 
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
