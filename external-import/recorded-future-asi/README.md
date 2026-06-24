@@ -159,7 +159,7 @@ The connector operates in two phases:
 
 ### Connector state
 
-State is persisted only after a successful collection and send cycle:
+State is persisted after a successful collection cycle, including runs that produce no STIX objects to send:
 
 
 | State key          | Description                                                                                                                                   |

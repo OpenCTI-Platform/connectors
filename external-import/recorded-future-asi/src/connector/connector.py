@@ -149,7 +149,7 @@ class RecordedFutureAsiConnector:
             {"exposure_count": len(exposures)},
         )
 
-        for exposure in exposures:
+        for exposure in exposures or []:
             signature = exposure["signature"]
             signature_id = signature["id"]
 
@@ -294,18 +294,6 @@ class RecordedFutureAsiConnector:
 
         return stix_objects
 
-    def _collect_intelligence(
-        self, exposures_cursor: str | None = None
-    ) -> tuple[list, str | None]:
-        """
-        Backward-compatible wrapper for initial sync collection.
-
-        :param exposures_cursor: Optional pagination cursor when run_limit is set.
-        :return: Tuple of STIX objects and optional next cursor for the next batch.
-        """
-        stix_objects, next_cursor = self._collect_initial_intelligence(exposures_cursor)
-        return stix_objects, next_cursor
-
     def _persist_sync_state(
         self,
         now: datetime,
@@ -339,6 +327,35 @@ class RecordedFutureAsiConnector:
         self.helper.set_state(current_state)
         return last_run_datetime
 
+    def _log_last_run_status(self, current_state: dict) -> None:
+        """Log whether the connector has run before."""
+        if "last_run" in current_state:
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector last run",
+                {"last_run_datetime": current_state["last_run"]},
+            )
+            return
+
+        self.helper.connector_logger.info("[CONNECTOR] Connector has never run...")
+
+    def _initiate_stix_import_work(self) -> str:
+        """Create an OpenCTI work item for a non-empty STIX import."""
+        friendly_name = "Recorded Future ASI Exposures Import"
+        return self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+
+    def _deliver_stix_bundle(self, stix_objects: list, work_id: str) -> None:
+        """Build and send a STIX bundle for an existing work item."""
+        stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
+        bundles_sent = self.helper.send_stix2_bundle(
+            stix_objects_bundle,
+            work_id=work_id,
+            cleanup_inconsistent_bundle=True,
+        )
+        self.helper.connector_logger.info(
+            "Sending STIX objects to OpenCTI...",
+            {"bundles_sent": {str(len(bundles_sent))}},
+        )
+
     def process_message(self) -> None:
         """
         Connector main process to collect intelligence
@@ -356,16 +373,7 @@ class RecordedFutureAsiConnector:
             # Get the current state
             now = datetime.now(timezone.utc)
             current_state = self.helper.get_state() or {}
-
-            if "last_run" in current_state:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": current_state["last_run"]},
-                )
-            else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector has never run..."
-                )
+            self._log_last_run_status(current_state)
 
             self.helper.connector_logger.info(
                 "[CONNECTOR] Running connector...",
@@ -393,24 +401,15 @@ class RecordedFutureAsiConnector:
                 initial_cycle_complete = False
 
             if stix_objects:
-                # Friendly name will be displayed on OpenCTI platform
-                friendly_name = "Recorded Future ASI Exposures Import"
-                work_id = self.helper.api.work.initiate_work(
-                    self.helper.connect_id, friendly_name
-                )
+                work_id = self._initiate_stix_import_work()
+                self._deliver_stix_bundle(stix_objects, work_id)
 
-                stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-                bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
-                )
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Collection complete",
+                {"stix_object_count": len(stix_objects)},
+            )
 
-                self.helper.connector_logger.info(
-                    "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
-                )
-            # Persist state only after a successful collection/send cycle.
+            # Persist state after a successful collection cycle, even when no bundle is sent.
             if self.config.recorded_future_asi.run_limit is not None and initial_sync:
                 exposures_cursor_to_store: str | None | bool = next_cursor
             else:

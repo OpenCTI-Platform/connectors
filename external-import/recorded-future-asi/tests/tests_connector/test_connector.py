@@ -11,7 +11,7 @@ from connector.settings import ConnectorSettings
 from pycti import Incident as PyctiIncident
 
 
-def test_collect_intelligence_returns_incidents_author_and_marking(
+def test_collect_initial_intelligence_returns_incidents_author_and_marking(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
     all_exposure_items,
@@ -24,7 +24,7 @@ def test_collect_intelligence_returns_incidents_author_and_marking(
         return_value={"signature": {}, "asset_exposures": []}
     )
 
-    stix_objects, _ = connector._collect_intelligence()
+    stix_objects, _ = connector._collect_initial_intelligence()
 
     incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
     identities = [obj for obj in stix_objects if obj["type"] == "identity"]
@@ -55,7 +55,7 @@ def test_collect_intelligence_returns_incidents_author_and_marking(
     )
 
 
-def test_collect_intelligence_returns_empty_list_when_no_exposures(
+def test_collect_initial_intelligence_returns_empty_list_when_no_exposures(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
 ):
@@ -65,13 +65,13 @@ def test_collect_intelligence_returns_empty_list_when_no_exposures(
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
-    stix_objects, _ = connector._collect_intelligence()
+    stix_objects, _ = connector._collect_initial_intelligence()
 
     assert stix_objects == []
     connector.client.get_exposure_assets.assert_not_called()
 
 
-def test_collect_intelligence_bundle_includes_related_entities(
+def test_collect_initial_intelligence_bundle_includes_related_entities(
     opencti_helper,
     stub_connector_settings: ConnectorSettings,
     all_exposure_items,
@@ -83,7 +83,7 @@ def test_collect_intelligence_bundle_includes_related_entities(
     connector.client.list_exposures = MagicMock(return_value=all_exposure_items[:1])
     connector.client.get_exposure_assets = MagicMock(return_value=all_exposure_assets)
 
-    stix_objects, _ = connector._collect_intelligence()
+    stix_objects, _ = connector._collect_initial_intelligence()
 
     incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
     ipv4_addresses = [obj for obj in stix_objects if obj["type"] == "ipv4-addr"]
@@ -138,7 +138,7 @@ def test_collect_intelligence_bundle_includes_related_entities(
     } == observable_ids
 
 
-def test_collect_intelligence_with_run_limit_uses_batch(
+def test_collect_initial_intelligence_with_run_limit_uses_batch(
     opencti_helper,
     make_stub_connector_settings,
     all_exposure_items,
@@ -154,7 +154,7 @@ def test_collect_intelligence_with_run_limit_uses_batch(
         return_value={"signature": {}, "asset_exposures": []}
     )
 
-    stix_objects, next_cursor = connector._collect_intelligence()
+    stix_objects, next_cursor = connector._collect_initial_intelligence()
 
     incidents = [obj for obj in stix_objects if obj["type"] == "incident"]
     assert len(incidents) == 1
@@ -169,7 +169,7 @@ def test_collect_intelligence_with_run_limit_uses_batch(
     assert connector.client.get_exposure_assets.call_count == 1
 
 
-def test_collect_intelligence_with_run_limit_passes_exposures_cursor(
+def test_collect_initial_intelligence_with_run_limit_passes_exposures_cursor(
     opencti_helper,
     make_stub_connector_settings,
 ):
@@ -178,7 +178,7 @@ def test_collect_intelligence_with_run_limit_passes_exposures_cursor(
     connector.client.list_exposures_batch = MagicMock(return_value=([], None))
     connector.client.get_exposure_assets = MagicMock()
 
-    connector._collect_intelligence(exposures_cursor="cursor-page-2")
+    connector._collect_initial_intelligence(exposures_cursor="cursor-page-2")
 
     connector.client.list_exposures_batch.assert_called_once_with(
         project_id="test-project-id",
@@ -305,7 +305,7 @@ def test_process_message_resumes_from_stored_exposures_cursor(
     )
 
 
-def test_collect_intelligence_passes_filter_severity_min(
+def test_collect_initial_intelligence_passes_filter_severity_min(
     opencti_helper,
     make_stub_connector_settings,
     all_exposure_items,
@@ -315,7 +315,7 @@ def test_collect_intelligence_passes_filter_severity_min(
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
-    connector._collect_intelligence()
+    connector._collect_initial_intelligence()
 
     connector.client.list_exposures.assert_called_once_with(
         project_id="test-project-id",
@@ -324,7 +324,7 @@ def test_collect_intelligence_passes_filter_severity_min(
     )
 
 
-def test_collect_intelligence_passes_filter_severity_exact(
+def test_collect_initial_intelligence_passes_filter_severity_exact(
     opencti_helper,
     make_stub_connector_settings,
 ):
@@ -333,7 +333,7 @@ def test_collect_intelligence_passes_filter_severity_exact(
     connector.client.list_exposures = MagicMock(return_value=[])
     connector.client.get_exposure_assets = MagicMock()
 
-    connector._collect_intelligence()
+    connector._collect_initial_intelligence()
 
     connector.client.list_exposures.assert_called_once_with(
         project_id="test-project-id",
@@ -342,7 +342,7 @@ def test_collect_intelligence_passes_filter_severity_exact(
     )
 
 
-def test_collect_intelligence_with_run_limit_passes_filter_severity_min(
+def test_collect_initial_intelligence_with_run_limit_passes_filter_severity_min(
     opencti_helper,
     make_stub_connector_settings,
 ):
@@ -354,7 +354,7 @@ def test_collect_intelligence_with_run_limit_passes_filter_severity_min(
     connector.client.list_exposures_batch = MagicMock(return_value=([], None))
     connector.client.get_exposure_assets = MagicMock()
 
-    connector._collect_intelligence()
+    connector._collect_initial_intelligence()
 
     connector.client.list_exposures_batch.assert_called_once_with(
         project_id="test-project-id",
@@ -594,7 +594,9 @@ def test_initial_sync_sets_last_fetch_time_when_zero_exposures(
 
     saved_state = opencti_helper.set_state.call_args.args[0]
     assert saved_state["last_fetch_time"] == 1717200000
+    assert saved_state["last_run"] == "2024-06-01 00:00:00"
     assert "exposures_cursor" not in saved_state
+    opencti_helper.api.work.initiate_work.assert_not_called()
     connector.client.get_exposure_assets.assert_not_called()
 
 
@@ -702,7 +704,10 @@ def test_incremental_sync_updates_last_fetch_time_on_success(
 
     saved_state = opencti_helper.set_state.call_args.args[0]
     assert saved_state["last_fetch_time"] == 1717200000
+    assert saved_state["last_run"] == "2024-06-01 00:00:00"
     assert "known_exposures" not in saved_state
+    opencti_helper.api.work.initiate_work.assert_not_called()
+    opencti_helper.send_stix2_bundle.assert_not_called()
 
 
 def test_initial_sync_sets_last_fetch_time_when_cycle_complete(
