@@ -5,9 +5,8 @@
   "description": "Enriches SHA-256, SHA-1, and MD5 file hash observables with PolySwarm multi-engine detection results across default and private communities. Creates STIX indicators with detection scores, malware family profiles with threat actor and CVE associations, MITRE ATT&CK technique mappings, network IOCs (domains, IPs, URLs), and geolocation data. Malware intelligence is sourced from polykg knowledge graph.",
   "logo": "logo.png",
   "use_cases": [
-    "File Hash Analysis",
-    "Malware Intelligence",
-    "Threat Intelligence Enrichment"
+    "Enrichment & Analysis",
+    "Malware Analysis"
   ],
   "verified": true,
   "last_verified_date": "2026-06-22",
