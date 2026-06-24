@@ -204,7 +204,10 @@ def get_relationships_from(observable_id: str, rel_type: str = None) -> list[dic
                 }
             }
         }
-    """ % (observable_id, observable_id)
+    """ % (
+        observable_id,
+        observable_id,
+    )
     result = graphql(query)
     rels = [e["node"] for e in result["stixCoreRelationships"]["edges"]]
     if rel_type:
