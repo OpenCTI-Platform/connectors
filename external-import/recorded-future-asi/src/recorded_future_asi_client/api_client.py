@@ -157,6 +157,8 @@ class RecordedFutureAsiClient:
         :return: Tuple of exposure summary items and optional next cursor.
         """
         data = payload.get("data") or []
+        if not isinstance(data, list):
+            data = []
         pagination = (payload.get("meta") or {}).get("pagination") or {}
         next_cursor = pagination.get("next_cursor")
         return data, next_cursor

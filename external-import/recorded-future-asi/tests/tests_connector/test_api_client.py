@@ -168,6 +168,13 @@ def test_parse_list_response_handles_missing_fields():
     assert next_cursor is None
 
 
+def test_parse_list_response_normalizes_non_list_data():
+    data, next_cursor = RecordedFutureAsiClient._parse_list_response({"data": {}})
+
+    assert data == []
+    assert next_cursor is None
+
+
 def test_get_exposure_assets_page_returns_signature_assets_and_cursor(
     opencti_helper, exposure_assets_page
 ):

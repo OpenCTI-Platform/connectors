@@ -210,7 +210,14 @@ class ConverterToStix:
     def _resolve_created(self, signature: dict) -> datetime:
         added_at = signature.get("added_at")
         if added_at:
-            return added_at
+            if isinstance(added_at, datetime):
+                return (
+                    added_at
+                    if added_at.tzinfo
+                    else added_at.replace(tzinfo=timezone.utc)
+                )
+            parsed = datetime.fromisoformat(str(added_at).replace("Z", "+00:00"))
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         self.helper.connector_logger.warning(
             "[CONVERTER] Exposure missing added_at; using current timestamp",
             {"signature_id": signature.get("id"), "name": signature.get("name")},

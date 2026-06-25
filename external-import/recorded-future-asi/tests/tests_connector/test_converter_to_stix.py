@@ -257,6 +257,16 @@ def test_exposure_to_incident_uses_fallback_created_when_added_at_missing(
     assert incident.created == fixed_now
 
 
+def test_resolve_created_parses_iso_string(converter, exposures_list_page):
+    exposure = exposures_list_page["data"][0]
+
+    incident = converter.exposure_to_incident(exposure)
+
+    assert isinstance(incident.created, datetime)
+    assert incident.created.tzinfo is not None
+    assert incident.created == datetime(2024, 6, 1, 12, 0, 0, tzinfo=timezone.utc)
+
+
 def test_converter_exposes_author_and_tlp_marking(converter):
     assert converter.author["type"] == "identity"
     assert converter.author["name"] == "Recorded Future ASI"
@@ -433,13 +443,19 @@ def test_build_exposure_objects_relationship_stix_refs_are_stable(
     converter, exposures_list_page, all_exposure_assets
 ):
     exposure = exposures_list_page["data"][0]
-    sdk_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+    first_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+    second_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
 
-    incident = next(obj for obj in sdk_objects if isinstance(obj, Incident))
-    relationships = [obj for obj in sdk_objects if isinstance(obj, Relationship)]
+    incident = next(obj for obj in first_objects if isinstance(obj, Incident))
+    first_relationships = [
+        obj for obj in first_objects if isinstance(obj, Relationship)
+    ]
+    second_relationships = [
+        obj for obj in second_objects if isinstance(obj, Relationship)
+    ]
 
-    first_relationship = relationships[0]
-    second_relationship = relationships[0]
+    first_relationship = first_relationships[0]
+    second_relationship = second_relationships[0]
 
     first_stix_relationship = first_relationship.to_stix2_object()
     second_stix_relationship = second_relationship.to_stix2_object()
@@ -491,25 +507,30 @@ def test_build_exposure_objects_observable_vulnerability_related_to_stix_refs_ar
     converter, exposures_list_page, all_exposure_assets
 ):
     exposure = exposures_list_page["data"][0]
-    sdk_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+    first_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
+    second_objects = converter.build_exposure_objects(exposure, all_exposure_assets)
 
-    observables = [
-        obj
-        for obj in sdk_objects
+    observable_ids = {
+        obj.id
+        for obj in first_objects
         if isinstance(obj, (IPV4Address, IPV6Address, DomainName))
-    ]
-    observable_ids = {obj.id for obj in observables}
-    observable_vulnerability_related_to = [
-        obj
-        for obj in sdk_objects
-        if isinstance(obj, Relationship)
-        and obj.type == "related-to"
-        and obj.source.id in observable_ids
-    ]
-    assert len(observable_vulnerability_related_to) == 3
+    }
 
-    first_relationship = observable_vulnerability_related_to[0]
-    second_relationship = observable_vulnerability_related_to[0]
+    def observable_vulnerability_related_to(objects):
+        return [
+            obj
+            for obj in objects
+            if isinstance(obj, Relationship)
+            and obj.type == "related-to"
+            and obj.source.id in observable_ids
+        ]
+
+    first_related_to = observable_vulnerability_related_to(first_objects)
+    second_related_to = observable_vulnerability_related_to(second_objects)
+    assert len(first_related_to) == 3
+
+    first_relationship = first_related_to[0]
+    second_relationship = second_related_to[0]
 
     first_stix_relationship = first_relationship.to_stix2_object()
     second_stix_relationship = second_relationship.to_stix2_object()
