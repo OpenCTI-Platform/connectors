@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/greynoise-vuln_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "GreyNoise Vulnerability Enrichment",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "default": [
+        "vulnerability"
+      ],
+      "description": "The scope of the connector.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "INTERNAL_ENRICHMENT",
+      "default": "INTERNAL_ENRICHMENT",
+      "type": "string"
+    },
+    "CONNECTOR_AUTO": {
+      "default": false,
+      "description": "Whether the connector should run automatically when an entity is created or updated.",
+      "type": "boolean"
+    },
+    "GREYNOISE_VULN_KEY": {
+      "description": "The GreyNoise API key.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
+    "GREYNOISE_VULN_MAX_TLP": {
+      "default": "TLP:AMBER",
+      "description": "The maximal TLP of the vulnerability being enriched.",
+      "enum": [
+        "TLP:CLEAR",
+        "TLP:WHITE",
+        "TLP:GREEN",
+        "TLP:AMBER",
+        "TLP:AMBER+STRICT",
+        "TLP:RED"
+      ],
+      "type": "string"
+    },
+    "GREYNOISE_VULN_NAME": {
+      "default": "GreyNoise Internet Scanner",
+      "description": "The name of the GreyNoise entity (used as the author identity in STIX).",
+      "type": "string"
+    },
+    "GREYNOISE_VULN_DESCRIPTION": {
+      "default": "GreyNoise collects and analyzes opportunistic scan and attack activity for devices connected directly to the Internet.",
+      "description": "The description of the GreyNoise entity.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "GREYNOISE_VULN_KEY"
+  ],
+  "additionalProperties": true
+}
