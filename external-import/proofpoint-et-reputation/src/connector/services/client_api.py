@@ -1,6 +1,6 @@
 import requests
-from connector.services.config_variables import ProofpointEtReputationConfig
 from pycti import OpenCTIConnectorHelper
+from pydantic import SecretStr
 from requests.adapters import HTTPAdapter
 from requests.exceptions import ConnectionError, HTTPError, RetryError, Timeout
 from urllib3.util.retry import Retry
@@ -31,21 +31,19 @@ def _make_session(retries: int = 3, backoff_factor: float = 0.3) -> requests.Ses
 
 
 class ProofpointEtReputationClient:
-    def __init__(
-        self, helper: OpenCTIConnectorHelper, config: ProofpointEtReputationConfig
-    ):
+    def __init__(self, helper: OpenCTIConnectorHelper, api_token: SecretStr):
         """
         Initialize the Proofpoint ET Reputation Client with necessary configurations
 
         Args:
             helper (OpenCTIConnectorHelper): An instance of the OpenCTI connector helper for logging and other utilities.
-            config (ProofpointEtReputationConfig): Configuration object containing API token and connector settings.
+            api_token (SecretStr): The API token for authenticating with the Proofpoint ET Reputation API.
 
         Returns:
             None
         """
         self.helper = helper
-        self.config = config
+        self.api_token = api_token
         self.base_url = "https://rules.emergingthreatspro.com/"
 
     def _build_query_request(self, reputation_list_entity: str) -> requests.Request:
@@ -68,7 +66,7 @@ class ProofpointEtReputationClient:
         try:
             return requests.Request(
                 "GET",
-                f"{self.base_url}{self.config.extra_api_token}/reputation/{reputation_list_entity}.json",
+                f"{self.base_url}{self.api_token.get_secret_value()}/reputation/{reputation_list_entity}.json",
             )
         except Exception as e:
             self.helper.connector_logger.error(

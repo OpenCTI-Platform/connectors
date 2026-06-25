@@ -1,3 +1,14 @@
+[project]
+name = "proofpoint-et-reputation"
+version = "0.1.0"
+description = "Information coming soon"
+readme = "README.md"
+authors = [
+    { name = "Hugo Dupras", email = "hugo.dupras@filigran.io" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
 [tool.pytest.ini_options]
 log_cli = true
 pythonpath = [
@@ -7,4 +18,5 @@ pythonpath = [
 testpaths = [
     "tests",
 ]
+
 #addopts = "-s"
