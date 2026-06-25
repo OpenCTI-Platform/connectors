@@ -193,7 +193,7 @@ class Phishunt:
                             bundle_objects.append(stix_relationship_ip_location)
             if bundle_objects:
                 bundle = self.helper.stix2_create_bundle(
-                    [self.stix_created_by] + bundle_objects
+                    [self.stix_created_by, self.tlp_clear] + bundle_objects
                 )
                 self.helper.send_stix2_bundle(
                     bundle, work_id=work_id, cleanup_inconsistent_bundle=True
