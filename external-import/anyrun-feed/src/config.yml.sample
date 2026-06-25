@@ -7,10 +7,9 @@ connector:
   name: 'ANY.RUN TI Feed' # A connector name to be shown in OpenCTI.
   scope: 'stix2' # Supported scope. E. g., `text/html`.
   log_level: 'info' # The log level for this connector, could be `debug`, `info`, `warn` or `error` (less verbose).
-  type: 'EXTERNAL_IMPORT' # A connector type.
-  update_existing_data: false # Update data already ingested into the platform.
+  #duration_period: 'PT2H' # The period of time to await between two runs of the connector.
 
 anyrun:
   api_key: 'ChangeMe' # ANY.RUN TI Feeds API key. See "Generate your API key" section in the README file. Example: WmNfqnpo...2Sjon7mtvm8e
-  feed_fetch_interval: 120 # Specify feed fetch interval in minutes.
-  feed_fetch_depth: 90 # Specify feed fetch depth in days.
+  #feed_fetch_interval: 120 # Deprecated. Use connector.duration_period instead. Specify feed fetch interval in minutes.
+  #feed_fetch_depth: 90 # Specify feed fetch depth in days.
