@@ -1,5 +1,7 @@
+import typing
 from datetime import datetime
 from enum import Enum
+from typing import Literal, TypedDict
 
 import pycountry
 
@@ -10,10 +12,33 @@ class DateTimeFormat(Enum):
     TIMESTAMP = "timestamp"  #  Unix Timestamp
 
 
+class DateTimeDict(TypedDict):
+    now_datetime: datetime
+    now_isoformat: str
+    now_timestamp: int
+
+
 class Utils:
+    @staticmethod
+    @typing.overload
+    def get_now(now_format: Literal[DateTimeFormat.DATETIME]) -> datetime: ...
 
     @staticmethod
-    def get_now(now_format: DateTimeFormat = None) -> datetime | str | int | dict:
+    @typing.overload
+    def get_now(now_format: Literal[DateTimeFormat.ISO]) -> str: ...
+
+    @staticmethod
+    @typing.overload
+    def get_now(now_format: Literal[DateTimeFormat.TIMESTAMP]) -> int: ...
+
+    @staticmethod
+    @typing.overload
+    def get_now(now_format: None = None) -> DateTimeDict: ...
+
+    @staticmethod
+    def get_now(
+        now_format: DateTimeFormat | None = None,
+    ) -> datetime | str | int | DateTimeDict:
         """Utility method: Get the current date and time in various formats.
         Parameters:
             now_format (DateTimeFormat, None) :
@@ -23,7 +48,7 @@ class Utils:
             - DateTimeFormat.TIMESTAMP: Return the current time as a UNIX timestamp (seconds since epoch).
             - None (default): If no format is specified, returns a dictionary containing all the formats.
         Returns:
-            datetime, str, int, or dict :
+            datetime, str, int, or DateTimeDict :
             - If `now_format` is DateTimeFormat.DATETIME, return a `datetime` object.
             - If `now_format` is DateTimeFormat.ISO, return an ISO 8601 formatted string.
             - If `now_format` is DateTimeFormat.TIMESTAMP, return an integer UNIX Timestamp.
