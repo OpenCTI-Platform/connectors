@@ -63,7 +63,7 @@ jobs:
 
           case "$BUILD_MODE" in
             rolling)
-              IMAGE_TAGS="rolling"
+              IMAGE_TAGS="rolling,1.0.0"
               ;;
             prerelease)
               IMAGE_TAGS="prerelease"
