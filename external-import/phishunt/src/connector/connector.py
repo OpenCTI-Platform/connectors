@@ -142,7 +142,7 @@ class Phishunt:
                         ip_is_valid = False
                         self.helper.connector_logger.warning(
                             "[Phishunt] Skipping invalid IP value.",
-                            {"ip": ip_value, "url": url_value},
+                            meta={"ip": ip_value, "url": url_value},
                         )
                     if ip_is_valid:
                         stix_ip = stix2.IPv4Address(
@@ -204,7 +204,7 @@ class Phishunt:
         except requests.exceptions.HTTPError as err:
             self.helper.connector_logger.error(
                 "[Phishunt] HTTP error while fetching feed.",
-                {"url": feed_url, "error": str(err)},
+                meta={"url": feed_url, "error": str(err)},
             )
 
     def _load_state(self) -> dict[str, Any]:
