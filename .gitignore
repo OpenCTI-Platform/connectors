@@ -24,3 +24,6 @@ external-import/loaderinsightagency
 .coverage
 **/*coverage.xml
 **/junit.xml
+
+.mise/config.local.toml
+.mise/tasks/local/**
