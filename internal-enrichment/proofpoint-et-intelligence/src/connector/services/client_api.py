@@ -1,5 +1,5 @@
 from aiohttp import ClientConnectionError, ClientResponseError, ClientSession
-from connector.services.config_variables import ProofpointEtIntelligenceConfig
+from connector.settings import ProofpointEtIntelligenceConfig
 from pycti import OpenCTIConnectorHelper
 from tenacity import retry, stop_after_attempt, wait_exponential_jitter
 
@@ -18,7 +18,7 @@ class ProofpointEtIntelligenceClient:
         """
         self.helper = helper
         self.config = config
-        self.headers = {"Authorization": f"{self.config.extra_api_key}"}
+        self.headers = {"Authorization": f"{self.config.api_key.get_secret_value()}"}
 
     def _build_url(
         self, entity_value: str, source_entity_type: str, target_entity_type: str | None
@@ -34,7 +34,7 @@ class ProofpointEtIntelligenceClient:
 
         """
         try:
-            url = f"{self.config.extra_api_base_url}{source_entity_type}/{entity_value}"
+            url = f"{self.config.api_base_url}{source_entity_type}/{entity_value}"
             if target_entity_type:
                 url += f"/{target_entity_type}"
             return url
@@ -50,7 +50,10 @@ class ProofpointEtIntelligenceClient:
         wait=wait_exponential_jitter(initial=1, max=30, exp_base=2, jitter=1),
     )
     async def _fetch_data(
-        self, entity_value: str, source_entity_type: str, target_entity_type: str = None
+        self,
+        entity_value: str,
+        source_entity_type: str,
+        target_entity_type: str | None = None,
     ) -> dict:
         """
         Fetch intelligence data for a specific collection from the ProofPoint ET Intelligence API.
@@ -58,7 +61,7 @@ class ProofpointEtIntelligenceClient:
         It handles various error scenarios, including retries, timeouts, and connection issues.
         Args:
             source_entity_type (str):
-            target_entity_type (str):
+            target_entity_type (str | None):
         Returns:
             dict: The reputation data as a dictionary if the request is successful, or an error dictionary with
             details about the failure.

@@ -14,9 +14,6 @@ The TheHive connector imports cases, alerts, and observables from TheHive incide
   - [Installation](#installation)
     - [Requirements](#requirements)
   - [Configuration variables](#configuration-variables)
-    - [OpenCTI environment variables](#opencti-environment-variables)
-    - [Base connector environment variables](#base-connector-environment-variables)
-    - [Connector extra parameters environment variables](#connector-extra-parameters-environment-variables)
   - [Deployment](#deployment)
     - [Docker Deployment](#docker-deployment)
     - [Manual Deployment](#manual-deployment)
@@ -39,43 +36,10 @@ TheHive is a scalable security incident response platform designed for SOCs and 
 
 ## Configuration variables
 
-There are a number of configuration options, which are set either in `docker-compose.yml` (for Docker) or in `config.yml` (for manual deployment).
+Find all the configuration variables available here: [Connector Configurations](./__metadata__/CONNECTOR_CONFIG_DOC.md)
 
-### OpenCTI environment variables
-
-| Parameter     | config.yml | Docker environment variable | Mandatory | Description                                          |
-|---------------|------------|-----------------------------|-----------|------------------------------------------------------|
-| OpenCTI URL   | url        | `OPENCTI_URL`               | Yes       | The URL of the OpenCTI platform.                     |
-| OpenCTI Token | token      | `OPENCTI_TOKEN`             | Yes       | The default admin token set in the OpenCTI platform. |
-
-### Base connector environment variables
-
-| Parameter       | config.yml | Docker environment variable | Default  | Mandatory | Description                                                                 |
-|-----------------|------------|-----------------------------| ---------|-----------|-----------------------------------------------------------------------------|
-| Connector ID    | id         | `CONNECTOR_ID`              |          | Yes       | A unique `UUIDv4` identifier for this connector instance.                   |
-| Connector Name  | name       | `CONNECTOR_NAME`            | TheHive  | No        | Name of the connector.                                                      |
-| Connector Scope | scope      | `CONNECTOR_SCOPE`           | thehive  | No        | The scope or type of data the connector is importing.                       |
-| Log Level       | log_level  | `CONNECTOR_LOG_LEVEL`       | error    | No        | Determines the verbosity of the logs: `debug`, `info`, `warn`, or `error`.  |
-
-### Connector extra parameters environment variables
-
-| Parameter             | config.yml                   | Docker environment variable       | Default              | Mandatory | Description                                                                 |
-|-----------------------|------------------------------|-----------------------------------|----------------------|-----------|-----------------------------------------------------------------------------|
-| TheHive URL           | thehive.url                  | `THEHIVE_URL`                     |                      | Yes       | URL of the TheHive instance.                                                |
-| API Key               | thehive.api_key              | `THEHIVE_API_KEY`                 |                      | Yes       | TheHive API key.                                                            |
-| Check SSL             | thehive.check_ssl            | `THEHIVE_CHECK_SSL`               | true                 | No        | Verify SSL certificates.                                                    |
-| Organization Name     | thehive.organization_name    | `THEHIVE_ORGANIZATION_NAME`       |                      | Yes       | TheHive organization name.                                                  |
-| Import from Date      | thehive.import_from_date     | `THEHIVE_IMPORT_FROM_DATE`        |                      | No        | Start date for importing (ISO format).                                      |
-| Import Only TLP       | thehive.import_only_tlp      | `THEHIVE_IMPORT_ONLY_TLP`         | 0,1,2,3,4            | No        | TLP levels to import (comma-separated).                                     |
-| Import Alerts         | thehive.import_alerts        | `THEHIVE_IMPORT_ALERTS`           | true                 | No        | Import alerts in addition to cases.                                         |
-| Import Attachments    | thehive.import_attachments   | `THEHIVE_IMPORT_ATTACHMENTS`      | false                | No        | Enable or disable the import of case attachments.                           |
-| Severity Mapping      | thehive.severity_mapping     | `THEHIVE_SEVERITY_MAPPING`        | 1:low,2:medium,3:high,4:critical | No | Map TheHive severity to OpenCTI.                                       |
-| Case Status Mapping   | thehive.case_status_mapping  | `THEHIVE_CASE_STATUS_MAPPING`     |                      | No        | Map TheHive case status to OpenCTI status ID.                               |
-| Task Status Mapping   | thehive.task_status_mapping  | `THEHIVE_TASK_STATUS_MAPPING`     |                      | No        | Map TheHive task status to OpenCTI status ID.                               |
-| Alert Status Mapping  | thehive.alert_status_mapping | `THEHIVE_ALERT_STATUS_MAPPING`    |                      | No        | Map TheHive alert status to OpenCTI status ID.                              |
-| User Mapping          | thehive.user_mapping         | `THEHIVE_USER_MAPPING`            |                      | No        | Map TheHive assignees to OpenCTI user IDs.                                  |
-| Interval              | thehive.interval             | `THEHIVE_INTERVAL`                | 5                    | No        | Polling interval in minutes.                                                |
-| Case Tag Whitelist    | thehive.case_tag_whitelist   | `THEHIVE_CASE_TAG_WHITELIST`      |                      | No        | Only import cases with these tags.                                          |
+_The `opencti` and `connector` options in the `docker-compose.yml` and `config.yml` are the same as for any other connector.
+For more information regarding variables, please refer to [OpenCTI's documentation on connectors](https://docs.opencti.io/latest/deployment/connectors/)._
 
 ## Deployment
 
@@ -106,7 +70,7 @@ Configure the connector in `docker-compose.yml`:
       - THEHIVE_IMPORT_FROM_DATE=2021-01-01T00:00:00
       - THEHIVE_IMPORT_ONLY_TLP=0,1,2,3,4
       - THEHIVE_IMPORT_ALERTS=true
-      - "THEHIVE_SEVERITY_MAPPING=1:low,2:medium,3:high,4:critical"
+      - THEHIVE_SEVERITY_MAPPING=1:low,2:medium,3:high,4:critical
       - THEHIVE_INTERVAL=5
     restart: always
 ```
