@@ -4,6 +4,7 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
 )
 from pydantic import Field, SecretStr, field_validator
 
@@ -20,6 +21,10 @@ class InternalEnrichmentConnectorConfig(BaseInternalEnrichmentConnectorConfig):
     name: str = Field(
         description="The name of the connector.",
         default="Joe Sandbox",
+    )
+    scope: ListFromString = Field(
+        description="The scope of the connector, i.e., the types of entities the connector can enrich.",
+        default=["Artifact", "Url"],
     )
 
 

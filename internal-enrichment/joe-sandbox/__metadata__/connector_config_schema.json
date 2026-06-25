@@ -21,9 +21,10 @@
     },
     "CONNECTOR_SCOPE": {
       "default": [
-        "joe-sandbox"
+        "Artifact",
+        "Url"
       ],
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "description": "The scope of the connector, i.e., the types of entities the connector can enrich.",
       "items": {
         "type": "string"
       },
