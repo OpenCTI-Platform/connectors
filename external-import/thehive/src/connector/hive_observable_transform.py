@@ -1,4 +1,7 @@
+from collections.abc import Callable
+
 import pycti
+from connector.utils import check_hash_type, is_ipv4, is_ipv6
 from pycti import CustomObservableText, CustomObservableUserAgent
 from stix2 import (
     URL,
@@ -13,8 +16,6 @@ from stix2 import (
     Vulnerability,
     WindowsRegistryKey,
 )
-
-from utils import check_hash_type, is_ipv4, is_ipv6  # isort: skip
 
 
 class UnsupportedIndicatorTypeError(Exception):
@@ -32,7 +33,6 @@ class HiveObservableTransform:
         self.markings = markings
         self.created_by_ref = created_by_ref
         self.observable = observable
-        self.data_type = None
 
         self.data_type = self.standardize_data_type()
         self.stix_observable = self.create_stix_observable()
@@ -41,7 +41,7 @@ class HiveObservableTransform:
         """Standardize a set of observables like hash, file, and ip."""
         data_type = None
         if self.observable.get("dataType") in ["hash"]:
-            data_type = f'file_{check_hash_type(self.observable.get("data")).replace("-","").lower()}'
+            data_type = f"file_{check_hash_type(self.observable.get('data')).replace('-', '').lower()}"
         if self.observable.get("dataType") in ["ip", "ipv4"] and is_ipv4(
             self.observable.get("data")
         ):
@@ -66,7 +66,7 @@ class HiveObservableTransform:
 
     def create_stix_observable(self):
         """Create stix observable if it exists in the provided map, if not, return the default observable."""
-        data_type_to_observable_map = {
+        data_type_to_observable_map: dict[str, Callable] = {
             "autonomous-system": self.create_autonomous_system,
             "cve": self.create_vulnerability,
             "fqdn": self.create_domain_name,
@@ -105,9 +105,10 @@ class HiveObservableTransform:
         }
 
         # Return the results from the function in the MAP, if it's not in the MAP return the default_observable
-        return data_type_to_observable_map.get(
+        handler = data_type_to_observable_map.get(
             self.data_type, self.default_observable
-        )()
+        )
+        return handler()
 
     def create_autonomous_system(self):
         return AutonomousSystem(
