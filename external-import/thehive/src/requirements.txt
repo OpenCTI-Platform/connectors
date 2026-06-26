@@ -1,4 +1,4 @@
-pycti==7.260624.0
+pycti==7.260626.0
 stix2
 thehive4py~=2.0
 pydantic~=2.8
