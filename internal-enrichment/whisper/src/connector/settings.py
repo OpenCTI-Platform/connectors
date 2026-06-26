@@ -1,139 +1,66 @@
-"""Pydantic settings for the Whisper connector.
+"""Connector configuration, built on the OpenCTI ``connectors-sdk``.
 
-Replaces the ``ConfigConnector`` shim that shipped with PR #66 / issue #65.
-The model follows the upstream OpenCTI-Platform/connectors convention used
-by ``virustotal`` and other Pydantic-based connectors — see
-https://github.com/OpenCTI-Platform/connectors/blob/master/internal-enrichment/virustotal/src/virustotal/models/configs/
+Per the upstream PR review (OpenCTI-Platform/connectors#6708), the connector
+now uses the SDK's ``BaseConnectorSettings`` rather than a hand-rolled
+``pydantic-settings`` model. The ``opencti:`` and ``connector:`` blocks come
+from the SDK base classes; the ``whisper:`` block carries the
+connector-specific configuration.
 
-Field rules:
-
-- ``api_url`` and ``api_key`` are required; Pydantic raises ``ValidationError``
-  at construction if either is missing or empty.
-- ``max_tlp`` is constrained to the canonical TLP marking strings via
-  ``Literal``. The old regex-style ``_validate()`` check goes away.
-- ``model_config`` is ``frozen=True`` — settings can't be mutated after
-  construction. Catches "config drift" bugs in tests and refactors.
-
-Source priority (highest to lowest):
-
-1. Environment variables (Pydantic auto-strips the ``WHISPER_`` prefix).
-2. ``config.yml`` (probed near ``main.py`` / project root), ``whisper:`` block.
-3. Pydantic field defaults.
-
-Env-overrides-YAML is preserved from the original ``ConfigConnector`` /
-``pycti.get_config_variable`` resolution order.
+The SDK loads values from environment variables and an optional ``config.yml``
+(see ``config.yml.sample``); ``to_helper_config()`` produces the dict consumed
+by ``OpenCTIConnectorHelper``.
 """
 
-import os
-from pathlib import Path
-from typing import Any, Literal
+from connectors_sdk import (
+    BaseConfigModel,
+    BaseConnectorSettings,
+    BaseInternalEnrichmentConnectorConfig,
+    ListFromString,
+)
+from pydantic import Field, SecretStr
 
-import yaml
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+__all__ = ["ConnectorSettings", "WhisperConfig"]
 
-__all__ = ["WhisperSettings", "load_yaml_config"]
-
-
-def load_yaml_config(path: Path | str | None = None) -> dict[str, Any]:
-    """Read the optional ``config.yml`` and return the parsed dict (empty
-    if the file is absent).
-
-    When no explicit ``path`` is given, several common locations are
-    probed so the same code works across deployment layouts — the file
-    can sit next to ``main.py`` at the ``src/`` app root (the upstream
-    template / manual-deploy convention, where ``entrypoint.sh`` runs
-    ``python3 main.py`` from that directory) or one level higher at a
-    project root. The current working directory is also checked, which
-    covers the container case where the entrypoint ``cd``s into the app
-    root before launching.
-
-    Loaded once at startup and passed to both ``OpenCTIConnectorHelper``
-    (which reads its own ``OPENCTI__`` / ``CONNECTOR__`` / ``RABBITMQ__``
-    keys out of it) and ``WhisperSettings.from_environment`` (which seeds
-    its kwargs from the ``whisper:`` block before env vars override).
-    """
-    if path is None:
-        here = Path(__file__).resolve()
-        candidates = [
-            here.parent.parent / "config.yml",  # <src>/config.yml (app root)
-            here.parent.parent.parent / "config.yml",  # project root
-            Path.cwd() / "config.yml",  # entrypoint cwd (container)
-        ]
-        path = next((c for c in candidates if c.is_file()), candidates[0])
-    p = Path(path)
-    if not p.is_file():
-        return {}
-    with open(p) as fh:
-        return yaml.safe_load(fh) or {}
+_DEFAULT_SCOPE = ["IPv4-Addr", "IPv6-Addr", "Domain-Name", "Autonomous-System"]
 
 
-class WhisperSettings(BaseSettings):
-    """Connector-side configuration validated by Pydantic.
+class _WhisperConnectorConfig(BaseInternalEnrichmentConnectorConfig):
+    """``connector:`` block — defaults specific to this connector."""
 
-    Constructed via ``WhisperSettings.from_environment(yaml_config)`` in
-    ``main.py`` so the YAML-source resolution is explicit. Tests build
-    instances directly with keyword arguments (no YAML, no env).
-    """
-
-    model_config = SettingsConfigDict(
-        env_prefix="WHISPER_",
-        frozen=True,
-        extra="ignore",
-        str_strip_whitespace=True,
+    name: str = Field(default="Whisper", description="Connector display name.")
+    scope: ListFromString = Field(
+        default=_DEFAULT_SCOPE,
+        description="Observable types this connector enriches.",
     )
+
+
+class WhisperConfig(BaseConfigModel):
+    """``whisper:`` block — Whisper graph API settings."""
 
     api_url: str = Field(
-        min_length=1,
         description=(
             "Base URL of the Whisper graph API, e.g. "
-            "'https://graph.whisper.security'. The connector POSTs "
-            "Cypher to '<api_url>/api/query'."
+            "'https://graph.whisper.security'. The connector POSTs Cypher "
+            "to '<api_url>/api/query'."
         ),
+        examples=["https://graph.whisper.security"],
     )
-    api_key: str = Field(
-        min_length=1,
-        description=(
-            "Whisper API key sent in the X-API-Key header on every "
-            "request. Never logged."
-        ),
+    api_key: SecretStr = Field(
+        description="Whisper API key, sent in the X-API-Key header. Never logged.",
+        examples=["whisper-0123456789abcdef0123456789abcdef"],
     )
-    max_tlp: Literal[
-        "TLP:WHITE",
-        "TLP:CLEAR",
-        "TLP:GREEN",
-        "TLP:AMBER",
-        "TLP:AMBER+STRICT",
-        "TLP:RED",
-    ] = Field(
+    max_tlp: str = Field(
         default="TLP:AMBER+STRICT",
         description=(
-            "Maximum TLP marking the connector will enrich. Observables "
-            "marked above this level are skipped with a WhisperTlpError. "
-            "Set to 'TLP:RED' to effectively disable the gate."
+            "Maximum TLP marking the connector will enrich. Observables marked "
+            "above this level are skipped. Set 'TLP:RED' to disable the gate."
         ),
+        examples=["TLP:AMBER+STRICT", "TLP:RED"],
     )
 
-    @classmethod
-    def from_environment(
-        cls, yaml_config: dict[str, Any] | None = None
-    ) -> "WhisperSettings":
-        """Build a ``WhisperSettings`` by composing the ``whisper:`` block
-        of ``yaml_config`` (if any) with environment variables (which win).
 
-        Pydantic ``BaseSettings`` reads init kwargs at HIGHER priority
-        than env vars, so to honour "env overrides YAML" we only thread
-        YAML values into kwargs for fields whose ``WHISPER_<NAME>`` env
-        var is absent — those fields then fall through to Pydantic's env
-        source.
-        """
-        kwargs: dict[str, Any] = {}
-        if yaml_config:
-            whisper_block = yaml_config.get("whisper") or {}
-            for key in ("api_url", "api_key", "max_tlp"):
-                if f"WHISPER_{key.upper()}" in os.environ:
-                    continue  # let Pydantic's env source own this field
-                value = whisper_block.get(key)
-                if value is not None:
-                    kwargs[key] = value
-        return cls(**kwargs)
+class ConnectorSettings(BaseConnectorSettings):
+    """Top-level settings: OpenCTI + connector blocks (from the SDK) + whisper."""
+
+    connector: _WhisperConnectorConfig = Field(default_factory=_WhisperConnectorConfig)
+    whisper: WhisperConfig = Field(default_factory=WhisperConfig)

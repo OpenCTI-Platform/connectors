@@ -17,21 +17,19 @@ Input shape (normalized; the Cypher → normalized translation lives in #7):
     }
 """
 
-import uuid
 from collections.abc import Callable
 from typing import Any
 
+import pycti
 import stix2
 from connector.exceptions import StixMappingError
 
-# Stable namespace for deterministic UUIDv5 generation off Whisper IDs.
-# Do not change once the connector has produced data in the wild — changing
-# this re-keys every SDO/relationship the connector has ever produced.
-WHISPER_NAMESPACE = uuid.UUID("a4f8c7b2-9e3d-4f6a-8c1e-2b5a7d9f1c4e")
-
-
-def _whisper_uuid5(whisper_id: str) -> str:
-    return str(uuid.uuid5(WHISPER_NAMESPACE, whisper_id))
+# SDO / Relationship / Note STIX IDs are generated with pycti's deterministic
+# ``generate_id`` helpers — the same method every first-party OpenCTI connector
+# uses — so objects this connector produces dedup against ones produced by
+# other connectors and across re-enrichments (per the upstream PR review,
+# OpenCTI-Platform/connectors#6708). SCOs keep the stix2 library's own
+# spec-deterministic IDs (derived from key properties; no explicit ``id=``).
 
 
 def _require_props(node: dict, *keys: str) -> None:
@@ -106,7 +104,9 @@ def _map_file(node: dict) -> stix2.File:
 
 
 # --- SDO mappers -----------------------------------------------------------
-# SDOs get UUIDv5 IDs keyed on the Whisper ID so re-enrichment is idempotent.
+# SDOs get deterministic IDs from pycti's ``generate_id`` helpers, keyed off
+# the same properties OpenCTI uses server-side — so re-enrichment and
+# cross-connector dedup both line up.
 
 
 def _map_threat_actor(node: dict) -> stix2.ThreatActor:
@@ -115,7 +115,7 @@ def _map_threat_actor(node: dict) -> stix2.ThreatActor:
     # Build id at the literal kwarg position — the vendored STIX-ID pylint
     # plugin can't see through **kwargs spreads, so we keep id explicit at
     # every stix2 _DomainObject / Relationship constructor site.
-    stix_id = f"threat-actor--{_whisper_uuid5(node['id'])}"
+    stix_id = pycti.ThreatActorGroup.generate_id(name=props["name"])
     extras: dict[str, Any] = {}
     if props.get("description"):
         extras["description"] = props["description"]
@@ -126,7 +126,7 @@ def _map_malware(node: dict) -> stix2.Malware:
     props = node.get("properties") or {}
     _require_props(node, "name")
     return stix2.Malware(
-        id=f"malware--{_whisper_uuid5(node['id'])}",
+        id=pycti.Malware.generate_id(name=props["name"]),
         name=props["name"],
         is_family=bool(props.get("is_family", False)),
     )
@@ -137,9 +137,8 @@ def _map_location(node: dict) -> stix2.Location:
     # Whisper CITY    → STIX Location with `city`+`country`+`name` (when
     #                   the "<City>, <CC>" suffix is parseable; otherwise
     #                   just `name` with the raw Whisper string).
-    # UUIDv5 ID under WHISPER_NAMESPACE so re-enrichment keyed off the
-    # same Whisper node produces the same Location SDO and OpenCTI
-    # deduplicates.
+    # pycti.Location.generate_id keys off (name, location_type) — the same
+    # tuple OpenCTI hashes server-side — so the SDO dedups across connectors.
     props = node.get("properties") or {}
     # STIX 2.1 Location requires at least one of country/region/lat-long.
     # The parser only produces Location nodes when it has a country, so
@@ -148,9 +147,17 @@ def _map_location(node: dict) -> stix2.Location:
         raise StixMappingError(
             f"location node id={node.get('id')!r} requires at least country or region"
         )
+    if props.get("city"):
+        location_type, location_name = "City", props.get("name") or props["city"]
+    elif props.get("region"):
+        location_type, location_name = "Region", props.get("name") or props["region"]
+    else:
+        location_type, location_name = "Country", props.get("name") or props["country"]
     # Build id at the literal kwarg position so the vendored STIX-ID
     # pylint plugin can see it (it doesn't follow **kwargs spreads).
-    stix_id = f"location--{_whisper_uuid5(node['id'])}"
+    stix_id = pycti.Location.generate_id(
+        name=location_name, x_opencti_location_type=location_type
+    )
     extras: dict[str, Any] = {}
     for stix_field in ("country", "city", "name", "region"):
         if props.get(stix_field):
@@ -168,10 +175,13 @@ def _map_identity(node: dict) -> stix2.Identity:
     # owner vs a contact organization.
     props = node.get("properties") or {}
     _require_props(node, "name")
+    identity_class = props.get("identity_class", "organization")
     return stix2.Identity(
-        id=f"identity--{_whisper_uuid5(node['id'])}",
+        id=pycti.Identity.generate_id(
+            name=props["name"], identity_class=identity_class
+        ),
         name=props["name"],
-        identity_class=props.get("identity_class", "organization"),
+        identity_class=identity_class,
     )
 
 
@@ -222,10 +232,14 @@ def map_edge(edge: dict, source_stix: Any, target_stix: Any) -> stix2.Relationsh
     if rel_type not in ALLOWED_RELATIONSHIPS:
         raise StixMappingError(f"unsupported relationship type: {rel_type!r}")
 
-    edge_key = edge.get("id") or f"{edge['source_id']}|{edge['target_id']}|{rel_type}"
-    # id passed at the literal kwarg position so the vendored STIX-ID
-    # pylint plugin can see it (it doesn't follow **kwargs spreads).
-    stix_id = f"relationship--{_whisper_uuid5(edge_key)}"
+    # pycti keys the relationship id off (type, source, target) — the same
+    # tuple OpenCTI uses server-side — so re-enrichment is idempotent and the
+    # SRO dedups against identical relationships from other connectors. id
+    # passed at the literal kwarg position so the vendored STIX-ID pylint
+    # plugin can see it (it doesn't follow **kwargs spreads).
+    stix_id = pycti.StixCoreRelationship.generate_id(
+        rel_type, source_stix.id, target_stix.id
+    )
     extras: dict[str, Any] = {}
     description = (edge.get("properties") or {}).get("description")
     if description:
@@ -284,9 +298,11 @@ def build_note(
 ) -> stix2.Note:
     """Build a STIX 2.1 Note SDO attached to a seed observable's STIX ID.
 
-    The Note's ID is UUIDv5 derived from (seed_stix_id, content) so
-    re-enrichment with the same content produces the same Note ID — keeps
-    OpenCTI deduplication clean.
+    The Note's ID comes from ``pycti.Note.generate_id`` keyed off
+    (content, abstract) — the same deterministic helper OpenCTI uses
+    server-side — so re-enrichment with the same content produces the same
+    Note ID and dedup stays clean. ``created`` is left unset so the ID is
+    stable across runs (a wall-clock ``created`` would re-key it each time).
 
     Used by the connector for:
     - `LINKS_TO` cap-overflow summaries ("Whisper found N inbound links,
@@ -297,9 +313,8 @@ def build_note(
     """
     if not seed_stix_id or not content:
         raise StixMappingError("build_note requires both seed_stix_id and content")
-    note_uuid = str(uuid.uuid5(WHISPER_NAMESPACE, f"note|{seed_stix_id}|{content}"))
     return stix2.Note(
-        id=f"note--{note_uuid}",
+        id=pycti.Note.generate_id(None, content, abstract),
         abstract=abstract,
         content=content,
         object_refs=[seed_stix_id],

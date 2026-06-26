@@ -1,14 +1,13 @@
 """Entry point for the Whisper OpenCTI connector.
 
-Loads the optional ``config.yml`` once, then constructs:
+Constructs:
 
-1. ``WhisperSettings`` — Pydantic-validated config for the Whisper side
-   (api_url / api_key / max_tlp), with env vars overriding the YAML
-   ``whisper:`` block.
+1. ``ConnectorSettings`` — the connectors-sdk ``BaseConnectorSettings`` model,
+   which loads the ``opencti:`` / ``connector:`` / ``whisper:`` config from env
+   vars and the optional ``config.yml`` and validates it. ``to_helper_config()``
+   produces the dict ``OpenCTIConnectorHelper`` consumes.
 2. ``OpenCTIConnectorHelper`` with ``playbook_compatible=True`` — required
-   by the v7 internal-enrichment callback contract (issue #65). The
-   helper reads its own ``OPENCTI__`` / ``CONNECTOR__`` / ``RABBITMQ__``
-   keys out of the same YAML dict.
+   by the v7 internal-enrichment callback contract (issue #65).
 
 Then hands both to ``WhisperConnector.run()``. Wrapped in
 ``try/traceback/sys.exit(1)`` so Docker reports the container as
@@ -28,7 +27,7 @@ import time
 import traceback
 
 from connector.connector import WhisperConnector
-from connector.settings import WhisperSettings, load_yaml_config
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
 logger = logging.getLogger("whisper.main")
@@ -94,9 +93,8 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
     )
-    yaml_config = load_yaml_config()
-    settings = WhisperSettings.from_environment(yaml_config)
-    helper = _build_helper(yaml_config)
+    settings = ConnectorSettings()
+    helper = _build_helper(settings.to_helper_config())
     WhisperConnector(helper=helper, config=settings).run()
 
 

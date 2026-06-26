@@ -26,7 +26,7 @@ from connector.result_parser import (
     parse_cypher_result,
     translate_node_cell,
 )
-from connector.settings import WhisperSettings
+from connector.settings import ConnectorSettings
 from connector.whisper_client import WhisperClient
 from pycti import OpenCTIConnectorHelper
 
@@ -69,20 +69,21 @@ class WhisperConnector:
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        config: WhisperSettings,
+        config: ConnectorSettings,
         client: WhisperClient | None = None,
     ) -> None:
         """Construct the connector with externally-built helper and settings.
 
-        ``main.py`` builds the helper from the parsed ``config.yml`` dict
-        and the connector consumes the typed ``WhisperSettings`` fields
-        (``api_url``, ``api_key``, ``max_tlp``). ``client`` is injectable
-        for tests; production passes a freshly-built ``WhisperClient``.
+        ``main.py`` builds both the helper and the ``ConnectorSettings`` from
+        the connectors-sdk; the connector consumes the typed ``whisper:`` block
+        (``api_url``, ``api_key``, ``max_tlp``). ``client`` is injectable for
+        tests; production passes a freshly-built ``WhisperClient``.
         """
         self.helper = helper
         self.config = config
         self.client = client or WhisperClient(
-            api_url=config.api_url, api_key=config.api_key
+            api_url=config.whisper.api_url,
+            api_key=config.whisper.api_key.get_secret_value(),
         )
 
     @staticmethod
@@ -131,7 +132,7 @@ class WhisperConnector:
         the TLP ceiling would leak intel to a less-trusted Whisper
         account. Raises ``WhisperTlpError`` on violation.
         """
-        max_tlp = self.config.max_tlp
+        max_tlp = self.config.whisper.max_tlp
         for marking in observable.get("objectMarking", []) or []:
             if marking.get("definition_type") == "TLP" and not (
                 OpenCTIConnectorHelper.check_max_tlp(
@@ -155,7 +156,7 @@ class WhisperConnector:
         if not stix_objects:
             return "playbook pass-through: no stix_objects to forward"
         bundle = self.helper.stix2_create_bundle(stix_objects)
-        self.helper.send_stix2_bundle(bundle)
+        self.helper.send_stix2_bundle(bundle, cleanup_inconsistent_bundle=True)
         return f"playbook pass-through: forwarded {len(stix_objects)} STIX object(s)"
 
     def _process_message(self, data: dict) -> str:
@@ -1131,7 +1132,7 @@ class WhisperConnector:
         # still produces a ``stix2.Bundle`` for the unit tests' sake;
         # ``helper.stix2_create_bundle`` consumes the object list.
         stix_bundle = self.helper.stix2_create_bundle(objects)
-        self.helper.send_stix2_bundle(stix_bundle)
+        self.helper.send_stix2_bundle(stix_bundle, cleanup_inconsistent_bundle=True)
         self.helper.connector_logger.info(
             "Sent STIX bundle",
             {
