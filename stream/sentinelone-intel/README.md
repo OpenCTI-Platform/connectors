@@ -22,8 +22,8 @@
         - [Manual Deployment](#manual-deployment)
     - [Usage](#usage)
     - [Behavior](#behavior)
+    - [Known Limitations](#known-limitations)
     - [Debugging](#debugging)
-    - [Additional information](#additional-information)
 
 ## Introduction
 
@@ -86,7 +86,7 @@ Below are the parameters you'll need to set for running the connector properly:
 | Connector Type                          | type                        | `CONNECTOR_TYPE`                        | STREAM                               | Yes       | Should always be set to `STREAM` for this connector.                                                                                                   |
 | Connector Name                          | name                        | `CONNECTOR_NAME`                        | SentinelOne Intel Stream Connector   | Yes       | Name of the connector.                                                                                                                                 |
 | Connector Scope                         | scope                       | `CONNECTOR_SCOPE`                       | sentinelone                          | Yes       | The scope or type of data the connector is importing, either a MIME type or Stix Object.                                                               |
-| Log Level                               | log_level                   | `CONNECTOR_LOG_LEVEL`                   | info                                 | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, or `error`.                                                                 |
+| Log Level                               | log_level                   | `CONNECTOR_LOG_LEVEL`                   | error                                | Yes       | Determines the verbosity of the logs. Options are `debug`, `info`, `warn`, `warning`, or `error`.                                                      |
 | Connector Live Stream ID                | live_stream_id              | `CONNECTOR_LIVE_STREAM_ID`              | live                                 | Yes       | ID of the live stream created in the OpenCTI UI                                                                                                        |
 | Connector Live Stream Listen Delete     | live_stream_listen_delete   | `CONNECTOR_LIVE_STREAM_LISTEN_DELETE`   | true                                 | Yes       | Listen to all delete events concerning the entity, depending on the filter set for the OpenCTI stream.                                                 |
 | Connector Live Stream No dependencies   | live_stream_no_dependencies | `CONNECTOR_LIVE_STREAM_NO_DEPENDENCIES` | true                                 | Yes       | Always set to `True` unless you are synchronizing 2 OpenCTI platforms and you want to get an entity and all context (relationships and related entity) |
@@ -168,7 +168,7 @@ regular interval specified in your `docker-compose.yml` or `config.yml` in `dura
 ![Creating a Stream in OpenCTI](src/doc/stream_creation.png)
 
 - Provide the stream with a relevant name so that it can be easily identified. 
-- Optional filters can be applied to determine which OpenCTI events the connector receivies. One should certainly set the following as to ensure that the stream only handles Indicators with STIX patterns
+- Optional filters can be applied to determine which OpenCTI events the connector receives. You should set at least the following filters to ensure the stream only handles Indicators with STIX patterns:
   - **Entity Type**: Set to `Indicator`
   - **Pattern Type**: Set to `stix`
 - Further filters based on your needs (e.g., specific labels or creators)
@@ -190,11 +190,11 @@ Compound patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) or mu
 
 ## Known Limitations
 
-- **IOCs not visible in the Management Console**: Threat intelligence data uploaded via the API cannot be configured or viewed through the SentinelOne Management Console and is accessible only via the [API. See [SentinelOne's API documentation](https://usea1-partners.sentinelone.net/api-doc/api-details?category=threat-intelligence&api=get-iocs).
+- **IOCs not visible in the Management Console**: Threat intelligence data uploaded via the API cannot be configured or viewed through the SentinelOne Management Console and is accessible only via the API. See [SentinelOne's API documentation](https://usea1-partners.sentinelone.net/api-doc/api-details?category=threat-intelligence&api=get-iocs) for details.
 - **Single-expression patterns only**: Compound STIX patterns containing logical operators (AND, OR, FOLLOWEDBY, etc.) are not supported and will be silently ignored.
 - **Limited IOC types**: Only file hashes (SHA-256, SHA-1, MD5) and network indicators (URLs, domains, IPv4) are supported.
 
 ## Debugging
 
 The connector can be debugged by setting the appropriate log level.
-Note that logging messages can be added using `self.helper.connector_logger,{LOG_LEVEL}("Sample message")`, i.e., `self.helper.connector_logger.error("An error message")`.
+Note that logging messages can be added using `self.helper.connector_logger.<level>("Sample message")`, where `<level>` is one of `debug`, `info`, `warning`, or `error` (e.g., `self.helper.connector_logger.error("An error message")`).
