@@ -1,23 +1,21 @@
-import ipaddress
-from typing import Literal
+import json
+from typing import List, Dict, Any, Literal, Optional
 
-import stix2
-import validators
-from pycti import (
-    Identity,
-    MarkingDefinition,
-    OpenCTIConnectorHelper,
-    StixCoreRelationship,
+from connectors_sdk.models import (
+    DomainName,
+    IPV4Address,
+    OrganizationAuthor,
+    Relationship,
+    TLPMarking,
+    Note,
 )
+from pycti import OpenCTIConnectorHelper
 
 
 class ConverterToStix:
     """
-    Provides methods for converting various types of input data into STIX 2.1 objects.
-
-    REQUIREMENTS:
-        - `generate_id()` methods from `pycti` library MUST be used to generate the `id` of each entity (except observables),
-        e.g. `pycti.Identity.generate_id(name="Source Name", identity_class="organization")` for a STIX Identity.
+    Provides methods for converting DDoSIA target data into STIX 2.1 objects
+    using the connectors-sdk models.
     """
 
     def __init__(
@@ -26,157 +24,125 @@ class ConverterToStix:
         tlp_level: Literal["clear", "white", "green", "amber", "amber+strict", "red"],
     ):
         """
-        Initialize the converter with necessary configuration.
-        For log purpose, the connector's helper CAN be injected.
-        Other arguments CAN be added (e.g. `tlp_level`) if necessary.
+        Initialize the converter.
 
         Args:
-            helper (OpenCTIConnectorHelper): The helper of the connector. Used for logs.
-            tlp_level (str): The TLP level to add to the created STIX entities.
+            helper: OpenCTI connector helper for logging.
+            tlp_level: The TLP level to apply to all created entities.
         """
         self.helper = helper
+        self.tlp_level = tlp_level.lower()
 
+        # Initialize author and marking once
         self.author = self.create_author()
-        self.tlp_marking = self._create_tlp_marking(level=tlp_level.lower())
+        self.tlp_marking = self.create_tlp_marking(self.tlp_level)
 
-    @staticmethod
-    def create_author() -> dict:
+    def create_author(self) -> OrganizationAuthor:
         """
-        Create Author
-        :return: Author in Stix2 object
+        Create the author identity for the connector.
+
+        Returns:
+            OrganizationAuthor object.
         """
-        author = stix2.Identity(
-            id=Identity.generate_id(name="Source Name", identity_class="organization"),
-            name="Source Name",
-            identity_class="organization",
-            description="DESCRIPTION",
-            external_references=[
-                stix2.ExternalReference(
-                    source_name="External Source",
-                    url="CHANGEME",
-                    description="DESCRIPTION",
-                )
-            ],
+        return OrganizationAuthor(
+            name="witha.name",
+            # Identity class is implicitly organization in OrganizationAuthor
         )
-        return author
 
-    @staticmethod
-    def _create_tlp_marking(level):
-        mapping = {
-            "white": stix2.TLP_WHITE,
-            "clear": stix2.TLP_WHITE,
-            "green": stix2.TLP_GREEN,
-            "amber": stix2.TLP_AMBER,
-            "amber+strict": stix2.MarkingDefinition(
-                id=MarkingDefinition.generate_id("TLP", "TLP:AMBER+STRICT"),
-                definition_type="statement",
-                definition={"statement": "custom"},
-                custom_properties={
-                    "x_opencti_definition_type": "TLP",
-                    "x_opencti_definition": "TLP:AMBER+STRICT",
-                },
-            ),
-            "red": stix2.TLP_RED,
+    def create_tlp_marking(self, level: str) -> TLPMarking:
+        """
+        Create a TLP marking object.
+
+        Args:
+            level: TLP level string.
+
+        Returns:
+            TLPMarking object.
+        """
+        return TLPMarking(level=level)
+
+    def create_domain(self, host: str) -> DomainName:
+        """
+        Create a STIX DomainName object.
+
+        Args:
+            host: The normalized domain name.
+
+        Returns:
+            DomainName object.
+        """
+        return DomainName(
+            value=host,
+            author=self.author,
+            markings=[self.tlp_marking],
+        )
+
+    def create_ipv4(self, ip: str) -> IPV4Address:
+        """
+        Create a STIX IPv4Address object.
+
+        Args:
+            ip: The validated IPv4 address.
+
+        Returns:
+            IPV4Address object.
+        """
+        return IPV4Address(
+            value=ip,
+            author=self.author,
+            markings=[self.tlp_marking],
+        )
+
+    def create_resolves_to_relationship(self, domain: DomainName, ip: IPV4Address) -> Relationship:
+        """
+        Create a 'resolves-to' relationship between a domain and an IP.
+
+        Args:
+            domain: The source DomainName object.
+            ip: The target IPV4Address object.
+
+        Returns:
+            Relationship object.
+        """
+        return Relationship(
+            type="resolves-to",
+            source=domain.id,
+            target=ip.id,
+            author=self.author,
+            markings=[self.tlp_marking],
+        )
+
+    def create_note_for_host(
+        self,
+        domain: DomainName,
+        cfg_id: str,
+        cfg_ts: float,
+        host: str,
+        targets: List[Dict[str, Any]],
+    ) -> Note:
+        """
+        Create a STIX Note containing the raw JSON targets for a specific domain.
+
+        Args:
+            domain: The target DomainName object.
+            cfg_id: The ID of the configuration snapshot.
+            cfg_ts: The timestamp of the snapshot.
+            host: The normalized host name.
+            targets: The list of raw target dictionaries.
+
+        Returns:
+            Note object.
+        """
+        note_content = {
+            "cfg_id": cfg_id,
+            "snapshot_ts": cfg_ts,
+            "host": host,
+            "targets": targets,
         }
-        return mapping[level]
 
-    def create_relationship(
-        self, source_id: str, relationship_type: str, target_id: str
-    ) -> dict:
-        """
-        Creates Relationship object
-        :param source_id: ID of source in string
-        :param relationship_type: Relationship type in string
-        :param target_id: ID of target in string
-        :return: Relationship STIX2 object
-        """
-        relationship = stix2.Relationship(
-            id=StixCoreRelationship.generate_id(
-                relationship_type, source_id, target_id
-            ),
-            relationship_type=relationship_type,
-            source_ref=source_id,
-            target_ref=target_id,
-            created_by_ref=self.author,
+        return Note(
+            content=json.dumps(note_content, indent=2),
+            object_refs=[domain.id],
+            author=self.author,
+            markings=[self.tlp_marking],
         )
-        return relationship
-
-    # ===========================#
-    # Other Examples
-    # ===========================#
-
-    @staticmethod
-    def _is_ipv6(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv6
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv6Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_ipv4(value: str) -> bool:
-        """
-        Determine whether the provided IP string is IPv4
-        :param value: Value in string
-        :return: A boolean
-        """
-        try:
-            ipaddress.IPv4Address(value)
-            return True
-        except ipaddress.AddressValueError:
-            return False
-
-    @staticmethod
-    def _is_domain(value: str) -> bool:
-        """
-        Valid domain name regex including internationalized domain name
-        :param value: Value in string
-        :return: A boolean
-        """
-        is_valid_domain = validators.domain(value)
-
-        if is_valid_domain:
-            return True
-        else:
-            return False
-
-    def create_obs(self, value: str) -> dict:
-        """
-        Create observable according to value given
-        :param value: Value in string
-        :return: Stix object for IPV4, IPV6 or Domain
-        """
-        if self._is_ipv6(value) is True:
-            stix_ipv6_address = stix2.IPv6Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv6_address
-        elif self._is_ipv4(value) is True:
-            stix_ipv4_address = stix2.IPv4Address(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_ipv4_address
-        elif self._is_domain(value) is True:
-            stix_domain_name = stix2.DomainName(
-                value=value,
-                custom_properties={
-                    "x_opencti_created_by_ref": self.author["id"],
-                },
-            )
-            return stix_domain_name
-        else:
-            self.helper.connector_logger.error(
-                "This observable value is not a valid IPv4 or IPv6 address nor DomainName: ",
-                {"value": value},
-            )

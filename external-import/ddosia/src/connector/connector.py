@@ -1,206 +1,226 @@
 import sys
 from datetime import datetime, timezone
+from typing import List, Dict, Any, Optional
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
+from connector.utils import group_targets_by_host
+from ddosia_client.api_client import DdosiaClient
 from pycti import OpenCTIConnectorHelper
-from template_client import TemplateClient
 
 
 class TemplateConnector:
     """
-    Specifications of the external import connector:
-
-    This class encapsulates the main actions, expected to be run by any connector of type `EXTERNAL_IMPORT`.
-    This type of connector aim to fetch external data to create STIX bundle and send it to OpenCTI.
-    The STIX bundle in the queue will be processed by OpenCTI workers.
-    This type of connector uses the basic methods of the helper.
-
-    ---
-
-    Attributes:
-        config (ConnectorSettings):
-            Store the connector's configuration. It defines how to connector will behave.
-        helper (OpenCTIConnectorHelper):
-            Handle the connection and the requests between the connector, OpenCTI and the workers.
-            _All connectors MUST use the connector helper with connector's configuration._
-        client (TemplateClient):
-            Provide methods to request the external API.
-        converter_to_stix (ConnectorConverter):
-            Provide methods for converting various types of input data into STIX 2.1 objects.
-
-    ---
-
-    Best practices:
-        - `self.helper.api.work.initiate_work(...)` is used to initiate a new work
-        - `self.helper.schedule_iso()` is used to schedule connector's runs frequency
-        - `self.helper.connector_logger.[info/debug/warning/error]` is used when logging a message
-        - `self.helper.stix2_create_bundle(stix_objects)` is used when creating a bundle
-        - `self.helper.send_stix2_bundle(stix_objects_bundle)` is used to send the bundle to OpenCTI
-        - `self.helper.set_state()` is used to store persistent data in connector's state
-
+    Connector for importing DDoSIA targets from witha.name into OpenCTI.
     """
 
     def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize `TemplateConnector` with its configuration.
+        Initialize the connector.
 
         Args:
-            config (ConnectorSettings): Configuration of the connector
-            helper (OpenCTIConnectorHelper): Helper to manage connection and requests to OpenCTI
+            config: Connector configuration.
+            helper: OpenCTI connector helper.
         """
         self.config = config
         self.helper = helper
 
-        self.client = TemplateClient(
-            self.helper,
-            base_url=self.config.template.api_base_url,
-            api_key=self.config.template.api_key,
-            # Pass any arguments necessary to the client
+        self.client = DdosiaClient(
+            helper=self.helper,
+            base_url=self.config.ddosia.api_base_url,
         )
+
         self.converter_to_stix = ConverterToStix(
-            self.helper,
-            tlp_level=self.config.template.tlp_level,
-            # Pass any arguments necessary to the converter
+            helper=self.helper,
+            tlp_level=self.config.ddosia.tlp_level,
         )
 
-    def _collect_intelligence(self) -> list:
+    def _select_configs_to_process(self, configs: List[Dict[str, Any]], state: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Collect intelligence from the source and convert into STIX object
-        :return: List of STIX objects
+        Filter and sort configurations to process based on the current state and configuration.
+
+        Args:
+            configs: List of all available configurations from the API.
+            state: The current connector state.
+
+        Returns:
+            A list of configurations to process, sorted by timestamp ascending.
         """
-        stix_objects = []
+        # Convert timestamps to float for reliable comparison
+        for item in configs:
+            item["_ts_float"] = float(item.get("ts", 0))
 
-        # ===========================
-        # === Add your code below ===
-        # ===========================
+        # Sort by timestamp ascending (oldest first)
+        sorted_configs = sorted(configs, key=lambda x: x["_ts_float"])
 
-        # Get entities from external sources
-        entities = self.client.get_entities()
+        if state and "last_cfg_ts" in state:
+            # Incremental import: only those strictly newer than the last processed timestamp
+            last_ts = state["last_cfg_ts"]
+            return [item for item in sorted_configs if item["_ts_float"] > last_ts]
 
-        # Convert into STIX2 object and add it on a list
-        for entity in entities:
-            entity_to_stix = self.converter_to_stix.create_obs(entity["value"])
-            stix_objects.append(entity_to_stix)
+        # First run logic
+        start_ts = self.config.ddosia.import_start_timestamp
 
-        # ===========================
-        # === Add your code above ===
-        # ===========================
+        if start_ts is None:
+            # Default: only the most recent snapshot
+            return [sorted_configs[-1]] if sorted_configs else []
 
-        # Ensure consistent bundle by adding the author and TLP marking
-        if len(stix_objects):
-            stix_objects.append(self.converter_to_stix.author)
-            stix_objects.append(self.converter_to_stix.tlp_marking)
+        if start_ts == 0:
+            # Import all available history
+            return sorted_configs
 
-        return stix_objects
+        # Import everything from the specified timestamp onwards
+        return [item for item in sorted_configs if item["_ts_float"] >= start_ts]
+
+    def _process_snapshot(self, config_item: Dict[str, Any]) -> List[Any]:
+        """
+        Process a single snapshot: fetch data, group by host, and convert to STIX.
+
+        Args:
+            config_item: The configuration item metadata.
+
+        Returns:
+            A list of STIX objects for this snapshot.
+        """
+        cfg_id = config_item["id"]
+        cfg_ts = float(config_item.get("ts", 0))
+
+        self.helper.connector_logger.info(
+            f"[CONNECTOR] Processing snapshot {cfg_id}",
+            {"cfg_id": cfg_id, "ts": cfg_ts}
+        )
+
+        try:
+            # 1. Fetch snapshot content
+            snapshot_data = self.client.get_config(cfg_id)
+            targets = snapshot_data.get("targets", [])
+
+            if not targets:
+                self.helper.connector_logger.info(f"[CONNECTOR] Snapshot {cfg_id} is empty", {"cfg_id": cfg_id})
+                return []
+
+            # 2. Group targets by host
+            aggregated_data = group_targets_by_host(targets)
+            stix_objects = []
+
+            # 3. Convert each host aggregate to STIX
+            for host, data in aggregated_data.items():
+                # Create Domain
+                domain_obj = self.converter_to_stix.create_domain(host)
+                stix_objects.append(domain_obj.to_stix2_object())
+
+                # Create IPs and relationships
+                for ip in data["ips"]:
+                    ip_obj = self.converter_to_stix.create_ipv4(ip)
+                    stix_objects.append(ip_obj.to_stix2_object())
+
+                    rel_obj = self.converter_to_stix.create_resolves_to_relationship(domain_obj, ip_obj)
+                    stix_objects.append(rel_obj.to_stix2_object())
+
+                # Create Note with raw targets
+                note_obj = self.converter_to_stix.create_note_for_host(
+                    domain=domain_obj,
+                    cfg_id=cfg_id,
+                    cfg_ts=cfg_ts,
+                    host=host,
+                    targets=data["raw_targets"]
+                )
+                stix_objects.append(note_obj.to_stix2_object())
+
+            return stix_objects
+
+        except Exception as e:
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] Failed to process snapshot {cfg_id}",
+                {"cfg_id": cfg_id, "error": str(e)}
+            )
+            return []
 
     def process_message(self) -> None:
         """
-        Connector main process to collect intelligence
-        :return: None
+        Main processing loop for the connector.
         """
         self.helper.connector_logger.info(
-            "[CONNECTOR] Starting connector...",
+            "[CONNECTOR] Starting connector run...",
             {"connector_name": self.helper.connect_name},
         )
 
         try:
-            # Get the current state
-            now = datetime.now()
-            current_timestamp = int(datetime.timestamp(now))
-            current_state = self.helper.get_state()
+            # 1. Get current state
+            current_state = self.helper.get_state() or {}
 
-            if current_state is not None and "last_run" in current_state:
-                last_run = current_state["last_run"]
+            # 2. Fetch available configurations
+            all_configs = self.client.get_configs().get("items", [])
+            if not all_configs:
+                self.helper.connector_logger.info("[CONNECTOR] No configurations found in API")
+                return
 
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": last_run},
-                )
-            else:
-                self.helper.connector_logger.info(
-                    "[CONNECTOR] Connector has never run..."
-                )
+            # 3. Select snapshots to process
+            configs_to_process = self._select_configs_to_process(all_configs, current_state)
 
-            # Friendly name will be displayed on OpenCTI platform
-            friendly_name = "Connector template feed"
-
-            # Initiate a new work
-            work_id = self.helper.api.work.initiate_work(
-                self.helper.connect_id, friendly_name
-            )
+            if not configs_to_process:
+                self.helper.connector_logger.info("[CONNECTOR] No new snapshots to process")
+                return
 
             self.helper.connector_logger.info(
-                "[CONNECTOR] Running connector...",
-                {"connector_name": self.helper.connect_name},
+                f"[CONNECTOR] Found {len(configs_to_process)} new snapshots to process"
             )
 
-            # Performing the collection of intelligence
-            # ===========================
-            # === Add your code below ===
-            # ===========================
-            stix_objects = self._collect_intelligence()
+            # 4. Process each snapshot sequentially
+            for config_item in configs_to_process:
+                cfg_id = config_item["id"]
+                cfg_ts = float(config_item.get("ts", 0))
 
-            if len(stix_objects):
-                stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
-                bundles_sent = self.helper.send_stix2_bundle(
-                    stix_objects_bundle,
-                    work_id=work_id,
-                    cleanup_inconsistent_bundle=True,
+                # Initiate a work for this specific snapshot
+                friendly_name = f"DDoSIA - {cfg_id}"
+                work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+
+                # Collect and convert
+                stix_objects = self._process_snapshot(config_item)
+
+                if stix_objects:
+                    # Add author and marking to the bundle
+                    stix_objects.append(self.converter_to_stix.author)
+                    stix_objects.append(self.converter_to_stix.tlp_marking)
+
+                    bundle = self.helper.stix2_create_bundle(stix_objects)
+                    self.helper.send_stix2_bundle(
+                        bundle,
+                        work_id=work_id,
+                        cleanup_inconsistent_bundle=True,
+                    )
+
+                    self.helper.connector_logger.info(
+                        f"[CONNECTOR] Snapshot {cfg_id} imported",
+                        {"objects_count": len(stix_objects)}
+                    )
+
+                # Mark work as processed
+                self.helper.api.work.to_processed(
+                    work_id,
+                    f"Processed snapshot {cfg_id} with {len(stix_objects)} objects"
                 )
 
-                self.helper.connector_logger.info(
-                    "Sending STIX objects to OpenCTI...",
-                    {"bundles_sent": {str(len(bundles_sent))}},
-                )
-            # ===========================
-            # === Add your code above ===
-            # ===========================
-
-            # Store the current timestamp as a last run of the connector
-            self.helper.connector_logger.debug(
-                "Getting current state and update it with last run of the connector",
-                {"current_timestamp": current_timestamp},
-            )
-            current_state = self.helper.get_state()
-            current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
-            last_run_datetime = datetime.fromtimestamp(
-                current_timestamp, tz=timezone.utc
-            ).strftime("%Y-%m-%d %H:%M:%S")
-            if current_state:
-                current_state["last_run"] = current_state_datetime
-            else:
-                current_state = {"last_run": current_state_datetime}
-            self.helper.set_state(current_state)
-
-            message = (
-                f"{self.helper.connect_name} connector successfully run, storing last_run as "
-                + str(last_run_datetime)
-            )
-
-            self.helper.api.work.to_processed(work_id, message)
-            self.helper.connector_logger.info(message)
+                # Update state after each successful snapshot to allow resume
+                now = datetime.now(timezone.utc)
+                self.helper.set_state({
+                    "last_run": now.isoformat(),
+                    "last_cfg_id": cfg_id,
+                    "last_cfg_ts": cfg_ts
+                })
 
         except (KeyboardInterrupt, SystemExit):
-            self.helper.connector_logger.info(
-                "[CONNECTOR] Connector stopped...",
-                {"connector_name": self.helper.connect_name},
-            )
+            self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")
             sys.exit(0)
         except Exception as err:
-            self.helper.connector_logger.error(str(err))
+            self.helper.connector_logger.error(
+                f"[CONNECTOR] Unexpected error during run: {str(err)}",
+                {"error": str(err)}
+            )
 
     def run(self) -> None:
         """
-        Start the connector, schedule its runs and trigger the first run.
-        It allows you to schedule the process to run at a certain interval.
-        This specific scheduler from the `OpenCTIConnectorHelper` will also check the queue size of a connector.
-        If `CONNECTOR_QUEUE_THRESHOLD` is set, and if the connector's queue size exceeds the queue threshold,
-        the connector's main process will not run until the queue is ingested and reduced sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB)
-
-        Example:
-            - If `CONNECTOR_DURATION_PERIOD=PT5M`, then the connector is running every 5 minutes.
+        Start the connector and schedule its runs.
         """
         self.helper.schedule_process(
             message_callback=self.process_message,
