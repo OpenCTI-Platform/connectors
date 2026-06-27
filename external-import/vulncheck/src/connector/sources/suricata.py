@@ -1,8 +1,11 @@
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from vulncheck_client import VulnCheckClient
 from stix2.v21.vocab import PATTERN_TYPE_SURICATA
-from vclib.models.rule import Rule, RuleParser
-from vclib.util.config import SCOPE_INDICATOR, compare_config_to_target_scope
+from connector.models.rule import Rule, RuleParser
+from connector.util.config import SCOPE_INDICATOR, compare_config_to_target_scope
 
 
 def _extract_stix_from_suricata(
@@ -21,10 +24,10 @@ def _extract_stix_from_suricata(
 
 
 def collect_suricata(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
-    client,
-    converter_to_stix,
+    client: VulnCheckClient,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

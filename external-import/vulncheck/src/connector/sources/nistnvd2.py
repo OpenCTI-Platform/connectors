@@ -1,17 +1,20 @@
 from typing import Any
 
 import stix2
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.models import data_source
-from vclib.util.config import (
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from vulncheck_client import VulnCheckClient
+from connector.sources import names
+from connector.util.config import (
     SCOPE_SOFTWARE,
     SCOPE_VULNERABILITY,
     compare_config_to_target_scope,
 )
-from vclib.util.cpe import parse_cpe_uri
-from vclib.util.memory_usage import log_memory_usage
-from vclib.util.nvd import build_nvd2_query_params, check_vuln_description
+from connector.util.cpe import parse_cpe_uri
+from connector.util.memory_usage import log_memory_usage
+from connector.util.nvd import build_nvd2_query_params, check_vuln_description
 from vulncheck_sdk.models.advisory_cvssv40 import AdvisoryCVSSV40
 from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
 from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
@@ -212,7 +215,7 @@ def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
 def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -256,10 +259,10 @@ def _extract_stix_from_nistnvd2(
 
 
 def collect_nistnvd2(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
-    client,
-    converter_to_stix,
+    client: VulnCheckClient,
+    converter_to_stix: ConverterToStix,
     logger,
     connector_state: dict,
 ) -> None:
@@ -280,7 +283,7 @@ def collect_nistnvd2(
     query_params = build_nvd2_query_params(
         config=config,
         connector_state=connector_state,
-        source_name=data_source.NIST_NVD2,
+        source_name=names.NIST_NVD2,
         logger=logger,
     )
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)

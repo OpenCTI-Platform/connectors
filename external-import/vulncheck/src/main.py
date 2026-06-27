@@ -1,8 +1,8 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
-from vclib import ConnectorVulnCheck
-from vclib.settings import ConnectorSettings
+from connector import ConnectorVulnCheck
+from connector.settings import ConnectorSettings
 
 if __name__ == "__main__":
     """

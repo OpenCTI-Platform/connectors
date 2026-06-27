@@ -1,10 +1,13 @@
 from datetime import datetime
 
 import stix2
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from vulncheck_client import VulnCheckClient
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
-from vclib.util.config import (
+from connector.util.config import (
     SCOPE_INFRASTRUCTURE,
     SCOPE_IP,
     SCOPE_LOCATION,
@@ -70,7 +73,7 @@ def _create_rel_consists_of(
 
 
 def _extract_stix_from_ipintel(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entities: list[AdvisoryIpIntelRecord],
     target_scope: list[str],
     logger,
@@ -122,7 +125,12 @@ def _extract_stix_from_ipintel(
 
 
 def collect_ipintel(
-    config, helper: OpenCTIConnectorHelper, client, converter_to_stix, logger, _: dict
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    client: VulnCheckClient,
+    converter_to_stix: ConverterToStix,
+    logger,
+    _: dict,
 ) -> None:
     source_name = "IP Intel"
     target_scope = [SCOPE_IP, SCOPE_INFRASTRUCTURE, SCOPE_LOCATION]

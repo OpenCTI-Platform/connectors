@@ -1,9 +1,12 @@
 from datetime import datetime
 
 import stix2
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import (
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from vulncheck_client import VulnCheckClient
+from connector.util.config import (
     SCOPE_EXTERNAL_REF,
     SCOPE_REPORT,
     SCOPE_THREAT_ACTOR,
@@ -34,7 +37,7 @@ def _create_vulns(converter_to_stix, logger, vulnerabilities: list[str]) -> list
 
 
 def _create_threat_actor(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entity: AdvisoryThreatActorWithExternalObjects,
     logger,
     external_refs: list[stix2.ExternalReference],
@@ -55,7 +58,7 @@ def _create_rel_targets(
     threat_actor: stix2.ThreatActor,
     vulnerability: stix2.Vulnerability,
     labels: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -72,7 +75,7 @@ def _create_rel_targets(
 def _extract_cve_references(
     cve_references: list[AdvisoryCVEReference] | None,
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> tuple[list[stix2.ExternalReference], list[stix2.Vulnerability]]:
     vulnerabilities = []
@@ -103,7 +106,7 @@ def _extract_threat_actors(
     external_refs: list[stix2.ExternalReference],
     vulnerabilities: list[stix2.Vulnerability],
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> list:
     result = []
@@ -138,7 +141,7 @@ def _extract_threat_actors(
 def _extract_stix_from_threat_actors(
     entities: list[AdvisoryThreatActorWithExternalObjects],
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> list:
     stix_objects = []
@@ -194,10 +197,10 @@ def _extract_stix_from_threat_actors(
 
 
 def collect_threat_actors(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
-    client,
-    converter_to_stix,
+    client: VulnCheckClient,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

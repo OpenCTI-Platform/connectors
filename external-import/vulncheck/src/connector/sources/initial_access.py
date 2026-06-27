@@ -1,12 +1,15 @@
 import stix2
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import (
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from vulncheck_client import VulnCheckClient
+from connector.util.config import (
     SCOPE_SOFTWARE,
     SCOPE_VULNERABILITY,
     compare_config_to_target_scope,
 )
-from vclib.util.cpe import parse_cpe_uri
+from connector.util.cpe import parse_cpe_uri
 from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
 
 
@@ -42,7 +45,7 @@ def _create_software(converter_to_stix, logger, cpe: str) -> stix2.Software:
 def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ):
     logger.debug(
@@ -91,7 +94,12 @@ def _extract_stix_from_initial_access(
 
 
 def collect_initial_access(
-    config, helper: OpenCTIConnectorHelper, client, converter_to_stix, logger, _: dict
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    client: VulnCheckClient,
+    converter_to_stix: ConverterToStix,
+    logger,
+    _: dict,
 ) -> None:
     source_name = "Initial Access"
     target_scope = [SCOPE_VULNERABILITY, SCOPE_SOFTWARE]

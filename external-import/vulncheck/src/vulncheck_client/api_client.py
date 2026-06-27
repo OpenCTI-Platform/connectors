@@ -1,9 +1,10 @@
 from typing import Any, Callable, Generator, List
 
+import requests
 import vulncheck_sdk
+from connector.sources import names
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
-from vclib.models import data_source
 from vulncheck_sdk.models.advisory_botnet import AdvisoryBotnet
 from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
 from vulncheck_sdk.models.advisory_ransomware_exploit import AdvisoryRansomwareExploit
@@ -18,7 +19,7 @@ from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
 from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
 
 
-class ConnectorClient:
+class VulnCheckClient:
     def __init__(
         self, helper: OpenCTIConnectorHelper, base_url: HttpUrl | str, api_key: str
     ):
@@ -26,11 +27,37 @@ class ConnectorClient:
         Initialize the client with necessary configurations
         """
         self.helper = helper
+        self.base_url = str(base_url)
+        self.api_key = str(api_key)
 
-        vc_config = vulncheck_sdk.Configuration(host=str(base_url))
-        vc_config.api_key["Bearer"] = str(api_key)
+        vc_config = vulncheck_sdk.Configuration(host=self.base_url)
+        vc_config.api_key["Bearer"] = self.api_key
 
         self.vc_config = vc_config
+
+    def is_source_available(self, name: str, api_prefix: str) -> bool:
+        """Check that a data source's index/rules endpoint is reachable.
+
+        A 4xx (other than auth/availability handled by the API) marks the source
+        as unavailable for the configured API key (e.g. community vs full access),
+        so it is skipped. Network errors are raised.
+        """
+        test_url = f"{self.base_url.rstrip('/')}{api_prefix}{name}"
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Accept": "*/*",
+        }
+        try:
+            resp = requests.head(
+                test_url,
+                headers=headers,
+                allow_redirects=True,
+                timeout=10,
+            )
+        except requests.RequestException as e:
+            raise RuntimeError(f"error testing {name}") from e
+
+        return not (400 <= resp.status_code < 500)
 
     def iter_data(
         self, index_func: Callable[..., Any], source_name: str, **kwargs
@@ -61,31 +88,31 @@ class ConnectorClient:
     def iter_ipintel(self) -> Generator[List[AdvisoryIpIntelRecord], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_ipintel3d_get(id="c2", **kwargs),
-            source_name=data_source.IPINTEL,
+            source_name=names.IPINTEL,
         )
 
     def iter_vckev(self) -> Generator[List[AdvisoryVulnCheckKEV], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_vulncheck_kev_get(**kwargs),
-            source_name=data_source.VULNCHECK_KEV,
+            source_name=names.VULNCHECK_KEV,
         )
 
     def iter_epss(self) -> Generator[List[ApiEPSSData], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_epss_get(**kwargs),
-            source_name=data_source.EPSS,
+            source_name=names.EPSS,
         )
 
     def iter_botnets(self) -> Generator[List[AdvisoryBotnet], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_botnets_get(**kwargs),
-            source_name=data_source.BOTNETS,
+            source_name=names.BOTNETS,
         )
 
     def iter_ransomware(self) -> Generator[List[AdvisoryRansomwareExploit], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_ransomware_get(**kwargs),
-            source_name=data_source.RANSOMWARE,
+            source_name=names.RANSOMWARE,
         )
 
     def iter_threat_actors(
@@ -93,32 +120,32 @@ class ConnectorClient:
     ) -> Generator[List[AdvisoryThreatActorWithExternalObjects], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_threat_actors_get(**kwargs),
-            source_name=data_source.THREAT_ACTORS,
+            source_name=names.THREAT_ACTORS,
         )
 
     def iter_exploits(self) -> Generator[List[ApiExploitV3Result], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_exploits_get(**kwargs),
-            source_name=data_source.EXPLOITS,
+            source_name=names.EXPLOITS,
         )
 
     def iter_initial_access(self) -> Generator[List[ApiInitialAccess], None, None]:
         yield from self.iter_data(
             lambda session, **kwargs: session.index_initial_access_get(**kwargs),
-            source_name=data_source.INITIAL_ACCESS,
+            source_name=names.INITIAL_ACCESS,
         )
 
     def iter_vcnvd2(self, **kwargs) -> Generator[List[ApiNVD20CVEExtended], None, None]:
         yield from self.iter_data(
             lambda session, **kw: session.index_vulncheck_nvd2_get(**kw),
-            source_name=data_source.VULNCHECK_NVD2,
+            source_name=names.VULNCHECK_NVD2,
             **kwargs,
         )
 
     def iter_nistnvd2(self, **kwargs) -> Generator[List[ApiNVD20CVE], None, None]:
         yield from self.iter_data(
             lambda session, **kw: session.index_nist_nvd2_get(**kw),
-            source_name=data_source.NIST_NVD2,
+            source_name=names.NIST_NVD2,
             **kwargs,
         )
 

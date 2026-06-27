@@ -2,15 +2,17 @@ import sys
 from datetime import datetime
 
 import stix2
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import get_time_until_next_run
-from vclib.util.memory_usage import reset_max_mem
+from connector.util.config import get_time_until_next_run
+from connector.util.memory_usage import reset_max_mem
 
-from .connector_client import ConnectorClient
+from vulncheck_client import VulnCheckClient
+
 from .converter_to_stix import ConverterToStix
-from .models.data_source import DataSource
 from .settings import ConnectorSettings
+from .sources import registry
+from .sources.registry import SourceSpec
 
 
 class ConnectorVulnCheck:
@@ -23,7 +25,7 @@ class ConnectorVulnCheck:
     Attributes:
     - config: Configuration object
     - helper: OpenCTIConnectorHelper object
-    - client: ConnectorClient object
+    - client: VulnCheckClient object
     - converter_to_stix: ConverterToStix object
     """
 
@@ -33,7 +35,7 @@ class ConnectorVulnCheck:
         """
         self.config = config
         self.helper = helper
-        self.client = ConnectorClient(
+        self.client = VulnCheckClient(
             self.helper,
             base_url=self.config.vulncheck.api_base_url,
             api_key=self.config.vulncheck.api_key,
@@ -41,7 +43,7 @@ class ConnectorVulnCheck:
         self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(
-        self, target_data_sources: list[DataSource], connector_state
+        self, target_data_sources: list[SourceSpec], connector_state
     ):
         """
         Collect intelligence from the source and convert into STIX object
@@ -51,7 +53,7 @@ class ConnectorVulnCheck:
                 f"[CONNECTOR] Collecting data for {source.name}",
             )
             # Get entities from source
-            source.collect_data_source(
+            source.collect(
                 self.config,
                 self.helper,
                 self.client,
@@ -60,24 +62,12 @@ class ConnectorVulnCheck:
                 connector_state,
             )
 
-    def _get_target_data_sources(self) -> list[DataSource]:
-        target_data_sources: list[DataSource] = []
-        for name in self.config.vulncheck.data_sources:
-            target_data_sources.append(DataSource.from_string(name))
-
-        # vulncheck-nvd2 is an enriched superset of nist-nvd2 (same CVEs plus
-        # attack patterns, mitigations, data sources and CPEs). If both are
-        # configured, prefer vulncheck-nvd2 and skip the redundant nist-nvd2.
-        if (
-            DataSource.VulnCheckNVD2 in target_data_sources
-            and DataSource.NistNVD2 in target_data_sources
-        ):
-            target_data_sources.remove(DataSource.NistNVD2)
-            self.helper.connector_logger.warning(
-                "[CONNECTOR] Both vulncheck-nvd2 and nist-nvd2 are configured; "
-                "preferring vulncheck-nvd2 and skipping nist-nvd2 (redundant)."
-            )
-
+    def _get_target_data_sources(self) -> list[SourceSpec]:
+        # registry.resolve validates names and applies the vulncheck-nvd2 ->
+        # skip nist-nvd2 preference (logging the skip via the connector logger).
+        target_data_sources = registry.resolve(
+            self.config.vulncheck.data_sources, self.helper.connector_logger
+        )
         self.helper.connector_logger.debug(
             "[CONNECTOR] Configured Data Sources",
             {"data_sources": [source.name for source in target_data_sources]},
@@ -85,18 +75,15 @@ class ConnectorVulnCheck:
         return target_data_sources
 
     def _get_validated_data_sources(
-        self, target_sources: list[DataSource]
-    ) -> list[DataSource]:
-        validated_sources: list[DataSource] = []
+        self, target_sources: list[SourceSpec]
+    ) -> list[SourceSpec]:
+        validated_sources: list[SourceSpec] = []
         self.helper.connector_logger.debug(
             "[CONNECTOR] Validating sources...",
             {"data_sources": [source.name for source in target_sources]},
         )
         for source in target_sources:
-            if source.validate(
-                str(self.config.vulncheck.api_base_url),
-                str(self.config.vulncheck.api_key),
-            ):
+            if self.client.is_source_available(source.name, source.api_prefix):
                 self.helper.connector_logger.debug(
                     f"[CONNECTOR] Valid source: {source.name}",
                 )
@@ -219,11 +206,10 @@ class ConnectorVulnCheck:
             )
 
     def _get_updated_state(
-        self, target_data_sources: list[DataSource], current_state_datetime
+        self, target_data_sources: list[SourceSpec], current_state_datetime
     ) -> dict:
         new_state = {
-            data_source.name: current_state_datetime
-            for data_source in target_data_sources
+            source.name: current_state_datetime for source in target_data_sources
         }
         new_state["last_run"] = current_state_datetime
         return new_state

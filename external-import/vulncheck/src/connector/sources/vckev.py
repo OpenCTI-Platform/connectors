@@ -1,7 +1,10 @@
 import stix2
-import vclib.util.works as works
+import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import SCOPE_VULNERABILITY, compare_config_to_target_scope
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from vulncheck_client import VulnCheckClient
+from connector.util.config import SCOPE_VULNERABILITY, compare_config_to_target_scope
 from vulncheck_sdk.models.advisory_vuln_check_kev import AdvisoryVulnCheckKEV
 
 
@@ -29,10 +32,10 @@ def _extract_stix_from_vckev(
 
 
 def collect_vckev(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
-    client,
-    converter_to_stix,
+    client: VulnCheckClient,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

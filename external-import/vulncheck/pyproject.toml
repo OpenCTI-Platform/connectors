@@ -3,7 +3,7 @@ requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "vclib"
+name = "vulncheck-connector"
 version = "0.1.0"
 description = "VulnCheck connector for OpenCTI"
 readme = "README.md"
