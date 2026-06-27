@@ -1,6 +1,7 @@
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -9,10 +10,10 @@ from vulncheck_sdk.models.advisory_vuln_check_kev import AdvisoryVulnCheckKEV
 
 
 def _create_vckev_vuln(
-    converter_to_stix, entity: AdvisoryVulnCheckKEV, logger
+    converter_to_stix, entity: AdvisoryVulnCheckKEV, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
-        "[VULNCHECK KEV] Creating vulnerability",
+        "Creating vulnerability",
         {"cve": entity.cve[0]},
     )
     return converter_to_stix.create_vulnerability(
@@ -21,9 +22,9 @@ def _create_vckev_vuln(
 
 
 def _extract_stix_from_vckev(
-    converter_to_stix, entities: list[AdvisoryVulnCheckKEV], logger
+    converter_to_stix, entities: list[AdvisoryVulnCheckKEV], logger: SourceLogger
 ) -> list:
-    logger.info("[VULNCHECK KEV] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     return [
         _create_vckev_vuln(converter_to_stix, entity, logger)
         for entity in entities
@@ -36,7 +37,7 @@ def collect_vckev(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     source_name = "VulnCheck KEV"
@@ -49,10 +50,10 @@ def collect_vckev(
     )
 
     if target_scope == []:
-        logger.info("[VULNCHECK KEV] VulnCheck KEV is out of scope, skipping")
+        logger.info("VulnCheck KEV is out of scope, skipping")
         return
 
-    logger.info("[VULNCHECK KEV] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_vckev():
@@ -69,4 +70,4 @@ def collect_vckev(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[VULNCHECK KEV] Data Source Completed!")
+    logger.info("Data Source Completed!")

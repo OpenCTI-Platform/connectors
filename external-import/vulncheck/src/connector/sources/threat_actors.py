@@ -3,6 +3,7 @@ from datetime import datetime
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -20,18 +21,20 @@ from vulncheck_sdk.models.advisory_threat_actor_with_external_objects import (
 
 
 def _create_external_ref(
-    converter_to_stix, logger, reference: AdvisoryCVEReference
+    converter_to_stix, logger: SourceLogger, reference: AdvisoryCVEReference
 ) -> stix2.ExternalReference:
     logger.debug(
-        "[THREAT ACTORS] Creating external reference",
+        "Creating external reference",
         {"ref_url": reference.url},
     )
     return converter_to_stix.create_external_reference(reference.url, reference.url)
 
 
-def _create_vulns(converter_to_stix, logger, vulnerabilities: list[str]) -> list:
+def _create_vulns(
+    converter_to_stix, logger: SourceLogger, vulnerabilities: list[str]
+) -> list:
     logger.debug(
-        "[THREAT ACTORS] Creating vulnerabilities",
+        "Creating vulnerabilities",
     )
     return [converter_to_stix.create_vulnerability(cve=cve) for cve in vulnerabilities]
 
@@ -39,11 +42,11 @@ def _create_vulns(converter_to_stix, logger, vulnerabilities: list[str]) -> list
 def _create_threat_actor(
     converter_to_stix: ConverterToStix,
     entity: AdvisoryThreatActorWithExternalObjects,
-    logger,
+    logger: SourceLogger,
     external_refs: list[stix2.ExternalReference],
 ) -> stix2.ThreatActor:
     logger.debug(
-        "[THREAT ACTORS] Creating threat actor group",
+        "Creating threat actor group",
         {"threat_actor": entity.threat_actor_name},
     )
     return converter_to_stix.create_threat_actor_group(
@@ -59,10 +62,10 @@ def _create_rel_targets(
     vulnerability: stix2.Vulnerability,
     labels: list[str],
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
-        '[THREAT ACTORS] Creating "targets" relationship',
+        'Creating "targets" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=threat_actor["id"],
@@ -76,7 +79,7 @@ def _extract_cve_references(
     cve_references: list[AdvisoryCVEReference] | None,
     target_scope: list[str],
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> tuple[list[stix2.ExternalReference], list[stix2.Vulnerability]]:
     vulnerabilities = []
     external_refs = []
@@ -107,7 +110,7 @@ def _extract_threat_actors(
     vulnerabilities: list[stix2.Vulnerability],
     target_scope: list[str],
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> list:
     result = []
     if SCOPE_THREAT_ACTOR in target_scope:
@@ -142,10 +145,10 @@ def _extract_stix_from_threat_actors(
     entities: list[AdvisoryThreatActorWithExternalObjects],
     target_scope: list[str],
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> list:
     stix_objects = []
-    logger.info("[THREAT ACTORS] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     for entity in entities:
         # NOTE: We need these refs when creating the threat actor
         external_refs, vulnerabilities = _extract_cve_references(
@@ -201,7 +204,7 @@ def collect_threat_actors(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     # Check if data source is in scope for this run
@@ -220,10 +223,10 @@ def collect_threat_actors(
     )
 
     if target_scope == []:
-        logger.info("[THREAT ACTORS] Threat Actors is out of scope, skipping")
+        logger.info("Threat Actors is out of scope, skipping")
         return
 
-    logger.info("[THREAT ACTORS] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_threat_actors():
@@ -241,4 +244,4 @@ def collect_threat_actors(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[THREAT ACTORS] Data Source Completed!")
+    logger.info("Data Source Completed!")

@@ -6,6 +6,7 @@ import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
 from connector.util.config import get_time_until_next_run
 from connector.util.memory_usage import reset_max_mem
+from connector.util.source_logger import SourceLogger
 
 from vulncheck_client import VulnCheckClient
 
@@ -52,13 +53,12 @@ class ConnectorVulnCheck:
             self.helper.connector_logger.info(
                 f"[CONNECTOR] Collecting data for {source.name}",
             )
-            # Get entities from source
             source.collect(
                 self.config,
                 self.helper,
                 self.client,
                 self.converter_to_stix,
-                self.helper.connector_logger,
+                SourceLogger(self.helper.connector_logger, source.name),
                 connector_state,
             )
 

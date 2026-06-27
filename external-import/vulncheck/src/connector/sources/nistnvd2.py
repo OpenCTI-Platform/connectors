@@ -3,6 +3,7 @@ from typing import Any
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -158,9 +159,11 @@ def _get_cvss_v4_properties(cvss_data: AdvisoryCVSSV40 | None) -> dict[str, Any]
     return properties
 
 
-def _create_vuln(entity: ApiNVD20CVE, converter_to_stix, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    entity: ApiNVD20CVE, converter_to_stix, logger: SourceLogger
+) -> stix2.Vulnerability:
     logger.debug(
-        "[NIST NVD-2] Creating vulnerability object",
+        "Creating vulnerability object",
         {"cve": entity.id},
     )
     description = (
@@ -198,10 +201,12 @@ def _create_vuln(entity: ApiNVD20CVE, converter_to_stix, logger) -> stix2.Vulner
     )
 
 
-def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
+def _create_software(
+    cpe: str, converter_to_stix, logger: SourceLogger
+) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
-        "[NIST NVD-2] Creating software object",
+        "Creating software object",
         {"software": cpe_dict["product"]},
     )
     return converter_to_stix.create_software(
@@ -216,10 +221,10 @@ def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
-        '[NIST NVD-2] Creating "has" relationship',
+        'Creating "has" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=software["id"],
@@ -229,7 +234,10 @@ def _create_rel_has(
 
 
 def _extract_stix_from_nistnvd2(
-    entity: ApiNVD20CVE, target_scope: list[str], converter_to_stix, logger
+    entity: ApiNVD20CVE,
+    target_scope: list[str],
+    converter_to_stix,
+    logger: SourceLogger,
 ) -> list:
     result = []
     vuln = None
@@ -263,7 +271,7 @@ def collect_nistnvd2(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     connector_state: dict,
 ) -> None:
     source_name = "NIST NVD-2"
@@ -276,10 +284,10 @@ def collect_nistnvd2(
     )
 
     if target_scope == []:
-        logger.info("[NIST NVD-2] NIST NVD-2 is out of scope, skipping")
+        logger.info("NIST NVD-2 is out of scope, skipping")
         return
 
-    logger.info("[NIST NVD-2] Starting collection")
+    logger.info("Starting collection")
     query_params = build_nvd2_query_params(
         config=config,
         connector_state=connector_state,
@@ -311,4 +319,4 @@ def collect_nistnvd2(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[NIST NVD-2] Data Source Completed!")
+    logger.info("Data Source Completed!")

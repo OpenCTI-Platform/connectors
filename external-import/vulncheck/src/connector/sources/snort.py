@@ -1,5 +1,6 @@
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -9,9 +10,9 @@ from connector.util.config import SCOPE_INDICATOR, compare_config_to_target_scop
 
 
 def _extract_stix_from_snort(
-    converter_to_stix, logger, snort_rules: list[Rule]
+    converter_to_stix, logger: SourceLogger, snort_rules: list[Rule]
 ) -> list:
-    logger.info("[SNORT] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     return [
         converter_to_stix.create_indicator(
             pattern=snort_rule.rule,
@@ -28,7 +29,7 @@ def collect_snort(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     # Check if data source is in scope for this run
@@ -42,10 +43,10 @@ def collect_snort(
     )
 
     if target_scope == []:
-        logger.info("[SNORT] Snort is out of scope, skipping")
+        logger.info("Snort is out of scope, skipping")
         return
 
-    logger.info("[SNORT] Starting collection")
+    logger.info("Starting collection")
     rule_string = client.get_rules("snort")
 
     # Initiate new work
@@ -64,4 +65,4 @@ def collect_snort(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[SNORT] Data Source Completed!")
+    logger.info("Data Source Completed!")

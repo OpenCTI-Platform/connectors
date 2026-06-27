@@ -15,7 +15,7 @@ def log_memory_usage(logger=None):
         max_mem = memory_mb
     log_string = f"Current: {memory_mb:.2f} MB -- Max: {max_mem:.2f} MB"
 
-    print(log_string) if logger is None else logger.info(log_string)
+    print(log_string) if logger is None else logger.debug(log_string)
 
 
 def reset_max_mem():

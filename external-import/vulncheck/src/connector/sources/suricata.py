@@ -1,5 +1,6 @@
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -9,9 +10,9 @@ from connector.util.config import SCOPE_INDICATOR, compare_config_to_target_scop
 
 
 def _extract_stix_from_suricata(
-    converter_to_stix, logger, suricata_rules: list[Rule]
+    converter_to_stix, logger: SourceLogger, suricata_rules: list[Rule]
 ) -> list:
-    logger.info("[SURICATA] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     return [
         converter_to_stix.create_indicator(
             pattern=suricata_rule.rule,
@@ -28,7 +29,7 @@ def collect_suricata(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     # Check if data source is in scope for this run
@@ -42,10 +43,10 @@ def collect_suricata(
     )
 
     if target_scope == []:
-        logger.info("[SURICATA] Suricata is out of scope, skipping")
+        logger.info("Suricata is out of scope, skipping")
         return
 
-    logger.info("[SURICATA] Starting collection")
+    logger.info("Starting collection")
     rule_string = client.get_rules("suricata")
 
     # Initiate new work
@@ -64,4 +65,4 @@ def collect_suricata(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[SURICATA] Data Source Completed!")
+    logger.info("Data Source Completed!")

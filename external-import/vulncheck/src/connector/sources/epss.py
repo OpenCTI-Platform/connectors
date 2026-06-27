@@ -1,6 +1,7 @@
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -8,9 +9,11 @@ from connector.util.config import SCOPE_VULNERABILITY, compare_config_to_target_
 from vulncheck_sdk.models.api_epss_data import ApiEPSSData
 
 
-def _create_vuln(converter_to_stix, entity: ApiEPSSData, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    converter_to_stix, entity: ApiEPSSData, logger: SourceLogger
+) -> stix2.Vulnerability:
     logger.debug(
-        "[EPSS] Creating vulnerability",
+        "Creating vulnerability",
         {"cve": entity.cve},
     )
     return converter_to_stix.create_vulnerability(
@@ -23,9 +26,9 @@ def _create_vuln(converter_to_stix, entity: ApiEPSSData, logger) -> stix2.Vulner
 
 
 def _extract_stix_from_epss(
-    converter_to_stix, entities: list[ApiEPSSData], logger
+    converter_to_stix, entities: list[ApiEPSSData], logger: SourceLogger
 ) -> list:
-    logger.info("[EPSS] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     return [
         _create_vuln(converter_to_stix=converter_to_stix, entity=e, logger=logger)
         for e in entities
@@ -37,7 +40,7 @@ def collect_epss(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     source_name = "EPSS"
@@ -50,10 +53,10 @@ def collect_epss(
     )
 
     if target_scope == []:
-        logger.info("[EPSS] EPSS is out of scope, skipping")
+        logger.info("EPSS is out of scope, skipping")
         return
 
-    logger.info("[EPSS] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_epss():
@@ -70,4 +73,4 @@ def collect_epss(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[EPSS] Data Source Completed!")
+    logger.info("Data Source Completed!")

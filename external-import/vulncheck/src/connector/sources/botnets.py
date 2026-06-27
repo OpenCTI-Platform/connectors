@@ -3,6 +3,7 @@ from datetime import datetime
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -17,10 +18,10 @@ from vulncheck_sdk.models.advisory_botnet import AdvisoryBotnet
 
 
 def _create_infra(
-    converter_to_stix, entity: AdvisoryBotnet, logger
+    converter_to_stix, entity: AdvisoryBotnet, logger: SourceLogger
 ) -> stix2.Infrastructure:
     logger.debug(
-        "[BOTNET] Creating infrastructure of type botnet",
+        "Creating infrastructure of type botnet",
         {"botnet_name": entity.botnet_name},
     )
     return converter_to_stix.create_infrastructure(
@@ -30,9 +31,11 @@ def _create_infra(
     )
 
 
-def _create_vuln(cve: str, converter_to_stix, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    cve: str, converter_to_stix, logger: SourceLogger
+) -> stix2.Vulnerability:
     logger.debug(
-        "[BOTNET] Creating vulnerability",
+        "Creating vulnerability",
         {"cve": cve},
     )
     return converter_to_stix.create_vulnerability(cve=cve)
@@ -43,10 +46,10 @@ def _create_rel_related_to(
     vulnerability: stix2.Vulnerability,
     labels: list[str],
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
-        "[BOTNET] Creating related-to relationship",
+        "Creating related-to relationship",
     )
     return converter_to_stix.create_relationship(
         source_id=infrastructure["id"],
@@ -57,11 +60,14 @@ def _create_rel_related_to(
 
 
 def _extract_stix_from_botnet(
-    converter_to_stix, entities: list[AdvisoryBotnet], target_scope: list[str], logger
+    converter_to_stix,
+    entities: list[AdvisoryBotnet],
+    target_scope: list[str],
+    logger: SourceLogger,
 ) -> list:
     result = []
 
-    logger.info("[BOTNET] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     for entity in entities:
         entity_objects = []
         infrastructure = None
@@ -136,7 +142,7 @@ def collect_botnets(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     # Check if data source is in scope for this run
@@ -150,10 +156,10 @@ def collect_botnets(
     )
 
     if target_scope == []:
-        logger.info("[BOTNET] Botnet is out of scope, skipping")
+        logger.info("Botnet is out of scope, skipping")
         return
 
-    logger.info("[BOTNET] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_botnets():
@@ -171,4 +177,4 @@ def collect_botnets(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[BOTNET] Data Source Completed!")
+    logger.info("Data Source Completed!")

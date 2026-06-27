@@ -3,6 +3,7 @@ from typing import Any
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -164,10 +165,10 @@ def _get_cvss_v4_properties(cvss_data: AdvisoryCVSSV40 | None) -> dict[str, Any]
 
 
 def _create_vuln(
-    entity: ApiNVD20CVEExtended, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended, converter_to_stix, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
-        "[VULNCHECK NVD-2] Creating vulnerability object",
+        "Creating vulnerability object",
         {"cve": entity.id},
     )
     description = (
@@ -212,10 +213,12 @@ def _create_vuln(
     )
 
 
-def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
+def _create_software(
+    cpe: str, converter_to_stix, logger: SourceLogger
+) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
-        "[VULNCHECK NVD-2] Creating software object",
+        "Creating software object",
         {"software": cpe_dict["product"]},
     )
     return converter_to_stix.create_software(
@@ -230,10 +233,10 @@ def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
-        '[VULNCHECK NVD-2] Creating "has" relationship',
+        'Creating "has" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=software["id"],
@@ -243,7 +246,10 @@ def _create_rel_has(
 
 
 def _create_capec_attack_patterns_and_relationships(
-    entity: ApiNVD20CVEExtended, vuln: stix2.Vulnerability, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    vuln: stix2.Vulnerability,
+    converter_to_stix,
+    logger: SourceLogger,
 ) -> list:
     """Create CAPEC attack pattern objects and relationships to vulnerability."""
     result = []
@@ -271,7 +277,7 @@ def _create_capec_attack_patterns_and_relationships(
             result.append(relationship)
 
             logger.debug(
-                "[VULNCHECK NVD-2] Created CAPEC attack pattern and relationship",
+                "Created CAPEC attack pattern and relationship",
                 {"capec_id": pattern.capec_id, "cve": entity.id},
             )
 
@@ -279,7 +285,10 @@ def _create_capec_attack_patterns_and_relationships(
 
 
 def _create_mitre_attack_patterns_and_relationships(
-    entity: ApiNVD20CVEExtended, vuln: stix2.Vulnerability, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    vuln: stix2.Vulnerability,
+    converter_to_stix,
+    logger: SourceLogger,
 ) -> list:
     """Create MITRE ATT&CK attack pattern objects and relationships to vulnerability."""
     result = []
@@ -307,7 +316,7 @@ def _create_mitre_attack_patterns_and_relationships(
             result.append(relationship)
 
             logger.debug(
-                "[VULNCHECK NVD-2] Created MITRE ATT&CK attack pattern and relationship",
+                "Created MITRE ATT&CK attack pattern and relationship",
                 {"technique_id": technique.id, "cve": entity.id},
             )
 
@@ -315,7 +324,10 @@ def _create_mitre_attack_patterns_and_relationships(
 
 
 def _create_course_of_actions_and_relationships(
-    entity: ApiNVD20CVEExtended, attack_patterns: list, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    attack_patterns: list,
+    converter_to_stix,
+    logger: SourceLogger,
 ) -> list:
     """Create Course of Action objects and relationships from MITRE attack technique mitigations."""
     result = []
@@ -357,7 +369,7 @@ def _create_course_of_actions_and_relationships(
                         result.append(relationship)
 
                         logger.debug(
-                            "[VULNCHECK NVD-2] Created Course of Action and mitigation relationship",
+                            "Created Course of Action and mitigation relationship",
                             {
                                 "mitigation_id": mitigation.id,
                                 "technique_id": technique.id,
@@ -367,7 +379,7 @@ def _create_course_of_actions_and_relationships(
                         )
                     else:
                         logger.debug(
-                            "[VULNCHECK NVD-2] No matching attack pattern found for mitigation",
+                            "No matching attack pattern found for mitigation",
                             {
                                 "mitigation_id": mitigation.id,
                                 "technique_id": technique.id,
@@ -379,7 +391,10 @@ def _create_course_of_actions_and_relationships(
 
 
 def _create_data_sources_and_relationships(
-    entity: ApiNVD20CVEExtended, attack_patterns: list, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    attack_patterns: list,
+    converter_to_stix,
+    logger: SourceLogger,
 ) -> list:
     """Create Data Source objects and relationships from MITRE attack technique detections."""
     result = []
@@ -405,7 +420,7 @@ def _create_data_sources_and_relationships(
                         created_data_sources[detection.id] = data_source
 
                         logger.debug(
-                            "[VULNCHECK NVD-2] Created Data Source object",
+                            "Created Data Source object",
                             {
                                 "data_source_id": detection.id,
                                 "data_source_name": detection.datasource,
@@ -436,7 +451,7 @@ def _create_data_sources_and_relationships(
                         result.append(relationship)
 
                         logger.debug(
-                            "[VULNCHECK NVD-2] Created Attack Pattern to Data Source relationship",
+                            "Created Attack Pattern to Data Source relationship",
                             {
                                 "data_source_id": detection.id,
                                 "technique_id": technique.id,
@@ -447,7 +462,7 @@ def _create_data_sources_and_relationships(
                         )
                     else:
                         logger.debug(
-                            "[VULNCHECK NVD-2] No matching attack pattern found for data source",
+                            "No matching attack pattern found for data source",
                             {
                                 "data_source_id": detection.id,
                                 "technique_id": technique.id,
@@ -459,7 +474,10 @@ def _create_data_sources_and_relationships(
 
 
 def _extract_stix_from_vcnvd2(
-    entity: ApiNVD20CVEExtended, target_scope: list[str], converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    target_scope: list[str],
+    converter_to_stix,
+    logger: SourceLogger,
 ) -> list:
     result = []
     vuln = None
@@ -540,7 +558,7 @@ def collect_vcnvd2(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     connector_state: dict,
 ) -> None:
     source_name = "VulnCheck NVD-2"
@@ -559,10 +577,10 @@ def collect_vcnvd2(
     )
 
     if target_scope == []:
-        logger.info("[VULNCHECK NVD-2] VulnCheck NVD-2 is out of scope, skipping")
+        logger.info("VulnCheck NVD-2 is out of scope, skipping")
         return
 
-    logger.info("[VULNCHECK NVD-2] Starting collection")
+    logger.info("Starting collection")
     query_params = build_nvd2_query_params(
         config=config,
         connector_state=connector_state,
@@ -594,4 +612,4 @@ def collect_vcnvd2(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[VULNCHECK NVD-2] Data Source Completed!")
+    logger.info("Data Source Completed!")

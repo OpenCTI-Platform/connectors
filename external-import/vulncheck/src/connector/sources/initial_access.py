@@ -1,6 +1,7 @@
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -14,10 +15,10 @@ from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
 
 
 def _create_vuln(
-    converter_to_stix, entity: ApiInitialAccess, logger
+    converter_to_stix, entity: ApiInitialAccess, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
-        "[INITIAL ACCESS] Creating vulnerability object",
+        "Creating vulnerability object",
         {"cve": entity.cve},
     )
     return converter_to_stix.create_vulnerability(
@@ -28,10 +29,12 @@ def _create_vuln(
     )
 
 
-def _create_software(converter_to_stix, logger, cpe: str) -> stix2.Software:
+def _create_software(
+    converter_to_stix, logger: SourceLogger, cpe: str
+) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
-        "[INITIAL ACCESS] Creating software object",
+        "Creating software object",
         {"software": cpe_dict["product"]},
     )
     return converter_to_stix.create_software(
@@ -46,10 +49,10 @@ def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ):
     logger.debug(
-        '[INITIAL ACCESS] Creating "has" relationship',
+        'Creating "has" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=software["id"],
@@ -59,10 +62,13 @@ def _create_rel_has(
 
 
 def _extract_stix_from_initial_access(
-    converter_to_stix, entities: list[ApiInitialAccess], target_scope: list[str], logger
+    converter_to_stix,
+    entities: list[ApiInitialAccess],
+    target_scope: list[str],
+    logger: SourceLogger,
 ) -> list:
     result = []
-    logger.info("[INITIAL ACCESS] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     for entity in entities:
         vuln = None
         if SCOPE_VULNERABILITY in target_scope:
@@ -98,7 +104,7 @@ def collect_initial_access(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     source_name = "Initial Access"
@@ -110,10 +116,10 @@ def collect_initial_access(
         logger=logger,
     )
     if target_scope == []:
-        logger.info("[INITIAL ACCESS] Initial Access is out of scope, skipping")
+        logger.info("Initial Access is out of scope, skipping")
         return
 
-    logger.info("[INITIAL ACCESS] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_initial_access():
@@ -131,4 +137,4 @@ def collect_initial_access(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[INITIAL ACCESS] Data Source Completed!")
+    logger.info("Data Source Completed!")

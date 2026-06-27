@@ -3,6 +3,7 @@ from datetime import datetime
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -16,10 +17,10 @@ from vulncheck_sdk.models.advisory_ransomware_exploit import AdvisoryRansomwareE
 
 
 def _create_malware(
-    converter_to_stix, entity: AdvisoryRansomwareExploit, logger
+    converter_to_stix, entity: AdvisoryRansomwareExploit, logger: SourceLogger
 ) -> stix2.Malware:
     logger.debug(
-        "[RANSOMWARE] Creating malware object",
+        "Creating malware object",
         {"ransomware_name": entity.ransomware_family},
     )
     return converter_to_stix.create_malware(
@@ -30,9 +31,11 @@ def _create_malware(
     )
 
 
-def _create_vuln(converter_to_stix, cve: str, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    converter_to_stix, cve: str, logger: SourceLogger
+) -> stix2.Vulnerability:
     logger.debug(
-        "[RANSOMWARE] Creating vulnerability object",
+        "Creating vulnerability object",
         {"cve": cve},
     )
     return converter_to_stix.create_vulnerability(cve=cve)
@@ -43,10 +46,10 @@ def _create_rel_exploits(
     vulnerability: stix2.Vulnerability,
     labels: list[str],
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
-        '[RANSOMWARE] Creating "exploits" relationship',
+        'Creating "exploits" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=malware["id"],
@@ -60,11 +63,11 @@ def _extract_stix_from_ransomware(
     converter_to_stix: ConverterToStix,
     entities: list[AdvisoryRansomwareExploit],
     target_scope: list[str],
-    logger,
+    logger: SourceLogger,
 ) -> list:
     result = []
 
-    logger.info("[RANSOMWARE] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     for entity in entities:
         entity_objects = []
         malware = None
@@ -131,7 +134,7 @@ def collect_ransomware(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     source_name = "Ransomware"
@@ -144,10 +147,10 @@ def collect_ransomware(
     )
 
     if target_scope == []:
-        logger.info("[RANSOMWARE] Ransomware is out of scope, skipping")
+        logger.info("Ransomware is out of scope, skipping")
         return
 
-    logger.info("[RANSOMWARE] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_ransomware():
@@ -165,4 +168,4 @@ def collect_ransomware(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[RANSOMWARE] Data Source Completed!")
+    logger.info("Data Source Completed!")

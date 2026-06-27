@@ -3,6 +3,7 @@ from datetime import datetime
 import stix2
 import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
+from connector.util.source_logger import SourceLogger
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from vulncheck_client import VulnCheckClient
@@ -16,19 +17,19 @@ from connector.util.config import (
 from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
 
 
-def _create_ip(converter_to_stix, entity: AdvisoryIpIntelRecord, logger):
+def _create_ip(converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceLogger):
     logger.debug(
-        "[IP INTEL] Creating observable",
+        "Creating observable",
         {"observable": entity.ip},
     )
     return converter_to_stix.create_obs(value=entity.ip)
 
 
 def _create_infra(
-    converter_to_stix, entity: AdvisoryIpIntelRecord, logger
+    converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceLogger
 ) -> stix2.Infrastructure:
     logger.debug(
-        "[IP INTEL] Creating infrastructure object of type command-and-control",
+        "Creating infrastructure object of type command-and-control",
         {"c2_name": entity.matches[0]},
     )
     return converter_to_stix.create_infrastructure(
@@ -39,10 +40,10 @@ def _create_infra(
 
 
 def _create_location(
-    converter_to_stix, entity: AdvisoryIpIntelRecord, logger
+    converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceLogger
 ) -> stix2.Location:
     logger.debug(
-        "[IP INTEL] Creating location object",
+        "Creating location object",
         {"country_name": entity.country},
     )
     return converter_to_stix.create_location(
@@ -51,10 +52,13 @@ def _create_location(
 
 
 def _create_rel_located_at(
-    converter_to_stix, infra: stix2.Infrastructure, location: stix2.Location, logger
+    converter_to_stix,
+    infra: stix2.Infrastructure,
+    location: stix2.Location,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
-        '[IP INTEL] Creating "located-at" relationship',
+        'Creating "located-at" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=infra.id, relationship_type="located-at", target_id=location.id
@@ -62,10 +66,10 @@ def _create_rel_located_at(
 
 
 def _create_rel_consists_of(
-    converter_to_stix, infra: stix2.Infrastructure, ip, logger
+    converter_to_stix, infra: stix2.Infrastructure, ip, logger: SourceLogger
 ) -> stix2.Relationship:
     logger.debug(
-        '[IP INTEL] Creating "consists-of" relationship',
+        'Creating "consists-of" relationship',
     )
     return converter_to_stix.create_relationship(
         source_id=infra.id, relationship_type="consists-of", target_id=ip.id
@@ -76,11 +80,11 @@ def _extract_stix_from_ipintel(
     converter_to_stix: ConverterToStix,
     entities: list[AdvisoryIpIntelRecord],
     target_scope: list[str],
-    logger,
+    logger: SourceLogger,
 ) -> list:
     result = []
 
-    logger.info("[IP INTEL] Parsing data into STIX objects")
+    logger.info("Parsing data into STIX objects")
     for entity in entities:
         ip = None
         infra = None
@@ -129,7 +133,7 @@ def collect_ipintel(
     helper: OpenCTIConnectorHelper,
     client: VulnCheckClient,
     converter_to_stix: ConverterToStix,
-    logger,
+    logger: SourceLogger,
     _: dict,
 ) -> None:
     source_name = "IP Intel"
@@ -142,10 +146,10 @@ def collect_ipintel(
     )
 
     if target_scope == []:
-        logger.info("[IP INTEL] IP Intel is out of scope, skipping")
+        logger.info("IP Intel is out of scope, skipping")
         return
 
-    logger.info("[IP INTEL] Starting collection")
+    logger.info("Starting collection")
     work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
     for page in client.iter_ipintel():
@@ -163,4 +167,4 @@ def collect_ipintel(
     works.finish_work(
         helper=helper, logger=logger, work_id=work_id, work_name=source_name
     )
-    logger.info("[IP INTEL] Data Source Completed!")
+    logger.info("Data Source Completed!")
