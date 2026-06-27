@@ -11,7 +11,7 @@ from vulncheck_client import VulnCheckClient
 
 
 def _create_vuln(
-    converter_to_stix, entity: ApiEPSSData, logger: SourceLogger
+    converter_to_stix: ConverterToStix, entity: ApiEPSSData, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability",
@@ -27,7 +27,9 @@ def _create_vuln(
 
 
 def _extract_stix_from_epss(
-    converter_to_stix, entities: list[ApiEPSSData], logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    entities: list[ApiEPSSData],
+    logger: SourceLogger,
 ) -> list:
     logger.info("Parsing data into STIX objects")
     return [

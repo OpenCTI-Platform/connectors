@@ -16,7 +16,7 @@ from vulncheck_client import VulnCheckClient
 
 
 def _create_vuln(
-    converter_to_stix, entity: ApiInitialAccess, logger: SourceLogger
+    converter_to_stix: ConverterToStix, entity: ApiInitialAccess, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability object",
@@ -31,7 +31,7 @@ def _create_vuln(
 
 
 def _create_software(
-    converter_to_stix, logger: SourceLogger, cpe: str
+    converter_to_stix: ConverterToStix, logger: SourceLogger, cpe: str
 ) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
@@ -63,7 +63,7 @@ def _create_rel_has(
 
 
 def _extract_stix_from_initial_access(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entities: list[ApiInitialAccess],
     target_scope: list[str],
     logger: SourceLogger,

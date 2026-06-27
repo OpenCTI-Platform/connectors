@@ -22,7 +22,9 @@ from vulncheck_client import VulnCheckClient
 
 
 def _create_external_ref(
-    converter_to_stix, logger: SourceLogger, reference: AdvisoryCVEReference
+    converter_to_stix: ConverterToStix,
+    logger: SourceLogger,
+    reference: AdvisoryCVEReference,
 ) -> stix2.ExternalReference:
     logger.debug(
         "Creating external reference",
@@ -32,7 +34,7 @@ def _create_external_ref(
 
 
 def _create_vulns(
-    converter_to_stix, logger: SourceLogger, vulnerabilities: list[str]
+    converter_to_stix: ConverterToStix, logger: SourceLogger, vulnerabilities: list[str]
 ) -> list:
     logger.debug(
         "Creating vulnerabilities",

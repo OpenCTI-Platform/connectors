@@ -166,7 +166,9 @@ def _get_cvss_v4_properties(cvss_data: AdvisoryCVSSV40 | None) -> dict[str, Any]
 
 
 def _create_vuln(
-    entity: ApiNVD20CVEExtended, converter_to_stix, logger: SourceLogger
+    entity: ApiNVD20CVEExtended,
+    converter_to_stix: ConverterToStix,
+    logger: SourceLogger,
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability object",
@@ -215,7 +217,7 @@ def _create_vuln(
 
 
 def _create_software(
-    cpe: str, converter_to_stix, logger: SourceLogger
+    cpe: str, converter_to_stix: ConverterToStix, logger: SourceLogger
 ) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
@@ -249,7 +251,7 @@ def _create_rel_has(
 def _create_capec_attack_patterns_and_relationships(
     entity: ApiNVD20CVEExtended,
     vuln: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger: SourceLogger,
 ) -> list:
     """Create CAPEC attack pattern objects and relationships to vulnerability."""
@@ -288,7 +290,7 @@ def _create_capec_attack_patterns_and_relationships(
 def _create_mitre_attack_patterns_and_relationships(
     entity: ApiNVD20CVEExtended,
     vuln: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger: SourceLogger,
 ) -> list:
     """Create MITRE ATT&CK attack pattern objects and relationships to vulnerability."""
@@ -327,7 +329,7 @@ def _create_mitre_attack_patterns_and_relationships(
 def _create_course_of_actions_and_relationships(
     entity: ApiNVD20CVEExtended,
     attack_patterns: list,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger: SourceLogger,
 ) -> list:
     """Create Course of Action objects and relationships from MITRE attack technique mitigations."""
@@ -394,7 +396,7 @@ def _create_course_of_actions_and_relationships(
 def _create_data_sources_and_relationships(
     entity: ApiNVD20CVEExtended,
     attack_patterns: list,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger: SourceLogger,
 ) -> list:
     """Create Data Source objects and relationships from MITRE attack technique detections."""
@@ -477,7 +479,7 @@ def _create_data_sources_and_relationships(
 def _extract_stix_from_vcnvd2(
     entity: ApiNVD20CVEExtended,
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger: SourceLogger,
 ) -> list:
     result = []

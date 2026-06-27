@@ -18,7 +18,9 @@ from vulncheck_client import VulnCheckClient
 
 
 def _create_malware(
-    converter_to_stix, entity: AdvisoryRansomwareExploit, logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    entity: AdvisoryRansomwareExploit,
+    logger: SourceLogger,
 ) -> stix2.Malware:
     logger.debug(
         "Creating malware object",
@@ -33,7 +35,7 @@ def _create_malware(
 
 
 def _create_vuln(
-    converter_to_stix, cve: str, logger: SourceLogger
+    converter_to_stix: ConverterToStix, cve: str, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability object",

@@ -19,7 +19,7 @@ from vulncheck_client import VulnCheckClient
 
 
 def _create_infra(
-    converter_to_stix, entity: AdvisoryBotnet, logger: SourceLogger
+    converter_to_stix: ConverterToStix, entity: AdvisoryBotnet, logger: SourceLogger
 ) -> stix2.Infrastructure:
     logger.debug(
         "Creating infrastructure of type botnet",
@@ -33,7 +33,7 @@ def _create_infra(
 
 
 def _create_vuln(
-    cve: str, converter_to_stix, logger: SourceLogger
+    cve: str, converter_to_stix: ConverterToStix, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability",
@@ -61,7 +61,7 @@ def _create_rel_related_to(
 
 
 def _extract_stix_from_botnet(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entities: list[AdvisoryBotnet],
     target_scope: list[str],
     logger: SourceLogger,

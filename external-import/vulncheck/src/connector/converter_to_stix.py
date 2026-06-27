@@ -103,7 +103,7 @@ class ConverterToStix:
         source_id: str,
         relationship_type: str,
         target_id: str,
-        labels: list[str] = [],
+        labels: list[str] | None = None,
     ) -> stix2.Relationship:
         """Creates Relationship object
 
@@ -127,7 +127,7 @@ class ConverterToStix:
             target_ref=target_id,
             created_by_ref=self.author,
             object_marking_refs=[stix2.TLP_AMBER],
-            labels=labels,
+            labels=labels or [],
             allow_custom=True,
         )
         return relationship
@@ -234,7 +234,7 @@ class ConverterToStix:
         name: str,
         infrastructure_type: str,
         last_seen=None,
-        labels: list[str] = [],
+        labels: list[str] | None = None,
     ) -> stix2.Infrastructure:
         """Create Infrastructure Object
 
@@ -255,7 +255,7 @@ class ConverterToStix:
             created_by_ref=self.author,
             last_seen=last_seen,
             object_marking_refs=[stix2.TLP_AMBER],
-            labels=labels,
+            labels=labels or [],
         )
         return stix_infrastructure
 
@@ -286,7 +286,7 @@ class ConverterToStix:
         self,
         cve: str,
         description: str = "",
-        custom_properties: dict = {},
+        custom_properties: dict | None = None,
     ) -> stix2.Vulnerability:
         """Create Vulnerability Object
 
@@ -311,7 +311,7 @@ class ConverterToStix:
                 created_by_ref=self.author,
                 external_references=[external_ref],
                 object_marking_refs=[stix2.TLP_AMBER],
-                custom_properties=custom_properties,
+                custom_properties=custom_properties or {},
             )
             if description != ""
             else stix2.Vulnerability(
@@ -320,7 +320,7 @@ class ConverterToStix:
                 created_by_ref=self.author,
                 external_references=[external_ref],
                 object_marking_refs=[stix2.TLP_AMBER],
-                custom_properties=custom_properties,
+                custom_properties=custom_properties or {},
             )
         )
 
@@ -330,7 +330,7 @@ class ConverterToStix:
         is_family: bool,
         first_seen: str | None,
         description: str = "",
-        labels: list[str] = [],
+        labels: list[str] | None = None,
     ) -> stix2.Malware:
         """Create Malware Object
 
@@ -355,7 +355,7 @@ class ConverterToStix:
                 first_seen=datetime.fromisoformat(first_seen),
                 created_by_ref=self.author,
                 object_marking_refs=[stix2.TLP_AMBER],
-                labels=labels,
+                labels=labels or [],
             )
             if first_seen is not None
             else stix2.Malware(
@@ -365,7 +365,7 @@ class ConverterToStix:
                 is_family=is_family,
                 created_by_ref=self.author,
                 object_marking_refs=[stix2.TLP_AMBER],
-                labels=labels,
+                labels=labels or [],
             )
         )
 
@@ -423,7 +423,7 @@ class ConverterToStix:
         name: str,
         first_seen: datetime,
         external_refs: list,
-        labels: list[str] = [],
+        labels: list[str] | None = None,
     ) -> stix2.ThreatActor:
         """Create a Threat Actor Group Object
 
@@ -445,7 +445,7 @@ class ConverterToStix:
             external_references=external_refs,
             created_by_ref=self.author,
             object_marking_refs=[stix2.TLP_AMBER],
-            labels=labels,
+            labels=labels or [],
         )
         return threat_actor
 

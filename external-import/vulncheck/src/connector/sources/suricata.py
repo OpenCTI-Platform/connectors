@@ -11,7 +11,7 @@ from vulncheck_client import VulnCheckClient
 
 
 def _extract_stix_from_suricata(
-    converter_to_stix, logger: SourceLogger, suricata_rules: list[Rule]
+    converter_to_stix: ConverterToStix, logger: SourceLogger, suricata_rules: list[Rule]
 ) -> list:
     logger.info("Parsing data into STIX objects")
     return [

@@ -5,7 +5,8 @@ opencti:
 connector:
   type: 'EXTERNAL_IMPORT'
   id: "ChangeMe"
- # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source"
+  # Required. Add 'software' only if prepared for the volume (see README "Data Volume").
+  scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,attack-pattern,course-of-action,x-mitre-data-source,report"
 
 vulncheck:
   api_key: "ChangeMe"

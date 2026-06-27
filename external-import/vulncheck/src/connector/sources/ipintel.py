@@ -18,7 +18,11 @@ from connector.util.source_logger import SourceLogger
 from vulncheck_client import VulnCheckClient
 
 
-def _create_ip(converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceLogger):
+def _create_ip(
+    converter_to_stix: ConverterToStix,
+    entity: AdvisoryIpIntelRecord,
+    logger: SourceLogger,
+):
     logger.debug(
         "Creating observable",
         {"observable": entity.ip},
@@ -27,7 +31,9 @@ def _create_ip(converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceL
 
 
 def _create_infra(
-    converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    entity: AdvisoryIpIntelRecord,
+    logger: SourceLogger,
 ) -> stix2.Infrastructure:
     logger.debug(
         "Creating infrastructure object of type command-and-control",
@@ -41,7 +47,9 @@ def _create_infra(
 
 
 def _create_location(
-    converter_to_stix, entity: AdvisoryIpIntelRecord, logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    entity: AdvisoryIpIntelRecord,
+    logger: SourceLogger,
 ) -> stix2.Location:
     logger.debug(
         "Creating location object",
@@ -53,7 +61,7 @@ def _create_location(
 
 
 def _create_rel_located_at(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     infra: stix2.Infrastructure,
     location: stix2.Location,
     logger: SourceLogger,
@@ -67,7 +75,10 @@ def _create_rel_located_at(
 
 
 def _create_rel_consists_of(
-    converter_to_stix, infra: stix2.Infrastructure, ip, logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    infra: stix2.Infrastructure,
+    ip,
+    logger: SourceLogger,
 ) -> stix2.Relationship:
     logger.debug(
         'Creating "consists-of" relationship',

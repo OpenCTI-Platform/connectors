@@ -161,7 +161,7 @@ def _get_cvss_v4_properties(cvss_data: AdvisoryCVSSV40 | None) -> dict[str, Any]
 
 
 def _create_vuln(
-    entity: ApiNVD20CVE, converter_to_stix, logger: SourceLogger
+    entity: ApiNVD20CVE, converter_to_stix: ConverterToStix, logger: SourceLogger
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability object",
@@ -203,7 +203,7 @@ def _create_vuln(
 
 
 def _create_software(
-    cpe: str, converter_to_stix, logger: SourceLogger
+    cpe: str, converter_to_stix: ConverterToStix, logger: SourceLogger
 ) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
@@ -237,7 +237,7 @@ def _create_rel_has(
 def _extract_stix_from_nistnvd2(
     entity: ApiNVD20CVE,
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger: SourceLogger,
 ) -> list:
     result = []

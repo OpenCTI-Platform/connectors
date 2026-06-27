@@ -11,7 +11,9 @@ from vulncheck_client import VulnCheckClient
 
 
 def _create_vckev_vuln(
-    converter_to_stix, entity: AdvisoryVulnCheckKEV, logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    entity: AdvisoryVulnCheckKEV,
+    logger: SourceLogger,
 ) -> stix2.Vulnerability:
     logger.debug(
         "Creating vulnerability",
@@ -23,7 +25,9 @@ def _create_vckev_vuln(
 
 
 def _extract_stix_from_vckev(
-    converter_to_stix, entities: list[AdvisoryVulnCheckKEV], logger: SourceLogger
+    converter_to_stix: ConverterToStix,
+    entities: list[AdvisoryVulnCheckKEV],
+    logger: SourceLogger,
 ) -> list:
     logger.info("Parsing data into STIX objects")
     return [
