@@ -7,7 +7,7 @@ connector:
   id: "ChangeMe"
  # scope: "vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source"
 
-connector_vulncheck:
+vulncheck:
   api_key: "ChangeMe"
  # data_sources: "botnets,epss,exploits,initial-access,ipintel,nist-nvd2,snort,suricata,ransomware,threat-actors,vulncheck-kev,vulncheck-nvd2"
  # NVD2 (nist-nvd2 / vulncheck-nvd2) incremental ingestion. Normal runs are

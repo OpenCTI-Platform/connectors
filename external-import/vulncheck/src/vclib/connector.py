@@ -4,16 +4,13 @@ from datetime import datetime
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import (
-    get_configured_sources,
-    get_time_until_next_run,
-)
+from vclib.util.config import get_time_until_next_run
 from vclib.util.memory_usage import reset_max_mem
 
-from .config_variables import ConfigConnector
 from .connector_client import ConnectorClient
 from .converter_to_stix import ConverterToStix
 from .models.data_source import DataSource
+from .settings import ConnectorSettings
 
 
 class ConnectorVulnCheck:
@@ -30,15 +27,17 @@ class ConnectorVulnCheck:
     - converter_to_stix: ConverterToStix object
     """
 
-    def __init__(self):
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
         """
-        Initialize the Connector with necessary configurations
+        Initialize the Connector with injected configuration and helper
         """
-
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
+        self.config = config
+        self.helper = helper
+        self.client = ConnectorClient(
+            self.helper,
+            base_url=self.config.vulncheck.api_base_url,
+            api_key=self.config.vulncheck.api_key,
+        )
         self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(
@@ -62,9 +61,8 @@ class ConnectorVulnCheck:
             )
 
     def _get_target_data_sources(self) -> list[DataSource]:
-        configured_data_sources = get_configured_sources(str(self.config.data_sources))
         target_data_sources: list[DataSource] = []
-        for name in configured_data_sources:
+        for name in self.config.vulncheck.data_sources:
             target_data_sources.append(DataSource.from_string(name))
 
         # vulncheck-nvd2 is an enriched superset of nist-nvd2 (same CVEs plus
@@ -95,7 +93,10 @@ class ConnectorVulnCheck:
             {"data_sources": [source.name for source in target_sources]},
         )
         for source in target_sources:
-            if source.validate(str(self.config.api_base_url), str(self.config.api_key)):
+            if source.validate(
+                str(self.config.vulncheck.api_base_url),
+                str(self.config.vulncheck.api_key),
+            ):
                 self.helper.connector_logger.debug(
                     f"[CONNECTOR] Valid source: {source.name}",
                 )
@@ -239,7 +240,7 @@ class ConnectorVulnCheck:
         Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
         :return: None
         """
-        self.helper.schedule_iso(
+        self.helper.schedule_process(
             message_callback=self.process_message,
-            duration_period=str(self.config.duration_period),
+            duration_period=self.config.connector.duration_period.total_seconds(),
         )

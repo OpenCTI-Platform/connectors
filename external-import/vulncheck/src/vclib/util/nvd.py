@@ -22,7 +22,7 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
     single window covers any range (no date chunking needed).
     """
     params: dict = {}
-    start = config.nvd2_last_mod_start_date  # explicit override (backfill)
+    start = config.vulncheck.nvd2_last_mod_start_date  # explicit override (backfill)
     origin = "override"
 
     if not start and connector_state:
@@ -30,8 +30,10 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
         if prev:
             start, origin = prev.split(" ")[0], "state"
 
-    if not start and not config.nvd2_pull_history:  # first run, bounded window
-        days = int(config.nvd2_max_date_range)
+    if (
+        not start and not config.vulncheck.nvd2_pull_history
+    ):  # first run, bounded window
+        days = int(config.vulncheck.nvd2_max_date_range)
         start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
         origin = "max_date_range"
 
@@ -40,8 +42,8 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
     else:  # first run + pull_history -> no start filter
         origin = "pull_history"
 
-    if config.nvd2_last_mod_end_date:
-        params["last_mod_end_date"] = config.nvd2_last_mod_end_date
+    if config.vulncheck.nvd2_last_mod_end_date:
+        params["last_mod_end_date"] = config.vulncheck.nvd2_last_mod_end_date
 
     logger.info(
         f"[{source_name}] NVD2 query window",

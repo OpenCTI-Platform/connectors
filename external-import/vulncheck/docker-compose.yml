@@ -7,13 +7,13 @@ services:
       - OPENCTI_TOKEN=ChangeMe
       - CONNECTOR_ID=ChangeMe
       # - CONNECTOR_SCOPE=vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source
-      - CONNECTOR_VULNCHECK_API_KEY=ChangeMe
-      # - CONNECTOR_VULNCHECK_DATA_SOURCES=botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2
+      - VULNCHECK_API_KEY=ChangeMe
+      # - VULNCHECK_DATA_SOURCES=botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2
       # NVD2 (nist-nvd2 / vulncheck-nvd2) incremental ingestion. Normal runs are
       # incremental via connector state; the settings below only shape the first
       # run and allow manual backfills.
-      # - CONNECTOR_VULNCHECK_NVD2_PULL_HISTORY=false        # true => first run pulls full history (no date filter)
-      # - CONNECTOR_VULNCHECK_NVD2_MAX_DATE_RANGE=120        # first-run lookback in days (when not pulling history)
-      # - CONNECTOR_VULNCHECK_NVD2_LAST_MOD_START_DATE=      # YYYY-MM-DD, manual backfill override (normally unset)
-      # - CONNECTOR_VULNCHECK_NVD2_LAST_MOD_END_DATE=        # YYYY-MM-DD, manual backfill override (normally unset)
+      # - VULNCHECK_NVD2_PULL_HISTORY=false        # true => first run pulls full history (no date filter)
+      # - VULNCHECK_NVD2_MAX_DATE_RANGE=120        # first-run lookback in days (when not pulling history)
+      # - VULNCHECK_NVD2_LAST_MOD_START_DATE=      # YYYY-MM-DD, manual backfill override (normally unset)
+      # - VULNCHECK_NVD2_LAST_MOD_END_DATE=        # YYYY-MM-DD, manual backfill override (normally unset)
     restart: always

@@ -85,19 +85,19 @@ Below are the parameters you'll need to set for running the connector:
 
 | Parameter                 | config.yml        | Docker Environment Variable          | Default                                                                                                                     | Mandatory   | Description                                                                   |
 | -----------------         | ----------------  | ------------------------------------ |-----------------------------------------------------------------------------------------------------------------------------| ----------- | ----------------------------------------------------------------------------- |
-| API Key                   | `api_key`         | `CONNECTOR_VULNCHECK_API_KEY`        | None                                                                                                                        | Yes         | The API key for authenticating with VulnCheck's API.                          |
+| API Key                   | `api_key`         | `VULNCHECK_API_KEY`        | None                                                                                                                        | Yes         | The API key for authenticating with VulnCheck's API.                          |
 | Connector ID              | `id`              | `CONNECTOR_ID`                       | /                                                                                                                           | Yes         | A unique `UUIDv4` identifier for this connector.                              |
 | Connector Type            | `type`            | `CONNECTOR_TYPE`                     | EXTERNAL_IMPORT                                                                                                             | No          | Specifies the type of connector. Should always be set to `EXTERNAL_IMPORT`.   |
 | Connector Name            | `name`            | `CONNECTOR_NAME`                     | VulnCheck Connector                                                                                                         | No          | The name of the connector as it will appear in OpenCTI.                       |
 | Connector Scope           | `scope`           | `CONNECTOR_SCOPE`                    | vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,attack-pattern,course-of-action,x-mitre-data-source,report     | No          | The scope of data to import, a list of Stix Objects.                          |
 | Connector Duration period | `duration_period` | `CONNECTOR_DURATION_PERIOD`          | PT1H                                                                                                                        | No          | The time period for which to fetch data. Default is 24 hours.                 |
 | Log Level                 | `log_level`       | `CONNECTOR_LOG_LEVEL`                | info                                                                                                                        | No          | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.        |
-| API Base URL              | `api_base_url`    | `CONNECTOR_VULNCHECK_API_BASE_URL`   | <https://api.vulncheck.com/v3>                                                                                                | No          | The base URL for the VulnCheck API (e.g., `https://api.vulncheck.com/v3`).    |
-| Data Sources              | `data_sources`    | `CONNECTOR_VULNCHECK_DATA_SOURCES`   | botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2 | No          | List of data sources to collect intelligence from.                            |
-| NVD2 Pull History         | `nvd2_pull_history`        | `CONNECTOR_VULNCHECK_NVD2_PULL_HISTORY`        | false | No | First run only: when `true`, pull the full NVD2 history (no date filter). When `false`, the first run is bounded by `nvd2_max_date_range`. |
-| NVD2 Max Date Range       | `nvd2_max_date_range`      | `CONNECTOR_VULNCHECK_NVD2_MAX_DATE_RANGE`      | 120   | No | First run only: how many days back (last-modified) to pull when not pulling full history. |
-| NVD2 Last Mod Start Date  | `nvd2_last_mod_start_date` | `CONNECTOR_VULNCHECK_NVD2_LAST_MOD_START_DATE` | None  | No | Optional `YYYY-MM-DD` override for a manual backfill. Normally unset — runs are incremental via connector state. |
-| NVD2 Last Mod End Date    | `nvd2_last_mod_end_date`   | `CONNECTOR_VULNCHECK_NVD2_LAST_MOD_END_DATE`   | None  | No | Optional `YYYY-MM-DD` override for a manual backfill. Normally unset (defaults to now). |
+| API Base URL              | `api_base_url`    | `VULNCHECK_API_BASE_URL`   | <https://api.vulncheck.com/v3>                                                                                                | No          | The base URL for the VulnCheck API (e.g., `https://api.vulncheck.com/v3`).    |
+| Data Sources              | `data_sources`    | `VULNCHECK_DATA_SOURCES`   | botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2 | No          | List of data sources to collect intelligence from.                            |
+| NVD2 Pull History         | `nvd2_pull_history`        | `VULNCHECK_NVD2_PULL_HISTORY`        | false | No | First run only: when `true`, pull the full NVD2 history (no date filter). When `false`, the first run is bounded by `nvd2_max_date_range`. |
+| NVD2 Max Date Range       | `nvd2_max_date_range`      | `VULNCHECK_NVD2_MAX_DATE_RANGE`      | 120   | No | First run only: how many days back (last-modified) to pull when not pulling full history. |
+| NVD2 Last Mod Start Date  | `nvd2_last_mod_start_date` | `VULNCHECK_NVD2_LAST_MOD_START_DATE` | None  | No | Optional `YYYY-MM-DD` override for a manual backfill. Normally unset — runs are incremental via connector state. |
+| NVD2 Last Mod End Date    | `nvd2_last_mod_end_date`   | `VULNCHECK_NVD2_LAST_MOD_END_DATE`   | None  | No | Optional `YYYY-MM-DD` override for a manual backfill. Normally unset (defaults to now). |
 
 > [!NOTE]
 > The `nist-nvd2` and `vulncheck-nvd2` sources ingest incrementally: each run
@@ -111,6 +111,13 @@ Below are the parameters you'll need to set for running the connector:
 > patterns, mitigations, data sources and CPEs). If **both** are listed in
 > `data_sources`, the connector prefers `vulncheck-nvd2` and skips the redundant
 > `nist-nvd2` ingest.
+
+> [!IMPORTANT]
+> The connector-specific environment variables were renamed from
+> `CONNECTOR_VULNCHECK_*` to `VULNCHECK_*` (and the `config.yml` section from
+> `connector_vulncheck:` to `vulncheck:`) when migrating to `connectors-sdk`.
+> The old `CONNECTOR_VULNCHECK_*` names still work but emit a deprecation warning —
+> update your deployment to the new names.
 
 ## Deployment
 
@@ -230,7 +237,7 @@ including countries and related vulnerabilities.
 > configuration](#vulncheck-connector-configuration)
 >
 > Individual data sources can be be disabled by removing them from the
-> `CONNECTOR_VULNCHECK_DATA_SOURCES` variable in the [connector
+> `VULNCHECK_DATA_SOURCES` variable in the [connector
 > configuration](#vulncheck-connector-configuration).
 
 One way to separate these large data sources when `software` is in scope, is to create

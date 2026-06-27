@@ -2,7 +2,7 @@ from typing import Any, Callable, Generator, List
 
 import vulncheck_sdk
 from pycti import OpenCTIConnectorHelper
-from vclib.config_variables import ConfigConnector
+from pydantic import HttpUrl
 from vclib.models import data_source
 from vulncheck_sdk.models.advisory_botnet import AdvisoryBotnet
 from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
@@ -19,15 +19,16 @@ from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
 
 
 class ConnectorClient:
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector):
+    def __init__(
+        self, helper: OpenCTIConnectorHelper, base_url: HttpUrl | str, api_key: str
+    ):
         """
         Initialize the client with necessary configurations
         """
         self.helper = helper
-        self.config = config
 
-        vc_config = vulncheck_sdk.Configuration(host=str(self.config.api_base_url))
-        vc_config.api_key["Bearer"] = str(self.config.api_key)
+        vc_config = vulncheck_sdk.Configuration(host=str(base_url))
+        vc_config.api_key["Bearer"] = str(api_key)
 
         self.vc_config = vc_config
 
