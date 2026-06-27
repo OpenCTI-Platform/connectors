@@ -10,4 +10,11 @@ connector:
 connector_vulncheck:
   api_key: "ChangeMe"
  # data_sources: "botnets,epss,exploits,initial-access,ipintel,nist-nvd2,snort,suricata,ransomware,threat-actors,vulncheck-kev,vulncheck-nvd2"
+ # NVD2 (nist-nvd2 / vulncheck-nvd2) incremental ingestion. Normal runs are
+ # incremental via connector state; the settings below only shape the first run
+ # and allow manual backfills.
+ # nvd2_pull_history: false          # true => first run pulls full history (no date filter)
+ # nvd2_max_date_range: 120          # first-run lookback in days (when not pulling history)
+ # nvd2_last_mod_start_date:         # YYYY-MM-DD, manual backfill override (normally unset)
+ # nvd2_last_mod_end_date:           # YYYY-MM-DD, manual backfill override (normally unset)
 

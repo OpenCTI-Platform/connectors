@@ -133,6 +133,41 @@ class ConfigConnector:
             default=f"{DataSource.VulnCheckKEV},{DataSource.NistNVD2}",
         )
 
+        # NVD2 incremental-ingestion controls (nist-nvd2 / vulncheck-nvd2).
+        # Normal runs are incremental via connector state; these only shape
+        # the first run and allow manual backfills. See build_nvd2_query_params.
+        self.nvd2_pull_history = get_config_variable(
+            "CONNECTOR_VULNCHECK_NVD2_PULL_HISTORY",
+            ["connector_vulncheck", "nvd2_pull_history"],
+            self.load_yml,
+            required=False,
+            default=False,
+        )
+
+        self.nvd2_max_date_range = get_config_variable(
+            "CONNECTOR_VULNCHECK_NVD2_MAX_DATE_RANGE",
+            ["connector_vulncheck", "nvd2_max_date_range"],
+            self.load_yml,
+            required=False,
+            default=120,
+        )
+
+        self.nvd2_last_mod_start_date = get_config_variable(
+            "CONNECTOR_VULNCHECK_NVD2_LAST_MOD_START_DATE",
+            ["connector_vulncheck", "nvd2_last_mod_start_date"],
+            self.load_yml,
+            required=False,
+            default=None,
+        )
+
+        self.nvd2_last_mod_end_date = get_config_variable(
+            "CONNECTOR_VULNCHECK_NVD2_LAST_MOD_END_DATE",
+            ["connector_vulncheck", "nvd2_last_mod_end_date"],
+            self.load_yml,
+            required=False,
+            default=None,
+        )
+
     def to_dict(self) -> dict:
         """Gather configuration settings and return them as a dictionary."""
         if (
@@ -161,6 +196,10 @@ class ConfigConnector:
                 "api_key": self.api_key,
                 "api_base_url": self.api_base_url,
                 "data_sources": self.data_sources,
+                "nvd2_pull_history": self.nvd2_pull_history,
+                "nvd2_max_date_range": self.nvd2_max_date_range,
+                "nvd2_last_mod_start_date": self.nvd2_last_mod_start_date,
+                "nvd2_last_mod_end_date": self.nvd2_last_mod_end_date,
             },
         }
         return dct

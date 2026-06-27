@@ -94,6 +94,23 @@ Below are the parameters you'll need to set for running the connector:
 | Log Level                 | `log_level`       | `CONNECTOR_LOG_LEVEL`                | info                                                                                                                        | No          | Sets the verbosity of logs. Options: `debug`, `info`, `warn`, `error`.        |
 | API Base URL              | `api_base_url`    | `CONNECTOR_VULNCHECK_API_BASE_URL`   | <https://api.vulncheck.com/v3>                                                                                                | No          | The base URL for the VulnCheck API (e.g., `https://api.vulncheck.com/v3`).    |
 | Data Sources              | `data_sources`    | `CONNECTOR_VULNCHECK_DATA_SOURCES`   | botnets,epss,exploits,initial-access,ipintel,nist-nvd2,ransomware,snort,suricata,threat-actors,vulncheck-kev,vulncheck-nvd2 | No          | List of data sources to collect intelligence from.                            |
+| NVD2 Pull History         | `nvd2_pull_history`        | `CONNECTOR_VULNCHECK_NVD2_PULL_HISTORY`        | false | No | First run only: when `true`, pull the full NVD2 history (no date filter). When `false`, the first run is bounded by `nvd2_max_date_range`. |
+| NVD2 Max Date Range       | `nvd2_max_date_range`      | `CONNECTOR_VULNCHECK_NVD2_MAX_DATE_RANGE`      | 120   | No | First run only: how many days back (last-modified) to pull when not pulling full history. |
+| NVD2 Last Mod Start Date  | `nvd2_last_mod_start_date` | `CONNECTOR_VULNCHECK_NVD2_LAST_MOD_START_DATE` | None  | No | Optional `YYYY-MM-DD` override for a manual backfill. Normally unset — runs are incremental via connector state. |
+| NVD2 Last Mod End Date    | `nvd2_last_mod_end_date`   | `CONNECTOR_VULNCHECK_NVD2_LAST_MOD_END_DATE`   | None  | No | Optional `YYYY-MM-DD` override for a manual backfill. Normally unset (defaults to now). |
+
+> [!NOTE]
+> The `nist-nvd2` and `vulncheck-nvd2` sources ingest incrementally: each run
+> requests only CVEs modified since the previous successful run (tracked in
+> connector state via the VulnCheck index API's `lastModStartDate` /
+> `lastModEndDate` parameters). The `nvd2_*` settings above only shape the very
+> first run (empty state) and enable manual backfills — they do not need to be
+> set for normal operation.
+>
+> `vulncheck-nvd2` is an enriched superset of `nist-nvd2` (same CVEs plus attack
+> patterns, mitigations, data sources and CPEs). If **both** are listed in
+> `data_sources`, the connector prefers `vulncheck-nvd2` and skips the redundant
+> `nist-nvd2` ingest.
 
 ## Deployment
 

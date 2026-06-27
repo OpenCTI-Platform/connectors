@@ -1,12 +1,9 @@
-import json
-import os
-import zipfile
 from typing import Any
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
-from pydantic import ValidationError
+from vclib.models import data_source
 from vclib.util.config import (
     SCOPE_ATTACK_PATTERN,
     SCOPE_COURSE_OF_ACTION,
@@ -17,7 +14,7 @@ from vclib.util.config import (
 )
 from vclib.util.cpe import parse_cpe_uri
 from vclib.util.memory_usage import log_memory_usage
-from vclib.util.nvd import check_vuln_description
+from vclib.util.nvd import build_nvd2_query_params, check_vuln_description
 from vulncheck_sdk.models.advisory_cvssv40 import AdvisoryCVSSV40
 from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
 from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
@@ -535,80 +532,13 @@ def _extract_stix_from_vcnvd2(
     return result
 
 
-def _process_vc_nvd2_json(
-    converter_to_stix,
-    logger,
-    target_scope: list[str],
-    data,
-) -> list:
-    result = []
-    for item in data["results"]:
-        try:
-            entity = ApiNVD20CVEExtended.model_validate(item)
-        except ValidationError as e:
-            logger.error(
-                f"Unable to validate JSON for NIST-NVD2 object, {e}",
-                {"item": item},
-            )
-            continue
-        log_memory_usage(logger)
-        result.extend(
-            _extract_stix_from_vcnvd2(
-                entity=entity,
-                target_scope=target_scope,
-                converter_to_stix=converter_to_stix,
-                logger=logger,
-            )
-        )
-    return result
-
-
-def _collect_vc_nvd2_from_backup(
-    filepath: str,
-    target_scope: list[str],
-    helper,
-    converter_to_stix,
-    logger,
-    source_name: str,
-    cleanup=True,
-) -> None:
-    work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
-
-    logger.info("[VULNCHECK NVD-2] Parsing data into STIX objects")
-
-    with zipfile.ZipFile(filepath, "r") as zip_ref:
-        for file_name in zip_ref.namelist():
-            if file_name.endswith(".json"):
-                with zip_ref.open(file_name) as json_file:
-                    stix_objects = _process_vc_nvd2_json(
-                        converter_to_stix=converter_to_stix,
-                        logger=logger,
-                        target_scope=target_scope,
-                        data=json.load(json_file),
-                    )
-                    if stix_objects:
-                        works.send_bundle(
-                            helper=helper,
-                            logger=logger,
-                            stix_objects=stix_objects,
-                            work_id=work_id,
-                        )
-
-    works.finish_work(
-        helper=helper, logger=logger, work_id=work_id, work_name=source_name
-    )
-    logger.info("Finished parsing STIX from VulnCheck-NVD2 backup!")
-    if cleanup:
-        os.remove(filepath)
-
-
 def collect_vcnvd2(
     config,
     helper: OpenCTIConnectorHelper,
     client,
     converter_to_stix,
     logger,
-    _: dict,
+    connector_state: dict,
 ) -> None:
     source_name = "VulnCheck NVD-2"
     target_scope = [
@@ -630,14 +560,35 @@ def collect_vcnvd2(
         return
 
     logger.info("[VULNCHECK NVD-2] Starting collection")
-
-    _collect_vc_nvd2_from_backup(
-        filepath=client.get_vcnvd2_backup_filepath(),
-        target_scope=target_scope,
-        helper=helper,
-        converter_to_stix=converter_to_stix,
+    query_params = build_nvd2_query_params(
+        config=config,
+        connector_state=connector_state,
+        source_name=data_source.VULNCHECK_NVD2,
         logger=logger,
-        source_name=source_name,
     )
+    work_id = works.start_work(helper=helper, logger=logger, work_name=source_name)
 
+    for page in client.iter_vcnvd2(**query_params):
+        log_memory_usage(logger)
+        stix_objects = []
+        for entity in page:
+            stix_objects.extend(
+                _extract_stix_from_vcnvd2(
+                    entity=entity,
+                    target_scope=target_scope,
+                    converter_to_stix=converter_to_stix,
+                    logger=logger,
+                )
+            )
+        if stix_objects:
+            works.send_bundle(
+                helper=helper,
+                logger=logger,
+                stix_objects=stix_objects,
+                work_id=work_id,
+            )
+
+    works.finish_work(
+        helper=helper, logger=logger, work_id=work_id, work_name=source_name
+    )
     logger.info("[VULNCHECK NVD-2] Data Source Completed!")

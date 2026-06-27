@@ -67,9 +67,22 @@ class ConnectorVulnCheck:
         for name in configured_data_sources:
             target_data_sources.append(DataSource.from_string(name))
 
+        # vulncheck-nvd2 is an enriched superset of nist-nvd2 (same CVEs plus
+        # attack patterns, mitigations, data sources and CPEs). If both are
+        # configured, prefer vulncheck-nvd2 and skip the redundant nist-nvd2.
+        if (
+            DataSource.VulnCheckNVD2 in target_data_sources
+            and DataSource.NistNVD2 in target_data_sources
+        ):
+            target_data_sources.remove(DataSource.NistNVD2)
+            self.helper.connector_logger.warning(
+                "[CONNECTOR] Both vulncheck-nvd2 and nist-nvd2 are configured; "
+                "preferring vulncheck-nvd2 and skipping nist-nvd2 (redundant)."
+            )
+
         self.helper.connector_logger.debug(
             "[CONNECTOR] Configured Data Sources",
-            {"data_sources": target_data_sources},
+            {"data_sources": [source.name for source in target_data_sources]},
         )
         return target_data_sources
 
@@ -79,7 +92,7 @@ class ConnectorVulnCheck:
         validated_sources: list[DataSource] = []
         self.helper.connector_logger.debug(
             "[CONNECTOR] Validating sources...",
-            {"data_sources": target_sources},
+            {"data_sources": [source.name for source in target_sources]},
         )
         for source in target_sources:
             if source.validate(str(self.config.api_base_url), str(self.config.api_key)):

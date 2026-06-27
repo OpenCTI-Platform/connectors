@@ -1,6 +1,5 @@
 from typing import Any, Callable, Generator, List
 
-import requests
 import vulncheck_sdk
 from pycti import OpenCTIConnectorHelper
 from vclib.config_variables import ConfigConnector
@@ -15,6 +14,8 @@ from vulncheck_sdk.models.advisory_vuln_check_kev import AdvisoryVulnCheckKEV
 from vulncheck_sdk.models.api_epss_data import ApiEPSSData
 from vulncheck_sdk.models.api_exploit_v3_result import ApiExploitV3Result
 from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
+from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
+from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
 
 
 class ConnectorClient:
@@ -106,6 +107,20 @@ class ConnectorClient:
             source_name=data_source.INITIAL_ACCESS,
         )
 
+    def iter_vcnvd2(self, **kwargs) -> Generator[List[ApiNVD20CVEExtended], None, None]:
+        yield from self.iter_data(
+            lambda session, **kw: session.index_vulncheck_nvd2_get(**kw),
+            source_name=data_source.VULNCHECK_NVD2,
+            **kwargs,
+        )
+
+    def iter_nistnvd2(self, **kwargs) -> Generator[List[ApiNVD20CVE], None, None]:
+        yield from self.iter_data(
+            lambda session, **kw: session.index_nist_nvd2_get(**kw),
+            source_name=data_source.NIST_NVD2,
+            **kwargs,
+        )
+
     def get_rules(self, rule_type: str) -> str:
         self.helper.connector_logger.info(f"[API] Getting {rule_type} rules")
 
@@ -119,30 +134,3 @@ class ConnectorClient:
             )
 
             return api_response
-
-    def get_vcnvd2_backup_filepath(self) -> str:
-        self.helper.connector_logger.info(
-            "[API] Downloading backup for VulnCheck-NVD2..."
-        )
-        file_path = self._get_backup(data_source.VULNCHECK_NVD2)
-        self.helper.connector_logger.info("[API] Backup downloaded for VulnCheck-NVD2")
-        return file_path
-
-    def get_nistnvd2_backup_filepath(self) -> str:
-        self.helper.connector_logger.info("[API] Downloading backup for NIST-NVD2...")
-        file_path = self._get_backup(data_source.NIST_NVD2)
-        self.helper.connector_logger.info("[API] Backup downloaded for NIST-NVD2")
-        return file_path
-
-    def _get_backup(self, index: str) -> str:
-        file_path = f"{index}.zip"
-        with vulncheck_sdk.ApiClient(self.vc_config) as api_client:
-            endpoints_client = vulncheck_sdk.EndpointsApi(api_client)
-
-            api_response = endpoints_client.backup_index_get(index)
-            if api_response.data is not None and api_response.data[0].url:
-                backup_url = requests.get(api_response.data[0].url)
-
-                with open(file_path, "wb") as file:
-                    file.write(backup_url.content)
-        return file_path

@@ -105,6 +105,9 @@ class DataSource(Enum):
     def name(self):
         return self._name
 
+    def __str__(self):
+        return self._name
+
     @classmethod
     def from_string(cls, name):
         for item in cls:
