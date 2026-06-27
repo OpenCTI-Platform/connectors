@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://www.filigran.io/connectors/vulncheck_config.schema.json",
+  "type": "object",
+  "properties": {
+    "OPENCTI_URL": {
+      "description": "The base URL of the OpenCTI instance.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_TOKEN": {
+      "description": "The API token to connect to OpenCTI.",
+      "type": "string"
+    },
+    "CONNECTOR_NAME": {
+      "default": "VulnCheck",
+      "description": "The name of the connector.",
+      "type": "string"
+    },
+    "CONNECTOR_SCOPE": {
+      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "CONNECTOR_LOG_LEVEL": {
+      "default": "error",
+      "description": "The minimum level of logs to display.",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "warning",
+        "error"
+      ],
+      "type": "string"
+    },
+    "CONNECTOR_TYPE": {
+      "const": "EXTERNAL_IMPORT",
+      "default": "EXTERNAL_IMPORT",
+      "type": "string"
+    },
+    "CONNECTOR_DURATION_PERIOD": {
+      "default": "PT1H",
+      "description": "The period of time to await between two runs of the connector.",
+      "format": "duration",
+      "type": "string"
+    },
+    "CONNECTOR_VULNCHECK_API_KEY": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_API_KEY instead."
+    },
+    "CONNECTOR_VULNCHECK_API_BASE_URL": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_API_BASE_URL instead."
+    },
+    "CONNECTOR_VULNCHECK_DATA_SOURCES": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_DATA_SOURCES instead."
+    },
+    "CONNECTOR_VULNCHECK_NVD2_PULL_HISTORY": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_NVD2_PULL_HISTORY instead."
+    },
+    "CONNECTOR_VULNCHECK_NVD2_MAX_DATE_RANGE": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_NVD2_MAX_DATE_RANGE instead."
+    },
+    "CONNECTOR_VULNCHECK_NVD2_LAST_MOD_START_DATE": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_NVD2_LAST_MOD_START_DATE instead."
+    },
+    "CONNECTOR_VULNCHECK_NVD2_LAST_MOD_END_DATE": {
+      "default": null,
+      "deprecated": true,
+      "type": "string",
+      "description": "Use VULNCHECK_NVD2_LAST_MOD_END_DATE instead."
+    },
+    "VULNCHECK_API_KEY": {
+      "description": "The API key used to authenticate against the VulnCheck API.",
+      "type": "string"
+    },
+    "VULNCHECK_API_BASE_URL": {
+      "default": "https://api.vulncheck.com/v3",
+      "description": "The base URL of the VulnCheck API.",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "VULNCHECK_DATA_SOURCES": {
+      "default": [
+        "vulncheck-kev",
+        "nist-nvd2"
+      ],
+      "description": "Comma-separated list of VulnCheck data sources to ingest.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "VULNCHECK_NVD2_PULL_HISTORY": {
+      "default": false,
+      "description": "First run only: when true, pull the full NVD2 history (no date filter). When false, the first run is bounded by nvd2_max_date_range.",
+      "type": "boolean"
+    },
+    "VULNCHECK_NVD2_MAX_DATE_RANGE": {
+      "default": 120,
+      "description": "First run only: how many days back (last-modified) to pull when not pulling full history.",
+      "type": "integer"
+    },
+    "VULNCHECK_NVD2_LAST_MOD_START_DATE": {
+      "default": null,
+      "description": "Optional YYYY-MM-DD override for a manual NVD2 backfill (start).",
+      "type": "string"
+    },
+    "VULNCHECK_NVD2_LAST_MOD_END_DATE": {
+      "default": null,
+      "description": "Optional YYYY-MM-DD override for a manual NVD2 backfill (end).",
+      "type": "string"
+    }
+  },
+  "required": [
+    "OPENCTI_URL",
+    "OPENCTI_TOKEN",
+    "CONNECTOR_SCOPE",
+    "VULNCHECK_API_KEY"
+  ],
+  "additionalProperties": true
+}
