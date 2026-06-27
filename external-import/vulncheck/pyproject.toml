@@ -32,7 +32,7 @@ dev = [
 all = ["vulncheck-connector[test,dev]"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.isort]
 profile = "black"

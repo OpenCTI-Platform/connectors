@@ -6,7 +6,8 @@ Mirrors the external-import template's ``test_main.py``.
 from conftest import StubConnectorSettings
 from pycti import OpenCTIConnectorHelper
 
-from connector import ConnectorSettings, ConnectorVulnCheck
+from connector import ConnectorSettings
+from connector.connector import ConnectorVulnCheck
 
 
 def test_connector_settings_is_instantiated():
