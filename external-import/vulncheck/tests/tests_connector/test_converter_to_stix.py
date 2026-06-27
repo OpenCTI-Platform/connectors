@@ -3,6 +3,7 @@
 import json
 
 import stix2
+
 from connector.converter_to_stix import ConverterToStix
 
 

@@ -2,7 +2,6 @@ from typing import Any, Callable, Generator, List
 
 import requests
 import vulncheck_sdk
-from connector.sources import names
 from pycti import OpenCTIConnectorHelper
 from pydantic import HttpUrl
 from vulncheck_sdk.models.advisory_botnet import AdvisoryBotnet
@@ -17,6 +16,8 @@ from vulncheck_sdk.models.api_exploit_v3_result import ApiExploitV3Result
 from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
 from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
 from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
+
+from connector.sources import names
 
 
 class VulnCheckClient:

@@ -1,19 +1,20 @@
 from datetime import datetime
 
 import stix2
-import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from connector.util.source_logger import SourceLogger
+from vulncheck_sdk.models.advisory_ransomware_exploit import AdvisoryRansomwareExploit
+
+import connector.util.works as works
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
-from vulncheck_client import VulnCheckClient
 from connector.util.config import (
     SCOPE_MALWARE,
     SCOPE_REPORT,
     SCOPE_VULNERABILITY,
     compare_config_to_target_scope,
 )
-from vulncheck_sdk.models.advisory_ransomware_exploit import AdvisoryRansomwareExploit
+from connector.util.source_logger import SourceLogger
+from vulncheck_client import VulnCheckClient
 
 
 def _create_malware(

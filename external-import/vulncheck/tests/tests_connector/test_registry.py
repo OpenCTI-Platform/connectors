@@ -3,6 +3,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+
 from connector.sources import names, registry
 
 

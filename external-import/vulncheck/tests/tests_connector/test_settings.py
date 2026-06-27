@@ -10,8 +10,9 @@ import warnings
 from typing import Any
 
 import pytest
-from connector import ConnectorSettings
 from connectors_sdk import BaseConfigModel, ConfigValidationError
+
+from connector import ConnectorSettings
 
 VALID = {
     "opencti": {"url": "http://localhost:8080", "token": "test-token"},

@@ -1,6 +1,7 @@
 import traceback
 
 from pycti import OpenCTIConnectorHelper
+
 from connector import ConnectorVulnCheck
 from connector.settings import ConnectorSettings
 

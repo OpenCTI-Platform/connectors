@@ -1,12 +1,13 @@
-import connector.util.works as works
 from pycti import OpenCTIConnectorHelper
-from connector.util.source_logger import SourceLogger
-from connector.converter_to_stix import ConverterToStix
-from connector.settings import ConnectorSettings
-from vulncheck_client import VulnCheckClient
 from stix2.v21.vocab import PATTERN_TYPE_SNORT
+
+import connector.util.works as works
+from connector.converter_to_stix import ConverterToStix
 from connector.models.rule import Rule, RuleParser
+from connector.settings import ConnectorSettings
 from connector.util.config import SCOPE_INDICATOR, compare_config_to_target_scope
+from connector.util.source_logger import SourceLogger
+from vulncheck_client import VulnCheckClient
 
 
 def _extract_stix_from_snort(
