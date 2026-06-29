@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 import json
 import os
 import zipfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_ATTACK_PATTERN,
     SCOPE_COURSE_OF_ACTION,
@@ -23,6 +26,9 @@ from vulncheck_sdk.models.api_nvd20_cve_extended import ApiNVD20CVEExtended
 from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
 from vulncheck_sdk.models.api_nvd20_cvss_data_v3 import ApiNVD20CvssDataV3
 from vulncheck_sdk.models.api_nvd20_weakness_extended import ApiNVD20WeaknessExtended
+
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
 
 
 def _get_cvss_v2_properties(cvss_data: ApiNVD20CvssDataV2 | None) -> dict[str, Any]:
@@ -164,7 +170,7 @@ def _get_cvss_v4_properties(cvss_data: AdvisoryCVSSV40 | None) -> dict[str, Any]
 
 
 def _create_vuln(
-    entity: ApiNVD20CVEExtended, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended, converter_to_stix: ConverterToStix, logger
 ) -> stix2.Vulnerability:
     logger.debug(
         "[VULNCHECK NVD-2] Creating vulnerability object",
@@ -212,7 +218,9 @@ def _create_vuln(
     )
 
 
-def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
+def _create_software(
+    cpe: str, converter_to_stix: ConverterToStix, logger
+) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
         "[VULNCHECK NVD-2] Creating software object",
@@ -229,7 +237,7 @@ def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
 def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -243,7 +251,10 @@ def _create_rel_has(
 
 
 def _create_capec_attack_patterns_and_relationships(
-    entity: ApiNVD20CVEExtended, vuln: stix2.Vulnerability, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    vuln: stix2.Vulnerability,
+    converter_to_stix: ConverterToStix,
+    logger,
 ) -> list:
     """Create CAPEC attack pattern objects and relationships to vulnerability."""
     result = []
@@ -279,7 +290,10 @@ def _create_capec_attack_patterns_and_relationships(
 
 
 def _create_mitre_attack_patterns_and_relationships(
-    entity: ApiNVD20CVEExtended, vuln: stix2.Vulnerability, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    vuln: stix2.Vulnerability,
+    converter_to_stix: ConverterToStix,
+    logger,
 ) -> list:
     """Create MITRE ATT&CK attack pattern objects and relationships to vulnerability."""
     result = []
@@ -315,7 +329,10 @@ def _create_mitre_attack_patterns_and_relationships(
 
 
 def _create_course_of_actions_and_relationships(
-    entity: ApiNVD20CVEExtended, attack_patterns: list, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    attack_patterns: list,
+    converter_to_stix: ConverterToStix,
+    logger,
 ) -> list:
     """Create Course of Action objects and relationships from MITRE attack technique mitigations."""
     result = []
@@ -379,7 +396,10 @@ def _create_course_of_actions_and_relationships(
 
 
 def _create_data_sources_and_relationships(
-    entity: ApiNVD20CVEExtended, attack_patterns: list, converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    attack_patterns: list,
+    converter_to_stix: ConverterToStix,
+    logger,
 ) -> list:
     """Create Data Source objects and relationships from MITRE attack technique detections."""
     result = []
@@ -459,7 +479,10 @@ def _create_data_sources_and_relationships(
 
 
 def _extract_stix_from_vcnvd2(
-    entity: ApiNVD20CVEExtended, target_scope: list[str], converter_to_stix, logger
+    entity: ApiNVD20CVEExtended,
+    target_scope: list[str],
+    converter_to_stix: ConverterToStix,
+    logger,
 ) -> list:
     result = []
     vuln = None
@@ -536,7 +559,7 @@ def _extract_stix_from_vcnvd2(
 
 
 def _process_vc_nvd2_json(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     target_scope: list[str],
     data,
@@ -566,8 +589,8 @@ def _process_vc_nvd2_json(
 def _collect_vc_nvd2_from_backup(
     filepath: str,
     target_scope: list[str],
-    helper,
-    converter_to_stix,
+    helper: OpenCTIConnectorHelper,
+    converter_to_stix: ConverterToStix,
     logger,
     source_name: str,
     cleanup=True,
@@ -603,10 +626,10 @@ def _collect_vc_nvd2_from_backup(
 
 
 def collect_vcnvd2(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
     client,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

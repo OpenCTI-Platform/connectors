@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_BOTNET
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_INFRASTRUCTURE,
     SCOPE_REPORT,
@@ -12,9 +16,12 @@ from vclib.util.config import (
 )
 from vulncheck_sdk.models.advisory_botnet import AdvisoryBotnet
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 def _create_infra(
-    converter_to_stix, entity: AdvisoryBotnet, logger
+    converter_to_stix: ConverterToStix, entity: AdvisoryBotnet, logger
 ) -> stix2.Infrastructure:
     logger.debug(
         "[BOTNET] Creating infrastructure of type botnet",
@@ -27,7 +34,9 @@ def _create_infra(
     )
 
 
-def _create_vuln(cve: str, converter_to_stix, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    cve: str, converter_to_stix: ConverterToStix, logger
+) -> stix2.Vulnerability:
     logger.debug(
         "[BOTNET] Creating vulnerability",
         {"cve": cve},
@@ -39,7 +48,7 @@ def _create_rel_related_to(
     infrastructure: stix2.Infrastructure,
     vulnerability: stix2.Vulnerability,
     labels: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -54,7 +63,10 @@ def _create_rel_related_to(
 
 
 def _extract_stix_from_botnet(
-    converter_to_stix, entities: list[AdvisoryBotnet], target_scope: list[str], logger
+    converter_to_stix: ConverterToStix,
+    entities: list[AdvisoryBotnet],
+    target_scope: list[str],
+    logger,
 ) -> list:
     result = []
 
@@ -129,7 +141,12 @@ def _extract_stix_from_botnet(
 
 
 def collect_botnets(
-    config, helper: OpenCTIConnectorHelper, client, converter_to_stix, logger, _: dict
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    client,
+    converter_to_stix: ConverterToStix,
+    logger,
+    _: dict,
 ) -> None:
     # Check if data source is in scope for this run
     source_name = "Botnet"

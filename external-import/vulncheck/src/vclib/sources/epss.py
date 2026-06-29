@@ -1,11 +1,21 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import SCOPE_VULNERABILITY, compare_config_to_target_scope
 from vulncheck_sdk.models.api_epss_data import ApiEPSSData
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
 
-def _create_vuln(converter_to_stix, entity: ApiEPSSData, logger) -> stix2.Vulnerability:
+
+def _create_vuln(
+    converter_to_stix: ConverterToStix, entity: ApiEPSSData, logger
+) -> stix2.Vulnerability:
     logger.debug(
         "[EPSS] Creating vulnerability",
         {"cve": entity.cve},
@@ -20,7 +30,7 @@ def _create_vuln(converter_to_stix, entity: ApiEPSSData, logger) -> stix2.Vulner
 
 
 def _extract_stix_from_epss(
-    converter_to_stix, entities: list[ApiEPSSData], logger
+    converter_to_stix: ConverterToStix, entities: list[ApiEPSSData], logger
 ) -> list:
     logger.info("[EPSS] Parsing data into STIX objects")
     return [
@@ -30,7 +40,12 @@ def _extract_stix_from_epss(
 
 
 def collect_epss(
-    config, helper: OpenCTIConnectorHelper, client, converter_to_stix, logger, _: dict
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    client,
+    converter_to_stix: ConverterToStix,
+    logger,
+    _: dict,
 ) -> None:
     source_name = "EPSS"
     target_scope = [SCOPE_VULNERABILITY]

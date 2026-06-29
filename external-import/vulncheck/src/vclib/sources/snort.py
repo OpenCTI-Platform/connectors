@@ -1,12 +1,20 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import PATTERN_TYPE_SNORT
+from vclib.converter_to_stix import ConverterToStix
 from vclib.models.rule import Rule, RuleParser
 from vclib.util.config import SCOPE_INDICATOR, compare_config_to_target_scope
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 def _extract_stix_from_snort(
-    converter_to_stix, logger, snort_rules: list[Rule]
+    converter_to_stix: ConverterToStix, logger, snort_rules: list[Rule]
 ) -> list:
     logger.info("[SNORT] Parsing data into STIX objects")
     return [
@@ -21,10 +29,10 @@ def _extract_stix_from_snort(
 
 
 def collect_snort(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
     client,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

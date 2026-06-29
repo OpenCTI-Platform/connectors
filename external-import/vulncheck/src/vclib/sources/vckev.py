@@ -1,12 +1,20 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import SCOPE_VULNERABILITY, compare_config_to_target_scope
 from vulncheck_sdk.models.advisory_vuln_check_kev import AdvisoryVulnCheckKEV
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 def _create_vckev_vuln(
-    converter_to_stix, entity: AdvisoryVulnCheckKEV, logger
+    converter_to_stix: ConverterToStix, entity: AdvisoryVulnCheckKEV, logger
 ) -> stix2.Vulnerability:
     logger.debug(
         "[VULNCHECK KEV] Creating vulnerability",
@@ -18,7 +26,7 @@ def _create_vckev_vuln(
 
 
 def _extract_stix_from_vckev(
-    converter_to_stix, entities: list[AdvisoryVulnCheckKEV], logger
+    converter_to_stix: ConverterToStix, entities: list[AdvisoryVulnCheckKEV], logger
 ) -> list:
     logger.info("[VULNCHECK KEV] Parsing data into STIX objects")
     return [
@@ -29,10 +37,10 @@ def _extract_stix_from_vckev(
 
 
 def collect_vckev(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
     client,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

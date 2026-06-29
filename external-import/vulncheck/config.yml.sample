@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  type: 'EXTERNAL_IMPORT'
+  id: 'ChangeMe'
+  # name: 'VulnCheck Connector'
+  scope: 'vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,software,report'
+  # log_level: 'info'
+  # duration_period: 'PT1H'
+
+connector_vulncheck:
+  api_key: 'ChangeMe'
+  # api_base_url: 'https://api.vulncheck.com/v3'
+  # data_sources: 'vulncheck-kev,nist-nvd2'
+

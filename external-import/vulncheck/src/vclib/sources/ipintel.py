@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_INFRASTRUCTURE,
     SCOPE_IP,
@@ -12,8 +16,13 @@ from vclib.util.config import (
 )
 from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
 
-def _create_ip(converter_to_stix, entity: AdvisoryIpIntelRecord, logger):
+
+def _create_ip(
+    converter_to_stix: ConverterToStix, entity: AdvisoryIpIntelRecord, logger
+):
     logger.debug(
         "[IP INTEL] Creating observable",
         {"observable": entity.ip},
@@ -22,7 +31,7 @@ def _create_ip(converter_to_stix, entity: AdvisoryIpIntelRecord, logger):
 
 
 def _create_infra(
-    converter_to_stix, entity: AdvisoryIpIntelRecord, logger
+    converter_to_stix: ConverterToStix, entity: AdvisoryIpIntelRecord, logger
 ) -> stix2.Infrastructure:
     logger.debug(
         "[IP INTEL] Creating infrastructure object of type command-and-control",
@@ -36,7 +45,7 @@ def _create_infra(
 
 
 def _create_location(
-    converter_to_stix, entity: AdvisoryIpIntelRecord, logger
+    converter_to_stix: ConverterToStix, entity: AdvisoryIpIntelRecord, logger
 ) -> stix2.Location:
     logger.debug(
         "[IP INTEL] Creating location object",
@@ -48,7 +57,10 @@ def _create_location(
 
 
 def _create_rel_located_at(
-    converter_to_stix, infra: stix2.Infrastructure, location: stix2.Location, logger
+    converter_to_stix: ConverterToStix,
+    infra: stix2.Infrastructure,
+    location: stix2.Location,
+    logger,
 ) -> stix2.Relationship:
     logger.debug(
         '[IP INTEL] Creating "located-at" relationship',
@@ -59,7 +71,7 @@ def _create_rel_located_at(
 
 
 def _create_rel_consists_of(
-    converter_to_stix, infra: stix2.Infrastructure, ip, logger
+    converter_to_stix: ConverterToStix, infra: stix2.Infrastructure, ip, logger
 ) -> stix2.Relationship:
     logger.debug(
         '[IP INTEL] Creating "consists-of" relationship',
@@ -70,7 +82,7 @@ def _create_rel_consists_of(
 
 
 def _extract_stix_from_ipintel(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entities: list[AdvisoryIpIntelRecord],
     target_scope: list[str],
     logger,
@@ -122,7 +134,12 @@ def _extract_stix_from_ipintel(
 
 
 def collect_ipintel(
-    config, helper: OpenCTIConnectorHelper, client, converter_to_stix, logger, _: dict
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    client,
+    converter_to_stix: ConverterToStix,
+    logger,
+    _: dict,
 ) -> None:
     source_name = "IP Intel"
     target_scope = [SCOPE_IP, SCOPE_INFRASTRUCTURE, SCOPE_LOCATION]

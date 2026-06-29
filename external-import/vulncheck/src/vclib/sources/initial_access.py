@@ -1,6 +1,11 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_SOFTWARE,
     SCOPE_VULNERABILITY,
@@ -9,9 +14,12 @@ from vclib.util.config import (
 from vclib.util.cpe import parse_cpe_uri
 from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 def _create_vuln(
-    converter_to_stix, entity: ApiInitialAccess, logger
+    converter_to_stix: ConverterToStix, entity: ApiInitialAccess, logger
 ) -> stix2.Vulnerability:
     logger.debug(
         "[INITIAL ACCESS] Creating vulnerability object",
@@ -25,7 +33,9 @@ def _create_vuln(
     )
 
 
-def _create_software(converter_to_stix, logger, cpe: str) -> stix2.Software:
+def _create_software(
+    converter_to_stix: ConverterToStix, logger, cpe: str
+) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
         "[INITIAL ACCESS] Creating software object",
@@ -42,7 +52,7 @@ def _create_software(converter_to_stix, logger, cpe: str) -> stix2.Software:
 def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ):
     logger.debug(
@@ -56,7 +66,10 @@ def _create_rel_has(
 
 
 def _extract_stix_from_initial_access(
-    converter_to_stix, entities: list[ApiInitialAccess], target_scope: list[str], logger
+    converter_to_stix: ConverterToStix,
+    entities: list[ApiInitialAccess],
+    target_scope: list[str],
+    logger,
 ) -> list:
     result = []
     logger.info("[INITIAL ACCESS] Parsing data into STIX objects")
@@ -91,7 +104,12 @@ def _extract_stix_from_initial_access(
 
 
 def collect_initial_access(
-    config, helper: OpenCTIConnectorHelper, client, converter_to_stix, logger, _: dict
+    config: ConnectorSettings,
+    helper: OpenCTIConnectorHelper,
+    client,
+    converter_to_stix: ConverterToStix,
+    logger,
+    _: dict,
 ) -> None:
     source_name = "Initial Access"
     target_scope = [SCOPE_VULNERABILITY, SCOPE_SOFTWARE]

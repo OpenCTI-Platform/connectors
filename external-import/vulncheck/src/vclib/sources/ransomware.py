@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_MALWARE,
     SCOPE_REPORT,
@@ -11,9 +15,12 @@ from vclib.util.config import (
 )
 from vulncheck_sdk.models.advisory_ransomware_exploit import AdvisoryRansomwareExploit
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 def _create_malware(
-    converter_to_stix, entity: AdvisoryRansomwareExploit, logger
+    converter_to_stix: ConverterToStix, entity: AdvisoryRansomwareExploit, logger
 ) -> stix2.Malware:
     logger.debug(
         "[RANSOMWARE] Creating malware object",
@@ -27,7 +34,9 @@ def _create_malware(
     )
 
 
-def _create_vuln(converter_to_stix, cve: str, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    converter_to_stix: ConverterToStix, cve: str, logger
+) -> stix2.Vulnerability:
     logger.debug(
         "[RANSOMWARE] Creating vulnerability object",
         {"cve": cve},
@@ -39,7 +48,7 @@ def _create_rel_exploits(
     malware: stix2.Malware,
     vulnerability: stix2.Vulnerability,
     labels: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -54,7 +63,7 @@ def _create_rel_exploits(
 
 
 def _extract_stix_from_ransomware(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entities: list[AdvisoryRansomwareExploit],
     target_scope: list[str],
     logger,
@@ -124,10 +133,10 @@ def _extract_stix_from_ransomware(
 
 
 def collect_ransomware(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
     client,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

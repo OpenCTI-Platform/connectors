@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_EXTERNAL_REF,
     SCOPE_REPORT,
@@ -15,9 +19,12 @@ from vulncheck_sdk.models.advisory_threat_actor_with_external_objects import (
     AdvisoryThreatActorWithExternalObjects,
 )
 
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 def _create_external_ref(
-    converter_to_stix, logger, reference: AdvisoryCVEReference
+    converter_to_stix: ConverterToStix, logger, reference: AdvisoryCVEReference
 ) -> stix2.ExternalReference:
     logger.debug(
         "[THREAT ACTORS] Creating external reference",
@@ -26,7 +33,9 @@ def _create_external_ref(
     return converter_to_stix.create_external_reference(reference.url, reference.url)
 
 
-def _create_vulns(converter_to_stix, logger, vulnerabilities: list[str]) -> list:
+def _create_vulns(
+    converter_to_stix: ConverterToStix, logger, vulnerabilities: list[str]
+) -> list:
     logger.debug(
         "[THREAT ACTORS] Creating vulnerabilities",
     )
@@ -34,7 +43,7 @@ def _create_vulns(converter_to_stix, logger, vulnerabilities: list[str]) -> list
 
 
 def _create_threat_actor(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     entity: AdvisoryThreatActorWithExternalObjects,
     logger,
     external_refs: list[stix2.ExternalReference],
@@ -55,7 +64,7 @@ def _create_rel_targets(
     threat_actor: stix2.ThreatActor,
     vulnerability: stix2.Vulnerability,
     labels: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -72,7 +81,7 @@ def _create_rel_targets(
 def _extract_cve_references(
     cve_references: list[AdvisoryCVEReference] | None,
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> tuple[list[stix2.ExternalReference], list[stix2.Vulnerability]]:
     vulnerabilities = []
@@ -103,7 +112,7 @@ def _extract_threat_actors(
     external_refs: list[stix2.ExternalReference],
     vulnerabilities: list[stix2.Vulnerability],
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> list:
     result = []
@@ -138,7 +147,7 @@ def _extract_threat_actors(
 def _extract_stix_from_threat_actors(
     entities: list[AdvisoryThreatActorWithExternalObjects],
     target_scope: list[str],
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> list:
     stix_objects = []
@@ -194,10 +203,10 @@ def _extract_stix_from_threat_actors(
 
 
 def collect_threat_actors(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
     client,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:

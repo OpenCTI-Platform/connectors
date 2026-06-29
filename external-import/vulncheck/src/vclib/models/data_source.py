@@ -136,7 +136,7 @@ class DataSource(Enum):
         except requests.RequestException as e:
             raise RuntimeError(f"error testing {self.name}") from e
 
-        if 400 <= resp.status_code < 500:
+        if resp.status_code is None or 400 <= resp.status_code < 500:
             return False
 
         return True

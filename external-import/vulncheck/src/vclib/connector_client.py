@@ -2,8 +2,8 @@ from typing import Any, Callable, Generator, List
 
 import requests
 import vulncheck_sdk
+from connector.settings import VulnCheckConfig
 from pycti import OpenCTIConnectorHelper
-from vclib.config_variables import ConfigConnector
 from vclib.models import data_source
 from vulncheck_sdk.models.advisory_botnet import AdvisoryBotnet
 from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
@@ -18,7 +18,7 @@ from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
 
 
 class ConnectorClient:
-    def __init__(self, helper: OpenCTIConnectorHelper, config: ConfigConnector):
+    def __init__(self, helper: OpenCTIConnectorHelper, config: VulnCheckConfig):
         """
         Initialize the client with necessary configurations
         """
@@ -26,7 +26,7 @@ class ConnectorClient:
         self.config = config
 
         vc_config = vulncheck_sdk.Configuration(host=str(self.config.api_base_url))
-        vc_config.api_key["Bearer"] = str(self.config.api_key)
+        vc_config.api_key["Bearer"] = self.config.api_key.get_secret_value()
 
         self.vc_config = vc_config
 

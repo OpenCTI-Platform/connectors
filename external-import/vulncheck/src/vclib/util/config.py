@@ -1,4 +1,10 @@
-from typing import Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Tuple
+
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
+
 
 SCOPE_VULNERABILITY = "vulnerability"
 SCOPE_MALWARE = "malware"
@@ -16,10 +22,10 @@ SCOPE_REPORT = "report"
 
 
 def compare_config_to_target_scope(
-    config, target_scope: list[str], name: str, logger
+    config: ConnectorSettings, target_scope: list[str], name: str, logger
 ) -> list[str]:
     logger.info(f"[{name}] Checking scope")
-    configured_scope = _get_configured_scope(config)
+    configured_scope = config.connector.scope
     intersection = get_intersection_of_string_lists(configured_scope, target_scope)
     if intersection == []:
         logger.info(
@@ -46,11 +52,3 @@ def get_time_until_next_run(
 
 def get_intersection_of_string_lists(a: list[str], b: list[str]) -> list[str]:
     return list(set(a) & set(b))
-
-
-def get_configured_sources(data_sources: str) -> list[str]:
-    return data_sources.split(",")
-
-
-def _get_configured_scope(config) -> list[str]:
-    return config.scope.split(",")

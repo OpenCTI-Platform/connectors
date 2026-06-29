@@ -3,55 +3,43 @@ from datetime import datetime
 
 import stix2
 import vclib.util.works as works
+from connector.settings import ConnectorSettings
 from pycti import OpenCTIConnectorHelper
-from vclib.util.config import (
-    get_configured_sources,
-    get_time_until_next_run,
-)
+from vclib.connector_client import ConnectorClient
+from vclib.converter_to_stix import ConverterToStix
+from vclib.models.data_source import DataSource
+from vclib.util.config import get_time_until_next_run
 from vclib.util.memory_usage import reset_max_mem
-
-from .config_variables import ConfigConnector
-from .connector_client import ConnectorClient
-from .converter_to_stix import ConverterToStix
-from .models.data_source import DataSource
 
 
 class ConnectorVulnCheck:
     """
-    Connector class for VulnCheck
+    Manager-supported connector class for VulnCheck.
 
-    This class wraps the entire process of collectioning intelligence from the
-    VulnCheck API and converting it into STIX objects.
-
-    Attributes:
-    - config: Configuration object
-    - helper: OpenCTIConnectorHelper object
-    - client: ConnectorClient object
-    - converter_to_stix: ConverterToStix object
+    Wraps the existing vclib logic with Pydantic-based settings
+    and the standard connector pattern expected by the OpenCTI manager.
     """
 
-    def __init__(self):
-        """
-        Initialize the Connector with necessary configurations
-        """
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
-        # Load configuration file and connection helper
-        self.config = ConfigConnector()
-        self.helper = OpenCTIConnectorHelper(self.config.load)
-        self.client = ConnectorClient(self.helper, self.config)
+        vulncheck_cfg = config.vulncheck
+        self.api_key = vulncheck_cfg.api_key.get_secret_value()
+        self.api_base_url = str(vulncheck_cfg.api_base_url)
+        self.data_sources = vulncheck_cfg.data_sources
+
+        self.client = ConnectorClient(self.helper, self.config.connector_vulncheck)
         self.converter_to_stix = ConverterToStix(self.helper)
 
     def _collect_intelligence(
         self, target_data_sources: list[DataSource], connector_state
     ):
-        """
-        Collect intelligence from the source and convert into STIX object
-        """
+        """Collect intelligence from the source and convert into STIX objects."""
         for source in target_data_sources:
             self.helper.connector_logger.info(
                 f"[CONNECTOR] Collecting data for {source.name}",
             )
-            # Get entities from source
             source.collect_data_source(
                 self.config,
                 self.helper,
@@ -62,7 +50,7 @@ class ConnectorVulnCheck:
             )
 
     def _get_target_data_sources(self) -> list[DataSource]:
-        configured_data_sources = get_configured_sources(str(self.config.data_sources))
+        configured_data_sources = self.data_sources
         target_data_sources: list[DataSource] = []
         for name in configured_data_sources:
             target_data_sources.append(DataSource.from_string(name))
@@ -82,7 +70,7 @@ class ConnectorVulnCheck:
             {"data_sources": target_sources},
         )
         for source in target_sources:
-            if source.validate(str(self.config.api_base_url), str(self.config.api_key)):
+            if source.validate(self.api_base_url, self.api_key):
                 self.helper.connector_logger.debug(
                     f"[CONNECTOR] Valid source: {source.name}",
                 )
@@ -118,25 +106,19 @@ class ConnectorVulnCheck:
         )
 
     def process_message(self) -> None:
-        """
-        Connector main process to collect intelligence
-        :return: None
-        """
+        """Connector main process to collect intelligence."""
         self.helper.connector_logger.info(
             "[CONNECTOR] Starting connector...",
             {"connector_name": self.helper.connect_name},
         )
 
-        # INFO: Reset state for tracking memory usage during large volume data-processing
         reset_max_mem()
 
         try:
-            # Get the current state
             now = datetime.now()
             current_timestamp = int(datetime.timestamp(now))
             connector_state = self.helper.get_state()
 
-            # Get the target data sources for this run
             target_data_sources = self._get_validated_data_sources(
                 self._get_target_data_sources()
             )
@@ -215,18 +197,8 @@ class ConnectorVulnCheck:
         return new_state
 
     def run(self) -> None:
-        """
-        Run the main process encapsulated in a scheduler
-        It allows you to schedule the process to run at a certain intervals
-        This specific scheduler from the pycti connector helper will also check the queue size of a connector
-        If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
-        the connector's main process will not run until the queue is ingested and reduced sufficiently,
-        allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
-        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
-        :return: None
-        """
+        """Run the main process encapsulated in a scheduler."""
         self.helper.schedule_iso(
             message_callback=self.process_message,
-            duration_period=str(self.config.duration_period),
+            duration_period=str(self.config.connector.duration_period),
         )

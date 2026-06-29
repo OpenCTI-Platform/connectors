@@ -1,13 +1,16 @@
+from __future__ import annotations
+
 import gzip
 import json
 import os
 import zipfile
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import stix2
 import vclib.util.works as works
 from pycti import OpenCTIConnectorHelper
 from pydantic import ValidationError
+from vclib.converter_to_stix import ConverterToStix
 from vclib.util.config import (
     SCOPE_SOFTWARE,
     SCOPE_VULNERABILITY,
@@ -21,6 +24,9 @@ from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
 from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
 from vulncheck_sdk.models.api_nvd20_cvss_data_v3 import ApiNVD20CvssDataV3
 from vulncheck_sdk.models.api_nvd20_weakness import ApiNVD20Weakness
+
+if TYPE_CHECKING:
+    from connector import ConnectorSettings
 
 
 def _get_cvss_v2_properties(cvss_data: ApiNVD20CvssDataV2 | None) -> dict[str, Any]:
@@ -159,7 +165,9 @@ def _get_cvss_v4_properties(cvss_data: AdvisoryCVSSV40 | None) -> dict[str, Any]
     return properties
 
 
-def _create_vuln(entity: ApiNVD20CVE, converter_to_stix, logger) -> stix2.Vulnerability:
+def _create_vuln(
+    entity: ApiNVD20CVE, converter_to_stix: ConverterToStix, logger
+) -> stix2.Vulnerability:
     logger.debug(
         "[NIST NVD-2] Creating vulnerability object",
         {"cve": entity.id},
@@ -199,7 +207,9 @@ def _create_vuln(entity: ApiNVD20CVE, converter_to_stix, logger) -> stix2.Vulner
     )
 
 
-def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
+def _create_software(
+    cpe: str, converter_to_stix: ConverterToStix, logger
+) -> stix2.Software:
     cpe_dict = parse_cpe_uri(cpe)
     logger.debug(
         "[NIST NVD-2] Creating software object",
@@ -216,7 +226,7 @@ def _create_software(cpe: str, converter_to_stix, logger) -> stix2.Software:
 def _create_rel_has(
     software: stix2.Software,
     vulnerability: stix2.Vulnerability,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
 ) -> stix2.Relationship:
     logger.debug(
@@ -230,7 +240,10 @@ def _create_rel_has(
 
 
 def _extract_stix_from_nistnvd2(
-    entity: ApiNVD20CVE, target_scope: list[str], converter_to_stix, logger
+    entity: ApiNVD20CVE,
+    target_scope: list[str],
+    converter_to_stix: ConverterToStix,
+    logger,
 ) -> list:
     result = []
     vuln = None
@@ -260,7 +273,7 @@ def _extract_stix_from_nistnvd2(
 
 
 def _process_nist_nvd2_json(
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     target_scope: list[str],
     data,
@@ -291,7 +304,7 @@ def _collect_nist_nvd2_from_backup(
     filepath: str,
     target_scope: list[str],
     helper,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     cleanup=True,
 ) -> None:
@@ -328,10 +341,10 @@ def _collect_nist_nvd2_from_backup(
 
 
 def collect_nistnvd2(
-    config,
+    config: ConnectorSettings,
     helper: OpenCTIConnectorHelper,
     client,
-    converter_to_stix,
+    converter_to_stix: ConverterToStix,
     logger,
     _: dict,
 ) -> None:
