@@ -241,3 +241,108 @@ def test_scope_gating_skips_out_of_scope(converter):
         converter, [entity], [], LOG
     )
     assert objs == []
+
+
+def _cvss_v2():
+    return SimpleNamespace(
+        base_score=5.0,
+        vector_string="AV:N/AC:L/Au:N/C:P/I:P/A:P",
+        access_vector="NETWORK",
+        access_complexity="LOW",
+        authentication="NONE",
+        confidentiality_impact="PARTIAL",
+        integrity_impact="PARTIAL",
+        availability_impact="PARTIAL",
+        temporal_score=4.0,
+        remediation_level="OFFICIAL_FIX",
+        report_confidence="CONFIRMED",
+    )
+
+
+def _cvss_v3():
+    return SimpleNamespace(
+        base_score=7.5,
+        base_severity="HIGH",
+        attack_vector="NETWORK",
+        attack_complexity="LOW",
+        privileges_required="NONE",
+        user_interaction="NONE",
+        scope="UNCHANGED",
+        confidentiality_impact="HIGH",
+        integrity_impact="HIGH",
+        availability_impact="HIGH",
+        temporal_score=6.0,
+        remediation_level="OFFICIAL_FIX",
+        report_confidence="CONFIRMED",
+    )
+
+
+def _cvss_v4():
+    return SimpleNamespace(
+        base_score=8.0,
+        base_severity="HIGH",
+        attack_vector="NETWORK",
+        attack_complexity="LOW",
+        attack_requirements="NONE",
+        privileges_required="NONE",
+        user_interaction="NONE",
+        vuln_confidentiality_impact="HIGH",
+        vuln_integrity_impact="HIGH",
+        vuln_availability_impact="HIGH",
+        sub_confidentiality_impact="LOW",
+        sub_integrity_impact="LOW",
+        sub_availability_impact="LOW",
+    )
+
+
+def _metrics():
+    return SimpleNamespace(
+        cvss_metric_v2=[SimpleNamespace(cvss_data=_cvss_v2())],
+        cvss_metric_v31=[SimpleNamespace(cvss_data=_cvss_v3())],
+        cvss_metric_v30=None,
+        cvss_metric_v40=[SimpleNamespace(cvss_data=_cvss_v4())],
+        epss=SimpleNamespace(epss_score=0.5, epss_percentile=0.9),
+    )
+
+
+def _weaknesses():
+    return [SimpleNamespace(description=[SimpleNamespace(value="CWE-79")])]
+
+
+def test_nistnvd2_with_full_metrics(converter):
+    """Exercises the CVSS v2/v3/v4 + EPSS + CWE property extractors."""
+    entity = SimpleNamespace(
+        id="CVE-2024-0002",
+        descriptions=[SimpleNamespace(lang="en", value="A description")],
+        weaknesses=_weaknesses(),
+        metrics=_metrics(),
+        vc_vulnerable_cpes=[CPE],
+    )
+    objs = nistnvd2._extract_stix_from_nistnvd2(
+        entity, [scope.SCOPE_VULNERABILITY], converter, LOG
+    )
+    vuln = objs[0]
+    assert vuln["x_opencti_cvss_v2_base_score"] == 5.0
+    assert vuln["x_opencti_cvss_base_score"] == 7.5
+    assert vuln["x_opencti_cvss_v4_base_score"] == 8.0
+    assert vuln["x_opencti_cwe"] == ["CWE-79"]
+
+
+def test_vcnvd2_with_full_metrics(converter):
+    entity = SimpleNamespace(
+        id="CVE-2024-0003",
+        descriptions=[SimpleNamespace(lang="en", value="A description")],
+        weaknesses=_weaknesses(),
+        metrics=_metrics(),
+        vc_vulnerable_cpes=[CPE],
+        related_attack_patterns=None,
+        mitre_attack_techniques=None,
+    )
+    objs = vcnvd2._extract_stix_from_vcnvd2(
+        entity, [scope.SCOPE_VULNERABILITY], converter, LOG
+    )
+    vuln = objs[0]
+    assert vuln["x_opencti_cvss_v2_base_score"] == 5.0
+    assert vuln["x_opencti_cvss_base_score"] == 7.5
+    assert vuln["x_opencti_cvss_v4_base_score"] == 8.0
+    assert vuln["x_opencti_epss_score"] == 0.5
