@@ -2,12 +2,16 @@
 
 from datetime import datetime, timedelta
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from connector.sources import names
 from connector.util.nvd import build_nvd2_query_params
 
 SRC = names.NIST_NVD2
+
+# Fixed "now" so first-run window assertions can't flake on a midnight rollover
+# between the test's datetime.now() and the one inside build_nvd2_query_params.
+FROZEN_NOW = datetime(2026, 6, 27, 12, 0, 0)
 
 
 def _config(**nvd2):
@@ -39,15 +43,19 @@ def test_state_drives_incremental():
 
 
 def test_first_run_bounded_by_max_date_range():
-    expected = (datetime.now() - timedelta(days=120)).strftime("%Y-%m-%d")
-    assert _params(_config(), None) == {"last_mod_start_date": expected}
+    with patch("connector.util.nvd.datetime") as mock_dt:
+        mock_dt.now.return_value = FROZEN_NOW
+        params = _params(_config(), None)
+    expected = (FROZEN_NOW - timedelta(days=120)).strftime("%Y-%m-%d")
+    assert params == {"last_mod_start_date": expected}
 
 
 def test_first_run_custom_max_date_range():
-    expected = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-    assert _params(_config(nvd2_max_date_range=7), {}) == {
-        "last_mod_start_date": expected
-    }
+    with patch("connector.util.nvd.datetime") as mock_dt:
+        mock_dt.now.return_value = FROZEN_NOW
+        params = _params(_config(nvd2_max_date_range=7), {})
+    expected = (FROZEN_NOW - timedelta(days=7)).strftime("%Y-%m-%d")
+    assert params == {"last_mod_start_date": expected}
 
 
 def test_pull_history_means_no_filter():

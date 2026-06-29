@@ -3,16 +3,15 @@ from datetime import datetime
 
 import connector.util.works as works
 import stix2
+from connector.converter_to_stix import ConverterToStix
+from connector.settings import ConnectorSettings
+from connector.sources import registry
+from connector.sources.registry import SourceSpec
 from connector.util.config import get_time_until_next_run
 from connector.util.memory_usage import reset_max_mem
 from connector.util.source_logger import SourceLogger
 from pycti import OpenCTIConnectorHelper
 from vulncheck_client import VulnCheckClient
-
-from .converter_to_stix import ConverterToStix
-from .settings import ConnectorSettings
-from .sources import registry
-from .sources.registry import SourceSpec
 
 
 class ConnectorVulnCheck:
@@ -221,8 +220,9 @@ class ConnectorVulnCheck:
         If `CONNECTOR_QUEUE_THRESHOLD` is set, if the connector's queue size exceeds the queue threshold,
         the connector's main process will not run until the queue is ingested and reduced sufficiently,
         allowing it to restart during the next scheduler check. (default is 500MB)
-        It requires the `duration_period` connector variable in ISO-8601 standard format
-        Example: `CONNECTOR_DURATION_PERIOD=PT5M` => Will run the process every 5 minutes
+        The `CONNECTOR_DURATION_PERIOD` config (ISO-8601, e.g. `PT5M` => every 5
+        minutes) is parsed by settings into a `timedelta`; it is passed to
+        `schedule_process` here as a number of seconds.
         :return: None
         """
         self.helper.schedule_process(

@@ -46,7 +46,7 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
         params["last_mod_end_date"] = config.vulncheck.nvd2_last_mod_end_date
 
     logger.info(
-        f"[{source_name}] NVD2 query window",
+        "NVD2 query window",
         {"params": params or "full history (no filter)", "start_origin": origin},
     )
     return params
