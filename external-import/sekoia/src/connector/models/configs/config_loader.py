@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from connectors_sdk import ListFromString
-from pydantic import Field
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr
 from pydantic_settings import (
     BaseSettings,
     DotEnvSettingsSource,
@@ -64,6 +64,26 @@ class ConfigLoader(ConfigBaseSettings):
         default_factory=_ConfigLoaderSekoia,
         description="Sekoia configurations.",
     )
+
+    # Detached opencti-ng mode (optional). When both are set, the connector
+    # ingests directly into opencti-ng over a JWT (no OpenCTI worker/queue); the
+    # write tenant and connector id are read from the JWT, run state lives
+    # server-side.
+    opencti_ng_url: HttpUrl | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_url", "OPENCTI_NG_URL"),
+        description="opencti-ng base URL for detached mode (set with opencti_ng_jwt).",
+    )
+    opencti_ng_jwt: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_jwt", "OPENCTI_NG_JWT"),
+        description="Long-lived connector JWT for opencti-ng detached mode.",
+    )
+
+    @property
+    def opencti_ng_enabled(self) -> bool:
+        """Whether detached opencti-ng mode is configured."""
+        return self.opencti_ng_url is not None and self.opencti_ng_jwt is not None
 
     @classmethod
     def settings_customise_sources(

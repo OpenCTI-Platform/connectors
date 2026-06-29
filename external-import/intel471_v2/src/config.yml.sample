@@ -2,6 +2,13 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+# Detached opencti-ng mode (optional): set both keys below to ingest directly
+# into opencti-ng over a JWT (no OpenCTI worker/queue). The write tenant and
+# connector id are read from the JWT; run state lives server-side.
+# (env equivalents: OPENCTI_NG_URL / OPENCTI_NG_JWT)
+# opencti_ng_url: 'http://localhost:4100'
+# opencti_ng_jwt: 'ChangeMe'
+
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d' # Optional (default: 'd5067b93-7f6a-47e2-b76d-bb4ed69e270d')

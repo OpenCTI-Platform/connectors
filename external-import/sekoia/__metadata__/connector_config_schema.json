@@ -14,6 +14,19 @@
       "description": "The token of the user who represents the connector in the OpenCTI platform.",
       "type": "string"
     },
+    "OPENCTI_NG_URL": {
+      "description": "opencti-ng base URL for detached mode (set with OPENCTI_NG_JWT).",
+      "format": "uri",
+      "maxLength": 2083,
+      "minLength": 1,
+      "type": "string"
+    },
+    "OPENCTI_NG_JWT": {
+      "description": "Long-lived connector JWT for opencti-ng detached mode.",
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
+    },
     "CONNECTOR_NAME": {
       "default": "SEKOIA.IO",
       "description": "Name of the connector.",

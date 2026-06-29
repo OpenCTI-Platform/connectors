@@ -5,5 +5,14 @@ services:
     environment:
       - OPENCTI_URL=http://localhost
       - OPENCTI_TOKEN=ChangeMe
+      # ── Detached opencti-ng mode (optional) ──────────────────────────────
+      # Set both to ingest directly into opencti-ng over a JWT (no OpenCTI
+      # worker/queue). Write tenant + connector id come from the JWT; run state
+      # is server-side. Generate the JWT in the opencti-ng repo:
+      #   OPENCTI_ENCRYPTION_KEY=<key> cargo run --bin connector_jwt -- \
+      #     --tenant <tenant-uuid> --name SEKOIA.IO
+      # OPENCTI_URL/OPENCTI_TOKEN above stay as placeholders (unused in this mode).
+      # - OPENCTI_NG_URL=http://localhost:4100
+      # - OPENCTI_NG_JWT=ChangeMe
       - SEKOIA_API_KEY=ChangeMe
     restart: always

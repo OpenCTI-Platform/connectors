@@ -2,6 +2,10 @@ opencti:
   url: 'http://localhost'
   token: 'ChangeMe'
 
+# Detached opencti-ng mode (optional):
+# opencti_ng_url: 'http://localhost:4100'
+# opencti_ng_jwt: 'ChangeMe'
+
 connector:
   type: 'EXTERNAL_IMPORT'
   id: 'ChangeMe'

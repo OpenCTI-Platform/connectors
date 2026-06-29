@@ -7,7 +7,7 @@ from connectors_sdk import (
     BaseExternalImportConnectorConfig,
     ListFromString,
 )
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, HttpUrl, SecretStr, model_validator
 
 
 class ExternalImportConnectorConfig(BaseExternalImportConnectorConfig):
@@ -70,6 +70,23 @@ class ConnectorSettings(BaseConnectorSettings):
         default_factory=ExternalImportConnectorConfig
     )
     urlhaus: UrlhausConfig = Field(default_factory=UrlhausConfig)
+
+    # Detached opencti-ng mode (optional).
+    opencti_ng_url: HttpUrl | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_url", "OPENCTI_NG_URL"),
+        description="opencti-ng base URL for detached mode (set with opencti_ng_jwt).",
+    )
+    opencti_ng_jwt: SecretStr | None = Field(
+        default=None,
+        validation_alias=AliasChoices("opencti_ng_jwt", "OPENCTI_NG_JWT"),
+        description="Long-lived connector JWT for opencti-ng detached mode.",
+    )
+
+    @property
+    def opencti_ng_enabled(self) -> bool:
+        """Whether detached opencti-ng mode is configured."""
+        return self.opencti_ng_url is not None and self.opencti_ng_jwt is not None
 
     @model_validator(mode="before")
     @classmethod

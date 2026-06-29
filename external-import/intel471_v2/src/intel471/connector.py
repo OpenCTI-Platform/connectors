@@ -1,3 +1,4 @@
+import datetime
 import signal
 from queue import Queue
 
@@ -89,6 +90,7 @@ class Intel471Connector:
             name=stream_obj.__class__.__name__,
             trigger="interval",
             minutes=interval,
+            next_run_time=datetime.datetime.now(datetime.UTC),
         )
 
     @staticmethod

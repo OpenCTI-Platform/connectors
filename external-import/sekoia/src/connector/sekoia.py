@@ -46,21 +46,24 @@ class SekoiaConnector(object):
         self.import_ioc_relationships = self.config.sekoia.import_ioc_relationships
 
         self.all_labels = []
+        self._opencti_ng_mode = getattr(config, "opencti_ng_enabled", False)
 
         self._load_data_sets()
         self.helper.connector_logger.info("All datasets has been loaded")
 
-        self.helper.api.identity.create(
-            stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
-            type="Organization",
-            name="SEKOIA",
-            description="SEKOIA.IO is a European cybersecurity SaaS company, whose mission is to develop the best protection capabilities against cyber attacks.",
-        )
-        self.helper.api.marking_definition.create(
-            stix_id="marking-definition--bf973641-9d22-45d7-a307-ccdc68e120b9",
-            definition_type="statement",
-            definition="Copyright SEKOIA.IO",
-        )
+        # These API calls are only available in standard OpenCTI mode (not opencti-ng).
+        if not self._opencti_ng_mode:
+            self.helper.api.identity.create(
+                stix_id="identity--357447d7-9229-4ce1-b7fa-f1b83587048e",
+                type="Organization",
+                name="SEKOIA",
+                description="SEKOIA.IO is a European cybersecurity SaaS company, whose mission is to develop the best protection capabilities against cyber attacks.",
+            )
+            self.helper.api.marking_definition.create(
+                stix_id="marking-definition--bf973641-9d22-45d7-a307-ccdc68e120b9",
+                definition_type="statement",
+                definition="Copyright SEKOIA.IO",
+            )
 
     @cached_property
     def requested_types(self) -> str:
@@ -204,9 +207,7 @@ class SekoiaConnector(object):
             self.helper.send_stix2_bundle(bundle, work_id=work_id)
 
         self.helper.set_state({"last_cursor": cursor})
-        if len(items) < self.limit:
-            # We got the last results
-            return cursor
+        return cursor
 
     def _clean_external_references_fields(self, items: List[Dict]):
         """
@@ -526,6 +527,10 @@ class SekoiaConnector(object):
         :param name_label: A parameter giving the name of the label.
         :param color_label: A parameter giving the color of the label.
         """
+        # Label API is not available in opencti-ng mode; just track locally.
+        if self._opencti_ng_mode:
+            self.all_labels.append(name_label)
+            return
 
         new_custom_label = self.helper.api.label.read_or_create_unchecked(
             value=name_label, color=color_label

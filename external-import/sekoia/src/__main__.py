@@ -1,24 +1,37 @@
 import traceback
 
-from pycti import OpenCTIConnectorHelper
-from src import (
-    ConfigLoader,
-    SekoiaConnector,
-)
+from pycti import OpenCTIConnectorHelper, OpenCTINGConnectorHelper
+from src.connector import ConfigLoader, SekoiaConnector
 
 if __name__ == "__main__":
     """
     Entry point of the script
-
-    - traceback.print_exc(): This function prints the traceback of the exception to the standard error (stderr).
-    The traceback includes information about the point in the program where the exception occurred,
-    which is very useful for debugging purposes.
-    - exit(1): effective way to terminate a Python program when an error is encountered.
-    It signals to the operating system and any calling processes that the program did not complete successfully.
     """
     try:
         config = ConfigLoader()
-        helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
+
+        # Detached opencti-ng mode: when `opencti_ng_url` + `opencti_ng_jwt` are
+        # configured (config.yml or OPENCTI_NG_* env), ingest directly into
+        # opencti-ng over a JWT (no OpenCTI worker/queue). The write tenant and
+        # connector id are read from the JWT; run state lives server-side.
+        if config.opencti_ng_enabled:
+            helper = OpenCTINGConnectorHelper(
+                config={
+                    "opencti-ng": {
+                        "url": str(config.opencti_ng_url),
+                        "jwt": config.opencti_ng_jwt.get_secret_value(),
+                    },
+                    "connector": {
+                        "name": config.connector.name,
+                        "type": "EXTERNAL_IMPORT",
+                        "scope": config.connector.scope,
+                        "duration_period": config.connector.duration_period,
+                    },
+                }
+            )
+        else:
+            helper = OpenCTIConnectorHelper(config=config.model_dump_pycti())
+
         connector = SekoiaConnector(config, helper)
         connector.run()
     except Exception:
