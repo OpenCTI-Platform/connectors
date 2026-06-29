@@ -27,7 +27,9 @@ class FlowtriqClient:
             }
         )
 
-    def get_incidents(self, limit: int = 50, offset: int = 0) -> dict | None:
+    def get_incidents(
+        self, limit: int = 50, offset: int = 0, severity: str | None = None
+    ) -> dict | None:
         """
         Fetch incidents from the Flowtriq API.
 
@@ -43,10 +45,9 @@ class FlowtriqClient:
         if self.config.flowtriq.incident_status:
             params["status"] = self.config.flowtriq.incident_status
 
-        if self.config.flowtriq.incident_severity:
-            # API accepts a single severity filter; if multiple are configured,
-            # we make separate calls per severity in the connector layer.
-            # Here we pass the first one if set.
+        if severity:
+            params["severity"] = severity
+        elif self.config.flowtriq.incident_severity:
             params["severity"] = self.config.flowtriq.incident_severity[0]
 
         try:
@@ -86,17 +87,18 @@ class FlowtriqClient:
             )
             return None
 
-    def get_all_incidents(self, max_total: int = 100) -> list[dict]:
-        """
-        Paginate through incidents up to max_total.
-        Returns a flat list of incident dicts.
-        """
-        all_incidents: list[dict] = []
+    def _paginate_incidents(
+        self, max_total: int, severity: str | None = None
+    ) -> list[dict]:
+        """Paginate through incidents for a single severity filter."""
+        results: list[dict] = []
         offset = 0
         page_size = min(max_total, 100)
 
         while offset < max_total:
-            data = self.get_incidents(limit=page_size, offset=offset)
+            data = self.get_incidents(
+                limit=page_size, offset=offset, severity=severity
+            )
             if not data or "incidents" not in data:
                 break
 
@@ -104,11 +106,33 @@ class FlowtriqClient:
             if not incidents:
                 break
 
-            all_incidents.extend(incidents)
+            results.extend(incidents)
             offset += len(incidents)
 
-            # Stop if we got fewer than requested (last page)
             if len(incidents) < page_size:
                 break
 
-        return all_incidents[:max_total]
+        return results[:max_total]
+
+    def get_all_incidents(self, max_total: int = 100) -> list[dict]:
+        """
+        Paginate through incidents up to max_total.
+        If multiple severities are configured, fetches each separately
+        and merges the results.
+        Returns a flat list of incident dicts.
+        """
+        severities = self.config.flowtriq.incident_severity
+        if severities and len(severities) > 1:
+            all_incidents: list[dict] = []
+            seen_uuids: set[str] = set()
+            per_severity_limit = max(max_total // len(severities), 10)
+            for sev in severities:
+                incidents = self._paginate_incidents(per_severity_limit, sev)
+                for inc in incidents:
+                    uid = inc.get("uuid", "")
+                    if uid and uid not in seen_uuids:
+                        seen_uuids.add(uid)
+                        all_incidents.append(inc)
+            return all_incidents[:max_total]
+
+        return self._paginate_incidents(max_total)
