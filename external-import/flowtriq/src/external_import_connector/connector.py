@@ -100,6 +100,7 @@ class ConnectorFlowtriq:
         processed = 0
         skipped_severity = 0
         skipped_seen = 0
+        newest_incident_time = last_incident_time
 
         for incident in incidents:
             severity = incident.get("severity", "medium")
@@ -134,6 +135,17 @@ class ConnectorFlowtriq:
             if objects:
                 stix_objects.extend(objects)
                 processed += 1
+
+                # Track the newest incident timestamp for dedup state
+                if started_at:
+                    if not newest_incident_time or started_at > newest_incident_time:
+                        newest_incident_time = started_at
+
+        # Persist the newest incident timestamp for next run deduplication
+        if newest_incident_time and newest_incident_time != last_incident_time:
+            state = self.helper.get_state() or {}
+            state["last_incident_time"] = newest_incident_time
+            self.helper.set_state(state)
 
         self.helper.connector_logger.info(
             "[CONNECTOR] Incident processing summary",
