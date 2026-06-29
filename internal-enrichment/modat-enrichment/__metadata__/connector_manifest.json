@@ -1,0 +1,19 @@
+{
+  "title": "Modat Enrichment",
+  "slug": "modat-enrichment",
+  "description": "Internal enrichment connector querying the Modat Magnify host-details API for IPv4 observables.",
+  "short_description": "Enriches IPv4 observables with Modat host intelligence.",
+  "logo": null,
+  "use_cases": ["Enrichment & Analysis"],
+  "verified": false,
+  "last_verified_date": null,
+  "playbook_supported": true,
+  "max_confidence_level": 50,
+  "support_version": ">=6.8.12",
+  "subscription_link": "https://magnify.modat.io/",
+  "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/modat-enrichment",
+  "manager_supported": false,
+  "container_version": "rolling",
+  "container_image": "opencti/connector-modat-enrichment",
+  "container_type": "INTERNAL_ENRICHMENT"
+}
