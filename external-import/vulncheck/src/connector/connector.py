@@ -43,22 +43,38 @@ class ConnectorVulnCheck:
 
     def _collect_intelligence(
         self, target_data_sources: list[SourceSpec], connector_state
-    ):
+    ) -> list[SourceSpec]:
         """
-        Collect intelligence from the source and convert into STIX object
+        Collect intelligence from the sources and convert into STIX objects.
+
+        Each source is isolated: if one raises, it is logged and skipped so the
+        remaining sources still run. Returns the sources that completed
+        successfully — only those should have their state timestamp advanced
+        (a failed source must keep its prior timestamp so the next run re-pulls
+        the window it missed, instead of silently skipping it).
         """
+        succeeded: list[SourceSpec] = []
         for source in target_data_sources:
             self.helper.connector_logger.info(
                 f"[CONNECTOR] Collecting data for {source.name}",
             )
-            source.collect(
-                self.config,
-                self.helper,
-                self.client,
-                self.converter_to_stix,
-                SourceLogger(self.helper.connector_logger, source.name),
-                connector_state,
-            )
+            try:
+                source.collect(
+                    self.config,
+                    self.helper,
+                    self.client,
+                    self.converter_to_stix,
+                    SourceLogger(self.helper.connector_logger, source.name),
+                    connector_state,
+                )
+                succeeded.append(source)
+            except Exception as e:
+                self.helper.connector_logger.error(
+                    "[CONNECTOR] Error collecting data source; "
+                    "state not advanced (will retry next run)",
+                    {"source": source.name, "error": str(e)},
+                )
+        return succeeded
 
     def _get_target_data_sources(self) -> list[SourceSpec]:
         # registry.resolve validates names and applies the vulncheck-nvd2 ->
@@ -170,23 +186,31 @@ class ConnectorVulnCheck:
                     {"connector_name": self.helper.connect_name},
                 )
 
-                self._collect_intelligence(target_data_sources, connector_state)
+                collected_sources = self._collect_intelligence(
+                    target_data_sources, connector_state
+                )
 
             except Exception as e:
                 self.helper.connector_logger.error(
                     "[CONNECTOR] Error in the collection of intelligence",
                     {"error": str(e)},
                 )
+                collected_sources = []
 
-            # Store the current timestamp as a last run of the connector
+            # Advance state only for sources that completed successfully, so a
+            # failed source re-pulls its missed window on the next run instead of
+            # skipping it (critical for the incremental NVD2 sources).
             self.helper.connector_logger.debug(
                 "[CONNECTOR] Updating connector state for collected data sources",
-                {"current_timestamp": current_timestamp},
+                {
+                    "current_timestamp": current_timestamp,
+                    "collected": [s.name for s in collected_sources],
+                },
             )
             current_state_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
 
             new_state = self._get_updated_state(
-                target_data_sources, current_state_datetime
+                connector_state, collected_sources, current_state_datetime
             )
 
             self.helper.set_state(new_state)
@@ -204,11 +228,16 @@ class ConnectorVulnCheck:
             )
 
     def _get_updated_state(
-        self, target_data_sources: list[SourceSpec], current_state_datetime
+        self,
+        connector_state: dict | None,
+        collected_sources: list[SourceSpec],
+        current_state_datetime,
     ) -> dict:
-        new_state = {
-            source.name: current_state_datetime for source in target_data_sources
-        }
+        # Preserve prior state (so failed/un-run sources keep their last
+        # successful timestamp) and only advance the sources that succeeded.
+        new_state = dict(connector_state or {})
+        for source in collected_sources:
+            new_state[source.name] = current_state_datetime
         new_state["last_run"] = current_state_datetime
         return new_state
 
