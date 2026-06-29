@@ -4,7 +4,6 @@ import json
 
 import pytest
 import stix2
-
 from connector.converter_to_stix import ConverterToStix
 
 

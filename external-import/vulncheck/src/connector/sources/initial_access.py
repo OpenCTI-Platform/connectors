@@ -1,8 +1,5 @@
-import stix2
-from pycti import OpenCTIConnectorHelper
-from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
-
 import connector.util.works as works
+import stix2
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.util.config import (
@@ -12,7 +9,9 @@ from connector.util.config import (
 )
 from connector.util.cpe import parse_cpe_uri
 from connector.util.source_logger import SourceLogger
+from pycti import OpenCTIConnectorHelper
 from vulncheck_client import VulnCheckClient
+from vulncheck_sdk.models.api_initial_access import ApiInitialAccess
 
 
 def _create_vuln(

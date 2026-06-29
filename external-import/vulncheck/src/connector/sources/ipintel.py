@@ -1,11 +1,7 @@
 from datetime import datetime
 
-import stix2
-from pycti import OpenCTIConnectorHelper
-from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
-from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
-
 import connector.util.works as works
+import stix2
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.util.config import (
@@ -15,7 +11,10 @@ from connector.util.config import (
     compare_config_to_target_scope,
 )
 from connector.util.source_logger import SourceLogger
+from pycti import OpenCTIConnectorHelper
+from stix2.v21.vocab import INFRASTRUCTURE_TYPE_COMMAND_AND_CONTROL
 from vulncheck_client import VulnCheckClient
+from vulncheck_sdk.models.advisory_ip_intel_record import AdvisoryIpIntelRecord
 
 
 def _create_ip(

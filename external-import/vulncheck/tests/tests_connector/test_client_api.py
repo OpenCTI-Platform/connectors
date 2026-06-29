@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 
 import pytest
 import requests
-
 from vulncheck_client import VulnCheckClient
 
 

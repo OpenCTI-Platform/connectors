@@ -1,14 +1,7 @@
 from typing import Any
 
-import stix2
-from pycti import OpenCTIConnectorHelper
-from vulncheck_sdk.models.advisory_cvssv40 import AdvisoryCVSSV40
-from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
-from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
-from vulncheck_sdk.models.api_nvd20_cvss_data_v3 import ApiNVD20CvssDataV3
-from vulncheck_sdk.models.api_nvd20_weakness import ApiNVD20Weakness
-
 import connector.util.works as works
+import stix2
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
 from connector.sources import names
@@ -21,7 +14,13 @@ from connector.util.cpe import parse_cpe_uri
 from connector.util.memory_usage import log_memory_usage
 from connector.util.nvd import build_nvd2_query_params, check_vuln_description
 from connector.util.source_logger import SourceLogger
+from pycti import OpenCTIConnectorHelper
 from vulncheck_client import VulnCheckClient
+from vulncheck_sdk.models.advisory_cvssv40 import AdvisoryCVSSV40
+from vulncheck_sdk.models.api_nvd20_cve import ApiNVD20CVE
+from vulncheck_sdk.models.api_nvd20_cvss_data_v2 import ApiNVD20CvssDataV2
+from vulncheck_sdk.models.api_nvd20_cvss_data_v3 import ApiNVD20CvssDataV3
+from vulncheck_sdk.models.api_nvd20_weakness import ApiNVD20Weakness
 
 
 def _get_cvss_v2_properties(cvss_data: ApiNVD20CvssDataV2 | None) -> dict[str, Any]:

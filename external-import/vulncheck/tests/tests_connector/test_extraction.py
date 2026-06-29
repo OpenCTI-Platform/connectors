@@ -9,7 +9,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-
 from connector.converter_to_stix import ConverterToStix
 from connector.sources import (
     botnets,

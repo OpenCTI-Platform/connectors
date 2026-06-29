@@ -4,10 +4,9 @@ Mirrors the external-import template's ``test_main.py``.
 """
 
 from conftest import StubConnectorSettings
-from pycti import OpenCTIConnectorHelper
-
 from connector import ConnectorSettings
 from connector.connector import ConnectorVulnCheck
+from pycti import OpenCTIConnectorHelper
 
 
 def test_connector_settings_is_instantiated():

@@ -1,13 +1,12 @@
 import sys
 from datetime import datetime
 
-import stix2
-from pycti import OpenCTIConnectorHelper
-
 import connector.util.works as works
+import stix2
 from connector.util.config import get_time_until_next_run
 from connector.util.memory_usage import reset_max_mem
 from connector.util.source_logger import SourceLogger
+from pycti import OpenCTIConnectorHelper
 from vulncheck_client import VulnCheckClient
 
 from .converter_to_stix import ConverterToStix
