@@ -1,0 +1,21 @@
+opencti:
+  url: 'http://localhost'
+  token: 'ChangeMe'
+
+connector:
+  id: 'ChangeMe'
+  type: 'STREAM'
+  name: 'ArcSight' # optional (default: 'ArcSight')
+  scope: 'arcsight' # optional (default: 'arcsight')
+  log_level: 'error' # optional (default: 'error')
+  live_stream_id: 'ChangeMe' # ID of the live stream created in the OpenCTI UI
+  live_stream_listen_delete: true # optional (default: true)
+  live_stream_no_dependencies: true # optional (default: true)
+
+arcsight:
+  api_base_url: 'ChangeMe' # Base URL of the ArcSight ESM Manager, e.g. https://arcsight.example.com:8443
+  username: 'ChangeMe'
+  password: 'ChangeMe'
+  active_list_id: 'ChangeMe' # Resource ID of the target Active List
+  value_column: 'value' # optional (default: 'value')
+  ssl_verify: true # optional (default: true)
