@@ -12,7 +12,7 @@ from pycti import (
 )
 from sigma.rule import SigmaRule
 
-from .utils import is_valid_technique_id
+from connector.utils import is_valid_technique_id
 
 
 class ConverterToStix:
