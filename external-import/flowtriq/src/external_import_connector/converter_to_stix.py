@@ -171,7 +171,6 @@ class ConverterToStix:
         peak_bps = incident.get("peak_bps", 0)
         started_at = incident.get("started_at")
         ended_at = incident.get("ended_at")
-        confidence = incident.get("confidence")
         incident_uuid = incident.get("uuid", "")
 
         if not target_ip:
@@ -295,7 +294,9 @@ class ConverterToStix:
         top_sources = incident.get("sp_top_sources")
         if top_sources and isinstance(top_sources, list):
             for source in top_sources:
-                source_ip = source.get("ip") if isinstance(source, dict) else str(source)
+                source_ip = (
+                    source.get("ip") if isinstance(source, dict) else str(source)
+                )
                 if not source_ip:
                     continue
 
