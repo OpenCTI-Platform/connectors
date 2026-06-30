@@ -1,16 +1,15 @@
 opencti:
-  url: 'http://localhost'
-  token: 'ChangeMe'
+  url: http://localhost:8080
+  token: YOUR_OPENCTI_TOKEN
 
 connector:
-  type: 'EXTERNAL_IMPORT'
-  id: 'ChangeMe'
-  name: 'DDoSIA' # optional (default: 'DDoSIA')
-  scope: 'ddosia'
-  log_level: 'info' # optional (default: 'info')
-  duration_period: 'PT1H' # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
+  id: YOUR_CONNECTOR_ID
+  name: DDoSIA Connector
+  scope: ddosia
+  log_level: info
+  duration_period: 1h
 
 ddosia:
-  api_base_url: 'ChangeMe' # e.g. https://witha.name
-  tlp_level: 'green' # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'green')
-  import_start_timestamp: null # optional, float. null = latest only on first run, 0 = complete history, >0 = specific timestamp retrofeed
+  api_base_url: http://api.witha.name
+  tlp_level: green
+  import_start_timestamp: null # 0 for all history, null for latest only

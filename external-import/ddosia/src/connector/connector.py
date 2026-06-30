@@ -9,7 +9,7 @@ from ddosia_client.api_client import DdosiaClient
 from pycti import OpenCTIConnectorHelper
 
 
-class TemplateConnector:
+class DdosiaConnector:
     """
     Connector for importing DDoSIA targets from witha.name into OpenCTI.
     """
@@ -46,12 +46,20 @@ class TemplateConnector:
         Returns:
             A list of configurations to process, sorted by timestamp ascending.
         """
-        # Convert timestamps to float for reliable comparison
+        processed_configs = []
         for item in configs:
-            item["_ts_float"] = float(item.get("ts", 0))
+            # Robustly convert timestamp to float, defaulting to 0 if missing or invalid
+            ts_val = item.get("ts")
+            try:
+                ts_float = float(ts_val) if ts_val is not None else 0.0
+            except (ValueError, TypeError):
+                ts_float = 0.0
+            
+            item["_ts_float"] = ts_float
+            processed_configs.append(item)
 
         # Sort by timestamp ascending (oldest first)
-        sorted_configs = sorted(configs, key=lambda x: x["_ts_float"])
+        sorted_configs = sorted(processed_configs, key=lambda x: x["_ts_float"])
 
         if state and "last_cfg_ts" in state:
             # Incremental import: only those strictly newer than the last processed timestamp
@@ -81,6 +89,9 @@ class TemplateConnector:
 
         Returns:
             A list of STIX objects for this snapshot.
+
+        Raises:
+            Exception: If the snapshot cannot be processed, to allow the caller to handle the failure.
         """
         cfg_id = config_item["id"]
         cfg_ts = float(config_item.get("ts", 0))
@@ -90,51 +101,43 @@ class TemplateConnector:
             {"cfg_id": cfg_id, "ts": cfg_ts}
         )
 
-        try:
-            # 1. Fetch snapshot content
-            snapshot_data = self.client.get_config(cfg_id)
-            targets = snapshot_data.get("targets", [])
+        # 1. Fetch snapshot content
+        snapshot_data = self.client.get_config(cfg_id)
+        targets = snapshot_data.get("targets", [])
 
-            if not targets:
-                self.helper.connector_logger.info(f"[CONNECTOR] Snapshot {cfg_id} is empty", {"cfg_id": cfg_id})
-                return []
-
-            # 2. Group targets by host
-            aggregated_data = group_targets_by_host(targets)
-            stix_objects = []
-
-            # 3. Convert each host aggregate to STIX
-            for host, data in aggregated_data.items():
-                # Create Domain
-                domain_obj = self.converter_to_stix.create_domain(host)
-                stix_objects.append(domain_obj.to_stix2_object())
-
-                # Create IPs and relationships
-                for ip in data["ips"]:
-                    ip_obj = self.converter_to_stix.create_ipv4(ip)
-                    stix_objects.append(ip_obj.to_stix2_object())
-
-                    rel_obj = self.converter_to_stix.create_resolves_to_relationship(domain_obj, ip_obj)
-                    stix_objects.append(rel_obj.to_stix2_object())
-
-                # Create Note with raw targets
-                note_obj = self.converter_to_stix.create_note_for_host(
-                    domain=domain_obj,
-                    cfg_id=cfg_id,
-                    cfg_ts=cfg_ts,
-                    host=host,
-                    targets=data["raw_targets"]
-                )
-                stix_objects.append(note_obj.to_stix2_object())
-
-            return stix_objects
-
-        except Exception as e:
-            self.helper.connector_logger.error(
-                f"[CONNECTOR] Failed to process snapshot {cfg_id}",
-                {"cfg_id": cfg_id, "error": str(e)}
-            )
+        if not targets:
+            self.helper.connector_logger.info(f"[CONNECTOR] Snapshot {cfg_id} is empty", {"cfg_id": cfg_id})
             return []
+
+        # 2. Group targets by host
+        aggregated_data = group_targets_by_host(targets)
+        stix_objects = []
+
+        # 3. Convert each host aggregate to STIX
+        for host, data in aggregated_data.items():
+            # Create Domain
+            domain_obj = self.converter_to_stix.create_domain(host)
+            stix_objects.append(domain_obj.to_stix2_object())
+
+            # Create IPs and relationships
+            for ip in data["ips"]:
+                ip_obj = self.converter_to_stix.create_ipv4(ip)
+                stix_objects.append(ip_obj.to_stix2_object())
+
+                rel_obj = self.converter_to_stix.create_resolves_to_relationship(domain_obj, ip_obj)
+                stix_objects.append(rel_obj.to_stix2_object())
+
+            # Create Note with raw targets
+            note_obj = self.converter_to_stix.create_note_for_host(
+                domain=domain_obj,
+                cfg_id=cfg_id,
+                cfg_ts=cfg_ts,
+                host=host,
+                targets=data["raw_targets"]
+            )
+            stix_objects.append(note_obj.to_stix2_object())
+
+        return stix_objects
 
     def process_message(self) -> None:
         """
@@ -149,8 +152,34 @@ class TemplateConnector:
             # 1. Get current state
             current_state = self.helper.get_state() or {}
 
-            # 2. Fetch available configurations
-            all_configs = self.client.get_configs().get("items", [])
+            # 2. Fetch available configurations with pagination
+            all_configs = []
+            page = 1
+            start_ts = self.config.ddosia.import_start_timestamp
+
+            while True:
+                self.helper.connector_logger.info(f"[CONNECTOR] Fetching configurations page {page}...")
+                response = self.client.get_configs(page=page)
+                items = response.get("items", [])
+
+                if not items:
+                    break
+
+                all_configs.extend(items)
+                
+                # Optimization: if we have a start_ts, we can stop if the last item of the page 
+                # is already older than our start_ts (since API is most recent first)
+                if start_ts is not None and start_ts > 0:
+                    last_item_ts = float(items[-1].get("ts", 0))
+                    if last_item_ts < start_ts:
+                        break
+                
+                # If we only want the first page (start_ts is None), we stop after page 1
+                if start_ts is None:
+                    break
+
+                page += 1
+
             if not all_configs:
                 self.helper.connector_logger.info("[CONNECTOR] No configurations found in API")
                 return
@@ -175,39 +204,52 @@ class TemplateConnector:
                 friendly_name = f"DDoSIA - {cfg_id}"
                 work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
 
-                # Collect and convert
-                stix_objects = self._process_snapshot(config_item)
+                try:
+                    # Collect and convert
+                    stix_objects = self._process_snapshot(config_item)
 
-                if stix_objects:
-                    # Add author and marking to the bundle
-                    stix_objects.append(self.converter_to_stix.author)
-                    stix_objects.append(self.converter_to_stix.tlp_marking)
+                    if stix_objects:
+                        # Add author and marking to the bundle
+                        stix_objects.append(self.converter_to_stix.author)
+                        stix_objects.append(self.converter_to_stix.tlp_marking)
 
-                    bundle = self.helper.stix2_create_bundle(stix_objects)
-                    self.helper.send_stix2_bundle(
-                        bundle,
-                        work_id=work_id,
-                        cleanup_inconsistent_bundle=True,
+                        bundle = self.helper.stix2_create_bundle(stix_objects)
+                        self.helper.send_stix2_bundle(
+                            bundle,
+                            work_id=work_id,
+                            cleanup_inconsistent_bundle=True,
+                        )
+
+                        self.helper.connector_logger.info(
+                            f"[CONNECTOR] Snapshot {cfg_id} imported",
+                            {"objects_count": len(stix_objects)}
+                        )
+
+                    # Mark work as processed
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        f"Processed snapshot {cfg_id} with {len(stix_objects)} objects"
                     )
 
-                    self.helper.connector_logger.info(
-                        f"[CONNECTOR] Snapshot {cfg_id} imported",
-                        {"objects_count": len(stix_objects)}
+                    # Update state ONLY after successful processing and import
+                    now = datetime.now(timezone.utc)
+                    self.helper.set_state({
+                        "last_run": now.isoformat(),
+                        "last_cfg_id": cfg_id,
+                        "last_cfg_ts": cfg_ts
+                    })
+
+                except Exception as e:
+                    self.helper.connector_logger.error(
+                        f"[CONNECTOR] Critical error processing snapshot {cfg_id}. Skipping state update.",
+                        {"cfg_id": cfg_id, "error": str(e)}
                     )
-
-                # Mark work as processed
-                self.helper.api.work.to_processed(
-                    work_id,
-                    f"Processed snapshot {cfg_id} with {len(stix_objects)} objects"
-                )
-
-                # Update state after each successful snapshot to allow resume
-                now = datetime.now(timezone.utc)
-                self.helper.set_state({
-                    "last_run": now.isoformat(),
-                    "last_cfg_id": cfg_id,
-                    "last_cfg_ts": cfg_ts
-                })
+                    # Mark work as failed
+                    self.helper.api.work.to_processed(
+                        work_id,
+                        f"Failed to process snapshot {cfg_id}: {str(e)}"
+                    )
+                    # We do NOT update the state here, so the snapshot will be retried next run
 
         except (KeyboardInterrupt, SystemExit):
             self.helper.connector_logger.info("[CONNECTOR] Connector stopped...")

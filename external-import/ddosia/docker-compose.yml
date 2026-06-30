@@ -1,19 +1,26 @@
 version: '3'
+
 services:
   connector-ddosia:
     image: opencti/connector-ddosia:latest
-    environment:
-      # Generic parameters (connection with OpenCTI)
-      - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
-      # Common parameters for connectors of type EXTERNAL_IMPORT
-      - CONNECTOR_ID=CHANGEME
-      - CONNECTOR_NAME=DDoSIA # optional (default: 'DDoSIA')
-      - CONNECTOR_SCOPE=ddosia
-      - CONNECTOR_LOG_LEVEL=info # optional (default: 'info')
-      - CONNECTOR_DURATION_PERIOD=PT1H # optional, interval in ISO-8601 format between two runs of the connector (default: 'PT1H')
-      # Custom parameters for connector ddosia
-      - DDOSIA_API_BASE_URL=CHANGEME
-      - DDOSIA_TLP_LEVEL=green # optional, available values: 'clear', 'white', 'green', 'amber', 'amber+strict', 'red' (default: 'green')
-      - DDOSIA_IMPORT_START_TIMESTAMP= # optional, float. unset/empty = latest only on first run, 0 = complete history, >0 = specific timestamp retrofeed
+    container_name: connector-ddosia
     restart: always
+    environment:
+      - OPENCTI_URL=http://opencti:8080
+      - OPENCTI_TOKEN=YOUR_OPENCTI_TOKEN
+      - CONNECTOR_ID=YOUR_CONNECTOR_ID
+      - CONNECTOR_NAME=DDoSIA Connector
+      - CONNECTOR_SCOPE=ddosia
+      - CONNECTOR_LOG_LEVEL=info
+      - CONNECTOR_DURATION_PERIOD=1h
+      - DDOSIA_API_BASE_URL=http://api.witha.name
+      - DDOSIA_TLP_LEVEL=green
+      - DDOSIA_IMPORT_START_TIMESTAMP=null
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - opencti
+
+networks:
+  opencti:
+    external: true

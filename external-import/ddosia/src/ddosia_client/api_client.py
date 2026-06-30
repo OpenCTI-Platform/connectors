@@ -64,14 +64,17 @@ class DdosiaClient:
             )
             raise
 
-    def get_configs(self) -> dict:
+    def get_configs(self, page: int = 1) -> dict:
         """
         Retrieve the list of available DDoSIA target configurations.
+
+        Args:
+            page: The page number to retrieve. Defaults to 1.
 
         Returns:
             A dictionary containing the paginated list of configurations (items, total, etc.).
         """
-        return self._request_json("/api/configs")
+        return self._request_json("/api/configs", params={"page": page})
 
     def get_config(self, cfg_id: str) -> dict:
         """

@@ -21,9 +21,8 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "template": {
+                "ddosia": {
                     "api_base_url": "http://test.com",
-                    "api_key": "test-api-key",
                     "tlp_level": "clear",
                 },
             },
@@ -39,7 +38,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
                     "id": "connector-id",
                     "scope": "test, connector",
                 },
-                "template": {
+                "ddosia": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                 },
@@ -51,8 +50,7 @@ from connectors_sdk import BaseConfigModel, ConfigValidationError
 def test_settings_should_accept_valid_input(settings_dict):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) accepts valid input.
-    For the test purpose, `BaseConnectorSettings._load_config_dict` is overridden to return
-    a fake but valid dict (instead of the env/config vars parsed from `config.yml`, `.env` or env vars).
+    For the test purpose, `BaseConnectorSettings._load_config_dict` is overridden to return a fake but valid config dict.
 
     :param settings_dict: The dict to use as `ConnectorSettings` input
     """
@@ -71,7 +69,7 @@ def test_settings_should_accept_valid_input(settings_dict):
 
     assert isinstance(settings.opencti, BaseConfigModel) is True
     assert isinstance(settings.connector, BaseConfigModel) is True
-    assert isinstance(settings.template, BaseConfigModel) is True
+    assert isinstance(settings.ddosia, BaseConfigModel) is True
 
 
 @pytest.mark.parametrize(
@@ -95,7 +93,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "template": {
+                "ddosia": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",
@@ -116,7 +114,7 @@ def test_settings_should_accept_valid_input(settings_dict):
                     "log_level": "error",
                     "duration_period": "PT5M",
                 },
-                "template": {
+                "ddosia": {
                     "api_base_url": "http://test.com",
                     "api_key": "test-api-key",
                     "tlp_level": "clear",
@@ -130,16 +128,16 @@ def test_settings_should_accept_valid_input(settings_dict):
 def test_settings_should_raise_when_invalid_input(settings_dict, field_name):
     """
     Test that `ConnectorSettings` (implementation of `BaseConnectorSettings` from `connectors-sdk`) raises on invalid input.
-    For the test purpose, `BaseConnectorSettings._load_config_dict` is overridden to return
-    a fake and invalid dict (instead of the env/config vars parsed from `config.yml`, `.env` or env vars).
+    For the test purpose, `BaseConnectorSettings._load_config_dict` is overridden to return a fake and invalid config dict.
 
     :param settings_dict: The dict to use as `ConnectorSettings` input
+    :param field_name: The field that is expected to be invalid
     """
 
     class FakeConnectorSettings(ConnectorSettings):
         """
         Subclass of `ConnectorSettings` (implementation of `BaseConnectorSettings`) for testing purpose.
-        It overrides `BaseConnectorSettings._load_config_dict` to return a fake but valid config dict.
+        It overrides `BaseConnectorSettings._load_config_dict` to return a fake and invalid config dict.
         """
 
         @classmethod

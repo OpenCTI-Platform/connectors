@@ -1,19 +1,23 @@
-FROM python:3.12-alpine
-ENV CONNECTOR_TYPE=EXTERNAL_IMPORT
+FROM python:3.12-slim
 
-# Copy the connector
-COPY src /opt/opencti-connector-template
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app
 
-# Install Python modules
-# hadolint ignore=DL3003
-RUN apk update && apk upgrade && \
-    apk --no-cache add git build-base libmagic libffi-dev libxml2-dev libxslt-dev
+WORKDIR /app
 
-RUN cd /opt/opencti-connector-template && \
-    pip3 install --no-cache-dir -r requirements.txt && \
-    apk del git build-base
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Expose and entrypoint
-COPY entrypoint.sh /
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
+# Install python dependencies
+COPY src/requirements.txt .
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/ ./src/
+
+# Set the entrypoint
+CMD ["python3", "src/main.py"]
