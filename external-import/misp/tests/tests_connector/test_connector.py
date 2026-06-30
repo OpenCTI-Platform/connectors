@@ -1689,3 +1689,81 @@ class TestProcessEventsAttributeTimestampFiltering:
         assert mock_process.call_count == 1
         # No last_attribute_timestamp should be saved
         assert "last_attribute_timestamp" not in state
+
+    def test_fallback_to_last_event_date_when_no_attribute_timestamp(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """When attribute filtering is enabled on an existing connector (has last_event_date
+        but no last_attribute_timestamp), last_event_date is used as the filter threshold.
+        """
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        # last_event_date = 1500 as unix timestamp
+        last_event_ts = 1500
+        last_event_iso = datetime.fromtimestamp(
+            last_event_ts, tz=timezone.utc
+        ).isoformat()
+
+        # Event with one old attribute (ts=1000) and one new (ts=2000)
+        event = _make_event_with_attributes(
+            "1",
+            2000,
+            attributes=[
+                {"id": "1", "timestamp": "1000", "value": "old"},
+                {"id": "2", "timestamp": "2000", "value": "new"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": last_event_iso,
+            # No last_attribute_timestamp — simulates enabling the feature on existing connector
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        # Event should still be processed (has attributes newer than fallback)
+        assert mock_process.call_count == 1
+        # State should now have last_attribute_timestamp set
+        assert state.get("last_attribute_timestamp") == 2001
+
+    def test_fallback_skips_event_when_all_attributes_older_than_last_event_date(
+        self, mock_opencti_connector_helper, mock_py_misp
+    ):
+        """When using last_event_date as fallback, events with only old attributes are skipped."""
+        config_dict = deepcopy(minimal_config_dict)
+        config_dict["misp"]["datetime_attribute"] = "publish_timestamp"
+        config_dict["misp"]["attribute_timestamp_filtering"] = True
+        connector = fake_misp_connector(config_dict)
+
+        last_event_ts = 5000
+        last_event_iso = datetime.fromtimestamp(
+            last_event_ts, tz=timezone.utc
+        ).isoformat()
+
+        # All attributes are older than the fallback threshold
+        event = _make_event_with_attributes(
+            "1",
+            6000,
+            attributes=[
+                {"id": "1", "timestamp": "1000", "value": "old1"},
+                {"id": "2", "timestamp": "2000", "value": "old2"},
+            ],
+        )
+
+        initial_state = {
+            "last_event_date": last_event_iso,
+        }
+
+        state, mock_process, result = _run_process_events(
+            connector, [event], initial_state=initial_state
+        )
+
+        assert result is None
+        # Event should be skipped — all attrs older than fallback
+        assert mock_process.call_count == 0

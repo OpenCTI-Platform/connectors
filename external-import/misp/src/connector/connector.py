@@ -569,6 +569,19 @@ class Misp:
                             "last_attribute_timestamp": since_attr_timestamp,
                         },
                     )
+                elif last_event:
+                    # Connector was already running but attribute filtering was
+                    # just enabled — use last_event_date as a reasonable fallback
+                    # to avoid reprocessing all attributes from returned events.
+                    since_attr_timestamp = int(last_event_date.timestamp())
+                    self.logger.info(
+                        "Attribute-level timestamp filtering enabled "
+                        "(using last_event_date as initial fallback)",
+                        {
+                            "prefix": LOG_PREFIX,
+                            "fallback_attribute_timestamp": since_attr_timestamp,
+                        },
+                    )
                 else:
                     self.logger.info(
                         "Attribute-level timestamp filtering enabled "
