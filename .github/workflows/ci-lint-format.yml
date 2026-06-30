@@ -1,14 +1,14 @@
 name: Lint & Format
 
 on:
-  push:
-    branches-ignore:
-      - master
-      - 'release/*'
-      - 'lts/*'
-    tags-ignore:
-      - '**'
   pull_request:
+    paths:
+      - 'connectors-sdk/**'
+      - 'external-import/**'
+      - 'internal-enrichment/**'
+      - 'internal-export-file/**'
+      - 'internal-import-file/**'
+      - 'stream/**'
   workflow_call:
 
 env:
@@ -27,7 +27,7 @@ jobs:
     name: Ensure Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: "Set up Python"
         uses: actions/setup-python@v6
@@ -53,7 +53,7 @@ jobs:
     name: Base Linter (flake8)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # - run: sudo apt-get update -qq && sudo apt-get install -y curl gettext
 
@@ -75,7 +75,7 @@ jobs:
     name: STIX ID Linter
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       # - run: sudo apt-get update -qq && sudo apt-get install -y curl gettext
       - name: "Set up Python"

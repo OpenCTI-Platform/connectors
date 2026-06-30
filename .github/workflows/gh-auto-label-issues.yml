@@ -1,22 +1,19 @@
-name: Auto-label backport-candidate
-
+name: Auto-label new issues
 on:
   issues:
-    types: [labeled]
-
+    types: [opened, reopened]
 jobs:
-  add-backport-label:
-    if: github.event.label.name == 'security' || github.event.label.name == 'critical'
+  add-needs-triage:
     runs-on: ubuntu-latest
     permissions:
       issues: write
     steps:
-      - uses: actions/github-script@v8
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
         with:
           script: |
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              labels: ['backport-candidate']
+              labels: ['needs triage']
             });

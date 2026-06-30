@@ -28,4 +28,7 @@ RUN set -eux; \
 
 WORKDIR ${CONNECTOR_WORKDIR}
 
-CMD python3.12 ${CONNECTOR_CMD}
+# exec ensures python3.12 replaces the shell process and receives OS signals 
+# (SIGTERM, SIGINT) directly as PID 1, while sh -c preserves the ${CONNECTOR_CMD} 
+#variable expansion needed for per-connector overrides.
+CMD ["sh", "-c", "exec python3.12 ${CONNECTOR_CMD}"]
