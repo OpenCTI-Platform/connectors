@@ -4,6 +4,8 @@ import threading
 import time
 
 import stix2
+from comlaude import ComLaudeAuth, ComLaudeSearch
+from connector.settings import ConnectorSettings
 from pycti import (
     Identity,
     Indicator,
@@ -11,8 +13,6 @@ from pycti import (
     StixCoreRelationship,
 )
 from stix2 import TLP_AMBER, Bundle, DomainName
-
-from .settings import ConnectorSettings
 
 X_OPENCTI_PREFIX = "x_opencti_"
 TIME_DELTA = datetime.timedelta(minutes=5)
@@ -172,7 +172,6 @@ class ComlaudeConnector:
 
     def _init_comlaude_search(self):
         """Initialize the ComLaude API search client."""
-        from comlaude import ComLaudeAuth, ComLaudeSearch
 
         end_time = _format_time(
             datetime.datetime.now(datetime.timezone.utc) - TIME_DELTA
