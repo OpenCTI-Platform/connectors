@@ -1,18 +1,26 @@
 import sys
-import time
 from datetime import datetime, timedelta
 
 import stix2
 from anyrun.connectors import FeedsConnector
 from anyrun.iterators import FeedsIterator
-from config import Config, config
+from connector.settings import ConnectorSettings
 from pycti import Identity, Indicator, OpenCTIConnectorHelper
 
 
 class AnyrunFeed:
-    def __init__(self, config_obj: Config):
-        self._config = config_obj
-        self._helper = OpenCTIConnectorHelper(config)
+    """
+    ANY.RUN TI Feed connector — fetches IOC indicators from the ANY.RUN TAXII feed
+    and ingests them into OpenCTI as STIX2 Indicator objects.
+    """
+
+    VERSION = "OpenCTI:7.260422.0"
+    DATE_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+    FEEDS_CHUNK_LIMIT = 5000
+
+    def __init__(self, config: ConnectorSettings, helper: OpenCTIConnectorHelper):
+        self.config = config
+        self.helper = helper
 
         self._identity = stix2.Identity(
             id=Identity.generate_id("ANY.RUN", "organization"),
@@ -32,31 +40,29 @@ class AnyrunFeed:
             "ipv4-addr": "IPv4-Addr",
         }
 
-    def mainloop(self) -> None:
-        self._helper.log_info(f"Starting {self._helper.connect_name} connector.")
+    def process_message(self) -> None:
+        """Connector main process to collect intelligence."""
+        self.helper.connector_logger.info(
+            f"Starting {self.helper.connect_name} connector."
+        )
+
+        current_state = self.helper.get_state() or {}
+        is_delta = "last_run" in current_state
 
         with FeedsConnector(
-            self._config.anyrun_api_key,
+            self.config.anyrun.api_key.get_secret_value(),
             enable_requests=True,
-            integration=self._config.VERSION,
-        ) as connector:
-            connector.check_authorization()
+            integration=self.VERSION,
+        ) as feeds_connector:
+            feeds_connector.check_authorization()
+            self._run_once(feeds_connector, is_delta=is_delta)
 
-            self._run_once(connector, is_delta=False)
-
-            if self._helper.connect_run_and_terminate:
-                self._helper.log_info(f"{self._helper.connect_name} connector ended")
-                sys.exit(0)
-
-            while True:
-                time.sleep(self._config.fetch_interval * 60)
-                self._run_once(connector, is_delta=True)
-
-                if self._helper.connect_run_and_terminate:
-                    self._helper.log_info(
-                        f"{self._helper.connect_name} connector ended"
-                    )
-                    sys.exit(0)
+    def run(self) -> None:
+        """Run the main process with the pycti scheduler."""
+        self.helper.schedule_iso(
+            message_callback=self.process_message,
+            duration_period=self.config.connector.duration_period,
+        )
 
     def _run_once(self, connector: FeedsConnector, is_delta: bool) -> None:
         """
@@ -66,29 +72,44 @@ class AnyrunFeed:
         :param connector: ANY.RUN connector instance
         :param is_delta: Collect new indicators over a period of time
         """
-        self._helper.log_info(f"{self._helper.connect_name} will run!")
+        self.helper.connector_logger.info(
+            f"{self.helper.connect_name} will run!",
+            {"is_delta": is_delta},
+        )
         work_id = self._initiate_work()
 
         try:
-            self._helper.send_stix2_bundle(
-                self._helper.stix2_create_bundle([self._identity]),
-                update=self._config.update_existing_data,
+            self.helper.send_stix2_bundle(
+                self.helper.stix2_create_bundle([self._identity]),
+                update=False,
                 work_id=work_id,
             )
 
             total_sent = self._fetch_feeds(connector, work_id, is_delta=is_delta)
-            self._helper.log_info(
-                f"{self._helper.connect_name} successfully sent {total_sent} feeds"
+            self.helper.connector_logger.info(
+                f"{self.helper.connect_name} successfully sent {total_sent} feeds"
             )
-            self._helper.api.work.to_processed(
+            self.helper.api.work.to_processed(
                 work_id,
-                f"{self._helper.connect_name} run! Sent {total_sent} indicators",
+                f"{self.helper.connect_name} run! Sent {total_sent} indicators",
             )
+
+            # Update state so subsequent runs know to use delta mode
+            current_state = self.helper.get_state() or {}
+            current_state["last_run"] = datetime.now().strftime(self.DATE_TIME_FORMAT)
+            self.helper.set_state(current_state)
+
+        except (KeyboardInterrupt, SystemExit):
+            self.helper.connector_logger.info(
+                "[CONNECTOR] Connector stopped...",
+                {"connector_name": self.helper.connect_name},
+            )
+            sys.exit(0)
         except Exception as exc:
-            self._helper.log_error(str(exc))
-            self._helper.api.work.to_processed(
+            self.helper.connector_logger.error(str(exc))
+            self.helper.api.work.to_processed(
                 work_id,
-                f"{self._helper.connect_name} run failed: {exc}",
+                f"{self.helper.connect_name} run failed: {exc}",
                 in_error=True,
             )
 
@@ -110,8 +131,8 @@ class AnyrunFeed:
         total_sent = 0
         for raw_feeds in FeedsIterator.taxii_stix(
             connector,
-            chunk_size=self._config.FEEDS_CHUNK_LIMIT,
-            limit=self._config.FEEDS_CHUNK_LIMIT,
+            chunk_size=self.FEEDS_CHUNK_LIMIT,
+            limit=self.FEEDS_CHUNK_LIMIT,
             match_version="all",
             match_type="indicator",
             modified_after=self._get_interval(),
@@ -144,9 +165,9 @@ class AnyrunFeed:
                 )
 
             if indicators:
-                self._helper.send_stix2_bundle(
-                    self._helper.stix2_create_bundle(indicators),
-                    update=self._config.update_existing_data,
+                self.helper.send_stix2_bundle(
+                    self.helper.stix2_create_bundle(indicators),
+                    update=False,
                     work_id=work_id,
                 )
                 total_sent += len(indicators)
@@ -156,20 +177,18 @@ class AnyrunFeed:
         """
         :return: OpenCTI work ID for the current run
         """
-        friendly_name = f"{self._helper.connect_name} run @ " + datetime.now().strftime(
-            self._config.DATE_TIME_FORMAT
+        friendly_name = f"{self.helper.connect_name} run @ " + datetime.now().strftime(
+            self.DATE_TIME_FORMAT
         )
-        return self._helper.api.work.initiate_work(
-            self._helper.connect_id, friendly_name
-        )
+        return self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
 
     def _get_interval(self) -> str:
         """
-        :return: feed fetch interval
+        :return: feed fetch interval (datetime string for the oldest data to fetch)
         """
         return datetime.strftime(
-            datetime.now() - timedelta(days=self._config.fetch_depth),
-            self._config.DATE_TIME_FORMAT,
+            datetime.now() - timedelta(days=self.config.anyrun.feed_fetch_depth),
+            self.DATE_TIME_FORMAT,
         )
 
     @staticmethod
@@ -207,8 +226,3 @@ class AnyrunFeed:
             )
             for ref_info in refs[:15]
         ]
-
-
-if __name__ == "__main__":
-    anyrun_connector = AnyrunFeed(Config())
-    anyrun_connector.mainloop()
