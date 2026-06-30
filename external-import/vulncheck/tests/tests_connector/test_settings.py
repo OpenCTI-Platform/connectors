@@ -7,6 +7,7 @@ the legacy ``CONNECTOR_VULNCHECK_*`` deprecation aliases).
 """
 
 import warnings
+from datetime import timedelta
 from typing import Any
 
 import pytest
@@ -76,7 +77,7 @@ def test_defaults(settings):
     assert str(settings.vulncheck.api_base_url) == "https://api.vulncheck.com/v3"
     assert settings.vulncheck.data_sources == ["vulncheck-kev", "nist-nvd2"]
     assert settings.vulncheck.nvd2_pull_history is False
-    assert settings.vulncheck.nvd2_max_date_range == 120
+    assert settings.vulncheck.nvd2_max_date_range == timedelta(days=120)
     assert settings.vulncheck.nvd2_last_mod_start_date is None
 
 
@@ -89,12 +90,12 @@ def test_new_style_env(monkeypatch):
     _set_env(
         monkeypatch,
         VULNCHECK_API_KEY="newkey",
-        VULNCHECK_NVD2_MAX_DATE_RANGE="7",
+        VULNCHECK_NVD2_MAX_DATE_RANGE="P7D",
         VULNCHECK_NVD2_PULL_HISTORY="true",
     )
     settings = ConnectorSettings()
-    assert settings.vulncheck.api_key == "newkey"
-    assert settings.vulncheck.nvd2_max_date_range == 7
+    assert settings.vulncheck.api_key.get_secret_value() == "newkey"
+    assert settings.vulncheck.nvd2_max_date_range == timedelta(days=7)
     assert settings.vulncheck.nvd2_pull_history is True
 
 
@@ -109,6 +110,6 @@ def test_legacy_env_aliases_migrate_with_warning(monkeypatch):
         settings = ConnectorSettings()
         messages = [str(w.message) for w in caught]
 
-    assert settings.vulncheck.api_key == "legacykey"
+    assert settings.vulncheck.api_key.get_secret_value() == "legacykey"
     assert settings.vulncheck.data_sources == ["vulncheck-kev"]
     assert any("vulncheck_api_key" in m for m in messages)

@@ -20,16 +20,17 @@ from connectors_sdk import (
     BaseConfigModel,
     BaseConnectorSettings,
     BaseExternalImportConnectorConfig,
+    DatetimeFromIsoString,
     DeprecatedField,
     ListFromString,
 )
-from pydantic import Field, HttpUrl
+from pydantic import Field, HttpUrl, SecretStr
 
 
 class VulnCheckConfig(BaseConfigModel):
     """VulnCheck-specific configuration (env prefix: ``VULNCHECK_``)."""
 
-    api_key: str = Field(
+    api_key: SecretStr = Field(
         description="The API key used to authenticate against the VulnCheck API.",
     )
     api_base_url: HttpUrl = Field(
@@ -48,20 +49,20 @@ class VulnCheckConfig(BaseConfigModel):
             "filter). When false, the first run is bounded by nvd2_max_date_range."
         ),
     )
-    nvd2_max_date_range: int = Field(
-        default=120,
+    nvd2_max_date_range: timedelta = Field(
+        default=timedelta(days=120),
         description=(
-            "First run only: how many days back (last-modified) to pull when not "
-            "pulling full history."
+            "First run only: how far back (last-modified) to pull when not pulling "
+            "full history. ISO-8601 duration, e.g. P120D."
         ),
     )
-    nvd2_last_mod_start_date: str | None = Field(
+    nvd2_last_mod_start_date: DatetimeFromIsoString | None = Field(
         default=None,
-        description="Optional YYYY-MM-DD override for a manual NVD2 backfill (start).",
+        description="Optional ISO-8601 date override for a manual NVD2 backfill (start).",
     )
-    nvd2_last_mod_end_date: str | None = Field(
+    nvd2_last_mod_end_date: DatetimeFromIsoString | None = Field(
         default=None,
-        description="Optional YYYY-MM-DD override for a manual NVD2 backfill (end).",
+        description="Optional ISO-8601 date override for a manual NVD2 backfill (end).",
     )
 
 
@@ -78,39 +79,60 @@ class ConnectorConfig(BaseExternalImportConnectorConfig):
         default=timedelta(hours=1),
         description="The period of time to await between two runs of the connector.",
     )
+    scope: ListFromString = Field(
+        description="Comma-separated STIX object types to import, e.g. `vulnerability,"
+        "malware,threat-actor,infrastructure,location,ip-addr,indicator,"
+        "external-reference,attack-pattern,course-of-action,x-mitre-data-source,report`"
+        " (add `software` only if prepared for the volume — "
+        "see [Data Volume](#data-volume)).",
+        default=[
+            "vulnerability",
+            "malware",
+            "threat-actor",
+            "infrastructure",
+            "location",
+            "ip-addr",
+            "indicator",
+            "external-reference",
+            "attack-pattern",
+            "course-of-action",
+            "x-mitre-data-source",
+            "report",
+        ],
+    )
 
     # --- Deprecated CONNECTOR_VULNCHECK_* aliases -> VULNCHECK_* (vulncheck namespace) ---
-    vulncheck_api_key: str | None = DeprecatedField(
+    vulncheck_api_key: str = DeprecatedField(
         deprecated="Use VULNCHECK_API_KEY instead of CONNECTOR_VULNCHECK_API_KEY.",
         new_namespace="vulncheck",
         new_namespaced_var="api_key",
     )
-    vulncheck_api_base_url: str | None = DeprecatedField(
+    vulncheck_api_base_url: str = DeprecatedField(
         deprecated="Use VULNCHECK_API_BASE_URL instead of CONNECTOR_VULNCHECK_API_BASE_URL.",
         new_namespace="vulncheck",
         new_namespaced_var="api_base_url",
     )
-    vulncheck_data_sources: str | None = DeprecatedField(
+    vulncheck_data_sources: str = DeprecatedField(
         deprecated="Use VULNCHECK_DATA_SOURCES instead of CONNECTOR_VULNCHECK_DATA_SOURCES.",
         new_namespace="vulncheck",
         new_namespaced_var="data_sources",
     )
-    vulncheck_nvd2_pull_history: str | None = DeprecatedField(
+    vulncheck_nvd2_pull_history: str = DeprecatedField(
         deprecated="Use VULNCHECK_NVD2_PULL_HISTORY instead of CONNECTOR_VULNCHECK_NVD2_PULL_HISTORY.",
         new_namespace="vulncheck",
         new_namespaced_var="nvd2_pull_history",
     )
-    vulncheck_nvd2_max_date_range: str | None = DeprecatedField(
+    vulncheck_nvd2_max_date_range: str = DeprecatedField(
         deprecated="Use VULNCHECK_NVD2_MAX_DATE_RANGE instead of CONNECTOR_VULNCHECK_NVD2_MAX_DATE_RANGE.",
         new_namespace="vulncheck",
         new_namespaced_var="nvd2_max_date_range",
     )
-    vulncheck_nvd2_last_mod_start_date: str | None = DeprecatedField(
+    vulncheck_nvd2_last_mod_start_date: str = DeprecatedField(
         deprecated="Use VULNCHECK_NVD2_LAST_MOD_START_DATE instead of CONNECTOR_VULNCHECK_NVD2_LAST_MOD_START_DATE.",
         new_namespace="vulncheck",
         new_namespaced_var="nvd2_last_mod_start_date",
     )
-    vulncheck_nvd2_last_mod_end_date: str | None = DeprecatedField(
+    vulncheck_nvd2_last_mod_end_date: str = DeprecatedField(
         deprecated="Use VULNCHECK_NVD2_LAST_MOD_END_DATE instead of CONNECTOR_VULNCHECK_NVD2_LAST_MOD_END_DATE.",
         new_namespace="vulncheck",
         new_namespaced_var="nvd2_last_mod_end_date",

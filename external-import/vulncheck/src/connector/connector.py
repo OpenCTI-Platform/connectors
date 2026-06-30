@@ -37,7 +37,7 @@ class ConnectorVulnCheck:
         self.client = VulnCheckClient(
             self.helper,
             base_url=self.config.vulncheck.api_base_url,
-            api_key=self.config.vulncheck.api_key,
+            api_key=self.config.vulncheck.api_key.get_secret_value(),
         )
         self.converter_to_stix = ConverterToStix(self.helper)
 

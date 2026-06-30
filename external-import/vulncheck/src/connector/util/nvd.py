@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 def check_vuln_description(descriptions: list) -> str:
@@ -22,7 +22,9 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
     single window covers any range (no date chunking needed).
     """
     params: dict = {}
-    start = config.vulncheck.nvd2_last_mod_start_date  # explicit override (backfill)
+    # explicit override (backfill) -- a datetime, formatted to the API's YYYY-MM-DD
+    override = config.vulncheck.nvd2_last_mod_start_date
+    start = override.strftime("%Y-%m-%d") if override else None
     origin = "override"
 
     if not start and connector_state:
@@ -33,8 +35,9 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
     if (
         not start and not config.vulncheck.nvd2_pull_history
     ):  # first run, bounded window
-        days = int(config.vulncheck.nvd2_max_date_range)
-        start = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        start = (datetime.now() - config.vulncheck.nvd2_max_date_range).strftime(
+            "%Y-%m-%d"
+        )
         origin = "max_date_range"
 
     if start:
@@ -43,7 +46,9 @@ def build_nvd2_query_params(config, connector_state, source_name: str, logger) -
         origin = "pull_history"
 
     if config.vulncheck.nvd2_last_mod_end_date:
-        params["last_mod_end_date"] = config.vulncheck.nvd2_last_mod_end_date
+        params["last_mod_end_date"] = config.vulncheck.nvd2_last_mod_end_date.strftime(
+            "%Y-%m-%d"
+        )
 
     logger.info(
         "NVD2 query window",

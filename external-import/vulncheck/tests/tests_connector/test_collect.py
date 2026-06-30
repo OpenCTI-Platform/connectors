@@ -5,6 +5,7 @@ by driving each source's public ``collect_*`` entry point with a mocked client
 and ``works`` module, so the in-scope collection/bundling path is covered.
 """
 
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -54,7 +55,7 @@ def _config(scope=None):
             nvd2_last_mod_start_date=None,
             nvd2_last_mod_end_date=None,
             nvd2_pull_history=False,
-            nvd2_max_date_range=120,
+            nvd2_max_date_range=timedelta(days=120),
         ),
     )
 

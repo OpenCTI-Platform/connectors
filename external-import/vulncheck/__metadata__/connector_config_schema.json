@@ -20,7 +20,21 @@
       "type": "string"
     },
     "CONNECTOR_SCOPE": {
-      "description": "The scope of the connector, e.g. 'flashpoint'.",
+      "default": [
+        "vulnerability",
+        "malware",
+        "threat-actor",
+        "infrastructure",
+        "location",
+        "ip-addr",
+        "indicator",
+        "external-reference",
+        "attack-pattern",
+        "course-of-action",
+        "x-mitre-data-source",
+        "report"
+      ],
+      "description": "Comma-separated STIX object types to import, e.g. `vulnerability,malware,threat-actor,infrastructure,location,ip-addr,indicator,external-reference,attack-pattern,course-of-action,x-mitre-data-source,report` (add `software` only if prepared for the volume \u2014 see [Data Volume](#data-volume)).",
       "items": {
         "type": "string"
       },
@@ -93,7 +107,9 @@
     },
     "VULNCHECK_API_KEY": {
       "description": "The API key used to authenticate against the VulnCheck API.",
-      "type": "string"
+      "format": "password",
+      "type": "string",
+      "writeOnly": true
     },
     "VULNCHECK_API_BASE_URL": {
       "default": "https://api.vulncheck.com/v3",
@@ -120,25 +136,27 @@
       "type": "boolean"
     },
     "VULNCHECK_NVD2_MAX_DATE_RANGE": {
-      "default": 120,
-      "description": "First run only: how many days back (last-modified) to pull when not pulling full history.",
-      "type": "integer"
+      "default": "P120D",
+      "description": "First run only: how far back (last-modified) to pull when not pulling full history. ISO-8601 duration, e.g. P120D.",
+      "format": "duration",
+      "type": "string"
     },
     "VULNCHECK_NVD2_LAST_MOD_START_DATE": {
       "default": null,
-      "description": "Optional YYYY-MM-DD override for a manual NVD2 backfill (start).",
+      "description": "Optional ISO-8601 date override for a manual NVD2 backfill (start).",
+      "format": "date-time",
       "type": "string"
     },
     "VULNCHECK_NVD2_LAST_MOD_END_DATE": {
       "default": null,
-      "description": "Optional YYYY-MM-DD override for a manual NVD2 backfill (end).",
+      "description": "Optional ISO-8601 date override for a manual NVD2 backfill (end).",
+      "format": "date-time",
       "type": "string"
     }
   },
   "required": [
     "OPENCTI_URL",
     "OPENCTI_TOKEN",
-    "CONNECTOR_SCOPE",
     "VULNCHECK_API_KEY"
   ],
   "additionalProperties": true
