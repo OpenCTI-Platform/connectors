@@ -79,9 +79,16 @@ class GoogleSecOpsConnector:
         self.helper = helper
         self._client: GoogleSecOpsApiClient | None = None
         self._secops_base_url: str | None = None
+
+        secops_siem_config = self.config.google_secops_siem_incidents
         self.converter_to_stix = ConverterToStix(
             helper=self.helper,
-            tlp_level=self.config.google_secops_siem_incidents.tlp_level,
+            tlp_level=secops_siem_config.tlp_level,
+            severity_filter=secops_siem_config.severity_filter,
+            priority_filter=secops_siem_config.priority_filter,
+            risk_score_filter=secops_siem_config.risk_score_filter,
+            tags_include=secops_siem_config.tags_include or None,
+            tags_exclude=secops_siem_config.tags_exclude or None,
         )
 
     @property

@@ -9,13 +9,13 @@
     "Vulnerability Management"
   ],
   "verified": true,
-  "last_verified_date": null,
+  "last_verified_date": "2026-06-04",
   "playbook_supported": true,
   "max_confidence_level": 50,
   "support_version": ">=6.3.4",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/internal-enrichment/greynoise-vuln",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-greynoise-vuln",
   "container_type": "INTERNAL_ENRICHMENT"

@@ -1,3 +1,4 @@
+import importlib.metadata
 import re
 import ssl
 import sys
@@ -44,8 +45,14 @@ class Phishunt:
         url = "https://phishunt.io/feed.txt"
         try:
             bundle_objects = []
+            req = urllib.request.Request(
+                url=url,
+                headers={
+                    "User-Agent": f"OpenCTI-Phishunt-Connector/{importlib.metadata.version('pycti')}"
+                },
+            )
             with urllib.request.urlopen(
-                url=url, context=ssl.create_default_context()
+                req, context=ssl.create_default_context()
             ) as fp:
                 for count, line in enumerate(fp, 1):
                     count += 1
@@ -123,7 +130,7 @@ class Phishunt:
             resp.raise_for_status()
             data = resp.json()
             bundle_objects = []
-            for url in data:
+            for url in data.get("results", data) if isinstance(data, dict) else data:
                 stix_url = stix2.URL(
                     value=url["url"],
                     object_marking_refs=[stix2.TLP_WHITE],

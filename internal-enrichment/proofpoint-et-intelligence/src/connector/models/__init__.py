@@ -1,4 +1,3 @@
-from connector.models.config_variables_models import ProofpointEtIntelligenceConfigVar
 from connector.models.intelligence_models import (
     AsnParameterModel,
     AsnResponseModel,
@@ -30,7 +29,6 @@ from connector.models.opencti_converter_models import (
 )
 
 __all__ = [
-    "ProofpointEtIntelligenceConfigVar",
     "ReputationResponseModel",
     "GeolocationResponseModel",
     "AsnResponseModel",
