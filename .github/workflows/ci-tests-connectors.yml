@@ -125,7 +125,7 @@ jobs:
           done <<< "${{ matrix.test_requirements }}"
 
       - name: Upload coverage to Codecov
-        if: ${{ !cancelled() && hashFiles('coverage.xml') != '' }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('coverage.xml') != '' }}
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -135,39 +135,8 @@ jobs:
           verbose: true
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           report_type: test_results
-
-  baseline-coverage:
-    name: Baseline coverage (untested connectors)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-
-      
-      - name: Setup uv
-        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
-        with:
-          enable-cache: false
-          python-version: "3.12"
-      - name: Generate 0% coverage for all connector source files
-        run: |
-          pip install coverage
-          coverage erase
-          echo "pass" > /tmp/noop.py
-          coverage run --rcfile=.coveragerc /tmp/noop.py
-          python .github/scripts/coverage_inject_unexecuted_files.py
-          coverage xml --rcfile=.coveragerc -o base-coverage.xml --ignore-errors
-          echo "Total source files in report:"
-          grep -c '<class ' base-coverage.xml || true
-
-      - name: Upload baseline coverage to Codecov
-        uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./base-coverage.xml
-          flags: baseline
-          fail_ci_if_error: false
