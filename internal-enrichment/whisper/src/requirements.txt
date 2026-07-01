@@ -1,0 +1,10 @@
+# pycti must match the exact pin connectors-sdk@master declares, or pip's
+# resolver fails (the SDK pins pycti==). Keep these two lines bumped together.
+pycti==7.260626.0
+connectors-sdk @ git+https://github.com/OpenCTI-Platform/connectors.git@master#subdirectory=connectors-sdk
+pydantic>=2.8.2,<3.0.0
+pydantic-settings>=2.5,<3.0
+PyYAML==6.0.2
+requests==2.32.3
+stix2==3.0.1
+validators==0.35.0
