@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://filigran.io/schemas/connector-manifest.json",
+  "title": "OpenCTI Connector Manifest",
+  "description": "Schema for OpenCTI connector manifest files describing connector metadata, versioning, and configuration.",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "slug",
+    "description",
+    "short_description",
+    "logo",
+    "use_cases",
+    "subscription_link",
+    "source_code",
+    "manager_supported",
+    "min_version",
+    "version",
+    "image_name",
+    "image_type",
+    "platform",
+    "integration_type",
+    "additional_properties",
+    "config_schema"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the connector, derived from the slug.",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "examples": ["misp", "export-file-csv", "crowdstrike"]
+    },
+    "title": {
+      "type": "string",
+      "description": "Human-readable display name of the connector.",
+      "minLength": 1,
+      "examples": ["MISP", "Export File Csv", "CrowdStrike"]
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-friendly unique identifier. Must match the 'id' field.",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "minLength": 1,
+      "examples": ["misp", "export-file-csv", "crowdstrike"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed description of the connector's functionality and capabilities.",
+      "minLength": 1
+    },
+    "short_description": {
+      "type": "string",
+      "description": "Brief one-line summary of the connector's purpose.",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "logo": {
+      "type": "string",
+      "description": "BASE64-encoded image data for the connector's logo.",
+      "minLength": 1
+    },
+    "use_cases": {
+      "type": "array",
+      "description": "List of use case categories this connector supports.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 0,
+      "uniqueItems": true,
+      "examples": [
+        ["Open Source Threat Intel"],
+        ["Commercial Threat Intel", "Threat Intelligence Enrichment"],
+        ["SIEM & Analytics", "Incident Response & Ticketing"]
+      ]
+    },
+    "verified": {
+      "type": ["boolean", "null"],
+      "description": "Whether the connector has passed the Filigran verification process."
+    },
+    "last_verified_date": {
+      "type": ["string", "null"],
+      "description": "Date when the connector was last verified, in ISO 8601 date format.",
+      "format": "date",
+      "examples": ["2025-01-01"]
+    },
+    "subscription_link": {
+      "type": "string",
+      "description": "URL to the external service or subscription page for the data source. Empty string if none.",
+      "examples": ["https://www.misp-project.org", ""]
+    },
+    "source_code": {
+      "type": "string",
+      "description": "URL to the connector's source code repository.",
+      "format": "uri",
+      "examples": ["https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/misp"]
+    },
+    "manager_supported": {
+      "type": "boolean",
+      "description": "Whether the connector supports the OpenCTI manager-based deployment mode."
+    },
+    "min_version": {
+      "type": "string",
+      "description": "Minimum OpenCTI platform version required to run this connector.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.?[0-9]*$",
+      "examples": ["7.260507.0", "6.0.0"]
+    },
+    "version": {
+      "type": "string",
+      "description": "Current version of the connector.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "examples": ["6.5.1", "1.0.0"]
+    },
+    "image_name": {
+      "type": "string",
+      "description": "Docker image name for the connector (without tag).",
+      "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+      "examples": ["opencti/connector-misp", "opencti/connector-export-file-csv"]
+    },
+    "image_type": {
+      "type": "string",
+      "description": "Type of the connector, corresponding to the OpenCTI connector category.",
+      "enum": [
+        "EXTERNAL_IMPORT",
+        "INTERNAL_ENRICHMENT",
+        "INTERNAL_EXPORT_FILE",
+        "INTERNAL_IMPORT_FILE",
+        "STREAM"
+      ]
+    },
+    "platform": {
+      "type": "string",
+      "description": "Target platform this connector integrates with.",
+      "examples": ["OpenCTI"]
+    },
+    "integration_type": {
+      "type": "string",
+      "description": "Type of integration provided by this component.",
+      "examples": ["connector"]
+    },
+    "additional_properties": {
+      "type": "object",
+      "description": "Platform-specific properties. This object will be stringified when stored.",
+      "properties": {
+        "playbook_supported": {
+          "type": "boolean",
+          "description": "Whether the connector can be used within OpenCTI playbooks."
+        },
+        "max_confidence_level": {
+          "type": "integer",
+          "description": "Maximum confidence level (0-100) for data produced by this connector.",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "additionalProperties": true
+    },
+    "config_schema": {
+      "type": "object",
+      "description": "JSON Schema defining the connector's configuration parameters. This object will be stringified when stored."
+    }
+  },
+  "if": {
+    "properties": {
+      "verified": { "const": true }
+    }
+  },
+  "then": {
+    "required": ["last_verified_date"]
+  }
+}
