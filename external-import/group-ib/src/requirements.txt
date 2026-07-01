@@ -1,5 +1,6 @@
-cyberintegrations==0.14.1
-pycti==7.260626.0
+pycti==7.260430.0
+ciaops==1.1.0
 python-dotenv==1.2.2
-stix2==3.0.1
+stix2==3.0.2
 isodate==0.7.2
+PyYAML==6.0.3
