@@ -67,3 +67,4 @@ azure-identity=azure
 
 # Other
 pdfminer.six=pdfminer
+pyjwt=jwt
