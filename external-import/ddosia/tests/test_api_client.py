@@ -6,7 +6,11 @@ from pycti import OpenCTIConnectorHelper
 class TestDdosiaClient:
     @pytest.fixture
     def mock_helper(self):
-        return MagicMock(spec=OpenCTIConnectorHelper)
+        # We use a simple MagicMock without 'spec' to allow dynamic attribute assignment
+        # and ensure connector_logger is available.
+        helper = MagicMock()
+        helper.connector_logger = MagicMock()
+        return helper
 
     @pytest.fixture
     def client(self, mock_helper):
@@ -23,7 +27,10 @@ class TestDdosiaClient:
             
             # Verify that the request was made with the correct page parameter
             args, kwargs = mock_get.call_args
-            assert "page=2" in args[0] or kwargs.get("params", {}).get("page") == 2
+            # Check if 'page=2' is in the URL or in the params dictionary
+            url = args[0] if args else ""
+            params = kwargs.get("params", {})
+            assert "page=2" in url or params.get("page") == 2
 
     def test_get_config_success(self, client, mock_helper):
         """Test that get_config retrieves a specific configuration."""

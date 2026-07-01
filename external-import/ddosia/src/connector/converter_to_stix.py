@@ -106,8 +106,8 @@ class ConverterToStix:
         """
         return Relationship(
             type="resolves-to",
-            source=domain.id,
-            target=ip.id,
+            source=domain,
+            target=ip,
             author=self.author,
             markings=[self.tlp_marking],
         )
@@ -142,7 +142,7 @@ class ConverterToStix:
 
         return Note(
             content=json.dumps(note_content, indent=2),
-            object_refs=[domain.id],
+            objects=[domain],
             author=self.author,
             markings=[self.tlp_marking],
         )

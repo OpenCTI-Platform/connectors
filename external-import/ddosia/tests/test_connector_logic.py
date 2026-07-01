@@ -10,8 +10,10 @@ class TestSelectConfigsToProcess:
 
     @pytest.fixture
     def mock_config(self):
-        # Mocking ConnectorSettings
-        config = MagicMock(spec=ConnectorSettings)
+        # We use a simple MagicMock without 'spec' to allow dynamic attribute assignment
+        # or we can create a mock that specifically has the 'ddosia' attribute.
+        config = MagicMock()
+        config.ddosia = MagicMock()
         config.ddosia.api_base_url = "http://api.witha.name"
         config.ddosia.tlp_level = "green"
         config.ddosia.import_start_timestamp = None
