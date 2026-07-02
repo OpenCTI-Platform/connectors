@@ -5,7 +5,7 @@
   "short_description": "Tenable delivers comprehensive solutions for vulnerability management within IT infrastructures, using detailed assessments and analytics to reduce cyber risk. Integration with OpenCTI allows for seamless import of vulnerability data, enhancing threat intelligence and prioritization.",
   "logo": "external-import/tenable-vuln-management/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability Management"
+    "Vulnerability & Exploit Awareness"
   ],
   "verified": true,
   "last_verified_date": null,

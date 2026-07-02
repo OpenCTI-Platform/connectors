@@ -5,7 +5,7 @@
   "short_description": "VulnCheck provides detailed insights into software vulnerabilities, helping prioritize and remediate security weaknesses. Its integration with OpenCTI brings timely vulnerability data to the platform, enhancing patching prioritization and maintaining a strong security posture.",
   "logo": "external-import/vulncheck/__metadata__/logo.png",
   "use_cases": [
-    "Vulnerability Management",
+    "Vulnerability & Exploit Awareness",
     "Commercial Threat Intel"
   ],
   "verified": true,
