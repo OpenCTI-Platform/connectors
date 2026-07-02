@@ -3,7 +3,7 @@
   "slug": "servicenow",
   "description": "ServiceNow provides Security Incident Response and Security Incident Tasks module handled by this connector which collects SIR and SIT and related entities.",
   "short_description": "Ingestion of SIR and SIT as Case Incident and Tasks.",
-  "logo": null,
+  "logo": "external-import/servicenow/__metadata__/logo.png",
   "use_cases": [
     "Detection & Response Enablement"
   ],

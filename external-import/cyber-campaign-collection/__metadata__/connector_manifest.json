@@ -4,7 +4,9 @@
   "description": "Information coming soon",
   "short_description": "Information coming soon",
   "logo": null,
-  "use_cases": [],
+  "use_cases": [
+    "Adversary & Campaign Insights"
+  ],
   "verified": false,
   "last_verified_date": null,
   "playbook_supported": false,

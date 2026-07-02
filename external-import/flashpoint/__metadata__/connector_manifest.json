@@ -5,7 +5,8 @@
   "short_description": "Flashpoint Ignite consolidates team-tailored intelligence across various groups into a single workspace, enabling security teams to connect, collaborate, and remediate risk more efficiently with timely and active intelligence.",
   "logo": "external-import/flashpoint/__metadata__/logo.png",
   "use_cases": [
-    "Commercial Threat Intel"
+    "Commercial Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": null,

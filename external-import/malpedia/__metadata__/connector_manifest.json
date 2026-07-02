@@ -5,7 +5,8 @@
   "short_description": "This connector imports knowledge from the Malpedia Library.",
   "logo": "external-import/malpedia/__metadata__/logo.png",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Open Source Threat Intel",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": null,
