@@ -12,7 +12,8 @@ name: "Release Connector"
 #   2. Resolve connector directory (scan type dirs)
 #   3. Generate scoped release notes (git-cliff)
 #   4. Build & push Docker image (DockerHub + GHCR)
-#   5. Create GitHub Release with changelog + manifest asset
+#   5. Create GitHub Release with changelog + manifest/schema/fragment assets
+#   6. Update container_version in manifest and commit back to default branch
 
 on:
   push:
@@ -356,7 +357,7 @@ jobs:
     secrets: inherit
 
   # ──────────────────────────────────────────────────────────
-  # 4. Create GitHub Release
+  # 4. Create GitHub Release + update manifest version
   # ──────────────────────────────────────────────────────────
   release:
     name: Create GitHub Release
@@ -393,6 +394,56 @@ jobs:
           git tag "$TAG"
           git push origin "$TAG"
 
+      - name: Patch manifest container_version
+        id: patch-manifest
+        run: |
+          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
+          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "patched=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Manifest not found: $MANIFEST — skipping version patch"
+            exit 0
+          fi
+
+          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
+            && mv "$RUNNER_TEMP/manifest.json" "$MANIFEST"
+
+          echo "patched=true" >> "$GITHUB_OUTPUT"
+          echo "✅ Patched container_version → $VERSION in $MANIFEST"
+
+      - name: Set up Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Generate manifest fragment
+        id: fragment
+        # Non-blocking: the release must succeed even if the fragment can't be built
+        continue-on-error: true
+        run: |
+          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
+          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "::warning::Manifest not found for ${CONNECTOR_DIR} — skipping fragment generation"
+            exit 0
+          fi
+
+          pip install --quiet -r shared/tools/composer/generate_manifest_fragment/requirements.txt
+
+          FRAGMENT_PATH="${RUNNER_TEMP}/${CONNECTOR_NAME}_manifest_fragment.json"
+          python shared/tools/composer/generate_manifest_fragment/generate_manifest_fragment.py \
+            --connector-dir "$CONNECTOR_DIR" \
+            --version "$VERSION" \
+            --output "$FRAGMENT_PATH"
+
+          echo "fragment_path=$FRAGMENT_PATH" >> "$GITHUB_OUTPUT"
+          echo "✅ Generated manifest fragment: $FRAGMENT_PATH"
+
       - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -411,21 +462,102 @@ jobs:
             --notes "$CHANGELOG" \
             --target "${{ github.sha }}"
 
-          # Attach connector manifest as release asset
+          # Attach connector manifest, config schema, and manifest fragment as release assets
           MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+          CONFIG_SCHEMA="${CONNECTOR_DIR}/__metadata__/connector_config_schema.json"
+          FRAGMENT="${{ steps.fragment.outputs.fragment_path }}"
+
           if [ -f "$MANIFEST" ]; then
             gh release upload "$TAG" "$MANIFEST" --clobber
+            echo "📎 Attached manifest: $MANIFEST"
+          fi
+
+          if [ -f "$CONFIG_SCHEMA" ]; then
+            gh release upload "$TAG" "$CONFIG_SCHEMA" --clobber
+            echo "📎 Attached config schema: $CONFIG_SCHEMA"
+          fi
+
+          if [ -n "$FRAGMENT" ] && [ -f "$FRAGMENT" ]; then
+            gh release upload "$TAG" "$FRAGMENT" --clobber
+            echo "📎 Attached manifest fragment: $FRAGMENT"
+          else
+            echo "ℹ️ No manifest fragment to attach"
           fi
 
           echo "✅ Release created: $TITLE"
 
   # ──────────────────────────────────────────────────────────
-  # 5. Summary
+  # 5. Commit manifest version back to default branch
+  # ──────────────────────────────────────────────────────────
+  update-manifest:
+    name: Update manifest version
+    runs-on: ubuntu-latest
+    needs: [resolve, release]
+    if: |
+      always() &&
+      needs.resolve.outputs.dry_run != 'true'
+    # Non-blocking: a failure here must not prevent the release from succeeding
+    continue-on-error: true
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Patch and commit container_version
+        run: |
+          CONNECTOR_DIR="${{ needs.resolve.outputs.connector_dir }}"
+          CONNECTOR_NAME="${{ needs.resolve.outputs.connector_name }}"
+          VERSION="${{ needs.resolve.outputs.version }}"
+          MANIFEST="${CONNECTOR_DIR}/__metadata__/connector_manifest.json"
+
+          if [ ! -f "$MANIFEST" ]; then
+            echo "⚠️ Manifest not found: $MANIFEST — skipping"
+            exit 0
+          fi
+
+          # Patch container_version
+          jq --arg v "$VERSION" '.container_version = $v' "$MANIFEST" > "$RUNNER_TEMP/manifest.json" \
+            && mv "$RUNNER_TEMP/manifest.json" "$MANIFEST"
+
+          # Validate the patched JSON
+          jq empty "$MANIFEST"
+
+          # Commit
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MANIFEST"
+
+          if git diff --cached --quiet; then
+            echo "ℹ️ container_version already set to $VERSION — nothing to commit"
+            exit 0
+          fi
+
+          git commit -m "chore(manifest): update ${CONNECTOR_NAME} container_version to ${VERSION} [skip ci]"
+
+          # Push with retry on non-fast-forward (concurrent releases for other connectors)
+          MAX_RETRIES=3
+          for attempt in $(seq 1 "$MAX_RETRIES"); do
+            if git push; then
+              echo "✅ Manifest update pushed (attempt $attempt)"
+              exit 0
+            fi
+            echo "⚠️ Push rejected (attempt $attempt/$MAX_RETRIES) — rebasing"
+            git pull --rebase origin "${{ github.event.repository.default_branch }}"
+          done
+
+          echo "::warning::Failed to push manifest update after $MAX_RETRIES attempts"
+          exit 1
+
+  # ──────────────────────────────────────────────────────────
+  # 6. Summary
   # ──────────────────────────────────────────────────────────
   summary:
     name: Release summary
     runs-on: ubuntu-latest
-    needs: [resolve, release-notes, build, release]
+    needs: [resolve, release-notes, build, release, update-manifest]
     if: always()
     steps:
       - name: Print summary
@@ -466,4 +598,5 @@ jobs:
             echo "| Release Notes | ${{ needs.release-notes.result }} |"
             echo "| Build | ${{ needs.build.result }} |"
             echo "| Release | ${{ needs.release.result }} |"
+            echo "| Update Manifest | ${{ needs.update-manifest.result }} |"
           } >> "$GITHUB_STEP_SUMMARY"
