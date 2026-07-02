@@ -1,12 +1,12 @@
 {
   "title": "Hatching Triage Sandbox",
   "slug": "hatching-triage-sandbox",
-  "description": "Information coming soon",
-  "short_description": "Information coming soon",
+  "description": "Hatching Triage is a malware analysis sandbox that automatically analyzes malicious files and URLs, extracting configuration data, network indicators, and behavioral information.\n\nThis connector submits files (Artifacts) and URLs to Hatching Triage for dynamic analysis and enriches OpenCTI with the results including:\n\u2022 Malware family identification\n\u2022 C2 server addresses and URLs\n\u2022 Network indicators (domains, IPs)\n\u2022 Extracted credentials\n\u2022 MITRE ATT&CK TTPs\n\u2022 Dropped files and configurations\n\u2022 Botnet and campaign information",
+  "short_description": "Hatching Triage connector detonates files and URLs in a malware sandbox, extracting malware families, C2 infrastructure, network indicators, and MITRE ATT&CK TTPs.",
   "logo": null,
   "use_cases": [
     "Enrichment & Analysis",
-    "Malware Analysis and Sandbox",
+    "Malware Analysis and Sandbox"
   ],
   "verified": true,
   "last_verified_date": null,
