@@ -28,8 +28,8 @@ class TestConverterToStix:
         rel = converter.create_resolves_to_relationship(domain, ip)
         
         assert rel.type == "resolves-to"
-        assert rel.source == domain.id
-        assert rel.target == ip.id
+        assert rel.source == domain
+        assert rel.target == ip
 
     def test_create_note_for_host(self, converter):
         domain = converter.create_domain("example.com")
@@ -45,4 +45,4 @@ class TestConverterToStix:
         assert "cfg_1" in note.content
         assert "123456.0" in note.content
         assert "example.com" in note.content
-        assert domain.id in note.object_refs
+        assert domain in note.objects
