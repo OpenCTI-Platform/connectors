@@ -1,0 +1,13 @@
+services:
+  connector-anthropic-ai-enrichment:
+    image: opencti/connector-anthropic-ai-enrichment:rolling
+    environment:
+      OPENCTI_URL: ${OPENCTI_URL}
+      OPENCTI_TOKEN: ${OPENCTI_TOKEN}
+      CONNECTOR_ID: ${CONNECTOR_ID}
+      CONNECTOR_NAME: "Anthropic AI Enrichment"
+      CONNECTOR_SCOPE: "Report,Intrusion-Set,Threat-Actor-Group,Malware"
+      CONNECTOR_LOG_LEVEL: "info"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      AI_MODEL: ${AI_MODEL:-claude-3-5-haiku-latest}
+    restart: always
