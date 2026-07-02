@@ -5,7 +5,7 @@ opencti:
 connector:
   id: 'ChangeMe'
   #name: 'IOC Extractor' # Optional (default: 'IOC Extractor')
-  #scope: 'Report,Note,Opinion,Grouping,Incident,Malware,Campaign,Intrusion-Set,Threat-Actor-Group,Threat-Actor-Individual,Tool,Vulnerability,Attack-Pattern,Indicator,Infrastructure,Channel,Event,Narrative' # Optional
+  #scope: 'Report' # Optional
   #auto: false # Optional (default: false)
   #log_level: 'error' # Optional (default: 'error')
 

@@ -4,11 +4,11 @@ services:
     environment:
       # Generic parameters (connection with OpenCTI)
       - OPENCTI_URL=http://localhost
-      - OPENCTI_TOKEN=CHANGEME
+      - OPENCTI_TOKEN=ChangeMe
       # Common parameters for connectors of type INTERNAL_ENRICHMENT
-      - CONNECTOR_ID=CHANGEME
+      - CONNECTOR_ID=ChangeMe
       - CONNECTOR_NAME=IOC Extractor # optional (default: 'IOC Extractor')
-      - CONNECTOR_SCOPE=CHANGEME
+      - CONNECTOR_SCOPE=Report
       - CONNECTOR_LOG_LEVEL=error # optional (default: 'error')
       - CONNECTOR_AUTO=false # optional (default: false)
       # Custom parameters for connector-ioc-extractor

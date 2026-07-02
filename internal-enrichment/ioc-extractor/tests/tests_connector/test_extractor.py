@@ -1,23 +1,23 @@
 from connector.extractor import (
     extract_iocs,
-    is_public_ipv4,
+    is_public_ip,
 )
 
 
 class TestIsPublicIpv4:
     def test_public_ip(self):
-        assert is_public_ipv4("8.8.8.8") is True
+        assert is_public_ip("8.8.8.8") is True
 
     def test_private_ip(self):
-        assert is_public_ipv4("192.168.1.1") is False
-        assert is_public_ipv4("10.0.0.1") is False
-        assert is_public_ipv4("172.16.0.1") is False
+        assert is_public_ip("192.168.1.1") is False
+        assert is_public_ip("10.0.0.1") is False
+        assert is_public_ip("172.16.0.1") is False
 
     def test_loopback(self):
-        assert is_public_ipv4("127.0.0.1") is False
+        assert is_public_ip("127.0.0.1") is False
 
     def test_invalid(self):
-        assert is_public_ipv4("not_an_ip") is False
+        assert is_public_ip("not_an_ip") is False
 
 
 class TestExtractIocs:

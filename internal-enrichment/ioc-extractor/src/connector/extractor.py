@@ -10,23 +10,13 @@ class ExtractedIOC:
     value: str
 
 
-def is_public_ipv4(ip: str) -> bool:
-    """Check if an IPv4 address is public (not private/reserved)."""
+def is_public_ip(ip: str) -> bool:
+    """Check if an IP address is public (not private/reserved)."""
     try:
         addr = ipaddress.ip_address(ip)
         return addr.is_global
     except ValueError:
         return False
-
-
-def is_public_ipv6(ip: str) -> bool:
-    """Check if an IPv6 address is public (not private/reserved)."""
-    try:
-        addr = ipaddress.ip_address(ip)
-        return addr.is_global
-    except ValueError:
-        return False
-
 
 def extract_iocs(
     text: str,
@@ -77,12 +67,12 @@ def extract_iocs(
 
     if extract_ipv4:
         for ip in raw.get("ipv4s", []):
-            if not skip_private_ips or is_public_ipv4(ip):
+            if not skip_private_ips or is_public_ip(ip):
                 iocs.append(ExtractedIOC(type="ipv4", value=ip))
 
     if extract_ipv6:
         for ip in raw.get("ipv6s", []):
-            if not skip_private_ips or is_public_ipv6(ip):
+            if not skip_private_ips or is_public_ip(ip):
                 iocs.append(ExtractedIOC(type="ipv6", value=ip))
 
     if extract_domains:

@@ -24,12 +24,10 @@ class IOCExtractorConnector:
         return stix_entity.get("description") or opencti_entity.get("description")
 
     @staticmethod
-    def _get_markings_from_entity(stix_entity: dict) -> list:
+    def _get_markings_from_entity(stix_entity: dict) -> list[Reference]:
         """Extract marking references from the source entity."""
         marking_refs = stix_entity.get("object_marking_refs", [])
-        if marking_refs:
-            return [Reference(id=ref) for ref in marking_refs]
-        return None
+        return [Reference(id=ref) for ref in marking_refs] if marking_refs else None
 
     @staticmethod
     def _ioc_to_stix_object(ioc: ExtractedIOC, markings=None):
@@ -54,7 +52,7 @@ class IOCExtractorConnector:
 
     def _build_stix_objects(
         self, iocs: list[ExtractedIOC], entity_id: str, markings=None
-    ) -> list[dict]:
+    ) -> tuple[list[dict], list[str]]:
         """Build STIX observable objects and relationships from extracted IOCs."""
         stix_objects = []
         observable_ids = []
@@ -68,14 +66,6 @@ class IOCExtractorConnector:
             stix_obj = sdk_object.to_stix2_object()
             stix_objects.append(stix_obj)
             observable_ids.append(stix_obj["id"])
-
-            # Create related-to relationship
-            relationship = Relationship(
-                type="related-to",
-                source=Reference(id=stix_obj["id"]),
-                target=entity_ref,
-            )
-            stix_objects.append(relationship.to_stix2_object())
 
         return stix_objects, observable_ids
 
@@ -94,7 +84,7 @@ class IOCExtractorConnector:
 
         return stix_entity
 
-    def _send_bundle(self, stix_objects: list) -> str:
+    def _send_bundle(self, stix_objects: list) -> list:
         """Send the STIX bundle to the OpenCTI platform."""
         stix_objects_bundle = self.helper.stix2_create_bundle(stix_objects)
         bundles_sent = self.helper.send_stix2_bundle(
@@ -150,7 +140,7 @@ class IOCExtractorConnector:
                         source=Reference(id=observable_id),
                         target=stix_entity,
                     )
-                stix_objects.append(relationship.to_stix2_object())
+                    stix_objects.append(relationship.to_stix2_object())
 
             # Merge enrichment objects with original bundle
             all_objects = stix_objects + enrichment_objects
