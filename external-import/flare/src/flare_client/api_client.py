@@ -3,23 +3,23 @@ from collections.abc import Iterator
 from datetime import datetime
 from typing import Any
 
-from flareio import FlareApiClient  # pylint: disable=import-error
+from flareio import FlareApiClient
 from pycti import OpenCTIConnectorHelper
-from pydantic import HttpUrl
+from pydantic import SecretStr
 
 
 class FlareClient:  # pylint: disable=too-few-public-methods
     def __init__(
         self,
         helper: OpenCTIConnectorHelper,
-        api_key: str,
-        base_url: HttpUrl,
+        api_key: SecretStr,
+        api_domain: str,
         tenant_id: int | None,
     ) -> None:
         self.helper = helper
         self._api = FlareApiClient(
-            api_key=api_key,
-            api_domain=str(base_url),
+            api_key=api_key.get_secret_value(),
+            api_domain=api_domain,
             tenant_id=tenant_id,
         )
 
