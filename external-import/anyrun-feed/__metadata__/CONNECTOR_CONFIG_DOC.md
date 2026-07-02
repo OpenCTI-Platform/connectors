@@ -10,7 +10,7 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | OPENCTI_TOKEN | `string` | ✅ | string |  |  | The API token to connect to OpenCTI. |
 | ANYRUN_API_KEY | `string` | ✅ | Format: [`password`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  |  | ANY.RUN TI Feeds API key. See 'Generate your API key' section in the README file. |
 | CONNECTOR_NAME | `string` |  | string |  | `"ANY.RUN TI Feed"` | The name of the connector. |
-| CONNECTOR_SCOPE | `array` |  | string |  | `[]` | The scope of the connector. |
+| CONNECTOR_SCOPE | `array` |  | string |  | `["anyrun-feed"]` | The scope of the connector. |
 | CONNECTOR_LOG_LEVEL | `string` |  | `debug` `info` `warn` `warning` `error` |  | `"error"` | The minimum level of logs to display. |
 | CONNECTOR_TYPE | `const` |  | `EXTERNAL_IMPORT` |  | `"EXTERNAL_IMPORT"` |  |
 | CONNECTOR_DURATION_PERIOD | `string` |  | Format: [`duration`](https://json-schema.org/understanding-json-schema/reference/string#built-in-formats) |  | `"PT2H"` | The period of time to await between two runs of the connector. |
