@@ -5,7 +5,7 @@
   "short_description": "Ingestion of SIR and SIT as Case Incident and Tasks.",
   "logo": null,
   "use_cases": [
-    "Incident Response & Ticketing"
+    "Detection & Response Enablement"
   ],
   "verified": true,
   "last_verified_date": "2025-06-15",
