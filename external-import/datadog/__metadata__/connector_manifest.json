@@ -5,7 +5,7 @@
   "short_description": "Ingest Datadog Cloud SIEM security signals as STIX incidents (with optional Case Incident response objects, observables and contextual notes).",
   "logo": null,
   "use_cases": [
-    "Cloud SIEM"
+    "Detection & Response Enablement"
   ],
   "verified": false,
   "last_verified_date": null,

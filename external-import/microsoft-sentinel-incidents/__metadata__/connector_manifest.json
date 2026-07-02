@@ -5,7 +5,8 @@
   "short_description": "This OpenCTI connector allows to import indicators and observables from Microsoft Sentinel's incidents to your OpenCTI platform.",
   "logo": "external-import/microsoft-sentinel-incidents/__metadata__/logo.png",
   "use_cases": [
-    "Incident Response & Ticketing"
+    "Detection & Response Enablement",
+    "SIEM and Analytics"
   ],
   "verified": true,
   "last_verified_date": null,
