@@ -1,13 +1,13 @@
 import json
-from typing import List, Dict, Any, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from connectors_sdk.models import (
     DomainName,
     IPV4Address,
+    Note,
     OrganizationAuthor,
     Relationship,
     TLPMarking,
-    Note,
 )
 from pycti import OpenCTIConnectorHelper
 
@@ -93,7 +93,9 @@ class ConverterToStix:
             markings=[self.tlp_marking],
         )
 
-    def create_resolves_to_relationship(self, domain: DomainName, ip: IPV4Address) -> Relationship:
+    def create_resolves_to_relationship(
+        self, domain: DomainName, ip: IPV4Address
+    ) -> Relationship:
         """
         Create a 'resolves-to' relationship between a domain and an IP.
 

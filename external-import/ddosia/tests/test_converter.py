@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from connector.converter_to_stix import ConverterToStix
 from pycti import OpenCTIConnectorHelper
+
 
 class TestConverterToStix:
     @pytest.fixture
@@ -26,7 +28,7 @@ class TestConverterToStix:
         domain = converter.create_domain("example.com")
         ip = converter.create_ipv4("1.2.3.4")
         rel = converter.create_resolves_to_relationship(domain, ip)
-        
+
         assert rel.type == "resolves-to"
         assert rel.source == domain
         assert rel.target == ip
@@ -39,9 +41,9 @@ class TestConverterToStix:
             cfg_id="cfg_1",
             cfg_ts=123456.0,
             host="example.com",
-            targets=targets
+            targets=targets,
         )
-        
+
         assert "cfg_1" in note.content
         assert "123456.0" in note.content
         assert "example.com" in note.content

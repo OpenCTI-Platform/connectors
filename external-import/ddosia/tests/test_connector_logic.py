@@ -1,7 +1,9 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from connector.connector import DdosiaConnector
 from connector.settings import ConnectorSettings
+
 
 class TestSelectConfigsToProcess:
     @pytest.fixture
@@ -39,9 +41,9 @@ class TestSelectConfigsToProcess:
         """Default behavior: only the most recent snapshot if no state and no start_ts."""
         connector.config.ddosia.import_start_timestamp = None
         state = None
-        
+
         result = connector._select_configs_to_process(sample_configs, state)
-        
+
         assert len(result) == 1
         assert result[0]["id"] == "cfg_3"  # The one with ts 300.0
 
@@ -49,11 +51,11 @@ class TestSelectConfigsToProcess:
         """If import_start_timestamp is 0, import all available history."""
         connector.config.ddosia.import_start_timestamp = 0
         state = None
-        
+
         result = connector._select_configs_to_process(sample_configs, state)
-        
+
         assert len(result) == 3
-        assert result[0]["id"] == "cfg_1" # Sorted ascending
+        assert result[0]["id"] == "cfg_1"  # Sorted ascending
         assert result[1]["id"] == "cfg_2"
         assert result[2]["id"] == "cfg_3"
 
@@ -61,9 +63,9 @@ class TestSelectConfigsToProcess:
         """If import_start_timestamp > 0, import from that timestamp onwards."""
         connector.config.ddosia.import_start_timestamp = 150.0
         state = None
-        
+
         result = connector._select_configs_to_process(sample_configs, state)
-        
+
         assert len(result) == 2
         assert result[0]["id"] == "cfg_2"
         assert result[1]["id"] == "cfg_3"
@@ -71,9 +73,9 @@ class TestSelectConfigsToProcess:
     def test_select_configs_incremental_import(self, connector, sample_configs):
         """Incremental import: only those strictly newer than last_cfg_ts."""
         state = {"last_cfg_ts": 200.0}
-        
+
         result = connector._select_configs_to_process(sample_configs, state)
-        
+
         assert len(result) == 1
         assert result[0]["id"] == "cfg_3"
 
@@ -88,14 +90,14 @@ class TestSelectConfigsToProcess:
         """
         configs = [
             {"id": "cfg_1", "ts": "100.0"},
-            {"id": "cfg_err", "ts": None}, # Should be treated as 0.0
-            {"id": "cfg_bad", "ts": "invalid"}, # Should be treated as 0.0
+            {"id": "cfg_err", "ts": None},  # Should be treated as 0.0
+            {"id": "cfg_bad", "ts": "invalid"},  # Should be treated as 0.0
         ]
         state = None
         connector.config.ddosia.import_start_timestamp = 0
-        
+
         result = connector._select_configs_to_process(configs, state)
-        
+
         # Sorted: cfg_err (0.0), cfg_bad (0.0), cfg_1 (100.0)
         # Note: stable sort preserves relative order of items with same key
         assert len(result) == 3

@@ -1,6 +1,7 @@
+import json
 import sys
 from datetime import datetime, timezone
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from connector.converter_to_stix import ConverterToStix
 from connector.settings import ConnectorSettings
@@ -35,7 +36,9 @@ class DdosiaConnector:
             tlp_level=self.config.ddosia.tlp_level,
         )
 
-    def _select_configs_to_process(self, configs: List[Dict[str, Any]], state: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _select_configs_to_process(
+        self, configs: List[Dict[str, Any]], state: Optional[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
         """
         Filter and sort configurations to process based on the current state and configuration.
 
@@ -54,7 +57,7 @@ class DdosiaConnector:
                 ts_float = float(ts_val) if ts_val is not None else 0.0
             except (ValueError, TypeError):
                 ts_float = 0.0
-            
+
             item["_ts_float"] = ts_float
             processed_configs.append(item)
 
@@ -88,7 +91,7 @@ class DdosiaConnector:
             config_item: The configuration item metadata.
 
         Returns:
-            A list of STIX objects for this snapshot.
+            A list of STIX objects (as dicts) for this snapshot.
 
         Raises:
             Exception: If the snapshot cannot be processed, to allow the caller to handle the failure.
@@ -98,7 +101,7 @@ class DdosiaConnector:
 
         self.helper.connector_logger.info(
             f"[CONNECTOR] Processing snapshot {cfg_id}",
-            {"cfg_id": cfg_id, "ts": cfg_ts}
+            {"cfg_id": cfg_id, "ts": cfg_ts},
         )
 
         # 1. Fetch snapshot content
@@ -106,7 +109,9 @@ class DdosiaConnector:
         targets = snapshot_data.get("targets", [])
 
         if not targets:
-            self.helper.connector_logger.info(f"[CONNECTOR] Snapshot {cfg_id} is empty", {"cfg_id": cfg_id})
+            self.helper.connector_logger.info(
+                f"[CONNECTOR] Snapshot {cfg_id} is empty", {"cfg_id": cfg_id}
+            )
             return []
 
         # 2. Group targets by host
@@ -117,15 +122,17 @@ class DdosiaConnector:
         for host, data in aggregated_data.items():
             # Create Domain
             domain_obj = self.converter_to_stix.create_domain(host)
-            stix_objects.append(domain_obj.to_stix2_object())
+            stix_objects.append(json.loads(domain_obj.to_stix2_object().serialize()))
 
             # Create IPs and relationships
             for ip in data["ips"]:
                 ip_obj = self.converter_to_stix.create_ipv4(ip)
-                stix_objects.append(ip_obj.to_stix2_object())
+                stix_objects.append(json.loads(ip_obj.to_stix2_object().serialize()))
 
-                rel_obj = self.converter_to_stix.create_resolves_to_relationship(domain_obj, ip_obj)
-                stix_objects.append(rel_obj.to_stix2_object())
+                rel_obj = self.converter_to_stix.create_resolves_to_relationship(
+                    domain_obj, ip_obj
+                )
+                stix_objects.append(json.loads(rel_obj.to_stix2_object().serialize()))
 
             # Create Note with raw targets
             note_obj = self.converter_to_stix.create_note_for_host(
@@ -133,9 +140,9 @@ class DdosiaConnector:
                 cfg_id=cfg_id,
                 cfg_ts=cfg_ts,
                 host=host,
-                targets=data["raw_targets"]
+                targets=data["raw_targets"],
             )
-            stix_objects.append(note_obj.to_stix2_object())
+            stix_objects.append(json.loads(note_obj.to_stix2_object().serialize()))
 
         return stix_objects
 
@@ -158,7 +165,9 @@ class DdosiaConnector:
             start_ts = self.config.ddosia.import_start_timestamp
 
             while True:
-                self.helper.connector_logger.info(f"[CONNECTOR] Fetching configurations page {page}...")
+                self.helper.connector_logger.info(
+                    f"[CONNECTOR] Fetching configurations page {page}..."
+                )
                 response = self.client.get_configs(page=page)
                 items = response.get("items", [])
 
@@ -166,14 +175,14 @@ class DdosiaConnector:
                     break
 
                 all_configs.extend(items)
-                
-                # Optimization: if we have a start_ts, we can stop if the last item of the page 
+
+                # Optimization: if we have a start_ts, we can stop if the last item of the page
                 # is already older than our start_ts (since API is most recent first)
                 if start_ts is not None and start_ts > 0:
                     last_item_ts = float(items[-1].get("ts", 0))
                     if last_item_ts < start_ts:
                         break
-                
+
                 # If we only want the first page (start_ts is None), we stop after page 1
                 if start_ts is None:
                     break
@@ -181,14 +190,20 @@ class DdosiaConnector:
                 page += 1
 
             if not all_configs:
-                self.helper.connector_logger.info("[CONNECTOR] No configurations found in API")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] No configurations found in API"
+                )
                 return
 
             # 3. Select snapshots to process
-            configs_to_process = self._select_configs_to_process(all_configs, current_state)
+            configs_to_process = self._select_configs_to_process(
+                all_configs, current_state
+            )
 
             if not configs_to_process:
-                self.helper.connector_logger.info("[CONNECTOR] No new snapshots to process")
+                self.helper.connector_logger.info(
+                    "[CONNECTOR] No new snapshots to process"
+                )
                 return
 
             self.helper.connector_logger.info(
@@ -202,17 +217,17 @@ class DdosiaConnector:
 
                 # Initiate a work for this specific snapshot
                 friendly_name = f"DDoSIA - {cfg_id}"
-                work_id = self.helper.api.work.initiate_work(self.helper.connect_id, friendly_name)
+                work_id = self.helper.api.work.initiate_work(
+                    self.helper.connect_id, friendly_name
+                )
 
                 try:
                     # Collect and convert
                     stix_objects = self._process_snapshot(config_item)
 
                     if stix_objects:
-                        # Add author and marking to the bundle
-                        stix_objects.append(self.converter_to_stix.author)
-                        stix_objects.append(self.converter_to_stix.tlp_marking)
-
+                        # Note: author and marking are handled automatically by the helper
+                        # (no need to append them to stix_objects)
                         bundle = self.helper.stix2_create_bundle(stix_objects)
                         self.helper.send_stix2_bundle(
                             bundle,
@@ -222,32 +237,33 @@ class DdosiaConnector:
 
                         self.helper.connector_logger.info(
                             f"[CONNECTOR] Snapshot {cfg_id} imported",
-                            {"objects_count": len(stix_objects)}
+                            {"objects_count": len(stix_objects)},
                         )
 
                     # Mark work as processed
                     self.helper.api.work.to_processed(
                         work_id,
-                        f"Processed snapshot {cfg_id} with {len(stix_objects)} objects"
+                        f"Processed snapshot {cfg_id} with {len(stix_objects)} objects",
                     )
 
                     # Update state ONLY after successful processing and import
                     now = datetime.now(timezone.utc)
-                    self.helper.set_state({
-                        "last_run": now.isoformat(),
-                        "last_cfg_id": cfg_id,
-                        "last_cfg_ts": cfg_ts
-                    })
+                    self.helper.set_state(
+                        {
+                            "last_run": now.isoformat(),
+                            "last_cfg_id": cfg_id,
+                            "last_cfg_ts": cfg_ts,
+                        }
+                    )
 
                 except Exception as e:
                     self.helper.connector_logger.error(
                         f"[CONNECTOR] Critical error processing snapshot {cfg_id}. Skipping state update.",
-                        {"cfg_id": cfg_id, "error": str(e)}
+                        {"cfg_id": cfg_id, "error": str(e)},
                     )
                     # Mark work as failed
                     self.helper.api.work.to_processed(
-                        work_id,
-                        f"Failed to process snapshot {cfg_id}: {str(e)}"
+                        work_id, f"Failed to process snapshot {cfg_id}: {str(e)}"
                     )
                     # We do NOT update the state here, so the snapshot will be retried next run
 
@@ -257,7 +273,7 @@ class DdosiaConnector:
         except Exception as err:
             self.helper.connector_logger.error(
                 f"[CONNECTOR] Unexpected error during run: {str(err)}",
-                {"error": str(err)}
+                {"error": str(err)},
             )
 
     def run(self) -> None:

@@ -1,6 +1,6 @@
 import traceback
 
-from connector import ConnectorSettings, TemplateConnector
+from connector import ConnectorSettings, DdosiaConnector
 from pycti import OpenCTIConnectorHelper
 
 if __name__ == "__main__":
@@ -17,7 +17,7 @@ if __name__ == "__main__":
         settings = ConnectorSettings()
         helper = OpenCTIConnectorHelper(config=settings.to_helper_config())
 
-        connector = TemplateConnector(config=settings, helper=helper)
+        connector = DdosiaConnector(config=settings, helper=helper)
         connector.run()
     except Exception:
         traceback.print_exc()
