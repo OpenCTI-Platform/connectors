@@ -1,0 +1,85 @@
+name: Build Connector Images
+
+on:
+  push:
+    branches:
+      - master
+      - 'release/*'
+      - 'lts/*'
+    tags:
+      # Global version tags only (e.g. 7.260529.0 , 7.260529.0-lts.0).
+      # Per-connector tags (mitre/v2.3.1) and SDK tags (connectors-sdk/v*)
+      # do NOT match these patterns because glob '*' excludes '/'.
+      - '[0-9]*.[0-9]*.[0-9]*'
+      - '[0-9]*.[0-9]*.[0-9]*-lts*'
+
+concurrency:
+  group: build-connectors-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Determine build mode from the git ref
+  resolve-build-mode:
+    name: Resolve build mode
+    runs-on: ubuntu-latest
+    outputs:
+      build_mode: ${{ steps.mode.outputs.build_mode }}
+    steps:
+      - name: Determine build mode
+        id: mode
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "build_mode=release" >> "$GITHUB_OUTPUT"
+            echo "🏷️ Build mode: release (tag: ${{ github.ref_name }})"
+          elif [ "${{ github.ref_name }}" = "master" ]; then
+            echo "build_mode=rolling" >> "$GITHUB_OUTPUT"
+            echo "🔄 Build mode: rolling (master)"
+          else
+            echo "build_mode=prerelease" >> "$GITHUB_OUTPUT"
+            echo "📦 Build mode: prerelease (branch: ${{ github.ref_name }})"
+          fi
+
+  lint:
+    uses: ./.github/workflows/ci-lint-format.yml
+    permissions:
+      contents: read
+
+  tests:
+    uses: ./.github/workflows/ci-tests-connectors.yml
+    permissions:
+      contents: read
+    secrets: inherit
+
+  build-alpine:
+    needs: [resolve-build-mode, lint, tests]
+    uses: ./.github/workflows/build-alpine.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
+      # TODO: Set push to true once CircleCI is decommissioned for Alpine/FIPS builds
+      push: false
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+
+  build-ubi9:
+    needs: [resolve-build-mode, lint, tests]
+    uses: ./.github/workflows/build-ubi9.yml
+    permissions:
+      contents: read
+      packages: write
+    with:
+      build_mode: ${{ needs.resolve-build-mode.outputs.build_mode }}
+      push: true
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME_UBI9 }}
+      DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASS_UBI9 }}
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}

@@ -23,3 +23,5 @@ Below is an exhaustive enumeration of all configurable parameters available, eac
 | DOPPEL_MAX_RETRIES | `integer` |  | integer | `3` | Configures automated error recovery from transient failures |
 | DOPPEL_RETRY_DELAY | `integer` |  | integer | `30` | Controls the frequency of requests during error recovery |
 | DOPPEL_PAGE_SIZE | `integer` |  | integer | `100` | Optimizes request volume and memory usage per fetch |
+| DOPPEL_ENABLE_GROUPING_CASE | `boolean` |  | boolean | `false` | Enables creation of grouping cases |
+| DOPPEL_ENABLE_RFT_CASE | `boolean` |  | boolean | `false` | Enables creation of RFT cases for takedown alerts |

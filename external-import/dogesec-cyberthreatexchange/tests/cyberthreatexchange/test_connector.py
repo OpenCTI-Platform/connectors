@@ -274,7 +274,58 @@ def test_retrieve_with_next_url(
     mock_session.get.assert_has_calls(
         [
             call("https://test-ctx-url/v1/test/", params={"page_size": 200}),
-            call("https://test-ctx-url/v1/test/?page=2", params={"page_size": 200}),
+            call("https://test-ctx-url/v1/test/?page=2", params={}),
+        ]
+    )
+
+
+@freezegun.freeze_time("2026-02-18T15:24:00Z")
+def test_retrieve_with_next_cursor(
+    mock_session: MagicMock, connector: CyberThreatExchangeConnector
+) -> None:
+    """Test _retrieve with next cursor pagination"""
+    # Mock responses with next cursor
+    mock_response_1 = MagicMock()
+    mock_response_1.json.return_value = {
+        "next": "mycursor1",
+        "objects": [{"id": "obj-1"}, {"id": "obj-5"}],
+    }
+
+    mock_response_2 = MagicMock()
+    mock_response_2.json.return_value = {
+        "next": "another-cursor",
+        "objects": [{"id": "obj-2"}],
+    }
+    mock_response_3 = MagicMock()
+    mock_response_3.json.return_value = {
+        "next": None,
+        "objects": [{"id": "obj-3"}, {"id": "obj-4"}],
+    }
+
+    mock_session.get.side_effect = [mock_response_1, mock_response_2, mock_response_3]
+
+    batches = list(
+        connector._retrieve(
+            "v1/test/?type=sometype", list_key="objects", cursor_key="cursor_key_x"
+        )
+    )
+
+    assert len(batches) == 3
+    assert sum(map(len, batches)) == 5
+    # Verify subsequent calls used the next cursor token
+    mock_session.get.assert_has_calls(
+        [
+            call(
+                "https://test-ctx-url/v1/test/?type=sometype", params={"page_size": 200}
+            ),
+            call(
+                "https://test-ctx-url/v1/test/?type=sometype",
+                params={"page_size": 200, "cursor_key_x": "mycursor1"},
+            ),
+            call(
+                "https://test-ctx-url/v1/test/?type=sometype",
+                params={"page_size": 200, "cursor_key_x": "another-cursor"},
+            ),
         ]
     )
 
@@ -288,19 +339,27 @@ def test_get_and_process_objects_no_filter(
     """Test get_and_process_objects without last_run_at"""
     connector.helper.get_state.return_value = {"feeds": {}}
 
-    feed = {"id": "feed-1", "name": "Test Feed"}
+    feed = {"id": "my-feed-uuid", "name": "Test Feed"}
 
     # Mock _retrieve to return batches
     mock_objects = [
         [{"type": "indicator", "id": "indicator--1"}],
         [{"type": "indicator", "id": "indicator--2"}],
     ]
-    mocker.patch.object(connector, "_retrieve", return_value=iter(mock_objects))
+    mock_retrieve = mocker.patch.object(
+        connector, "_retrieve", return_value=iter(mock_objects)
+    )
 
     connector.get_and_process_objects(feed, "work-id")
 
     # Verify bundles were sent
     assert connector.helper.send_stix2_bundle.call_count == 2
+    mock_retrieve.assert_called_once_with(
+        "v1/feeds/my-feed-uuid/objects/",
+        list_key="objects",
+        params={},
+        cursor_key="added_after",
+    )
 
 
 @freezegun.freeze_time("2026-02-18T15:24:00Z")

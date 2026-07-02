@@ -1,0 +1,4 @@
+# Installs the connector (its runtime dependencies) plus the `test` extra so the
+# repository CI test runner (run_test.sh) discovers this connector and runs its
+# pytest suite. Path is relative to the connectors repo root, where run_test.sh runs.
+./external-import/vulncheck/.[test]

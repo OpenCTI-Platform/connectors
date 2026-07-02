@@ -8,13 +8,13 @@
     "Incident Response & Ticketing"
   ],
   "verified": true,
-  "last_verified_date": null,
+  "last_verified_date": "2026-06-03",
   "playbook_supported": false,
   "max_confidence_level": 80,
   "support_version": ">=5.5.4",
   "subscription_link": null,
   "source_code": "https://github.com/OpenCTI-Platform/connectors/tree/master/external-import/thehive",
-  "manager_supported": false,
+  "manager_supported": true,
   "container_version": "rolling",
   "container_image": "opencti/connector-thehive",
   "container_type": "EXTERNAL_IMPORT"

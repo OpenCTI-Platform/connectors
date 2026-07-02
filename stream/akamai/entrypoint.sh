@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# Display startup banner
-echo "Starting OpenCTI Akamai Stream Connector (LOCAL TEST MODE)"
+cd /opt/opencti-connector-akamai
 
-# Launch main Python process
-python main.py
+python3 main.py

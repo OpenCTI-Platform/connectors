@@ -1,5 +1,5 @@
 # Test dependencies
 pytest>=7.0.0
 pytest-mock>=3.10.0
-pycti==7.260615.0
+pycti==7.260701.0
 python-catalyst
