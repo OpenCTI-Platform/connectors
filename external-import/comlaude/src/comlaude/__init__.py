@@ -2,7 +2,8 @@ import json
 import logging
 from datetime import datetime, timedelta
 
-import jwt  # pip install pyjwt
+import jwt
+from jwt.types import Options
 from requests import Session
 
 API_BASE_URL = "https://api.comlaude.com"
@@ -82,7 +83,7 @@ class ComLaudeAuth(object):
         Args:
             token: Authentication bearer token to be decoded.
         """
-        jwt_options = {"verify_signature": False}
+        jwt_options: Options = {"verify_signature": False}
         self._token = token
         try:
             self._decoded_token = jwt.decode(
@@ -96,7 +97,7 @@ class ComLaudeAuth(object):
             self.retrieve_token()
 
         self.authorization_header = {
-            "authorization": "Bearer {0}".format(self._token.get("access_token")),
+            "authorization": f"Bearer {self._token.get('access_token')}",
         }
 
     def _request_token(self):
@@ -105,7 +106,7 @@ class ComLaudeAuth(object):
         Returns:
             Return response Authentication Bearer token from request.
         """
-        auth_endpoint = "{}{}".format(self.api_base_url, "/api_login")
+        auth_endpoint = f"{self.api_base_url.rstrip('/')}/api_login"
         headers = {"content-type": "application/json"}
         response = self._http_session.request(
             "POST",
@@ -120,12 +121,17 @@ class ComLaudeAuth(object):
         LOGGER.debug("Token Response: %s", response.text)
 
         _response_error(
-            "Can't get token for user {0}".format(self._creds.get("username")), response
+            f"Can't get token for user {self._creds.get('username')}", response
         )
         return json.loads(response.text)["data"]
 
     def _verify_token(self):
         """Check to see if token is expiring in 12 hours."""
+        if self._decoded_token is None:
+            LOGGER.debug("Decoded token is None, fetching token using _creds")
+            self.retrieve_token()
+            return
+
         token_expiration = datetime.fromtimestamp(self._decoded_token["exp"])
         time_difference = datetime.now() + timedelta(hours=12)
 
@@ -181,16 +187,11 @@ class ComLaudeSearch(object):
         self.get_search_results()
 
     def _request_search(self):
-        api_search_url = "{}{}{}{}".format(
-            self._comlaude_auth.api_base_url,
-            "/groups/",
-            self._group_id,
-            "/domains/search",
-        )
+        api_search_url = f"{self._comlaude_auth.api_base_url.rstrip('/')}/groups/{self._group_id}/domains/search"
 
         headers = dict(
             {"content-type": "application/json"},
-            **self._comlaude_auth.authorization_header
+            **self._comlaude_auth.authorization_header,
         )
 
         response = self._http_session.request(
@@ -230,7 +231,7 @@ class ComLaudeSearch(object):
             self.parameters["page"] = self.parameters["page"] + 1
             self.get_search_results()
         else:
-            raise "Next page DNE."
+            raise Exception("Next page DNE.")
 
 
 def _response_error(message, response):
@@ -242,16 +243,6 @@ def _response_error(message, response):
     else:
         error_message = json.loads(response.text)
 
-    print(
-        "Message:{0}. Response code returned:{1}. Error message returned:{2}.".format(
-            message, response.status_code, error_message
-        )
-    )
-
-    raise Exception(
-        """Message:{0}.
-            Response code returned:{1}.
-            Error message returned:{2}.""".format(
-            message, response.status_code, error_message
-        )
-    )
+    raise Exception(f"""Message:{message}.
+            Response code returned:{response.status_code}.
+            Error message returned:{error_message}.""")
