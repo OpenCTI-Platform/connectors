@@ -56,7 +56,6 @@ class IOCExtractorConnector:
         """Build STIX observable objects and relationships from extracted IOCs."""
         stix_objects = []
         observable_ids = []
-        entity_ref = Reference(id=entity_id)
 
         for ioc in iocs:
             sdk_object = self._ioc_to_stix_object(ioc, markings=markings)

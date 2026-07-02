@@ -18,6 +18,7 @@ def is_public_ip(ip: str) -> bool:
     except ValueError:
         return False
 
+
 def extract_iocs(
     text: str,
     extract_hashes: bool = True,

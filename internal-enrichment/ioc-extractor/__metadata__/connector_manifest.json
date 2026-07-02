@@ -5,7 +5,7 @@
   "short_description": "Extract IOCs from entity descriptions and create STIX observables.",
   "logo": null,
   "use_cases": ["Enrichment & Analysis"],
-  "verified": true,
+  "verified": false,
   "last_verified_date": null,
   "playbook_supported": true,
   "max_confidence_level": 50,
