@@ -25,7 +25,7 @@ on:
         type: boolean
         default: true
       dockerfile:
-        description: "Override Dockerfile path (e.g. './Dockerfile_ubi9'). Defaults to per-connector Dockerfile when empty."
+        description: "Override Dockerfile path (e.g. 'Dockerfile_ubi9'). Defaults to per-connector Dockerfile when empty."
         required: false
         type: string
         default: ""
@@ -66,7 +66,7 @@ jobs:
             .github
             shared
             connectors-sdk
-            ${{ inputs.dockerfile }}
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
           sparse-checkout-cone-mode: false
 
       - name: Set up Docker Buildx
@@ -129,7 +129,7 @@ jobs:
             .github
             shared
             connectors-sdk
-            ${{ inputs.dockerfile }}
+            ${{ inputs.dockerfile != '' && inputs.dockerfile || '.github' }}
           sparse-checkout-cone-mode: false
 
       - name: Set up Docker Buildx

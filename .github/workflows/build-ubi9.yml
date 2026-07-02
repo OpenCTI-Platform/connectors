@@ -95,6 +95,6 @@ jobs:
       image_tags: ${{ needs.build-matrix.outputs.image_tags }}
       build_mode: ${{ inputs.build_mode }}
       push: ${{ inputs.push }}
-      dockerfile: ./Dockerfile_ubi9
+      dockerfile: Dockerfile_ubi9
       variant: ubi9
     secrets: inherit
