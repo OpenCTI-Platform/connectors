@@ -6,7 +6,7 @@
   "logo": "internal-enrichment/virustotal/__metadata__/logo.png",
   "use_cases": [
     "Enrichment & Analysis",
-    "Malware Analysis"
+    "Malware Analysis and Sandbox"
   ],
   "verified": true,
   "last_verified_date": null,

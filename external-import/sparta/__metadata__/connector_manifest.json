@@ -5,7 +5,9 @@
   "short_description": "The Aerospace Corporation created the Space Attack Research and Tactic Analysis (SPARTA) matrix to address the information and communication barriers that hinder the identification and sharing of space-system Tactic, Techniques, and Procedures (TTP).",
   "logo": "https://sparta.aerospace.org/theme/images/sparta_log_white.PNG",
   "use_cases": [
-    "Open Source Threat Intel"
+    "Open Source Threat Intel",
+    "Vertical Market & Mission-Specific Intelligence",
+    "Adversary & Campaign Insights"
   ],
   "verified": true,
   "last_verified_date": "2025-11-07",

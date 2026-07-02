@@ -6,8 +6,7 @@
   "logo": null,
   "use_cases": [
     "Enrichment & Analysis",
-    "Malware Analysis",
-    "Sandbox"
+    "Malware Analysis and Sandbox",
   ],
   "verified": true,
   "last_verified_date": null,
