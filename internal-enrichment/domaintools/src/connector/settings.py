@@ -38,6 +38,10 @@ class DomaintoolsConfig(BaseConfigModel):
     api_key: SecretStr = Field(
         description="The password required for the authentication on DomainTools API.",
     )
+    enrichment_method: str = Field(
+        description="Which method to use for the enrichment: Iris Enrich (enrich) or Iris Investigate (investigate)",
+        default="investigate",
+    )
     max_tlp: str = Field(
         description="The maximal TLP of the observable being enriched.",
         default="TLP:AMBER",
