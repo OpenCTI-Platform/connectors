@@ -7,23 +7,29 @@ state management, scheduling, error handling, and running data processors.
 Architecture::
 
     ExternalImportConnector
-    ├── OpenCTIConnectorHelper → pycti bridge (created in _init_dependencies)
-    ├── ConnectorLogger        → Logging (wraps helper's AppLogger)
+    ├── OpenCTIConnectorHelper       → pycti bridge (created in _init_dependencies)
+    ├── Logger                       → Logging (wraps helper's AppLogger)
     ├── ExternalImportConnectorState → State persistence (last_run, custom fields)
-    └── BaseDataProcessor[]    → process(): with work_manager: send(transform(collect()))
-        └── WorkManager        → context manager: open work → send → close work
+    └── BaseDataProcessor[]          → process(): with work_manager: send(transform(collect()))
+        └── WorkManager              → context manager: open work → send → close work
 """
+
+from __future__ import annotations
 
 import sys
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from connectors_sdk.connectors.external_import.base_data_processor import (
     BaseDataProcessor,
 )
-from connectors_sdk.connectors.external_import.logger import ConnectorLogger
+from connectors_sdk.logging.logger import logger as connector_logger
 from connectors_sdk.settings.base_settings import BaseConnectorSettings
 from connectors_sdk.states.states import ExternalImportConnectorState
 from pycti import OpenCTIConnectorHelper
+
+if TYPE_CHECKING:
+    from connectors_sdk.logging._base_logger import BaseLogger
 
 
 class ExternalImportConnector:
@@ -44,8 +50,8 @@ class ExternalImportConnector:
     (e.g. one for indicators, one for reports, one for vulnerabilities).
 
     Attributes:
+        logger(ClassVar): A ``Logger``'s child for logging, named after the connector class.
         settings: The connector configuration (subclass of ``BaseConnectorSettings``).
-        logger: The ``ConnectorLogger`` for logging without direct pycti dependency.
         state: The ``ExternalImportConnectorState`` for persisting connector state.
         data_processors: The list of ``BaseDataProcessor`` instances.
 
@@ -66,6 +72,14 @@ class ExternalImportConnector:
         >>> connector.start()
     """
 
+    logger: ClassVar[BaseLogger] = connector_logger.get_child("ExternalImportConnector")
+
+    @classmethod
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Attach a logger child named after the concrete `ExternalImportConnector` subclass."""
+        super().__init_subclass__(**kwargs)
+        cls.logger = connector_logger.get_child(cls.__name__)
+
     def __init__(
         self,
         settings: BaseConnectorSettings,
@@ -85,21 +99,24 @@ class ExternalImportConnector:
         """
         if not data_processors:
             raise ValueError("At least one BaseDataProcessor must be provided.")
-        self.settings = settings
         self.data_processors = data_processors
+        self.settings = settings
         self.state = state if state is not None else ExternalImportConnectorState()
+
+        self.logger.debug(
+            f"{self.__class__.__name__} instantiated succesfully with {len(data_processors)} processor(s)",
+            {"data_processors": [p.__class__.__name__ for p in data_processors]},
+        )
 
     def _init_dependencies(self) -> None:
         """Create the OpenCTI connector helper and wire up all components.
 
         This method:
         1. Creates the ``OpenCTIConnectorHelper`` from the config
-        2. Creates the ``ConnectorLogger``
-        3. Initializes the state and injects dependencies
-        4. Calls ``inject_dependencies()`` on each data processor
+        2. Initializes the state and injects dependencies
+        3. Calls ``inject_dependencies()`` on each data processor
         """
         self._helper = OpenCTIConnectorHelper(config=self.settings.to_helper_config())
-        self.logger = ConnectorLogger(self._helper)
         self.state.inject_dependencies(self._helper)
         for processor in self.data_processors:
             processor.inject_dependencies(
@@ -121,46 +138,66 @@ class ExternalImportConnector:
         Override this method for fully custom processing logic.
         """
         connector_name = self.settings.connector.name
+
         self.logger.info(
-            "[CONNECTOR] Starting connector...",
+            "Connector's run starting",
             {"connector_name": connector_name},
         )
 
         try:
             self.state.load(force=True)
+            self.logger.info(
+                "Connector's state loaded from OpenCTI",
+                {"connector_name": connector_name, "state": self.state.to_json()},
+            )
 
             if self.state.last_run:
                 self.logger.info(
-                    "[CONNECTOR] Connector last run",
-                    {"last_run_datetime": str(self.state.last_run)},
+                    "Connector's 'last_run' datetime found in state",
+                    {
+                        "connector_name": connector_name,
+                        "last_run": self.state.last_run.isoformat(),
+                    },
                 )
             else:
-                self.logger.info("[CONNECTOR] Connector has never run...")
+                self.logger.info(
+                    "Connector has never run before",
+                    {"connector_name": connector_name},
+                )
 
             self.logger.info(
-                "[CONNECTOR] Running connector...",
+                "Running connector's data processors",
                 {"connector_name": connector_name},
             )
-
             for processor in self.data_processors:
                 processor.process()
 
             self.state.last_run = datetime.now(tz=timezone.utc)
             self.state.save()
+            self.logger.info(
+                "Connector's state saved on OpenCTI",
+                {"connector_name": connector_name, "state": self.state.to_json()},
+            )
 
             self.logger.info(
-                f"{connector_name} connector successfully run, "
-                f"storing last_run as {self.state.last_run}"
+                "Connector's run completed, 'last_run' datetime stored in state",
+                {
+                    "connector_name": connector_name,
+                    "last_run": self.state.last_run.isoformat(),
+                },
             )
 
         except (KeyboardInterrupt, SystemExit):
             self.logger.info(
-                "[CONNECTOR] Connector stopped...",
+                "Connector stopped by user or system",
                 {"connector_name": connector_name},
             )
             sys.exit(0)
         except Exception as err:
-            self.logger.error(str(err))
+            self.logger.error(
+                f"Unexpected error: {err}",
+                {"connector_name": connector_name},
+            )
 
     def start(self) -> None:
         """Start the connector with scheduled execution.
@@ -177,6 +214,11 @@ class ExternalImportConnector:
             The ``settings.connector`` must be a ``BaseExternalImportConnectorConfig``
             (or subclass) with a ``duration_period`` field.
         """
+        self.logger.info(
+            "Connector's starting",
+            {"connector_name": self.settings.connector.name},
+        )
+
         self._init_dependencies()
         self._helper.schedule_process(
             message_callback=self.callback,
