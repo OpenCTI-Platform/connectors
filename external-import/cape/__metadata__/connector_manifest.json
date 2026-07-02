@@ -5,9 +5,8 @@
   "short_description": "CAPE Sandbox is an Open Source software for automating analysis of suspicious files.\n\nCAPE Sandbox connector imports malware analysis results into OpenCTI, enriching threat insights.",
   "logo": "external-import/cape/__metadata__/logo.png",
   "use_cases": [
-    "Malware Analysis",
+    "Malware Analysis and Sandbox",
     "Threat Intelligence",
-    "Sandbox"
   ],
   "verified": true,
   "last_verified_date": null,

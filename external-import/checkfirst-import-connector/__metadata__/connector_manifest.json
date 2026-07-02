@@ -4,7 +4,7 @@
   "description": "Fetches Checkfirst articles from a remote API and pushes STIX bundles to OpenCTI.",
   "short_description": "Import Checkfirst articles into OpenCTI.",
   "logo": null,
-  "use_cases": [],
+  "use_cases": ["Foreign Information, Manipulation & Interference (FIMI) and Disinformation"],
   "verified": true,
   "last_verified_date": "2026-03-20",
   "playbook_supported": false,
